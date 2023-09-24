@@ -1,9 +1,0 @@
-,frame,person,bbox.x,bbox.y,bbox.w,bbox.h,emotion,age,gender
-0,0,0,91,85,68,68,happy,28,Man
-1,0,1,107,209,135,135,happy,33,Woman
-2,1,0,91,86,68,68,happy,28,Man
-3,1,1,109,209,132,132,happy,33,Woman
-4,2,0,91,85,68,68,happy,28,Man
-5,2,1,111,209,130,130,happy,33,Woman
-6,3,0,91,85,68,68,happy,28,Man
-7,3,1,109,209,132,132,happy,33,Woman
