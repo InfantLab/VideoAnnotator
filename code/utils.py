@@ -30,7 +30,7 @@ def createkeypointsdf():
 
 def addkeypointstodf(df, framenumber, bbox,bconf, keypoints, kconf):
     for idx in range(len(bbox)):
-        row = [framenumber, idx]
+        row = [int(framenumber), idx]
         row += torch.flatten(bbox[idx]).tolist()
         row += torch.flatten(bconf[idx]).tolist()
         row += torch.flatten(keypoints[idx]).tolist()
