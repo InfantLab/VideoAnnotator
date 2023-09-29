@@ -39,6 +39,6 @@ pip install -r requirements.txt
 
 ## Sage Hackathon
 Sage data scientist, Yu-Cheng has a write up of his team's approach to the problem on the Sage-AI blog. [Quantifying Parent-Child Interactions: Advancing Video Understanding with Multi-Modal LLMs](https://medium.com/sage-ai/unlocking-parent-child-interactions-advancing-video-understanding-with-multi-modal-llms-c570ab487183)
-Repositories from the f
+Repositories from the hackathon are found here:
  * London team - Combining Speech recognition and laughter detection https://github.com/chilledgeek/ethical_ai_hackathon_2023
  * US team - Interpreting Parent laughter with VideoLLama https://github.com/yutsai84/Ask-Anything 
