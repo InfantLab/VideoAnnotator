@@ -13,6 +13,6 @@ def drawOneFrame(baseImage,keyPoints = None,speechLabels = None,objectData = Non
     '''
     annotator = ultrautils.plotting.Annotator(baseImage)
     for row in keyPoints:
-    if keyPoints is not None:
-        annotator.keypoints(keyPoints)
+        if keyPoints is not None:
+            annotator.kpts(keyPoints)
     return annotator.result()

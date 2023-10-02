@@ -19,22 +19,20 @@ def getprocessedvideos(data_out):
 def createkeypointsdf():
     #create empty dataframe to store keypoints, one per person per frame
     bodyparts = ['nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear', 'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist', 'left_hip', 'right_hip', 'left_knee', 'right_knee', 'left_ankle', 'right_ankle']
-    coords = ['x', 'y']
-    conf = ['c']
+    coords = ['x', 'y', 'c']
     bodypartsxy = [f"{bp}.{c}" for bp in bodyparts for c in coords]
-    bodypartsc = [f"{bp}.{c}" for bp in bodyparts for c in conf]
     boundingbox = [ 'bboxcent.x', 'bboxcent.y', 'bbox.width', 'bbox.height', 'bbox.c' ]
-    cols = ['frame', 'person'] + boundingbox + bodypartsxy + bodypartsc
+    cols = ['frame', 'person'] + boundingbox + bodypartsxy
     df = pd.DataFrame(columns=cols)
     return df
 
-def addkeypointstodf(df, framenumber, bbox,bconf, keypoints, kconf):
+def addkeypointstodf(df, framenumber, bbox,bconf, keypointsdata):
+    #take output from yolov8 and add to dataframe, person by person.
     for idx in range(len(bbox)):
         row = [int(framenumber), idx]
         row += torch.flatten(bbox[idx]).tolist()
         row += torch.flatten(bconf[idx]).tolist()
-        row += torch.flatten(keypoints[idx]).tolist()
-        row += torch.flatten(kconf[idx]).tolist()
+        row += torch.flatten(keypointsdata[idx]).tolist()
         #add row to dataframe
         #print(row)
         df.loc[len(df)] = row
@@ -50,7 +48,7 @@ def videotokeypoints(model, videopath, track = False):
     frame = 0
     for r in results:
         #print(torch.flatten(r.keypoints.xy[0]).tolist())
-        df = addkeypointstodf(df,frame,r.boxes.xywh,r.boxes.conf,r.keypoints.xy, r.keypoints.conf)  
+        df = addkeypointstodf(df,frame,r.boxes.xywh,r.boxes.conf,r.keypoints.data)  
         frame += 1
     return df
 
