@@ -3,16 +3,18 @@
 
 import ultralytics.utils as ultrautils
 
-def drawOneFrame(baseImage,keyPoints = None,speechLabels = None,objectData = None):
+def drawOneFrame(baseImage, bboxes = None, keyPoints = None,speechLabels = None,objectData = None):
     '''
     redraw one frame with all the annotations we provide. 
     Use ultralytics.utils.Annotator where we can.
 
-    Args: keyPoints, speechLabels, objectData
+    Args: bboxes - keyPoints, speechLabels, objectData
     Output: annotated image
     '''
     annotator = ultrautils.plotting.Annotator(baseImage)
-    for row in keyPoints:
-        if keyPoints is not None:
-            annotator.kpts(keyPoints)
+    for box in bboxes:
+        annotator.box_label(box = box[:2], label = f"{box[0]}: {box[1]}", color = 'red')
+    for kpts in keyPoints:
+        kpts = kpts.reshape(17,3)
+        annotator.kpts(kpts)
     return annotator.result()
