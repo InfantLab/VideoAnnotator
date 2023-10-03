@@ -8,12 +8,16 @@ def drawOneFrame(baseImage, bboxes = None, keyPoints = None,speechLabels = None,
     redraw one frame with all the annotations we provide. 
     Use ultralytics.utils.Annotator where we can.
 
-    Args: bboxes - keyPoints, speechLabels, objectData
+    Args:   bboxes - expects one row per person, each row to contain [person,idx,x,y,w,h] 
+            keyPoints - [nrows x 51] 
+            speechLabel - string of speech happening during this frame
+            objectData - similar to bboxes, but for objects [objecttype,objectinfo,x,y,w,h]
     Output: annotated image
     '''
     annotator = ultrautils.plotting.Annotator(baseImage)
     for box in bboxes:
-        annotator.box_label(box = box[:2], label = f"{box[0]}: {box[1]}", color = 'red')
+        xyxy = ultrautils.ops.xywh2xyxy(box[2:]) #need to convert the bounding box to xyxy format
+        annotator.box_label(box = xyxy, label = f"{box[0]}: {box[1]}")
     for kpts in keyPoints:
         kpts = kpts.reshape(17,3)
         annotator.kpts(kpts)

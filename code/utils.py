@@ -11,7 +11,7 @@ def getprocessedvideos(data_dir, filename = "processedvideos.xlsx"):
     #check if we have already processed some videos
     if os.path.exists(filepath):
         print(f"Found existing {filename}")
-        processedvideos = pd.read_excel(filepath, index_col=0)
+        processedvideos = pd.read_excel(filepath, index_col=None)
     else:
         #create new dataframe for info about processed videos
         print(f"Creating new {filename}")
