@@ -84,19 +84,20 @@ def convert_mp3_to_wav_moviepy(audio_file, output_ext="wav"):
 
 def createfacesdf():
     #creates a dataframe with the facial data from the videos
-    cols = ['frame', 'person', 'index', "bbox.x", "bbox.y","bbox.w","bbox.h","emotion","age","gender" ] #, "allemotions","allgenders"]
+    cols = ['frame', 'person', 'index', "bbox.x1", "bbox.y1","bbox.x2","bbox.y2","emotion","age","gender" ] #, "allemotions","allgenders"]
     return pd.DataFrame(columns=cols)
 
 def addfacestodf(facesdf,frameidx, facedata):
     #add the faces identified by face detection model to the dataframe, along with emotion, age and gender. 
+    #note that unlike YOLO bounding boxes are returned top left corner and width/height not centre and width/height
     for idx, face in enumerate(facedata):
         newrow = {'frame': frameidx,
                   'person':"unknown",
                   'index' : idx,
-                  'bbox.x':face['region']['x'],
-                  'bbox.y':face['region']['y'],
-                  'bbox.w':face['region']['w'],
-                  'bbox.h':face['region']['h'],
+                  'bbox.x1':face['region']['x'],
+                  'bbox.y1':face['region']['y'],
+                  'bbox.x2':face['region']['x']+ face['region']['w'],
+                  'bbox.y2':face['region']['y'] + face['region']['h'],
                   'emotion':face['dominant_emotion'],
                   'age':face['age'],
                   'gender':face['dominant_gender']}
