@@ -3,6 +3,7 @@ import os
 import cv2
 import torch
 import pandas as pd
+import ultralytics.utils as ultrautils
 import moviepy.editor as mp
 
 def getprocessedvideos(data_dir, filename = "processedvideos.xlsx"):
@@ -29,7 +30,7 @@ def createkeypointsdf():
     bodyparts = ['nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear', 'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist', 'left_hip', 'right_hip', 'left_knee', 'right_knee', 'left_ankle', 'right_ankle']
     coords = ['x', 'y', 'c']
     bodypartsxy = [f"{bp}.{c}" for bp in bodyparts for c in coords]
-    boundingbox = [ 'bboxcent.x', 'bboxcent.y', 'bbox.width', 'bbox.height', 'bbox.c' ]
+    boundingbox = [ "bbox.x1", "bbox.y1","bbox.x2","bbox.y2", 'bbox.c' ]
     cols = ['frame', 'person', 'index'] + boundingbox + bodypartsxy
     df = pd.DataFrame(columns=cols)
     return df
@@ -39,13 +40,31 @@ def addkeypointstodf(df, framenumber, bbox,bconf, keypointsdata):
     for idx in range(len(bbox)):
         person = ("child" if idx == 0 else "adult")
         row = [int(framenumber), person, idx]
-        row += torch.flatten(bbox[idx]).tolist()
+        #YOLO returns bounding boxes as [centre.x,centre.y,w,h] 
+        # but for consistency with other models we want [x1,y1,x2,y2]
+        bb = ultrautils.ops.xywh2xyxy(bbox[idx])
+        row += bb.tolist()
         row += torch.flatten(bconf[idx]).tolist()
         row += torch.flatten(keypointsdata[idx]).tolist()
         #add row to dataframe
         #print(row)
         df.loc[len(df)] = row
     return df
+
+def getframekpts(kptsdf,framenumber):
+    framekpts = kptsdf[kptsdf['frame'] ==framenumber]
+    nrows = framekpts.shape[0]
+    bboxlabels = [None] * nrows
+    #for each row framekpts, create a label for the bounding box from person and index cols
+    for idx in range(nrows):
+        pers = framekpts["person"].values[idx]
+        index = framekpts["index"].values[idx]
+        bboxlabels[idx] =  f'{pers}: {index}'
+    
+    bboxes = framekpts.iloc[:,3:7].values
+    xycs = framekpts.iloc[:,8:].values
+
+    return bboxlabels, bboxes, xycs
 
 def videotokeypoints(model, videopath, track = False):
     # Run inference on the source
@@ -67,7 +86,7 @@ def convert_video_to_audio_moviepy(videos_in, video_file, out_path, output_ext="
     try:
         filename = os.path.splitext(video_file)[0]
         clip = mp.VideoFileClip(videos_in + video_file)
-        audio_file = f"{out_path}\\{filename}.{output_ext}"
+        audio_file = os.path.join(out_path, f"{filename}.{output_ext}")
         clip.audio.write_audiofile(audio_file)
         clip.close()
         return audio_file
