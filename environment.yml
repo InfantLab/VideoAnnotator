@@ -293,4 +293,3 @@ dependencies:
       - typing-extensions==4.5.0
       - werkzeug==2.3.7
       - wrapt==1.15.0
-prefix: C:\Users\cas\Anaconda3\envs\babyjokes
