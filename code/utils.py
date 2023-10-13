@@ -122,3 +122,23 @@ def addfacestodf(facesdf,frameidx, facedata):
                   'gender':face['dominant_gender']}
         facesdf.loc[len(facesdf)] = newrow
     return facesdf
+
+def relabelPersonIndex(df, person = None, index = None, newPerson = None,  newIndex = None, startFrame = None, endFrame = None):
+    '''replace person and/or index values with new values for a range of frames'''
+    if startFrame is None:
+        startFrame = 0
+    if endFrame is None:
+        endFrame = df['frame'].max()
+    if person is None and index is None:
+        return df
+    if person is not None and index is None:
+        #just person
+        df.loc[(df['frame'] >= startFrame) & (df['frame'] <= endFrame) & (df['person'] == person), 'person'] = newPerson
+    if person is None and index is not None:
+        #just index
+        df.loc[(df['frame'] >= startFrame) & (df['frame'] <= endFrame) & (df['index'] == index), 'index'] = newIndex
+    if person is not None and index is not None:
+        #both
+        df.loc[(df['frame'] >= startFrame) & (df['frame'] <= endFrame) & (df['person'] == person) & (df['index'] == index), 'person'] = newPerson
+        df.loc[(df['frame'] >= startFrame) & (df['frame'] <= endFrame) & (df['person'] == newPerson) & (df['index'] == index), 'index'] = newIndex
+    return df
