@@ -19,26 +19,49 @@ All notebooks and supporting code are in the `code` folder. The numbered noteboo
 
 This project makes use of the following libraries and versions:
 
-Python 3.11
-Pytorch 2.0.1
-ultralytics 8.0  (wrapper for YOLOv8 object detection model)
-deepface 0.0.68 (Facial Expression Recognition)
-speechbrain 0.5  (Speech Recognition)
-openai-whisper (Opensource version of OpenAI's Whisper model)
++ Python 3.11
++ Pytorch 2.1.0 (for YOLOv8, deepface, whisper) 
++ ultralytics 8.0  (wrapper for YOLOv8 object detection model)
++ deepface 0.0.68 (Facial Expression Recognition)
++ speechbrain 0.5  (Speech Recognition)
++ openai-whisper (OpenAI's Whisper speech recognition -open source version)
 
 
-Conda environment file is provided. To create the environment and activate it run the following commands in the terminal:
+### Installing with Conda
+
+A Conda `environment.yml` file is provided but dependencies are complex so can fail to install in a single step.
+The culprit seems to be the `pytorch` dependencies. So instead run the follow commands in the terminal.
+1. Create a new Python 3.11 environment 
+```bash
+conda create --name "babyjokes" python=3.11
 ```
-conda env create --name babyjokes --file=environment.yml
+2. Activate the environment
+```bash
 conda activate babyjokes
 ```
-Using Pip
+3. Install PyTorch
+```bash
+conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+4. Add the other dependencies. Run the following command from the root directory of this project.
+```bash
+conda env update --file environment.yml
 ```
+
+### Installing with Pip
+We also provide a pip `requirements.txt` file. This should work but has not been tested. 
+We recommend following similar steps to the conda installation above. Creating a new environment, installing PyTorch and then installing the other dependencies.
+
+```bash
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements.txt
 ```
+If you get this working, please let us know what you did (and what OS you are using) so we can update this README.
+
 
 ## Sage Hackathon
 Sage data scientist, Yu-Cheng has a write up of his team's approach to the problem on the Sage-AI blog. [Quantifying Parent-Child Interactions: Advancing Video Understanding with Multi-Modal LLMs](https://medium.com/sage-ai/unlocking-parent-child-interactions-advancing-video-understanding-with-multi-modal-llms-c570ab487183)
 Repositories from the hackathon are found here:
  * London team - Combining Speech recognition and laughter detection https://github.com/chilledgeek/ethical_ai_hackathon_2023
  * US team - Interpreting Parent laughter with VideoLLama https://github.com/yutsai84/Ask-Anything 
+
+
