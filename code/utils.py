@@ -51,6 +51,16 @@ def addkeypointstodf(df, framenumber, bbox,bconf, keypointsdata):
         df.loc[len(df)] = row
     return df
 
+def readKeyPointsFromCSV(processedvideos,VIDEO_FILE):
+    #get the keypoints from the csv file
+    videoname = os.path.basename(VIDEO_FILE)
+    #is video in the processedvideos dataframe?
+    videodata = processedvideos[processedvideos['VideoID'] == videoname]
+    kptsfile = videodata['Keypoints.file'].values[0]
+    keypoints = pd.read_csv(kptsfile)
+    return keypoints
+    
+
 def getframekpts(kptsdf,framenumber):
     framekpts = kptsdf[kptsdf['frame'] ==framenumber]
     nrows = framekpts.shape[0]

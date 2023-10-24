@@ -40,11 +40,11 @@ def centreOfGravity(df,frames = [],people = "all",bodypart = "whole"):
             #get the keypoints for this person in this frame
             kpts = df[(df['frame'] == frame) & (df['person'] == person)]
             
-            if kpts.shape[0] > 0:
+            if not kpts.empty:
                 #get the average position of the bodypart
-                #print(kpts)
                 if bodypart == "whole":
-                    xyc = kpts[:,8:]
+                    xyc = kpts.iloc[:,8:59].to_numpy() #just keypoints
+                    xyc = xyc.reshape(-1,3) #reshape to n x 3 array (x,y,conf
                     avgx, avgy = avgxys(xyc,threshold)
                 
                 df.loc[(df['frame'] == frame) & (df['person'] == person), "cog.x"] = avgx
@@ -72,4 +72,22 @@ def avgxys(xyc,threshold = 0.5):
     return avgx, avgy
 
 
-
+def rowcogs(keypoints1d,threshold = 0.5):
+    '''
+    An function to apply to a dataframe row to get the centre of gravity for that row.
+    
+    keypointrow:   xyc - [1dimensional] np.array of x,y,conf values
+    threshold:     threshold for conf values        
+    returns:    [avgx, avgy]
+    '''
+    #get the x,y values where conf > threshold
+    xyc3 = keypoints1d.to_numpy().reshape(-1,3)
+    x = xyc3[:,0]
+    y = xyc3[:,1]
+    conf = xyc3[:,2]
+    x = x[conf > threshold]
+    y = y[conf > threshold]
+    #calculate the average
+    avgx = np.mean(x)
+    avgy = np.mean(y)
+    return [avgx, avgy]
