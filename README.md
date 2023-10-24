@@ -40,21 +40,23 @@ conda create --name "babyjokes" python=3.11
 conda activate babyjokes
 ```
 3. Install PyTorch
-```bash
-conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
-4. Add the other dependencies. Run the following command from the root directory of this project.
+Advisable to follow the instructions at [pytorch.org](https://pytorch.org/) to get the correct version for your system.  
+4. Add the other dependencies.  
+Run the following command from the root directory of this project.
 ```bash
 conda env update --file environment.yml
 ```
 
 ### Installing with Pip
-We also provide a pip `requirements.txt` file. This should work but has not been tested. 
-We recommend following similar steps to the conda installation above. Creating a new environment, installing PyTorch and then installing the other dependencies.
-
+We also provide a pip `requirements.txt` file. *This should work but has not been tested.* 
+We recommend following similar steps to the conda installation above. 
+1. Create a new python 3.11 environment.
+2. Install [PyTorch](https://pytorch.org/get-started/locally/)
+3. Installing the other dependencies:
 ```bash
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements.txt
 ```
+
 If you get this working, please let us know what you did (and what OS you are using) so we can update this README.
 
 
