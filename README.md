@@ -9,7 +9,7 @@ A small test dataset is provided in the `LookitLaughter.test` folder. It consist
 
 
 ## Code
-All notebooks and supporting code are in the `code` folder. The numbered notebooks should be run in order to process the data, train the models and generate the results.
+All notebooks and supporting code are in the `code` folder. The numbered notebooks should be run in order to process the data, train the models and generate the results.n
 
 #TODO - visualise data
 #TODO - build models & analysis

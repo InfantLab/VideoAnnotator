@@ -137,3 +137,7 @@ dask-worker-space
 #YOLO models
 *.pt
 
+# Other models
+
+code/pretrained_models/
+code/audio_cache/ 
