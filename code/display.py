@@ -72,7 +72,6 @@ def createAnnotatedVideo(videopath,kptsdf = None,facesdf = None,speechjson = Non
                 bboxlabels[idx] =  f'{pers}: {index}'
                 
             bboxes = framekpts.iloc[:,3:7].values
-            bboxes = ultrautils.ops.xywh2xyxy(bboxes) #need to convert the bounding box to xyxy format
 
             xycs = framekpts.iloc[:,8:].values
             frame = drawOneFrame(frame, bboxlabels, bboxes, xycs)
@@ -83,8 +82,7 @@ def createAnnotatedVideo(videopath,kptsdf = None,facesdf = None,speechjson = Non
             framefaces = facesdf[facesdf['frame'] == framenum]
             facelabels = framefaces['emotion'].values
             #TODO - maybe include age & gender info
-            faceboxes = framefaces.iloc[:,4:8].values
-            #faceboxes = ultrautils.ops.xywh2xyxy(faceboxes)
+            faceboxes = framefaces.iloc[:,3:7].values
             frame = drawOneFrame(frame, facelabels, faceboxes)
         if speechjson is None:
             pass
