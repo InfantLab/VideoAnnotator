@@ -91,3 +91,25 @@ def rowcogs(keypoints1d,threshold = 0.5):
     avgx = np.mean(x)
     avgy = np.mean(y)
     return [avgx, avgy]
+
+def normaliseCoordinates(df, cols, frameHeight, frameWidth):
+    '''
+    normalise the x and y pixel based coordinates to be between 0 and 1
+    input: dataframe, list of column names, frame height and width
+    output: dataframe with normalised coordinates
+    '''
+    longaxis = max(frameHeight, frameWidth)
+    for col in cols:
+        df[col] = df[col] / longaxis
+    return df
+
+def denormaliseCoordinates(df, cols, frameHeight, frameWidth):
+    '''
+    for normalised x and y coordinates (between 0 and 1) convert back to pixel based coordinates (between 0 and frameHeight/Width
+    input: dataframe, list of column names, frame height and width
+    output: dataframe with normalised coordinates
+    '''
+    longaxis = max(frameHeight, frameWidth)
+    for col in cols:
+        df[col] = df[col] * longaxis
+    return df
