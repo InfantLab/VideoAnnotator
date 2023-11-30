@@ -5,6 +5,8 @@ import torch
 import pandas as pd
 import ultralytics.utils as ultrautils
 import moviepy.editor as mp
+import json
+
 
 def getprocessedvideos(data_dir, filename = "processedvideos.xlsx"):
     #looks in data_dir for processedvideos.xlsx, if it exists, loads it, otherwise creates it.
@@ -51,12 +53,15 @@ def addkeypointstodf(df, framenumber, bbox,bconf, keypointsdata):
         df.loc[len(df)] = row
     return df
 
-def readKeyPointsFromCSV(processedvideos,VIDEO_FILE):
+def readKeyPointsFromCSV(processedvideos,VIDEO_FILE, normed = False):
     #get the keypoints from the csv file
     videoname = os.path.basename(VIDEO_FILE)
     #is video in the processedvideos dataframe?
     videodata = processedvideos[processedvideos['VideoID'] == videoname]
-    kptsfile = videodata['Keypoints.file'].values[0]
+    if normed:
+        kptsfile = videodata['Keypoints.normed'].values[0]
+    else:
+        kptsfile = videodata['Keypoints.file'].values[0]
     keypoints = pd.read_csv(kptsfile)
     return keypoints
     
@@ -152,3 +157,63 @@ def relabelPersonIndex(df, person = None, index = None, newPerson = None,  newIn
         df.loc[(df['frame'] >= startFrame) & (df['frame'] <= endFrame) & (df['person'] == person) & (df['index'] == index), 'person'] = newPerson
         df.loc[(df['frame'] >= startFrame) & (df['frame'] <= endFrame) & (df['person'] == newPerson) & (df['index'] == index), 'index'] = newIndex
     return df
+
+def getkeypointcols():
+    #set of coord columns, 0,1 are x,y, 2 is confidence, so loop through
+    xcols = []
+    ycols = []
+    for c in range(17*3):
+        if c % 3 == 0:
+            xcols.append(c)
+        elif c % 3 == 1:
+            ycols.append(c)
+
+    xcols = [x+8 for x in xcols] #shift by 8 to get to correct column
+    ycols = [x+8 for x in ycols] #shift by 8 to get to correct column
+    
+    xkeys = [3,5] #bounding box
+    xkeys.extend(xcols) #keypoints
+    ykeys = [4,6] #bounding box
+    ykeys.extend(ycols) #keypoints
+    return xkeys, ykeys
+
+def getfacecols():
+#    return [3,4,5,6]
+    return [3,5], [4,6] #xcols,ycols
+
+def getKeyPoints(processedvideos,videoname):
+    #look in processed videos to see if we have a keypoints file for this video
+    videodata = processedvideos[processedvideos['VideoID'] == videoname]
+    if videodata.shape[0] > 0:
+        print(f"We have a keypoints file for {videoname}")
+        kptsfile = videodata['Keypoints.file'].values[0]
+        #Load the keypoints file
+        kpts = pd.read_csv(kptsfile)
+    else:  
+        raise Exception(f"No keypoints file found for {videoname}")
+    return kpts
+
+def getFaceData(processedvideos,videoname):
+    #look in processed videos to see if we have a keypoints file for this video
+    videodata = processedvideos[processedvideos['VideoID'] == videoname]
+    if videodata.shape[0] > 0:
+        print(f"We have a face data file for {videoname}")
+        facesfile = videodata['Faces.file'].values[0]
+        #Load the keypoints file
+        facedata = pd.read_csv(facesfile)
+    else:  
+        raise Exception(f"No face data file found for {videoname}")
+    return facedata
+
+def getSpeechData(processedvideos,videoname):
+    #look in processed videos to see if we have a keypoints file for this video
+    videodata = processedvideos[processedvideos['VideoID'] == videoname]
+    if videodata.shape[0] > 0:
+        print(f"We have a speech data file for {videoname}")
+        speechfile = videodata['Speech.file'].values[0]
+        #Load the keypoints file
+        with open(speechfile) as f:
+            speechdata = json.load(f)
+    else:  
+        raise Exception(f"No speech data file found for {videoname}")
+    return speechdata

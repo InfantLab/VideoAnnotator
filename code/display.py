@@ -5,6 +5,13 @@ import ultralytics.utils as ultrautils
 import os
 import cv2
 
+from matplotlib import pyplot
+from IPython.display import Image, clear_output
+from IPython.display import display as ipydisplay
+import time
+from PIL import Image as PILImage
+
+
 def drawOneFrame(baseImage, bboxlabels = None, bboxes = None, keyPoints = None,speechLabel = None,objectData = None):
     '''
     redraw one frame with all the annotations we provide. 
@@ -31,7 +38,7 @@ def drawOneFrame(baseImage, bboxlabels = None, bboxes = None, keyPoints = None,s
         annotator.text([int(w/3),int(h/10)],speechLabel, anchor = 'top')
     return annotator.result()
 
-def createAnnotatedVideo(videopath,kptsdf = None,facesdf = None,speechjson = None, videos_out = None):
+def createAnnotatedVideo(videopath,kptsdf = None,facesdf = None,speechjson = None, videos_out = None, debug = False):
     '''
     Take a processed video and go through frame by frame, adding the bounding boxes, keypoints, face/emotion and speech info.
     Then export the resulting video to a file.
@@ -105,8 +112,15 @@ def createAnnotatedVideo(videopath,kptsdf = None,facesdf = None,speechjson = Non
     outpath = os.path.join(videos_out, videofilename)
     out  = cv2.VideoWriter(outpath, fourcc, fps, (width, height))
     print(f"Writing video to {outpath}")
+    print(f"Number of frames: {len(annotatedframes)}")
 
     for i in range(len(annotatedframes)):
+        if debug:
+            clear_output(wait=True)
+            color_converted = cv2.cvtColor(annotatedframes[i], cv2.COLOR_BGR2RGB)
+            pil_image = PILImage.fromarray(color_converted)
+            ipydisplay(pil_image )
+            time.sleep(1/fps)
         out.write(annotatedframes[i])
     out.release()
 
