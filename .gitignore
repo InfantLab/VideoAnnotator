@@ -128,6 +128,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Trunk files
+.trunk/
+
 # Weights & Biases
 /wandb
 

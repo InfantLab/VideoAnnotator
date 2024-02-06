@@ -190,7 +190,7 @@ def getKeyPoints(processedvideos,videoname):
         #Load the keypoints file
         kpts = pd.read_csv(kptsfile)
     else:  
-        raise Exception(f"No keypoints file found for {videoname}")
+        raise FileNotFoundError(f"No keypoints file found for {videoname}")
     return kpts
 
 def getFaceData(processedvideos,videoname):
@@ -202,8 +202,9 @@ def getFaceData(processedvideos,videoname):
         #Load the keypoints file
         facedata = pd.read_csv(facesfile)
     else:  
-        raise Exception(f"No face data file found for {videoname}")
+        raise FileNotFoundError(f"No face data file found for {videoname}")
     return facedata
+
 
 def getSpeechData(processedvideos,videoname):
     #look in processed videos to see if we have a keypoints file for this video
@@ -215,5 +216,5 @@ def getSpeechData(processedvideos,videoname):
         with open(speechfile) as f:
             speechdata = json.load(f)
     else:  
-        raise Exception(f"No speech data file found for {videoname}")
+        raise FileNotFoundError(f"No speech data file found for {videoname}")
     return speechdata
