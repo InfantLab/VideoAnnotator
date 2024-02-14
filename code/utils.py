@@ -18,7 +18,7 @@ def getprocessedvideos(data_dir, filename = "processedvideos.xlsx"):
     else:
         #create new dataframe for info about processed videos
         print(f"Creating new {filename}")
-        cols = ["VideoID","ChildID", "JokeType","JokeNum","JokeRep","JokeTake", "HowFunny","LaughYesNo", "Frames", "FPS", "Width", "Height", "Duration","Keypoints.when", "Keypoints.file","Audio.when","Audio.file","Faces.when","Faces.file","Speech.when","Speech.file","LastError"]
+        cols = ["VideoID","ChildID", "JokeType","JokeNum","JokeRep","JokeTake", "HowFunny","LaughYesNo", "Frames", "FPS", "Width", "Height", "Duration","Keypoints.when", "Keypoints.file","Audio.when","Audio.file","Faces.when","Faces.file","Speech.when","Speech.file","LastError","annotatedVideo","annotated.when"]
         processedvideos = pd.DataFrame(columns=cols)
         processedvideos.to_excel(filepath, index=False)
     return processedvideos
