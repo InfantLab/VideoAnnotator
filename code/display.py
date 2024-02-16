@@ -6,9 +6,8 @@ import time
 
 import cv2
 import ultralytics.utils as ultrautils
-from IPython.display import Image, clear_output
+from IPython.display import clear_output
 from IPython.display import display as ipydisplay
-from matplotlib import pyplot
 from PIL import Image as PILImage
 
 
@@ -125,11 +124,10 @@ def createAnnotatedVideo(
     if videos_out is None:
         videos_out = os.path.dirname(videopath)
     videoname = os.path.basename(videopath)
-    videofilename = os.path.splitext(videoname)[0] + "_annotated.mp4"
+    videofilename = os.path.splitext(videoname)[0] + ".annotated.mp4"
     outpath = os.path.join(videos_out, videofilename)
     out = cv2.VideoWriter(outpath, fourcc, fps, (width, height))
     print(f"Writing video to {outpath}")
-    
     for i in range(len(annotatedframes)):
         if debug:
             clear_output(wait=True)

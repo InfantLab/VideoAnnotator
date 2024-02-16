@@ -1,5 +1,3 @@
 {
-    "python.analysis.extraPaths": [
-        "./code"
-    ]
+  "python.analysis.extraPaths": ["./code"]
 }
