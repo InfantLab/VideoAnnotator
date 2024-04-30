@@ -7,6 +7,10 @@ import pandas as pd
 import torch
 import ultralytics.utils as ultrautils
 
+import moviepy.editor as mp
+import pandas as pd
+import torch
+import ultralytics.utils as ultrautils
 
 from os.path import normpath
 from pathlib import PureWindowsPath

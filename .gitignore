@@ -144,3 +144,5 @@ dask-worker-space
 
 code/pretrained_models/
 code/audio_cache/ 
+code/__temp__.mp3
+code/__temp__.mp4
