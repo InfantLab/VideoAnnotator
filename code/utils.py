@@ -23,6 +23,15 @@ def localpath(path):
 
 # helper functions for processing videos and dataframes
 
+def getVideoProperty(processedvideos, VideoID, Property):
+    # get the value of a property for a video in the processedvideos dataframe
+    videodata = processedvideos[processedvideos["VideoID"] == VideoID]
+    if videodata.shape[0] > 0:
+        return videodata[Property].values[0]
+    else:
+        return None
+
+
 def getprocessedvideos(data_dir, filename="processedvideos.xlsx"):
     # looks in data_dir for processedvideos.xlsx, if it exists, loads it, otherwise creates it.
     filepath = os.path.join(data_dir, filename)
@@ -202,7 +211,7 @@ def createfacesdf():
 
 def addfacestodf(facesdf, frameidx, facedata):
     # add the faces identified by face detection model to the dataframe, along with emotion, age and gender.
-    # note that unlike YOLO bounding boxes are returned top left corner and width/height not centre and width/height
+    # note that unlike YOLO bounding boxes, these are returned top left corner and width/height not centre and width/height
     for idx, face in enumerate(facedata):
         newrow = {
             "frame": frameidx,

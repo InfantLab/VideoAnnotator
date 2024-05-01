@@ -1,3 +1,6 @@
 {
-  "python.analysis.extraPaths": ["./code"]
+  "python.analysis.extraPaths": [
+    "./code"
+  ],
+  "cSpell.language": "en,en-GB"
 }
