@@ -22,16 +22,6 @@ def drawOneFrame(
 ):
     """
     redraw one frame with all the annotations we provide.
-def drawOneFrame(
-    baseImage,
-    bboxlabels=None,
-    bboxes=None,
-    keyPoints=None,
-    speechLabel=None,
-    objectData=None,
-):
-    """
-    redraw one frame with all the annotations we provide.
     Use ultralytics.utils.Annotator where we can.
 
     Args:   bboxlabels - list of labels for each bounding box, must be same length as bboxes
@@ -42,7 +32,6 @@ def drawOneFrame(
             speechLabel - string of speech happening during this frame
             objectData - similar to bboxes, but for objects [objecttype,objectinfo,x,y,w,h]
     Output: annotated image
-    """
     """
     annotator = ultrautils.plotting.Annotator(baseImage)
     if bboxlabels is not None and bboxes is not None:
@@ -67,11 +56,6 @@ def createAnnotatedVideo(
     videopath, kptsdf=None, facesdf=None, speechjson=None, videos_out=None, debug=False
 ):
     """
-
-def createAnnotatedVideo(
-    videopath, kptsdf=None, facesdf=None, speechjson=None, videos_out=None, debug=False
-):
-    """
     Take a processed video and go through frame by frame, adding the bounding boxes, keypoints, face/emotion and speech info.
     Then export the resulting video to a file.
     args:
@@ -88,19 +72,12 @@ def createAnnotatedVideo(
     if not os.path.exists(videopath):
         print(f"Video file {videopath} not found.")
         return None
-    """
-    # check if video exists
-    if not os.path.exists(videopath):
-        print(f"Video file {videopath} not found.")
-        return None
     video = cv2.VideoCapture(videopath)
     fps = video.get(cv2.CAP_PROP_FPS)
     width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 
-    # loop through frames annotating each one and storing to a list
     # loop through frames annotating each one and storing to a list
     annotatedframes = []
     framenum = 0
@@ -108,41 +85,26 @@ def createAnnotatedVideo(
         ret, frame = video.read()
         if not ret:
             print("video read stopped on frame ", framenum)
-            print("video read stopped on frame ", framenum)
             break
-        # get the keypoints for this frame
         # get the keypoints for this frame
         if kptsdf is None:
             bboxes = None
             xycs = None
         else:
             framekpts = kptsdf[kptsdf["frame"] == framenum]
-            framekpts = kptsdf[kptsdf["frame"] == framenum]
             nrows = framekpts.shape[0]
             bboxlabels = [None] * nrows
-            # for each row framekpts, create a label for the bounding box from person and index cols
             # for each row framekpts, create a label for the bounding box from person and index cols
             for idx in range(nrows):
                 pers = framekpts["person"].values[idx]
                 index = framekpts["index"].values[idx]
                 bboxlabels[idx] = f"{pers}: {index}"
-
-            bboxes = framekpts.iloc[:, 3:7].values
-                bboxlabels[idx] = f"{pers}: {index}"
-
-            bboxes = framekpts.iloc[:, 3:7].values
-
-            xycs = framekpts.iloc[:, 8:].values
-            xycs = framekpts.iloc[:, 8:].values
+                bboxes = framekpts.iloc[:, 3:7].values
+                xycs = framekpts.iloc[:, 8:].values
             frame = drawOneFrame(frame, bboxlabels, bboxes, xycs)
         if facesdf is None:
             framefaces = None
         else:
-            # get the faces for this frame
-            framefaces = facesdf[facesdf["frame"] == framenum]
-            facelabels = framefaces["emotion"].values
-            # TODO - maybe include age & gender info
-            faceboxes = framefaces.iloc[:, 3:7].values
             # get the faces for this frame
             framefaces = facesdf[facesdf["frame"] == framenum]
             facelabels = framefaces["emotion"].values
@@ -168,10 +130,8 @@ def createAnnotatedVideo(
         framenum += 1
 
     # release the video
-    # release the video
     video.release()
 
-    # create the output video
     # create the output video
     if videos_out is None:
         videos_out = os.path.dirname(videopath)
@@ -189,22 +149,11 @@ def createAnnotatedVideo(
             pil_image = PILImage.fromarray(color_converted)
             ipydisplay(pil_image)
             time.sleep(1 / fps)
-            ipydisplay(pil_image)
-            time.sleep(1 / fps)
         out.write(annotatedframes[i])
     out.release()
     print(f"Number of frames: {len(annotatedframes)}")
-    print(f"Number of frames: {len(annotatedframes)}")
     return outpath
 
-
-def WhisperExtractCurrentCaption(speechjson, frame, fps):
-    """looks through 'segments' data in the json output from whisper
-    and returns the caption that is current for the given frame"""
-    time = frame / fps
-    for seg in speechjson["segments"]:
-        if time >= seg["start"] and time <= seg["end"]:
-            return seg["text"]
 
 def WhisperExtractCurrentCaption(speechjson, frame, fps):
     """looks through 'segments' data in the json output from whisper
