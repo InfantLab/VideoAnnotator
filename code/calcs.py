@@ -81,7 +81,7 @@ def rowcogs(keypoints1d, threshold=0.5):
     """
     An function to apply to a dataframe row to get the centre of gravity for that row.
 
-    keypointrow:   xyc - [1dimensional] np.array of x,y,conf values
+    keypoints1d:   xyc - [1dimensional] np.array of x,y,conf values
     threshold:     threshold for conf values
     returns:    [avgx, avgy]
     """
@@ -122,29 +122,6 @@ def denormaliseCoordinates(df, xcols, ycols, frameHeight, frameWidth):
     for col in ycols:
         df[col] = df[col] * frameHeight
     return df
-
-
-# def normaliseCoordinates(df, cols, frameHeight, frameWidth):
-#     '''
-#     normalise the x and y pixel based coordinates to be between 0 and 1
-#     input: dataframe, list of column names, frame height and width
-#     output: dataframe with normalised coordinates
-#     '''
-#     longaxis = max(frameHeight, frameWidth)
-#     for col in cols:
-#         df.iloc[:, [col]] = df.iloc[:, [col]]  / longaxis
-#     return df
-
-# def denormaliseCoordinates(df, cols, frameHeight, frameWidth):
-#     '''
-#     for normalised x and y coordinates (between 0 and 1) convert back to pixel based coordinates (between 0 and frameHeight/Width
-#     input: dataframe, list of column names, frame height and width
-#     output: dataframe with normalised coordinates
-#     '''
-#     longaxis = max(frameHeight, frameWidth)
-#     for col in cols:
-#         df[col] = df[col] * longaxis
-#     return df
 
 
 def xyxy2ltwh(bbox):

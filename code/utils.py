@@ -69,6 +69,9 @@ def getprocessedvideos(data_dir, filename="processedvideos.xlsx"):
             "annotated.when",
         ]
         processedvideos = pd.DataFrame(columns=cols)
+        ## create numerical labels for joke type
+        #labels, unique = pd.factorize(df['category_column'])
+        #processedvideos["JokeType.label"] = labels
         processedvideos.to_excel(filepath, index=False)
     return processedvideos
 
