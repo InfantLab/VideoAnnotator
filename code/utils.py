@@ -4,11 +4,7 @@ import os
 
 import moviepy.editor as mp
 import pandas as pd
-import torch
-import ultralytics.utils as ultrautils
-
-import moviepy.editor as mp
-import pandas as pd
+import numpy as np
 import torch
 import ultralytics.utils as ultrautils
 
@@ -106,8 +102,7 @@ def createkeypointsdf():
     bodypartsxy = [f"{bp}.{c}" for bp in bodyparts for c in coords]
     boundingbox = ["bbox.x1", "bbox.y1", "bbox.x2", "bbox.y2", "bbox.c"]
     cols = ["frame", "person", "index"] + boundingbox + bodypartsxy
-    df = pd.DataFrame(columns=cols)
-    return df
+    return pd.DataFrame(columns=cols)
 
 
 def addkeypointstodf(df, framenumber, bbox, bconf, keypointsdata):
@@ -136,8 +131,7 @@ def readKeyPointsFromCSV(processedvideos, VIDEO_FILE, normed=False):
         kptsfile = videodata["Keypoints.normed"].values[0]
     else:
         kptsfile = videodata["Keypoints.file"].values[0]
-    keypoints = pd.read_csv(kptsfile)
-    return keypoints
+    return pd.read_csv(kptsfile)
 
 
 def getframekpts(kptsdf, framenumber):
@@ -163,11 +157,9 @@ def videotokeypoints(model, videopath, track=False):
     else:
         results = model(videopath, stream=True)  # generator of Results objects
     df = createkeypointsdf()
-    frame = 0
-    for r in results:
+    for frame, r in enumerate(results):
         # print(torch.flatten(r.keypoints.xy[0]).tolist())
         df = addkeypointstodf(df, frame, r.boxes.xywh, r.boxes.conf, r.keypoints.data)
-        frame += 1
     return df
 
 
@@ -296,10 +288,8 @@ def getkeypointcols():
     xcols = [x + 8 for x in xcols]  # shift by 8 to get to correct column
     ycols = [x + 8 for x in ycols]  # shift by 8 to get to correct column
 
-    xkeys = [3, 5]  # bounding box
-    xkeys.extend(xcols)  # keypoints
-    ykeys = [4, 6]  # bounding box
-    ykeys.extend(ycols)  # keypoints
+    xkeys = [3, 5, *xcols]
+    ykeys = [4, 6, *ycols]
     return xkeys, ykeys
 
 
@@ -311,38 +301,148 @@ def getfacecols():
 def getKeyPoints(processedvideos, videoname):
     # look in processed videos to see if we have a keypoints file for this video
     videodata = processedvideos[processedvideos["VideoID"] == videoname]
-    if videodata.shape[0] > 0:
-        print(f"We have a keypoints file for {videoname}")
-        kptsfile = videodata["Keypoints.file"].values[0]
-        # Load the keypoints file
-        kpts = pd.read_csv(kptsfile)
-    else:
+    if videodata.shape[0] <= 0:
         raise FileNotFoundError(f"No keypoints file found for {videoname}")
-    return kpts
+    print(f"We have a keypoints file for {videoname}")
+    kptsfile = videodata["Keypoints.file"].values[0]
+    return pd.read_csv(kptsfile)
 
 
 def getFaceData(processedvideos, videoname):
     # look in processed videos to see if we have a keypoints file for this video
     videodata = processedvideos[processedvideos["VideoID"] == videoname]
-    if videodata.shape[0] > 0:
-        print(f"We have a face data file for {videoname}")
-        facesfile = videodata["Faces.file"].values[0]
-        # Load the keypoints file
-        facedata = pd.read_csv(facesfile)
-    else:
+    if videodata.shape[0] <= 0:
         raise FileNotFoundError(f"No face data file found for {videoname}")
-    return facedata
+    print(f"We have a face data file for {videoname}")
+    facesfile = videodata["Faces.file"].values[0]
+    return pd.read_csv(facesfile)
 
 
 def getSpeechData(processedvideos, videoname):
+    """
+    Retrieves speech data for a specific video from processed videos.
+
+    Args:
+        processedvideos (pandas.DataFrame): DataFrame containing processed video data.
+        videoname (str): Name of the video to retrieve speech data for.
+
+    Returns:
+        dict: Speech data for the specified video.
+    Raises:
+        FileNotFoundError: If no speech data file is found for the provided video name.
+    """
     # look in processed videos to see if we have a keypoints file for this video
     videodata = processedvideos[processedvideos["VideoID"] == videoname]
-    if videodata.shape[0] > 0:
-        print(f"We have a speech data file for {videoname}")
-        speechfile = videodata["Speech.file"].values[0]
-        # Load the keypoints file
-        with open(speechfile) as f:
-            speechdata = json.load(f)
-    else:
+    if videodata.shape[0] <= 0:
         raise FileNotFoundError(f"No speech data file found for {videoname}")
+    print(f"We have a speech data file for {videoname}")
+    speechfile = videodata["Speech.file"].values[0]
+    # Load the keypoints file
+    with open(speechfile) as f:
+        speechdata = json.load(f)
     return speechdata
+
+############################################################################################################
+### Dataframe manipulation functions
+############################################################################################################
+def appendDictToDf(df, dict_to_append):
+    df = pd.concat([df, pd.DataFrame.from_records(dict_to_append)],ignore_index=True)
+    return df
+
+def padMovementData(keyPoints, maxFrames = None):
+    """
+    We pad the keyPoints array so that for each person [0,1]:
+    1. There is a row entry for every frame in the video upto maxFrames
+    2a. if the video is less than the maxFrames, we pad out to maxFrames
+    2b. if vides is longer than maxFrames, we truncate to maxFrames
+    Nan values are used to pad the array.
+
+    Args:
+        keyPoints (pandas.DataFrame): DataFrame containing key points data.
+        maxFrames (int, optional): Maximum number of frames to pad. Defaults to None.
+
+    Returns:
+        pandas.DataFrame: Padded DataFrame with consistent frame numbers for each person.
+    """
+    if maxFrames is None:
+        maxFrames = keyPoints.shape[1]
+    
+    print(f"Padding to {maxFrames} frames")
+    # a list of frame numbers
+    frameNumbers = pd.Index(np.arange(0,maxFrames + 1), name="frame")
+    
+    paddedKeyPoints = keyPoints.iloc[:0].copy()
+    
+    #There are two people indexed 0 and 1. 
+    #We need to pad both arrays
+    for idx in range(2):
+        thisperson = keyPoints[keyPoints["index"]==idx]
+        missing_frames = frameNumbers.difference(thisperson["frame"])
+        
+        # pad and fill missing frames
+        add_df = pd.DataFrame(index=missing_frames, columns=thisperson.columns).fillna(np.nan)
+        add_df["frame"] = missing_frames
+        add_df["index"] = idx
+        add_df["person"] = idx
+        thisperson = pd.concat([thisperson, add_df])
+        # truncate to maxFrames
+        if thisperson.shape[0] > maxFrames:
+            thisperson = thisperson[thisperson["frame"] <= maxFrames]
+        # add the paddedKeyPoints to the dataframe
+        paddedKeyPoints = appen#tododDictToDf(paddedKeyPoints,thisperson)
+        
+    return paddedKeyPoints.sort_values(by=["frame","index"])
+
+def interpolateMovementData(keyPoints):
+    """
+    Interpolates movement data to fill missing frames for each person.
+        We interpolate the keyPoints array so that for each person [0,1]:
+        1. There is a row entry for each frame in the video 
+        2. if the video is less than the maxFrames, we pad out to maxFrames
+        Nan values are used to pad the array.
+
+    Args:
+        keyPoints (pandas.DataFrame): DataFrame containing key points data.
+
+    Returns:
+        pandas.DataFrame: Interpolated DataFrame with filled missing frames.
+    """
+    # a list of frame numbers
+    maxFrames = keyPoints["frame"].max()
+    frameNumbers = pd.Index(np.arange(0,maxFrames + 1), name="frame")
+    
+    interpolatedKeyPoints = keyPoints.iloc[:0].copy()
+    
+    #There are two people indexed 0 and 1. 
+    #We need to interpolate both arrays
+    for idx in range(2):
+        thisperson = keyPoints[keyPoints["index"]==idx]
+        thisperson = thisperson.set_index("frame")
+        thisperson = thisperson.reindex(frameNumbers)
+        thisperson = thisperson.interpolate(method='linear',axis=0,limit_direction='backward')
+        thisperson["frame"] = thisperson.index
+        thisperson["index"] = idx
+        thisperson["person"] = idx
+        # add the paddedKeyPoints to the dataframe
+        interpolatedKeyPoints = appendDictToDf(interpolatedKeyPoints,thisperson)
+        
+    return interpolatedKeyPoints.sort_values(by=["frame","index"])
+
+def flattenMovementDataset(keyPoints):
+    """
+    Flattens the movement dataset by restructuring the key points data.
+    We go from 1 row per frame per person to 1 row per frame with columns for each key point.
+
+    Args:
+    keyPoints (pandas.DataFrame): DataFrame containing key points data.
+
+    Returns:
+    pandas.DataFrame: Flattened DataFrame with restructured columns.
+    """
+    #There are two people indexed 0 and 1. 
+    flattenedKps = keyPoints.pivot(index='frame', columns='index')
+    flattenedKps.columns = ["_".join((str(j),i)) for i,j in flattenedKps.columns]
+    flattenedKps = flattenedKps.reset_index()
+    return flattenedKps
+
+
