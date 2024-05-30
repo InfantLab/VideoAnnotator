@@ -28,7 +28,7 @@ def getVideoProperty(processedvideos, VideoID, Property):
         return None
 
 
-def getprocessedvideos(data_dir, filename="processedvideos.xlsx"):
+def getProcessedVideos(data_dir, filename="processedvideos.xlsx"):
     # looks in data_dir for processedvideos.xlsx, if it exists, loads it, otherwise creates it.
     filepath = os.path.join(data_dir, filename)
     # check if we have already processed some videos
@@ -72,12 +72,12 @@ def getprocessedvideos(data_dir, filename="processedvideos.xlsx"):
     return processedvideos
 
 
-def saveprocessedvideos(processedvideos, data_dir, filename="processedvideos.xlsx"):
+def saveProcessedVideos(processedvideos, data_dir, filename="processedvideos.xlsx"):
     filepath = os.path.join(data_dir, filename)
     processedvideos.to_excel(filepath, index=False)
 
 
-def createkeypointsdf():
+def createKeypointsDF():
     # create empty dataframe to store keypoints, one per person per frame
     bodyparts = [
         "nose",
@@ -105,7 +105,7 @@ def createkeypointsdf():
     return pd.DataFrame(columns=cols)
 
 
-def addkeypointstodf(df, framenumber, bbox, bconf, keypointsdata):
+def addKeypointsToDF(df, framenumber, bbox, bconf, keypointsdata):
     # take output from yolov8 and add to dataframe, person by person.
     for idx in range(len(bbox)):
         person = "child" if idx == 0 else "adult"
@@ -134,7 +134,7 @@ def readKeyPointsFromCSV(processedvideos, VIDEO_FILE, normed=False):
     return pd.read_csv(kptsfile)
 
 
-def getframekpts(kptsdf, framenumber):
+def getFrameKpts(kptsdf, framenumber):
     framekpts = kptsdf[kptsdf["frame"] == framenumber]
     nrows = framekpts.shape[0]
     bboxlabels = [None] * nrows
@@ -156,10 +156,10 @@ def videotokeypoints(model, videopath, track=False):
         results = model.track(videopath, stream=True)
     else:
         results = model(videopath, stream=True)  # generator of Results objects
-    df = createkeypointsdf()
+    df =createKeypointsDF()
     for frame, r in enumerate(results):
         # print(torch.flatten(r.keypoints.xy[0]).tolist())
-        df = addkeypointstodf(df, frame, r.boxes.xywh, r.boxes.conf, r.keypoints.data)
+        df = addKeypointsToDF(df, frame, r.boxes.xywh, r.boxes.conf, r.keypoints.data)
     return df
 
 
@@ -367,7 +367,6 @@ def padMovementData(keyPoints, maxFrames = None):
     if maxFrames is None:
         maxFrames = keyPoints.shape[1]
     
-    print(f"Padding to {maxFrames} frames")
     # a list of frame numbers
     frameNumbers = pd.Index(np.arange(0,maxFrames + 1), name="frame")
     
@@ -389,7 +388,7 @@ def padMovementData(keyPoints, maxFrames = None):
         if thisperson.shape[0] > maxFrames:
             thisperson = thisperson[thisperson["frame"] <= maxFrames]
         # add the paddedKeyPoints to the dataframe
-        paddedKeyPoints = appen#tododDictToDf(paddedKeyPoints,thisperson)
+        paddedKeyPoints = appendDictToDf(paddedKeyPoints,thisperson)
         
     return paddedKeyPoints.sort_values(by=["frame","index"])
 
@@ -444,5 +443,4 @@ def flattenMovementDataset(keyPoints):
     flattenedKps.columns = ["_".join((str(j),i)) for i,j in flattenedKps.columns]
     flattenedKps = flattenedKps.reset_index()
     return flattenedKps
-
 
