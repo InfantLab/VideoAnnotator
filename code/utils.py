@@ -33,8 +33,8 @@ def getProcessedVideos(data_dir, filename="processedvideos.xlsx"):
     filepath = os.path.join(data_dir, filename)
     # check if we have already processed some videos
     if os.path.exists(filepath):
-        print(f"Found existing {filename}")
         processedvideos = pd.read_excel(filepath, index_col=None)
+        print(f"Found existing {filename} with {processedvideos.shape[0]} rows.")
     else:
         # create new dataframe for info about processed videos
         print(f"Creating new {filename}")
@@ -127,6 +127,8 @@ def readKeyPointsFromCSV(processedvideos, VIDEO_FILE, normed=False):
     videoname = os.path.basename(VIDEO_FILE)
     # is video in the processedvideos dataframe?
     videodata = processedvideos[processedvideos["VideoID"] == videoname]
+    if videodata.shape[0] <= 0:
+        raise FileNotFoundError(f"No keypoints file found for {videoname}")
     if normed:
         kptsfile = videodata["Keypoints.normed"].values[0]
     else:
