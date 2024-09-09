@@ -58,13 +58,20 @@ conda env update --file environment.yml
 We also provide a pip `requirements.txt` file. _This should work but has not been tested._
 We recommend following similar steps to the conda installation above.
 
-1. Create a new python 3.11 environment.
+1. Create a new python 3.12 environment.
 2. Install [PyTorch](https://pytorch.org/get-started/locally/)
 3. Installing the other dependencies:
 
 ```bash
+pip install ipython pillow calcs opencv-python fastapi matplotlib moviepy numpy pandas pytest torch ultralytics deepface openai-whisper openpyxl ipywidgets tensorflow tf-keras 
+```
+
+Or from our requirements.txt
+```bash
 pip install -r requirements.txt
 ```
+
+
 
 If you get this working, please let us know what you did (and what OS you are using) so we can update this README.
 
