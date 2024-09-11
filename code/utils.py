@@ -11,6 +11,15 @@ import ultralytics.utils as ultrautils
 from os.path import normpath
 from pathlib import PureWindowsPath
 
+from pyannote.audio import Pipeline
+from pyannote.database.util import load_rttm
+import torch, torchaudio
+
+# take secrets from environment variables
+from dotenv import load_dotenv
+load_dotenv()  
+HUGGINGFACE_ACCESS_TOKEN = os.getenv("HUGGINGFACE_ACCESS_TOKEN")
+
 def posixpath(path):
     return PureWindowsPath(normpath(PureWindowsPath(path).as_posix())).as_posix()
 
@@ -60,6 +69,8 @@ def getProcessedVideos(data_dir, filename="processedvideos.xlsx"):
             "Faces.file",
             "Speech.when",
             "Speech.file",
+            "Diary.file",
+            "Diary.when",
             "LastError",
             "annotatedVideo",
             "annotated.when",
@@ -344,6 +355,8 @@ def getSpeechData(processedvideos, videoname):
         speechdata = json.load(f)
     return speechdata
 
+
+
 ############################################################################################################
 ### Dataframe manipulation functions
 ############################################################################################################
@@ -446,3 +459,34 @@ def flattenMovementDataset(keyPoints):
     flattenedKps = flattenedKps.reset_index()
     return flattenedKps
 
+
+def diarize_audio(audio_file):
+    """Diarize an audio file using the pyannote speaker diarization model.
+    from https://github.com/pyannote/pyannote-audio
+
+    Args:
+        audio_file (wav): expects a wav file
+
+    Returns:
+        Diarization: in json format {{start: float, end: float, speaker: str},...}
+    """
+    try:
+        ## Convert audio to WAV if necessary
+        #audio_file = convert_audio(audio_file, "wav")
+
+        print(f"Diarizing audio file: {audio_file}")
+        pipeline = Pipeline.from_pretrained(
+            "pyannote/speaker-diarization-3.1",
+            use_auth_token=HUGGINGFACE_ACCESS_TOKEN)
+
+        # send pipeline to GPU (when available)
+        pipeline.to(torch.device("cuda"))
+
+        # apply pretrained pipeline
+        diarization = pipeline(audio_file)
+        
+        return diarization
+        
+    except Exception as e:
+        print(f"diarize_audio Error: {str(e)}")
+        return None

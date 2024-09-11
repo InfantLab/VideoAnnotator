@@ -76,26 +76,40 @@ def avgxys(xyc, threshold=0.5):
     avgy = np.mean(y)
     return avgx, avgy
 
-
-def rowcogs(keypoints1d, threshold=0.5):
+def stdevxys(xyc, threshold=0.5):
     """
-    An function to apply to a dataframe row to get the centre of gravity for that row.
-
-    keypoints1d:   xyc - [1dimensional] np.array of x,y,conf values
-    threshold:     threshold for conf values
-    returns:    [avgx, avgy]
+    Given a set of x,y,conf values (a n x 3 array) calculate the stdev for x,y values
+    for all those with a confidence above the threshold.
+    args:   xyc - [nrows x 3] array of x,y,conf values
+            threshold - confidence threshold
+    returns:    stdx, stdy
     """
     # get the x,y values where conf > threshold
-    xyc3 = keypoints1d.to_numpy().reshape(-1, 3)
-    x = xyc3[:, 0]
-    y = xyc3[:, 1]
-    conf = xyc3[:, 2]
+    x = xyc[:, 0]
+    y = xyc[:, 1]
+    conf = xyc[:, 2]
     x = x[conf > threshold]
     y = y[conf > threshold]
     # calculate the average
-    avgx = np.mean(x)
-    avgy = np.mean(y)
-    return [avgx, avgy]
+    stdevx = np.std(x)
+    stdevy = np.std(y)
+    return stdevx, stdevy
+
+def rowcogs(keypoints1d, threshold=0.5):
+    """
+    wrapper for avgxys to work with a 1d array of keypoints
+    """
+    # get the x,y values where conf > threshold
+    xyc3 = keypoints1d.to_numpy().reshape(-1, 3)
+    return avgxys(xyc3, threshold)
+
+def rowstds(keypoints1d, threshold=0.5):
+    """
+        wraps stdevxys to work with a 1d array of keypoints
+    """
+    xycs3 = keypoints1d.to_numpy().reshape(-1, 3)
+    return stdevxys(xycs3, threshold)
+
 
 
 def normaliseCoordinates(df, xcols, ycols, frameHeight, frameWidth):
