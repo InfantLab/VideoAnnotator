@@ -62,17 +62,25 @@ conda activate babyjokes
 conda env update --file environment.yml
 ```
 
-### Installing with Pip
+### Installing with Pip (recommended)
 
 We also provide a pip `requirements.txt` file. _This should work but has not been tested._
 We recommend following similar steps to the conda installation above.
 
 1. Create a new python 3.12 environment.
 2. Install [PyTorch](https://pytorch.org/get-started/locally/)
+
+For example, on Windows with Python 3.12 and Cuda v12
+   
+```bash
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 --user
+```
+
+
 3. Installing the other dependencies:
 
 ```bash
-pip install ipython pillow calcs opencv-python fastapi matplotlib moviepy numpy pandas pytest torch ultralytics deepface openai-whisper openpyxl ipywidgets tensorflow tf-keras 
+pip install ipython pillow calcs opencv-python fastapi matplotlib moviepy numpy pandas pytest torch ultralytics deepface openai-whisper openpyxl ipywidgets tensorflow tf-keras librosa pyannote-audio python-dotenv lapx openpyxl
 ```
 
 Or from our requirements.txt
