@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from calcs import avgxys
+from src.calcs import avgxys
 
 class TestAvgxys(unittest.TestCase):
     def test_avgxys(self):
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     unittest.main()
     import pytest
 import pandas as pd
-from calcs import centreOfGravity
+from src.calcs import centreOfGravity
 
 # Test data setup
 @pytest.fixture

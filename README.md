@@ -1,36 +1,68 @@
-# BabyJokes Video Analysis
+# BabyJokes Project
 
-## Caspar Addyman <infantologist@gmail.com>
+This project analyzes videos of children's reactions to jokes using computer vision and machine learning techniques.
 
 ## Table of Contents
 
-- [Description](#description)
-- [Dataset](#dataset)
+- [Directory Structure](#directory-structure)
+- [Usage](#usage)
+  - [Running in Jupyter Notebooks](#running-in-jupyter-notebooks)
+  - [Submitting to HPC](#submitting-to-hpc)
+- [Dependencies](#dependencies)
 - [Installation](#installation)
   - [Using with Docker](#using-with-docker)
   - [Installing with Conda](#installing-with-conda)
   - [Installing with Pip](#installing-with-pip)
 - [Sage Hackathon](#sage-hackathon)
 - [License](#license)
+- [Citation](#citation)
 
-## Description
-A demonstration project using machine learning models to analyse dataset of videos of parents demonstrating jokes to babies. This dataset was assembled for Sage Ethical AI hackathon 2023. It serves as a small test case to explore challenges with machine learning models of parent child interactions. You can watch a video motivating the project here [Sage Hackathon 2023 - PCI Video Analysis 6m20](https://www.youtube.com/watch?v=mt0Um-ZNbj4)
+## Directory Structure
 
-## Dataset
+```
+babyjokes/
+├── code/            # Jupyter notebooks
+├── data/            # Data directory
+├── src/             # Shared source code
+│   ├── processors/  # Video processing modules
+│   └── utils/       # Utility functions  
+└── scripts/         # HPC job submission scripts
+```
 
-A small test dataset is provided in the `LookitLaughter.test` folder. It consists of 54 videos of parents demonstarting simple jokes to their babies. Metadata is provided in `_LookitLaughter.xlsx`. Each video shows one joke from a set of five possibilities [Peekaboo,TearingPaper,NomNomNom,ThatsNotAHat,ThatsNotACat]. For each joke parents rated how funny the child found it [Not Funny, Slightly Funny, Funny, Extremely Funny] and whether they laughed [Yes, No]
-_A larger dataset with 1425 videos is available on request._
+## Usage
 
+### Running in Jupyter Notebooks
+
+1. Open the notebooks in the `code` directory
+2. Run the cells in order to process the videos
+
+### Submitting to HPC
+
+Use the scripts in the `scripts` directory to submit jobs to the HPC system.
+
+For keypoint extraction:
+
+```bash
+cd babyjokes
+python scripts/submit_extract_movement.py --videos_in "../LookitLaughter.test" --data_out "../data/1_interim"
+```
+
+For video understanding:
+
+```bash
+cd babyjokes
+python scripts/submit_video_understanding.py --videos_in "../LookitLaughter.test" --data_out "../data/1_interim"
+```
+
+## Dependencies
+
+- Python 3.8+
+- ultralytics (YOLOv8)
+- pandas
+- numpy
+- opencv-python
 
 ## Installation
-
-This project makes use of the following libraries and versions:
-
-- Python 3.12
-- Pytorch 2.4.0 (for YOLOv8, deepface, whisper)
-- ultralytics 8.2 (wrapper for YOLOv8 object detection model)
-- deepface 0.0.93 (Facial Expression Recognition)
-- openai-whisper (OpenAI's Whisper speech recognition -open source version)
 
 ### Using with Docker
 
@@ -71,11 +103,10 @@ We recommend following similar steps to the conda installation above.
 2. Install [PyTorch](https://pytorch.org/get-started/locally/)
 
 For example, on Windows with Python 3.12 and Cuda v12
-   
+
 ```bash
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 --user
 ```
-
 
 3. Installing the other dependencies:
 
@@ -84,6 +115,7 @@ pip install ipython pillow calcs opencv-python fastapi matplotlib moviepy numpy 
 ```
 
 Or from our requirements.txt
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -95,14 +127,13 @@ If you get this working, please let us know what you did (and what OS you are us
 Sage data scientist, Yu-Cheng has a write up of his team's approach to the problem on the Sage-AI blog. [Quantifying Parent-Child Interactions: Advancing Video Understanding with Multi-Modal LLMs](https://medium.com/sage-ai/unlocking-parent-child-interactions-advancing-video-understanding-with-multi-modal-llms-c570ab487183)
 Repositories from the hackathon are found here:
 
-- London team - Combining Speech recognition and laughter detection https://github.com/chilledgeek/ethical_ai_hackathon_2023
-- US team - Interpreting Parent laughter with VideoLLama https://github.com/yutsai84/Ask-Anything
-
+- London team - Combining Speech recognition and laughter detection <https://github.com/chilledgeek/ethical_ai_hackathon_2023>
+- US team - Interpreting Parent laughter with VideoLLama <https://github.com/yutsai84/Ask-Anything>
 
 ## License
+
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Citation
 
 If you use this code or dataset in your research, please cite the following doi:
-

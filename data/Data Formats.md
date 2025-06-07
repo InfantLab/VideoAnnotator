@@ -1,13 +1,12 @@
 # Data Formats
 
-
-This document explains the data formats created and saved by the project. 
+This document explains the data formats created and saved by the project.
 
 This data is found in the folder `/data/1_interim`
 
 1. Metadata dataframe `processedvideos` saved as `processedvideos.xlsx`
 2. Keypoints from YOLOv8. One datafram per video each row is a unique person detected in a single frame of video
-    a. Keypoints DataFrames - keypoints x,y locations in frame pixels `{videoid}.csv`, 
+    a. Keypoints DataFrames - keypoints x,y locations in frame pixels `{videoid}.csv`,
     b. Normed Keypoints DataFrames - keypoints scaled to range (0, 1) `{videoid}_normed.csv`
 3. Face recognition data from DeepFace - potentially several dataframes per video (One for each backend model used).
     Each dataframe has a row for each face detected in a frame of video.
@@ -52,36 +51,61 @@ def saveProcessedVideos(processedvideos, data_dir, filename="processedvideos.xls
 
 The Keypoints DataFrame is used to store keypoints data for each person detected in each frame of the video. It includes columns for various body parts and their coordinates, as well as bounding box information.
 
-
-The Keypoints DataFrame has the following columns:
 ### Columns
+
 - `frame`: The frame number in the video.
-- `person`: The person identifier.
+- `person`: The person identifier (usually "child" or "adult").
+- `index`: Numerical index for the person (0 = child, 1 = adult).
 - `bbox.x1`: The x-coordinate of the top-left corner of the bounding box.
 - `bbox.y1`: The y-coordinate of the top-left corner of the bounding box.
 - `bbox.x2`: The x-coordinate of the bottom-right corner of the bounding box.
 - `bbox.y2`: The y-coordinate of the bottom-right corner of the bounding box.
-- `bbox.c`: The confidence score of the bounding box.
-- body keypoints have an x, y, and confidence score for each body part.
+- `bbox.conf`: The confidence score of the bounding box.
+
+### Keypoint Columns
+
+For each keypoint in the standard COCO/YOLO keypoint model, there are three values:
+
+- `{keypoint_name}.x`: The x-coordinate of the keypoint.
+- `{keypoint_name}.y`: The y-coordinate of the keypoint.
+- `{keypoint_name}.conf`: The confidence score of the keypoint detection.
+
+For example, for the "nose" keypoint, we have:
+
 ```
-nose.x, nose.y, nose.c
-left_eye.x, left_eye.y, left_eye.c
-right_eye.x, right_eye.y, right_eye.c
-left_ear.x, left_ear.y, left_ear.c
-right_ear.x, right_ear.y, right_ear.c
-left_shoulder.x, left_shoulder.y, left_shoulder.c
-right_shoulder.x, right_shoulder.y, right_shoulder.c
-left_elbow.x, left_elbow.y, left_elbow.c
-right_elbow.x, right_elbow.y, right_elbow.c
-left_wrist.x, left_wrist.y, left_wrist.c
-right_wrist.x, right_wrist.y, right_wrist.c
-left_hip.x, left_hip.y, left_hip.c
-right_hip.x, right_hip.y, right_hip.c
-left_knee.x, left_knee.y, left_knee.c
-right_knee.x, right_knee.y, right_knee.c
-left_ankle.x, left_ankle.y, left_ankle.c
-right_ankle.x, right_ankle.y, right_ankle.c
+nose.x, nose.y, nose.conf
 ```
+
+### Standard Keypoints
+
+The following keypoints are included (in order):
+
+1. `nose`
+2. `left_eye`
+3. `right_eye`
+4. `left_ear`
+5. `right_ear`
+6. `left_shoulder`
+7. `right_shoulder`
+8. `left_elbow`
+9. `right_elbow`
+10. `left_wrist`
+11. `right_wrist`
+12. `left_hip`
+13. `right_hip`
+14. `left_knee`
+15. `right_knee`
+16. `left_ankle`
+17. `right_ankle`
+
+### Normalized Data
+
+Normalized keypoints data follows the same structure but with x,y coordinates scaled to the range [0,1], where:
+
+- x coordinates are divided by the video width
+- y coordinates are divided by the video height
+
+This makes the coordinates invariant to video dimensions and suitable for modeling.
 
 ## 3. Face Recognition Data Format
 
@@ -271,4 +295,5 @@ The JSON file contains the following structure:
         }
     ],
     "language": "en"
-}```
+}
+```
