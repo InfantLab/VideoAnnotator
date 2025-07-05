@@ -1,73 +1,129 @@
-# Welcome to your Lovable project
+# Video Annotation Viewer - Multimodal Analysis Tool
 
-## Project info
+A sophisticated web-based video annotation viewer designed for reviewing offline-processed videos with rich multimodal annotations including pose detection, facial emotion recognition, audio analysis, and synchronized timeline visualization.
 
-**URL**: https://lovable.dev/projects/e37e7db5-0e30-453d-8ae3-a54c1cbb39b0
+## Features
 
-## How can I edit this code?
+### 🎥 **Video Player with Multimodal Overlays**
+- **Pose Detection**: Real-time skeleton overlay with keypoints and connections
+- **Facial Emotion Recognition**: Bounding boxes with emotion labels and confidence scores
+- **Audio Emotion Analysis**: Voice sentiment indicators synchronized with speech
+- **Subtitles**: Transcribed speech with customizable styling
+- **Event Annotations**: Action and interaction labels with timing
 
-There are several ways of editing your application.
+### 📊 **Rich Timeline Visualization**
+- **Audio Waveform**: Visual representation of audio amplitude over time
+- **Motion Intensity**: Graph showing movement activity throughout the video
+- **Event Tracks**: Subtitle and action event segments with hover details
+- **Interactive Navigation**: Click and drag to seek, with precise time markers
 
-**Use Lovable**
+### 🎛️ **Advanced Controls**
+- **Overlay Toggles**: Show/hide individual annotation layers
+- **Playback Controls**: Play, pause, frame stepping, and variable speed playback
+- **Timeline Settings**: Customize which tracks are visible
+- **Responsive Design**: Optimized for research and analysis workflows
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e37e7db5-0e30-453d-8ae3-a54c1cbb39b0) and start prompting.
+## How to Use
 
-Changes made via Lovable will be committed automatically to this repo.
+### 1. **Getting Started**
+- Launch the application to see the welcome screen
+- Click "Get Started" to begin loading your files
+- Or click "Try with Sample Data" to explore with demo content
 
-**Use your preferred IDE**
+### 2. **Loading Your Data**
+- **Video File**: Upload any standard video format (MP4, WebM, AVI, MOV)
+- **Annotation File**: Upload a JSON file containing your analysis results
+- Click "Start Viewing" to launch the annotation viewer
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 3. **JSON Data Format**
+Your annotation JSON should include:
+```json
+{
+  "video": {
+    "filename": "your-video.mp4",
+    "duration": 60.0,
+    "frameRate": 30,
+    "width": 1920,
+    "height": 1080
+  },
+  "frames": {
+    "0": {
+      "frameNumber": 0,
+      "timestamp": 0.0,
+      "persons": [...],
+      "faces": [...],
+      "audioEmotion": {...},
+      "motionIntensity": 0.3
+    }
+  },
+  "events": [...],
+  "audio": {...},
+  "metadata": {...}
+}
+```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 4. **Navigation & Analysis**
+- **Timeline**: Click anywhere to jump to that time
+- **Overlays**: Toggle different annotation types using the control panel
+- **Playback**: Use standard controls plus frame stepping for detailed analysis
+- **Timeline Tracks**: Enable/disable waveform, motion, and event visualization
 
-Follow these steps:
+## Technology Stack
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+- **Frontend**: React + TypeScript + Tailwind CSS
+- **Video Processing**: HTML5 Video API with Canvas overlays
+- **Timeline**: Custom SVG/Canvas implementation with real-time synchronization
+- **UI Components**: Shadcn/ui for consistent, accessible interface
+- **Build System**: Vite for fast development and optimized builds
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## Use Cases
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 🔬 **Research Applications**
+- Human behavior analysis and validation
+- Computer vision pipeline result review
+- Multimodal interaction studies
+- Algorithm performance evaluation
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### 📹 **Video Analysis**
+- Pose estimation result verification
+- Emotion recognition quality assessment
+- Audio-visual synchronization review
+- Event detection validation
+
+### 🏥 **Clinical & Educational**
+- Therapy session analysis
+- Movement disorder assessment
+- Educational interaction studies
+- Social behavior research
+
+## Getting Started for Developers
+
+This project was built using [Lovable](https://lovable.dev), an AI-powered web development platform.
+
+### Running Locally
+```bash
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Customization
+The application is designed to be easily extensible:
+- Add new annotation types by extending the overlay system
+- Customize timeline tracks for your specific data
+- Modify the JSON schema to match your pipeline outputs
+- Integrate with your existing analysis workflow
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Future Enhancements
 
-**Use GitHub Codespaces**
+- **Editing Capabilities**: Validate and correct annotations directly in the viewer
+- **Multi-video Comparison**: Side-by-side analysis of different processing results
+- **Export Features**: Generate reports and export corrected annotations
+- **Real-time Processing**: Integration with live analysis pipelines
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Support
 
-## What technologies are used for this project?
+For questions, feature requests, or technical support, please refer to the project documentation or contact the development team.
 
-This project is built with:
+---
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/e37e7db5-0e30-453d-8ae3-a54c1cbb39b0) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+**Built with ❤️ using Lovable** - *AI-powered full-stack development*

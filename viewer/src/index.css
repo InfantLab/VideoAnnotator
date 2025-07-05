@@ -8,26 +8,53 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Video Annotation Viewer Design System */
+    --background: 220 13% 8%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 220 13% 10%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 220 13% 10%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 220 13% 8%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 220 13% 15%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 13% 15%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 142 76% 36%;
+    --accent-foreground: 210 40% 98%;
+
+    /* Video-specific colors */
+    --video-bg: 220 13% 6%;
+    --timeline-bg: 220 13% 12%;
+    --playhead: 217 91% 60%;
+    
+    /* Annotation colors */
+    --pose-color: 142 76% 36%;
+    --face-emotion: 45 93% 47%;
+    --audio-emotion: 271 81% 56%;
+    --subtitle-color: 210 40% 98%;
+    --event-color: 0 91% 71%;
+    
+    /* Timeline track colors */
+    --waveform-color: 217 91% 60%;
+    --motion-color: 142 76% 36%;
+    --subtitle-track: 45 93% 47%;
+    --event-track: 0 91% 71%;
+    
+    /* Interactive states */
+    --hover-bg: 220 13% 18%;
+    --active-bg: 217 91% 60%;
+    
+    /* Glassmorphism effects */
+    --glass-bg: 220 13% 10% / 0.8;
+    --glass-border: 220 13% 25% / 0.3;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
