@@ -4,6 +4,8 @@ librosa
 matplotlib==3.9.2
 moviepy==1.0.3
 opencv_python==4.10.0.84
+openai-whisper
+openpxl
 pandas==2.2.2
 Pillow==10.4.0
 pyannote.audio==3.3.2
