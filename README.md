@@ -1,6 +1,6 @@
-# BabyJokes
+# VideoAnnotator
 
-A toolkit for analyzing, processing, and visualizing baby joke data, including video, audio, and annotation workflows. This project supports both local and containerized development using Conda and pip, and is designed for cross-platform compatibility.
+A toolkit for analyzing, processing, and visualizing human interaction videos With video, audio, and annotation workflows. This project supports both local and containerized development using Conda and pip, and is designed for cross-platform compatibility.
 
 ## Quick Start
 
@@ -21,3 +21,7 @@ A toolkit for analyzing, processing, and visualizing baby joke data, including v
 ---
 
 For more information, please refer to the detailed [Installation.md](docs/Installation.md) guide.
+
+## Forked from BabyJokes, JULY 2025
+
+https://github.com/InfantLab/babyjokes.git
