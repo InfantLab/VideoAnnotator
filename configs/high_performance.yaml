@@ -1,0 +1,116 @@
+# High-performance configuration for GPU-accelerated processing
+# Optimized for systems with CUDA-capable GPUs
+
+# Scene Detection Pipeline
+scene_detection:
+  threshold: 25.0  # More sensitive detection
+  min_scene_length: 1.0  # Shorter minimum scenes
+  model: "ViT-L/14"  # Larger CLIP model for better accuracy
+  scene_labels:
+    - "living room"
+    - "bedroom" 
+    - "kitchen"
+    - "bathroom"
+    - "nursery"
+    - "clinic"
+    - "office"
+    - "outdoor"
+    - "playground"
+    - "car"
+    - "restaurant"
+    - "hospital"
+    - "school"
+    - "daycare"
+  extract_keyframes: true
+  keyframe_format: "jpg"
+
+# Person Tracking Pipeline
+person_tracking:
+  model_name: "yolo11l-pose.pt"  # Larger model for better accuracy
+  confidence_threshold: 0.4  # Lower threshold for more detections
+  iou_threshold: 0.4
+  track_mode: true
+  tracker_type: "botsort"  # More accurate tracker
+  pose_format: "coco_17"
+  min_keypoint_confidence: 0.2
+  max_persons: 20
+  min_track_length: 3
+  trajectory_smoothing: true
+
+# Face Analysis Pipeline
+face_analysis:
+  backend: "mediapipe"  # Switch to OpenFace when available
+  face_confidence_threshold: 0.6
+  max_faces: 15
+  detect_emotions: true
+  detect_gaze: true
+  detect_action_units: true
+  detect_identity: false
+  face_crop_padding: 30
+  emotion_batch_size: 16  # Larger batch for GPU
+  
+  mediapipe:
+    model_selection: 1
+    refine_landmarks: true
+  
+  openface:
+    model_path: "models/openface/"
+    enable_3d_landmarks: true
+    enable_head_pose: true
+    enable_aus: true
+  
+  deepface:
+    emotion_model: "Facenet512"  # More accurate model
+    age_gender_model: "VGG-Face"
+    detector_backend: "retinaface"  # More accurate detector
+
+# Audio Processing Pipeline
+audio_processing:
+  speech_recognition:
+    model: "openai/whisper-large-v2"  # Larger model
+    language: "auto"
+    
+  speaker_diarization:
+    model: "pyannote/speaker-diarization"
+    min_speakers: 1
+    max_speakers: 15
+    
+  audio_classification:
+    model: "yamnet"
+    confidence_threshold: 0.4  # Lower threshold
+    
+  features:
+    sample_rate: 16000
+    hop_length: 256  # Higher resolution
+    n_mels: 256  # More mel bins
+    
+  segment_length: 15.0  # Shorter segments for precision
+  overlap: 0.25
+
+# Global Settings
+global:
+  device: "cuda"
+  batch_size: 16  # Larger batch for GPU
+  num_workers: 8  # More workers
+  output_format: "json"
+  save_intermediate: true  # Save for analysis
+  log_level: "DEBUG"  # Detailed logging
+  
+  # Performance settings
+  memory_limit: "16GB"
+  gpu_memory_fraction: 0.9  # Use most of GPU memory
+  
+  # Quality settings
+  min_face_size: 30  # Smaller minimum for distant faces
+  min_person_size: 50  # Smaller minimum for distant people
+  blur_threshold: 50  # More sensitive blur detection
+  
+  # Processing settings
+  enable_tensorrt: true  # TensorRT acceleration if available
+  mixed_precision: true  # Mixed precision training
+  compile_models: true  # JIT compilation
+  
+  # Output settings
+  save_visualizations: true  # Save annotated frames
+  visualization_fps: 5  # FPS for visualization videos
+  compress_output: true  # Compress JSON output

@@ -150,3 +150,75 @@ code/__temp__.mp4
 
 # labelstudio
 mydata
+
+# Project specific outputs and caches
+output/
+data/0_temp/
+data/1_interim/
+data/2_final/
+*.ipynb_checkpoints
+
+# Large media files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+*.flv
+*.webm
+*.m4v
+*.3gp
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.ogg
+*.wma
+
+# Model files and caches
+*.pth
+*.onnx
+*.pkl
+*.joblib
+*.h5
+*.hdf5
+*.pb
+*.tflite
+.cache/
+.huggingface/
+.torch/
+
+# IDE and editor files
+.vscode/
+*.code-workspace
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Test and benchmark data
+test_data/
+sample_videos/
+benchmark.json
+.benchmarks/
+
+# Annotation tools
+.fiftyone/
+.label-studio/
+.roboflow/
+
+# Audio processing temp files
+*.rttm
+*.lab
+*.TextGrid
+
+# Performance reports
+performance_reports/
+benchmark_results/
+
+# Coverage reports
+htmlcov/

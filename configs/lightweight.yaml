@@ -1,0 +1,92 @@
+# Lightweight configuration for CPU-only processing or resource-constrained environments
+# Optimized for minimal resource usage while maintaining reasonable accuracy
+
+# Scene Detection Pipeline
+scene_detection:
+  threshold: 35.0  # Less sensitive to reduce false positives
+  min_scene_length: 3.0  # Longer minimum scenes
+  model: "ViT-B/32"  # Smaller CLIP model
+  scene_labels:
+    - "indoor"
+    - "outdoor"
+    - "clinic"
+    - "home"
+    - "office"
+  extract_keyframes: false  # Skip keyframe extraction
+  keyframe_format: "jpg"
+
+# Person Tracking Pipeline
+person_tracking:
+  model_name: "yolo11n-pose.pt"  # Nano model for speed
+  confidence_threshold: 0.6  # Higher threshold for precision
+  iou_threshold: 0.6
+  track_mode: false  # Disable tracking to save resources
+  tracker_type: "bytetrack"
+  pose_format: "coco_17"
+  min_keypoint_confidence: 0.4
+  max_persons: 5  # Limit to reduce computation
+  min_track_length: 10
+  trajectory_smoothing: false
+
+# Face Analysis Pipeline
+face_analysis:
+  backend: "mediapipe"  # Lightweight option
+  face_confidence_threshold: 0.8  # Higher threshold
+  max_faces: 5  # Limit faces
+  detect_emotions: true
+  detect_gaze: false  # Disable to save resources
+  detect_action_units: false  # Disable to save resources
+  detect_identity: false
+  face_crop_padding: 15
+  emotion_batch_size: 1  # Process one at a time
+  
+  mediapipe:
+    model_selection: 0  # Short-range model (faster)
+    refine_landmarks: false  # Skip refinement
+  
+  deepface:
+    emotion_model: "VGG-Face"  # Lightweight model
+    detector_backend: "opencv"  # Fastest detector
+
+# Audio Processing Pipeline
+audio_processing:
+  speech_recognition:
+    model: "openai/whisper-tiny"  # Smallest model
+    language: "en"  # Fixed language
+    
+  audio_classification:
+    confidence_threshold: 0.6  # Higher threshold
+    
+  features:
+    sample_rate: 8000  # Lower sample rate
+    hop_length: 1024  # Lower resolution
+    n_mels: 64  # Fewer mel bins
+    
+  segment_length: 60.0  # Longer segments
+  overlap: 0.1  # Minimal overlap
+
+# Global Settings
+global:
+  device: "cpu"
+  batch_size: 1  # Process one at a time
+  num_workers: 1  # Single worker
+  output_format: "json"
+  save_intermediate: false
+  log_level: "WARNING"  # Minimal logging
+  
+  # Performance settings
+  memory_limit: "2GB"
+  
+  # Quality settings - relaxed for speed
+  min_face_size: 80  # Larger minimum
+  min_person_size: 150  # Larger minimum
+  blur_threshold: 200  # Less sensitive
+  
+  # Processing settings
+  enable_tensorrt: false
+  mixed_precision: false
+  compile_models: false
+  
+  # Output settings
+  save_visualizations: false
+  compress_output: true

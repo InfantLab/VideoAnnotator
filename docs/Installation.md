@@ -1,6 +1,6 @@
-# Installation Guide for BabyJokes
+# Installation Guide for VideoAnnotator
 
-This guide provides detailed instructions for setting up the BabyJokes project for both local development and containerized environments.
+This guide provides detailed instructions for setting up the VideoAnnotator project for both local development and containerized environments.
 
 ---
 
@@ -16,8 +16,8 @@ This guide provides detailed instructions for setting up the BabyJokes project f
 ## 1. Clone the Repository
 
 ```sh
-git clone https://github.com/your-org/babyjokes.git
-cd babyjokes
+git clone https://github.com/your-org/VideoAnnotator.git
+cd VideoAnnotator  
 ```
 
 ---
@@ -28,7 +28,7 @@ This method works on Windows, macOS, and Linux.
 
 ```sh
 conda env create -f environment.yml
-conda activate babyjokes
+conda activate VideoAnnotator
 ```
 
 - This will install all required dependencies, including pip packages, as specified in `environment.yml`.

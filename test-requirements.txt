@@ -1,0 +1,8 @@
+# Test basic packages for Python 3.13 compatibility
+numpy
+pandas
+matplotlib
+opencv-python
+torch
+torchvision
+transformers

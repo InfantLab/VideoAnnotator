@@ -1,36 +1,12 @@
-name: babyjokes
+name: VideoAnnotator
 channels:
+  - conda-forge
   - defaults
 dependencies:
-  - python=3.12
+  - python=3.13
   - pip
-  - bzip2
-  - ca-certificates
-  - expat
-  - libffi
-  - openssl
-  - setuptools
-  - sqlite
-  - tk
-  - wheel
-  - xz
-  - zlib
+  - ffmpeg  # Essential for video processing
+  - cmake   # For building native extensions
+  - pkg-config
   - pip:
-      - fastapi==0.115.0
-      - ipython==8.12.3
-      - librosa
-      - matplotlib==3.9.2
-      - moviepy==1.0.3
-      - opencv_python==4.10.0.84
-      - openai-whisper
-      - openpyxl
-      - pandas==2.2.2
-      - Pillow==10.4.0
-      - pyannote.audio==3.3.2
-      - pyannote.core==5.0.0
-      - pyannote.database==5.1.0
-      - pyannote.metrics==3.2.1
-      - pyannote.pipeline==3.0.1
-      - pytest==8.3.2
-      - python-dotenv==1.0.1
-      - ultralytics==8.2.85
+    - -r requirements.txt

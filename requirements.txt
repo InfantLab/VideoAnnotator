@@ -1,18 +1,87 @@
-fastapi==0.115.0
-ipython==8.12.3
-librosa
-matplotlib==3.9.2
-moviepy==1.0.3
-opencv_python==4.10.0.84
-openai-whisper
-openpxl
-pandas==2.2.2
-Pillow==10.4.0
-pyannote.audio==3.3.2
-pyannote.core==5.0.0
-pyannote.database==5.1.0
-pyannote.metrics==3.2.1
-pyannote.pipeline==3.0.1
-pytest==8.3.2
-python-dotenv==1.0.1
-ultralytics==8.2.85
+# Core dependencies - Python 3.13 Compatible
+fastapi>=0.115.0
+ipython>=8.12.3
+librosa>=0.10.0
+matplotlib>=3.9.2
+moviepy>=1.0.3
+opencv-python>=4.10.0.84
+openai-whisper>=20231117
+openpyxl
+pandas>=2.2.2
+Pillow>=10.4.0
+pytest>=8.3.2
+python-dotenv>=1.0.1
+numpy>=1.24.0
+tqdm>=4.65.0
+
+# Video and computer vision - YOLO11 and detection
+ultralytics>=8.3.0
+supervision>=0.16.0
+# Note: PyTorch with CUDA should be installed separately:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+torch>=2.0.0  # CUDA version installed separately
+torchvision>=0.15.0  # CUDA version installed separately
+timm>=0.9.0
+
+# Audio processing - Core packages that should work
+pyannote.audio>=3.3.2
+pyannote.core>=5.0.0
+pyannote.database>=5.1.0
+pyannote.metrics>=3.2.1
+pyannote.pipeline>=3.0.1
+torchaudio>=2.0.0  # CUDA version installed separately
+
+
+# Scene detection and video understanding
+scenedetect[opencv]>=0.6.3
+transformers>=4.40.0
+# clip-by-openai - Not compatible with Python 3.13 and modern PyTorch
+sentence-transformers>=2.2.0
+
+# Face analysis - Limited set for Python 3.13
+# deepface>=0.0.91 - Not compatible with Python 3.13 due to TensorFlow dependency
+dlib>=19.24.0
+imutils>=0.5.4
+
+# Additional ML/AI tools
+openai>=1.0.0
+huggingface-hub>=0.20.0
+accelerate>=0.20.0
+datasets>=2.16.0
+
+# Data processing and visualization
+seaborn>=0.12.0
+plotly>=5.17.0
+scipy>=1.11.0
+scikit-learn>=1.3.0
+networkx>=3.1
+pydantic>=2.0.0
+typer>=0.9.0
+
+# Development and testing
+black>=23.0.0
+flake8>=6.0.0
+pre-commit>=3.0.0
+jupyter>=1.0.0
+jupyterlab>=4.0.0
+pytest-cov>=4.0.0
+mypy>=1.5.0
+
+# Additional video processing
+imageio>=2.31.0
+imageio-ffmpeg>=0.4.8
+av>=10.0.0
+
+# Multimodal and advanced AI
+open-clip-torch>=2.24.0
+
+# Database and storage
+sqlalchemy>=2.0.0
+alembic>=1.12.0
+
+# Additional utilities
+pyyaml>=6.0.0
+rich>=13.0.0
+click>=8.0.0
+requests>=2.31.0
+packaging>=21.0

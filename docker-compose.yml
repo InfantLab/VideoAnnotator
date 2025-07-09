@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # Development service
+  videoannotator-dev:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./output:/app/output
+    environment:
+      - PYTHONPATH=/app
+      - CUDA_VISIBLE_DEVICES=0
+    ports:
+      - "8888:8888"  # Jupyter
+      - "8000:8000"  # FastAPI
+    command: ["python", "main.py", "--help"]
+    profiles:
+      - dev
+
+  # Production service
+  videoannotator-prod:
+    build:
+      context: .
+      target: production
+    volumes:
+      - ./data:/app/data:ro
+      - ./output:/app/output
+    environment:
+      - PYTHONPATH=/app
+    command: ["python", "main.py", "--config", "configs/default.yaml"]
+    profiles:
+      - prod
+
+  # GPU-enabled service
+  videoannotator-gpu:
+    build:
+      context: .
+      target: gpu-base
+    volumes:
+      - ./data:/app/data:ro
+      - ./output:/app/output
+    environment:
+      - PYTHONPATH=/app
+      - CUDA_VISIBLE_DEVICES=0
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: ["python", "main.py", "--config", "configs/high_performance.yaml"]
+    profiles:
+      - gpu
+
+  # Jupyter service for development
+  jupyter:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./output:/app/output
+    ports:
+      - "8888:8888"
+    environment:
+      - PYTHONPATH=/app
+    command: ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
+    profiles:
+      - dev
+
+  # Database service (optional, for future use)
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=videoannotator
+      - POSTGRES_USER=videoannotator
+      - POSTGRES_PASSWORD=videoannotator
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    profiles:
+      - db
+
+  # Redis service (optional, for caching)
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    profiles:
+      - cache
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: videoannotator_network

@@ -1,0 +1,75 @@
+# Default configuration for all VideoAnnotator pipelines
+# This configuration provides sensible defaults for most use cases
+
+# Scene Detection Pipeline
+scene_detection:
+  threshold: 30.0
+  min_scene_length: 2.0
+  model: "ViT-B/32"
+  scene_labels:
+    - "living room"
+    - "bedroom"
+    - "kitchen"
+    - "bathroom"
+    - "nursery"
+    - "clinic"
+    - "office"
+    - "outdoor"
+    - "playground"
+    - "car"
+  extract_keyframes: true
+  keyframe_format: "jpg"
+
+# Person Tracking Pipeline  
+person_tracking:
+  model_name: "yolo11n-pose.pt"
+  confidence_threshold: 0.5
+  iou_threshold: 0.5
+  track_mode: true
+  tracker_type: "bytetrack"
+  pose_format: "coco_17"
+  min_keypoint_confidence: 0.3
+  max_persons: 10
+
+# Face Analysis Pipeline
+face_analysis:
+  backend: "mediapipe"
+  face_confidence_threshold: 0.7
+  max_faces: 10
+  detect_emotions: true
+  detect_gaze: false  # Requires OpenFace
+  detect_action_units: false  # Requires OpenFace
+  face_crop_padding: 20
+  
+  mediapipe:
+    model_selection: 1
+    refine_landmarks: true
+  
+  deepface:
+    emotion_model: "VGG-Face"
+    detector_backend: "opencv"
+
+# Audio Processing Pipeline
+audio_processing:
+  speech_recognition:
+    model: "openai/whisper-base"
+    language: "auto"
+  
+  audio_classification:
+    confidence_threshold: 0.5
+  
+  features:
+    sample_rate: 16000
+    hop_length: 512
+    n_mels: 128
+
+# Global Settings
+global:
+  device: "auto"
+  batch_size: 4
+  num_workers: 2
+  output_format: "json"
+  save_intermediate: false
+  log_level: "INFO"
+  min_face_size: 50
+  min_person_size: 100
