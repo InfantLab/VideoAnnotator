@@ -39,8 +39,8 @@ except ImportError:
 
 from ..base_pipeline import BasePipeline
 from ...schemas.audio_schema import (
-    AudioSegment, SpeechTranscription, SpeakerDiarization, 
-    AudioEvent, MusicDetection, AudioQuality, SpeechEmotion
+    AudioSegment, SpeechRecognition, SpeakerDiarization, 
+    AudioClassification
 )
 
 
@@ -180,7 +180,7 @@ class AudioPipeline(BasePipeline):
         
         return results
     
-    def _transcribe_speech(self, audio_path: Path) -> Optional[SpeechTranscription]:
+    def _transcribe_speech(self, audio_path: Path) -> Optional[SpeechRecognition]:
         """Transcribe speech using Whisper."""
         if not self._whisper_model:
             return None
@@ -204,7 +204,7 @@ class AudioPipeline(BasePipeline):
                                 'confidence': word.get('probability', 0.0)
                             })
             
-            return SpeechTranscription(
+            return SpeechRecognition(
                 text=result['text'],
                 language=result.get('language', 'unknown'),
                 confidence=0.0,  # Whisper doesn't provide overall confidence
@@ -261,7 +261,7 @@ class AudioPipeline(BasePipeline):
             self.logger.error(f"Speaker diarization failed: {e}")
             return None
     
-    def _detect_audio_events(self, audio: np.ndarray, sr: int) -> List[AudioEvent]:
+    def _detect_audio_events(self, audio: np.ndarray, sr: int) -> List[AudioClassification]:
         """Detect audio events (applause, laughter, etc.)."""
         events = []
         
@@ -275,7 +275,7 @@ class AudioPipeline(BasePipeline):
             energy = np.mean(window ** 2)
             
             if energy > self.config.event_detection_threshold:
-                event = AudioEvent(
+                event = AudioClassification(
                     event_type="generic_event",
                     start_time=i / sr,
                     end_time=(i + window_size) / sr,
@@ -288,7 +288,7 @@ class AudioPipeline(BasePipeline):
         merged_events = self._merge_nearby_events(events)
         return merged_events
     
-    def _detect_music(self, audio: np.ndarray, sr: int) -> Optional[MusicDetection]:
+    def _detect_music(self, audio: np.ndarray, sr: int) -> Optional[AudioClassification]:
         """Detect music segments in audio."""
         # Placeholder implementation using spectral features
         # Real implementation would use trained music detection models
@@ -302,7 +302,7 @@ class AudioPipeline(BasePipeline):
         is_music = consistency > self.config.music_detection_threshold
         
         if is_music:
-            return MusicDetection(
+            return AudioClassification(
                 is_music=True,
                 confidence=consistency,
                 segments=[{
@@ -317,14 +317,14 @@ class AudioPipeline(BasePipeline):
                 }
             )
         
-        return MusicDetection(
+        return AudioClassification(
             is_music=False,
             confidence=1.0 - consistency,
             segments=[],
             properties={}
         )
     
-    def _assess_audio_quality(self, audio: np.ndarray, sr: int) -> AudioQuality:
+    def _assess_audio_quality(self, audio: np.ndarray, sr: int) -> AudioClassification:
         """Assess audio quality metrics."""
         # Calculate various quality metrics
         
@@ -344,7 +344,7 @@ class AudioPipeline(BasePipeline):
         # Overall quality score (0-1)
         quality_score = min(1.0, max(0.0, (snr / 40.0 + (1.0 - clipping_ratio)) / 2.0))
         
-        return AudioQuality(
+        return AudioClassification(
             signal_to_noise_ratio=snr,
             dynamic_range=dynamic_range,
             clipping_ratio=clipping_ratio,
@@ -357,7 +357,7 @@ class AudioPipeline(BasePipeline):
             }
         )
     
-    def _analyze_speech_emotions(self, audio: np.ndarray, sr: int) -> List[SpeechEmotion]:
+    def _analyze_speech_emotions(self, audio: np.ndarray, sr: int) -> List[AudioClassification]:
         """Analyze emotions in speech."""
         # Placeholder implementation
         # Real implementation would use trained emotion recognition models
@@ -388,7 +388,7 @@ class AudioPipeline(BasePipeline):
                 emotion = "neutral"
                 confidence = 0.7
             
-            emotion_obj = SpeechEmotion(
+            emotion_obj = AudioClassification(
                 emotion=emotion,
                 confidence=confidence,
                 start_time=i / sr,
@@ -402,7 +402,7 @@ class AudioPipeline(BasePipeline):
         
         return emotions
     
-    def _merge_nearby_events(self, events: List[AudioEvent]) -> List[AudioEvent]:
+    def _merge_nearby_events(self, events: List[AudioClassification]) -> List[AudioClassification]:
         """Merge nearby audio events."""
         if not events:
             return []

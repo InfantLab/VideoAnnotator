@@ -9,7 +9,7 @@ from .pipelines import (
     SceneDetectionPipeline,
     PersonTrackingPipeline,
     FaceAnalysisPipeline,
-    AudioProcessingPipeline
+    AudioPipeline
 )
 
 __version__ = "1.0.0"

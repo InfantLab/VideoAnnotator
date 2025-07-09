@@ -59,7 +59,7 @@ class AudioContext(BaseAnnotation):
     dominant_frequency: Optional[float] = Field(None, description="Dominant frequency in Hz")
     
     # Common audio tags
-    AUDIO_TAGS = [
+    AUDIO_TAGS: ClassVar[List[str]] = [
         "speech", "laughter", "crying", "music", "television", 
         "toys", "appliances", "outdoor", "traffic", "nature"
     ]
@@ -68,9 +68,9 @@ class AudioContext(BaseAnnotation):
 @dataclass
 class SceneSegment(AnnotationBase):
     """A detected scene segment (legacy dataclass support)."""
-    start_time: float  # Segment start time in seconds
-    end_time: float    # Segment end time in seconds
-    scene_id: str      # Unique scene identifier
+    start_time: float = 0.0  # Segment start time in seconds
+    end_time: float = 0.0    # Segment end time in seconds
+    scene_id: str = ""       # Unique scene identifier
     scene_type: Optional[str] = None  # Scene classification (e.g., "living_room", "outdoor")
     transition_type: Optional[str] = None  # Type of transition ("cut", "fade", etc.)
     
@@ -91,16 +91,20 @@ class SceneSegment(AnnotationBase):
 
 
 @dataclass
-class SceneAnnotation(AnnotationBase):
+class SceneAnalysis(AnnotationBase):
     """Complete scene analysis for a video segment."""
-    segments: List[SceneSegment]
-    total_scenes: int
-    avg_scene_length: float
-    scene_types: List[str]  # All detected scene types
+    segments: List[SceneSegment] = None
+    total_scenes: int = 0
+    avg_scene_length: float = 0.0
+    scene_types: List[str] = None  # All detected scene types
     
     def __post_init__(self):
         if not self.type:
             self.type = "scene_analysis"
+        if self.segments is None:
+            self.segments = []
+        if self.scene_types is None:
+            self.scene_types = []
     
     def to_dict(self) -> Dict[str, Any]:
         base = super().to_dict()

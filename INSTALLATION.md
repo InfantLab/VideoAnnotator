@@ -4,7 +4,7 @@ VideoAnnotator is a powerful video analysis tool that leverages GPU-accelerated 
 
 ## Prerequisites
 
-- **Python 3.13** (recommended)
+- **Python 3.12** (recommended)
 - **Git** for cloning repositories
 - **Visual Studio Build Tools** (Windows) or **GCC** (Linux/Mac)
 - **CMake** (version 3.22 or higher)
@@ -44,7 +44,14 @@ conda activate VideoAnnotator
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 ```
 
-### 3. Install Dependencies
+### 3. Install TensorFlow with CUDA Support (for DeepFace)
+
+```bash
+# Install TensorFlow 2.15 with CUDA support for Python 3.12
+pip install tensorflow==2.15.0
+```
+
+### 4. Install Dependencies
 
 ```bash
 # Install all other Python dependencies
@@ -102,13 +109,20 @@ python setup.py install
 ### 3. Verify Installation
 
 ```python
-# Test CUDA availability
+# Test CUDA availability with PyTorch
 import torch
 print(f"PyTorch version: {torch.__version__}")
 print(f"CUDA available: {torch.cuda.is_available()}")
 if torch.cuda.is_available():
     print(f"CUDA version: {torch.version.cuda}")
     print(f"GPU device: {torch.cuda.get_device_name(0)}")
+
+# Test TensorFlow CUDA availability
+import tensorflow as tf
+print(f"TensorFlow version: {tf.__version__}")
+print(f"TensorFlow sees GPU: {len(tf.config.list_physical_devices('GPU')) > 0}")
+if len(tf.config.list_physical_devices('GPU')) > 0:
+    print(f"GPU devices: {tf.config.list_physical_devices('GPU')}")
 
 # Test YOLO11 installation
 from ultralytics import YOLO
@@ -247,14 +261,14 @@ python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f
 This project uses a hybrid approach for dependency management:
 
 1. **Conda** for system-level packages and environment management
-   - Creates an isolated Python 3.13 environment
+   - Creates an isolated Python 3.12 environment
    - Handles C/C++ dependencies that are hard to install with pip
    - Provides consistent environment across platforms
 
 2. **Pip** for Python-specific packages
    - Installs PyTorch with CUDA support
    - Installs all other Python dependencies
-   - Ensures compatibility with Python 3.13
+   - Ensures compatibility with Python 3.12
 
 ### Managing Environment Updates
 
@@ -311,13 +325,18 @@ Once installed, OpenFace 3.0 provides:
 | **Audio** | Whisper, pyannote.audio | Speech & audio processing | ✅ |
 | **Annotation** | Label Studio, FiftyOne | Data annotation & visualization | N/A |
 
-### Python 3.13 Compatibility Notes
+### Python 3.12 Compatibility Notes
 
-Some packages are not yet compatible with Python 3.13:
+Some packages require specific installation steps for Python 3.12:
 
-- **DeepFace**: TensorFlow dependency not yet Python 3.13 compatible
-- **CLIP by OpenAI**: Original implementation not compatible with Python 3.13
-- **face-recognition**: Not yet updated for Python 3.13
+- **TensorFlow**: TensorFlow 2.15+ is compatible with Python 3.12 and can be installed with:
+  ```bash
+  pip install tensorflow==2.15.0
+  ```
+
+- **DeepFace**: Compatible with Python 3.12 when TensorFlow 2.15+ is installed
+
+- **face-recognition**: May require manual compilation for Python 3.12
 
 Alternative compatible packages are provided in the codebase.
 

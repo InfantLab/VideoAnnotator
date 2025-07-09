@@ -26,10 +26,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import yaml
 
 # Import all pipeline modules
-from src.pipelines.scene_detection import ScenePipeline, ScenePipelineConfig
-from src.pipelines.person_tracking import PersonPipeline, PersonPipelineConfig
-from src.pipelines.face_analysis import FacePipeline, FacePipelineConfig
-from src.pipelines.audio_processing import AudioPipeline, AudioPipelineConfig
+from src.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
+from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
+from src.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
+from src.pipelines.audio_processing.audio_pipeline import AudioPipeline
 
 
 class VideoAnnotatorRunner:
@@ -138,26 +138,27 @@ class VideoAnnotatorRunner:
         try:
             # Scene detection pipeline
             if self.config.get('scene_detection', {}).get('enabled', True):
-                scene_config = ScenePipelineConfig(**self.config.get('scene_detection', {}))
-                self.pipelines['scene'] = ScenePipeline(scene_config)
+                scene_config = self.config.get('scene_detection', {})
+                self.pipelines['scene'] = SceneDetectionPipeline(scene_config)
                 self.logger.info("Scene detection pipeline initialized")
             
             # Person tracking pipeline
             if self.config.get('person_tracking', {}).get('enabled', True):
-                person_config = PersonPipelineConfig(**self.config.get('person_tracking', {}))
-                self.pipelines['person'] = PersonPipeline(person_config)
+                person_config = self.config.get('person_tracking', {})
+                self.pipelines['person'] = PersonTrackingPipeline(person_config)
                 self.logger.info("Person tracking pipeline initialized")
             
             # Face analysis pipeline
             if self.config.get('face_analysis', {}).get('enabled', True):
-                face_config = FacePipelineConfig(**self.config.get('face_analysis', {}))
-                self.pipelines['face'] = FacePipeline(face_config)
+                face_config = self.config.get('face_analysis', {})
+                self.pipelines['face'] = FaceAnalysisPipeline(face_config)
                 self.logger.info("Face analysis pipeline initialized")
             
             # Audio processing pipeline
             if self.config.get('audio_processing', {}).get('enabled', True):
-                audio_config = AudioPipelineConfig(**self.config.get('audio_processing', {}))
+                audio_config = self.config.get('audio_processing', {})
                 self.pipelines['audio'] = AudioPipeline(audio_config)
+                self.logger.info("Audio processing pipeline initialized")
                 self.logger.info("Audio processing pipeline initialized")
             
         except Exception as e:
@@ -225,8 +226,14 @@ class VideoAnnotatorRunner:
                             'message': 'Audio extraction failed or disabled'
                         }
                 else:
-                    # For video pipelines
-                    pipeline_results = pipeline.process_video(video_path)
+                    # For video pipelines, use the standard process method
+                    pipeline_results = pipeline.process(
+                        video_path=str(video_path),
+                        start_time=0.0,
+                        end_time=None,
+                        pps=1.0,  # Default to 1 prediction per second
+                        output_dir=str(output_dir)
+                    )
                 
                 # Calculate processing time
                 pipeline_duration = time.time() - pipeline_start_time

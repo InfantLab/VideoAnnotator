@@ -7,7 +7,7 @@ import numpy as np
 from pathlib import Path
 
 from ..base_pipeline import BasePipeline
-from ...schemas.person_schema import PersonDetection, PersonTracking, PoseKeypoints
+from ...schemas.person_schema import PersonDetection, PersonTrajectory, PoseKeypoints
 from ...schemas.base_schema import BoundingBox, KeyPoint
 
 
@@ -189,7 +189,7 @@ class PersonTrackingPipeline(BasePipeline):
         
         return pose_keypoints
     
-    def _build_trajectories(self, tracks: Dict[int, List[PersonDetection]], video_id: str) -> List[PersonTracking]:
+    def _build_trajectories(self, tracks: Dict[int, List[PersonDetection]], video_id: str) -> List[PersonTrajectory]:
         """Build trajectory objects from tracked detections."""
         trajectories = []
         
@@ -197,7 +197,7 @@ class PersonTrackingPipeline(BasePipeline):
             if len(detections) > 1:  # Only include multi-frame tracks
                 detections.sort(key=lambda d: d.timestamp)
                 
-                trajectory = PersonTracking(
+                trajectory = PersonTrajectory(
                     type="person_tracking",
                     video_id=video_id,
                     timestamp=detections[0].timestamp,

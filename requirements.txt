@@ -1,4 +1,4 @@
-# Core dependencies - Python 3.13 Compatible
+# Core dependencies - Python 3.12 Compatible
 fastapi>=0.115.0
 ipython>=8.12.3
 librosa>=0.10.0

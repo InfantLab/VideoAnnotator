@@ -2,7 +2,7 @@
 Audio processing schemas for speech, music, and sound analysis.
 """
 
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, ClassVar
 from dataclasses import dataclass
 from pydantic import BaseModel, Field
 
@@ -70,7 +70,7 @@ class AudioClassification(BaseAnnotation):
     event_confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Event confidence")
     
     # Common audio events
-    AUDIO_EVENTS = [
+    AUDIO_EVENTS: ClassVar[List[str]] = [
         "speech", "laughter", "crying", "applause", "music",
         "toys", "television", "phone", "door", "footsteps",
         "coughing", "sneezing", "breathing", "silence"
@@ -91,9 +91,9 @@ class AudioClassification(BaseAnnotation):
 @dataclass
 class SpeechSegment(AnnotationBase):
     """A speech segment with transcription (legacy dataclass support)."""
-    start_time: float  # Segment start time in seconds
-    end_time: float    # Segment end time in seconds
-    text: str          # Transcribed text
+    start_time: float = 0.0  # Segment start time in seconds
+    end_time: float = 0.0    # Segment end time in seconds
+    text: str = ""          # Transcribed text
     language: Optional[str] = None  # Detected language
     speaker_id: Optional[str] = None  # Speaker identifier
     words: Optional[List[Dict[str, Any]]] = None  # Word-level timestamps
@@ -118,12 +118,18 @@ class SpeechSegment(AnnotationBase):
 @dataclass
 class SpeakerDiarization(AnnotationBase):
     """Speaker identification and diarization results (legacy dataclass support)."""
-    speakers: List[str]  # List of detected speaker IDs
-    segments: List[Dict[str, Any]]  # Speaker segments with start/end times
-    total_speech_time: float  # Total time with speech
-    speaker_change_points: List[float]  # Timestamps of speaker changes
+    speakers: List[str] = None  # List of detected speaker IDs
+    segments: List[Dict[str, Any]] = None  # Speaker segments with start/end times
+    total_speech_time: float = 0.0  # Total time with speech
+    speaker_change_points: List[float] = None  # Timestamps of speaker changes
     
     def __post_init__(self):
+        if self.speakers is None:
+            self.speakers = []
+        if self.segments is None:
+            self.segments = []
+        if self.speaker_change_points is None:
+            self.speaker_change_points = []
         if not self.type:
             self.type = "speaker_diarization"
     
@@ -141,8 +147,8 @@ class SpeakerDiarization(AnnotationBase):
 @dataclass
 class AudioFeatures(AnnotationBase):
     """Audio feature extraction results (legacy dataclass support)."""
-    duration: float
-    sample_rate: int
+    duration: float = 0.0
+    sample_rate: int = 44100
     fundamental_frequency: Optional[List[float]] = None  # F0 over time
     spectral_features: Optional[Dict[str, List[float]]] = None  # MFCC, spectral centroid, etc.
     prosodic_features: Optional[Dict[str, float]] = None  # Pitch range, speaking rate, etc.

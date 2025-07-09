@@ -3,7 +3,7 @@ Face detection, emotion recognition, and gaze estimation schemas.
 Includes support for OpenFace 3.0, DeepFace, and MediaPipe.
 """
 
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, ClassVar
 from dataclasses import dataclass
 from pydantic import BaseModel, Field
 
@@ -99,7 +99,7 @@ class FaceActionUnits(BaseAnnotation):
     aus: Dict[str, float] = Field(..., description="Action Unit intensities")
     
     # Common Action Units
-    AU_NAMES = {
+    AU_NAMES: ClassVar[Dict[str, str]] = {
         "AU01": "Inner Brow Raiser",
         "AU02": "Outer Brow Raiser", 
         "AU04": "Brow Lowerer",
@@ -156,9 +156,9 @@ class FaceIdentity(BaseAnnotation):
 @dataclass
 class FaceDetectionLegacy(AnnotationBase):
     """A detected face in a frame (legacy dataclass support)."""
-    face_id: int  # Unique face identifier
-    person_id: Optional[int]  # Associated person ID if tracked
-    bbox: BoundingBox  # Face bounding box
+    face_id: int = 0  # Unique face identifier
+    person_id: Optional[int] = None  # Associated person ID if tracked
+    bbox: Optional[BoundingBox] = None  # Face bounding box
     landmarks: Optional[List[KeyPoint]] = None  # Facial landmarks
     quality_score: Optional[float] = None  # Face quality/clarity score
     
@@ -171,7 +171,7 @@ class FaceDetectionLegacy(AnnotationBase):
         base.update({
             "face_id": self.face_id,
             "person_id": self.person_id,
-            "bbox": self.bbox.to_dict(),
+            "bbox": self.bbox.to_dict() if self.bbox else None,
             "landmarks": [lm.to_dict() for lm in self.landmarks] if self.landmarks else None,
             "quality_score": self.quality_score
         })
@@ -181,10 +181,10 @@ class FaceDetectionLegacy(AnnotationBase):
 @dataclass
 class FaceEmotionLegacy(AnnotationBase):
     """Facial emotion recognition results (legacy dataclass support)."""
-    face_id: int
-    person_id: Optional[int]
-    emotions: Dict[str, float]  # Emotion probabilities (anger, disgust, fear, happy, sad, surprise, neutral)
-    dominant_emotion: str  # The emotion with highest probability
+    face_id: int = 0
+    person_id: Optional[int] = None
+    emotions: Optional[Dict[str, float]] = None  # Emotion probabilities (anger, disgust, fear, happy, sad, surprise, neutral)
+    dominant_emotion: str = "neutral"  # The emotion with highest probability
     arousal: Optional[float] = None  # Arousal level (0-1)
     valence: Optional[float] = None  # Valence level (0-1)
     age_estimate: Optional[int] = None  # Estimated age
@@ -199,7 +199,7 @@ class FaceEmotionLegacy(AnnotationBase):
         base.update({
             "face_id": self.face_id,
             "person_id": self.person_id,
-            "emotions": self.emotions,
+            "emotions": self.emotions or {},
             "dominant_emotion": self.dominant_emotion,
             "arousal": self.arousal,
             "valence": self.valence,
@@ -212,10 +212,10 @@ class FaceEmotionLegacy(AnnotationBase):
 @dataclass
 class FaceGazeLegacy(AnnotationBase):
     """Gaze direction and attention estimation (legacy dataclass support)."""
-    face_id: int
-    person_id: Optional[int]
-    gaze_direction: Tuple[float, float, float]  # 3D gaze vector (x, y, z)
-    gaze_angles: Tuple[float, float]  # Pitch and yaw angles in degrees
+    face_id: int = 0
+    person_id: Optional[int] = None
+    gaze_direction: Tuple[float, float, float] = (0.0, 0.0, 0.0)  # 3D gaze vector (x, y, z)
+    gaze_angles: Tuple[float, float] = (0.0, 0.0)  # Pitch and yaw angles in degrees
     eye_landmarks: Optional[Dict[str, List[KeyPoint]]] = None  # Left/right eye landmarks
     attention_target: Optional[str] = None  # What the person is looking at
     

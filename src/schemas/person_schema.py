@@ -2,7 +2,7 @@
 Person detection, tracking, and pose estimation schemas.
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, ClassVar
 from dataclasses import dataclass
 from pydantic import BaseModel, Field
 
@@ -40,7 +40,7 @@ class PoseKeypoints(BaseAnnotation):
     action_label: Optional[str] = Field(None, description="Detected action/gesture")
     
     # Standard COCO-17 keypoint names
-    COCO_17_KEYPOINTS = [
+    COCO_17_KEYPOINTS: ClassVar[List[str]] = [
         "nose", "left_eye", "right_eye", "left_ear", "right_ear",
         "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
         "left_wrist", "right_wrist", "left_hip", "right_hip",
@@ -113,8 +113,8 @@ class PersonTrajectory(BaseAnnotation):
 @dataclass
 class PersonDetectionLegacy(AnnotationBase):
     """A detected person in a frame (legacy dataclass support)."""
-    person_id: int  # Unique identifier for tracking
-    bbox: BoundingBox  # Person bounding box
+    person_id: int = 0  # Unique identifier for tracking
+    bbox: Optional[BoundingBox] = None  # Person bounding box
     pose_keypoints: Optional[List[KeyPoint]] = None  # COCO-style keypoints if available
     attributes: Optional[Dict[str, Any]] = None  # Additional attributes (age, clothing, etc.)
     
@@ -136,11 +136,11 @@ class PersonDetectionLegacy(AnnotationBase):
 @dataclass
 class PersonTrackingLegacy(AnnotationBase):
     """Person tracking across multiple frames (legacy dataclass support)."""
-    person_id: int
-    trajectory: List[PersonDetectionLegacy]  # Detections across frames
-    first_seen: float  # First appearance timestamp
-    last_seen: float   # Last appearance timestamp
-    total_duration: float  # Total time person is visible
+    person_id: int = 0
+    trajectory: Optional[List[PersonDetectionLegacy]] = None  # Detections across frames
+    first_seen: float = 0.0  # First appearance timestamp
+    last_seen: float = 0.0   # Last appearance timestamp
+    total_duration: float = 0.0  # Total time person is visible
     
     def __post_init__(self):
         if not self.type:
@@ -150,7 +150,7 @@ class PersonTrackingLegacy(AnnotationBase):
         base = super().to_dict()
         base.update({
             "person_id": self.person_id,
-            "trajectory": [det.to_dict() for det in self.trajectory],
+            "trajectory": [det.to_dict() for det in self.trajectory] if self.trajectory else [],
             "first_seen": self.first_seen,
             "last_seen": self.last_seen,
             "total_duration": self.total_duration
@@ -161,8 +161,8 @@ class PersonTrackingLegacy(AnnotationBase):
 @dataclass
 class PoseKeypointsLegacy(AnnotationBase):
     """Detailed pose keypoint annotation (legacy dataclass support)."""
-    person_id: int
-    keypoints: Dict[str, KeyPoint]  # Named keypoints (nose, left_eye, etc.)
+    person_id: int = 0
+    keypoints: Optional[Dict[str, KeyPoint]] = None  # Named keypoints (nose, left_eye, etc.)
     pose_type: str = "coco_17"  # Keypoint format (coco_17, coco_133, etc.)
     action_label: Optional[str] = None  # Detected action/gesture
     
@@ -174,7 +174,7 @@ class PoseKeypointsLegacy(AnnotationBase):
         base = super().to_dict()
         base.update({
             "person_id": self.person_id,
-            "keypoints": {name: kp.to_dict() for name, kp in self.keypoints.items()},
+            "keypoints": {name: kp.to_dict() for name, kp in self.keypoints.items()} if self.keypoints else {},
             "pose_type": self.pose_type,
             "action_label": self.action_label
         })
