@@ -1,8 +1,19 @@
 """
-VideoAnnotator Core Module
+VideoAnnotator - Modern Video Annotation Pipeline
 
-This package contains the core functionality for the VideoAnnotator toolkit.
+A comprehensive toolkit for video analysis including scene detection,
+person tracking, face analysis, and audio processing.
 """
+
+from .version import (
+    __version__,
+    __version_info__,
+    __author__,
+    __license__,
+    get_version_info,
+    print_version_info,
+    create_annotation_metadata
+)
 
 from .pipelines import (
     BasePipeline,
@@ -12,12 +23,39 @@ from .pipelines import (
     AudioPipeline
 )
 
-__version__ = "1.0.0"
+from .schemas import (
+    AnnotationBase,
+    VideoMetadata,
+    SceneSegment,
+    SceneAnnotation,
+    PersonDetection,
+    FaceDetection,
+    SpeechSegment
+)
 
 __all__ = [
+    # Version information
+    "__version__",
+    "__version_info__",
+    "__author__",
+    "__license__",
+    "get_version_info",
+    "print_version_info",
+    "create_annotation_metadata",
+    
+    # Pipelines
     "BasePipeline",
     "SceneDetectionPipeline",
     "PersonTrackingPipeline", 
     "FaceAnalysisPipeline",
-    "AudioProcessingPipeline"
+    "AudioPipeline",
+    
+    # Schemas
+    "AnnotationBase",
+    "VideoMetadata",
+    "SceneSegment",
+    "SceneAnnotation",
+    "PersonDetection",
+    "FaceDetection",
+    "SpeechSegment"
 ]

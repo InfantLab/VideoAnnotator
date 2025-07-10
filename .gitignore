@@ -153,9 +153,7 @@ mydata
 
 # Project specific outputs and caches
 output/
-data/0_temp/
-data/1_interim/
-data/2_final/
+data/
 *.ipynb_checkpoints
 
 # Large media files

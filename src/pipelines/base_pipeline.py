@@ -8,6 +8,7 @@ from pathlib import Path
 import json
 import logging
 from ..schemas.base_schema import AnnotationBase, VideoMetadata, BaseAnnotation
+from ..version import create_annotation_metadata, get_model_info
 
 
 class BasePipeline(ABC):
@@ -19,7 +20,8 @@ class BasePipeline(ABC):
         self.name = self.__class__.__name__.lower()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_initialized = False
-    
+        self._model_info = None  # Will be set by individual pipelines
+
     @abstractmethod
     def initialize(self) -> None:
         """Initialize the pipeline (load models, etc.)."""
@@ -92,6 +94,20 @@ class BasePipeline(ABC):
             }
         finally:
             cap.release()
+    
+    def set_model_info(self, model_name: str, model_path: Optional[str] = None) -> None:
+        """Set model information for this pipeline."""
+        self._model_info = get_model_info(model_name, model_path)
+        self.logger.info(f"Model info set: {model_name}")
+
+    def create_output_metadata(self, video_metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Create comprehensive metadata for pipeline outputs."""
+        return create_annotation_metadata(
+            pipeline_name=self.__class__.__name__,
+            model_info=self._model_info,
+            processing_params=self.config,
+            video_metadata=video_metadata
+        )
     
     def __enter__(self):
         """Context manager entry."""

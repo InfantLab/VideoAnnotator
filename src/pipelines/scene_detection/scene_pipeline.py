@@ -5,9 +5,12 @@ Scene detection and classification pipeline using PySceneDetect and CLIP.
 from typing import Dict, Any, List, Optional
 import numpy as np
 from pathlib import Path
+from datetime import datetime
+import json
 
 from ..base_pipeline import BasePipeline
 from ...schemas.scene_schema import SceneSegment, SceneAnnotation
+from ...schemas.base_schema import VideoMetadata
 
 
 class SceneDetectionPipeline(BasePipeline):
@@ -89,6 +92,11 @@ class SceneDetectionPipeline(BasePipeline):
         except ImportError:
             raise ImportError("PySceneDetect not installed. Run: pip install scenedetect")
         
+        # Get video duration if end_time not specified
+        if end_time is None:
+            video_info = self.get_video_info(video_path)
+            end_time = video_info["duration"]
+        
         # Detect scenes
         scene_list = detect(
             video_path, 
@@ -109,6 +117,14 @@ class SceneDetectionPipeline(BasePipeline):
                     "start": start_sec,
                     "end": end_sec
                 })
+        
+        # If no scenes detected, create a single scene for the entire video
+        if not segments:
+            self.logger.info(f"No scene changes detected. Creating single scene for entire video ({start_time:.2f}s - {end_time:.2f}s)")
+            segments.append({
+                "start": start_time,
+                "end": end_time
+            })
         
         return segments
     
@@ -195,3 +211,78 @@ class SceneDetectionPipeline(BasePipeline):
             },
             "required": ["type", "video_id", "timestamp", "start_time", "end_time", "scene_id"]
         }
+
+    def initialize(self) -> None:
+        """Initialize the pipeline (load models, etc.)."""
+        self.logger.info("Initializing Scene Detection Pipeline")
+        
+        # Verify PySceneDetect is available
+        try:
+            import scenedetect
+            self.logger.info(f"PySceneDetect version: {scenedetect.__version__}")
+        except ImportError:
+            self.logger.warning("PySceneDetect not available - scene detection will be limited")
+        
+        # Try to verify CLIP/OpenCV availability
+        try:
+            import cv2
+            self.logger.info(f"OpenCV version: {cv2.__version__}")
+        except ImportError:
+            self.logger.warning("OpenCV not available - video processing will be limited")
+        
+        try:
+            import torch
+            self.logger.info(f"PyTorch available: {torch.cuda.is_available()}")
+        except ImportError:
+            self.logger.warning("PyTorch not available - CLIP classification disabled")
+        
+        self.is_initialized = True
+        self.logger.info("Scene Detection Pipeline initialized successfully")
+        
+        # Set model information
+        self.set_model_info("PySceneDetect + CLIP", None)
+
+    def cleanup(self) -> None:
+        """Cleanup resources."""
+        self.logger.info("Cleaning up Scene Detection Pipeline")
+        # Nothing specific to clean up for this pipeline
+        self.is_initialized = False
+
+    def get_video_metadata(self, video_path: str) -> VideoMetadata:
+        """Get video metadata."""
+        from ...schemas.base_schema import VideoMetadata
+        import cv2
+        
+        video_info = self.get_video_info(video_path)
+        path = Path(video_path)
+        
+        return VideoMetadata(
+            video_id=path.stem,
+            filepath=str(path),
+            duration=video_info["duration"],
+            fps=video_info["fps"],
+            width=video_info["width"],
+            height=video_info["height"],
+            total_frames=video_info["frame_count"]
+        )
+
+    def save_annotations(self, annotations: List[SceneSegment], output_path: str) -> None:
+        """Save annotations to JSON file with comprehensive metadata."""
+        # Get video metadata from the first annotation if available
+        video_metadata = None
+        if annotations:
+            video_metadata = {
+                "video_id": annotations[0].video_id,
+                "total_scenes": len(annotations),
+                "total_duration": max(ann.end_time for ann in annotations) if annotations else 0.0
+            }
+        
+        output_data = {
+            "metadata": self.create_output_metadata(video_metadata),
+            "pipeline": "scene_detection",
+            "timestamp": datetime.now().isoformat(),
+            "annotations": [ann.to_dict() for ann in annotations]
+        }
+        
+        with open(output_path, 'w') as f:
+            json.dump(output_data, f, indent=2)

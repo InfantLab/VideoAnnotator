@@ -1,5 +1,5 @@
 """
-VideoAnnotat    "AudioPipeline",r Pipeline Modules
+VideoAnnotator Pipeline Modules
 
 This package contains modular pipeline implementations for video annotation tasks.
 """
@@ -15,5 +15,5 @@ __all__ = [
     "SceneDetectionPipeline", 
     "PersonTrackingPipeline",
     "FaceAnalysisPipeline",
-    "AudioProcessingPipeline"
+    "AudioPipeline"
 ]
