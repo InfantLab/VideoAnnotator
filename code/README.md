@@ -1,4 +1,6 @@
-# Baby Jokes Video Analysis - Notebooks
+# VideoAnnotator Analysis Notebooks
+
+Jupyter notebooks for video analysis, data exploration, and research workflows.
 
 Here you can find all the notebooks. The naming convention is:
 * A number (for ordering),

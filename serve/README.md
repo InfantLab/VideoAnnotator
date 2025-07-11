@@ -1,4 +1,6 @@
-# Baby Jokes Video Analysis - HTTP API
+# VideoAnnotator HTTP API
+
+REST API server for VideoAnnotator video processing pipelines.
 
 HTTP API for serving predictions.
 

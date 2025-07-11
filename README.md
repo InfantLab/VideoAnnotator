@@ -1,12 +1,17 @@
 # VideoAnnotator
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 A modern, modular toolkit for analyzing, processing, and visualizing human interaction videos with comprehensive video, audio, and annotation workflows. Built with scalable pipeline architecture and support for both local and containerized development.
 
 ## Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/VideoAnnotator.git
+git clone https://github.com/InfantLab/VideoAnnotator.git
 cd VideoAnnotator
 
 # Install dependencies
@@ -16,7 +21,7 @@ pip install -r requirements.txt
 python main.py --input video.mp4 --output results/ --config configs/default.yaml
 ```
 
-For detailed setup instructions, troubleshooting, and advanced configuration, see the [Installation Guide](INSTALLATION.md).
+For detailed setup instructions, troubleshooting, and advanced configuration, see the [Installation Guide](docs/INSTALLATION.md).
 
 ## Features
 
@@ -95,15 +100,16 @@ See [schemas documentation](src/schemas/) for detailed output formats.
 ## Documentation
 
 ### Core Documentation
-- [Installation & Setup Guide](INSTALLATION.md)
+- [Getting Started Guide](docs/GETTING_STARTED.md)
+- [Installation & Setup Guide](docs/INSTALLATION.md)
 - [Configuration Guide](configs/README.md)
-- [Testing Standards](TESTING_STANDARDS.md)
-- [Development Roadmap](ROADMAP.md)
+- [Testing Standards](docs/TESTING_STANDARDS.md)
 
-### Legacy Documentation
-- [Troubleshooting](Troubleshooting.md)
-- [Data Formats](data/Data Formats.md)
-- [Original Installation Guide](docs/Installation.md)
+### API Documentation
+- [Data Schemas & Output Formats](docs/OUTPUT_FORMATS.md)
+- [Technical Specification](docs/TECHNICAL_SPECIFICATION.md)
+- [Development Roadmap](docs/ROADMAP.md)
+- [Troubleshooting Guide](docs/TROUBLESHOOTING.md)
 
 ## Testing
 
@@ -123,7 +129,7 @@ python -m pytest tests/ --cov=src --cov-report=html
 
 ## Contributing
 
-1. Follow the [Testing Standards](TESTING_STANDARDS.md) for all contributions
+1. Follow the [Testing Standards](docs/TESTING_STANDARDS.md) for all contributions
 2. Add tests to existing test files in `tests/` directory
 3. Update documentation for new features
 4. Run the full test suite before submitting changes
@@ -139,6 +145,6 @@ python -m pytest tests/ --cov=src --cov-report=html
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Forked from BabyJokes, JULY 2025
+## Acknowledgments
 
-https://github.com/InfantLab/babyjokes.git
+VideoAnnotator builds upon research methodologies from computational video analysis and machine learning communities. Special thanks to the open-source ML ecosystem including YOLO, OpenAI Whisper, and PyTorch.

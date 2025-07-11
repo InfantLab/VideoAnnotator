@@ -1,4 +1,6 @@
-# Baby Jokes Video Analysis - Pipelines and Data Workflows
+# VideoAnnotator Pipelines and Data Workflows
+
+Legacy pipeline implementations. See `src/pipelines/` for current modular architecture.
 
 ## Installation
 

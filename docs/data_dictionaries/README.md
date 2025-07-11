@@ -1,1 +1,3 @@
-# Baby Jokes Video Analysis - Data Dictionaries
+# VideoAnnotator Data Dictionaries
+
+Schema definitions and data format specifications for VideoAnnotator outputs.
