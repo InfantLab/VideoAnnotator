@@ -152,8 +152,7 @@ code/__temp__.mp4
 mydata
 
 # Project specific outputs and caches
-output/
-data/
+data/*
 *.ipynb_checkpoints
 
 # Large media files

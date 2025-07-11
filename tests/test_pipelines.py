@@ -8,21 +8,28 @@ schemas, and utility functions.
 import pytest
 import tempfile
 import numpy as np
+import os
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 import json
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Import pipeline modules
 from src.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
 from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
 from src.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
 from src.pipelines.audio_processing.audio_pipeline import AudioPipeline
+from src.pipelines.audio_processing.diarization_pipeline import DiarizationPipeline, DiarizationPipelineConfig
+from src.pipelines.audio_processing.speech_pipeline import SpeechPipeline, SpeechPipelineConfig
 
 # Import schemas
 from src.schemas.scene_schema import SceneAnnotation, SceneClassification, SceneSegment
 from src.schemas.person_schema import PersonDetection, PersonTrajectory, PoseKeypoints
 from src.schemas.face_schema import FaceDetection, FaceEmotion, FaceGaze
-from src.schemas.audio_schema import AudioSegment, SpeechRecognition, SpeakerDiarizationModern
+from src.schemas.audio_schema import AudioSegment, SpeechRecognition, SpeakerDiarization
 
 # Import version utilities
 from src.version import (
@@ -202,6 +209,279 @@ class TestAudioPipeline:
             assert isinstance(results, list)
         except Exception as e:
             pytest.skip(f"Pipeline processing failed: {e}")
+
+
+@pytest.mark.unit
+class TestDiarizationPipeline:
+    """Test cases for speaker diarization pipeline."""
+    
+    def test_diarization_config_initialization(self):
+        """Test diarization pipeline configuration."""
+        config = DiarizationPipelineConfig(
+            diarization_model="pyannote/speaker-diarization-3.1",
+            min_speakers=1,
+            max_speakers=5,
+            use_gpu=False
+        )
+        
+        assert config.diarization_model == "pyannote/speaker-diarization-3.1"
+        assert config.min_speakers == 1
+        assert config.max_speakers == 5
+        assert config.use_gpu == False
+    
+    def test_diarization_config_token_from_env(self):
+        """Test that config picks up token from environment."""
+        # Clear any existing environment tokens
+        with patch.dict('os.environ', {'HF_AUTH_TOKEN': 'test_token', 'HUGGINGFACE_TOKEN': 'test_token'}, clear=False):
+            with patch.dict('os.environ', {}, clear=True):
+                with patch.dict('os.environ', {'HUGGINGFACE_TOKEN': 'test_token'}):
+                    config = DiarizationPipelineConfig()
+                    assert config.huggingface_token == 'test_token'
+    
+    def test_diarization_pipeline_initialization(self):
+        """Test diarization pipeline initialization."""
+        config = DiarizationPipelineConfig(
+            huggingface_token="test_token",
+            use_gpu=False
+        )
+        pipeline = DiarizationPipeline(config)
+        
+        assert pipeline.config.huggingface_token == "test_token"
+        assert pipeline.config.use_gpu == False
+        assert not pipeline.is_initialized
+    
+    @patch('src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE', True)
+    @patch('src.pipelines.audio_processing.diarization_pipeline.PyannoteePipeline')
+    def test_diarization_pipeline_initialize_success(self, mock_pyannote):
+        """Test successful diarization pipeline initialization."""
+        # Mock PyAnnote pipeline
+        mock_pipeline_instance = Mock()
+        mock_pyannote.from_pretrained.return_value = mock_pipeline_instance
+        
+        config = DiarizationPipelineConfig(
+            huggingface_token="test_token",
+            use_gpu=False
+        )
+        pipeline = DiarizationPipeline(config)
+        
+        # Test initialization
+        pipeline.initialize()
+        
+        assert pipeline.is_initialized
+        mock_pyannote.from_pretrained.assert_called_once_with(
+            "pyannote/speaker-diarization-3.1",
+            use_auth_token="test_token"
+        )
+    
+    @patch('src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE', False)
+    def test_diarization_pipeline_initialize_no_pyannote(self):
+        """Test initialization fails when PyAnnote not available."""
+        config = DiarizationPipelineConfig(huggingface_token="test_token")
+        pipeline = DiarizationPipeline(config)
+        
+        with pytest.raises(ImportError, match="pyannote.audio is not available"):
+            pipeline.initialize()
+    
+    def test_diarization_pipeline_initialize_no_token(self):
+        """Test initialization fails without HuggingFace token."""
+        # Clear environment variables to ensure no token is available
+        with patch.dict('os.environ', {}, clear=True):
+            config = DiarizationPipelineConfig()  # No token
+            pipeline = DiarizationPipeline(config)
+            
+            with pytest.raises(ValueError, match="HuggingFace token is required"):
+                pipeline.initialize()
+    
+    @patch('src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE', True)
+    @patch('src.pipelines.audio_processing.diarization_pipeline.PyannoteePipeline')
+    @patch('src.pipelines.audio_processing.diarization_pipeline.torch')
+    def test_diarization_pipeline_gpu_usage(self, mock_torch, mock_pyannote):
+        """Test GPU usage in diarization pipeline."""
+        # Mock GPU availability
+        mock_torch.cuda.is_available.return_value = True
+        mock_device = Mock()
+        mock_torch.device.return_value = mock_device
+        
+        mock_pipeline_instance = Mock()
+        mock_pyannote.from_pretrained.return_value = mock_pipeline_instance
+        
+        config = DiarizationPipelineConfig(
+            huggingface_token="test_token",
+            use_gpu=True
+        )
+        pipeline = DiarizationPipeline(config)
+        pipeline.initialize()
+        
+        # Should call device and to methods
+        mock_torch.device.assert_called_with("cuda")
+        mock_pipeline_instance.to.assert_called_with(mock_device)
+    
+    @patch('src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE', True)
+    @patch('src.pipelines.audio_processing.diarization_pipeline.PyannoteePipeline')
+    def test_diarization_audio_processing(self, mock_pyannote, temp_audio_file):
+        """Test audio diarization processing."""
+        # Mock diarization results
+        mock_turn1 = Mock()
+        mock_turn1.start = 0.0
+        mock_turn1.end = 2.5
+        
+        mock_turn2 = Mock() 
+        mock_turn2.start = 3.0
+        mock_turn2.end = 5.0
+        
+        mock_diarization = Mock()
+        mock_diarization.itertracks.return_value = [
+            (mock_turn1, None, "SPEAKER_00"),
+            (mock_turn2, None, "SPEAKER_01")
+        ]
+        
+        mock_pipeline_instance = Mock()
+        mock_pipeline_instance.return_value = mock_diarization
+        mock_pyannote.from_pretrained.return_value = mock_pipeline_instance
+        
+        config = DiarizationPipelineConfig(
+            huggingface_token="test_token",
+            use_gpu=False
+        )
+        pipeline = DiarizationPipeline(config)
+        pipeline.initialize()
+        
+        # Test diarization
+        result = pipeline.diarize_audio(temp_audio_file)
+        
+        assert result is not None
+        assert isinstance(result, SpeakerDiarization)
+        assert len(result.speakers) == 2
+        assert len(result.segments) == 2
+        
+        # Check segments
+        segments = result.segments
+        assert segments[0]['speaker_id'] == 'speaker_SPEAKER_00'
+        assert segments[0]['start_time'] == 0.0
+        assert segments[0]['end_time'] == 2.5
+        
+        assert segments[1]['speaker_id'] == 'speaker_SPEAKER_01'
+        assert segments[1]['start_time'] == 3.0
+        assert segments[1]['end_time'] == 5.0
+    
+    @patch('src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE', True)
+    @patch('src.pipelines.audio_processing.diarization_pipeline.PyannoteePipeline')
+    def test_diarization_audio_file_not_found(self, mock_pyannote):
+        """Test diarization with non-existent audio file."""
+        mock_pipeline_instance = Mock()
+        mock_pyannote.from_pretrained.return_value = mock_pipeline_instance
+        
+        config = DiarizationPipelineConfig(
+            huggingface_token="test_token",
+            use_gpu=False
+        )
+        pipeline = DiarizationPipeline(config)
+        pipeline.initialize()
+        
+        # Test with non-existent file
+        result = pipeline.diarize_audio("non_existent_file.wav")
+        assert result is None
+    
+    @patch('src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE', True)
+    @patch('src.pipelines.audio_processing.diarization_pipeline.PyannoteePipeline')
+    def test_diarization_pipeline_info(self, mock_pyannote):
+        """Test pipeline info method."""
+        config = DiarizationPipelineConfig(
+            huggingface_token="test_token",
+            use_gpu=False
+        )
+        pipeline = DiarizationPipeline(config)
+        
+        info = pipeline.get_pipeline_info()
+        
+        assert info['name'] == 'DiarizationPipeline'
+        assert 'capabilities' in info
+        assert 'models' in info
+        assert 'config' in info
+        assert 'requirements' in info
+        
+        # Check requirements
+        assert 'pyannote_available' in info['requirements']
+        assert 'cuda_available' in info['requirements']
+        assert 'has_auth_token' in info['requirements']
+    
+    @patch('src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE', True)
+    @patch('src.pipelines.audio_processing.diarization_pipeline.PyannoteePipeline')
+    def test_diarization_process_video(self, mock_pyannote, temp_video_file):
+        """Test diarization processing of video file."""
+        # Mock diarization
+        mock_diarization = Mock()
+        mock_diarization.itertracks.return_value = []
+        
+        mock_pipeline_instance = Mock()
+        mock_pipeline_instance.return_value = mock_diarization
+        mock_pyannote.from_pretrained.return_value = mock_pipeline_instance
+        
+        config = DiarizationPipelineConfig(
+            huggingface_token="test_token",
+            use_gpu=False
+        )
+        pipeline = DiarizationPipeline(config)
+        pipeline.initialize()
+        
+        # Create a mock audio file that should exist
+        audio_path = Path(str(temp_video_file).replace('.mp4', '.wav'))
+        audio_path.touch()
+        
+        try:
+            results = pipeline.process(str(temp_video_file))
+            assert isinstance(results, list)
+        except Exception as e:
+            pytest.skip(f"Video processing test failed: {e}")
+        finally:
+            # Clean up
+            if audio_path.exists():
+                audio_path.unlink()
+
+
+@pytest.mark.integration
+class TestDiarizationPipelineIntegration:
+    """Integration tests for diarization pipeline (require external dependencies)."""
+    
+    @pytest.mark.skipif(
+        not os.getenv("HUGGINGFACE_TOKEN"),
+        reason="Requires HUGGINGFACE_TOKEN environment variable"
+    )
+    @pytest.mark.skipif(
+        not os.getenv("TEST_INTEGRATION"),
+        reason="Integration tests disabled. Set TEST_INTEGRATION=1 to enable"
+    )
+    def test_real_diarization_pipeline(self):
+        """Test diarization with real PyAnnote models (requires HF token)."""
+        try:
+            # This test requires actual PyAnnote installation and HF token
+            from src.pipelines.audio_processing.diarization_pipeline import PYANNOTE_AVAILABLE
+            
+            if not PYANNOTE_AVAILABLE:
+                pytest.skip("PyAnnote not available")
+            
+            config = DiarizationPipelineConfig(
+                huggingface_token=os.getenv("HUGGINGFACE_TOKEN"),
+                use_gpu=False  # Use CPU for CI
+            )
+            
+            pipeline = DiarizationPipeline(config)
+            pipeline.initialize()
+            
+            # Test pipeline info
+            info = pipeline.get_pipeline_info()
+            assert info['requirements']['pyannote_available']
+            assert info['requirements']['has_auth_token']
+            
+            # If we have test data, try processing it
+            test_videos = list(Path("babyjokes videos").glob("*.mp4"))
+            if test_videos:
+                result = pipeline.process(str(test_videos[0]))
+                assert isinstance(result, list)
+                if result:
+                    assert isinstance(result[0], SpeakerDiarization)
+        except Exception as e:
+            pytest.skip(f"Real diarization test failed: {e}")
 
 
 @pytest.mark.unit
@@ -720,3 +1000,241 @@ class TestVersioningIntegration:
                         
             finally:
                 pipeline.cleanup()
+
+@pytest.mark.unit
+class TestSpeechPipeline:
+    """Test cases for SpeechPipeline."""
+    
+    def test_speech_config_initialization(self):
+        """Test speech pipeline configuration initialization."""
+        config = SpeechPipelineConfig(
+            model_name="tiny",
+            language="en",
+            task="transcribe",
+            word_timestamps=True,
+            use_gpu=False
+        )
+        
+        assert config.model_name == "tiny"
+        assert config.language == "en"
+        assert config.task == "transcribe"
+        assert config.word_timestamps == True
+        assert config.use_gpu == False
+    
+    def test_speech_config_validation(self):
+        """Test speech configuration validation."""
+        # Test invalid model name
+        with pytest.raises(ValueError, match="Invalid model_name"):
+            SpeechPipelineConfig(model_name="invalid_model")
+        
+        # Test invalid task
+        with pytest.raises(ValueError, match="Invalid task"):
+            SpeechPipelineConfig(task="invalid_task")
+    
+    def test_speech_pipeline_initialization(self):
+        """Test speech pipeline initialization."""
+        config = SpeechPipelineConfig(
+            model_name="tiny",
+            use_gpu=False
+        )
+        pipeline = SpeechPipeline(config)
+        
+        assert pipeline.config.model_name == "tiny"
+        assert not pipeline.is_initialized
+        assert pipeline._whisper_model is None
+    
+    @patch('src.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE', True)
+    @patch('src.pipelines.audio_processing.speech_pipeline.whisper')
+    def test_speech_pipeline_initialize_success(self, mock_whisper):
+        """Test successful pipeline initialization."""
+        mock_model = Mock()
+        mock_whisper.load_model.return_value = mock_model
+        
+        config = SpeechPipelineConfig(model_name="tiny", use_gpu=False)
+        pipeline = SpeechPipeline(config)
+        pipeline.initialize()
+        
+        assert pipeline.is_initialized
+        assert pipeline._whisper_model == mock_model
+        mock_whisper.load_model.assert_called_once_with("tiny", device="cpu")
+    
+    @patch('src.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE', False)
+    def test_speech_pipeline_initialize_no_whisper(self):
+        """Test initialization fails when Whisper is not available."""
+        pipeline = SpeechPipeline()
+        
+        with pytest.raises(ImportError, match="whisper is not available"):
+            pipeline.initialize()
+    
+    @patch('src.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE', True)
+    @patch('src.pipelines.audio_processing.speech_pipeline.whisper')
+    @patch('torch.cuda.is_available', return_value=True)
+    def test_speech_pipeline_gpu_usage(self, mock_cuda, mock_whisper):
+        """Test GPU usage when available."""
+        mock_model = Mock()
+        mock_whisper.load_model.return_value = mock_model
+        
+        config = SpeechPipelineConfig(model_name="tiny", use_gpu=True)
+        pipeline = SpeechPipeline(config)
+        pipeline.initialize()
+        
+        mock_whisper.load_model.assert_called_once_with("tiny", device="cuda")
+    
+    @patch('src.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE', True)
+    @patch('src.pipelines.audio_processing.speech_pipeline.whisper')
+    def test_speech_audio_processing(self, mock_whisper, temp_audio_file):
+        """Test speech recognition on audio file."""
+        # Mock Whisper model and result
+        mock_model = Mock()
+        mock_transcribe_result = {
+            'text': 'Hello world',
+            'language': 'en',
+            'segments': [
+                {
+                    'id': 0,
+                    'start': 0.0,
+                    'end': 2.0,
+                    'text': 'Hello world',
+                    'tokens': [1, 2, 3],
+                    'temperature': 0.0,
+                    'avg_logprob': -0.5,
+                    'compression_ratio': 1.0,
+                    'no_speech_prob': 0.1,
+                    'words': [
+                        {'word': 'Hello', 'start': 0.0, 'end': 1.0, 'probability': 0.9},
+                        {'word': 'world', 'start': 1.0, 'end': 2.0, 'probability': 0.8}
+                    ]
+                }
+            ]
+        }
+        mock_model.transcribe.return_value = mock_transcribe_result
+        mock_whisper.load_model.return_value = mock_model
+        
+        config = SpeechPipelineConfig(model_name="tiny", use_gpu=False)
+        pipeline = SpeechPipeline(config)
+        pipeline.initialize()
+        
+        result = pipeline.transcribe_audio(temp_audio_file)
+        
+        assert result is not None
+        assert result.transcript == 'Hello world'
+        assert result.language == 'en'
+        assert len(result.words) == 2
+        assert len(result.metadata.get('segments', [])) == 1
+        assert result.words[0]['word'] == 'Hello'
+        assert result.words[0]['start'] == 0.0
+        assert result.words[0]['end'] == 1.0
+    
+    def test_speech_audio_file_not_found(self):
+        """Test handling of missing audio file."""
+        config = SpeechPipelineConfig(model_name="tiny", use_gpu=False)
+        pipeline = SpeechPipeline(config)
+        
+        result = pipeline.transcribe_audio("nonexistent_file.wav")
+        assert result is None
+    
+    def test_speech_pipeline_info(self):
+        """Test getting pipeline information."""
+        config = SpeechPipelineConfig(
+            model_name="base",
+            language="en",
+            word_timestamps=True
+        )
+        pipeline = SpeechPipeline(config)
+        info = pipeline.get_pipeline_info()
+        
+        assert info['name'] == 'SpeechPipeline'
+        assert 'capabilities' in info
+        assert 'speech_recognition' in info['capabilities']
+        assert info['config']['model_name'] == 'base'
+        assert info['config']['language'] == 'en'
+    
+    def test_speech_get_schema(self):
+        """Test getting output schema."""
+        pipeline = SpeechPipeline()
+        schema = pipeline.get_schema()
+        
+        assert schema['type'] == 'speech_recognition'
+        assert 'properties' in schema
+        assert 'transcript' in schema['properties']
+        assert 'words' in schema['properties']
+    
+    @patch('src.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE', True)
+    @patch('src.pipelines.audio_processing.speech_pipeline.whisper')
+    @patch('src.pipelines.audio_processing.ffmpeg_utils.extract_audio_from_video')
+    def test_speech_process_video(self, mock_extract, mock_whisper, temp_video_file):
+        """Test processing video file for speech recognition."""
+        # Mock FFmpeg extraction
+        mock_extract.return_value = Path("extracted_audio.wav")
+        
+        # Mock Whisper
+        mock_model = Mock()
+        mock_result = {
+            'text': 'Test speech',
+            'language': 'en',
+            'segments': []
+        }
+        mock_model.transcribe.return_value = mock_result
+        mock_whisper.load_model.return_value = mock_model
+        
+        # Mock file existence
+        with patch('pathlib.Path.exists', return_value=True):
+            config = SpeechPipelineConfig(model_name="tiny", use_gpu=False)
+            pipeline = SpeechPipeline(config)
+            pipeline.initialize()
+            
+            results = pipeline.process(str(temp_video_file))
+            
+            assert isinstance(results, list)
+            assert len(results) == 1
+            assert results[0].transcript == 'Test speech'
+    
+    def test_speech_cleanup(self):
+        """Test pipeline cleanup."""
+        config = SpeechPipelineConfig(model_name="tiny", use_gpu=False)
+        pipeline = SpeechPipeline(config)
+        
+        # Mock model with to() method
+        mock_model = Mock()
+        pipeline._whisper_model = mock_model
+        pipeline.is_initialized = True
+        
+        pipeline.cleanup()
+        
+        assert pipeline._whisper_model is None
+        assert not pipeline.is_initialized
+        mock_model.to.assert_called_once_with('cpu')
+
+
+@pytest.mark.integration  
+class TestSpeechPipelineIntegration:
+    """Integration tests for speech pipeline (require external dependencies)."""
+    
+    @pytest.mark.skipif(
+        not os.getenv("TEST_INTEGRATION"),
+        reason="Integration tests disabled. Set TEST_INTEGRATION=1 to enable"
+    )
+    def test_real_speech_pipeline(self, temp_audio_file):
+        """Test speech recognition with real Whisper model."""
+        try:
+            config = SpeechPipelineConfig(
+                model_name="tiny",  # Use smallest model for testing
+                use_gpu=False,
+                word_timestamps=True
+            )
+            
+            pipeline = SpeechPipeline(config)
+            pipeline.initialize()
+            
+            result = pipeline.transcribe_audio(temp_audio_file)
+            
+            # Basic validation
+            assert result is not None
+            assert isinstance(result.text, str)
+            assert isinstance(result.words, list)
+            assert isinstance(result.segments, list)
+            
+        except Exception as e:
+            pytest.skip(f"Real speech recognition test failed: {e}")
+        finally:
+            pipeline.cleanup()

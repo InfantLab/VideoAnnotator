@@ -18,7 +18,7 @@ We take security vulnerabilities seriously. If you discover a security vulnerabi
 **DO NOT** create a public GitHub issue for security vulnerabilities.
 
 Instead, please email us directly:
-- **Email**: [security@infantlab.org](mailto:security@infantlab.org)
+- **Email**: [infantologist@gmail.com](mailto:infantologist@gmail.com)
 - **Subject**: `[VideoAnnotator Security] Brief description of vulnerability`
 
 ### 📋 What to Include
@@ -181,8 +181,8 @@ safety check
 
 ## Contact Information
 
-- **Security Email**: [security@infantlab.org](mailto:security@infantlab.org)
-- **General Contact**: [info@infantlab.org](mailto:info@infantlab.org)
+- **Security Email**: [infantologist@gmail.com](mailto:infantologist@gmail.com)
+- **General Contact**: [infantologist@gmail.com](mailto:infantologist@gmail.com)
 - **GitHub Issues**: Only for non-security bugs and features
 
 Thank you for helping keep VideoAnnotator secure! 🛡️

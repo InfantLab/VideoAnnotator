@@ -1,14 +1,21 @@
 """
-Audio Processing Pipeline Module
+Audio processing pipelines for VideoAnnotator.
 
-This module provides comprehensive audio analysis capabilities including:
-- Speech transcription and diarization
-- Audio event detection and classification
-- Music detection and analysis
-- Audio quality assessment
-- Speech emotion analysis
+This module provides separate pipelines for different audio processing tasks:
+- DiarizationPipeline: Speaker diarization using PyAnnote
+- SpeechPipeline: Speech recognition using OpenAI Whisper
+- AudioPipeline: Comprehensive audio analysis including transcription, diarization, and feature extraction
 """
 
+from .diarization_pipeline import DiarizationPipeline, DiarizationPipelineConfig
+from .speech_pipeline import SpeechPipeline, SpeechPipelineConfig
 from .audio_pipeline import AudioPipeline, AudioPipelineConfig
+
+__all__ = [
+    'DiarizationPipeline',
+    'DiarizationPipelineConfig', 
+    'AudioPipeline',
+    'AudioPipelineConfig'
+], AudioPipelineConfig
 
 __all__ = ['AudioPipeline', 'AudioPipelineConfig']
