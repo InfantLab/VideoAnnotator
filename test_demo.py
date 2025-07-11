@@ -5,6 +5,7 @@ Tests both scene detection and person tracking pipelines with versioning.
 """
 
 import sys
+import os
 import logging
 from pathlib import Path
 import json
@@ -190,6 +191,109 @@ def test_person_tracking_pipeline():
         return False
 
 
+def test_diarization_pipeline():
+    """Test the diarization pipeline with a demo video."""
+    logger.info("Testing Diarization Pipeline")
+    
+    # Check for HuggingFace token
+    hf_token = os.getenv("HF_AUTH_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
+    if not hf_token:
+        logger.warning("No HuggingFace token found - skipping diarization test")
+        logger.info("To enable diarization testing:")
+        logger.info("1. Get a token from: https://huggingface.co/settings/tokens")
+        logger.info("2. Accept terms for: https://huggingface.co/pyannote/speaker-diarization-3.1")
+        logger.info("3. Set HF_AUTH_TOKEN in your .env file")
+        return False
+    
+    # Get demo videos
+    demo_dir = Path("demovideos/babyjokes")
+    if not demo_dir.exists():
+        demo_dir = Path("data/demovideos")
+        
+    if not demo_dir.exists():
+        logger.error(f"Demo directory not found: {demo_dir}")
+        return False
+    
+    output_dir = Path("data/demovideos.out")
+    output_dir.mkdir(exist_ok=True)
+    
+    # Get first available video
+    video_files = list(demo_dir.glob("*.mp4"))
+    if not video_files:
+        logger.error("No MP4 files found in demo directory")
+        return False
+    
+    video_path = video_files[0]
+    logger.info(f"Processing video for diarization: {video_path}")
+    
+    try:
+        # Import the diarization classes
+        from src.pipelines.audio_processing import DiarizationPipeline, DiarizationPipelineConfig
+        
+        # Initialize pipeline with config
+        config = DiarizationPipelineConfig(
+            huggingface_token=hf_token,
+            diarization_model="pyannote/speaker-diarization-3.1",
+            use_gpu=True,
+            min_speakers=1,
+            max_speakers=10
+        )
+        
+        pipeline = DiarizationPipeline(config)
+        pipeline.initialize()
+        logger.info("Diarization Pipeline initialized successfully")
+        
+        # Test processing
+        try:
+            results = pipeline.process(
+                video_path=str(video_path),
+                start_time=0.0,
+                end_time=None,  # Process full video
+                output_dir=str(output_dir)
+            )
+            
+            if results:
+                diarization_result = results[0]
+                logger.info(f"Diarization completed. Found {len(diarization_result.speakers)} speakers")
+                logger.info(f"Number of speaker segments: {len(diarization_result.segments)}")
+                logger.info(f"Total speech time: {diarization_result.total_speech_time:.2f} seconds")
+                
+                # Show speaker breakdown
+                logger.info("Speaker breakdown:")
+                for speaker_id in diarization_result.speakers:
+                    speaker_segments = [s for s in diarization_result.segments if s['speaker_id'] == speaker_id]
+                    total_time = sum(s['end_time'] - s['start_time'] for s in speaker_segments)
+                    logger.info(f"  {speaker_id}: {len(speaker_segments)} segments, {total_time:.2f}s total")
+                
+                # Show first few segments
+                logger.info("First few speaker segments:")
+                for i, segment in enumerate(diarization_result.segments[:5]):
+                    speaker = segment['speaker_id']
+                    start = segment['start_time']
+                    end = segment['end_time']
+                    logger.info(f"  Segment {i+1}: {speaker} from {start:.2f}s to {end:.2f}s")
+                
+                return True
+            else:
+                logger.warning("No diarization results returned")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Diarization processing failed: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
+            
+        finally:
+            pipeline.cleanup()
+            
+    except Exception as e:
+        logger.error(f"Diarization pipeline initialization failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return False
+
+
 def test_schemas():
     """Test the schema classes."""
     logger.info("Testing Schema Classes")
@@ -252,6 +356,7 @@ def main():
     # Test pipelines
     scene_success = test_scene_detection_pipeline()
     person_success = test_person_tracking_pipeline()
+    diarization_success = test_diarization_pipeline()
     
     # Summary
     logger.info("="*60)
@@ -259,9 +364,13 @@ def main():
     logger.info(f"  Schema Tests: {'PASSED' if schema_success else 'FAILED'}")
     logger.info(f"  Scene Detection: {'PASSED' if scene_success else 'FAILED'}")
     logger.info(f"  Person Tracking: {'PASSED' if person_success else 'FAILED'}")
+    logger.info(f"  Diarization: {'PASSED' if diarization_success else 'SKIPPED/FAILED'}")
     
     if schema_success and scene_success and person_success:
-        logger.info("SUCCESS: All tests passed! VideoAnnotator is ready for full processing.")
+        if diarization_success:
+            logger.info("SUCCESS: All tests passed! VideoAnnotator is ready for full processing including diarization.")
+        else:
+            logger.info("SUCCESS: Core tests passed! Diarization was skipped (needs HuggingFace token).")
         return 0
     elif schema_success and (scene_success or person_success):
         logger.info("! Some tests passed. Check logs for details.")

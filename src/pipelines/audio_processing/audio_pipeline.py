@@ -24,6 +24,11 @@ import librosa
 import torch
 from dataclasses import dataclass
 
+# Reduce speechbrain logging noise from pyannote
+logging.getLogger('speechbrain').setLevel(logging.WARNING)
+logging.getLogger('speechbrain.utils.checkpoints').setLevel(logging.WARNING)
+logging.getLogger('speechbrain.utils.quirks').setLevel(logging.WARNING)
+
 try:
     import whisper
     WHISPER_AVAILABLE = True
@@ -89,9 +94,21 @@ class AudioPipeline(BasePipeline):
     Audio processing pipeline with support for multiple audio analysis tasks.
     """
     
-    def __init__(self, config: Optional[AudioPipelineConfig] = None):
+    def __init__(self, config: Optional[Union[Dict[str, Any], AudioPipelineConfig]] = None):
         super().__init__()
-        self.config = config or AudioPipelineConfig()
+        
+        # Handle both dict and AudioPipelineConfig
+        if isinstance(config, dict):
+            # Convert dict to AudioPipelineConfig, filtering out unknown parameters
+            valid_params = {}
+            config_fields = set(AudioPipelineConfig.__dataclass_fields__.keys())
+            for key, value in config.items():
+                if key in config_fields:
+                    valid_params[key] = value
+            self.config = AudioPipelineConfig(**valid_params)
+        else:
+            self.config = config or AudioPipelineConfig()
+            
         self.logger = logging.getLogger(__name__)
         
         # Set up authentication token
@@ -703,3 +720,40 @@ class AudioPipeline(BasePipeline):
         except Exception as e:
             self.logger.error(f"F0 extraction failed: {e}")
             return None
+    
+    def cleanup(self) -> None:
+        """Cleanup audio processing resources."""
+        if hasattr(self, '_whisper_model') and self._whisper_model is not None:
+            del self._whisper_model
+            self._whisper_model = None
+        
+        if hasattr(self, '_diarization_pipeline') and self._diarization_pipeline is not None:
+            del self._diarization_pipeline
+            self._diarization_pipeline = None
+        
+        # Clear GPU cache if using CUDA
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        self.is_initialized = False
+        self.logger.info("Audio pipeline cleaned up")
+
+    def get_schema(self) -> Dict[str, Any]:
+        """Return JSON schema for audio analysis annotations."""
+        return {
+            "type": "object",
+            "properties": {
+                "type": {"type": "string", "enum": ["speech_recognition", "speaker_diarization", "audio_classification", "audio_features"]},
+                "video_id": {"type": "string"},
+                "timestamp": {"type": "number"},
+                "duration": {"type": "number"},
+                "text": {"type": ["string", "null"]},
+                "speaker_id": {"type": ["string", "null"]},
+                "confidence": {"type": "number"},
+                "language": {"type": ["string", "null"]},
+                "audio_class": {"type": ["string", "null"]},
+                "sample_rate": {"type": ["number", "null"]},
+                "metadata": {"type": "object"}
+            },
+            "required": ["type", "video_id", "timestamp", "duration", "confidence"]
+        }

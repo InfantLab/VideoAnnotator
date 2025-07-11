@@ -48,6 +48,11 @@ def extract_audio_from_video(
         logger.error(f"Video file not found: {video_path}")
         return None
     
+    # Check if video has audio streams
+    if not has_audio_stream(video_path):
+        logger.warning(f"No audio streams found in video: {video_path}")
+        return None
+    
     # Generate output path if not provided
     if output_path is None:
         output_path = video_path.parent / f"{video_path.stem}_audio.{format}"
@@ -211,3 +216,44 @@ def get_audio_info(audio_path: Union[str, Path]) -> Optional[dict]:
     except Exception as e:
         logger.error(f"Error getting audio info: {e}")
         return None
+
+
+def has_audio_stream(video_path: Union[str, Path]) -> bool:
+    """
+    Check if video file contains audio streams.
+    
+    Args:
+        video_path: Path to video file
+        
+    Returns:
+        True if video has audio streams, False otherwise
+    """
+    if not check_ffmpeg_available():
+        logger.warning("FFmpeg not found. Cannot check for audio streams.")
+        return False
+    
+    video_path = Path(video_path)
+    if not video_path.exists():
+        logger.error(f"Video file not found: {video_path}")
+        return False
+    
+    # Use ffprobe to check for audio streams
+    cmd = [
+        'ffprobe', '-v', 'quiet', '-select_streams', 'a', 
+        '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', 
+        str(video_path)
+    ]
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        
+        if result.returncode == 0:
+            # If there's any output, it means audio streams were found
+            return bool(result.stdout.strip())
+        else:
+            logger.warning(f"ffprobe failed to analyze {video_path}: {result.stderr}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error checking audio streams: {e}")
+        return False

@@ -4,6 +4,7 @@ Face analysis pipeline supporting OpenFace 3.0, DeepFace, and MediaPipe.
 
 from typing import Dict, Any, List, Optional, Tuple
 import numpy as np
+import cv2
 from pathlib import Path
 
 from ..base_pipeline import BasePipeline
@@ -38,13 +39,40 @@ class FaceAnalysisPipeline(BasePipeline):
             default_config.update(config)
         super().__init__(default_config)
     
+    def initialize(self) -> None:
+        """Initialize the face analysis pipeline."""
+        if self.is_initialized:
+            return
+            
+        self.logger.info("Initializing face analysis pipeline")
+        self.backends = {}
+        
+        # Initialize backends based on configuration
+        self._initialize_backends()
+        
+        self.is_initialized = True
+        self.logger.info("Face analysis pipeline initialized successfully")
+    
+    def cleanup(self) -> None:
+        """Cleanup face analysis resources."""
+        if hasattr(self, 'backends'):
+            for backend_name, backend in self.backends.items():
+                if hasattr(backend, 'cleanup'):
+                    try:
+                        backend.cleanup()
+                    except Exception as e:
+                        self.logger.warning(f"Error cleaning up {backend_name}: {e}")
+            self.backends.clear()
+        
+        self.is_initialized = False
+        self.logger.info("Face analysis pipeline cleaned up")
+
     def process(
         self, 
         video_path: str, 
         start_time: float = 0.0, 
         end_time: Optional[float] = None,
-        pps: float = 10.0,  # 10 FPS for face analysis
-        output_dir: Optional[str] = None
+        pps: float = 10.0  # 10 FPS for face analysis
     ) -> List[FaceDetection]:
         """Process video for comprehensive face analysis."""
         
@@ -106,16 +134,16 @@ class FaceAnalysisPipeline(BasePipeline):
             cap.release()
         
         # Save results if output directory specified
-        if output_dir:
-            detection_path = Path(output_dir) / f"{video_metadata.video_id}_face_detections.json"
+        if self.config["output_dir"]:
+            detection_path = Path(self.config["output_dir"]) / f"{video_metadata.video_id}_face_detections.json"
             self.save_annotations(face_detections, str(detection_path))
             
             if emotion_results:
-                emotion_path = Path(output_dir) / f"{video_metadata.video_id}_face_emotions.json"
+                emotion_path = Path(self.config["output_dir"]) / f"{video_metadata.video_id}_face_emotions.json"
                 self.save_annotations(emotion_results, str(emotion_path))
             
             if gaze_results:
-                gaze_path = Path(output_dir) / f"{video_metadata.video_id}_face_gaze.json"
+                gaze_path = Path(self.config["output_dir"]) / f"{video_metadata.video_id}_face_gaze.json"
                 self.save_annotations(gaze_results, str(gaze_path))
         
         return face_detections
