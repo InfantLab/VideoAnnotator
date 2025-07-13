@@ -174,7 +174,7 @@ python main.py --input video.mp4 --output output/ --config configs/default.yaml
 4. **Test Integration**: Run comprehensive tests
 5. **Update Documentation**: Review API changes
 
-For detailed migration assistance, see the [Migration Guide](docs/migration.md).
+For technical specifications, see the [Pipeline Specs](docs/Pipeline%20Specs.md).
 
 ---
 

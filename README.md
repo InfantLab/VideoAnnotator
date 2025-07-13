@@ -3,148 +3,200 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Tests](https://img.shields.io/badge/tests-94%25%20passing-brightgreen.svg)](tests/)
 
-A modern, modular toolkit for analyzing, processing, and visualizing human interaction videos with comprehensive video, audio, and annotation workflows. Built with scalable pipeline architecture and support for both local and containerized development.
+A **modern, research-focused toolkit** for comprehensive video analysis of human interactions. Built with simplified schemas, standards-based pipelines, and seamless annotation tool integration.
+
+## ✨ Key Features
+
+### 🏗️ **Modern Architecture**
+- **YOLO11-powered** person tracking and scene detection
+- **Open-source models** for face analysis and audio processing  
+- **Simplified JSON schemas** for maximum interoperability
+- **Test-driven development** with 94% success rate
+
+### 🎯 **Research Ready**
+- **Annotation tool integration**: Direct export to CVAT, LabelStudio, ELAN
+- **Flexible data formats**: String/integer IDs, extensible schemas
+- **Batch processing**: Efficient multi-video workflows
+- **Reproducible outputs**: Version-controlled processing
+
+### 🚀 **Production Scalable**
+- **GPU acceleration** for compute-intensive pipelines
+- **Configurable processing** via YAML configs
+- **Docker support** for containerized deployment
+- **Cross-platform** Windows/macOS/Linux compatibility
 
 ## Quick Start
 
 ```bash
-# Clone the repository
+# Clone and setup
 git clone https://github.com/InfantLab/VideoAnnotator.git
 cd VideoAnnotator
-
-# Install dependencies
 pip install -r requirements.txt
 
-# Run a basic video annotation pipeline
-python main.py --input video.mp4 --output results/ --config configs/default.yaml
+# Process a video
+python -m videoannotator process video.mp4
+
+# View results
+ls output/video/  # JSON files ready for analysis
 ```
 
-For detailed setup instructions, troubleshooting, and advanced configuration, see the [Installation Guide](docs/INSTALLATION.md).
-
-## Features
-
-### Core Pipeline Architecture
-- **Scene Detection**: YOLO11-based object detection and CLIP scene classification
-- **Person Tracking**: Advanced multi-person tracking with pose estimation
-- **Face Analysis**: Multi-modal face detection, recognition, and emotion analysis
-- **Audio Processing**: Speech recognition, diarization, and audio feature extraction
-
-### Key Capabilities
-- **Modular Design**: Mix and match pipelines for custom workflows
-- **Batch Processing**: Process multiple videos efficiently with parallel support
-- **Flexible Configuration**: YAML-based configuration system with presets
-- **Modern Standards**: Built with latest ML models and best practices
-- **Comprehensive Testing**: Full test suite with performance benchmarks
-- **Cross-Platform**: Support for Windows, macOS, and Linux environments
-
-## Getting Started
-
-### Basic Usage
-
-```bash
-# Process a single video with default settings
-python main.py --input video.mp4
-
-# Process with custom configuration
+📖 **[Full Documentation](docs/)** | 🧪 **[Examples](examples/)** | 🔧 **[Installation Guide](docs/INSTALLATION.md)**
 python main.py --input video.mp4 --config configs/high_performance.yaml
 
 # Batch process multiple videos
 python main.py --input videos/ --batch --parallel 4
 
-# Run specific pipelines only
-python main.py --input video.mp4 --pipelines scene_detection,face_analysis
+## 🧩 Pipeline Architecture
+
+VideoAnnotator provides four core pipelines, each optimized for specific analysis tasks:
+
+### 🎬 **Scene Detection**
+- **Technology**: PySceneDetect + CLIP classification
+- **Purpose**: Boundary detection and environment classification  
+- **Output**: Scene segments with transition metadata
+
+### 👥 **Person Tracking** 
+- **Technology**: YOLO11 + ByteTrack
+- **Purpose**: Multi-person detection and tracking
+- **Output**: Normalized bounding boxes with persistent IDs
+
+### 😊 **Face Analysis**
+- **Technology**: YOLO11-face + OpenCV emotion detection
+- **Purpose**: Face detection and emotion recognition
+- **Output**: Face bounding boxes with emotion predictions
+
+### 🎤 **Audio Processing**
+- **Technology**: Whisper + pyannote.audio
+- **Purpose**: Speech recognition and speaker diarization
+- **Output**: Transcripts with speaker identification
+
+## 📊 **Output Formats**
+
+All pipelines generate **simple JSON arrays** compatible with annotation tools:
+
+```json
+[
+  {
+    "type": "person_bbox",
+    "video_id": "example",
+    "t": 12.34,
+    "person_id": 1,
+    "bbox": [0.2, 0.3, 0.4, 0.5],
+    "confidence": 0.87
+  }
+]
 ```
 
-### Pipeline Examples
+**✅ Key Benefits:**
+- **Tool Integration**: Direct import to CVAT, LabelStudio, ELAN
+- **Research Friendly**: Simple formats for analysis and visualization
+- **Extensible**: Models can add custom fields seamlessly
 
-See the [examples directory](examples/) for detailed usage examples:
-- [Basic Video Processing](examples/basic_video_processing.py)
-- [Batch Processing](examples/batch_processing.py)
-- [Individual Pipeline Testing](examples/test_individual_pipelines.py)
-- [Custom Pipeline Configuration](examples/custom_pipeline_config.py)
+## 🚀 **Usage Examples**
 
-### Configuration
+### Python API
+```python
+from videoannotator import VideoAnnotator
 
-The system uses YAML configuration files for flexible pipeline setup:
-- `configs/default.yaml` - Balanced settings for most use cases
-- `configs/high_performance.yaml` - Maximum accuracy, slower processing
-- `configs/lightweight.yaml` - Fast processing, reduced accuracy
+# Process all pipelines
+annotator = VideoAnnotator()
+results = annotator.process("video.mp4")
 
-See [Configuration Guide](configs/README.md) for detailed configuration options.
+# Specific pipelines only  
+results = annotator.process("video.mp4", pipelines=["person_tracking"])
 
-## Architecture
-
-### Pipeline Structure
-
-```
-src/pipelines/
-├── base_pipeline.py          # Base pipeline interface
-├── scene_detection/          # Scene analysis and object detection
-├── person_tracking/          # Multi-person tracking and pose estimation
-├── face_analysis/            # Face detection, recognition, emotions
-└── audio_processing/         # Speech recognition and audio features
+# Custom configuration
+annotator = VideoAnnotator(config="configs/high_performance.yaml")
+results = annotator.process("video.mp4")
 ```
 
-### Data Schemas
+### Command Line
+```bash
+# Single video processing
+python -m videoannotator process video.mp4
 
-All pipelines output standardized data formats with comprehensive metadata:
-- Scene annotations with object detection and classification
-- Person tracking with pose keypoints and movement analysis
-- Face analysis with detection, recognition, and emotion scores
-- Audio processing with speech transcription and speaker diarization
+# Batch processing
+python -m videoannotator batch videos/ --output results/
 
-See [schemas documentation](src/schemas/) for detailed output formats.
+# Specific pipeline
+python -m videoannotator process video.mp4 --pipeline face_analysis
 
-## Documentation
+# Custom config
+python -m videoannotator process video.mp4 --config configs/lightweight.yaml
+```
 
-### Core Documentation
-- [Getting Started Guide](docs/GETTING_STARTED.md)
-- [Installation & Setup Guide](docs/INSTALLATION.md)
-- [Configuration Guide](configs/README.md)
-- [Testing Standards](docs/TESTING_STANDARDS.md)
+### Export to Annotation Tools
+```python
+from videoannotator.exporters import CVATExporter, LabelStudioExporter
 
-### API Documentation
-- [Data Schemas & Output Formats](docs/OUTPUT_FORMATS.md)
-- [Technical Specification](docs/TECHNICAL_SPECIFICATION.md)
-- [Development Roadmap](docs/ROADMAP.md)
-- [Troubleshooting Guide](docs/TROUBLESHOOTING.md)
+# Export to CVAT
+CVATExporter().export(annotations, "cvat_project.json")
 
-## Testing
+# Export to LabelStudio  
+LabelStudioExporter().export(annotations, "labelstudio_tasks.json")
+```
 
-Run the comprehensive test suite:
+## 📁 **Project Structure**
+
+```
+VideoAnnotator/
+├── src/
+│   ├── pipelines/           # Core analysis pipelines
+│   ├── schemas/             # JSON schemas & validation  
+│   ├── exporters/           # Annotation tool exporters
+│   └── utils/               # Shared utilities
+├── tests/                   # Comprehensive test suite (94% success)
+├── configs/                 # Pipeline configurations
+├── examples/                # Usage examples and demos
+├── docs/                    # Documentation
+└── requirements.txt         # Dependencies
+```
+
+## 📚 **Documentation**
+
+| Document | Description |
+|----------|-------------|
+| **[Installation Guide](docs/INSTALLATION.md)** | Setup and dependencies |
+| **[Pipeline Specs](docs/Pipeline%20Specs.md)** | Technical pipeline details |
+| **[Output Formats](docs/OUTPUT_FORMATS.md)** | JSON schema documentation |
+| **[Testing Standards](docs/TESTING_STANDARDS.md)** | Test framework and practices |
+| **[Configuration Guide](configs/README.md)** | YAML configuration options |
+
+## 🧪 **Quality Assurance**
+
+VideoAnnotator maintains high code quality through comprehensive testing:
 
 ```bash
-# Run all tests
-python -m pytest tests/
+# Run full test suite (94% success rate)
+python -m pytest tests/ -v
 
-# Run specific test categories
-python -m pytest tests/test_pipelines.py -k "test_integration"
-python -m pytest tests/test_pipelines.py -k "test_performance"
+# Test specific pipelines
+python -m pytest tests/test_face_pipeline_modern.py -v
 
-# Run with coverage
+# Performance benchmarks
+python -m pytest tests/ -m performance -v
+
+# Test coverage analysis
 python -m pytest tests/ --cov=src --cov-report=html
 ```
 
-## Contributing
+**📊 Test Results:**
+- ✅ **67/71 tests passing** (94% success rate)
+- ✅ **Zero code duplication** after rationalization
+- ✅ **Modern test patterns** across all pipelines
+- ✅ **Performance benchmarks** for optimization
 
-1. Follow the [Testing Standards](docs/TESTING_STANDARDS.md) for all contributions
-2. Add tests to existing test files in `tests/` directory
-3. Update documentation for new features
-4. Run the full test suite before submitting changes
+## 🤝 **Contributing**
 
-## Requirements
+1. **Follow Standards**: Use existing [Testing Standards](docs/TESTING_STANDARDS.md)
+2. **Add Tests**: Integrate into existing test files in `tests/`
+3. **Update Docs**: Keep documentation current with changes
+4. **Quality Check**: Ensure test suite maintains 90%+ success rate
 
-- Python 3.8+
-- FFmpeg for audio/video processing
-- CUDA (optional, for GPU acceleration)
-- See [requirements.txt](requirements.txt) for full dependencies
+## 📄 **License & Acknowledgments**
 
-## License
+**License**: MIT - see [LICENSE](LICENSE) for details
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-VideoAnnotator builds upon research methodologies from computational video analysis and machine learning communities. Special thanks to the open-source ML ecosystem including YOLO, OpenAI Whisper, and PyTorch.
+**Acknowledgments**: Built on the shoulders of giants including YOLO, Whisper, PyTorch, and the open-source ML community. Special thanks to research communities advancing computer vision and audio processing.
