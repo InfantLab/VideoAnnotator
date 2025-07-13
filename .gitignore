@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+
 # C extensions
 *.so
 
@@ -152,6 +153,7 @@ code/__temp__.mp4
 mydata
 
 # Project specific outputs and caches
+batch_results/
 data/*
 *.ipynb_checkpoints
 
