@@ -359,6 +359,7 @@ class PersonTrackingPipeline(BasePipeline):
         if self.model is not None:
             del self.model
             self.model = None
+        self.is_initialized = False
 
     def initialize(self) -> None:
         """Initialize the person tracking pipeline by loading the YOLO model."""

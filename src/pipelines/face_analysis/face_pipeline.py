@@ -66,6 +66,7 @@ class FaceAnalysisPipeline(BasePipeline):
         """Initialize the face analysis backend."""
         self.logger.info(f"Initializing FaceAnalysisPipeline with backend: {self.config['detection_backend']}")
         self._initialize_backend()
+        self.is_initialized = True
 
     def get_schema(self) -> Dict[str, Any]:
         """Get the output schema for face analysis annotations."""
@@ -426,6 +427,14 @@ class FaceAnalysisPipeline(BasePipeline):
 
     def cleanup(self):
         """Cleanup resources."""
-        if "mediapipe" in self.backends:
-            self.backends["mediapipe"].close()
-        self.backends.clear()
+        # Cleanup MediaPipe resources if initialized
+        if self.mp_face_detection is not None:
+            self.mp_face_detection.close()
+        if self.mp_face_mesh is not None:
+            self.mp_face_mesh.close()
+        
+        # Reset attributes
+        self.face_cascade = None
+        self.mp_face_detection = None
+        self.mp_face_mesh = None
+        self.is_initialized = False
