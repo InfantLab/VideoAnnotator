@@ -7,7 +7,7 @@ All schemas follow industry standards (COCO, CVAT, Label Studio, WebVTT, RTTM).
 Usage:
     from src.schemas.industry_standards import (
         COCOPersonDetection,
-        COCOPoseKeypoints, 
+        COCOPoseKeypoints,
         COCOFaceDetection,
         CVATAnnotation,
         WebVTTTranscription,
@@ -17,18 +17,12 @@ Usage:
 
 # Core industry standard base classes
 from .standards_compatible_schemas import (
-    COCOBaseAnnotation,
-    COCOBoundingBox, 
     COCOKeypoints,
-    COCOImageAnnotation,
     CVATAnnotation,
-    CVATTrack,
     LabelStudioResult,
-    UniversalPersonDetection,
-    UniversalPoseKeypoints,
     export_to_coco_json,
     export_to_cvat_xml,
-    export_to_labelstudio_json
+    export_to_labelstudio_json,
 )
 
 # Audio format integrations
@@ -36,48 +30,30 @@ from .audio_standards import (
     WebVTTEntry,
     RTTMEntry,
     AudioSetEntry,
-    AudioStandardsExporter,
     export_audio_transcription_webvtt,
     export_speaker_diarization_rttm,
-    export_audio_events_audioset
+    export_audio_events_audioset,
 )
 
 # COCO extensions for video-specific needs
 from .coco_extensions import (
-    VIDEOANNOTATOR_CATEGORIES,
-    COCOVideoImage,
-    COCOVideoAnnotation,
     COCOPersonAnnotation,
-    COCOFaceAnnotation, 
+    COCOFaceAnnotation,
     COCOSceneAnnotation,
-    COCOVideoDataset,
-    create_coco_info,
-    create_default_licenses,
-    get_categories_for_pipeline,
-    convert_yolo_bbox_to_coco,
-    convert_yolo_keypoints_to_coco,
-    calculate_bbox_area,
-    create_video_coco_dataset,
-    create_scene_annotation,
-    create_person_annotation,
-    create_face_annotation
 )
 
 # Simplified schemas for quick prototyping
 from .simple_schemas import (
-    BaseAnnotation as SimpleBaseAnnotation,
     PersonDetection as SimplePersonDetection,
-    PoseKeypoints as SimplePoseKeypoints, 
+    PoseKeypoints as SimplePoseKeypoints,
     FaceDetection as SimpleFaceDetection,
     FaceEmotion as SimpleFaceEmotion,
     SpeechRecognition as SimpleSpeechRecognition,
     SpeakerDiarization as SimpleSpeakerDiarization,
-    AudioEvent as SimpleAudioEvent,
     SceneAnnotation as SimpleSceneAnnotation,
-    ObjectDetection as SimpleObjectDetection,
     to_cvat_format,
     to_labelstudio_format,
-    from_dict
+    from_dict,
 )
 
 
@@ -114,32 +90,33 @@ SceneAnnotation = SimpleSceneAnnotation
 # Migration Helpers
 # ============================================================================
 
+
 def get_recommended_schema(use_case: str):
     """Get the recommended schema for a specific use case."""
-    
+
     recommendations = {
         "pytorch_training": {
             "person": COCOPersonDetection,
             "pose": COCOPoseKeypoints,
             "face": COCOFaceDetection,
-            "scene": COCOSceneDetection
+            "scene": COCOSceneDetection,
         },
         "annotation_tool": {
             "person": CVATPersonDetection,
             "pose": CVATAnnotation,
             "face": CVATAnnotation,
-            "scene": CVATAnnotation
+            "scene": CVATAnnotation,
         },
         "research_export": {
             "person": LabelStudioPersonDetection,
             "pose": LabelStudioResult,
             "face": LabelStudioResult,
-            "scene": LabelStudioResult
+            "scene": LabelStudioResult,
         },
         "audio_processing": {
             "transcription": WebVTTTranscription,
             "diarization": RTTMSpeakerDiarization,
-            "classification": AudioSetClassification
+            "classification": AudioSetClassification,
         },
         "prototyping": {
             "person": PersonDetection,
@@ -148,16 +125,16 @@ def get_recommended_schema(use_case: str):
             "emotion": FaceEmotion,
             "speech": SpeechRecognition,
             "speaker": SpeakerDiarization,
-            "scene": SceneAnnotation
-        }
+            "scene": SceneAnnotation,
+        },
     }
-    
+
     return recommendations.get(use_case, recommendations["prototyping"])
 
 
 def migrate_legacy_annotation(legacy_dict: dict, annotation_type: str) -> any:
     """Convert legacy annotation dictionaries to new schemas."""
-    
+
     # Detect legacy format and convert
     if legacy_dict.get("type") == "person_bbox":
         return PersonDetection(**legacy_dict)
@@ -185,28 +162,24 @@ def migrate_legacy_annotation(legacy_dict: dict, annotation_type: str) -> any:
 __all__ = [
     # Core COCO formats (recommended for ML workflows)
     "COCOPersonDetection",
-    "COCOPoseKeypoints", 
+    "COCOPoseKeypoints",
     "COCOFaceDetection",
     "COCOSceneDetection",
-    
     # Annotation tool formats
     "CVATPersonDetection",
     "LabelStudioPersonDetection",
-    
     # Audio formats
     "WebVTTTranscription",
-    "RTTMSpeakerDiarization", 
+    "RTTMSpeakerDiarization",
     "AudioSetClassification",
-    
     # Simple formats (prototyping)
     "PersonDetection",
     "PoseKeypoints",
-    "FaceDetection", 
+    "FaceDetection",
     "FaceEmotion",
     "SpeechRecognition",
     "SpeakerDiarization",
     "SceneAnnotation",
-    
     # Export functions
     "export_to_coco_json",
     "export_to_cvat_xml",
@@ -214,13 +187,11 @@ __all__ = [
     "export_audio_transcription_webvtt",
     "export_speaker_diarization_rttm",
     "export_audio_events_audioset",
-    
     # Conversion utilities
     "to_cvat_format",
     "to_labelstudio_format",
     "from_dict",
-    
     # Migration helpers
     "get_recommended_schema",
-    "migrate_legacy_annotation"
+    "migrate_legacy_annotation",
 ]

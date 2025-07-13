@@ -3,17 +3,17 @@ Mathematical utility functions for calculations on keypoints and audio data.
 """
 
 import numpy as np
-import librosa
+
 
 def avgxys(xyc, threshold=0.5):
     """
     Given a set of x,y,conf values (a n x 3 array) calculate the average x,y values
     for all those with a confidence above the threshold.
-    
-    Args:   
+
+    Args:
         xyc - [nrows x 3] array of x,y,conf values
         threshold - confidence threshold
-    Returns:    
+    Returns:
         avgx, avgy
     """
     # get the x,y values where conf > threshold
@@ -27,15 +27,16 @@ def avgxys(xyc, threshold=0.5):
     avgy = np.mean(y)
     return avgx, avgy
 
+
 def stdevxys(xyc, threshold=0.5):
     """
     Given a set of x,y,conf values (a n x 3 array) calculate the stdev for x,y values
     for all those with a confidence above the threshold.
-    
-    Args:   
+
+    Args:
         xyc - [nrows x 3] array of x,y,conf values
         threshold - confidence threshold
-    Returns:    
+    Returns:
         stdx, stdy
     """
     # get the x,y values where conf > threshold
@@ -49,10 +50,11 @@ def stdevxys(xyc, threshold=0.5):
     stdevy = np.std(y)
     return stdevx, stdevy
 
+
 def rowcogs(keypoints1d, threshold=0.5):
     """
     Wrapper for avgxys to work with a 1d array of keypoints
-    
+
     Args:
         keypoints1d - 1d array of keypoints
         threshold - confidence threshold
@@ -63,10 +65,11 @@ def rowcogs(keypoints1d, threshold=0.5):
     xyc3 = keypoints1d.to_numpy().reshape(-1, 3)
     return avgxys(xyc3, threshold)
 
+
 def rowstds(keypoints1d, threshold=0.5):
     """
     Wraps stdevxys to work with a 1d array of keypoints
-    
+
     Args:
         keypoints1d - 1d array of keypoints
         threshold - confidence threshold
@@ -76,18 +79,19 @@ def rowstds(keypoints1d, threshold=0.5):
     xycs3 = keypoints1d.to_numpy().reshape(-1, 3)
     return stdevxys(xycs3, threshold)
 
+
 def centreOfGravity(df, frames=(), people="all", bodypart="whole"):
     """
     Find average position of a bodypart across frames and people,
     and add these as new column in the dataframe.
     Useful for plotting time series of movement.
 
-    Args:   
+    Args:
         df (DataFrame): Dataframe of keypoints
         frames (list): List of frames to include
         people (list or str): List of people to include, or 'all'
         bodypart (str): Which bodypart to use, default is "whole" for all keypoints
-        
+
     Returns:
         DataFrame: Dataframe with added center of gravity columns
     """
@@ -118,12 +122,7 @@ def centreOfGravity(df, frames=(), people="all", bodypart="whole"):
                     xyc = xyc.reshape(-1, 3)  # reshape to n x 3 array (x,y,conf)
                     avgx, avgy = avgxys(xyc, threshold)
 
-                df.loc[
-                    (df["frame"] == frame) & (df["person"] == person), "cog.x"
-                ] = avgx
-                df.loc[
-                    (df["frame"] == frame) & (df["person"] == person), "cog.y"
-                ] = avgy
+                df.loc[(df["frame"] == frame) & (df["person"] == person), "cog.x"] = avgx
+                df.loc[(df["frame"] == frame) & (df["person"] == person), "cog.y"] = avgy
 
     return df
-

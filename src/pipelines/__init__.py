@@ -12,8 +12,8 @@ from .audio_processing.audio_pipeline import AudioPipeline
 
 __all__ = [
     "BasePipeline",
-    "SceneDetectionPipeline", 
+    "SceneDetectionPipeline",
     "PersonTrackingPipeline",
     "FaceAnalysisPipeline",
-    "AudioPipeline"
+    "AudioPipeline",
 ]

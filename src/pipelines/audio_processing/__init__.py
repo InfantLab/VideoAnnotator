@@ -7,15 +7,13 @@ This module provides separate pipelines for different audio processing tasks:
 - AudioPipeline: Comprehensive audio analysis including transcription, diarization, and feature extraction
 """
 
-from .diarization_pipeline import DiarizationPipeline, DiarizationPipelineConfig
-from .speech_pipeline import SpeechPipeline, SpeechPipelineConfig
 from .audio_pipeline import AudioPipeline, AudioPipelineConfig
 
 __all__ = [
-    'DiarizationPipeline',
-    'DiarizationPipelineConfig', 
-    'AudioPipeline',
-    'AudioPipelineConfig'
+    "DiarizationPipeline",
+    "DiarizationPipelineConfig",
+    "AudioPipeline",
+    "AudioPipelineConfig",
 ], AudioPipelineConfig
 
-__all__ = ['AudioPipeline', 'AudioPipelineConfig']
+__all__ = ["AudioPipeline", "AudioPipelineConfig"]

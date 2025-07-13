@@ -12,7 +12,7 @@ from .version import (
     __license__,
     get_version_info,
     print_version_info,
-    create_annotation_metadata
+    create_annotation_metadata,
 )
 
 from .pipelines import (
@@ -20,7 +20,7 @@ from .pipelines import (
     SceneDetectionPipeline,
     PersonTrackingPipeline,
     FaceAnalysisPipeline,
-    AudioPipeline
+    AudioPipeline,
 )
 
 from .schemas import (
@@ -30,7 +30,7 @@ from .schemas import (
     SceneAnnotation,
     PersonDetection,
     FaceDetection,
-    SpeechSegment
+    SpeechSegment,
 )
 
 __all__ = [
@@ -42,14 +42,12 @@ __all__ = [
     "get_version_info",
     "print_version_info",
     "create_annotation_metadata",
-    
     # Pipelines
     "BasePipeline",
     "SceneDetectionPipeline",
-    "PersonTrackingPipeline", 
+    "PersonTrackingPipeline",
     "FaceAnalysisPipeline",
     "AudioPipeline",
-    
     # Schemas
     "AnnotationBase",
     "VideoMetadata",
@@ -57,5 +55,5 @@ __all__ = [
     "SceneAnnotation",
     "PersonDetection",
     "FaceDetection",
-    "SpeechSegment"
+    "SpeechSegment",
 ]

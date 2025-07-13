@@ -7,10 +7,11 @@ import numpy as np
 import torch
 import ultralytics.utils as ultrautils
 
+
 def createKeypointsDF():
     """
     Create empty dataframe to store keypoints, one per person per frame.
-    
+
     Returns:
         DataFrame: Empty dataframe with keypoint columns
     """
@@ -43,14 +44,14 @@ def createKeypointsDF():
 def addKeypointsToDF(df, framenumber, bbox, bconf, keypointsdata):
     """
     Take output from yolov8 and add to dataframe, person by person.
-    
+
     Args:
         df (DataFrame): Keypoints dataframe
         framenumber (int): Frame number
         bbox (array): Bounding box data
         bconf (array): Bounding box confidence
         keypointsdata (array): Keypoints data
-        
+
     Returns:
         DataFrame: Updated keypoints dataframe
     """
@@ -71,7 +72,7 @@ def addKeypointsToDF(df, framenumber, bbox, bconf, keypointsdata):
 def createfacesdf():
     """
     Creates a dataframe with the facial data from the videos.
-    
+
     Returns:
         DataFrame: Empty faces dataframe
     """
@@ -92,14 +93,14 @@ def createfacesdf():
 
 def addfacestodf(facesdf, frameidx, facedata):
     """
-    Add the faces identified by face detection model to the dataframe, 
+    Add the faces identified by face detection model to the dataframe,
     along with emotion, age and gender.
-    
+
     Args:
         facesdf (DataFrame): Faces dataframe
         frameidx (int): Frame index
         facedata (list): Face detection data
-        
+
     Returns:
         DataFrame: Updated faces dataframe
     """
@@ -131,7 +132,7 @@ def relabelPersonIndex(
 ):
     """
     Replace person and/or index values with new values for a range of frames.
-    
+
     Args:
         df (DataFrame): DataFrame with person and index columns
         person (str): Original person value
@@ -140,7 +141,7 @@ def relabelPersonIndex(
         newIndex (int): New index value
         startFrame (int): Start frame for the change
         endFrame (int): End frame for the change
-        
+
     Returns:
         DataFrame: Updated dataframe
     """
@@ -150,25 +151,21 @@ def relabelPersonIndex(
         endFrame = df["frame"].max()
     if person is None and index is None:
         return df
-        
+
     if person is not None and index is None:
         # just person
         df.loc[
-            (df["frame"] >= startFrame)
-            & (df["frame"] <= endFrame)
-            & (df["person"] == person),
+            (df["frame"] >= startFrame) & (df["frame"] <= endFrame) & (df["person"] == person),
             "person",
         ] = newPerson
-        
+
     if person is None and index is not None:
         # just index
         df.loc[
-            (df["frame"] >= startFrame)
-            & (df["frame"] <= endFrame)
-            & (df["index"] == index),
+            (df["frame"] >= startFrame) & (df["frame"] <= endFrame) & (df["index"] == index),
             "index",
         ] = newIndex
-        
+
     if person is not None and index is not None:
         # both
         df.loc[
@@ -185,14 +182,14 @@ def relabelPersonIndex(
             & (df["index"] == index),
             "index",
         ] = newIndex
-        
+
     return df
 
 
 def getkeypointcols():
     """
     Get lists of x and y coordinate column indices.
-    
+
     Returns:
         tuple: (xcols, ycols) - Lists of x and y coordinate column indices
     """
@@ -216,7 +213,7 @@ def getkeypointcols():
 def getfacecols():
     """
     Get lists of face x and y coordinate column indices.
-    
+
     Returns:
         tuple: (xcols, ycols) - Lists of face x and y coordinate column indices
     """
@@ -226,11 +223,11 @@ def getfacecols():
 def appendDictToDf(df, dict_to_append):
     """
     Append a dictionary to a dataframe.
-    
+
     Args:
         df (DataFrame): DataFrame to append to
         dict_to_append (dict): Dictionary to append
-        
+
     Returns:
         DataFrame: Updated dataframe
     """
@@ -244,90 +241,90 @@ def padMovementData(keyPoints, maxFrames=None):
     1. There is a row entry for every frame in the video up to maxFrames
     2a. If the video is less than the maxFrames, we pad out to maxFrames
     2b. If video is longer than maxFrames, we truncate to maxFrames
-    
+
     Args:
         keyPoints (DataFrame): DataFrame containing key points data
         maxFrames (int): Maximum number of frames to pad
-        
+
     Returns:
         DataFrame: Padded DataFrame with consistent frame numbers for each person
     """
     if maxFrames is None:
         maxFrames = keyPoints["frame"].max()
-    
+
     # a list of frame numbers
     frameNumbers = pd.Index(np.arange(0, maxFrames + 1), name="frame")
-    
+
     paddedKeyPoints = keyPoints.iloc[:0].copy()
-    
+
     # There are two people indexed 0 and 1
     # We need to pad both arrays
     for idx in range(2):
         thisperson = keyPoints[keyPoints["index"] == idx]
         missing_frames = frameNumbers.difference(thisperson["frame"])
-        
+
         # pad and fill missing frames
         add_df = pd.DataFrame(index=missing_frames, columns=thisperson.columns).fillna(np.nan)
         add_df["frame"] = missing_frames
         add_df["index"] = idx
         add_df["person"] = idx
         thisperson = pd.concat([thisperson, add_df])
-        
+
         # truncate to maxFrames
         if thisperson.shape[0] > maxFrames:
             thisperson = thisperson[thisperson["frame"] <= maxFrames]
-            
+
         # add the paddedKeyPoints to the dataframe
         paddedKeyPoints = appendDictToDf(paddedKeyPoints, thisperson)
-        
+
     return paddedKeyPoints.sort_values(by=["frame", "index"])
 
 
 def interpolateMovementData(keyPoints):
     """
     Interpolates movement data to fill missing frames for each person.
-    
+
     Args:
         keyPoints (DataFrame): DataFrame containing key points data
-        
+
     Returns:
         DataFrame: Interpolated DataFrame with filled missing frames
     """
     # a list of frame numbers
     maxFrames = keyPoints["frame"].max()
     frameNumbers = pd.Index(np.arange(0, maxFrames + 1), name="frame")
-    
+
     interpolatedKeyPoints = keyPoints.iloc[:0].copy()
-    
+
     # There are two people indexed 0 and 1
     # We need to interpolate both arrays
     for idx in range(2):
         thisperson = keyPoints[keyPoints["index"] == idx]
         thisperson = thisperson.set_index("frame")
         thisperson = thisperson.reindex(frameNumbers)
-        thisperson = thisperson.interpolate(method='linear', axis=0, limit_direction='backward')
+        thisperson = thisperson.interpolate(method="linear", axis=0, limit_direction="backward")
         thisperson["frame"] = thisperson.index
         thisperson["index"] = idx
         thisperson["person"] = idx
-        
+
         # add the interpolated data to the dataframe
         interpolatedKeyPoints = appendDictToDf(interpolatedKeyPoints, thisperson)
-        
+
     return interpolatedKeyPoints.sort_values(by=["frame", "index"])
 
 
 def flattenMovementDataset(keyPoints):
     """
     Flattens the movement dataset by restructuring the key points data.
-    
+
     Args:
         keyPoints (DataFrame): DataFrame containing key points data
-        
+
     Returns:
         DataFrame: Flattened DataFrame with restructured columns
     """
     # There are two people indexed 0 and 1
-    flattenedKps = keyPoints.pivot(index='frame', columns='index')
+    flattenedKps = keyPoints.pivot(index="frame", columns="index")
     flattenedKps.columns = ["_".join((str(j), i)) for i, j in flattenedKps.columns]
     flattenedKps = flattenedKps.reset_index()
     return flattenedKps

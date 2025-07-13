@@ -16,18 +16,20 @@ from ...exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
     export_coco_json,
-    validate_coco_json
+    validate_coco_json,
 )
 
 # Optional imports for enhanced face analysis
 try:
     from deepface import DeepFace
+
     DEEPFACE_AVAILABLE = True
 except ImportError:
     DEEPFACE_AVAILABLE = False
 
 try:
     import mediapipe as mp
+
     MEDIAPIPE_AVAILABLE = True
 except ImportError:
     MEDIAPIPE_AVAILABLE = False
@@ -36,10 +38,10 @@ except ImportError:
 class FaceAnalysisPipeline(BasePipeline):
     """
     Standards-only face analysis pipeline using COCO format.
-    
+
     Returns native COCO annotation dictionaries instead of custom schemas.
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         default_config = {
             "detection_backend": "opencv",  # opencv, mediapipe, deepface
@@ -52,173 +54,181 @@ class FaceAnalysisPipeline(BasePipeline):
         if config:
             default_config.update(config)
         super().__init__(default_config)
-        
+
         self.logger = logging.getLogger(__name__)
         self.backends = {}
 
     def process(
-        self, 
-        video_path: str, 
-        start_time: float = 0.0, 
+        self,
+        video_path: str,
+        start_time: float = 0.0,
         end_time: Optional[float] = None,
         pps: float = 5.0,  # 5 FPS for face analysis
-        output_dir: Optional[str] = None
+        output_dir: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Process video for face analysis.
-        
+
         Returns:
             List of COCO format annotation dictionaries with face detection results.
         """
-        
+
         # Get video metadata
         video_metadata = self._get_video_metadata(video_path)
-        
+
         # Initialize detection backend
         self._initialize_backend()
-        
+
         # Process video frames
         annotations = []
         cap = cv2.VideoCapture(video_path)
-        
+
         if not cap.isOpened():
             raise ValueError(f"Could not open video file: {video_path}")
-        
+
         fps = cap.get(cv2.CAP_PROP_FPS)
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        
+
         # Calculate frame processing parameters
         if end_time is None:
             end_time = total_frames / fps
-        
+
         start_frame = int(start_time * fps)
         end_frame = int(end_time * fps)
         frame_step = max(1, int(fps / pps))  # Process every Nth frame
-        
+
         annotation_id = 1
-        
+
         try:
             for frame_num in range(start_frame, min(end_frame, total_frames), frame_step):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
                 ret, frame = cap.read()
-                
+
                 if not ret:
                     continue
-                
+
                 timestamp = frame_num / fps
                 height, width = frame.shape[:2]
-                
+
                 # Detect faces in frame
                 face_annotations = self._detect_faces_in_frame(
-                    frame, timestamp, video_metadata['video_id'], frame_num, width, height
+                    frame, timestamp, video_metadata["video_id"], frame_num, width, height
                 )
-                
+
                 # Assign unique annotation IDs
                 for face_ann in face_annotations:
-                    face_ann['id'] = annotation_id
+                    face_ann["id"] = annotation_id
                     annotation_id += 1
-                    
+
                 annotations.extend(face_annotations)
-                
+
         finally:
             cap.release()
-        
+
         # Save results if output directory specified
         if output_dir and annotations:
             self._save_coco_annotations(annotations, output_dir, video_metadata)
-        
+
         self.logger.info(f"Face analysis complete: {len(annotations)} detections")
         return annotations
 
     def _get_video_metadata(self, video_path: str) -> Dict[str, Any]:
         """Extract video metadata."""
         cap = cv2.VideoCapture(video_path)
-        
+
         if not cap.isOpened():
             raise ValueError(f"Could not open video file: {video_path}")
-        
+
         fps = cap.get(cv2.CAP_PROP_FPS)
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         duration = total_frames / fps if fps > 0 else 0
-        
+
         cap.release()
-        
+
         return {
-            'video_id': Path(video_path).stem,
-            'filepath': video_path,
-            'width': width,
-            'height': height,
-            'fps': fps,
-            'duration': duration,
-            'total_frames': total_frames
+            "video_id": Path(video_path).stem,
+            "filepath": video_path,
+            "width": width,
+            "height": height,
+            "fps": fps,
+            "duration": duration,
+            "total_frames": total_frames,
         }
 
     def _initialize_backend(self):
         """Initialize the selected detection backend."""
         backend = self.config["detection_backend"]
-        
+
         if backend == "mediapipe" and MEDIAPIPE_AVAILABLE:
             self.backends["mediapipe"] = mp.solutions.face_detection.FaceDetection(
                 model_selection=0, min_detection_confidence=self.config["confidence_threshold"]
             )
             self.logger.info("Initialized MediaPipe face detection")
-            
+
         elif backend == "opencv":
             # OpenCV Haar cascades are built-in
             self.logger.info("Using OpenCV face detection")
-            
+
         elif backend == "deepface" and DEEPFACE_AVAILABLE:
             # DeepFace will be initialized on first use
             self.logger.info("Using DeepFace detection")
-            
+
         else:
             self.logger.warning(f"Backend {backend} not available, falling back to OpenCV")
             self.config["detection_backend"] = "opencv"
 
     def _detect_faces_in_frame(
-        self, 
-        frame: np.ndarray, 
-        timestamp: float, 
-        video_id: str, 
+        self,
+        frame: np.ndarray,
+        timestamp: float,
+        video_id: str,
         frame_number: int,
         width: int,
-        height: int
+        height: int,
     ) -> List[Dict[str, Any]]:
         """Detect faces in a single frame and return COCO annotations."""
-        
+
         backend = self.config["detection_backend"]
-        
+
         if backend == "mediapipe" and "mediapipe" in self.backends:
-            return self._detect_faces_mediapipe(frame, timestamp, video_id, frame_number, width, height)
+            return self._detect_faces_mediapipe(
+                frame, timestamp, video_id, frame_number, width, height
+            )
         elif backend == "deepface" and DEEPFACE_AVAILABLE:
-            return self._detect_faces_deepface(frame, timestamp, video_id, frame_number, width, height)
+            return self._detect_faces_deepface(
+                frame, timestamp, video_id, frame_number, width, height
+            )
         else:
-            return self._detect_faces_opencv(frame, timestamp, video_id, frame_number, width, height)
+            return self._detect_faces_opencv(
+                frame, timestamp, video_id, frame_number, width, height
+            )
 
     def _detect_faces_opencv(
-        self, 
-        frame: np.ndarray, 
-        timestamp: float, 
+        self,
+        frame: np.ndarray,
+        timestamp: float,
         video_id: str,
-        frame_number: int, 
-        width: int, 
-        height: int
+        frame_number: int,
+        width: int,
+        height: int,
     ) -> List[Dict[str, Any]]:
         """Detect faces using OpenCV Haar cascades."""
-        
+
         # Load cascade classifier
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        
+        face_cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        )
+
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         face_rects = face_cascade.detectMultiScale(
-            gray, 
-            scaleFactor=1.1, 
-            minNeighbors=5, 
-            minSize=(self.config["min_face_size"], self.config["min_face_size"])
+            gray,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(self.config["min_face_size"], self.config["min_face_size"]),
         )
-        
+
         annotations = []
         for i, (x, y, w, h) in enumerate(face_rects):
             # Create COCO annotation
@@ -232,37 +242,37 @@ class FaceAnalysisPipeline(BasePipeline):
                 face_id=i,
                 timestamp=timestamp,
                 frame_number=frame_number,
-                backend="opencv"
+                backend="opencv",
             )
             annotations.append(annotation)
-            
+
         return annotations
 
     def _detect_faces_mediapipe(
-        self, 
-        frame: np.ndarray, 
-        timestamp: float, 
+        self,
+        frame: np.ndarray,
+        timestamp: float,
         video_id: str,
-        frame_number: int, 
-        width: int, 
-        height: int
+        frame_number: int,
+        width: int,
+        height: int,
     ) -> List[Dict[str, Any]]:
         """Detect faces using MediaPipe."""
-        
+
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.backends["mediapipe"].process(rgb_frame)
-        
+
         annotations = []
         if results.detections:
             for i, detection in enumerate(results.detections):
                 bbox_norm = detection.location_data.relative_bounding_box
-                
+
                 # Convert normalized coordinates to pixels
-                x = float(bbox_norm.x_center - bbox_norm.width/2) * width
-                y = float(bbox_norm.y_center - bbox_norm.height/2) * height
+                x = float(bbox_norm.x_center - bbox_norm.width / 2) * width
+                y = float(bbox_norm.y_center - bbox_norm.height / 2) * height
                 w = float(bbox_norm.width) * width
                 h = float(bbox_norm.height) * height
-                
+
                 # Filter by minimum face size
                 if min(w, h) >= self.config["min_face_size"]:
                     annotation = create_coco_annotation(
@@ -275,34 +285,34 @@ class FaceAnalysisPipeline(BasePipeline):
                         face_id=i,
                         timestamp=timestamp,
                         frame_number=frame_number,
-                        backend="mediapipe"
+                        backend="mediapipe",
                     )
                     annotations.append(annotation)
-                    
+
         return annotations
 
     def _detect_faces_deepface(
-        self, 
-        frame: np.ndarray, 
-        timestamp: float, 
+        self,
+        frame: np.ndarray,
+        timestamp: float,
         video_id: str,
-        frame_number: int, 
-        width: int, 
-        height: int
+        frame_number: int,
+        width: int,
+        height: int,
     ) -> List[Dict[str, Any]]:
         """Detect faces using DeepFace."""
-        
+
         try:
             # DeepFace expects RGB format
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            
+
             # Use DeepFace.extract_faces for detection
             face_objs = DeepFace.extract_faces(
-                rgb_frame, 
-                detector_backend='opencv',  # Use OpenCV backend for speed
-                enforce_detection=False
+                rgb_frame,
+                detector_backend="opencv",  # Use OpenCV backend for speed
+                enforce_detection=False,
             )
-            
+
             annotations = []
             for i, face_obj in enumerate(face_objs):
                 if face_obj is not None:
@@ -319,62 +329,61 @@ class FaceAnalysisPipeline(BasePipeline):
                         face_id=i,
                         timestamp=timestamp,
                         frame_number=frame_number,
-                        backend="deepface"
+                        backend="deepface",
                     )
                     annotations.append(annotation)
-                    
+
             return annotations
-            
+
         except Exception as e:
             self.logger.warning(f"DeepFace detection failed: {e}")
             return []
 
     def _save_coco_annotations(
-        self, 
-        annotations: List[Dict[str, Any]], 
-        output_dir: str, 
-        video_metadata: Dict[str, Any]
+        self, annotations: List[Dict[str, Any]], output_dir: str, video_metadata: Dict[str, Any]
     ):
         """Save annotations in COCO format."""
-        
+
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
-        
+
         # Create COCO images list
         images = []
         image_ids = set()
-        
+
         for ann in annotations:
-            image_id = ann['image_id']
+            image_id = ann["image_id"]
             if image_id not in image_ids:
                 image_ids.add(image_id)
-                frame_number = ann.get('frame_number', 0)
-                timestamp = ann.get('timestamp', 0.0)
-                
+                frame_number = ann.get("frame_number", 0)
+                timestamp = ann.get("timestamp", 0.0)
+
                 image = create_coco_image_entry(
                     image_id=image_id,
-                    width=video_metadata['width'],
-                    height=video_metadata['height'],
+                    width=video_metadata["width"],
+                    height=video_metadata["height"],
                     file_name=f"frame_{frame_number:06d}.jpg",
                     # VideoAnnotator extensions
-                    video_id=video_metadata['video_id'],
+                    video_id=video_metadata["video_id"],
                     frame_number=frame_number,
-                    timestamp=timestamp
+                    timestamp=timestamp,
                 )
                 images.append(image)
-        
+
         # Export COCO JSON
         categories = [{"id": 100, "name": "face", "supercategory": "person"}]
         coco_path = output_path / f"{video_metadata['video_id']}_face_detections.json"
-        
+
         export_coco_json(annotations, images, str(coco_path), categories)
-        
+
         # Validate COCO format
         validation_result = validate_coco_json(str(coco_path), "face_analysis")
         if validation_result.is_valid:
             self.logger.info(f"Face detection COCO validation successful: {coco_path}")
         else:
-            self.logger.warning(f"Face detection COCO validation warnings: {', '.join(validation_result.warnings)}")
+            self.logger.warning(
+                f"Face detection COCO validation warnings: {', '.join(validation_result.warnings)}"
+            )
 
     def cleanup(self):
         """Cleanup resources."""

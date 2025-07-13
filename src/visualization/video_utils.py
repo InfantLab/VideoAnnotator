@@ -5,19 +5,20 @@ Functions for video creation and manipulation.
 import os
 import time
 import cv2
-from IPython.display import Image, clear_output
+from IPython.display import clear_output
 from IPython.display import display as ipydisplay
 from PIL import Image as PILImage
 
 from src.visualization.render import drawOneFrame, WhisperExtractCurrentCaption
 
+
 def createAnnotatedVideo(
     videopath, kptsdf=None, facesdf=None, speechjson=None, videos_out=None, debug=False
 ):
     """
-    Take a processed video and go through frame by frame, adding the bounding boxes, 
+    Take a processed video and go through frame by frame, adding the bounding boxes,
     keypoints, face/emotion and speech info. Then export the resulting video to a file.
-    
+
     Args:
         videopath (str): Path to the video file
         kptsdf (DataFrame): Dataframe of the keypoints
@@ -25,7 +26,7 @@ def createAnnotatedVideo(
         speechjson (dict): Speech data from Whisper
         videos_out (str): Path to the output directory
         debug (bool): Whether to display debug output
-        
+
     Returns:
         str: Path to the output video
     """
@@ -33,7 +34,7 @@ def createAnnotatedVideo(
     if not os.path.exists(videopath):
         print(f"Video file {videopath} not found.")
         return None
-        
+
     video = cv2.VideoCapture(videopath)
     fps = video.get(cv2.CAP_PROP_FPS)
     width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -48,7 +49,7 @@ def createAnnotatedVideo(
         if not ret:
             print("video read stopped on frame ", framenum)
             break
-            
+
         # get the keypoints for this frame
         if kptsdf is None:
             bboxes = None
@@ -65,7 +66,7 @@ def createAnnotatedVideo(
                 bboxes = framekpts.iloc[:, 3:7].values
                 xycs = framekpts.iloc[:, 8:].values
             frame = drawOneFrame(frame, bboxlabels, bboxes, xycs)
-            
+
         if facesdf is None:
             framefaces = None
         else:
@@ -75,7 +76,7 @@ def createAnnotatedVideo(
             # TODO - maybe include age & gender info
             faceboxes = framefaces.iloc[:, 3:7].values
             frame = drawOneFrame(frame, facelabels, faceboxes)
-            
+
         if speechjson is None:
             pass
         else:
@@ -99,7 +100,7 @@ def createAnnotatedVideo(
     outpath = os.path.join(videos_out, videofilename)
     out = cv2.VideoWriter(outpath, fourcc, fps, (width, height))
     print(f"Writing video to {outpath}")
-    
+
     for i in range(len(annotatedframes)):
         if debug:
             clear_output(wait=True)
@@ -116,12 +117,12 @@ def createAnnotatedVideo(
 def addSoundtoVideo(videopath, soundpath, out_dir=None):
     """
     Take a video and add a sound file to it using moviepy.
-    
+
     Args:
         videopath (str): Path to the video file
         soundpath (str): Path to the sound file
         out_dir (str): Path to the output directory
-        
+
     Returns:
         str: Path to the output video
     """
