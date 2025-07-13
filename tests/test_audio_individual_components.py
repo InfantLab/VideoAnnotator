@@ -80,7 +80,7 @@ class TestDiarizationPipeline:
         # Check that model was loaded with correct parameters
         mock_pyannote.from_pretrained.assert_called_once_with(
             "pyannote/speaker-diarization-3.1",
-            use_auth_token="FAKE_TOKEN_FOR_TESTING"  # Uses env token if available
+            use_auth_token="FAKE_TOKEN_FOR_TESTING"  # Mock token for testing
         )
         
         pipeline.cleanup()
