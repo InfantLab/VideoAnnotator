@@ -48,15 +48,54 @@ class FaceAnalysisPipeline(BasePipeline):
             "emotion_backend": "deepface",  # deepface, disabled
             "confidence_threshold": 0.7,
             "min_face_size": 30,  # Minimum face size in pixels
-            "enable_emotion": True,
-            "enable_landmarks": False,
+            "scale_factor": 1.1,  # For OpenCV Haar cascades
+            "min_neighbors": 5,  # For OpenCV Haar cascades
+            "max_faces": 10,  # Maximum faces to detect per frame
         }
+        # Merge with default config
+        merged_config = default_config.copy()
         if config:
-            default_config.update(config)
-        super().__init__(default_config)
-
+            merged_config.update(config)
+        super().__init__(merged_config)
+        self.face_cascade = None
+        self.mp_face_detection = None
+        self.mp_face_mesh = None
         self.logger = logging.getLogger(__name__)
-        self.backends = {}
+
+    def initialize(self) -> None:
+        """Initialize the face analysis backend."""
+        self.logger.info(f"Initializing FaceAnalysisPipeline with backend: {self.config['detection_backend']}")
+        self._initialize_backend()
+
+    def get_schema(self) -> Dict[str, Any]:
+        """Get the output schema for face analysis annotations."""
+        return {
+            "type": "coco_annotation",
+            "format_version": "1.0",
+            "categories": [
+                {
+                    "id": 1,
+                    "name": "face",
+                    "supercategory": "person"
+                }
+            ],
+            "annotation_schema": {
+                "id": "integer",
+                "image_id": "integer", 
+                "category_id": "integer",
+                "bbox": "array[4]",  # [x, y, width, height]
+                "area": "float",
+                "iscrowd": "integer",
+                "keypoints": "array[15]",  # Face landmarks (5 points: 2 eyes, nose, 2 mouth corners)
+                "num_keypoints": "integer",
+                "confidence": "float",
+                "attributes": {
+                    "emotion": "string",
+                    "age": "integer", 
+                    "gender": "string"
+                }
+            }
+        }
 
     def process(
         self,

@@ -5,10 +5,10 @@ This package contains modular pipeline implementations for video annotation task
 """
 
 from .base_pipeline import BasePipeline
-from .scene_detection.scene_pipeline_legacy import SceneDetectionPipeline
+from .scene_detection.scene_pipeline import SceneDetectionPipeline
 from .person_tracking.person_pipeline import PersonTrackingPipeline
 from .face_analysis.face_pipeline import FaceAnalysisPipeline
-from .audio_processing.audio_pipeline import AudioPipeline
+from .audio_processing import AudioPipeline
 
 __all__ = [
     "BasePipeline",

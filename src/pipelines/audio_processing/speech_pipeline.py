@@ -9,7 +9,6 @@ import logging
 from typing import Dict, List, Optional, Union, Any
 from pathlib import Path
 import torch
-from dataclasses import dataclass
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -24,50 +23,9 @@ except ImportError:
     logging.warning("whisper not available. Speech recognition will be disabled.")
 
 from ..base_pipeline import BasePipeline
-from ...schemas.audio_schema import SpeechRecognition
 
 
-@dataclass
-class SpeechPipelineConfig:
-    """Configuration for speech recognition pipeline."""
-
-    # Whisper model configuration
-    model_name: str = "base"  # tiny, base, small, medium, large, large-v2, large-v3
-    language: Optional[str] = None  # Auto-detect if None
-    task: str = "transcribe"  # transcribe or translate
-
-    # Processing options
-    beam_size: int = 5
-    best_of: int = 5
-    temperature: float = 0.0
-    patience: float = 1.0
-    length_penalty: float = 1.0
-    suppress_tokens: Optional[List[int]] = None
-
-    # Word-level timestamps
-    word_timestamps: bool = True
-    prepend_punctuations: str = "\"'¿([{-"
-    append_punctuations: str = '"\'.。,，!！?？:：")]}、'
-
-    # Audio preprocessing
-    use_vad: bool = True  # Voice Activity Detection
-    vad_threshold: float = 0.5
-    chunk_length: int = 30  # seconds
-
-    # Processing options
-    use_gpu: bool = True  # Use GPU if available
-    fp16: bool = True  # Use half precision
-
-    def __post_init__(self):
-        """Validate configuration."""
-        valid_models = ["tiny", "base", "small", "medium", "large", "large-v2", "large-v3"]
-        if self.model_name not in valid_models:
-            raise ValueError(
-                f"Invalid model_name: {self.model_name}. Must be one of {valid_models}"
-            )
-
-        if self.task not in ["transcribe", "translate"]:
-            raise ValueError(f"Invalid task: {self.task}. Must be 'transcribe' or 'translate'")
+# Configuration is now handled via dictionary for consistency with BasePipeline
 
 
 class SpeechPipeline(BasePipeline):
@@ -75,9 +33,24 @@ class SpeechPipeline(BasePipeline):
     Speech recognition pipeline using OpenAI Whisper.
     """
 
-    def __init__(self, config: Optional[SpeechPipelineConfig] = None):
-        super().__init__()
-        self.config = config or SpeechPipelineConfig()
+    @property
+    def output_format(self) -> str:
+        """Return the output format for this pipeline."""
+        return "webvtt"
+
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        default_config = {
+            "model": "base",
+            "language": None,
+            "task": "transcribe",
+            "beam_size": 5,
+            "word_timestamps": True,
+            "min_segment_duration": 1.0
+        }
+        if config:
+            default_config.update(config)
+        
+        super().__init__(default_config)
         self.logger = logging.getLogger(__name__)
 
         # Initialize model
@@ -91,16 +64,16 @@ class SpeechPipeline(BasePipeline):
             )
 
         try:
-            self.logger.info(f"Loading Whisper model: {self.config.model_name}")
+            self.logger.info(f"Loading Whisper model: {self.config['model']}")
 
             # Load model with device selection
-            device = "cuda" if self.config.use_gpu and torch.cuda.is_available() else "cpu"
-            self._whisper_model = whisper.load_model(self.config.model_name, device=device)
+            device = "cuda" if self.config.get("use_gpu", True) and torch.cuda.is_available() else "cpu"
+            self._whisper_model = whisper.load_model(self.config["model"], device=device)
 
             if device == "cuda":
                 self.logger.info("Whisper model loaded on GPU")
             else:
-                if self.config.use_gpu:
+                if self.config.get("use_gpu", True):
                     self.logger.warning("GPU requested but CUDA not available, using CPU")
                 else:
                     self.logger.info("Whisper model loaded on CPU")
@@ -119,7 +92,7 @@ class SpeechPipeline(BasePipeline):
         end_time: Optional[float] = None,
         pps: float = 0.0,
         output_dir: Optional[str] = None,
-    ) -> List[SpeechRecognition]:
+    ) -> List[Dict[str, Any]]:
         """
         Process video and return speech recognition results.
 
@@ -172,7 +145,7 @@ class SpeechPipeline(BasePipeline):
             self.logger.error(f"Error processing speech recognition: {e}")
             return []
 
-    def transcribe_audio(self, audio_path: Union[str, Path]) -> Optional[SpeechRecognition]:
+    def transcribe_audio(self, audio_path: Union[str, Path]) -> Optional[Dict[str, Any]]:
         """
         Perform speech recognition on an audio file.
 
@@ -199,21 +172,21 @@ class SpeechPipeline(BasePipeline):
 
             # Prepare Whisper options
             options = {
-                "language": self.config.language,
-                "task": self.config.task,
-                "beam_size": self.config.beam_size,
-                "best_of": self.config.best_of,
-                "temperature": self.config.temperature,
-                "patience": self.config.patience,
-                "length_penalty": self.config.length_penalty,
-                "word_timestamps": self.config.word_timestamps,
-                "prepend_punctuations": self.config.prepend_punctuations,
-                "append_punctuations": self.config.append_punctuations,
-                "fp16": self.config.fp16 and torch.cuda.is_available(),
+                "language": self.config.get("language"),
+                "task": self.config.get("task", "transcribe"),
+                "beam_size": self.config.get("beam_size", 5),
+                "best_of": self.config.get("best_of", 5),
+                "temperature": self.config.get("temperature", 0.0),
+                "patience": self.config.get("patience", 1.0),
+                "length_penalty": self.config.get("length_penalty", 1.0),
+                "word_timestamps": self.config.get("word_timestamps", True),
+                "prepend_punctuations": self.config.get("prepend_punctuations", "\"'\"¿([{-"),
+                "append_punctuations": self.config.get("append_punctuations", "\"'.。,，!！?？:：\")]}、"),
+                "fp16": self.config.get("fp16", True) and torch.cuda.is_available(),
             }
 
-            if self.config.suppress_tokens:
-                options["suppress_tokens"] = self.config.suppress_tokens
+            if self.config.get("suppress_tokens"):
+                options["suppress_tokens"] = self.config["suppress_tokens"]
 
             # Transcribe audio
             result = self._whisper_model.transcribe(str(audio_path), **options)
@@ -251,27 +224,25 @@ class SpeechPipeline(BasePipeline):
                         }
                     )
 
-            # Create result using the schema format
-            speech_result = SpeechRecognition(
-                video_id=str(audio_path.stem),  # Use filename as video_id
-                timestamp=0.0,  # Start time
-                transcript=result["text"].strip(),
-                language=result.get("language", "unknown"),
-                confidence=0.0,  # Whisper doesn't provide overall confidence
-                words=word_timestamps,
-            )
-
-            # Add metadata
-            speech_result.metadata = {
-                "model": self.config.model_name,
-                "audio_file": str(audio_path),
-                "task": self.config.task,
-                "num_segments": len(segments),
-                "num_words": len(word_timestamps),
-                "start_time": 0.0,
-                "end_time": segments[-1]["end"] if segments else 0.0,
-                "total_duration": segments[-1]["end"] if segments else 0.0,
-                "segments": segments,  # Store segment details in metadata
+            # Create result using dictionary format
+            speech_result = {
+                "video_id": str(audio_path.stem),  # Use filename as video_id
+                "timestamp": 0.0,  # Start time
+                "transcript": result["text"].strip(),
+                "language": result.get("language", "unknown"),
+                "confidence": 0.0,  # Whisper doesn't provide overall confidence
+                "words": word_timestamps,
+                "metadata": {
+                    "model": self.config["model"],
+                    "audio_file": str(audio_path),
+                    "task": self.config.get("task", "transcribe"),
+                    "num_segments": len(segments),
+                    "num_words": len(word_timestamps),
+                    "start_time": 0.0,
+                    "end_time": segments[-1]["end"] if segments else 0.0,
+                    "total_duration": segments[-1]["end"] if segments else 0.0,
+                    "segments": segments,  # Store segment details in metadata
+                }
             }
 
             self.logger.info(
@@ -333,15 +304,15 @@ class SpeechPipeline(BasePipeline):
                 "translation": True,
             },
             "models": {
-                "whisper_model": self.config.model_name if WHISPER_AVAILABLE else None,
+                "whisper_model": self.config["model"] if WHISPER_AVAILABLE else None,
             },
             "config": {
-                "model_name": self.config.model_name,
-                "language": self.config.language,
-                "task": self.config.task,
-                "word_timestamps": self.config.word_timestamps,
-                "use_gpu": self.config.use_gpu,
-                "fp16": self.config.fp16,
+                "model_name": self.config["model"],
+                "language": self.config.get("language"),
+                "task": self.config.get("task", "transcribe"),
+                "word_timestamps": self.config.get("word_timestamps", True),
+                "use_gpu": self.config.get("use_gpu", True),
+                "fp16": self.config.get("fp16", True),
             },
             "requirements": {
                 "whisper_available": WHISPER_AVAILABLE,

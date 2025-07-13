@@ -6,7 +6,8 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import logging
-from ..schemas.base_schema import AnnotationBase
+# Note: After standards migration, base schemas are no longer used
+# Pipelines now return native format dictionaries (COCO, WebVTT, RTTM, etc.)
 from ..version import create_annotation_metadata, get_model_info
 
 
@@ -33,7 +34,7 @@ class BasePipeline(ABC):
         end_time: Optional[float] = None,
         pps: float = 0.0,  # predictions per second, 0 = once per segment
         output_dir: Optional[str] = None,
-    ) -> List[AnnotationBase]:
+    ) -> List[Dict[str, Any]]:
         """
         Process video segment and return annotations.
 
@@ -45,7 +46,7 @@ class BasePipeline(ABC):
             output_dir: Optional output directory for saving results
 
         Returns:
-            List of annotation objects
+            List of annotation dictionaries in native formats (COCO, WebVTT, RTTM, etc.)
         """
 
     @abstractmethod

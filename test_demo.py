@@ -16,18 +16,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 # Import all available pipelines
-from src.pipelines.scene_detection.scene_pipeline_legacy import SceneDetectionPipeline
+from src.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
 from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
 from src.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
-from src.pipelines.audio_processing.audio_pipeline import AudioPipeline
-from src.pipelines.audio_processing.speech_pipeline import SpeechPipeline
-from src.pipelines.audio_processing.diarization_pipeline import DiarizationPipeline
+from src.pipelines.audio_processing import AudioPipeline
 
-# Import annotation schemas (not result classes)
-from src.schemas.scene_schema import SceneAnnotation
-from src.schemas.person_schema import PersonDetection
-from src.schemas.face_schema import FaceDetection
-from src.schemas.audio_schema import SpeechRecognition, SpeakerDiarization
+# Note: After standards migration, pipelines return native format dictionaries
+# rather than custom schema objects. Individual speech/diarization pipelines
+# are now combined in the main AudioPipeline.
 
 from src import print_version_info
 
@@ -98,24 +94,19 @@ def test_scene_detection_pipeline():
     # Validate result structure
     assert isinstance(results, list)
     if results:
-        # Check first result is a scene annotation
+        # Check first result is a COCO-format annotation
         first_result = results[0]
-        assert hasattr(first_result, 'scene_id') or hasattr(first_result, 'start_time')
+        assert isinstance(first_result, dict)
+        # COCO annotations should have these fields
+        expected_fields = ['id', 'image_id', 'category_id']
+        for field in expected_fields:
+            assert field in first_result, f"Missing required COCO field: {field}"
     
     # Save result to data directory
     output_file = output_dir / f"scene_detection_{video_path.stem}.json"
     with open(output_file, 'w') as f:
-        # Convert results to serializable format
-        serializable_results = []
-        for result in results:
-            if hasattr(result, 'model_dump'):
-                serializable_results.append(result.model_dump())
-            elif hasattr(result, 'to_dict'):
-                serializable_results.append(result.to_dict())
-            else:
-                # Fallback for basic objects
-                serializable_results.append(str(result))
-        json.dump(serializable_results, f, indent=2, cls=DateTimeEncoder)
+        # Results are already dictionaries from native formats
+        json.dump(results, f, indent=2, cls=DateTimeEncoder)
     
     logger.info(f"Scene detection result saved to: {output_file}")
     logger.info(f"Detected {len(results)} scenes")
@@ -137,164 +128,138 @@ def test_person_tracking_pipeline():
     # Validate result structure
     assert isinstance(results, list)
     if results:
-        # Check first result is a person detection
+        # Check first result is a COCO-format annotation
         first_result = results[0]
-        assert hasattr(first_result, 'person_id') or hasattr(first_result, 'bbox') or hasattr(first_result, 'timestamp')
+        assert isinstance(first_result, dict)
+        # COCO annotations should have these fields
+        expected_fields = ['id', 'image_id', 'category_id']
+        for field in expected_fields:
+            assert field in first_result, f"Missing required COCO field: {field}"
     
     # Save result to data directory
     output_file = output_dir / f"person_tracking_{video_path.stem}.json"
     with open(output_file, 'w') as f:
-        # Convert results to serializable format
-        serializable_results = []
-        for result in results:
-            if hasattr(result, 'model_dump'):
-                serializable_results.append(result.model_dump())
-            elif hasattr(result, 'to_dict'):
-                serializable_results.append(result.to_dict())
-            else:
-                # Fallback for basic objects
-                serializable_results.append(str(result))
-        json.dump(serializable_results, f, indent=2, cls=DateTimeEncoder)
+        # Results are already dictionaries from native formats
+        json.dump(results, f, indent=2, cls=DateTimeEncoder)
     
     logger.info(f"Person tracking result saved to: {output_file}")
     logger.info(f"Detected {len(results)} person detections")
     return results
 
 
-def test_diarization_pipeline():
-    """Test diarization pipeline with real video."""
-    video_path, _ = get_demo_video_path()
-    if not video_path:
-        pytest.skip("No demo video available")
-    
-    output_dir = ensure_output_dir()
-    
-    # Check for HuggingFace token
-    hf_token = os.getenv("HF_AUTH_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
-    if not hf_token:
-        logger.warning("No HuggingFace token found - skipping diarization test")
-        logger.info("To enable diarization: set HF_AUTH_TOKEN environment variable")
-        pytest.skip("No HuggingFace token available")
-    
-    logger.info("Testing Diarization Pipeline")
-    pipeline = DiarizationPipeline()
-    results = pipeline.process(str(video_path))
-    
-    # Validate result structure
-    assert isinstance(results, list)
-    if results:
-        # Check first result has speaker diarization info
-        first_result = results[0]
-        assert hasattr(first_result, 'speaker_id') or hasattr(first_result, 'speakers')
-    
-    # Save result to data directory
-    output_file = output_dir / f"diarization_{video_path.stem}.json"
-    with open(output_file, 'w') as f:
-        # Convert results to serializable format
-        serializable_results = []
-        for result in results:
-            if hasattr(result, 'model_dump'):
-                serializable_results.append(result.model_dump())
-            elif hasattr(result, 'to_dict'):
-                serializable_results.append(result.to_dict())
-            else:
-                # Fallback for basic objects
-                serializable_results.append(str(result))
-        json.dump(serializable_results, f, indent=2, cls=DateTimeEncoder)
-    
-    logger.info(f"Diarization result saved to: {output_file}")
-    logger.info(f"Detected diarization with {len(results)} results")
+# Note: Diarization is now part of the combined AudioPipeline
+# def test_diarization_pipeline():
+#     """Test diarization pipeline with real video."""
+#     video_path, _ = get_demo_video_path()
+#     if not video_path:
+#         pytest.skip("No demo video available")
+#     
+#     output_dir = ensure_output_dir()
+#     
+#     # Check for HuggingFace token
+#     hf_token = os.getenv("HF_AUTH_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
+#     if not hf_token:
+#         logger.warning("No HuggingFace token found - skipping diarization test")
+#         logger.info("To enable diarization: set HF_AUTH_TOKEN environment variable")
+#         pytest.skip("No HuggingFace token available")
+#     
+#     logger.info("Testing Diarization Pipeline")
+#     pipeline = DiarizationPipeline()
+#     results = pipeline.process(str(video_path))
+#     
+#     # Validate result structure
+#     assert isinstance(results, dict)  # Diarization pipeline returns dict with RTTM data
+#     assert 'turns' in results or 'speakers' in results
+#     
+#     # Save result to data directory
+#     output_file = output_dir / f"diarization_{video_path.stem}.json"
+#     with open(output_file, 'w') as f:
+#         # Results are already dictionaries from native formats
+#         json.dump(results, f, indent=2, cls=DateTimeEncoder)
+#     
+#     logger.info(f"Diarization result saved to: {output_file}")
+#     if isinstance(results, dict):
+#         turns_count = len(results.get('turns', []))
+#         logger.info(f"Detected diarization with {turns_count} speaker turns")
+#     else:
+#         logger.info(f"Detected diarization results: {type(results)}")
     return results
 
 
 def test_audio_pipeline():
-    """Test audio pipeline with real video."""
+    """Test modular audio pipeline with real video."""
     video_path, _ = get_demo_video_path()
     if not video_path:
         pytest.skip("No demo video available")
     
     output_dir = ensure_output_dir()
     
-    logger.info("Testing Audio Pipeline")
+    logger.info("Testing Modular Audio Pipeline")
     pipeline = AudioPipeline()
     results = pipeline.process(str(video_path))
     
-    # Validate result structure
+    # Validate result structure - modular pipeline returns list of pipeline results
     assert isinstance(results, list)
     if results:
-        # Check first result has audio info
+        # Each result should be a pipeline result with separate data streams
         first_result = results[0]
-        assert hasattr(first_result, 'audio_file') or hasattr(first_result, 'timestamp')
+        assert isinstance(first_result, dict)
+        # Should have pipeline metadata
+        assert 'pipeline' in first_result
+        assert 'format' in first_result  
+        assert 'data' in first_result
+        assert 'metadata' in first_result
     
     # Save result to data directory
     output_file = output_dir / f"audio_{video_path.stem}.json"
     with open(output_file, 'w') as f:
-        # Convert results to serializable format
-        serializable_results = []
-        for result in results:
-            if hasattr(result, 'model_dump'):
-                serializable_results.append(result.model_dump())
-            elif hasattr(result, 'to_dict'):
-                serializable_results.append(result.to_dict())
-            else:
-                # Fallback for basic objects
-                serializable_results.append(str(result))
-        json.dump(serializable_results, f, indent=2, cls=DateTimeEncoder)
+        # Results are already dictionaries from native formats
+        json.dump(results, f, indent=2, cls=DateTimeEncoder)
     
     logger.info(f"Audio result saved to: {output_file}")
-    logger.info(f"Audio processing completed with {len(results)} results")
+    logger.info(f"Modular audio processing completed with {len(results)} pipeline results")
     return results
 
 
-def test_speech_recognition_pipeline():
-    """Test speech recognition pipeline with real video."""
-    video_path, _ = get_demo_video_path()
-    if not video_path:
-        pytest.skip("No demo video available")
-    
-    output_dir = ensure_output_dir()
-    
-    logger.info("Testing Speech Recognition Pipeline")
-    pipeline = SpeechPipeline()
-    results = pipeline.process(str(video_path))
-    
-    # Validate result structure
-    assert isinstance(results, list)
-    if results:
-        # Check first result
-        first_result = results[0]
-        assert hasattr(first_result, 'transcript')
-        
-        # Save result to data directory
-        output_file = output_dir / f"speech_recognition_{video_path.stem}.json"
-        with open(output_file, 'w') as f:
-            # Convert results to serializable format
-            serializable_results = []
-            for result in results:
-                if hasattr(result, 'model_dump'):
-                    serializable_results.append(result.model_dump())
-                elif hasattr(result, 'to_dict'):
-                    serializable_results.append(result.to_dict())
-                else:
-                    # Fallback for basic objects
-                    serializable_results.append({
-                        'transcript': getattr(result, 'transcript', ''),
-                        'language': getattr(result, 'language', 'unknown'),
-                        'timestamp': getattr(result, 'timestamp', 0.0)
-                    })
-            json.dump(serializable_results, f, indent=2, cls=DateTimeEncoder)
-        
-        logger.info(f"Speech recognition result saved to: {output_file}")
-        logger.info(f"Found {len(results)} speech recognition results")
-        
-        # Show sample transcripts
-        for i, result in enumerate(results[:3]):  # Show first 3
-            transcript = getattr(result, 'transcript', 'N/A')[:50]
-            logger.info(f"  Result {i+1}: '{transcript}...'")
-    else:
-        logger.warning("No speech recognition results found")
-    
-    return results
+# Note: Speech recognition is now part of the combined AudioPipeline
+# def test_speech_recognition_pipeline():
+#     """Test speech recognition pipeline with real video."""
+#     video_path, _ = get_demo_video_path()
+#     if not video_path:
+#         pytest.skip("No demo video available")
+#     
+#     output_dir = ensure_output_dir()
+#     
+#     logger.info("Testing Speech Recognition Pipeline")
+#     pipeline = SpeechPipeline()
+#     results = pipeline.process(str(video_path))
+#     
+#     # Validate result structure
+#     assert isinstance(results, list)
+#     if results:
+#         # Check first result format - should be WebVTT or similar format
+#         first_result = results[0]
+#         assert isinstance(first_result, dict)
+#         # WebVTT captions should have text content
+#         assert 'text' in first_result or 'transcript' in first_result
+#         
+#         # Save result to data directory
+#         output_file = output_dir / f"speech_recognition_{video_path.stem}.json"
+#         with open(output_file, 'w') as f:
+#             # Results are already dictionaries from native formats
+#             json.dump(results, f, indent=2, cls=DateTimeEncoder)
+#         
+#         logger.info(f"Speech recognition result saved to: {output_file}")
+#         logger.info(f"Found {len(results)} speech recognition results")
+#         
+#         # Show sample transcripts
+#         for i, result in enumerate(results[:3]):  # Show first 3
+#             transcript = result.get('text', result.get('transcript', 'N/A'))[:50]
+#             logger.info(f"  Result {i+1}: '{transcript}...'")
+#     else:
+#         logger.warning("No speech recognition results found")
+#     
+#     return results
 
 
 def test_face_analysis_pipeline():
@@ -312,39 +277,26 @@ def test_face_analysis_pipeline():
     # Validate result structure
     assert isinstance(results, list)
     if results:
-        # Check first result has face detection info
+        # Check first result is a COCO-format annotation
         first_result = results[0]
-        assert hasattr(first_result, 'face_id') or hasattr(first_result, 'bbox') or hasattr(first_result, 'timestamp')
+        assert isinstance(first_result, dict)
+        # COCO annotations should have these fields
+        expected_fields = ['id', 'image_id', 'category_id']
+        for field in expected_fields:
+            assert field in first_result, f"Missing required COCO field: {field}"
     
     # Save result to data directory
     output_file = output_dir / f"face_analysis_{video_path.stem}.json"
     with open(output_file, 'w') as f:
-        # Convert results to serializable format
-        serializable_results = []
-        for result in results:
-            if hasattr(result, 'model_dump'):
-                serializable_results.append(result.model_dump())
-            elif hasattr(result, 'to_dict'):
-                serializable_results.append(result.to_dict())
-            else:
-                # Fallback for basic objects
-                serializable_results.append(str(result))
-        json.dump(serializable_results, f, indent=2, cls=DateTimeEncoder)
+        # Results are already dictionaries from native formats
+        json.dump(results, f, indent=2, cls=DateTimeEncoder)
     
     logger.info(f"Face analysis result saved to: {output_file}")
     logger.info(f"Detected {len(results)} face detections")
     
-    # Show emotion summary
-    emotions = {}
-    for result in results:
-        if hasattr(result, 'emotion') and result.emotion:
-            emotion = getattr(result.emotion, 'dominant_emotion', 'unknown')
-            emotions[emotion] = emotions.get(emotion, 0) + 1
-    
-    if emotions:
-        logger.info("Emotion summary:")
-        for emotion, count in sorted(emotions.items(), key=lambda x: x[1], reverse=True):
-            logger.info(f"  {emotion}: {count} detections")
+    # Show emotion summary - Note: This will need to be adapted for COCO format
+    # For now, just log the result count
+    logger.info(f"COCO annotations contain {len(results)} face detections")
     
     return results
 
@@ -372,14 +324,12 @@ def run_comprehensive_demo():
     
     results = {}
     
-    # Test all pipelines
+    # Test all pipelines  
     pipeline_tests = [
         ("Scene Detection", test_scene_detection_pipeline),
         ("Person Tracking", test_person_tracking_pipeline),
-        ("Audio Processing", test_audio_pipeline),
-        ("Speech Recognition", test_speech_recognition_pipeline),
+        ("Audio Processing", test_audio_pipeline),  # Combines speech + diarization
         ("Face Analysis", test_face_analysis_pipeline),
-        ("Diarization", test_diarization_pipeline),
     ]
     
     for name, test_func in pipeline_tests:

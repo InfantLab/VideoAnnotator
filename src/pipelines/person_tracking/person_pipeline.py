@@ -58,7 +58,7 @@ class PersonTrackingPipeline(BasePipeline):
         video_path: str,
         start_time: float = 0.0,
         end_time: Optional[float] = None,
-        pps: float = 10.0,  # 10 FPS for person tracking
+        pps: float = 5,  # 5 predictions per second for person tracking
         output_dir: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
@@ -71,8 +71,9 @@ class PersonTrackingPipeline(BasePipeline):
         # Get video metadata
         video_metadata = self._get_video_metadata(video_path)
 
-        # Initialize YOLO model
-        self._initialize_model()
+        # Ensure pipeline is initialized
+        if not self.is_initialized:
+            self.initialize()
 
         # Process video
         annotations = []
@@ -192,7 +193,12 @@ class PersonTrackingPipeline(BasePipeline):
             # Process each detection
             if result.boxes is not None:
                 boxes = result.boxes.cpu().numpy()
-                keypoints = result.keypoints.cpu().numpy() if result.keypoints is not None else None
+                
+                # Handle keypoints properly
+                keypoints_data = None
+                if result.keypoints is not None:
+                    # Extract the actual keypoint data from the Keypoints object
+                    keypoints_data = result.keypoints.data.cpu().numpy()  # Shape: (N, 17, 3)
 
                 for i, box in enumerate(boxes):
                     # Filter for person class (class 0 in COCO)
@@ -205,23 +211,24 @@ class PersonTrackingPipeline(BasePipeline):
                         track_id = int(box.id[0]) if box.id is not None else i
 
                         # Check if keypoints are available for this detection
-                        if keypoints is not None and i < len(keypoints):
+                        if keypoints_data is not None and i < len(keypoints_data):
                             # Create keypoints annotation
-                            kp_data = keypoints[i]  # Shape: (17, 3) for COCO-17
+                            kp_data = keypoints_data[i]  # Shape: (17, 3) for COCO-17
 
                             # Convert to COCO keypoints format: [x1,y1,v1,x2,y2,v2,...]
                             coco_keypoints = []
                             visible_keypoints = 0
 
                             for kp in kp_data:
-                                x, y, conf = kp
+                                x, y, conf = float(kp[0]), float(kp[1]), float(kp[2])
+                                
                                 # Visibility: 0=not labeled, 1=labeled but not visible, 2=labeled and visible
                                 visibility = (
                                     2 if conf > self.config["min_keypoint_confidence"] else 0
                                 )
                                 if visibility > 0:
                                     visible_keypoints += 1
-                                coco_keypoints.extend([float(x), float(y), float(visibility)])
+                                coco_keypoints.extend([x, y, visibility])
 
                             # Create COCO keypoints annotation
                             annotation = create_coco_keypoints_annotation(
@@ -352,3 +359,57 @@ class PersonTrackingPipeline(BasePipeline):
         if self.model is not None:
             del self.model
             self.model = None
+
+    def initialize(self) -> None:
+        """Initialize the person tracking pipeline by loading the YOLO model."""
+        if self.is_initialized:
+            return
+
+        self.logger.info("Initializing PersonTrackingPipeline...")
+
+        try:
+            if not YOLO_AVAILABLE:
+                raise ImportError("Ultralytics YOLO not available. Install with: pip install ultralytics")
+
+            self._initialize_model()
+            self.set_model_info("yolo", self.config["model"])
+            self.is_initialized = True
+            self.logger.info("PersonTrackingPipeline initialization complete")
+
+        except Exception as e:
+            self.logger.error(f"Failed to initialize PersonTrackingPipeline: {e}")
+            raise
+
+    def get_schema(self) -> Dict[str, Any]:
+        """Return the COCO schema for person tracking outputs."""
+        return {
+            "type": "array",
+            "description": "Person tracking results in COCO annotation format",
+            "items": {
+                "type": "object",
+                "description": "COCO annotation for person detection/tracking",
+                "properties": {
+                    "id": {"type": "integer", "description": "Unique annotation ID"},
+                    "image_id": {"type": "integer", "description": "Image/frame ID"},
+                    "category_id": {"type": "integer", "description": "COCO category ID (1 for person)"},
+                    "bbox": {
+                        "type": "array",
+                        "description": "Bounding box [x, y, width, height]",
+                        "items": {"type": "number"},
+                        "minItems": 4,
+                        "maxItems": 4
+                    },
+                    "area": {"type": "number", "description": "Bounding box area"},
+                    "iscrowd": {"type": "integer", "description": "0 for individual objects"},
+                    "keypoints": {
+                        "type": "array",
+                        "description": "COCO-17 keypoints [x1,y1,v1, x2,y2,v2, ...]",
+                        "items": {"type": "number"}
+                    },
+                    "num_keypoints": {"type": "integer", "description": "Number of visible keypoints"},
+                    "score": {"type": "number", "description": "Detection confidence"},
+                    "track_id": {"type": ["integer", "null"], "description": "Tracking ID across frames"}
+                },
+                "required": ["id", "image_id", "category_id", "bbox", "area", "iscrowd"]
+            }
+        }

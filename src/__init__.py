@@ -23,15 +23,17 @@ from .pipelines import (
     AudioPipeline,
 )
 
-from .schemas import (
-    AnnotationBase,
-    VideoMetadata,
-    SceneSegment,
-    SceneAnnotation,
-    PersonDetection,
-    FaceDetection,
-    SpeechSegment,
-)
+# Note: After standards migration, these schemas are no longer used
+# Pipelines now return native format dictionaries (COCO, WebVTT, RTTM, etc.)
+# from .schemas import (
+#     AnnotationBase,
+#     VideoMetadata,
+#     SceneSegment,
+#     SceneAnnotation,
+#     PersonDetection,
+#     FaceDetection,
+#     SpeechSegment,
+# )
 
 __all__ = [
     # Version information
@@ -48,12 +50,12 @@ __all__ = [
     "PersonTrackingPipeline",
     "FaceAnalysisPipeline",
     "AudioPipeline",
-    # Schemas
-    "AnnotationBase",
-    "VideoMetadata",
-    "SceneSegment",
-    "SceneAnnotation",
-    "PersonDetection",
-    "FaceDetection",
-    "SpeechSegment",
+    # Note: Schemas no longer exported after standards migration
+    # "AnnotationBase",
+    # "VideoMetadata", 
+    # "SceneSegment",
+    # "SceneAnnotation",
+    # "PersonDetection",
+    # "FaceDetection",
+    # "SpeechSegment",
 ]
