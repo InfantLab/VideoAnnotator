@@ -6,7 +6,7 @@ Test script to verify versioning and metadata are included in all outputs.
 import json
 import tempfile
 from pathlib import Path
-from src.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
+from src.pipelines.scene_detection.scene_pipeline_legacy import SceneDetectionPipeline
 from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
 from src.version import get_version_info, print_version_info
 

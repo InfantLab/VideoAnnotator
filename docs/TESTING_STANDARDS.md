@@ -12,35 +12,77 @@ The VideoAnnotator project uses **pytest** as its primary testing framework. All
 
 ```
 tests/
-├── conftest.py              # Pytest configuration and fixtures
-├── test_pipelines.py        # Main pipeline tests
-├── test_schemas.py          # Schema validation tests  
-├── test_integration.py      # Integration tests
-└── test_performance.py     # Performance benchmarks
+├── conftest.py                        # Pytest configuration and fixtures
+├── test_all_pipelines.py              # Test runner and organization
+├── test_face_pipeline.py              # Face Analysis Pipeline tests
+├── test_audio_pipeline.py             # Audio Processing Pipeline tests
+├── test_scene_pipeline.py             # Scene Detection Pipeline tests
+├── test_person_pipeline.py            # Person Tracking Pipeline tests
+├── test_audio_speech_pipeline.py      # Diarization and Speech Recognition tests
+├── test_pipelines.py                  # Legacy compatibility wrapper (deprecated)
+├── test_schemas.py                     # Schema validation tests  
+├── test_integration.py                # Integration tests
+├── test_performance.py               # Performance benchmarks
 ```
 
 ### Test Categories
 
-1. **Unit Tests** (`test_pipelines.py`)
-   - Test individual pipeline components
+Tests are organized using pytest marks for easy categorization:
+
+1. **Unit Tests** (`@pytest.mark.unit`)
+   - Test individual pipeline components in isolation
    - Test configuration validation
    - Test error handling
    - Mock external dependencies
+   - Fast execution (< 1 second per test)
 
-2. **Schema Tests** (`test_schemas.py`)
+2. **Integration Tests** (`@pytest.mark.integration`)
+   - Test component integration with real dependencies
+   - Test end-to-end pipeline workflows
+   - Test file I/O operations
+   - May require external models/services
+
+3. **Performance Tests** (`@pytest.mark.performance`)
+   - Benchmark pipeline performance
+   - Memory usage testing
+   - Scalability testing
+   - Resource consumption validation
+
+4. **Schema Tests** (in dedicated files)
    - Test Pydantic model validation
    - Test data serialization/deserialization
    - Test schema migrations
 
-3. **Integration Tests** (`test_integration.py`)
-   - Test end-to-end pipeline workflows
-   - Test pipeline combinations
-   - Test file I/O operations
+### Pipeline-Specific Test Files
 
-4. **Performance Tests** (`test_performance.py`)
-   - Benchmark pipeline performance
-   - Memory usage testing
-   - Scalability testing
+The VideoAnnotator test suite uses a modular approach with dedicated test files for each pipeline:
+
+#### Individual Pipeline Tests
+- **Face Analysis** (`test_face_pipeline.py`): Tests face detection, emotion analysis, JSON serialization fixes
+- **Audio Processing** (`test_audio_pipeline.py`): Tests audio feature extraction, schema validation fixes
+- **Scene Detection** (`test_scene_pipeline.py`): Tests scene detection and classification
+- **Person Tracking** (`test_person_pipeline.py`): Tests YOLO integration, tracking, pose estimation
+- **Audio Speech** (`test_audio_speech_pipeline.py`): Tests diarization and speech recognition
+
+#### Test Organization Benefits
+- **Focused Testing**: Each file contains tests for a single pipeline
+- **Easier Maintenance**: Smaller, focused test files are easier to maintain
+- **Parallel Execution**: Pipeline tests can be run independently
+- **Clear Responsibilities**: Each test file has a clear scope and purpose
+
+#### Running Modular Tests
+```bash
+# Run tests for a specific pipeline
+python -m pytest tests/test_face_pipeline.py -v
+
+# Run specific test categories across all pipelines  
+python -m pytest tests/ -m unit -v
+python -m pytest tests/ -m integration -v
+python -m pytest tests/ -m performance -v
+
+# Run all pipeline tests through the test runner
+python -m pytest tests/test_all_pipelines.py -v
+```
 
 ## Test File Standards
 

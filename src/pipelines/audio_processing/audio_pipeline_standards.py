@@ -38,7 +38,7 @@ except ImportError:
     PYANNOTE_AVAILABLE = False
 
 
-class AudioProcessingPipeline(BasePipeline):
+class AudioProcessingPipelineStandards(BasePipeline):
     """
     Standards-only audio processing pipeline using WebVTT and RTTM formats.
     

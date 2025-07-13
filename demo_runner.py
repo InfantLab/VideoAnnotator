@@ -12,7 +12,7 @@ from datetime import datetime
 # Add the project root to Python path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
+from src.pipelines.scene_detection.scene_pipeline_legacy import SceneDetectionPipeline
 from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
 from src.version import get_version_info, create_annotation_metadata
 

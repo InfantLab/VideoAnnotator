@@ -24,7 +24,11 @@ except ImportError:
     logging.warning("pyannote.audio not available. Speaker diarization will be disabled.")
 
 from ..base_pipeline import BasePipeline
-from ...schemas.audio_schema import SpeakerDiarization
+from ...exporters.native_formats import (
+    create_rttm_turn,
+    export_rttm,
+    validate_rttm
+)
 
 
 @dataclass
@@ -101,7 +105,7 @@ class DiarizationPipeline(BasePipeline):
         end_time: Optional[float] = None,
         pps: float = 0.0,
         output_dir: Optional[str] = None
-    ) -> List[SpeakerDiarization]:
+    ) -> List[Dict[str, Any]]:
         """
         Process video and return speaker diarization results.
         
@@ -152,7 +156,7 @@ class DiarizationPipeline(BasePipeline):
             self.logger.error(f"Error processing diarization: {e}")
             return []
     
-    def diarize_audio(self, audio_path: Union[str, Path]) -> Optional[SpeakerDiarization]:
+    def diarize_audio(self, audio_path: Union[str, Path]) -> Optional[Dict[str, Any]]:
         """
         Perform speaker diarization on an audio file.
         
@@ -201,22 +205,39 @@ class DiarizationPipeline(BasePipeline):
                 speakers[speaker_id]['total_duration'] += turn.end - turn.start
                 segments.append(segment)
             
-            # Create result using the legacy dataclass format
-            result = SpeakerDiarization(
-                type="speaker_diarization",
-                video_id=str(audio_path.stem),  # Use filename as video_id
-                timestamp=0.0,  # Start time
-                speakers=list(speakers.keys()),
-                segments=segments,
-                total_speech_time=sum(s['total_duration'] for s in speakers.values()),
-                speaker_change_points=[seg['start_time'] for seg in segments[1:]]
-            )
+            # Create RTTM turns for each segment
+            rttm_turns = []
+            for turn, _, speaker in diarization.itertracks(yield_label=True):
+                rttm_turn = create_rttm_turn(
+                    file_id=str(audio_path.stem),
+                    start_time=float(turn.start),
+                    duration=float(turn.duration),
+                    speaker_id=f"speaker_{speaker}",
+                    confidence=1.0  # pyannote doesn't provide confidence scores
+                )
+                rttm_turns.append(rttm_turn)
+                segments.append({
+                    'start_time': float(turn.start),
+                    'end_time': float(turn.end), 
+                    'speaker_id': f"speaker_{speaker}",
+                    'confidence': 1.0
+                })
             
-            # Add metadata
-            result.metadata = {
-                'num_speakers': len(speakers),
-                'audio_file': str(audio_path),
-                'model': self.config.diarization_model
+            # Create result using RTTM format
+            result = {
+                'type': 'speaker_diarization',
+                'video_id': str(audio_path.stem),
+                'timestamp': 0.0,
+                'speakers': list(speakers.keys()),
+                'segments': segments,
+                'rttm_turns': rttm_turns,
+                'total_speech_time': sum(s['total_duration'] for s in speakers.values()),
+                'speaker_change_points': [seg['start_time'] for seg in segments[1:]],
+                'metadata': {
+                    'num_speakers': len(speakers),
+                    'audio_file': str(audio_path),
+                    'model': self.config.diarization_model
+                }
             }
             
             self.logger.info(f"Diarization completed. Found {len(speakers)} speakers in {len(segments)} segments")

@@ -25,11 +25,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import yaml
 
-# Import all pipeline modules
-from src.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
+# Import all pipeline modules - STANDARDS-ONLY VERSIONS
+from src.pipelines.scene_detection.scene_pipeline_legacy import SceneDetectionPipeline
 from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
 from src.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
-from src.pipelines.audio_processing.audio_pipeline import AudioPipeline
+from src.pipelines.audio_processing.audio_pipeline import AudioProcessingPipeline
 
 
 class VideoAnnotatorRunner:
@@ -157,8 +157,7 @@ class VideoAnnotatorRunner:
             # Audio processing pipeline
             if self.config.get('audio_processing', {}).get('enabled', True):
                 audio_config = self.config.get('audio_processing', {})
-                self.pipelines['audio'] = AudioPipeline(audio_config)
-                self.logger.info("Audio processing pipeline initialized")
+                self.pipelines['audio'] = AudioProcessingPipeline(audio_config)
                 self.logger.info("Audio processing pipeline initialized")
             
         except Exception as e:
@@ -215,25 +214,14 @@ class VideoAnnotatorRunner:
             pipeline_start_time = time.time()
             
             try:
-                # Run the pipeline
-                if pipeline_name == 'audio':
-                    # Use extracted audio
-                    if audio_path and audio_path.exists():
-                        pipeline_results = pipeline.process_audio(audio_path)
-                    else:
-                        pipeline_results = {
-                            'error': 'Audio file not available',
-                            'message': 'Audio extraction failed or disabled'
-                        }
-                else:
-                    # For video pipelines, use the standard process method
-                    pipeline_results = pipeline.process(
-                        video_path=str(video_path),
-                        start_time=0.0,
-                        end_time=None,
-                        pps=1.0,  # Default to 1 prediction per second
-                        output_dir=str(output_dir)
-                    )
+                # Run the pipeline - all standards pipelines use unified process() method
+                pipeline_results = pipeline.process(
+                    video_path=str(video_path),
+                    start_time=0.0,
+                    end_time=None,
+                    pps=1.0 if pipeline_name != 'audio' else None,  # Audio doesn't use pps
+                    output_dir=str(output_dir)
+                )
                 
                 # Calculate processing time
                 pipeline_duration = time.time() - pipeline_start_time

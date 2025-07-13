@@ -23,6 +23,9 @@ torch>=2.0.0  # CUDA version installed separately
 torchvision>=0.15.0  # CUDA version installed separately
 timm>=0.9.0
 
+# COCO format and industry standards
+pycocotools>=2.0.7
+
 # Audio processing - Core packages that should work
 pyannote.audio>=3.3.2
 pyannote.core>=5.0.0
@@ -31,6 +34,11 @@ pyannote.metrics>=3.2.1
 pyannote.pipeline>=3.0.1
 torchaudio>=2.0.0  # CUDA version installed separately
 
+# Audio annotation format libraries
+webvtt-py>=0.4.6  # WebVTT subtitle/caption format support
+audformat>=1.4.0  # Comprehensive audio annotation format library (lightweight)
+praatio>=6.0.0    # TextGrid (Praat) format support
+
 
 # Scene detection and video understanding
 scenedetect[opencv]>=0.6.3
@@ -38,8 +46,8 @@ transformers>=4.40.0
 # clip-by-openai - Not compatible with Python 3.13 and modern PyTorch
 sentence-transformers>=2.2.0
 
-# Face analysis - Limited set for Python 3.13
-# deepface>=0.0.91 - Not compatible with Python 3.13 due to TensorFlow dependency
+# Face analysis - Limited set for Python 3.12/3.13
+deepface>=0.0.91  # Re-enabled for Python 3.12 compatibility
 dlib>=19.24.0
 imutils>=0.5.4
 

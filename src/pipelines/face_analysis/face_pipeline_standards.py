@@ -33,7 +33,7 @@ except ImportError:
     MEDIAPIPE_AVAILABLE = False
 
 
-class FaceAnalysisPipeline(BasePipeline):
+class FaceAnalysisPipelineStandards(BasePipeline):
     """
     Standards-only face analysis pipeline using COCO format.
     

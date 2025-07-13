@@ -28,7 +28,7 @@ except ImportError:
     YOLO_AVAILABLE = False
 
 
-class PersonTrackingPipeline(BasePipeline):
+class PersonTrackingPipelineStandards(BasePipeline):
     """
     Standards-only person tracking pipeline using COCO person/keypoint format.
     
