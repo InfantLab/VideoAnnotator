@@ -263,8 +263,91 @@ def export_webvtt_captions(speech_segments: List[Dict[str, Any]], output_path: s
     logger.info(f"WebVTT captions exported: {output_path}")
 
 
+def export_webvtt(
+    segments: List[Dict[str, Any]],
+    output_path: Union[str, Path],
+    include_metadata: bool = True
+) -> bool:
+    """
+    Export results in WebVTT format.
+    
+    Args:
+        segments: List of segment dictionaries with start_time, end_time, and optional text/speaker data
+        output_path: Path to save the WebVTT file
+        include_metadata: Whether to include extra metadata in WebVTT comments
+        
+    Returns:
+        True if export was successful, False otherwise
+    """
+    if not WEBVTT_AVAILABLE:
+        logger.error("WebVTT export failed: webvtt-py library not available")
+        return False
+    
+    try:
+        output_path = Path(output_path)
+        vtt = webvtt.WebVTT()
+        
+        for segment in segments:
+            # Required fields
+            start_time = segment.get("start_time", 0)
+            end_time = segment.get("end_time", 0)
+            
+            # Format times as WebVTT timestamps (HH:MM:SS.mmm)
+            start_str = _format_timestamp(start_time)
+            end_str = _format_timestamp(end_time)
+            
+            # Get content text
+            text = segment.get("transcription", "")
+            if not text and "text" in segment:
+                text = segment["text"]
+                
+            # Add speaker information if available
+            speaker_id = segment.get("speaker_id", segment.get("speaker", ""))
+            if speaker_id:
+                text = f"<v {speaker_id}>{text}"
+            
+            # Add emotions if available and metadata is enabled
+            emotions = segment.get("emotions", {})
+            if emotions and include_metadata:
+                emotion_text = ", ".join([
+                    f"{emotion}({data['score']:.2f})" 
+                    for emotion, data in emotions.items()
+                    if isinstance(data, dict) and "score" in data
+                ])
+                if emotion_text:
+                    text += f"\nEMOTIONS: {emotion_text}"
+            
+            # Create caption
+            caption = webvtt.Caption(
+                start=start_str,
+                end=end_str,
+                text=text
+            )
+            vtt.captions.append(caption)
+        
+        # Add header information
+        vtt.file = str(output_path)
+        
+        # Save the WebVTT file
+        vtt.save()
+        logger.info(f"WebVTT file saved to: {output_path}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to export WebVTT: {e}")
+        return False
+
+
 def _seconds_to_webvtt_time(seconds: float) -> str:
     """Convert seconds to WebVTT time format (HH:MM:SS.mmm)."""
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
+
+
+def _format_timestamp(seconds: float) -> str:
+    """Format seconds as WebVTT timestamp (HH:MM:SS.mmm)."""
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
     secs = seconds % 60

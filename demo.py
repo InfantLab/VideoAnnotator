@@ -30,6 +30,7 @@ from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
 from src.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
 from src.pipelines.face_analysis.laion_face_pipeline import LAIONFacePipeline
 from src.pipelines.audio_processing import AudioPipeline
+from src.pipelines.audio_processing.laion_voice_pipeline import LAIONVoicePipeline
 from src.version import get_version_info, print_version_info
 
 # Configure logging
@@ -116,6 +117,12 @@ class VideoAnnotatorDemo:
                     "whisper_model": "tiny",
                     "word_timestamps": False,
                     "enable_diarization": False,
+                },
+                "laion_voice_analysis": {
+                    "model_size": "small",  # Use small model for fast demo
+                    "whisper_model": "mkrausio/EmoWhisper-AnS-Small-v0.1",
+                    "top_k_emotions": 3,  # Less emotions for faster processing
+                    "segmentation_mode": "fixed_interval",
                 }
             }
         elif self.args.high_quality:
@@ -146,6 +153,13 @@ class VideoAnnotatorDemo:
                     "whisper_model": "base",
                     "word_timestamps": True,
                     "enable_diarization": True,
+                },
+                "laion_voice_analysis": {
+                    "model_size": "large",  # Use large model for high quality
+                    "whisper_model": "mkrausio/EmoWhisper-AnS-Large-v0.1",
+                    "top_k_emotions": 5,
+                    "segmentation_mode": "fixed_interval",
+                    "include_transcription": True,  # Include transcription for high quality
                 }
             }
         else:
@@ -176,6 +190,13 @@ class VideoAnnotatorDemo:
                     "whisper_model": "tiny",
                     "word_timestamps": True,
                     "enable_diarization": False,  # Enable if HF token available
+                },
+                "laion_voice_analysis": {
+                    "model_size": "small",  # Use small model for balanced performance
+                    "whisper_model": "mkrausio/EmoWhisper-AnS-Small-v0.1",
+                    "top_k_emotions": 5,
+                    "segmentation_mode": "fixed_interval",
+                    "include_transcription": False,
                 }
             }
     
@@ -183,7 +204,7 @@ class VideoAnnotatorDemo:
         """Get list of pipelines to run based on user selection."""
         if self.args.pipelines:
             return [p.strip() for p in self.args.pipelines.split(',')]
-        return ["scene_detection", "person_tracking", "face_analysis", "laion_face_analysis", "audio_processing"]
+        return ["scene_detection", "person_tracking", "face_analysis", "laion_face_analysis", "audio_processing", "laion_voice_analysis"]
     
     def run_scene_detection(self):
         """Run scene detection pipeline."""
@@ -348,7 +369,48 @@ class VideoAnnotatorDemo:
         except Exception as e:
             logger.error(f"   ❌ Audio processing failed: {e}")
             self.results["audio_processing"] = {"status": "failed", "error": str(e)}
-    
+
+    def run_laion_voice_analysis(self):
+        """Run LAION voice emotion analysis pipeline."""
+        logger.info("🎭 Running LAION Voice Emotion Analysis Pipeline...")
+        try:
+            pipeline = LAIONVoicePipeline(self.configs["laion_voice_analysis"])
+            
+            start_time = time.time()
+            results = pipeline.process(
+                str(self.video_path),
+                output_dir=str(self.output_dir),
+                include_transcription=self.configs["laion_voice_analysis"].get("include_transcription", False)
+            )
+            duration = time.time() - start_time
+            
+            # Save results
+            output_file = self.output_dir / f"laion_voice_analysis_{self.video_path.stem}.json"
+            with open(output_file, 'w') as f:
+                json.dump({
+                    "segments": results,
+                    "metadata": {
+                        "source": self.video_path.name,
+                        "pipeline": "LAIONVoicePipeline",
+                        "model_size": self.configs["laion_voice_analysis"]["model_size"],
+                        "total_segments": len(results)
+                    }
+                }, f, indent=2)
+            
+            segment_count = len(results) if results else 0
+            self.results["laion_voice_analysis"] = {
+                "status": "success",
+                "segments": segment_count,
+                "processing_time": f"{duration:.2f}s",
+                "output_file": str(output_file)
+            }
+            
+            logger.info(f"   ✅ Analyzed {segment_count} voice emotion segments in {duration:.2f}s")
+            
+        except Exception as e:
+            logger.error(f"   ❌ LAION voice analysis failed: {e}")
+            self.results["laion_voice_analysis"] = {"status": "failed", "error": str(e)}
+
     def run_demo(self):
         """Run the complete demo."""
         logger.info("🚀 VideoAnnotator Pipeline Demo")
@@ -374,6 +436,7 @@ class VideoAnnotatorDemo:
             "face_analysis": self.run_face_analysis,
             "laion_face_analysis": self.run_laion_face_analysis,
             "audio_processing": self.run_audio_processing,
+            "laion_voice_analysis": self.run_laion_voice_analysis,
         }
         
         total_start = time.time()
@@ -472,7 +535,7 @@ Examples:
     
     parser.add_argument(
         "--pipelines", "-p",
-        help="Comma-separated list of pipelines to run (scene_detection,person_tracking,face_analysis,laion_face_analysis,audio_processing)"
+        help="Comma-separated list of pipelines to run (scene_detection,person_tracking,face_analysis,laion_face_analysis,audio_processing,laion_voice_analysis)"
     )
     
     parser.add_argument(
