@@ -36,6 +36,11 @@ def get_version_info() -> Dict[str, Any]:
         "processor": platform.processor(),
         "hostname": platform.node(),
     }
+    
+    # Add GPU/CUDA information
+    gpu_info = get_gpu_info()
+    if gpu_info:
+        system_info["gpu"] = gpu_info
 
     # Get dependency versions
     dependencies = get_dependency_versions()
@@ -110,6 +115,60 @@ def get_git_info() -> Optional[Dict[str, str]]:
         pass
 
     return None
+
+
+def get_gpu_info() -> Optional[Dict[str, Any]]:
+    """Get GPU and CUDA information if available."""
+    gpu_info = {}
+    
+    # Check PyTorch CUDA availability
+    try:
+        import torch
+        gpu_info["torch_cuda_available"] = torch.cuda.is_available()
+        if torch.cuda.is_available():
+            gpu_info["torch_cuda_version"] = torch.version.cuda
+            gpu_info["torch_cudnn_version"] = torch.backends.cudnn.version()
+            gpu_info["gpu_count"] = torch.cuda.device_count()
+            gpu_info["current_device"] = torch.cuda.current_device()
+            gpu_info["device_name"] = torch.cuda.get_device_name(0) if torch.cuda.device_count() > 0 else None
+            gpu_info["device_capability"] = torch.cuda.get_device_capability(0) if torch.cuda.device_count() > 0 else None
+            
+            # Memory information
+            if torch.cuda.device_count() > 0:
+                gpu_info["memory_allocated"] = torch.cuda.memory_allocated(0)
+                gpu_info["memory_cached"] = torch.cuda.memory_reserved(0)
+                gpu_info["max_memory_allocated"] = torch.cuda.max_memory_allocated(0)
+    except ImportError:
+        gpu_info["torch_cuda_available"] = "torch_not_installed"
+    except Exception as e:
+        gpu_info["torch_cuda_error"] = str(e)
+    
+    # Check NVIDIA-ML for additional GPU info
+    try:
+        import pynvml
+        pynvml.nvmlInit()
+        gpu_info["nvidia_ml_available"] = True
+        gpu_info["driver_version"] = pynvml.nvmlSystemGetDriverVersion()
+        
+        device_count = pynvml.nvmlDeviceGetCount()
+        gpu_info["nvidia_device_count"] = device_count
+        
+        if device_count > 0:
+            handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+            gpu_info["gpu_name"] = pynvml.nvmlDeviceGetName(handle).decode('utf-8')
+            
+            # Memory info from nvidia-ml
+            mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            gpu_info["total_memory"] = mem_info.total
+            gpu_info["free_memory"] = mem_info.free
+            gpu_info["used_memory"] = mem_info.used
+            
+    except ImportError:
+        gpu_info["nvidia_ml_available"] = False
+    except Exception as e:
+        gpu_info["nvidia_ml_error"] = str(e)
+    
+    return gpu_info if gpu_info else None
 
 
 def get_dependency_versions() -> Dict[str, str]:
@@ -243,6 +302,27 @@ def print_version_info() -> None:
     print(f"  Platform: {system['platform']}")
     print(f"  Python: {system['python_version'].split()[0]}")
     print(f"  Architecture: {system['architecture']}")
+    
+    # Show GPU information if available
+    if "gpu" in system and system["gpu"]:
+        gpu = system["gpu"]
+        print("  GPU Information:")
+        if "torch_cuda_available" in gpu:
+            cuda_status = "✅ Available" if gpu["torch_cuda_available"] else "❌ Not Available"
+            print(f"    CUDA: {cuda_status}")
+            if gpu.get("torch_cuda_available"):
+                if "torch_cuda_version" in gpu:
+                    print(f"    CUDA Version: {gpu['torch_cuda_version']}")
+                if "device_name" in gpu:
+                    print(f"    Device: {gpu['device_name']}")
+                if "gpu_count" in gpu:
+                    print(f"    Device Count: {gpu['gpu_count']}")
+        if gpu.get("nvidia_ml_available"):
+            if "driver_version" in gpu:
+                print(f"    Driver Version: {gpu['driver_version']}")
+            if "total_memory" in gpu:
+                total_gb = gpu["total_memory"] / (1024**3)
+                print(f"    Total Memory: {total_gb:.1f} GB")
     print()
 
     print("Key Dependencies:")

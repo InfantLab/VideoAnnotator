@@ -154,7 +154,13 @@ mydata
 
 # Project specific outputs and caches
 batch_results/
+demo_results/
+test_output/
 data/*
+models/
+outputs/
+
+# Jupyter Notebook checkpoints
 *.ipynb_checkpoints
 
 # Large media files

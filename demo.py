@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from src.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
 from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline  
 from src.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
+from src.pipelines.face_analysis.laion_face_pipeline import LAIONFacePipeline
 from src.pipelines.audio_processing import AudioPipeline
 from src.version import get_version_info, print_version_info
 
@@ -106,6 +107,11 @@ class VideoAnnotatorDemo:
                     "enable_emotion": True,
                     "enable_landmarks": False,
                 },
+                "laion_face_analysis": {
+                    "model_size": "small",  # Use small model for fast demo
+                    "confidence_threshold": 0.6,
+                    "top_k_emotions": 5,
+                },
                 "audio_processing": {
                     "whisper_model": "tiny",
                     "word_timestamps": False,
@@ -126,10 +132,15 @@ class VideoAnnotatorDemo:
                     "pose_format": "coco_17",
                 },
                 "face_analysis": {
-                    "backend": "mediapipe", 
+                    "backend": "deepface", 
                     "detection_confidence": 0.3,
                     "enable_emotion": True,
                     "enable_landmarks": True,
+                },
+                "laion_face_analysis": {
+                    "model_size": "large",  # Use large model for high quality
+                    "confidence_threshold": 0.3,
+                    "top_k_emotions": 5,
                 },
                 "audio_processing": {
                     "whisper_model": "base",
@@ -156,6 +167,11 @@ class VideoAnnotatorDemo:
                     "enable_emotion": True,
                     "enable_landmarks": True,
                 },
+                "laion_face_analysis": {
+                    "model_size": "small",  # Use small model for balanced performance
+                    "confidence_threshold": 0.5,
+                    "top_k_emotions": 5,
+                },
                 "audio_processing": {
                     "whisper_model": "tiny",
                     "word_timestamps": True,
@@ -167,7 +183,7 @@ class VideoAnnotatorDemo:
         """Get list of pipelines to run based on user selection."""
         if self.args.pipelines:
             return [p.strip() for p in self.args.pipelines.split(',')]
-        return ["scene_detection", "person_tracking", "face_analysis", "audio_processing"]
+        return ["scene_detection", "person_tracking", "face_analysis", "laion_face_analysis", "audio_processing"]
     
     def run_scene_detection(self):
         """Run scene detection pipeline."""
@@ -228,13 +244,21 @@ class VideoAnnotatorDemo:
             self.results["person_tracking"] = {"status": "failed", "error": str(e)}
     
     def run_face_analysis(self):
-        """Run face analysis pipeline."""
-        logger.info("😊 Running Face Analysis Pipeline...")
+        """Run original face analysis pipeline."""
+        logger.info("😊 Running Face Analysis Pipeline (Original)...")
         try:
             pipeline = FaceAnalysisPipeline(self.configs["face_analysis"])
-            
+            # Load previous person tracking results if available
+            person_file = self.output_dir / f"person_tracking_{self.video_path.stem}.json"
+            person_tracks = None
+            if person_file.exists():
+                with open(person_file) as pf:
+                    person_tracks = json.load(pf)
             start_time = time.time()
-            results = pipeline.process(str(self.video_path))
+            results = pipeline.process(
+                str(self.video_path),
+                person_tracks=person_tracks
+            )
             duration = time.time() - start_time
             
             # Save results
@@ -255,6 +279,46 @@ class VideoAnnotatorDemo:
         except Exception as e:
             logger.error(f"   ❌ Face analysis failed: {e}")
             self.results["face_analysis"] = {"status": "failed", "error": str(e)}
+
+    def run_laion_face_analysis(self):
+        """Run LAION face analysis pipeline."""
+        model_size = self.configs["laion_face_analysis"].get("model_size", "small")
+        logger.info(f"🧠 Running LAION Face Analysis Pipeline ({model_size.upper()} model)...")
+        try:
+            pipeline = LAIONFacePipeline(self.configs["laion_face_analysis"])
+            # Load previous person tracking results if available
+            person_file = self.output_dir / f"person_tracking_{self.video_path.stem}.json"
+            person_tracks = None
+            if person_file.exists():
+                with open(person_file) as pf:
+                    person_tracks = json.load(pf)
+            start_time = time.time()
+            results = pipeline.process(
+                str(self.video_path),
+                pps=0.2,  # Process 0.2 frames per second for efficiency
+                person_tracks=person_tracks
+            )
+            duration = time.time() - start_time
+            
+            # Save results
+            output_file = self.output_dir / f"laion_face_analysis_{model_size}_{self.video_path.stem}.json"
+            with open(output_file, 'w') as f:
+                json.dump(results, f, indent=2)
+            
+            face_count = len(results) if results else 0
+            self.results["laion_face_analysis"] = {
+                "status": "success",
+                "faces_detected": face_count,
+                "processing_time": f"{duration:.2f}s",
+                "output_file": str(output_file),
+                "model_size": model_size
+            }
+            
+            logger.info(f"   ✅ Analyzed {face_count} faces with {model_size.upper()} model in {duration:.2f}s")
+            
+        except Exception as e:
+            logger.error(f"   ❌ LAION face analysis failed: {e}")
+            self.results["laion_face_analysis"] = {"status": "failed", "error": str(e)}
     
     def run_audio_processing(self):
         """Run audio processing pipeline."""
@@ -308,6 +372,7 @@ class VideoAnnotatorDemo:
             "scene_detection": self.run_scene_detection,
             "person_tracking": self.run_person_tracking,
             "face_analysis": self.run_face_analysis,
+            "laion_face_analysis": self.run_laion_face_analysis,
             "audio_processing": self.run_audio_processing,
         }
         
@@ -407,7 +472,7 @@ Examples:
     
     parser.add_argument(
         "--pipelines", "-p",
-        help="Comma-separated list of pipelines to run (scene_detection,person_tracking,face_analysis,audio_processing)"
+        help="Comma-separated list of pipelines to run (scene_detection,person_tracking,face_analysis,laion_face_analysis,audio_processing)"
     )
     
     parser.add_argument(

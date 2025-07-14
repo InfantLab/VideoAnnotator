@@ -258,16 +258,41 @@ class AudioPipelineModular(BasePipeline):
 
             try:
                 if output_format == "webvtt" and data:
-                    # Save speech recognition as WebVTT
+                    # Save speech recognition as WebVTT manually to avoid library append issues
                     webvtt_path = output_path / f"{video_id}_{pipeline_name}.vtt"
-                    export_webvtt_captions(data, str(webvtt_path))
-                    self.logger.info(f"Saved {pipeline_name} to {webvtt_path}")
+                    try:
+                        # Extract segments list
+                        speech_result = data[0] if isinstance(data, list) and data else {}
+                        segments = speech_result.get('metadata', {}).get('segments', [])
+                        # Helper to format time to WebVTT
+                        def _fmt(t: float) -> str:
+                            hours = int(t // 3600)
+                            minutes = int((t % 3600) // 60)
+                            secs = t % 60
+                            return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
+                        # Write WebVTT file
+                        with open(webvtt_path, 'w', encoding='utf-8') as f:
+                            f.write("WEBVTT\n\n")
+                            for idx, seg in enumerate(segments, start=1):
+                                start = _fmt(seg['start'])
+                                end = _fmt(seg['end'])
+                                f.write(f"{idx}\n{start} --> {end}\n{seg['text']}\n\n")
+                        self.logger.info(f"Saved {pipeline_name} to {webvtt_path}")
+                    except Exception as e:
+                        self.logger.error(f"Failed to save {pipeline_name} results: {e}")
 
                 elif output_format == "rttm" and data:
-                    # Save diarization as RTTM
+                    # Save diarization as RTTM; transform to segments with start, end, speaker_id
                     rttm_path = output_path / f"{video_id}_{pipeline_name}.rttm"
-                    export_rttm_diarization(data, str(rttm_path))
-                    self.logger.info(f"Saved {pipeline_name} to {rttm_path}")
+                    try:
+                        diarization_data = [
+                            {'start': seg.get('start_time', 0.0), 'end': seg.get('end_time', seg.get('start_time', 0.0) + seg.get('duration', 0.0)), 'speaker_id': seg.get('speaker_id')}
+                            for seg in data
+                        ]
+                        export_rttm_diarization(diarization_data, str(rttm_path))
+                        self.logger.info(f"Saved {pipeline_name} to {rttm_path}")
+                    except Exception as e:
+                        self.logger.error(f"Failed to save {pipeline_name} results: {e}")
 
                 # Future: Add other format exports here
                 # elif output_format == "csv" and data:  # For emotion, F0, etc.

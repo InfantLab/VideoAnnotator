@@ -26,10 +26,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import yaml
 
 # Import all pipeline modules - STANDARDS-ONLY VERSIONS
-from src.pipelines.scene_detection.scene_pipeline_legacy import SceneDetectionPipeline
+from src.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
 from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
-from src.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
-from src.pipelines.audio_processing.audio_pipeline import AudioProcessingPipeline
+from src.pipelines.face_analysis.laion_face_pipeline import LAIONFacePipeline as FaceAnalysisPipeline
+from src.pipelines.audio_processing import AudioPipeline as AudioProcessingPipeline
 
 
 class VideoAnnotatorRunner:
@@ -215,13 +215,22 @@ class VideoAnnotatorRunner:
             
             try:
                 # Run the pipeline - all standards pipelines use unified process() method
-                pipeline_results = pipeline.process(
-                    video_path=str(video_path),
-                    start_time=0.0,
-                    end_time=None,
-                    pps=1.0 if pipeline_name != 'audio' else None,  # Audio doesn't use pps
-                    output_dir=str(output_dir)
-                )
+                # Call process with or without pps depending on pipeline
+                if pipeline_name == 'audio':
+                    pipeline_results = pipeline.process(
+                        video_path=str(video_path),
+                        start_time=0.0,
+                        end_time=None,
+                        output_dir=str(output_dir)
+                    )
+                else:
+                    pipeline_results = pipeline.process(
+                        video_path=str(video_path),
+                        start_time=0.0,
+                        end_time=None,
+                        pps=1.0,
+                        output_dir=str(output_dir)
+                    )
                 
                 # Calculate processing time
                 pipeline_duration = time.time() - pipeline_start_time

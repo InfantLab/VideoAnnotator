@@ -105,9 +105,18 @@ class FaceAnalysisPipeline(BasePipeline):
         end_time: Optional[float] = None,
         pps: float = 5.0,  # 5 FPS for face analysis
         output_dir: Optional[str] = None,
+        person_tracks: Optional[List[Dict[str, Any]]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Process video for face analysis.
+
+        Args:
+            video_path: Path to video file
+            start_time: Start time in seconds
+            end_time: End time in seconds (None for full video)
+            pps: Frames per second to process
+            output_dir: Output directory (optional)
+            person_tracks: Optional person tracking data to associate faces with
 
         Returns:
             List of COCO format annotation dictionaries with face detection results.
@@ -264,8 +273,8 @@ class FaceAnalysisPipeline(BasePipeline):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         face_rects = face_cascade.detectMultiScale(
             gray,
-            scaleFactor=1.1,
-            minNeighbors=5,
+            scaleFactor=self.config.get("scale_factor", 1.1),
+            minNeighbors=self.config.get("min_neighbors", 5),
             minSize=(self.config["min_face_size"], self.config["min_face_size"]),
         )
 
