@@ -3,10 +3,11 @@ Base storage backend interface for VideoAnnotator batch processing.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
 from pathlib import Path
 
-from ..batch.types import BatchJob
+if TYPE_CHECKING:
+    from ..batch.types import BatchJob
 
 
 class StorageBackend(ABC):
@@ -59,7 +60,7 @@ class StorageBackend(ABC):
         pass
     
     @abstractmethod
-    def save_job_metadata(self, job: BatchJob) -> None:
+    def save_job_metadata(self, job: "BatchJob") -> None:
         """
         Save job metadata.
         
@@ -69,7 +70,7 @@ class StorageBackend(ABC):
         pass
     
     @abstractmethod
-    def load_job_metadata(self, job_id: str) -> BatchJob:
+    def load_job_metadata(self, job_id: str) -> "BatchJob":
         """
         Load job metadata.
         

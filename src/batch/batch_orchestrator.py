@@ -17,7 +17,6 @@ from .types import BatchJob, JobStatus, BatchReport, BatchStatus, VideoPath, Con
 from .progress_tracker import ProgressTracker
 from .recovery import FailureRecovery, RetryStrategy
 from ..storage.base import StorageBackend
-from ..storage.file_backend import FileStorageBackend
 
 
 class BatchOrchestrator:
@@ -47,7 +46,12 @@ class BatchOrchestrator:
             retry_strategy: Strategy for retry delays
             checkpoint_interval: Save checkpoint every N completed jobs
         """
-        self.storage_backend = storage_backend or FileStorageBackend(Path("batch_results"))
+        if storage_backend is None:
+            # Lazy import to avoid circular import
+            from ..storage.file_backend import FileStorageBackend
+            storage_backend = FileStorageBackend(Path("batch_results"))
+        
+        self.storage_backend = storage_backend
         self.progress_tracker = ProgressTracker()
         self.failure_recovery = FailureRecovery(
             max_retries=max_retries,
@@ -73,6 +77,10 @@ class BatchOrchestrator:
             from ..pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
             from ..pipelines.audio_processing import AudioPipeline
             
+            # Import LAION pipelines
+            from ..pipelines.face_analysis.laion_face_pipeline import LAIONFacePipeline
+            from ..pipelines.audio_processing.laion_voice_pipeline import LAIONVoicePipeline
+            
             self.pipeline_classes = {
                 'scene_detection': SceneDetectionPipeline,
                 'scene': SceneDetectionPipeline,  # Alias for convenience
@@ -82,6 +90,11 @@ class BatchOrchestrator:
                 'face': FaceAnalysisPipeline,  # Alias for convenience
                 'audio_processing': AudioPipeline,
                 'audio': AudioPipeline,  # Alias for convenience
+                # LAION emotion analysis pipelines
+                'laion_face_analysis': LAIONFacePipeline,
+                'laion_face': LAIONFacePipeline,  # Alias for convenience
+                'laion_voice_analysis': LAIONVoicePipeline,
+                'laion_voice': LAIONVoicePipeline,  # Alias for convenience
             }
             self.logger.debug("Pipeline classes imported successfully")
             
@@ -319,7 +332,64 @@ class BatchOrchestrator:
         """Clear all jobs from the queue."""
         self.jobs.clear()
         self.logger.info("Cleared job queue")
+
+    def get_job(self, job_id: str) -> Optional[BatchJob]:
+        """Get a job by its ID."""
+        for job in self.jobs:
+            if job.job_id == job_id:
+                return job
+        return None
     
+    def update_job_status(self, job_id: str, status: JobStatus) -> bool:
+        """Update the status of a job."""
+        job = self.get_job(job_id)
+        if job:
+            job.status = status
+            if status == JobStatus.RUNNING and job.started_at is None:
+                job.started_at = datetime.now()
+            elif status in [JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED]:
+                job.completed_at = datetime.now()
+            return True
+        return False
+    
+    def set_job_error(self, job_id: str, error_message: str) -> bool:
+        """Set error message for a job and mark it as failed."""
+        job = self.get_job(job_id)
+        if job:
+            job.status = JobStatus.FAILED
+            job.error_message = error_message
+            job.completed_at = datetime.now()
+            return True
+        return False
+    
+    def increment_retry_count(self, job_id: str) -> bool:
+        """Increment the retry count for a job."""
+        job = self.get_job(job_id)
+        if job:
+            job.retry_count += 1
+            return True
+        return False
+    
+    def add_pipeline_result(self, job_id: str, result) -> bool:
+        """Add a pipeline result to a job."""
+        job = self.get_job(job_id)
+        if job:
+            if job.pipeline_results is None:
+                job.pipeline_results = {}
+            job.pipeline_results[result.pipeline_name] = result
+            return True
+        return False
+
+    def _should_retry_job(self, job_id: str) -> bool:
+        """Check if a job should be retried based on failure recovery settings."""
+        job = self.get_job(job_id)
+        if not job:
+            return False
+        
+        # Simple retry logic - could be expanded to use failure_recovery
+        max_retries = 3  # Default max retries
+        return job.retry_count < max_retries
+
     def _process_job_with_retry(self, job: BatchJob) -> BatchJob:
         """
         Process a single job with retry logic.

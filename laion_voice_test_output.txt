@@ -1,7 +1,0 @@
-WARNING:tensorflow:From C:\Users\caspar\anaconda3\envs\VideoAnnotator\Lib\site-packages\tf_keras\src\losses.py:2976: The name tf.losses.sparse_softmax_cross_entropy is deprecated. Please use tf.compat.v1.losses.sparse_softmax_cross_entropy instead.
-
-usage: test_laion_voice_pipeline.py [-h] --video_path VIDEO_PATH
-                                    [--output_dir OUTPUT_DIR]
-                                    [--log_level LOG_LEVEL]
-                                    [--model_size {small,large}]
-test_laion_voice_pipeline.py: error: the following arguments are required: --video_path

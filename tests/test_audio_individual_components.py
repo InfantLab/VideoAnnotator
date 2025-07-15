@@ -241,7 +241,7 @@ class TestSpeechPipeline:
         pipeline.initialize()
         
         assert pipeline.is_initialized == True
-        assert pipeline._whisper_model is not None
+        assert pipeline.whisper_model is not None
         
         # Check that model was loaded
         mock_whisper.load_model.assert_called_once_with("base", device='cpu')

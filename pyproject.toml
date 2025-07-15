@@ -181,12 +181,15 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
+    "--asyncio-mode=auto",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
     "performance: marks tests as performance tests",
+    "meta: marks tests as meta-tests for testing test infrastructure",
+    "asyncio: marks tests as requiring asyncio support",
 ]
 
 [tool.mypy]

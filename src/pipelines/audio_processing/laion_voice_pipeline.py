@@ -178,7 +178,21 @@ class LAIONVoicePipeline(WhisperBasePipeline):
         
         self.logger = logging.getLogger(__name__)
         self.classifiers = {}  # LAION emotion classifiers
+        
+        # Set CUDA capability for GPU optimization decisions
+        self.cuda_capability = self._get_cuda_capability()
     
+    def _get_cuda_capability(self) -> float:
+        """Get CUDA capability version for optimization decisions."""
+        try:
+            if torch.cuda.is_available():
+                # Get capability of device 0 by default
+                major, minor = torch.cuda.get_device_capability(0)
+                return float(f"{major}.{minor}")
+            return 0.0
+        except Exception:
+            return 0.0
+
     def initialize(self) -> None:
         """Initialize the Whisper model and emotion classifiers."""
         if self.is_initialized:

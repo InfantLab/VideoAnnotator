@@ -218,6 +218,20 @@ class BatchProcessingDemo:
                 "audio_processing": {
                     "whisper_model": "tiny",
                     "diarization_enabled": False,
+                },
+                "laion_face_analysis": {
+                    "model_size": "small",
+                    "confidence_threshold": 0.7,
+                    "top_k_emotions": 3,
+                    "device": "auto"
+                },
+                "laion_voice_analysis": {
+                    "model_size": "small",
+                    "segmentation_mode": "fixed_interval",
+                    "min_segment_duration": 2.0,
+                    "max_segment_duration": 15.0,
+                    "include_transcription": False,
+                    "top_k_emotions": 3
                 }
             }
         elif self.args.high_quality:
@@ -237,6 +251,20 @@ class BatchProcessingDemo:
                 "audio_processing": {
                     "whisper_model": "base",
                     "diarization_enabled": True,
+                },
+                "laion_face_analysis": {
+                    "model_size": "large",
+                    "confidence_threshold": 0.5,
+                    "top_k_emotions": 5,
+                    "device": "auto"
+                },
+                "laion_voice_analysis": {
+                    "model_size": "large",
+                    "segmentation_mode": "fixed_interval",
+                    "min_segment_duration": 1.0,
+                    "max_segment_duration": 10.0,
+                    "include_transcription": True,
+                    "top_k_emotions": 5
                 }
             }
         else:
@@ -257,6 +285,20 @@ class BatchProcessingDemo:
                 "audio_processing": {
                     "whisper_model": "base",
                     "diarization_enabled": True,
+                },
+                "laion_face_analysis": {
+                    "model_size": "small",
+                    "confidence_threshold": 0.6,
+                    "top_k_emotions": 5,
+                    "device": "auto"
+                },
+                "laion_voice_analysis": {
+                    "model_size": "small",
+                    "segmentation_mode": "fixed_interval",
+                    "min_segment_duration": 1.0,
+                    "max_segment_duration": 15.0,
+                    "include_transcription": True,
+                    "top_k_emotions": 5
                 }
             }
     
@@ -354,7 +396,7 @@ def main():
     parser.add_argument('--workers', type=int, default=4, 
                        help='Number of parallel workers')
     parser.add_argument('--pipelines', type=str, 
-                       help='Comma-separated list of pipelines (scene,person,face,audio)')
+                       help='Comma-separated list of pipelines (scene,person,face,audio,laion_face,laion_voice)')
     
     # Quality presets
     quality_group = parser.add_mutually_exclusive_group()
