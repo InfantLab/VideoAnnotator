@@ -20,6 +20,18 @@ from ..storage.base import StorageBackend
 
 
 class BatchOrchestrator:
+    async def start(self, max_workers: int = 4, save_checkpoints: bool = True):
+        """
+        Async entry point for batch processing (for test compatibility).
+        Runs run_batch in a thread executor.
+        """
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self.run_batch, max_workers, save_checkpoints)
+
+    # Alias for testing compatibility (so patch.object works in tests)
+    def _process_job(self, job):
+        return self._process_job_with_retry(job)
     """
     Orchestrates batch processing of videos through VideoAnnotator pipelines.
     
@@ -405,15 +417,12 @@ class BatchOrchestrator:
         for attempt in range(max_attempts):
             try:
                 return self._process_single_job(job)
-                
             except Exception as e:
                 self.logger.error(f"Job {job.job_id} failed (attempt {attempt + 1}/{max_attempts}): {e}")
-                
                 # Check if we should retry
                 if attempt < max_attempts - 1 and self.failure_recovery.should_retry(job, e):
                     # Prepare for retry
                     job = self.failure_recovery.prepare_retry(job, e)
-                    
                     # Wait before retry
                     delay = self.failure_recovery.calculate_retry_delay(job)
                     if delay > 0:
@@ -424,9 +433,11 @@ class BatchOrchestrator:
                     job.status = JobStatus.FAILED
                     job.error_message = str(e)
                     break
-        
         return job
-    
+
+
+
+
     def _process_single_job(self, job: BatchJob) -> BatchJob:
         """
         Process a single job through selected pipelines.

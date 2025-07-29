@@ -1,7 +1,7 @@
 # Core dependencies - Python 3.12 Compatible
 fastapi>=0.115.0
 ipython>=8.12.3
-librosa>=0.10.0
+librosa>=0.11.0
 matplotlib>=3.9.2
 moviepy>=1.0.3
 opencv-python>=4.10.0.84
@@ -36,7 +36,7 @@ torchaudio>=2.0.0  # CUDA version installed separately
 
 # Audio annotation format libraries
 webvtt-py>=0.4.6  # WebVTT subtitle/caption format support
-audformat>=1.4.0  # Comprehensive audio annotation format library (lightweight)
+audformat>=1.3.2  # Comprehensive audio annotation format library (lightweight)
 praatio>=6.0.0    # TextGrid (Praat) format support
 
 

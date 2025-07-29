@@ -19,20 +19,12 @@ from ...exporters.native_formats import (
     validate_coco_json,
 )
 
-# Optional imports for enhanced face analysis
+# Optional import for enhanced face analysis
 try:
     from deepface import DeepFace
-
     DEEPFACE_AVAILABLE = True
 except ImportError:
     DEEPFACE_AVAILABLE = False
-
-try:
-    import mediapipe as mp
-
-    MEDIAPIPE_AVAILABLE = True
-except ImportError:
-    MEDIAPIPE_AVAILABLE = False
 
 
 class FaceAnalysisPipeline(BasePipeline):
@@ -44,7 +36,7 @@ class FaceAnalysisPipeline(BasePipeline):
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         default_config = {
-            "detection_backend": "opencv",  # opencv, mediapipe, deepface
+            "detection_backend": "opencv",  # opencv, deepface
             "emotion_backend": "deepface",  # deepface, disabled
             "confidence_threshold": 0.7,
             "min_face_size": 30,  # Minimum face size in pixels
@@ -58,8 +50,7 @@ class FaceAnalysisPipeline(BasePipeline):
             merged_config.update(config)
         super().__init__(merged_config)
         self.face_cascade = None
-        self.mp_face_detection = None
-        self.mp_face_mesh = None
+        # Remove mediapipe attributes
         self.logger = logging.getLogger(__name__)
 
     def initialize(self) -> None:
@@ -210,13 +201,7 @@ class FaceAnalysisPipeline(BasePipeline):
         """Initialize the selected detection backend."""
         backend = self.config["detection_backend"]
 
-        if backend == "mediapipe" and MEDIAPIPE_AVAILABLE:
-            self.backends["mediapipe"] = mp.solutions.face_detection.FaceDetection(
-                model_selection=0, min_detection_confidence=self.config["confidence_threshold"]
-            )
-            self.logger.info("Initialized MediaPipe face detection")
-
-        elif backend == "opencv":
+        if backend == "opencv":
             # OpenCV Haar cascades are built-in
             self.logger.info("Using OpenCV face detection")
 
@@ -241,11 +226,7 @@ class FaceAnalysisPipeline(BasePipeline):
 
         backend = self.config["detection_backend"]
 
-        if backend == "mediapipe" and "mediapipe" in self.backends:
-            return self._detect_faces_mediapipe(
-                frame, timestamp, video_id, frame_number, width, height
-            )
-        elif backend == "deepface" and DEEPFACE_AVAILABLE:
+        if backend == "deepface" and DEEPFACE_AVAILABLE:
             return self._detect_faces_deepface(
                 frame, timestamp, video_id, frame_number, width, height
             )
@@ -297,48 +278,7 @@ class FaceAnalysisPipeline(BasePipeline):
 
         return annotations
 
-    def _detect_faces_mediapipe(
-        self,
-        frame: np.ndarray,
-        timestamp: float,
-        video_id: str,
-        frame_number: int,
-        width: int,
-        height: int,
-    ) -> List[Dict[str, Any]]:
-        """Detect faces using MediaPipe."""
 
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.backends["mediapipe"].process(rgb_frame)
-
-        annotations = []
-        if results.detections:
-            for i, detection in enumerate(results.detections):
-                bbox_norm = detection.location_data.relative_bounding_box
-
-                # Convert normalized coordinates to pixels
-                x = float(bbox_norm.x_center - bbox_norm.width / 2) * width
-                y = float(bbox_norm.y_center - bbox_norm.height / 2) * height
-                w = float(bbox_norm.width) * width
-                h = float(bbox_norm.height) * height
-
-                # Filter by minimum face size
-                if min(w, h) >= self.config["min_face_size"]:
-                    annotation = create_coco_annotation(
-                        annotation_id=0,  # Will be set later
-                        image_id=f"{video_id}_frame_{frame_number}",
-                        category_id=100,  # Face category
-                        bbox=[x, y, w, h],
-                        score=float(detection.score[0]),
-                        # VideoAnnotator extensions
-                        face_id=i,
-                        timestamp=timestamp,
-                        frame_number=frame_number,
-                        backend="mediapipe",
-                    )
-                    annotations.append(annotation)
-
-        return annotations
 
     def _detect_faces_deepface(
         self,
@@ -436,14 +376,6 @@ class FaceAnalysisPipeline(BasePipeline):
 
     def cleanup(self):
         """Cleanup resources."""
-        # Cleanup MediaPipe resources if initialized
-        if self.mp_face_detection is not None:
-            self.mp_face_detection.close()
-        if self.mp_face_mesh is not None:
-            self.mp_face_mesh.close()
-        
         # Reset attributes
         self.face_cascade = None
-        self.mp_face_detection = None
-        self.mp_face_mesh = None
         self.is_initialized = False
