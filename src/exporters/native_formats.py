@@ -20,7 +20,13 @@ Usage:
 import json
 import logging
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Union, NamedTuple
+from typing import List, Dict, Any, Optional, Union, NamedTuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    try:
+        from pycocotools.coco import COCO
+    except ImportError:
+        COCO = None
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +46,8 @@ try:
     PYCOCOTOOLS_AVAILABLE = True
 except ImportError:
     PYCOCOTOOLS_AVAILABLE = False
+    # Define a placeholder for type annotations when pycocotools is not available
+    COCO = None
     logger.warning("pycocotools not available. Install with: pip install pycocotools")
 
 try:
@@ -139,7 +147,7 @@ def export_coco_json(
     images: List[Dict[str, Any]],
     output_path: str,
     categories: Optional[List[Dict[str, Any]]] = None,
-) -> COCO:
+) -> Optional[Any]:
     """
     Export to COCO JSON format using native structure.
 

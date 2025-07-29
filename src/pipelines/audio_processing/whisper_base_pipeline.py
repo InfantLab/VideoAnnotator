@@ -9,12 +9,28 @@ import logging
 import gc
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any, Union
+import tempfile
+import os
+import warnings
 
 import numpy as np
 import torch
+
+# Initialize librosa with safer settings to avoid numba crashes
 import librosa
+try:
+    # Disable numba JIT compilation for librosa if causing issues
+    import numba
+    # Configure numba to use threading layer that's more stable
+    numba.config.THREADING_LAYER = 'omp'
+except ImportError:
+    pass
+
+# Suppress librosa warnings that might indicate instability
+warnings.filterwarnings('ignore', category=UserWarning, module='librosa')
 
 from ..base_pipeline import BasePipeline
+from .ffmpeg_utils import check_ffmpeg_available, extract_audio_from_video as ffmpeg_extract
 
 # Try to import both standard Whisper and HF Whisper
 try:
@@ -205,6 +221,7 @@ class WhisperBasePipeline(BasePipeline):
     def extract_audio_from_video(self, video_path: Union[str, Path]) -> Tuple[np.ndarray, int]:
         """
         Extract audio from video file and preprocess it.
+        Uses FFmpeg for safer extraction, then librosa for processing.
         
         Args:
             video_path: Path to the video file
@@ -213,34 +230,70 @@ class WhisperBasePipeline(BasePipeline):
             Tuple of (audio_waveform, sample_rate)
         """
         try:
-            video_path = str(video_path)
+            video_path = Path(video_path)
             self.logger.info(f"Extracting audio from {video_path}")
-            
-            # Use librosa to load audio
-            audio, orig_sr = librosa.load(
-                video_path, 
-                sr=None,  # Use original sample rate initially
-                mono=True
-            )
             
             target_sr = self.config["sample_rate"]
             
-            # Resample if necessary
-            if orig_sr != target_sr:
-                self.logger.info(f"Resampling audio from {orig_sr}Hz to {target_sr}Hz")
-                audio = librosa.resample(audio, orig_sr=orig_sr, target_sr=target_sr)
+            # Method 1: Try FFmpeg extraction first (safer for video files)
+            if check_ffmpeg_available():
+                self.logger.debug("Using FFmpeg for audio extraction")
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    temp_audio_path = Path(temp_dir) / "temp_audio.wav"
+                    
+                    # Extract audio to temporary WAV file using FFmpeg
+                    extracted_path = ffmpeg_extract(
+                        video_path=video_path,
+                        output_path=temp_audio_path,
+                        sample_rate=target_sr,
+                        channels=1,  # Mono
+                        format="wav"
+                    )
+                    
+                    if extracted_path and extracted_path.exists():
+                        # Load the extracted audio file with librosa (safer than direct video loading)
+                        audio, loaded_sr = librosa.load(
+                            str(extracted_path),
+                            sr=target_sr,
+                            mono=True
+                        )
+                        
+                        # Clean up is automatic with tempfile.TemporaryDirectory
+                        self.logger.info(f"Audio extracted via FFmpeg: {len(audio)/target_sr:.2f} seconds at {target_sr}Hz")
+                    else:
+                        raise RuntimeError("FFmpeg extraction failed")
+            else:
+                self.logger.warning("FFmpeg not available, falling back to librosa direct loading")
+                # Method 2: Fallback to direct librosa loading (may crash on some systems)
+                audio, orig_sr = librosa.load(
+                    str(video_path), 
+                    sr=None,  # Use original sample rate initially
+                    mono=True
+                )
+                
+                # Resample if necessary
+                if orig_sr != target_sr:
+                    self.logger.info(f"Resampling audio from {orig_sr}Hz to {target_sr}Hz")
+                    audio = librosa.resample(audio, orig_sr=orig_sr, target_sr=target_sr)
             
             # Apply normalization if configured
             if self.config.get("normalize_audio", True):
                 self.logger.debug("Normalizing audio")
-                audio = librosa.util.normalize(audio)
-            
-            self.logger.info(f"Audio extracted: {len(audio)/target_sr:.2f} seconds at {target_sr}Hz")
+                # Use safer normalization approach
+                if np.max(np.abs(audio)) > 0:
+                    audio = audio / np.max(np.abs(audio))
+                
+            self.logger.info(f"Audio extraction complete: {len(audio)/target_sr:.2f} seconds at {target_sr}Hz")
             return audio, target_sr
-        
+            
         except Exception as e:
             self.logger.error(f"Error extracting audio from {video_path}: {e}")
-            raise RuntimeError(f"Failed to extract audio: {e}")
+            # Try to provide more specific error information
+            if "librosa" in str(e).lower() or "numba" in str(e).lower():
+                raise RuntimeError(f"Audio processing library error. This may be due to librosa/numba compatibility issues. "
+                                 f"Consider installing FFmpeg for more stable audio extraction. Original error: {e}")
+            else:
+                raise RuntimeError(f"Failed to extract audio: {e}")
     
     @torch.no_grad()
     def get_whisper_embedding(self, audio: np.ndarray, pad_or_trim: bool = True, 
@@ -421,3 +474,89 @@ class WhisperBasePipeline(BasePipeline):
             
         except Exception as e:
             self.logger.error(f"Error cleaning up resources: {e}")
+
+    def get_schema(self) -> Dict[str, Any]:
+        """
+        Return the output schema for this pipeline.
+        
+        Returns:
+            Dictionary describing the output format
+        """
+        return {
+            "type": "whisper_base",
+            "description": "Base Whisper pipeline for audio processing",
+            "output_format": {
+                "embeddings": "torch.Tensor",
+                "segments": "List[Dict[str, Any]]",
+                "audio_info": "Dict[str, Any]"
+            }
+        }
+
+    def process(self, video_path: str, start_time: float = 0.0, 
+                end_time: Optional[float] = None, pps: float = 1.0,
+                output_dir: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Process video/audio file to extract embeddings and segments.
+        
+        Args:
+            video_path: Path to the video/audio file
+            start_time: Start time in seconds
+            end_time: End time in seconds (None = end of file)
+            pps: Predictions per second for segmentation
+            output_dir: Output directory (unused in base implementation)
+            
+        Returns:
+            List of processing results
+        """
+        try:
+            # Ensure initialization
+            if not self.is_initialized:
+                self.initialize()
+            
+            # Extract audio from video
+            audio, sample_rate = self.extract_audio_from_video(video_path)
+            
+            # Segment the audio
+            segments = self.segment_audio(
+                audio=audio, 
+                sample_rate=sample_rate,
+                pps=pps,
+                start_time=start_time,
+                end_time=end_time
+            )
+            
+            # Process each segment (basic implementation)
+            results = []
+            for i, segment in enumerate(segments):
+                try:
+                    # Extract embedding for this segment
+                    embedding = self.get_whisper_embedding(segment["audio"])
+                    
+                    result = {
+                        "segment_id": i,
+                        "start_time": segment["start_time"],
+                        "end_time": segment["end_time"],
+                        "duration": segment["end_time"] - segment["start_time"],
+                        "embedding_shape": list(embedding.shape) if embedding is not None else None,
+                        "has_embedding": embedding is not None,
+                        "audio_length": len(segment["audio"]),
+                    }
+                    results.append(result)
+                    
+                except Exception as e:
+                    self.logger.warning(f"Failed to process segment {i}: {e}")
+                    result = {
+                        "segment_id": i,
+                        "start_time": segment["start_time"],
+                        "end_time": segment["end_time"],
+                        "error": str(e),
+                        "has_embedding": False
+                    }
+                    results.append(result)
+            
+            self.logger.info(f"Processed {len(results)} segments from {video_path}")
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"Error processing {video_path}: {e}")
+            raise RuntimeError(f"Failed to process audio: {e}")
