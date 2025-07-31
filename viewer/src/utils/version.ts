@@ -1,0 +1,47 @@
+/**
+ * Version information utilities
+ */
+
+// For production builds, this would read from package.json
+// For now, we'll export the version as a constant
+export const VERSION = '0.1.0';
+export const GITHUB_URL = 'https://github.com/InfantLab/VideoActionViewer';
+export const APP_NAME = 'Video Action Viewer';
+
+/**
+ * Get formatted version string
+ */
+export function getVersionString(): string {
+  return `v${VERSION}`;
+}
+
+/**
+ * Get full app title with version
+ */
+export function getAppTitle(): string {
+  return `${APP_NAME} ${getVersionString()}`;
+}
+
+/**
+ * Log version info to console for debugging
+ */
+export function logVersionInfo(): void {
+  console.log(`🎬 ${getAppTitle()}`);
+  console.log(`🔗 GitHub: ${GITHUB_URL}`);
+  console.log(`📅 Build: ${new Date().toISOString()}`);
+}
+
+// Make version info available globally for browser console
+if (typeof window !== 'undefined') {
+  (window as any).version = {
+    VERSION,
+    GITHUB_URL,
+    APP_NAME,
+    getVersionString,
+    getAppTitle,
+    logVersionInfo
+  };
+  
+  // Auto-log version on startup
+  logVersionInfo();
+}

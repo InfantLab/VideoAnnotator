@@ -1,10 +1,12 @@
 import { useState, useCallback, useRef } from 'react';
+import { DEMO_DATA_SETS, loadDemoAnnotations, loadDemoVideo } from '../utils/debugUtils';
 import { VideoPlayer } from './VideoPlayer';
 import { Timeline } from './Timeline';
 import { OverlayControls } from './OverlayControls';
 import { VideoControls } from './VideoControls';
 import { FileUploader } from './FileUploader';
 import { WelcomeScreen } from './WelcomeScreen';
+import { Footer } from './Footer';
 import { Card } from '@/components/ui/card';
 import { StandardAnnotationData, OverlaySettings, TimelineSettings } from '@/types/annotations';
 
@@ -35,6 +37,29 @@ export const VideoAnnotationViewer = () => {
 
   const handleGetStarted = useCallback(() => {
     setShowWelcome(false);
+  }, []);
+
+  const handleViewDemo = useCallback(async () => {
+    try {
+      const demoKey = Object.keys(DEMO_DATA_SETS)[0] as keyof typeof DEMO_DATA_SETS;
+      
+      // Load video and annotations in parallel
+      const [videoFile, annotation] = await Promise.all([
+        loadDemoVideo(demoKey),
+        loadDemoAnnotations(demoKey)
+      ]);
+      
+      if (videoFile && annotation) {
+        setVideoFile(videoFile);
+        setAnnotationData(annotation);
+        setShowWelcome(false);
+      } else {
+        throw new Error('Failed to load demo video or annotations');
+      }
+    } catch (error) {
+      console.error('Failed to load demo:', error);
+      alert('Failed to load demo data. Please check the console for details.');
+    }
   }, []);
 
   const handleVideoLoad = useCallback((file: File) => {
@@ -89,7 +114,7 @@ export const VideoAnnotationViewer = () => {
 
   // Show welcome screen first
   if (showWelcome) {
-    return <WelcomeScreen onGetStarted={handleGetStarted} />;
+    return <WelcomeScreen onGetStarted={handleGetStarted} onViewDemo={handleViewDemo} />;
   }
 
   // Show file uploader if no files loaded
@@ -102,6 +127,16 @@ export const VideoAnnotationViewer = () => {
             <p className="text-muted-foreground">
               Load a video file and its corresponding annotation data to begin analysis
             </p>
+          </div>
+          <div className="flex flex-col items-center gap-4 mb-6">
+            <button
+              className="px-6 py-2 rounded bg-primary text-primary-foreground font-semibold shadow hover:bg-primary/90 transition"
+              onClick={handleViewDemo}
+              type="button"
+            >
+              ▶️ View Demo
+            </button>
+            <span className="text-xs text-muted-foreground">Loads sample video and annotations from demo folder</span>
           </div>
           <FileUploader
             onVideoLoad={handleVideoLoad}
@@ -206,6 +241,9 @@ export const VideoAnnotationViewer = () => {
             />
           </div>
         </div>
+        
+        {/* Footer */}
+        <Footer />
       </div>
     </div>
   );

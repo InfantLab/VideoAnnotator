@@ -4,21 +4,19 @@
 
 import { parseWebVTT } from '../lib/parsers/webvtt'
 import { parseRTTM } from '../lib/parsers/rttm'
-import { parseCOCO } from '../lib/parsers/coco'
+import { parseCOCOPersonData } from '../lib/parsers/coco'
 import { parseSceneDetection } from '../lib/parsers/scene'
-import { mergeAnnotationData } from '../lib/parsers/merger'
+import { detectFileType, mergeAnnotationData } from '../lib/parsers/merger'
 import type { StandardAnnotationData } from '../types/annotations'
 
 export interface DemoDataPaths {
-    video: string
-    coco?: string
-    webvtt?: string
-    rttm?: string
-    scene?: string
-    audio?: string
-}
-
-export const DEMO_DATA_SETS = {
+  video: string
+  coco?: string
+  webvtt?: string
+  rttm?: string
+  scene?: string
+  audio?: string
+}export const DEMO_DATA_SETS = {
     'peekaboo-rep3': {
         video: 'demo/videos/2UWdXP.joke1.rep3.take1.Peekaboo_h265.mp4',
         coco: 'demo/annotations/2UWdXP.joke1.rep3.take1.Peekaboo_h265/2UWdXP.joke1.rep3.take1.Peekaboo_h265_person_tracking.json',
@@ -38,124 +36,95 @@ export const DEMO_DATA_SETS = {
 } as const
 
 export async function loadDemoAnnotations(datasetName: keyof typeof DEMO_DATA_SETS): Promise<StandardAnnotationData | null> {
-    const paths = DEMO_DATA_SETS[datasetName]
-
-    try {
-        console.log(`🔍 Loading demo dataset: ${datasetName}`)
-
-        const loadPromises: Promise<any>[] = []
-        const parsedData: any = {}
-
-        // Load COCO person tracking
-        if (paths.coco) {
-            loadPromises.push(
-                fetch(paths.coco)
-                    .then(res => res.json())
-                    .then(data => {
-                        console.log('✅ COCO data loaded')
-                        parsedData.coco = parseCOCO(JSON.stringify(data))
-                    })
-            )
-        }
-
-        // Load WebVTT speech recognition
-        if (paths.webvtt) {
-            loadPromises.push(
-                fetch(paths.webvtt)
-                    .then(res => res.text())
-                    .then(data => {
-                        console.log('✅ WebVTT data loaded')
-                        parsedData.webvtt = parseWebVTT(data)
-                    })
-            )
-        }
-
-        // Load RTTM speaker diarization
-        if (paths.rttm) {
-            loadPromises.push(
-                fetch(paths.rttm)
-                    .then(res => res.text())
-                    .then(data => {
-                        console.log('✅ RTTM data loaded')
-                        parsedData.rttm = parseRTTM(data)
-                    })
-            )
-        }
-
-        // Load scene detection
-        if (paths.scene) {
-            loadPromises.push(
-                fetch(paths.scene)
-                    .then(res => res.json())
-                    .then(data => {
-                        console.log('✅ Scene data loaded')
-                        parsedData.scene = parseSceneDetection(JSON.stringify(data))
-                    })
-            )
-        }
-
-        await Promise.all(loadPromises)
-
-        // Merge all data into StandardAnnotationData
-        const mergedData = mergeAnnotationData(
-            parsedData.coco || null,
-            parsedData.webvtt || null,
-            parsedData.rttm || null,
-            parsedData.scene || null
-        )
-
-        console.log('🎉 Demo data successfully loaded and merged:', mergedData)
-        return mergedData
-
-    } catch (error) {
-        console.error('❌ Error loading demo data:', error)
-        return null
+  const paths = DEMO_DATA_SETS[datasetName]
+  
+  try {
+    console.log(`🔍 Loading demo dataset: ${datasetName}`)
+    
+    // Fetch all available files as File objects (including video for merger requirement)
+    const files: File[] = []
+    
+    // Fetch video file first (required by merger for metadata extraction)
+    const videoRes = await fetch(paths.video)
+    const videoBlob = await videoRes.blob()
+    const videoFileName = paths.video.split('/').pop() || 'demo.mp4'
+    files.push(new File([videoBlob], videoFileName, { type: videoBlob.type }))
+    
+    // Fetch COCO file
+    if (paths.coco) {
+      const res = await fetch(paths.coco)
+      const blob = await res.blob()
+      files.push(new File([blob], 'person_tracking.json', { type: 'application/json' }))
     }
+    
+    // Fetch WebVTT file (only available in peekaboo-rep3)
+    if ('webvtt' in paths && paths.webvtt) {
+      const res = await fetch(paths.webvtt)
+      const blob = await res.blob()
+      files.push(new File([blob], 'speech_recognition.vtt', { type: 'text/vtt' }))
+    }
+    
+    // Fetch RTTM file
+    if (paths.rttm) {
+      const res = await fetch(paths.rttm)
+      const blob = await res.blob()
+      files.push(new File([blob], 'speaker_diarization.rttm', { type: 'text/plain' }))
+    }
+    
+    // Fetch Scene file
+    if (paths.scene) {
+      const res = await fetch(paths.scene)
+      const blob = await res.blob()
+      files.push(new File([blob], 'scene_detection.json', { type: 'application/json' }))
+    }
+    
+    // Detect file types
+    const detectedFiles = await Promise.all(
+      files.map(async (file) => await detectFileType(file))
+    )
+    
+    console.log('✅ Files detected:', detectedFiles.map(f => f.type).join(', '))
+    
+    // Merge annotation data using the actual merger (includes video metadata extraction)
+    const parseResult = await mergeAnnotationData(detectedFiles)
+    
+    console.log('🎉 Demo data successfully loaded and merged:', parseResult.data)
+    return parseResult.data
+    
+  } catch (error) {
+    console.error('❌ Error loading demo data:', error)
+    return null
+  }
 }
 
 /**
- * Test individual parsers with demo data
+ * Load demo video file separately for use in VideoAnnotationViewer
  */
-export async function testParsers() {
-    console.log('🧪 Testing individual parsers with demo data...')
-
-    try {
-        // Test COCO parser
-        const cocoResponse = await fetch(DEMO_DATA_SETS['peekaboo-rep3'].coco!)
-        const cocoData = await cocoResponse.json()
-        const cocoResult = parseCOCO(JSON.stringify(cocoData))
-        console.log('✅ COCO parser test:', cocoResult.persons.length, 'person detections')
-
-        // Test WebVTT parser
-        const webvttResponse = await fetch(DEMO_DATA_SETS['peekaboo-rep3'].webvtt!)
-        const webvttData = await webvttResponse.text()
-        const webvttResult = parseWebVTT(webvttData)
-        console.log('✅ WebVTT parser test:', webvttResult.cues.length, 'speech cues')
-
-        // Test RTTM parser
-        const rttmResponse = await fetch(DEMO_DATA_SETS['peekaboo-rep3'].rttm!)
-        const rttmData = await rttmResponse.text()
-        const rttmResult = parseRTTM(rttmData)
-        console.log('✅ RTTM parser test:', rttmResult.speakers.length, 'speaker segments')
-
-        // Test Scene parser
-        const sceneResponse = await fetch(DEMO_DATA_SETS['peekaboo-rep3'].scene!)
-        const sceneData = await sceneResponse.json()
-        const sceneResult = parseSceneDetection(JSON.stringify(sceneData))
-        console.log('✅ Scene parser test:', sceneResult.scenes.length, 'scene boundaries')
-
-        console.log('🎉 All parser tests completed successfully!')
-
-    } catch (error) {
-        console.error('❌ Parser test failed:', error)
-    }
+export async function loadDemoVideo(datasetName: keyof typeof DEMO_DATA_SETS): Promise<File | null> {
+  const paths = DEMO_DATA_SETS[datasetName]
+  
+  try {
+    console.log(`🎬 Loading demo video: ${datasetName}`)
+    
+    const videoRes = await fetch(paths.video)
+    const videoBlob = await videoRes.blob()
+    const videoFileName = paths.video.split('/').pop() || 'demo.mp4'
+    const videoFile = new File([videoBlob], videoFileName, { type: videoBlob.type })
+    
+    console.log('✅ Demo video loaded:', videoFileName)
+    return videoFile
+    
+  } catch (error) {
+    console.error('❌ Error loading demo video:', error)
+    return null
+  }
 }
 
 // Make utilities available globally for browser console testing
 if (typeof window !== 'undefined') {
-    (window as any).debugUtils = {
-        loadDemoAnnotations,
-        testParsers,
-        DEMO_DATA_SETS
-    }
+  (window as any).debugUtils = {
+    loadDemoAnnotations,
+    loadDemoVideo,
+    DEMO_DATA_SETS
+  }
 }

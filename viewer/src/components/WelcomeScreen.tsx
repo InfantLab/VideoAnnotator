@@ -2,12 +2,14 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Play, Upload, FileText, Eye } from 'lucide-react';
 import viewerPreview from '@/assets/viewer-interface-preview.jpg';
+import { Footer } from './Footer';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
+  onViewDemo?: () => void;
 }
 
-export const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
+export const WelcomeScreen = ({ onGetStarted, onViewDemo }: WelcomeScreenProps) => {
   const features = [
     {
       icon: <Eye className="w-6 h-6" />,
@@ -27,9 +29,9 @@ export const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Hero Section */}
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden flex-1">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />
         
         <div className="container mx-auto px-6 py-16 relative">
@@ -55,6 +57,7 @@ export const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
                 variant="outline" 
                 size="lg"
                 className="text-lg px-8 py-3"
+                onClick={onViewDemo}
               >
                 <Play className="w-5 h-5 mr-2" />
                 View Demo
@@ -146,6 +149,9 @@ export const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
           </Button>
         </div>
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };
