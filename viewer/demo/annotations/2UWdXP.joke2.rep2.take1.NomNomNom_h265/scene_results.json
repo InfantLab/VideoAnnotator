@@ -1,0 +1,25 @@
+[
+  {
+    "id": 1,
+    "image_id": "2UWdXP.joke2.rep2.take1.NomNomNom_h265_frame_000047",
+    "category_id": 1,
+    "bbox": [
+      0,
+      0,
+      640,
+      480
+    ],
+    "area": 307200,
+    "iscrowd": 0,
+    "score": 1.0,
+    "video_id": "2UWdXP.joke2.rep2.take1.NomNomNom_h265",
+    "timestamp": 3.4121770833333334,
+    "start_time": 0.0,
+    "end_time": 6.824354166666667,
+    "duration": 6.824354166666667,
+    "scene_type": "unknown",
+    "frame_start": 0,
+    "frame_end": 95,
+    "all_scores": {}
+  }
+]

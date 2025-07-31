@@ -1,0 +1,238 @@
+[
+  {
+    "pipeline": "speech_recognition",
+    "format": "webvtt",
+    "data": [
+      {
+        "video_id": "audio_segment",
+        "timestamp": 0.0,
+        "transcript": "Ready, baby girl? Good morning, girl. Take a move! Go to smile, huh?",
+        "language": "en",
+        "confidence": 0.0,
+        "words": [
+          {
+            "word": "Ready,",
+            "start": 0.0,
+            "end": 0.84,
+            "confidence": 0.7626826167106628
+          },
+          {
+            "word": "baby",
+            "start": 0.98,
+            "end": 1.08,
+            "confidence": 0.8693008422851562
+          },
+          {
+            "word": "girl?",
+            "start": 1.08,
+            "end": 1.32,
+            "confidence": 0.9898415207862854
+          },
+          {
+            "word": "Good",
+            "start": 2.000000000000001,
+            "end": 2.54,
+            "confidence": 0.6139785647392273
+          },
+          {
+            "word": "morning,",
+            "start": 2.54,
+            "end": 2.8,
+            "confidence": 0.4814576506614685
+          },
+          {
+            "word": "girl.",
+            "start": 3.02,
+            "end": 3.16,
+            "confidence": 0.45301273465156555
+          },
+          {
+            "word": "Take",
+            "start": 4.440000000000001,
+            "end": 4.98,
+            "confidence": 0.11140990257263184
+          },
+          {
+            "word": "a",
+            "start": 4.98,
+            "end": 5.24,
+            "confidence": 0.7268789410591125
+          },
+          {
+            "word": "move!",
+            "start": 5.24,
+            "end": 6.04,
+            "confidence": 0.2142447680234909
+          },
+          {
+            "word": "Go",
+            "start": 8.96,
+            "end": 9.5,
+            "confidence": 0.3660428822040558
+          },
+          {
+            "word": "to",
+            "start": 9.5,
+            "end": 9.72,
+            "confidence": 0.8284518122673035
+          },
+          {
+            "word": "smile,",
+            "start": 9.72,
+            "end": 9.88,
+            "confidence": 0.8229027986526489
+          },
+          {
+            "word": "huh?",
+            "start": 10.16,
+            "end": 10.26,
+            "confidence": 0.9868386387825012
+          }
+        ],
+        "metadata": {
+          "model": "base",
+          "task": "transcribe",
+          "num_segments": 4,
+          "num_words": 13,
+          "start_time": 0.0,
+          "end_time": 10.26,
+          "total_duration": 10.26,
+          "segments": [
+            {
+              "id": 0,
+              "start": 0.0,
+              "end": 1.32,
+              "text": "Ready, baby girl?",
+              "tokens": [
+                50364,
+                9944,
+                11,
+                3186,
+                2013,
+                30,
+                50464
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.644421281485722,
+              "compression_ratio": 0.9714285714285714,
+              "no_speech_prob": 0.0312936007976532
+            },
+            {
+              "id": 1,
+              "start": 2.000000000000001,
+              "end": 3.16,
+              "text": "Good morning, girl.",
+              "tokens": [
+                50464,
+                2205,
+                2446,
+                11,
+                2013,
+                13,
+                50564
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.644421281485722,
+              "compression_ratio": 0.9714285714285714,
+              "no_speech_prob": 0.0312936007976532
+            },
+            {
+              "id": 2,
+              "start": 4.440000000000001,
+              "end": 6.04,
+              "text": "Take a move!",
+              "tokens": [
+                50564,
+                3664,
+                257,
+                1286,
+                0,
+                50714
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.644421281485722,
+              "compression_ratio": 0.9714285714285714,
+              "no_speech_prob": 0.0312936007976532
+            },
+            {
+              "id": 3,
+              "start": 8.96,
+              "end": 10.26,
+              "text": "Go to smile, huh?",
+              "tokens": [
+                50814,
+                1037,
+                281,
+                7563,
+                11,
+                7020,
+                30,
+                50914
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.644421281485722,
+              "compression_ratio": 0.9714285714285714,
+              "no_speech_prob": 0.0312936007976532
+            }
+          ]
+        }
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speech_recognition",
+      "output_format": "webvtt",
+      "processed_segments": 1
+    }
+  },
+  {
+    "pipeline": "speaker_diarization",
+    "format": "rttm",
+    "data": [
+      {
+        "file_id": "2UWdXP.joke1.rep3.take1.Peekaboo_h265_temp_audio",
+        "start_time": 0.63846875,
+        "duration": 0.793125,
+        "end_time": 1.43159375,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "2UWdXP.joke1.rep3.take1.Peekaboo_h265_temp_audio",
+        "start_time": 2.42721875,
+        "duration": 1.0125000000000002,
+        "end_time": 3.4397187500000004,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "2UWdXP.joke1.rep3.take1.Peekaboo_h265_temp_audio",
+        "start_time": 9.31221875,
+        "duration": 0.6581250000000018,
+        "end_time": 9.970343750000001,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "2UWdXP.joke1.rep3.take1.Peekaboo_h265_temp_audio",
+        "start_time": 9.970343750000001,
+        "duration": 0.4556250000000013,
+        "end_time": 10.425968750000003,
+        "speaker_id": "SPEAKER_01",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speaker_diarization",
+      "output_format": "rttm",
+      "processed_segments": 4
+    }
+  }
+]

@@ -16,11 +16,10 @@ export const OverlayControls = ({ settings, onChange }: OverlayControlsProps) =>
   };
 
   const overlayOptions = [
-    { key: 'pose' as const, label: 'Pose Detection', color: 'annotation-pose' },
-    { key: 'faceEmotion' as const, label: 'Face Emotions', color: 'annotation-face' },
-    { key: 'audioEmotion' as const, label: 'Audio Emotions', color: 'annotation-audio' },
-    { key: 'subtitles' as const, label: 'Subtitles', color: 'annotation-subtitle' },
-    { key: 'events' as const, label: 'Events', color: 'annotation-event' },
+    { key: 'pose' as const, label: 'Person Tracking (COCO)', color: 'annotation-pose' },
+    { key: 'subtitles' as const, label: 'Speech Recognition (WebVTT)', color: 'annotation-subtitle' },
+    { key: 'speakers' as const, label: 'Speaker Diarization (RTTM)', color: 'annotation-audio' },
+    { key: 'scenes' as const, label: 'Scene Detection', color: 'annotation-event' },
   ];
 
   return (
@@ -28,7 +27,7 @@ export const OverlayControls = ({ settings, onChange }: OverlayControlsProps) =>
       {overlayOptions.map(({ key, label, color }) => (
         <div key={key} className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div 
+            <div
               className={`w-3 h-3 rounded-full bg-${color}`}
               style={{ backgroundColor: `hsl(var(--${color.replace('-', '-')}))` }}
             />

@@ -1,9 +1,9 @@
 import { forwardRef, useEffect, useRef, useCallback, useState } from 'react';
-import { AnnotationData, OverlaySettings, FrameData } from '@/types/annotations';
+import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCue, RTTMSegment, SceneAnnotation, COCO_SKELETON_CONNECTIONS } from '@/types/annotations';
 
 interface VideoPlayerProps {
   videoFile: File;
-  annotationData: AnnotationData;
+  annotationData: StandardAnnotationData;
   currentTime: number;
   overlaySettings: OverlaySettings;
   onTimeUpdate: (time: number) => void;
@@ -27,142 +27,164 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       }
     }, [videoFile]);
 
-    // Get current frame data based on current time
-    const getCurrentFrameData = useCallback((): FrameData | null => {
-      if (!annotationData) return null;
-      
-      const frameNumber = Math.floor(currentTime * annotationData.video.frameRate);
-      return annotationData.frames[frameNumber] || null;
+    // Get current pose data based on current time
+    const getCurrentPoseData = useCallback((): COCOPersonAnnotation[] => {
+      if (!annotationData?.person_tracking) return [];
+
+      // Find poses within a small time window around current time (±0.1 seconds)
+      const timeWindow = 0.1;
+      return annotationData.person_tracking.filter(pose =>
+        Math.abs(pose.timestamp - currentTime) <= timeWindow
+      );
     }, [currentTime, annotationData]);
 
-    // Draw pose overlay
-    const drawPose = useCallback((ctx: CanvasRenderingContext2D, frameData: FrameData) => {
-      if (!overlaySettings.pose || !frameData.persons) return;
+    // Get current speech data
+    const getCurrentSpeechData = useCallback((): WebVTTCue | null => {
+      if (!annotationData?.speech_recognition) return null;
 
-      frameData.persons.forEach((person, index) => {
-        // Use different colors for different people
-        const hue = (index * 137.508) % 360; // Golden angle for good color distribution
+      return annotationData.speech_recognition.find(cue =>
+        currentTime >= cue.startTime && currentTime <= cue.endTime
+      ) || null;
+    }, [currentTime, annotationData]);
+
+    // Get current speaker data
+    const getCurrentSpeakerData = useCallback((): RTTMSegment[] => {
+      if (!annotationData?.speaker_diarization) return [];
+
+      return annotationData.speaker_diarization.filter(segment =>
+        currentTime >= segment.start_time && currentTime <= segment.end_time
+      );
+    }, [currentTime, annotationData]);
+
+    // Get current scene data
+    const getCurrentSceneData = useCallback((): SceneAnnotation | null => {
+      if (!annotationData?.scene_detection) return null;
+
+      return annotationData.scene_detection.find(scene =>
+        currentTime >= scene.start_time && currentTime <= scene.end_time
+      ) || null;
+    }, [currentTime, annotationData]);
+
+    // Draw COCO pose overlay
+    const drawPose = useCallback((ctx: CanvasRenderingContext2D, poses: COCOPersonAnnotation[]) => {
+      if (!overlaySettings.pose || poses.length === 0) return;
+
+      poses.forEach((person, index) => {
+        // Use different colors for different people/tracks
+        const hue = person.track_id ? (person.track_id * 137.508) % 360 : (index * 137.508) % 360;
         ctx.strokeStyle = `hsl(${hue}, 70%, 60%)`;
         ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
         ctx.lineWidth = 2;
 
-        // Draw keypoints
-        person.keypoints.forEach((keypoint) => {
-          if (keypoint.confidence > 0.5) {
+        // COCO keypoints are stored as [x1, y1, visibility1, x2, y2, visibility2, ...]
+        // Convert to array of keypoint objects for easier handling
+        const keypoints = [];
+        for (let i = 0; i < person.keypoints.length; i += 3) {
+          keypoints.push({
+            x: person.keypoints[i],
+            y: person.keypoints[i + 1],
+            visibility: person.keypoints[i + 2] // 0=not labeled, 1=labeled but not visible, 2=labeled and visible
+          });
+        }
+
+        // Draw keypoints (only visible ones)
+        keypoints.forEach((keypoint) => {
+          if (keypoint.visibility === 2) { // Only draw visible keypoints
             ctx.beginPath();
-            ctx.arc(keypoint.x, keypoint.y, 3, 0, 2 * Math.PI);
+            ctx.arc(keypoint.x, keypoint.y, 4, 0, 2 * Math.PI);
             ctx.fill();
           }
         });
 
-        // Draw connections
-        person.connections.forEach(([i, j]) => {
-          const kp1 = person.keypoints[i];
-          const kp2 = person.keypoints[j];
-          if (kp1.confidence > 0.5 && kp2.confidence > 0.5) {
+        // Draw skeleton connections using COCO connections
+        COCO_SKELETON_CONNECTIONS.forEach(([i, j]) => {
+          const kp1 = keypoints[i];
+          const kp2 = keypoints[j];
+          if (kp1 && kp2 && kp1.visibility === 2 && kp2.visibility === 2) {
             ctx.beginPath();
             ctx.moveTo(kp1.x, kp1.y);
             ctx.lineTo(kp2.x, kp2.y);
             ctx.stroke();
           }
         });
+
+        // Draw bounding box if enabled
+        if (person.bbox && person.bbox.length === 4) {
+          ctx.strokeStyle = `hsl(${hue}, 70%, 40%)`;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(person.bbox[0], person.bbox[1], person.bbox[2], person.bbox[3]);
+
+          // Draw track ID if available
+          if (person.track_id !== undefined) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(person.bbox[0], person.bbox[1] - 20, 40, 18);
+            ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+            ctx.font = '12px monospace';
+            ctx.fillText(`ID:${person.track_id}`, person.bbox[0] + 2, person.bbox[1] - 6);
+          }
+        }
       });
     }, [overlaySettings.pose]);
 
-    // Draw face emotion overlay
-    const drawFaceEmotions = useCallback((ctx: CanvasRenderingContext2D, frameData: FrameData) => {
-      if (!overlaySettings.faceEmotion || !frameData.faces) return;
-
-      ctx.strokeStyle = 'hsl(var(--face-emotion))';
-      ctx.fillStyle = 'hsl(var(--face-emotion))';
-      ctx.lineWidth = 2;
-      ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-
-      frameData.faces.forEach((face) => {
-        // Draw bounding box
-        ctx.strokeRect(face.boundingBox.x, face.boundingBox.y, face.boundingBox.width, face.boundingBox.height);
-        
-        // Draw emotion label
-        const labelY = face.boundingBox.y - 5;
-        const labelText = `${face.emotion} (${Math.round(face.confidence * 100)}%)`;
-        
-        // Background for text
-        const textMetrics = ctx.measureText(labelText);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(face.boundingBox.x, labelY - 16, textMetrics.width + 8, 20);
-        
-        // Text
-        ctx.fillStyle = 'hsl(var(--face-emotion))';
-        ctx.fillText(labelText, face.boundingBox.x + 4, labelY - 2);
-      });
-    }, [overlaySettings.faceEmotion]);
-
-    // Draw audio emotion overlay
-    const drawAudioEmotion = useCallback((ctx: CanvasRenderingContext2D, frameData: FrameData) => {
-      if (!overlaySettings.audioEmotion || !frameData.audioEmotion) return;
-
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.fillRect(10, 10, 200, 40);
-      
-      ctx.fillStyle = 'hsl(var(--audio-emotion))';
-      ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-      ctx.fillText(
-        `Voice: ${frameData.audioEmotion.emotion}`,
-        15, 35
-      );
-    }, [overlaySettings.audioEmotion]);
-
-    // Draw subtitle overlay
+    // Draw subtitle overlay (from WebVTT)
     const drawSubtitles = useCallback((ctx: CanvasRenderingContext2D) => {
-      if (!overlaySettings.subtitles || !annotationData) return;
+      if (!overlaySettings.subtitles) return;
 
-      const currentSubtitle = annotationData.events.find(
-        event => event.type === 'subtitle' && 
-                 currentTime >= event.startTime && 
-                 currentTime <= event.endTime
-      );
-
-      if (currentSubtitle && currentSubtitle.content) {
+      const currentSpeech = getCurrentSpeechData();
+      if (currentSpeech && currentSpeech.text) {
         const canvasHeight = ctx.canvas.height;
-        const text = currentSubtitle.content;
-        
+        const text = currentSpeech.text;
+
         ctx.font = '18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         ctx.textAlign = 'center';
-        
+
         const textWidth = ctx.measureText(text).width;
         const x = ctx.canvas.width / 2;
         const y = canvasHeight - 50;
-        
+
         // Background
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
         ctx.fillRect(x - textWidth / 2 - 10, y - 25, textWidth + 20, 35);
-        
+
         // Text
-        ctx.fillStyle = 'hsl(var(--subtitle-color))';
+        ctx.fillStyle = 'white';
         ctx.fillText(text, x, y - 5);
         ctx.textAlign = 'left';
       }
-    }, [overlaySettings.subtitles, annotationData, currentTime]);
+    }, [overlaySettings.subtitles, getCurrentSpeechData]);
 
-    // Draw event overlay
-    const drawEvents = useCallback((ctx: CanvasRenderingContext2D) => {
-      if (!overlaySettings.events || !annotationData) return;
+    // Draw speaker diarization overlay (from RTTM)
+    const drawSpeakers = useCallback((ctx: CanvasRenderingContext2D) => {
+      if (!overlaySettings.speakers) return;
 
-      const currentEvents = annotationData.events.filter(
-        event => event.type !== 'subtitle' && 
-                 currentTime >= event.startTime && 
-                 currentTime <= event.endTime
-      );
+      const currentSpeakers = getCurrentSpeakerData();
+      if (currentSpeakers.length > 0) {
+        currentSpeakers.forEach((speaker, index) => {
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.fillRect(10, 60 + index * 35, 200, 30);
 
-      currentEvents.forEach((event, index) => {
+          const hue = (speaker.speaker_id.charCodeAt(0) * 137.508) % 360;
+          ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+          ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+          ctx.fillText(`Speaker: ${speaker.speaker_id}`, 15, 80 + index * 35);
+        });
+      }
+    }, [overlaySettings.speakers, getCurrentSpeakerData]);
+
+    // Draw scene overlay
+    const drawScenes = useCallback((ctx: CanvasRenderingContext2D) => {
+      if (!overlaySettings.scenes) return;
+
+      const currentScene = getCurrentSceneData();
+      if (currentScene) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(10, 60 + index * 35, 250, 30);
-        
-        ctx.fillStyle = 'hsl(var(--event-color))';
+        ctx.fillRect(10, 10, 250, 30);
+
+        ctx.fillStyle = 'hsl(200, 70%, 60%)';
         ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-        ctx.fillText(`Event: ${event.label}`, 15, 80 + index * 35);
-      });
-    }, [overlaySettings.events, annotationData, currentTime]);
+        ctx.fillText(`Scene: ${currentScene.scene_type}`, 15, 30);
+      }
+    }, [overlaySettings.scenes, getCurrentSceneData]);
 
     // Render all overlays
     const renderOverlays = useCallback(() => {
@@ -175,16 +197,15 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const frameData = getCurrentFrameData();
-      if (!frameData) return;
+      // Get current data
+      const poseData = getCurrentPoseData();
 
       // Draw all enabled overlays
-      drawPose(ctx, frameData);
-      drawFaceEmotions(ctx, frameData);
-      drawAudioEmotion(ctx, frameData);
+      drawPose(ctx, poseData);
       drawSubtitles(ctx);
-      drawEvents(ctx);
-    }, [getCurrentFrameData, drawPose, drawFaceEmotions, drawAudioEmotion, drawSubtitles, drawEvents]);
+      drawSpeakers(ctx);
+      drawScenes(ctx);
+    }, [getCurrentPoseData, drawPose, drawSubtitles, drawSpeakers, drawScenes]);
 
     // Update overlays when current time changes
     useEffect(() => {
@@ -226,10 +247,10 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
 
       const containerRect = container.getBoundingClientRect();
       const aspectRatio = dimensions.width / dimensions.height;
-      
+
       let width = containerRect.width;
       let height = width / aspectRatio;
-      
+
       if (height > containerRect.height) {
         height = containerRect.height;
         width = height * aspectRatio;
@@ -257,8 +278,8 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           <canvas
             ref={canvasRef}
             className="absolute top-0 left-0 pointer-events-none"
-            style={{ 
-              width: '100%', 
+            style={{
+              width: '100%',
               height: '100%',
               objectFit: 'contain'
             }}

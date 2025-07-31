@@ -1,0 +1,25 @@
+[
+  {
+    "id": 1,
+    "image_id": "2UWdXP.joke1.rep3.take1.Peekaboo_h265_frame_000075",
+    "category_id": 1,
+    "bbox": [
+      0,
+      0,
+      640,
+      480
+    ],
+    "area": 307200,
+    "iscrowd": 0,
+    "score": 1.0,
+    "video_id": "2UWdXP.joke1.rep3.take1.Peekaboo_h265",
+    "timestamp": 5.258,
+    "start_time": 0.0,
+    "end_time": 10.516,
+    "duration": 10.516,
+    "scene_type": "unknown",
+    "frame_start": 0,
+    "frame_end": 150,
+    "all_scores": {}
+  }
+]

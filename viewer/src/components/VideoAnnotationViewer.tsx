@@ -6,29 +6,28 @@ import { VideoControls } from './VideoControls';
 import { FileUploader } from './FileUploader';
 import { WelcomeScreen } from './WelcomeScreen';
 import { Card } from '@/components/ui/card';
-import { AnnotationData, OverlaySettings, TimelineSettings } from '@/types/annotations';
+import { StandardAnnotationData, OverlaySettings, TimelineSettings } from '@/types/annotations';
 
 export const VideoAnnotationViewer = () => {
   const [showWelcome, setShowWelcome] = useState(true);
   const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [annotationData, setAnnotationData] = useState<AnnotationData | null>(null);
+  const [annotationData, setAnnotationData] = useState<StandardAnnotationData | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
-  
+
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
     pose: true,
-    faceEmotion: true,
-    audioEmotion: true,
     subtitles: true,
-    events: true,
+    speakers: true,
+    scenes: true,
   });
 
   const [timelineSettings, setTimelineSettings] = useState<TimelineSettings>({
     showSubtitles: true,
-    showEvents: true,
-    showWaveform: true,
+    showSpeakers: true,
+    showScenes: true,
     showMotion: true,
   });
 
@@ -42,7 +41,7 @@ export const VideoAnnotationViewer = () => {
     setVideoFile(file);
   }, []);
 
-  const handleAnnotationLoad = useCallback((data: AnnotationData) => {
+  const handleAnnotationLoad = useCallback((data: StandardAnnotationData) => {
     setAnnotationData(data);
     setShowWelcome(false);
   }, []);
@@ -71,8 +70,10 @@ export const VideoAnnotationViewer = () => {
 
   const handleFrameStep = useCallback((direction: 'forward' | 'backward') => {
     if (videoRef.current && annotationData) {
-      const frameStep = 1 / annotationData.video.frameRate;
-      const newTime = direction === 'forward' 
+      // Use a default frame rate if not available, or calculate from video duration
+      const estimatedFrameRate = annotationData.video_info?.frame_rate || 30;
+      const frameStep = 1 / estimatedFrameRate;
+      const newTime = direction === 'forward'
         ? Math.min(currentTime + frameStep, duration)
         : Math.max(currentTime - frameStep, 0);
       handleSeek(newTime);
@@ -102,7 +103,7 @@ export const VideoAnnotationViewer = () => {
               Load a video file and its corresponding annotation data to begin analysis
             </p>
           </div>
-          <FileUploader 
+          <FileUploader
             onVideoLoad={handleVideoLoad}
             onAnnotationLoad={handleAnnotationLoad}
           />
@@ -119,7 +120,7 @@ export const VideoAnnotationViewer = () => {
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold">Video Annotation Viewer</h1>
             <div className="text-sm text-muted-foreground">
-              {annotationData.video.filename}
+              {annotationData.video_info?.filename || videoFile.name}
             </div>
           </div>
         </div>
@@ -142,7 +143,7 @@ export const VideoAnnotationViewer = () => {
                   onPlayStateChange={setIsPlaying}
                 />
               </div>
-              
+
               {/* Video Controls */}
               <div className="flex-shrink-0 p-4">
                 <VideoControls
@@ -167,7 +168,7 @@ export const VideoAnnotationViewer = () => {
                   onChange={setOverlaySettings}
                 />
               </div>
-              
+
               <div className="p-4">
                 <h3 className="font-medium mb-4">Timeline Settings</h3>
                 <div className="space-y-2">

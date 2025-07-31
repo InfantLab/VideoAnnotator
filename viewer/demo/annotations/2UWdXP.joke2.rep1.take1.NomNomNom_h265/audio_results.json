@@ -1,0 +1,135 @@
+[
+  {
+    "pipeline": "speech_recognition",
+    "format": "webvtt",
+    "data": [
+      {
+        "video_id": "audio_segment",
+        "timestamp": 0.0,
+        "transcript": "Okay, ready? Ah, no, no, no, no, no.",
+        "language": "en",
+        "confidence": 0.0,
+        "words": [
+          {
+            "word": "Okay,",
+            "start": 0.0,
+            "end": 0.5,
+            "confidence": 0.1057288721203804
+          },
+          {
+            "word": "ready?",
+            "start": 0.94,
+            "end": 1.38,
+            "confidence": 0.5357303023338318
+          },
+          {
+            "word": "Ah,",
+            "start": 2.26,
+            "end": 2.54,
+            "confidence": 0.10074365884065628
+          },
+          {
+            "word": "no,",
+            "start": 2.68,
+            "end": 2.8,
+            "confidence": 0.16397696733474731
+          },
+          {
+            "word": "no,",
+            "start": 2.9,
+            "end": 3.12,
+            "confidence": 0.9672043919563293
+          },
+          {
+            "word": "no,",
+            "start": 3.24,
+            "end": 3.26,
+            "confidence": 0.9762815237045288
+          },
+          {
+            "word": "no,",
+            "start": 3.28,
+            "end": 3.36,
+            "confidence": 0.9440028071403503
+          },
+          {
+            "word": "no.",
+            "start": 3.36,
+            "end": 3.9,
+            "confidence": 0.9214277267456055
+          }
+        ],
+        "metadata": {
+          "model": "base",
+          "task": "transcribe",
+          "num_segments": 2,
+          "num_words": 8,
+          "start_time": 0.0,
+          "end_time": 3.9,
+          "total_duration": 3.9,
+          "segments": [
+            {
+              "id": 0,
+              "start": 0.0,
+              "end": 1.38,
+              "text": "Okay, ready?",
+              "tokens": [
+                50364,
+                1033,
+                11,
+                1919,
+                30,
+                50464
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.6988079434349423,
+              "compression_ratio": 1.2413793103448276,
+              "no_speech_prob": 0.18111485242843628
+            },
+            {
+              "id": 1,
+              "start": 2.26,
+              "end": 3.9,
+              "text": "Ah, no, no, no, no, no.",
+              "tokens": [
+                50464,
+                2438,
+                11,
+                572,
+                11,
+                572,
+                11,
+                572,
+                11,
+                572,
+                11,
+                572,
+                13,
+                50564
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.6988079434349423,
+              "compression_ratio": 1.2413793103448276,
+              "no_speech_prob": 0.18111485242843628
+            }
+          ]
+        }
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speech_recognition",
+      "output_format": "webvtt",
+      "processed_segments": 1
+    }
+  },
+  {
+    "pipeline": "speaker_diarization",
+    "format": "rttm",
+    "data": [],
+    "metadata": {
+      "pipeline_name": "speaker_diarization",
+      "output_format": "rttm",
+      "processed_segments": 0
+    }
+  }
+]
