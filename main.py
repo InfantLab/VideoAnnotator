@@ -415,6 +415,28 @@ class VideoAnnotatorRunner:
         
         return info
     
+    def find_video_files(self, directory: Path) -> List[Path]:
+        """
+        Find all video files in the specified directory.
+        
+        Args:
+            directory: Directory to search for video files
+            
+        Returns:
+            List of video file paths
+        """
+        video_extensions = {'.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.m4v'}
+        video_files = []
+        
+        for ext in video_extensions:
+            video_files.extend(directory.glob(f'**/*{ext}'))
+            video_files.extend(directory.glob(f'**/*{ext.upper()}'))
+        
+        # Remove duplicates and sort
+        video_files = sorted(list(set(video_files)))
+        
+        return video_files
+
     def validate_video_file(self, video_path: Path) -> bool:
         """Validate that the video file exists and is readable."""
         if not video_path.exists():
