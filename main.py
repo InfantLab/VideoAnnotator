@@ -28,7 +28,12 @@ import yaml
 # Import all pipeline modules - STANDARDS-ONLY VERSIONS
 from src.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
 from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
-from src.pipelines.face_analysis.laion_face_pipeline import LAIONFacePipeline as FaceAnalysisPipeline
+from src.pipelines.face_analysis import (
+    FaceAnalysisPipeline,
+    LAIONFacePipeline,
+    OpenFace3Pipeline,
+    OPENFACE3_AVAILABLE
+)
 from src.pipelines.audio_processing import AudioPipeline as AudioProcessingPipeline
 
 
@@ -78,8 +83,12 @@ class VideoAnnotatorRunner:
             },
             'face_analysis': {
                 'enabled': True,
-                'backends': ['mediapipe'],
-                'detection_confidence': 0.7
+                'backend': 'laion',  # 'openface3', 'laion', 'opencv'
+                'detection_confidence': 0.7,
+                'enable_action_units': True,
+                'enable_head_pose': True,
+                'enable_gaze': True,
+                'max_faces': 5
             },
             'audio_processing': {
                 'enabled': True,
@@ -151,8 +160,26 @@ class VideoAnnotatorRunner:
             # Face analysis pipeline
             if self.config.get('face_analysis', {}).get('enabled', True):
                 face_config = self.config.get('face_analysis', {})
-                self.pipelines['face'] = FaceAnalysisPipeline(face_config)
-                self.logger.info("Face analysis pipeline initialized")
+                backend = face_config.get('backend', 'laion')  # Default to LAION
+                
+                if backend == 'openface3':
+                    if OPENFACE3_AVAILABLE:
+                        self.pipelines['face'] = OpenFace3Pipeline(face_config)
+                        self.logger.info("OpenFace 3.0 face analysis pipeline initialized")
+                    else:
+                        self.logger.warning("OpenFace 3.0 not available, falling back to LAION")
+                        self.pipelines['face'] = LAIONFacePipeline(face_config)
+                        self.logger.info("LAION face analysis pipeline initialized (fallback)")
+                elif backend == 'laion':
+                    self.pipelines['face'] = LAIONFacePipeline(face_config)
+                    self.logger.info("LAION face analysis pipeline initialized")
+                elif backend == 'opencv':
+                    self.pipelines['face'] = FaceAnalysisPipeline(face_config)
+                    self.logger.info("OpenCV face analysis pipeline initialized")
+                else:
+                    self.logger.warning(f"Unknown face backend '{backend}', using LAION")
+                    self.pipelines['face'] = LAIONFacePipeline(face_config)
+                    self.logger.info("LAION face analysis pipeline initialized (default)")
             
             # Audio processing pipeline
             if self.config.get('audio_processing', {}).get('enabled', True):

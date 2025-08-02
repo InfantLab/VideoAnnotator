@@ -1,0 +1,53 @@
+# OpenFace 3.0 Configuration for VideoAnnotator
+# This configuration enables comprehensive facial behavior analysis using OpenFace 3.0
+
+scene_detection:
+  enabled: true
+  threshold: 0.3
+  min_scene_length: 1.0
+
+person_tracking:
+  enabled: true
+  model_name: 'yolo11s'
+  confidence_threshold: 0.5
+
+face_analysis:
+  enabled: true
+  backend: 'openface3'  # Use OpenFace 3.0 for face analysis
+  
+  # Model paths (working configuration)
+  face_detector_model: "./weights/Alignment_RetinaFace.pth"
+  landmark_model: "./weights/Landmark_98.pkl"  # 98-point landmarks (68-point has compatibility issues)
+  
+  # Detection settings
+  detection_confidence: 0.5
+  max_faces: 5
+  track_faces: true
+  
+  # Feature extraction settings
+  landmark_points: 98  # Use 98-point landmarks (working configuration)
+  enable_3d_landmarks: false  # Not yet implemented in current API
+  enable_action_units: false  # Not yet implemented in current API  
+  enable_head_pose: false     # Not yet implemented in current API
+  enable_gaze: false          # Not yet implemented in current API
+  enable_emotions: false      # Not yet implemented in current API
+  
+  # Performance settings
+  batch_size: 1
+  device: 'cpu'  # 'cpu' or 'cuda' (tested with CPU)
+  confidence_threshold: 0.5
+  
+  # Output settings
+  save_landmarks: true
+  save_face_crops: false
+  save_visualizations: true
+
+audio_processing:
+  enabled: true
+  whisper_model: 'base'
+  sample_rate: 16000
+
+# Processing settings
+processing:
+  max_workers: 1  # OpenFace 3.0 can be memory intensive
+  chunk_size: 1000  # Process videos in chunks to manage memory

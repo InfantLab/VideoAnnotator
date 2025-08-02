@@ -63,14 +63,46 @@ VideoAnnotator provides four core pipelines, each optimized for specific analysi
 - **Output**: Normalized bounding boxes with persistent IDs
 
 ### 😊 **Face Analysis**
-- **Technology**: YOLO11-face + OpenCV emotion detection
-- **Purpose**: Face detection and emotion recognition
-- **Output**: Face bounding boxes with emotion predictions
+- **Technology**: Multiple backends available:
+  - **OpenFace 3.0** (recommended): Comprehensive facial behavior analysis
+  - **LAION Face**: CLIP-based face analysis and emotion detection
+  - **OpenCV**: Basic face detection with emotion analysis
+- **Purpose**: Face detection, landmark extraction, emotion recognition, action units, head pose, gaze estimation
+- **Output**: COCO format with facial landmarks, emotions, and behavioral features
 
 ### 🎤 **Audio Processing**
 - **Technology**: Whisper + pyannote.audio
 - **Purpose**: Speech recognition and speaker diarization
 - **Output**: Transcripts with speaker identification
+
+## 🎭 **OpenFace 3.0 Integration**
+
+VideoAnnotator now supports **OpenFace 3.0** for comprehensive facial behavior analysis:
+
+### Features
+- **68-point facial landmarks** (2D and 3D)
+- **Facial Action Units (AUs)** intensity and presence detection
+- **Head pose estimation** (rotation and translation)
+- **Gaze direction** and eye tracking
+- **Face tracking** across video frames
+- **COCO format output** for annotation tool compatibility
+
+### Quick Setup
+```bash
+# 1. Install OpenFace 3.0 dependencies
+python scripts/test_openface3.py
+
+# 2. Process video with OpenFace 3.0
+python main.py --config configs/openface3.yaml --video_path video.mp4
+
+# 3. Results include comprehensive facial analysis
+# - Facial landmarks in COCO keypoints format
+# - Action unit intensities
+# - Head pose angles
+# - Gaze direction vectors
+```
+
+📖 **[Full OpenFace 3.0 Installation Guide](docs/OPENFACE3_INSTALLATION.md)**
 
 ## 📊 **Output Formats**
 
