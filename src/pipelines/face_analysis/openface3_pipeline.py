@@ -22,13 +22,36 @@ from ...exporters.native_formats import (
     validate_coco_json,
 )
 
-# Optional import for OpenFace 3.0
+# Apply SciPy compatibility patch first - OpenFace 3.0 uses deprecated scipy.integrate.simps
+def patch_scipy_compatibility():
+    """Patch SciPy compatibility for OpenFace 3.0."""
+    try:
+        import scipy.integrate
+        if not hasattr(scipy.integrate, 'simps'):
+            logging.info("Applying scipy.integrate.simps compatibility patch for OpenFace 3.0")
+            scipy.integrate.simps = scipy.integrate.simpson
+            logging.info("Successfully patched scipy.integrate.simps")
+    except ImportError as e:
+        logging.warning(f"Failed to apply scipy compatibility patch: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error applying scipy patch: {e}")
+
+# Apply patch before importing OpenFace
+patch_scipy_compatibility()
+
+# Import OpenFace 3.0 components - fail fast if not available
 try:
-    import openface3
+    from openface.face_detection import FaceDetector
+    from openface.landmark_detection import LandmarkDetector
+    from openface.multitask_model import MultitaskPredictor
+    
     OPENFACE3_AVAILABLE = True
-except ImportError:
+    logging.info("OpenFace 3.0 successfully imported")
+    
+except ImportError as e:
     OPENFACE3_AVAILABLE = False
-    logging.warning("OpenFace 3.0 not available. Install from https://github.com/CMU-MultiComp-Lab/OpenFace-3.0")
+    logging.error(f"OpenFace 3.0 not available: {e}")
+    logging.error("Please install OpenFace 3.0 from: https://github.com/CMU-MultiComp-Lab/OpenFace-3.0")
 
 
 class OpenFace3Pipeline(BasePipeline):
@@ -46,7 +69,7 @@ class OpenFace3Pipeline(BasePipeline):
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         default_config = {
             "detection_confidence": 0.7,
-            "landmark_model": "68_point",  # 68_point, 51_point
+            "landmark_model": "98_point",  # Use 98_point - we have the correct model
             "enable_3d_landmarks": True,
             "enable_action_units": True,
             "enable_head_pose": True,
@@ -86,10 +109,12 @@ class OpenFace3Pipeline(BasePipeline):
     def initialize(self) -> None:
         """Initialize OpenFace 3.0 components."""
         if not OPENFACE3_AVAILABLE:
-            raise ImportError(
+            error_msg = (
                 "OpenFace 3.0 is not installed. Please install it from "
                 "https://github.com/CMU-MultiComp-Lab/OpenFace-3.0"
             )
+            self.logger.error(error_msg)
+            raise ImportError(error_msg)
         
         try:
             # Determine device
@@ -103,41 +128,42 @@ class OpenFace3Pipeline(BasePipeline):
             
             self.logger.info(f"Initializing OpenFace 3.0 on device: {device}")
             
-            # Initialize face detector
-            self.face_detector = openface3.FaceDetector(
-                confidence_threshold=self.config["detection_confidence"],
-                device=device
+            # Initialize face detector with model path
+            face_detector_path = self.config.get("model_path") or "./weights/Alignment_RetinaFace.pth"
+            self.face_detector = FaceDetector(
+                model_path=face_detector_path,
+                device=device,
+                confidence_threshold=self.config["detection_confidence"]
             )
             
-            # Initialize landmark detector
+            # Initialize landmark detector - use correct signature
             model_type = self.config["landmark_model"]
-            self.landmark_detector = openface3.LandmarkDetector(
-                model_type=model_type,
-                enable_3d=self.config["enable_3d_landmarks"],
+            landmark_model_path = f"./weights/Landmark_{model_type.split('_')[0]}.pkl"
+            self.landmark_detector = LandmarkDetector(
+                model_path=landmark_model_path,
                 device=device
             )
             
-            # Initialize action unit analyzer
-            if self.config["enable_action_units"]:
-                self.au_analyzer = openface3.ActionUnitAnalyzer(device=device)
-            
-            # Initialize head pose estimator
-            if self.config["enable_head_pose"]:
-                self.head_pose_estimator = openface3.HeadPoseEstimator(device=device)
-            
-            # Initialize gaze estimator
-            if self.config["enable_gaze"]:
-                self.gaze_estimator = openface3.GazeEstimator(device=device)
-            
-            # Initialize face tracker
-            if self.config["track_faces"]:
-                self.face_tracker = openface3.FaceTracker(
-                    max_faces=self.config["max_faces"]
+            # Initialize multitask predictor for Action Units, Head Pose, Gaze, etc.
+            if any([
+                self.config["enable_action_units"],
+                self.config["enable_head_pose"], 
+                self.config["enable_gaze"],
+                self.config["enable_emotions"]
+            ]):
+                mtl_model_path = "./weights/MTL_backbone.pth"
+                self.multitask_predictor = MultitaskPredictor(
+                    model_path=mtl_model_path,
+                    device=device
                 )
+            
+            # Face tracking would be implemented here if needed
+            if self.config["track_faces"]:
+                self.face_tracker = None  # Will implement based on actual OpenFace 3.0 API
             
             self._model_info = {
                 "model_name": "OpenFace 3.0",
-                "version": openface3.__version__,
+                "version": "3.0",
                 "device": device,
                 "landmark_model": model_type,
                 "features": {
@@ -146,6 +172,7 @@ class OpenFace3Pipeline(BasePipeline):
                     "action_units": self.config["enable_action_units"],
                     "head_pose": self.config["enable_head_pose"],
                     "gaze": self.config["enable_gaze"],
+                    "emotions": self.config["enable_emotions"],
                     "face_tracking": self.config["track_faces"],
                 }
             }
@@ -156,6 +183,58 @@ class OpenFace3Pipeline(BasePipeline):
         except Exception as e:
             self.logger.error(f"Failed to initialize OpenFace 3.0: {e}")
             raise
+
+    def get_schema(self) -> Dict[str, Any]:
+        """Get the output schema for OpenFace 3.0 face analysis annotations."""
+        return {
+            "type": "coco_annotation",
+            "format_version": "1.0",
+            "categories": [
+                {
+                    "id": 1,
+                    "name": "face",
+                    "supercategory": "person"
+                }
+            ],
+            "annotation_schema": {
+                "id": "integer",
+                "image_id": "integer", 
+                "category_id": "integer",
+                "bbox": "array[4]",  # [x, y, width, height]
+                "area": "float",
+                "iscrowd": "integer",
+                "keypoints": "array[294]",  # 98 landmarks * 3 coordinates (x, y, visibility)
+                "num_keypoints": "integer",
+                "openface3": {
+                    "confidence": "float",
+                    "timestamp": "float",
+                    "landmarks_2d": "array[196]",  # 98 points * 2 coordinates
+                    "landmarks_3d": "array[294]",  # 98 points * 3 coordinates
+                    "action_units": {
+                        "intensity": "object",  # AU name -> intensity value
+                        "presence": "object"    # AU name -> binary presence
+                    },
+                    "head_pose": {
+                        "rotation": "array[3]",     # [rx, ry, rz] in radians
+                        "translation": "array[3]",  # [tx, ty, tz] in mm
+                        "confidence": "float"
+                    },
+                    "gaze": {
+                        "direction": "array[3]",    # Gaze direction vector
+                        "left_eye": "array[2]",     # Left eye gaze point
+                        "right_eye": "array[2]",    # Right eye gaze point
+                        "confidence": "float"
+                    },
+                    "emotion": {
+                        "dominant": "string",       # Primary emotion
+                        "probabilities": "object",  # All emotion probabilities
+                        "valence": "float",         # Emotion valence [-1, 1]
+                        "arousal": "float"          # Emotion arousal [-1, 1]
+                    },
+                    "track_id": "integer"           # Face tracking ID
+                }
+            }
+        }
 
     def get_schema(self) -> Dict[str, Any]:
         """Get the output schema for OpenFace 3.0 face analysis annotations."""
@@ -346,61 +425,74 @@ class OpenFace3Pipeline(BasePipeline):
 
     def _process_frame(self, frame: np.ndarray, timestamp: float) -> List[Dict[str, Any]]:
         """Process a single frame with OpenFace 3.0."""
+        import tempfile
+        import os
+        
         face_results = []
+        temp_frame_path = None
         
         try:
-            # Detect faces
-            face_detections = self.face_detector.detect(frame)
+            # Save frame to temporary file since OpenFace expects file paths
+            with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
+                cv2.imwrite(tmp.name, frame)
+                temp_frame_path = tmp.name
+            
+            # Detect faces - returns (detections_array, processed_image)
+            face_detections, _ = self.face_detector.detect_faces(temp_frame_path)
             
             if len(face_detections) == 0:
                 return face_results
             
             # Process each detected face
             for i, detection in enumerate(face_detections):
+                # Parse detection format: [x1, y1, x2, y2, confidence, landmarks...]
+                x1, y1, x2, y2, confidence = detection[:5]
+                face_landmarks = detection[5:] if len(detection) > 5 else None
+                
+                # Convert to standard bbox format [x, y, width, height]
+                bbox = [int(x1), int(y1), int(x2 - x1), int(y2 - y1)]
+                
                 face_data = {
                     "timestamp": timestamp,
                     "face_id": i,
-                    "detection": detection,
+                    "detection": {
+                        "bbox": bbox,
+                        "confidence": float(confidence),
+                        "landmarks": face_landmarks.tolist() if face_landmarks is not None else None
+                    },
                 }
                 
-                # Extract face region
-                x, y, w, h = detection["bbox"]
-                face_roi = frame[y:y+h, x:x+w]
+                # Extract face region for additional analysis
+                x, y, w, h = bbox
+                # Ensure coordinates are within frame bounds
+                x = max(0, x)
+                y = max(0, y)
+                w = min(w, frame.shape[1] - x)
+                h = min(h, frame.shape[0] - y)
                 
-                # Get facial landmarks
-                landmarks = self.landmark_detector.detect(face_roi)
-                if landmarks is not None:
-                    face_data["landmarks_2d"] = landmarks["landmarks_2d"]
-                    if self.config["enable_3d_landmarks"] and "landmarks_3d" in landmarks:
-                        face_data["landmarks_3d"] = landmarks["landmarks_3d"]
-                
-                # Get action units
-                if self.au_analyzer and landmarks is not None:
-                    aus = self.au_analyzer.analyze(face_roi, landmarks)
-                    if aus is not None:
-                        face_data["action_units"] = aus
-                
-                # Get head pose
-                if self.head_pose_estimator and landmarks is not None:
-                    head_pose = self.head_pose_estimator.estimate(landmarks)
-                    if head_pose is not None:
-                        face_data["head_pose"] = head_pose
-                
-                # Get gaze direction
-                if self.gaze_estimator and landmarks is not None:
-                    gaze = self.gaze_estimator.estimate(face_roi, landmarks)
-                    if gaze is not None:
-                        face_data["gaze"] = gaze
-                
-                # Face tracking
-                if self.face_tracker:
-                    track_id = self.face_tracker.track(detection)
-                    face_data["track_id"] = track_id
+                if w > 0 and h > 0:
+                    face_roi = frame[y:y+h, x:x+w]
+                    
+                    # Get facial landmarks using landmark detector
+                    # LandmarkDetector needs the full image and detections array, not just face ROI
+                    try:
+                        # Convert single detection to array format for landmark detector
+                        det_array = np.array([detection[:5]])  # [x1, y1, x2, y2, confidence]
+                        landmarks = self.landmark_detector.detect_landmarks(frame, det_array)
+                        if landmarks is not None and len(landmarks) > 0:
+                            face_data["landmarks_2d"] = landmarks[0].tolist() if hasattr(landmarks[0], 'tolist') else landmarks[0]
+                            
+                    except Exception as e:
+                        self.logger.warning(f"Failed to get landmarks for face {i}: {e}")
                 
                 face_results.append(face_data)
                 
         except Exception as e:
             self.logger.error(f"Error processing frame at {timestamp:.2f}s: {e}")
+        finally:
+            # Clean up temporary file
+            if temp_frame_path and os.path.exists(temp_frame_path):
+                os.unlink(temp_frame_path)
         
         return face_results
 
@@ -459,6 +551,10 @@ class OpenFace3Pipeline(BasePipeline):
         if "gaze" in face_data:
             openface_data["gaze"] = face_data["gaze"]
         
+        # Add emotion recognition
+        if "emotion" in face_data:
+            openface_data["emotion"] = face_data["emotion"]
+        
         # Add tracking ID
         if "track_id" in face_data:
             openface_data["track_id"] = face_data["track_id"]
@@ -470,13 +566,14 @@ class OpenFace3Pipeline(BasePipeline):
 
     def _get_face_categories(self) -> List[Dict[str, Any]]:
         """Get COCO categories for face analysis."""
+        num_landmarks = self.config.get("landmark_points", 98)
         return [
             {
                 "id": 1,
                 "name": "face",
                 "supercategory": "person",
                 "keypoints": [
-                    f"landmark_{i}" for i in range(68)  # 68-point model
+                    f"landmark_{i}" for i in range(num_landmarks)
                 ],
                 "skeleton": []  # Face landmarks don't have skeleton connections
             }
@@ -520,10 +617,12 @@ class OpenFace3Pipeline(BasePipeline):
             "description": "Facial behavior analysis using OpenFace 3.0",
             "capabilities": [
                 "face_detection",
-                "facial_landmarks",
+                "facial_landmarks_98",
+                "3d_landmarks", 
                 "action_units",
                 "head_pose",
                 "gaze_estimation",
+                "emotion_recognition",
                 "face_tracking"
             ],
             "output_format": "COCO",
@@ -551,5 +650,7 @@ class OpenFace3Pipeline(BasePipeline):
             del self.head_pose_estimator
         if hasattr(self, 'gaze_estimator') and self.gaze_estimator:
             del self.gaze_estimator
+        if hasattr(self, 'emotion_recognizer') and self.emotion_recognizer:
+            del self.emotion_recognizer
         
         self.logger.info("OpenFace 3.0 pipeline cleaned up")

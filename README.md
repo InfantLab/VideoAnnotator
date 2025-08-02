@@ -102,7 +102,7 @@ python main.py --config configs/openface3.yaml --video_path video.mp4
 # - Gaze direction vectors
 ```
 
-📖 **[Full OpenFace 3.0 Installation Guide](docs/OPENFACE3_INSTALLATION.md)**
+📖 **[OpenFace 3.0 Integration Guide](docs/OPENFACE3_GUIDE.md)**
 
 ## 📊 **Output Formats**
 

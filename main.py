@@ -163,13 +163,18 @@ class VideoAnnotatorRunner:
                 backend = face_config.get('backend', 'laion')  # Default to LAION
                 
                 if backend == 'openface3':
-                    if OPENFACE3_AVAILABLE:
-                        self.pipelines['face'] = OpenFace3Pipeline(face_config)
-                        self.logger.info("OpenFace 3.0 face analysis pipeline initialized")
-                    else:
-                        self.logger.warning("OpenFace 3.0 not available, falling back to LAION")
-                        self.pipelines['face'] = LAIONFacePipeline(face_config)
-                        self.logger.info("LAION face analysis pipeline initialized (fallback)")
+                    try:
+                        if OPENFACE3_AVAILABLE:
+                            self.pipelines['face'] = OpenFace3Pipeline(face_config)
+                            self.logger.info("OpenFace 3.0 face analysis pipeline initialized")
+                        else:
+                            self.logger.error("OpenFace 3.0 not available, skipping face analysis")
+                            self.logger.info("Install OpenFace 3.0 from: https://github.com/CMU-MultiComp-Lab/OpenFace-3.0")
+                            # Don't add any face pipeline - gracefully skip
+                    except Exception as e:
+                        self.logger.error(f"Failed to initialize OpenFace 3.0: {e}")
+                        self.logger.info("Face analysis will be skipped for this session")
+                        # Don't add any face pipeline - gracefully skip
                 elif backend == 'laion':
                     self.pipelines['face'] = LAIONFacePipeline(face_config)
                     self.logger.info("LAION face analysis pipeline initialized")

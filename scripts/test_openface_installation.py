@@ -248,7 +248,7 @@ def main():
     if results.get('face_detection', False):
         print("✅ FaceDetector working - basic face detection available")
     
-    print("\n🔗 For detailed troubleshooting, see: docs/OPENFACE3_INSTALLATION.md")
+    print("\n🔗 For detailed troubleshooting, see: docs/OPENFACE3_GUIDE.md")
 
 if __name__ == "__main__":
     main()

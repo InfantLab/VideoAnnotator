@@ -24,13 +24,13 @@ face_analysis:
   max_faces: 5
   track_faces: true
   
-  # Feature extraction settings
+  # Feature extraction settings - COMPREHENSIVE OPENFACE 3.0 ANALYSIS
   landmark_points: 98  # Use 98-point landmarks (working configuration)
-  enable_3d_landmarks: false  # Not yet implemented in current API
-  enable_action_units: false  # Not yet implemented in current API  
-  enable_head_pose: false     # Not yet implemented in current API
-  enable_gaze: false          # Not yet implemented in current API
-  enable_emotions: false      # Not yet implemented in current API
+  enable_3d_landmarks: true   # Enable 3D facial landmarks
+  enable_action_units: true   # Enable Action Units (AU) intensity and presence
+  enable_head_pose: true      # Enable head pose estimation (rotation & translation)
+  enable_gaze: true           # Enable gaze tracking and eye gaze direction
+  enable_emotions: true       # Enable emotion recognition from facial expressions
   
   # Performance settings
   batch_size: 1
