@@ -28,6 +28,28 @@ face_analysis:
   landmark_points: 98  # Use 98-point landmarks (working configuration)
   enable_3d_landmarks: true   # Enable 3D facial landmarks
   enable_action_units: true   # Enable Action Units (AU) intensity and presence
+  enable_head_pose: true      # Enable head pose estimation (3D orientation)
+  enable_gaze: true          # Enable gaze direction estimation  
+  enable_emotions: true      # Enable emotion recognition
+  
+  # Advanced feature settings
+  action_units:
+    intensity_threshold: 0.5
+    presence_threshold: 0.3
+    normalize_range: [0, 5]
+    
+  head_pose:
+    angle_units: "degrees"
+    coordinate_system: "opencv"
+    
+  gaze:
+    use_head_pose_proxy: true
+    confidence_threshold: 0.6
+    
+  emotions:
+    probability_threshold: 0.1
+    normalize_probabilities: true
+    include_valence_arousal: true
   enable_head_pose: true      # Enable head pose estimation (rotation & translation)
   enable_gaze: true           # Enable gaze tracking and eye gaze direction
   enable_emotions: true       # Enable emotion recognition from facial expressions

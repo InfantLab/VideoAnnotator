@@ -138,7 +138,11 @@ class OpenFace3Pipeline(BasePipeline):
             
             # Initialize landmark detector - use correct signature
             model_type = self.config["landmark_model"]
-            landmark_model_path = f"./weights/Landmark_{model_type.split('_')[0]}.pkl"
+            # Use provided landmark_model path directly if it contains a path, otherwise construct it
+            if "/" in model_type or "\\" in model_type:
+                landmark_model_path = model_type
+            else:
+                landmark_model_path = f"./weights/Landmark_{model_type.split('_')[0]}.pkl"
             self.landmark_detector = LandmarkDetector(
                 model_path=landmark_model_path,
                 device=device
@@ -156,6 +160,9 @@ class OpenFace3Pipeline(BasePipeline):
                     model_path=mtl_model_path,
                     device=device
                 )
+                self.logger.info("MultitaskPredictor initialized for advanced features")
+            else:
+                self.multitask_predictor = None
             
             # Face tracking would be implemented here if needed
             if self.config["track_faces"]:
@@ -458,7 +465,7 @@ class OpenFace3Pipeline(BasePipeline):
                     "detection": {
                         "bbox": bbox,
                         "confidence": float(confidence),
-                        "landmarks": face_landmarks.tolist() if face_landmarks is not None else None
+                        "landmarks": face_landmarks.tolist() if face_landmarks is not None and hasattr(face_landmarks, 'tolist') else (list(face_landmarks) if face_landmarks is not None else None)
                     },
                 }
                 
@@ -480,10 +487,39 @@ class OpenFace3Pipeline(BasePipeline):
                         det_array = np.array([detection[:5]])  # [x1, y1, x2, y2, confidence]
                         landmarks = self.landmark_detector.detect_landmarks(frame, det_array)
                         if landmarks is not None and len(landmarks) > 0:
-                            face_data["landmarks_2d"] = landmarks[0].tolist() if hasattr(landmarks[0], 'tolist') else landmarks[0]
+                            # Handle different landmark formats
+                            landmark_data = landmarks[0]
+                            if hasattr(landmark_data, 'tolist'):
+                                face_data["landmarks_2d"] = landmark_data.tolist()
+                            elif isinstance(landmark_data, (list, tuple)):
+                                face_data["landmarks_2d"] = list(landmark_data)
+                            else:
+                                face_data["landmarks_2d"] = landmark_data
                             
                     except Exception as e:
                         self.logger.warning(f"Failed to get landmarks for face {i}: {e}")
+                    
+                    # Advanced analysis with MultitaskPredictor
+                    if self.multitask_predictor and w > 0 and h > 0:
+                        try:
+                            au_output, pose_output, emotion_output = self.multitask_predictor.predict(face_roi)
+                            
+                            # Parse and add to face_data
+                            if self.config["enable_action_units"]:
+                                face_data["action_units"] = self._parse_action_units(au_output)
+                                
+                            if self.config["enable_head_pose"]:
+                                face_data["head_pose"] = self._parse_head_pose(pose_output)
+                                
+                            if self.config["enable_emotions"]:
+                                face_data["emotion"] = self._parse_emotions(emotion_output)
+                                
+                            # Note: Gaze processing would use pose_output or separate gaze model
+                            if self.config["enable_gaze"]:
+                                face_data["gaze"] = self._parse_gaze(pose_output)
+                                
+                        except Exception as e:
+                            self.logger.warning(f"MultitaskPredictor failed for face {i}: {e}")
                 
                 face_results.append(face_data)
                 
@@ -534,10 +570,11 @@ class OpenFace3Pipeline(BasePipeline):
             
             annotation["keypoints"] = keypoints
             annotation["num_keypoints"] = len(landmarks_2d)
-            openface_data["landmarks_2d"] = landmarks_2d.tolist()
+            openface_data["landmarks_2d"] = landmarks_2d.tolist() if hasattr(landmarks_2d, 'tolist') else list(landmarks_2d)
         
         if "landmarks_3d" in face_data:
-            openface_data["landmarks_3d"] = face_data["landmarks_3d"].tolist()
+            landmarks_3d = face_data["landmarks_3d"]
+            openface_data["landmarks_3d"] = landmarks_3d.tolist() if hasattr(landmarks_3d, 'tolist') else list(landmarks_3d)
         
         # Add action units
         if "action_units" in face_data:
@@ -637,6 +674,133 @@ class OpenFace3Pipeline(BasePipeline):
             info["model_info"] = self._model_info
         
         return info
+
+    def _parse_action_units(self, au_output):
+        """Parse Action Units from MultitaskPredictor output."""
+        # au_output shape: (1, 8) 
+        # Need to determine which AUs these 8 values represent
+        au_values = au_output.detach().cpu().numpy().flatten()
+        
+        # Standard FACS Action Units mapping (based on common OpenFace implementations)
+        au_mapping = {
+            0: "AU01_Inner_Brow_Raiser",
+            1: "AU02_Outer_Brow_Raiser", 
+            2: "AU04_Brow_Lowerer",
+            3: "AU05_Upper_Lid_Raiser",
+            4: "AU06_Cheek_Raiser",
+            5: "AU07_Lid_Tightener",
+            6: "AU09_Nose_Wrinkler", 
+            7: "AU10_Upper_Lip_Raiser"
+        }
+        
+        action_units = {}
+        for idx, au_name in au_mapping.items():
+            intensity = float(au_values[idx])
+            # Convert to 0-5 intensity scale and presence detection
+            normalized_intensity = max(0, min(5, (intensity + 4) * 1.25))  # Normalize range
+            presence = normalized_intensity > 0.5
+            
+            action_units[au_name] = {
+                "intensity": normalized_intensity,
+                "presence": presence
+            }
+        
+        return action_units
+
+    def _parse_head_pose(self, pose_output):
+        """Parse head pose from MultitaskPredictor output."""
+        # pose_output shape: (1, 2)
+        pose_values = pose_output.detach().cpu().numpy().flatten()
+        
+        # Determine which angles these represent (likely pitch and yaw)
+        return {
+            "pitch": float(pose_values[0]) * 180 / np.pi,  # Convert to degrees
+            "yaw": float(pose_values[1]) * 180 / np.pi,
+            "roll": 0.0,  # Not available from current output
+            "confidence": 0.8  # Default confidence
+        }
+
+    def _parse_emotions(self, emotion_output):
+        """Parse emotions from MultitaskPredictor output.""" 
+        # emotion_output shape: (1, 8)
+        emotion_probs = emotion_output.detach().cpu().numpy().flatten()
+        
+        # Standard emotion mapping (common in facial expression research)
+        emotion_labels = [
+            "neutral", "happiness", "sadness", "anger", 
+            "fear", "surprise", "disgust", "contempt"
+        ]
+        
+        # Softmax normalization
+        exp_probs = np.exp(emotion_probs - np.max(emotion_probs))
+        normalized_probs = exp_probs / np.sum(exp_probs)
+        
+        probabilities = {
+            label: float(prob) for label, prob in zip(emotion_labels, normalized_probs)
+        }
+        
+        # Find dominant emotion
+        dominant_idx = np.argmax(normalized_probs)
+        dominant = emotion_labels[dominant_idx]
+        
+        # Calculate valence and arousal
+        valence = self._calculate_valence(probabilities)
+        arousal = self._calculate_arousal(probabilities)
+        
+        return {
+            "dominant": dominant,
+            "probabilities": probabilities,
+            "valence": valence,
+            "arousal": arousal,
+            "confidence": float(normalized_probs[dominant_idx])
+        }
+
+    def _parse_gaze(self, pose_output):
+        """Parse gaze from MultitaskPredictor output (using head pose as proxy)."""
+        # For now, use head pose as gaze direction proxy
+        # In future versions, this could use a dedicated gaze model
+        pose_values = pose_output.detach().cpu().numpy().flatten()
+        
+        # Convert head pose to gaze direction vector
+        pitch = pose_values[0]
+        yaw = pose_values[1]
+        
+        # Convert to 3D direction vector
+        direction_x = np.sin(yaw) * np.cos(pitch)
+        direction_y = -np.sin(pitch)
+        direction_z = np.cos(yaw) * np.cos(pitch)
+        
+        return {
+            "direction_x": float(direction_x),
+            "direction_y": float(direction_y),
+            "direction_z": float(direction_z),
+            "confidence": 0.7  # Lower confidence since this is head pose proxy
+        }
+
+    def _calculate_valence(self, probabilities):
+        """Calculate valence (positive/negative sentiment) from emotion probabilities."""
+        # Valence mapping: positive emotions = positive valence, negative = negative
+        valence_map = {
+            "happiness": 1.0, "surprise": 0.3, "neutral": 0.0,
+            "contempt": -0.2, "anger": -0.8, "disgust": -0.7,
+            "fear": -0.6, "sadness": -0.9
+        }
+        
+        valence = sum(prob * valence_map.get(emotion, 0.0) 
+                     for emotion, prob in probabilities.items())
+        return max(-1.0, min(1.0, valence))  # Clamp to [-1, 1]
+
+    def _calculate_arousal(self, probabilities):
+        """Calculate arousal (activation level) from emotion probabilities."""
+        # Arousal mapping: high-energy emotions = high arousal
+        arousal_map = {
+            "anger": 0.9, "fear": 0.8, "surprise": 0.7, "happiness": 0.6,
+            "disgust": 0.5, "contempt": 0.3, "sadness": 0.2, "neutral": 0.0
+        }
+        
+        arousal = sum(prob * arousal_map.get(emotion, 0.0) 
+                     for emotion, prob in probabilities.items())
+        return max(0.0, min(1.0, arousal))  # Clamp to [0, 1]
 
     def cleanup(self) -> None:
         """Cleanup resources."""

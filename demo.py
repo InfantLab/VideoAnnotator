@@ -29,6 +29,7 @@ from src.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
 from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline  
 from src.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
 from src.pipelines.face_analysis.laion_face_pipeline import LAIONFacePipeline
+from src.pipelines.face_analysis.openface3_pipeline import OpenFace3Pipeline
 from src.pipelines.audio_processing import AudioPipeline
 from src.pipelines.audio_processing.laion_voice_pipeline import LAIONVoicePipeline
 from src.version import get_version_info, print_version_info
@@ -113,6 +114,11 @@ class VideoAnnotatorDemo:
                     "confidence_threshold": 0.6,
                     "top_k_emotions": 5,
                 },
+                "openface3_analysis": {
+                    "device": "cpu",  # Use CPU for fast demo compatibility
+                    "pps": 1.0,  # Process 1 frame per second for speed
+                    "enable_advanced_features": True,
+                },
                 "audio_processing": {
                     "whisper_model": "tiny",
                     "word_timestamps": False,
@@ -148,6 +154,11 @@ class VideoAnnotatorDemo:
                     "model_size": "large",  # Use large model for high quality
                     "confidence_threshold": 0.3,
                     "top_k_emotions": 5,
+                },
+                "openface3_analysis": {
+                    "device": "cpu",  # Use CPU for compatibility
+                    "pps": 2.0,  # Process 2 frames per second for high quality
+                    "enable_advanced_features": True,
                 },
                 "audio_processing": {
                     "whisper_model": "base",
@@ -186,6 +197,11 @@ class VideoAnnotatorDemo:
                     "confidence_threshold": 0.5,
                     "top_k_emotions": 5,
                 },
+                "openface3_analysis": {
+                    "device": "cpu",  # Use CPU for compatibility
+                    "pps": 1.0,  # Process 1 frame per second for balanced performance
+                    "enable_advanced_features": True,
+                },
                 "audio_processing": {
                     "whisper_model": "tiny",
                     "word_timestamps": True,
@@ -204,7 +220,7 @@ class VideoAnnotatorDemo:
         """Get list of pipelines to run based on user selection."""
         if self.args.pipelines:
             return [p.strip() for p in self.args.pipelines.split(',')]
-        return ["scene_detection", "person_tracking", "face_analysis", "laion_face_analysis", "audio_processing", "laion_voice_analysis"]
+        return ["scene_detection", "person_tracking", "face_analysis", "laion_face_analysis", "openface3_analysis", "audio_processing", "laion_voice_analysis"]
     
     def run_scene_detection(self):
         """Run scene detection pipeline."""
@@ -229,10 +245,10 @@ class VideoAnnotatorDemo:
                 "output_file": str(output_file)
             }
             
-            logger.info(f"   ✅ Detected {scene_count} scenes in {duration:.2f}s")
+            logger.info(f"   Detected {scene_count} scenes in {duration:.2f}s")
             
         except Exception as e:
-            logger.error(f"   ❌ Scene detection failed: {e}")
+            logger.error(f"   Scene detection failed: {e}")
             self.results["scene_detection"] = {"status": "failed", "error": str(e)}
     
     def run_person_tracking(self):
@@ -258,15 +274,15 @@ class VideoAnnotatorDemo:
                 "output_file": str(output_file)
             }
             
-            logger.info(f"   ✅ Found {detection_count} person detections in {duration:.2f}s")
+            logger.info(f"   Found {detection_count} person detections in {duration:.2f}s")
             
         except Exception as e:
-            logger.error(f"   ❌ Person tracking failed: {e}")
+            logger.error(f"   Person tracking failed: {e}")
             self.results["person_tracking"] = {"status": "failed", "error": str(e)}
     
     def run_face_analysis(self):
         """Run original face analysis pipeline."""
-        logger.info("😊 Running Face Analysis Pipeline (Original)...")
+        logger.info("Running Face Analysis Pipeline (Original)...")
         try:
             pipeline = FaceAnalysisPipeline(self.configs["face_analysis"])
             # Load previous person tracking results if available
@@ -295,7 +311,7 @@ class VideoAnnotatorDemo:
                 "output_file": str(output_file)
             }
             
-            logger.info(f"   ✅ Analyzed {face_count} faces in {duration:.2f}s")
+            logger.info(f"   [SUCCESS] Analyzed {face_count} faces in {duration:.2f}s")
             
         except Exception as e:
             logger.error(f"   ❌ Face analysis failed: {e}")
@@ -335,11 +351,77 @@ class VideoAnnotatorDemo:
                 "model_size": model_size
             }
             
-            logger.info(f"   ✅ Analyzed {face_count} faces with {model_size.upper()} model in {duration:.2f}s")
+            logger.info(f"   [SUCCESS] Analyzed {face_count} faces with {model_size.upper()} model in {duration:.2f}s")
             
         except Exception as e:
             logger.error(f"   ❌ LAION face analysis failed: {e}")
             self.results["laion_face_analysis"] = {"status": "failed", "error": str(e)}
+    
+    def run_openface3_analysis(self):
+        """Run OpenFace 3.0 analysis pipeline."""
+        logger.info("🔬 Running OpenFace 3.0 Analysis Pipeline...")
+        try:
+            pipeline = OpenFace3Pipeline(self.configs["openface3_analysis"])
+            
+            start_time = time.time()
+            results = pipeline.process(
+                str(self.video_path),
+                pps=self.configs["openface3_analysis"].get("pps", 1.0)
+            )
+            duration = time.time() - start_time
+            
+            # Save results - OpenFace returns COCO format list
+            output_file = self.output_dir / f"openface3_analysis_{self.video_path.stem}.json"
+            
+            # Extract the COCO dataset from results
+            if results and isinstance(results, list) and len(results) > 0:
+                coco_dataset = results[0]
+                with open(output_file, 'w') as f:
+                    json.dump(coco_dataset, f, indent=2)
+                
+                # Count annotations
+                annotations = coco_dataset.get('annotations', [])
+                face_count = len(annotations)
+                
+                # Extract feature summary
+                features = []
+                if annotations:
+                    sample_annotation = annotations[0]
+                    openface_data = sample_annotation.get('openface3', {})
+                    if 'action_units' in openface_data:
+                        features.append('Action Units')
+                    if 'head_pose' in openface_data:
+                        features.append('Head Pose')
+                    if 'gaze' in openface_data:
+                        features.append('Gaze')
+                    if 'emotions' in openface_data:
+                        features.append('Emotions')
+                
+                self.results["openface3_analysis"] = {
+                    "status": "success",
+                    "faces_detected": face_count,
+                    "processing_time": f"{duration:.2f}s",
+                    "output_file": str(output_file),
+                    "features": features
+                }
+                
+                logger.info(f"   [SUCCESS] Analyzed {face_count} faces with OpenFace 3.0 in {duration:.2f}s")
+                if features:
+                    logger.info(f"   [FEATURES] {', '.join(features)}")
+            else:
+                # No results
+                self.results["openface3_analysis"] = {
+                    "status": "success",
+                    "faces_detected": 0,
+                    "processing_time": f"{duration:.2f}s",
+                    "output_file": str(output_file),
+                    "features": []
+                }
+                logger.info(f"   ✅ OpenFace 3.0 analysis completed in {duration:.2f}s (no faces detected)")
+            
+        except Exception as e:
+            logger.error(f"   ❌ OpenFace 3.0 analysis failed: {e}")
+            self.results["openface3_analysis"] = {"status": "failed", "error": str(e)}
     
     def run_audio_processing(self):
         """Run audio processing pipeline."""
@@ -435,6 +517,7 @@ class VideoAnnotatorDemo:
             "person_tracking": self.run_person_tracking,
             "face_analysis": self.run_face_analysis,
             "laion_face_analysis": self.run_laion_face_analysis,
+            "openface3_analysis": self.run_openface3_analysis,
             "audio_processing": self.run_audio_processing,
             "laion_voice_analysis": self.run_laion_voice_analysis,
         }
@@ -458,14 +541,14 @@ class VideoAnnotatorDemo:
     def _print_summary(self, total_duration):
         """Print demo results summary."""
         print()
-        logger.info("📊 Demo Results Summary")
+        logger.info("=== Demo Results Summary ===")
         logger.info("=" * 60)
         
         successful = 0
         failed = 0
         
         for pipeline_name, result in self.results.items():
-            status = "✅" if result["status"] == "success" else "❌"
+            status = "[SUCCESS]" if result["status"] == "success" else "[FAILED]"
             logger.info(f"{status} {pipeline_name.replace('_', ' ').title()}")
             
             if result["status"] == "success":
@@ -487,9 +570,9 @@ class VideoAnnotatorDemo:
                 logger.info(f"    Error: {result['error']}")
             print()
         
-        logger.info(f"🎯 Overall: {successful} successful, {failed} failed")
-        logger.info(f"⏱️  Total time: {total_duration:.2f}s")
-        logger.info(f"📁 Results saved to: {self.output_dir}")
+        logger.info(f"=== Overall: {successful} successful, {failed} failed ===")
+        logger.info(f"Total time: {total_duration:.2f}s")
+        logger.info(f"Results saved to: {self.output_dir}")
     
     def _save_summary(self, total_duration):
         """Save demo summary to JSON."""
@@ -509,7 +592,7 @@ class VideoAnnotatorDemo:
         with open(summary_file, 'w') as f:
             json.dump(summary, f, indent=2)
         
-        logger.info(f"📄 Demo summary saved to: {summary_file}")
+        logger.info(f"Demo summary saved to: {summary_file}")
 
 
 def main():
@@ -535,7 +618,7 @@ Examples:
     
     parser.add_argument(
         "--pipelines", "-p",
-        help="Comma-separated list of pipelines to run (scene_detection,person_tracking,face_analysis,laion_face_analysis,audio_processing,laion_voice_analysis)"
+        help="Comma-separated list of pipelines to run (scene_detection,person_tracking,face_analysis,laion_face_analysis,openface3_analysis,audio_processing,laion_voice_analysis)"
     )
     
     parser.add_argument(
