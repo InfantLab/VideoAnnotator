@@ -507,23 +507,32 @@ Examples:
   # Process a video with default configuration
   python main.py --video_path video.mp4 --output_dir output/
 
+  # Process a video with auto-generated output directory
+  python main.py --video_path video.mp4
+
   # Use custom configuration
   python main.py --config configs/high_performance.yaml --video_path video.mp4
 
   # Run only specific pipelines
   python main.py --pipeline scene person --video_path video.mp4
 
+  # Smart batch processing (directory detection with auto output)
+  python main.py --video_path /path/to/videos
+
+  # Smart batch processing with custom output
+  python main.py --video_path /path/to/videos --output_dir /path/to/outputs
+
   # Get pipeline information
   python main.py --info
 
-  # Batch process videos
+  # Explicit batch processing
   python main.py --batch_dir /path/to/videos --output_dir /path/to/outputs
         """
     )
     
     # Input/output arguments
-    parser.add_argument('--video_path', type=str, help='Path to input video file')
-    parser.add_argument('--output_dir', type=str, help='Directory to save results')
+    parser.add_argument('--video_path', type=str, help='Path to input video file or directory (directory will trigger batch processing)')
+    parser.add_argument('--output_dir', type=str, help='Directory to save results (optional - will auto-generate if not specified)')
     parser.add_argument('--batch_dir', type=str, help='Directory containing videos for batch processing')
     
     # Configuration arguments
@@ -569,15 +578,42 @@ Examples:
             logger.error("Either --video_path or --batch_dir must be specified")
             return 1
         
+        # Smart detection: check if video_path is actually a directory
+        batch_mode = False
+        input_path = None
+        
+        if args.video_path:
+            input_path = Path(args.video_path)
+            if input_path.is_dir():
+                logger.info(f"Detected directory input, switching to batch processing mode")
+                batch_mode = True
+                batch_dir = input_path
+            else:
+                video_path = input_path
+        elif args.batch_dir:
+            batch_mode = True
+            batch_dir = Path(args.batch_dir)
+            input_path = batch_dir
+        
+        # Auto-generate output directory if not specified
         if not args.output_dir:
-            logger.error("--output_dir must be specified")
-            return 1
+            if batch_mode:
+                # Simple rule: input_directory -> input_directory_out
+                # Examples: 
+                # demovideos -> demovideos_out
+                # demovideos/babyjokes -> demovideos/babyjokes_out
+                # /full/path/to/videos -> /full/path/to/videos_out
+                output_dir = input_path.parent / f"{input_path.name}_out"
+            else:
+                # For single video files: video.mp4 -> video_out/
+                output_dir = input_path.parent / f"{input_path.stem}_out"
+            
+            logger.info(f"Auto-generated output directory: {output_dir}")
+        else:
+            output_dir = Path(args.output_dir)
         
         # Single video processing
-        if args.video_path:
-            video_path = Path(args.video_path)
-            output_dir = Path(args.output_dir)
-            
+        if not batch_mode:
             if not runner.validate_video_file(video_path):
                 return 1
             
@@ -597,10 +633,7 @@ Examples:
                     logger.warning(f"  - {error}")
         
         # Batch processing
-        elif args.batch_dir:
-            batch_dir = Path(args.batch_dir)
-            output_dir = Path(args.output_dir)
-            
+        else:
             if not batch_dir.exists():
                 logger.error(f"Batch directory not found: {batch_dir}")
                 return 1

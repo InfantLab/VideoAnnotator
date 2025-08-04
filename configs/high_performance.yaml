@@ -59,7 +59,7 @@ person_tracking:
 
 # Face Analysis Pipeline
 face_analysis:
-  backend: "mediapipe"  # Switch to OpenFace when available
+  backend: "deepface"  # Reliable option
   face_confidence_threshold: 0.6
   max_faces: 15
   detect_emotions: true
@@ -69,9 +69,9 @@ face_analysis:
   face_crop_padding: 30
   emotion_batch_size: 16  # Larger batch for GPU
   
-  mediapipe:
-    model_selection: 1
-    refine_landmarks: true
+  deepface:
+    emotion_model: "VGG-Face"
+    detector_backend: "opencv"
   
   openface:
     model_path: "models/openface/"

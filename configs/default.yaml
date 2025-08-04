@@ -53,21 +53,21 @@ person_tracking:
 
 # Face Analysis Pipeline
 face_analysis:
-  backend: "mediapipe"
+  backend: "deepface"
   face_confidence_threshold: 0.7
   max_faces: 10
   detect_emotions: true
+  detect_age: true
+  detect_gender: true
   detect_gaze: false  # Requires OpenFace
   detect_action_units: false  # Requires OpenFace
   face_crop_padding: 20
   
-  mediapipe:
-    model_selection: 1
-    refine_landmarks: true
-  
   deepface:
     emotion_model: "VGG-Face"
+    age_gender_model: "VGG-Face"
     detector_backend: "opencv"
+    enforce_detection: false
 
 # Audio Processing Pipeline
 audio_processing:

@@ -38,13 +38,24 @@ class FaceAnalysisPipeline(BasePipeline):
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         default_config = {
-            "detection_backend": "opencv",  # opencv, deepface
+            "detection_backend": "deepface",  # opencv, deepface
             "emotion_backend": "deepface",  # deepface, disabled
             "confidence_threshold": 0.7,
             "min_face_size": 30,  # Minimum face size in pixels
             "scale_factor": 1.1,  # For OpenCV Haar cascades
             "min_neighbors": 5,  # For OpenCV Haar cascades
             "max_faces": 10,  # Maximum faces to detect per frame
+            # Analysis features
+            "detect_emotions": True,
+            "detect_age": True,
+            "detect_gender": True,
+            # DeepFace settings
+            "deepface": {
+                "emotion_model": "VGG-Face",
+                "age_gender_model": "VGG-Face", 
+                "detector_backend": "opencv",
+                "enforce_detection": False
+            },
             # Person identity configuration
             "person_identity": {
                 "enabled": True,
@@ -60,7 +71,6 @@ class FaceAnalysisPipeline(BasePipeline):
         super().__init__(merged_config)
         self.face_cascade = None
         self.identity_manager = None  # Will be initialized during processing
-        # Remove mediapipe attributes
         self.logger = logging.getLogger(__name__)
 
     def initialize(self) -> None:
@@ -99,11 +109,15 @@ class FaceAnalysisPipeline(BasePipeline):
                 # VideoAnnotator extensions
                 "timestamp": {"type": ["number", "null"], "description": "Frame timestamp"},
                 "frame_number": {"type": ["integer", "null"], "description": "Frame number"},
-                "attributes": {
-                    "emotion": "string",
-                    "age": "integer", 
-                    "gender": "string"
-                }
+                # DeepFace analysis results
+                "emotion": {"type": ["string", "null"], "description": "Dominant emotion detected"},
+                "emotion_confidence": {"type": ["number", "null"], "description": "Confidence of emotion prediction"},
+                "emotion_scores": {"type": ["object", "null"], "description": "All emotion scores"},
+                "age": {"type": ["number", "null"], "description": "Predicted age"},
+                "gender": {"type": ["string", "null"], "description": "Predicted gender"},
+                "gender_confidence": {"type": ["number", "null"], "description": "Confidence of gender prediction"},
+                "gender_scores": {"type": ["object", "null"], "description": "All gender scores"},
+                "backend": {"type": "string", "description": "Face detection backend used"}
             }
         }
 
@@ -396,43 +410,150 @@ class FaceAnalysisPipeline(BasePipeline):
         width: int,
         height: int,
     ) -> List[Dict[str, Any]]:
-        """Detect faces using DeepFace."""
+        """Detect faces using DeepFace with comprehensive analysis."""
 
         try:
             # DeepFace expects RGB format
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-            # Use DeepFace.extract_faces for detection
-            face_objs = DeepFace.extract_faces(
-                rgb_frame,
-                detector_backend="opencv",  # Use OpenCV backend for speed
-                enforce_detection=False,
-            )
-
+            
+            # Get DeepFace configuration
+            deepface_config = self.config.get("deepface", {})
+            detector_backend = deepface_config.get("detector_backend", "opencv")
+            enforce_detection = deepface_config.get("enforce_detection", False)
+            
             annotations = []
-            for i, face_obj in enumerate(face_objs):
-                if face_obj is not None:
-                    # DeepFace doesn't provide bounding box coordinates directly
-                    # This would need to be enhanced for production use
-                    # For now, create a placeholder annotation
+            
+            # First, detect faces and get their regions
+            try:
+                face_objs = DeepFace.extract_faces(
+                    rgb_frame,
+                    detector_backend=detector_backend,
+                    enforce_detection=enforce_detection,
+                    align=True,
+                    grayscale=False
+                )
+                
+                if not face_objs:
+                    return []
+                
+                # Get face regions with coordinates using DeepFace.analyze
+                analyze_results = DeepFace.analyze(
+                    rgb_frame,
+                    actions=['emotion', 'age', 'gender'] if (
+                        self.config.get('detect_emotions', True) or 
+                        self.config.get('detect_age', True) or 
+                        self.config.get('detect_gender', True)
+                    ) else ['emotion'],  # At least one action is required
+                    detector_backend=detector_backend,
+                    enforce_detection=enforce_detection
+                )
+                
+                # Handle single face vs multiple faces
+                if not isinstance(analyze_results, list):
+                    analyze_results = [analyze_results]
+                
+                for i, analysis in enumerate(analyze_results):
+                    # Extract face region coordinates
+                    region = analysis.get('region', {})
+                    x = region.get('x', 0)
+                    y = region.get('y', 0)
+                    w = region.get('w', 100)
+                    h = region.get('h', 100)
+                    
+                    # Skip faces that are too small
+                    if w < self.config['min_face_size'] or h < self.config['min_face_size']:
+                        continue
+                    
+                    # Prepare analysis data
+                    analysis_data = {}
+                    
+                    # Emotion analysis
+                    if self.config.get('detect_emotions', True) and 'emotion' in analysis:
+                        emotions = analysis['emotion']
+                        # Get dominant emotion
+                        dominant_emotion = analysis.get('dominant_emotion', 'unknown')
+                        emotion_confidence = emotions.get(dominant_emotion, 0.0) / 100.0 if dominant_emotion != 'unknown' else 0.0
+                        
+                        analysis_data.update({
+                            'emotion': dominant_emotion,
+                            'emotion_confidence': float(emotion_confidence),
+                            'emotion_scores': {k: float(v/100.0) for k, v in emotions.items()}
+                        })
+                    
+                    # Age analysis  
+                    if self.config.get('detect_age', True) and 'age' in analysis:
+                        analysis_data['age'] = float(analysis['age'])
+                    
+                    # Gender analysis
+                    if self.config.get('detect_gender', True) and 'gender' in analysis:
+                        gender_scores = analysis.get('gender', {})
+                        dominant_gender = analysis.get('dominant_gender', 'unknown')
+                        gender_confidence = gender_scores.get(dominant_gender, 0.0) / 100.0 if dominant_gender != 'unknown' else 0.0
+                        
+                        analysis_data.update({
+                            'gender': dominant_gender,
+                            'gender_confidence': float(gender_confidence),
+                            'gender_scores': {k: float(v/100.0) for k, v in gender_scores.items()}
+                        })
+                    
+                    # Create COCO annotation with DeepFace analysis
                     annotation = create_coco_annotation(
                         annotation_id=0,  # Will be set later
                         image_id=f"{video_id}_frame_{frame_number}",
                         category_id=100,  # Face category
-                        bbox=[0.0, 0.0, 100.0, 100.0],  # Placeholder
+                        bbox=[float(x), float(y), float(w), float(h)],
                         score=1.0,
                         # VideoAnnotator extensions
                         face_id=i,
                         timestamp=timestamp,
                         frame_number=frame_number,
                         backend="deepface",
+                        **analysis_data  # Add all analysis results
                     )
                     annotations.append(annotation)
+                    
+                    # Limit number of faces
+                    if len(annotations) >= self.config['max_faces']:
+                        break
+
+            except Exception as analysis_error:
+                self.logger.warning(f"DeepFace analysis failed: {analysis_error}")
+                # Fallback to simple detection only
+                try:
+                    face_objs = DeepFace.extract_faces(
+                        rgb_frame,
+                        detector_backend=detector_backend,
+                        enforce_detection=False,
+                        align=False
+                    )
+                    
+                    for i, face_obj in enumerate(face_objs):
+                        if face_obj is not None:
+                            # Create basic annotation without analysis
+                            annotation = create_coco_annotation(
+                                annotation_id=0,  # Will be set later
+                                image_id=f"{video_id}_frame_{frame_number}",
+                                category_id=100,  # Face category
+                                bbox=[0.0, 0.0, 100.0, 100.0],  # Placeholder
+                                score=1.0,
+                                # VideoAnnotator extensions
+                                face_id=i,
+                                timestamp=timestamp,
+                                frame_number=frame_number,
+                                backend="deepface",
+                            )
+                            annotations.append(annotation)
+                            
+                            if len(annotations) >= self.config['max_faces']:
+                                break
+                                
+                except Exception as fallback_error:
+                    self.logger.warning(f"DeepFace fallback detection also failed: {fallback_error}")
 
             return annotations
 
         except Exception as e:
-            self.logger.warning(f"DeepFace detection failed: {e}")
+            self.logger.warning(f"DeepFace detection failed completely: {e}")
             return []
 
     def _save_coco_annotations(

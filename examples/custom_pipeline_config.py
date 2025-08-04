@@ -53,7 +53,7 @@ def create_high_performance_config() -> Dict[str, Any]:
             'enable_tracking': True
         },
         'face_analysis': {
-            'backends': ['openface', 'deepface', 'mediapipe'],
+            'backends': ['openface', 'deepface'],
             'detection_confidence': 0.7,
             'recognition_model': 'VGG-Face',
             'emotion_model': 'fer2013',
@@ -95,7 +95,7 @@ def create_lightweight_config() -> Dict[str, Any]:
             'enable_tracking': True
         },
         'face_analysis': {
-            'backends': ['mediapipe'],  # Lightweight backend only
+            'backends': ['deepface'],  # Reliable backend only
             'detection_confidence': 0.8,
             'recognition_model': 'Facenet',
             'emotion_model': 'fer2013',
@@ -140,7 +140,7 @@ def create_research_config() -> Dict[str, Any]:
             'pose_model': 'yolo11x-pose'
         },
         'face_analysis': {
-            'backends': ['openface', 'deepface', 'mediapipe'],
+            'backends': ['openface', 'deepface'],
             'detection_confidence': 0.5,
             'recognition_model': 'ArcFace',
             'emotion_model': 'fer2013',

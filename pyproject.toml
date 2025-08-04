@@ -69,7 +69,7 @@ dependencies = [
     # Face analysis - Limited set for Python 3.12
     # deepface>=0.0.91 - Not compatible with Python 3.12 due to TensorFlow dependency
     # face-recognition>=1.3.0 - Has compatibility issues
-    # mediapipe>=0.10.0 - Has compatibility issues
+    # mediapipe>=0.10.0 - Removed due to compatibility issues and slow Google updates (use DeepFace instead)
     # fer>=22.5.0 - Has compatibility issues
     # insightface>=0.7.3 - Has compatibility issues
     "dlib>=19.24.0",

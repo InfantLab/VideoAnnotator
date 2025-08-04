@@ -30,7 +30,7 @@ person_tracking:
 
 # Face Analysis Pipeline
 face_analysis:
-  backend: "mediapipe"  # Lightweight option
+  backend: "deepface"  # Reliable option
   face_confidence_threshold: 0.8  # Higher threshold
   max_faces: 5  # Limit faces
   detect_emotions: true
@@ -39,10 +39,6 @@ face_analysis:
   detect_identity: false
   face_crop_padding: 15
   emotion_batch_size: 1  # Process one at a time
-  
-  mediapipe:
-    model_selection: 0  # Short-range model (faster)
-    refine_landmarks: false  # Skip refinement
   
   deepface:
     emotion_model: "VGG-Face"  # Lightweight model

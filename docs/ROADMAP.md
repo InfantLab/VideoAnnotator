@@ -12,8 +12,7 @@ VideoAnnotator has been modernized to support a **modular**, **standards-based**
 - ✅ **Updated to Python 3.13** with modern dependency management
 - ✅ **Added YOLO11** for unified detection/pose/tracking
 - ✅ **Integrated OpenFace 3.0** support (requires manual installation)
-- ✅ **Added DeepFace** for emotion recognition
-- ✅ **Added MediaPipe** for lightweight face analysis
+- ✅ **Added DeepFace** for emotion recognition (default backend)
 - ✅ **Added PySceneDetect + CLIP** for scene understanding
 - ✅ **Updated audio processing** with Whisper and pyannote.audio
 
@@ -27,7 +26,7 @@ VideoAnnotator has been modernized to support a **modular**, **standards-based**
 ### Core Pipelines (Implementation Started)
 - ✅ **Scene Detection Pipeline** - PySceneDetect + CLIP integration
 - ✅ **Person Tracking Pipeline** - YOLO11 pose + tracking
-- ✅ **Face Analysis Pipeline** - Multi-backend support (OpenFace/DeepFace/MediaPipe)
+- ✅ **Face Analysis Pipeline** - Multi-backend support (OpenFace/DeepFace)
 - ✅ **Audio Processing Pipeline** - Speech recognition + classification
 
 ### Documentation
@@ -143,7 +142,7 @@ VideoAnnotator has been modernized to support a **modular**, **standards-based**
 ### Benchmark Comparisons
 - [ ] **OpenFace 2.0 vs 3.0** accuracy comparison
 - [ ] **YOLO11 vs YOLOv8** performance analysis  
-- [ ] **MediaPipe vs OpenFace** speed/accuracy tradeoffs
+- [ ] **DeepFace vs OpenFace** speed/accuracy tradeoffs
 - [ ] **Scene detection** accuracy across video types
 
 ### Real-world Validation

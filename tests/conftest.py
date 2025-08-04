@@ -158,7 +158,7 @@ def sample_config():
             'iou_threshold': 0.7
         },
         'face_analysis': {
-            'backends': ['mediapipe'],
+            'backends': ['deepface'],
             'detection_confidence': 0.7,
             'enable_landmarks': True
         },

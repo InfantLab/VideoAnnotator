@@ -21,7 +21,6 @@ from ...exporters.native_formats import (
 )
 from ...utils.person_identity import PersonIdentityManager
 from ...utils.automatic_labeling import infer_person_labels_from_tracks
-from ...utils.size_based_person_analysis import run_size_based_analysis
 
 # Optional imports
 try:
@@ -60,9 +59,7 @@ class PersonTrackingPipeline(BasePipeline):
                         "height_threshold": 0.4,  # Normalized height threshold for child/adult
                         "confidence": 0.7,
                         "adult_label": "parent",
-                        "child_label": "infant",
-                        "use_simple_analyzer": True,  # Use simplified size-based analyzer by default
-                        "min_detections_for_analysis": 2  # Minimum detections needed for classification
+                        "child_label": "infant"
                     },
                     "position_based": {
                         "enabled": True,
@@ -171,47 +168,12 @@ class PersonTrackingPipeline(BasePipeline):
                 # Get person tracks for labeling
                 person_tracks = [ann for ann in annotations if ann.get('person_id')]
                 
-                # Check if we should use simplified size-based analyzer
-                size_based_config = auto_labeling_config.get("size_based", {})
-                use_simple_analyzer = size_based_config.get("use_simple_analyzer", True)
-                
-                if use_simple_analyzer and size_based_config.get("enabled", True):
-                    # Use simplified size-based analyzer
-                    self.logger.info("Using simplified size-based person analysis...")
-                    
-                    # Filter annotations with sufficient detections per person
-                    min_detections = size_based_config.get("min_detections_for_analysis", 2)
-                    person_detection_counts = {}
-                    for ann in person_tracks:
-                        person_id = ann.get('person_id')
-                        if person_id:
-                            person_detection_counts[person_id] = person_detection_counts.get(person_id, 0) + 1
-                    
-                    # Only analyze persons with sufficient detections
-                    filtered_tracks = [ann for ann in person_tracks 
-                                     if person_detection_counts.get(ann.get('person_id', ''), 0) >= min_detections]
-                    
-                    if filtered_tracks:
-                        # Run simplified size-based analysis
-                        automatic_labels = run_size_based_analysis(
-                            filtered_tracks,
-                            height_threshold=size_based_config.get("height_threshold", 0.4),
-                            confidence=size_based_config.get("confidence", 0.7)
-                        )
-                        
-                        self.logger.info(f"Size-based analysis completed: {len(automatic_labels)} persons labeled")
-                    else:
-                        self.logger.info("No persons met minimum detection threshold for size-based analysis")
-                        automatic_labels = {}
-                else:
-                    # Use full automatic labeling system
-                    self.logger.info("Using full automatic labeling system...")
-                    automatic_labels = infer_person_labels_from_tracks(person_tracks, annotations, auto_labeling_config)
+                # Apply automatic labeling
+                automatic_labels = infer_person_labels_from_tracks(person_tracks, annotations, auto_labeling_config)
                 
                 # Update identity manager with automatic labels
                 for person_id, label_info in automatic_labels.items():
-                    confidence_threshold = auto_labeling_config.get('confidence_threshold', 0.7)
-                    if label_info['confidence'] >= confidence_threshold:
+                    if label_info['confidence'] >= auto_labeling_config.get('confidence_threshold', 0.7):
                         self.identity_manager.set_person_label(
                             person_id,
                             label_info['label'],
@@ -219,10 +181,7 @@ class PersonTrackingPipeline(BasePipeline):
                             label_info['method']
                         )
                         self.logger.info(f"Auto-labeled {person_id}: {label_info['label']} "
-                                       f"(confidence={label_info['confidence']:.2f}, method={label_info['method']})")
-                    else:
-                        self.logger.debug(f"Skipped labeling {person_id}: confidence {label_info['confidence']:.2f} "
-                                        f"below threshold {confidence_threshold}")
+                                       f"(confidence={label_info['confidence']:.2f})")
                 
                 # Update annotations with new labels
                 for annotation in annotations:

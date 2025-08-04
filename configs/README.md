@@ -62,7 +62,7 @@ person_tracking:
 ```yaml
 face_analysis:
   # Backend selection
-  backend: "mediapipe"             # Backend: openface, mediapipe, deepface
+  backend: "deepface"             # Backend: opencv, deepface
   
   # Detection settings
   face_confidence_threshold: 0.7   # Face detection confidence
@@ -70,14 +70,11 @@ face_analysis:
   
   # Analysis features
   detect_emotions: true           # Emotion recognition
-  detect_gaze: true              # Gaze estimation (OpenFace only)
-  detect_action_units: false     # Action Units (OpenFace only)
+  detect_age: true               # Age prediction
+  detect_gender: true            # Gender prediction
+  detect_gaze: false             # Gaze estimation (requires OpenFace3)
+  detect_action_units: false     # Action Units (requires OpenFace3)
   detect_identity: false         # Face recognition
-  
-  # MediaPipe settings
-  mediapipe:
-    model_selection: 1            # 0: short-range, 1: full-range
-    refine_landmarks: true        # Use refined face mesh
     
   # OpenFace 3.0 settings (when available)
   openface:
@@ -90,11 +87,11 @@ face_analysis:
   deepface:
     emotion_model: "VGG-Face"     # Emotion recognition model
     age_gender_model: "VGG-Face"  # Age/gender model
-    detector_backend: "opencv"    # Face detector
+    detector_backend: "opencv"    # Face detector: opencv, mtcnn, retinaface, ssd
+    enforce_detection: false      # Continue even if no face detected
     
   # Processing settings
   face_crop_padding: 20           # Padding around face crops
-  emotion_batch_size: 8           # Batch size for emotion analysis
 ```
 
 ## Audio Processing Configuration

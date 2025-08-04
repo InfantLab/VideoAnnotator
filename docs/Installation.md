@@ -140,7 +140,7 @@ except ImportError:
 import cv2
 import transformers
 import scenedetect
-import mediapipe
+import deepface
 print("All core dependencies installed!")
 ```
 
@@ -318,10 +318,10 @@ Once installed, OpenFace 3.0 provides:
 
 | Category | Tools | Purpose | CUDA Support |
 |----------|-------|---------|-------------|
-| **Detection** | YOLO11, MediaPipe | Person/object detection | ✅ (YOLO11) |
+| **Detection** | YOLO11 | Person/object detection | ✅ (YOLO11) |
 | **Tracking** | YOLO11 tracking, ByteTrack | Multi-object tracking | ✅ |
 | **Scene** | PySceneDetect, CLIP | Scene segmentation & classification | ✅ (CLIP) |
-| **Face** | OpenFace 3.0, MediaPipe | Face analysis & emotion | ✅ (OpenFace) |
+| **Face** | OpenFace 3.0, DeepFace | Face analysis & emotion | ✅ (OpenFace) |
 | **Audio** | Whisper, pyannote.audio | Speech & audio processing | ✅ |
 | **Annotation** | Label Studio, FiftyOne | Data annotation & visualization | N/A |
 
