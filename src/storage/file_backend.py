@@ -116,41 +116,48 @@ class FileStorageBackend(StorageBackend):
         
         self.logger.debug(f"Saved metadata for job {job.job_id}")
     
-    def load_job_metadata(self, job_id: str) -> BatchJob:
+    def load_job_metadata(self, job_id: str) -> Optional[BatchJob]:
         """Load job metadata."""
         metadata_file = self._get_metadata_file(job_id)
         
         if not metadata_file.exists():
-            raise FileNotFoundError(f"Job metadata not found: {metadata_file}")
+            return None
         
-        with open(metadata_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        return BatchJob.from_dict(data)
+        try:
+            with open(metadata_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return BatchJob.from_dict(data)
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            self.logger.error(f"Failed to load job metadata for {job_id}: {e}")
+            return None
     
-    def list_jobs(self, status_filter: Optional[str] = None) -> List[str]:
-        """List all job IDs, optionally filtered by status."""
-        job_ids = []
+    def list_jobs(self, status_filter: Optional[str] = None) -> List[BatchJob]:
+        """List all jobs with full metadata, optionally filtered by status."""
+        jobs = []
         
         if not self.jobs_dir.exists():
-            return job_ids
+            return jobs
         
         for job_dir in self.jobs_dir.iterdir():
             if job_dir.is_dir():
                 job_id = job_dir.name
+                job = self.load_job_metadata(job_id)
+                
+                if job is None:
+                    continue
                 
                 # Apply status filter if specified
-                if status_filter:
-                    try:
-                        job = self.load_job_metadata(job_id)
-                        if job.status.value != status_filter:
-                            continue
-                    except FileNotFoundError:
-                        continue
+                if status_filter and job.status.value != status_filter:
+                    continue
                 
-                job_ids.append(job_id)
+                jobs.append(job)
         
-        return sorted(job_ids)
+        return sorted(jobs, key=lambda j: j.created_at)
+    
+    def list_job_ids(self, status_filter: Optional[str] = None) -> List[str]:
+        """List all job IDs, optionally filtered by status."""
+        jobs = self.list_jobs(status_filter)
+        return [job.job_id for job in jobs]
     
     def delete_job(self, job_id: str) -> bool:
         """Delete all data for a job."""
@@ -185,14 +192,14 @@ class FileStorageBackend(StorageBackend):
                 stats["total_jobs"] += 1
                 
                 # Get job status
-                try:
-                    job = self.load_job_metadata(job_dir.name)
+                job = self.load_job_metadata(job_dir.name)
+                if job is not None:
                     status = job.status.value
                     stats["jobs_by_status"][status] = stats["jobs_by_status"].get(status, 0) + 1
                     
                     # Collect pipeline info
                     stats["pipelines"].update(job.pipeline_results.keys())
-                except FileNotFoundError:
+                else:
                     stats["jobs_by_status"]["unknown"] = stats["jobs_by_status"].get("unknown", 0) + 1
                 
                 # Calculate directory size
@@ -235,6 +242,9 @@ class FileStorageBackend(StorageBackend):
         """Export complete job results to a single file."""
         job = self.load_job_metadata(job_id)
         
+        if job is None:
+            raise ValueError(f"Job not found: {job_id}")
+        
         export_data = {
             "job": job.to_dict(),
             "annotations": {}
@@ -262,31 +272,42 @@ class FileStorageBackend(StorageBackend):
         
         self.logger.info(f"Saved batch report {report.batch_id} to {report_file}")
     
-    def load_report(self, batch_id: str) -> BatchReport:
+    def load_report(self, batch_id: str) -> Optional[BatchReport]:
         """Load batch report."""
         report_file = self.reports_dir / f"batch_report_{batch_id}.json"
         
         if not report_file.exists():
-            raise FileNotFoundError(f"Batch report not found: {report_file}")
+            return None
         
-        with open(report_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        return BatchReport.from_dict(data)
+        try:
+            with open(report_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return BatchReport.from_dict(data)
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            self.logger.error(f"Failed to load batch report {batch_id}: {e}")
+            return None
     
-    def list_reports(self) -> List[str]:
-        """List all batch report IDs."""
-        report_ids = []
+    def list_reports(self) -> List[BatchReport]:
+        """List all batch reports with full data."""
+        reports = []
         
         if not self.reports_dir.exists():
-            return report_ids
+            return reports
         
         for report_file in self.reports_dir.glob("batch_report_*.json"):
             # Extract batch_id from filename: batch_report_{batch_id}.json
             batch_id = report_file.stem.replace("batch_report_", "")
-            report_ids.append(batch_id)
+            report = self.load_report(batch_id)
+            
+            if report is not None:
+                reports.append(report)
         
-        return sorted(report_ids)
+        return sorted(reports, key=lambda r: r.start_time if r.start_time else datetime.min.replace(tzinfo=None))
+    
+    def list_report_ids(self) -> List[str]:
+        """List all batch report IDs."""
+        reports = self.list_reports()
+        return [report.batch_id for report in reports]
     
     def cleanup_old_files(self, max_age_days: int) -> tuple[int, int]:
         """Clean up old files."""

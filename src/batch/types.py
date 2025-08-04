@@ -161,10 +161,10 @@ class BatchStatus:
     @property
     def success_rate(self) -> float:
         """Get success rate as percentage (0-100)."""
-        completed = self.completed_jobs + self.failed_jobs + self.cancelled_jobs
-        if completed == 0:
-            return 100.0  # Default optimistic when no finished jobs yet
-        return (self.completed_jobs / completed) * 100.0
+        finished_jobs = self.completed_jobs + self.failed_jobs + self.cancelled_jobs
+        if finished_jobs == 0:
+            return 0.0  # No finished jobs means no success rate yet
+        return (self.completed_jobs / finished_jobs) * 100.0
     
     @property
     def estimated_completion(self) -> Optional[datetime]:

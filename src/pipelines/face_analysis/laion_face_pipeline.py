@@ -256,7 +256,14 @@ class LAIONFacePipeline(BasePipeline):
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
             self.device = torch.device(self.config["device"])
-        self.model.to(self.device)
+        # Handle meta tensor properly for newer PyTorch versions
+        try:
+            self.model.to(self.device)
+        except RuntimeError as e:
+            if "meta tensor" in str(e):
+                self.model = self.model.to_empty(device=self.device)
+            else:
+                raise
         # Set model info metadata
         self.set_model_info(model_name, self.config.get("model_cache_dir"))
         self.is_initialized = True
@@ -558,7 +565,14 @@ class LAIONFacePipeline(BasePipeline):
                     # Load the state dict into the model
                     classifier.load_state_dict(state_dict)
                     classifier.eval()
-                    classifier.to(self.device)
+                    # Handle meta tensor properly for newer PyTorch versions
+                    try:
+                        classifier.to(self.device)
+                    except RuntimeError as e:
+                        if "meta tensor" in str(e):
+                            classifier = classifier.to_empty(device=self.device)
+                        else:
+                            raise
                     
                     self.classifiers[label] = classifier
                     self.logger.info(f"Loaded classifier for emotion: {label}")

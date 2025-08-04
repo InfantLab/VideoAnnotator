@@ -481,7 +481,14 @@ class LAIONVoicePipeline(WhisperBasePipeline):
                     model_instance.eval()
                     
                     # Move to device and match Whisper model dtype if needed
-                    model_instance = model_instance.to(self.device)
+                    # Handle meta tensor properly for newer PyTorch versions
+                    try:
+                        model_instance = model_instance.to(self.device)
+                    except RuntimeError as e:
+                        if "meta tensor" in str(e):
+                            model_instance = model_instance.to_empty(device=self.device)
+                        else:
+                            raise
                     
                     # If parent Whisper model uses FP16, convert classifier to FP16 too
                     if hasattr(self, 'whisper_model') and hasattr(self.whisper_model, 'dtype'):

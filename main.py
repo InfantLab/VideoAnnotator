@@ -14,6 +14,7 @@ Usage:
 import argparse
 import logging
 import sys
+import signal
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import json
@@ -22,6 +23,7 @@ from datetime import datetime
 import subprocess
 import shutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 import yaml
 
@@ -35,6 +37,26 @@ from src.pipelines.face_analysis import (
     OPENFACE3_AVAILABLE
 )
 from src.pipelines.audio_processing import AudioPipeline as AudioProcessingPipeline
+
+
+# Global variables for interrupt handling
+_interrupted = threading.Event()
+_executor_shutdown = False
+
+
+def signal_handler(signum, frame):
+    """Handle interrupt signals (Ctrl+C)."""
+    global _interrupted, _executor_shutdown
+    logger = logging.getLogger(__name__)
+    logger.warning("\nInterrupt received (Ctrl+C). Gracefully shutting down...")
+    _interrupted.set()
+    _executor_shutdown = True
+
+
+# Register signal handlers
+signal.signal(signal.SIGINT, signal_handler)
+if hasattr(signal, 'SIGTERM'):
+    signal.signal(signal.SIGTERM, signal_handler)
 
 
 class VideoAnnotatorRunner:
@@ -143,18 +165,20 @@ class VideoAnnotatorRunner:
             return None
     
     def _initialize_pipelines(self):
-        """Initialize all pipeline instances."""
+        """Initialize all pipeline instances and pre-load models for GPU efficiency."""
         try:
             # Scene detection pipeline
             if self.config.get('scene_detection', {}).get('enabled', True):
                 scene_config = self.config.get('scene_detection', {})
                 self.pipelines['scene'] = SceneDetectionPipeline(scene_config)
+                self.pipelines['scene'].initialize()  # Pre-initialize for batch processing
                 self.logger.info("Scene detection pipeline initialized")
             
             # Person tracking pipeline
             if self.config.get('person_tracking', {}).get('enabled', True):
                 person_config = self.config.get('person_tracking', {})
                 self.pipelines['person'] = PersonTrackingPipeline(person_config)
+                self.pipelines['person'].initialize()  # Pre-initialize for batch processing
                 self.logger.info("Person tracking pipeline initialized")
             
             # Face analysis pipeline
@@ -166,6 +190,7 @@ class VideoAnnotatorRunner:
                     try:
                         if OPENFACE3_AVAILABLE:
                             self.pipelines['face'] = OpenFace3Pipeline(face_config)
+                            self.pipelines['face'].initialize()  # Pre-initialize for batch processing
                             self.logger.info("OpenFace 3.0 face analysis pipeline initialized")
                         else:
                             self.logger.error("OpenFace 3.0 not available, skipping face analysis")
@@ -177,24 +202,51 @@ class VideoAnnotatorRunner:
                         # Don't add any face pipeline - gracefully skip
                 elif backend == 'laion':
                     self.pipelines['face'] = LAIONFacePipeline(face_config)
+                    self.pipelines['face'].initialize()  # Pre-initialize for batch processing
                     self.logger.info("LAION face analysis pipeline initialized")
                 elif backend == 'opencv':
                     self.pipelines['face'] = FaceAnalysisPipeline(face_config)
+                    self.pipelines['face'].initialize()  # Pre-initialize for batch processing
                     self.logger.info("OpenCV face analysis pipeline initialized")
                 else:
                     self.logger.warning(f"Unknown face backend '{backend}', using LAION")
                     self.pipelines['face'] = LAIONFacePipeline(face_config)
+                    self.pipelines['face'].initialize()  # Pre-initialize for batch processing
                     self.logger.info("LAION face analysis pipeline initialized (default)")
             
             # Audio processing pipeline
             if self.config.get('audio_processing', {}).get('enabled', True):
                 audio_config = self.config.get('audio_processing', {})
                 self.pipelines['audio'] = AudioProcessingPipeline(audio_config)
+                self.pipelines['audio'].initialize()  # Pre-initialize for batch processing
                 self.logger.info("Audio processing pipeline initialized")
             
         except Exception as e:
             self.logger.error(f"Error initializing pipelines: {e}")
             raise
+    
+    def cleanup(self):
+        """Cleanup all pipeline resources to free GPU memory."""
+        for name, pipeline in self.pipelines.items():
+            try:
+                if hasattr(pipeline, 'cleanup'):
+                    pipeline.cleanup()
+                    self.logger.debug(f"Cleaned up {name} pipeline")
+            except Exception as e:
+                self.logger.warning(f"Error cleaning up {name} pipeline: {e}")
+        
+        # Clear CUDA cache if available
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                self.logger.debug("Cleared CUDA cache")
+        except ImportError:
+            pass
+    
+    def __del__(self):
+        """Destructor to ensure cleanup on object deletion."""
+        self.cleanup()
     
     def process_video(self, video_path: Path, output_dir: Path, 
                      selected_pipelines: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -242,6 +294,16 @@ class VideoAnnotatorRunner:
         
         # Run each pipeline
         for pipeline_name, pipeline in pipelines_to_run.items():
+            # Check for interrupt before each pipeline
+            if _interrupted.is_set():
+                self.logger.warning(f"Interrupted before running {pipeline_name} pipeline")
+                results['pipeline_results'][pipeline_name] = {
+                    'error': 'Processing interrupted by user',
+                    'status': 'cancelled'
+                }
+                results['errors'].append(f"{pipeline_name} pipeline cancelled due to interrupt")
+                break
+                
             self.logger.info(f"Running {pipeline_name} pipeline...")
             pipeline_start_time = time.time()
             
@@ -280,6 +342,17 @@ class VideoAnnotatorRunner:
                     json.dump(pipeline_results, f, indent=2, default=str)
                 
                 self.logger.info(f"Completed {pipeline_name} pipeline in {pipeline_duration:.2f}s")
+                
+            except KeyboardInterrupt:
+                _interrupted.set()
+                error_msg = f"Interrupted during {pipeline_name} pipeline"
+                self.logger.warning(error_msg)
+                results['pipeline_results'][pipeline_name] = {
+                    'error': 'Processing interrupted by user',
+                    'status': 'cancelled'
+                }
+                results['errors'].append(error_msg)
+                break
                 
             except Exception as e:
                 error_msg = f"Error in {pipeline_name} pipeline: {str(e)}"
@@ -352,11 +425,16 @@ class VideoAnnotatorRunner:
             }
         }
         
-        # Process videos in parallel
+        # Process videos in parallel with interrupt handling
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_video = {}
             
+            # Submit all tasks first
             for video_file in video_files:
+                if _interrupted.is_set():
+                    self.logger.warning("Interrupted before submitting all tasks")
+                    break
+                    
                 # Create unique output directory for each video
                 video_output_dir = output_dir / video_file.stem
                 
@@ -368,28 +446,51 @@ class VideoAnnotatorRunner:
                 future_to_video[future] = video_file
             
             # Collect results as they complete
-            for future in as_completed(future_to_video):
-                video_file = future_to_video[future]
-                
-                try:
-                    result = future.result()
-                    batch_results['video_results'][str(video_file)] = result
+            try:
+                for future in as_completed(future_to_video):
+                    if _interrupted.is_set():
+                        self.logger.warning("Interrupted during processing, cancelling remaining tasks...")
+                        # Cancel remaining futures
+                        for f in future_to_video:
+                            if not f.done():
+                                f.cancel()
+                        break
                     
-                    if result.get('errors'):
+                    video_file = future_to_video[future]
+                    
+                    try:
+                        # Use timeout to allow interrupt checking
+                        result = future.result(timeout=1.0)
+                        batch_results['video_results'][str(video_file)] = result
+                        
+                        if result.get('errors'):
+                            batch_results['summary']['failed'] += 1
+                            batch_results['errors'].extend(result['errors'])
+                        else:
+                            batch_results['summary']['completed'] += 1
+                        
+                        batch_results['summary']['total_processing_time'] += result.get('total_duration', 0)
+                        
+                        self.logger.info(f"Completed processing: {video_file.name}")
+                        
+                    except Exception as e:
+                        error_msg = f"Failed to process {video_file}: {str(e)}"
+                        self.logger.error(error_msg)
+                        batch_results['errors'].append(error_msg)
                         batch_results['summary']['failed'] += 1
-                        batch_results['errors'].extend(result['errors'])
-                    else:
-                        batch_results['summary']['completed'] += 1
-                    
-                    batch_results['summary']['total_processing_time'] += result.get('total_duration', 0)
-                    
-                    self.logger.info(f"Completed processing: {video_file.name}")
-                    
-                except Exception as e:
-                    error_msg = f"Failed to process {video_file}: {str(e)}"
-                    self.logger.error(error_msg)
-                    batch_results['errors'].append(error_msg)
-                    batch_results['summary']['failed'] += 1
+                        
+            except KeyboardInterrupt:
+                self.logger.warning("KeyboardInterrupt caught in batch processing")
+                _interrupted.set()
+                # Attempt to cancel remaining futures
+                for future in future_to_video:
+                    if not future.done():
+                        future.cancel()
+        
+        # Check if we were interrupted
+        if _interrupted.is_set():
+            batch_results['interrupted'] = True
+            batch_results['errors'].append("Batch processing was interrupted by user")
         
         # Finalize batch results
         batch_results['end_time'] = datetime.now().isoformat()
@@ -417,14 +518,30 @@ class VideoAnnotatorRunner:
             Dictionary containing processing results
         """
         try:
+            # Check for interrupt before starting
+            if _interrupted.is_set():
+                return {
+                    'error': 'Processing interrupted by user',
+                    'status': 'cancelled',
+                    'video_path': str(video_path)
+                }
+            
             if not self.validate_video_file(video_path):
                 return {
                     'error': 'Invalid video file',
-                    'status': 'failed'
+                    'status': 'failed',
+                    'video_path': str(video_path)
                 }
             
             return self.process_video(video_path, output_dir, selected_pipelines)
             
+        except KeyboardInterrupt:
+            _interrupted.set()
+            return {
+                'error': 'Processing interrupted by user',
+                'status': 'cancelled',
+                'video_path': str(video_path)
+            }
         except Exception as e:
             return {
                 'error': str(e),
@@ -484,17 +601,80 @@ class VideoAnnotatorRunner:
 
 
 def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
-    """Set up logging configuration."""
-    handlers = [logging.StreamHandler()]
+    """Set up comprehensive logging configuration."""
+    # Clear any existing handlers
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
     
-    if log_file:
-        handlers.append(logging.FileHandler(log_file))
-    
-    logging.basicConfig(
-        level=getattr(logging, log_level.upper()),
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=handlers
+    # Create formatters
+    detailed_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
     )
+    
+    simple_formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    
+    # Console handler - always present for user feedback
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(getattr(logging, log_level.upper()))
+    console_handler.setFormatter(simple_formatter)
+    
+    handlers = [console_handler]
+    
+    # File handler - if specified
+    if log_file:
+        log_path = Path(log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        file_handler.setLevel(logging.DEBUG)  # Always debug level for files
+        file_handler.setFormatter(detailed_formatter)
+        handlers.append(file_handler)
+        
+        print(f"Logging to file: {log_file}")
+    else:
+        # Create default log file in logs directory
+        log_dir = Path("logs")
+        log_dir.mkdir(exist_ok=True)
+        log_file = log_dir / f"videoannotator_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(detailed_formatter)
+        handlers.append(file_handler)
+        
+        print(f"Logging to file: {log_file}")
+    
+    # Configure root logger
+    logging.basicConfig(
+        level=logging.DEBUG,  # Set root to DEBUG, handlers control actual level
+        handlers=handlers,
+        force=True  # Force reconfiguration
+    )
+    
+    # Reduce noise from some verbose libraries
+    logging.getLogger('PIL').setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+    logging.getLogger('requests').setLevel(logging.WARNING)
+    # Suppress ByteTrack and YOLO debug output
+    logging.getLogger('ultralytics').setLevel(logging.WARNING)
+    logging.getLogger('yolo').setLevel(logging.WARNING)
+    logging.getLogger('bytetrack').setLevel(logging.WARNING)
+    # Suppress numba debug output
+    logging.getLogger('numba').setLevel(logging.WARNING)
+    logging.getLogger('numba.core.byteflow').setLevel(logging.WARNING)
+    
+    # Test logging
+    logger = logging.getLogger(__name__)
+    logger.info("Logging system initialized")
+    logger.debug(f"Log level: {log_level}")
+    logger.debug(f"Handlers: {[type(h).__name__ for h in handlers]}")
+    
+    return str(log_file)
 
 
 def main():
@@ -556,10 +736,14 @@ Examples:
     
     args = parser.parse_args()
     
-    # Set up logging
-    setup_logging(args.log_level, args.log_file)
+    # Set up logging and get log file path
+    log_file_path = setup_logging(args.log_level, args.log_file)
     logger = logging.getLogger(__name__)
     
+    # Show startup banner
+    print("=" * 60)
+    print("VideoAnnotator - Modern Video Annotation Pipeline")
+    print("=" * 60)
     logger.info("VideoAnnotator - Modern Video Annotation Pipeline")
     logger.info("=" * 50)
     
@@ -646,35 +830,73 @@ Examples:
                 return 1
             
             logger.info(f"Found {len(video_files)} videos to process")
+            logger.info(f"Using {args.max_workers} parallel workers")
+            logger.info(f"Output directory: {output_dir}")
+            logger.info("Press Ctrl+C to interrupt batch processing gracefully")
+            print()  # Add space before processing starts
             
-            # Process videos in batch
-            batch_results = runner.process_videos_batch(
-                batch_dir, output_dir, args.pipeline, max_workers=2
-            )
-            
-            # Print batch summary
-            logger.info("\nBatch Processing Summary:")
-            logger.info(f"  Total videos: {batch_results['total_videos']}")
-            logger.info(f"  Completed: {batch_results['summary']['completed']}")
-            logger.info(f"  Failed: {batch_results['summary']['failed']}")
-            logger.info(f"  Total processing time: {batch_results['summary']['total_processing_time']:.2f}s")
-            
-            if batch_results['errors']:
-                logger.warning(f"  Errors encountered: {len(batch_results['errors'])}")
-                for error in batch_results['errors'][:5]:  # Show first 5 errors
-                    logger.warning(f"    - {error}")
-                if len(batch_results['errors']) > 5:
-                    logger.warning(f"    ... and {len(batch_results['errors']) - 5} more errors")
-            
-            return 0 if batch_results['summary']['failed'] == 0 else 1
+            try:
+                # Process videos in batch
+                batch_results = runner.process_videos_batch(
+                    batch_dir, output_dir, args.pipeline, max_workers=args.max_workers
+                )
+                
+                # Print batch summary
+                print("\n" + "=" * 60)
+                print("BATCH PROCESSING SUMMARY")
+                print("=" * 60)
+                logger.info("Batch Processing Summary:")
+                logger.info(f"  Total videos: {batch_results['total_videos']}")
+                logger.info(f"  Completed: {batch_results['summary']['completed']}")
+                logger.info(f"  Failed: {batch_results['summary']['failed']}")
+                
+                if batch_results.get('interrupted'):
+                    logger.warning("  Status: INTERRUPTED BY USER")
+                    
+                logger.info(f"  Total processing time: {batch_results['summary']['total_processing_time']:.2f}s")
+                logger.info(f"  Log file: {log_file_path}")
+                
+                if batch_results['errors']:
+                    logger.warning(f"  Errors encountered: {len(batch_results['errors'])}")
+                    for error in batch_results['errors'][:5]:  # Show first 5 errors
+                        logger.warning(f"    - {error}")
+                    if len(batch_results['errors']) > 5:
+                        logger.warning(f"    ... and {len(batch_results['errors']) - 5} more errors")
+                        logger.warning(f"    Check log file for complete error details: {log_file_path}")
+                
+                # Return appropriate exit code
+                if batch_results.get('interrupted'):
+                    return 130  # Standard exit code for Ctrl+C
+                elif batch_results['summary']['failed'] > 0:
+                    return 1
+                else:
+                    return 0
+                    
+            except KeyboardInterrupt:
+                logger.warning("\nBatch processing interrupted by user")
+                return 130
         
         logger.info("VideoAnnotator processing completed successfully!")
         return 0
         
+    except KeyboardInterrupt:
+        logger.warning("\nVideoAnnotator interrupted by user")
+        return 130
+        
     except Exception as e:
         logger.error(f"VideoAnnotator processing failed: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Check log file for details: {log_file_path}")
+        
+        # Log full traceback to file but show simplified error to user
+        logger.debug("Full error traceback:", exc_info=True)
+        
+        # Show traceback if debug level
+        if args.log_level.upper() == 'DEBUG':
+            import traceback
+            traceback.print_exc()
+        else:
+            logger.error("Run with --log_level DEBUG for detailed error information")
+        
         return 1
 
 

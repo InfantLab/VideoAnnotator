@@ -58,7 +58,7 @@ class TestFileStorageBackend:
         self.storage.save_job_metadata(job)
         
         # Verify file exists
-        job_file = self.storage.base_dir / "jobs" / f"{job.job_id}.json"
+        job_file = self.storage.base_dir / "jobs" / job.job_id / "job_metadata.json"
         assert job_file.exists()
         
         # Verify content
@@ -149,7 +149,7 @@ class TestFileStorageBackend:
         self.storage.save_report(report)
         
         # Verify file exists
-        report_file = self.storage.base_dir / "reports" / f"{report.batch_id}.json"
+        report_file = self.storage.base_dir / "reports" / f"batch_report_{report.batch_id}.json"
         assert report_file.exists()
         
         # Verify content
@@ -257,9 +257,11 @@ class TestFileStorageBackendErrorHandling:
     @patch("builtins.open", new_callable=mock_open, read_data='invalid json')
     def test_load_job_invalid_json(self, mock_file):
         """Test handling invalid JSON during job load."""
-        # Create a job file first
+        # Create a job directory and metadata file first
         job = BatchJob(video_path=Path("test_video.mp4"))
-        job_file = self.storage.base_dir / "jobs" / f"{job.job_id}.json"
+        job_dir = self.storage.base_dir / "jobs" / job.job_id
+        job_dir.mkdir(parents=True, exist_ok=True)
+        job_file = job_dir / "job_metadata.json"
         job_file.touch()
         
         # Should handle invalid JSON gracefully

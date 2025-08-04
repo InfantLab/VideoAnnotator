@@ -256,19 +256,44 @@ class PersonTrackingPipeline(BasePipeline):
 
         height, width = frame.shape[:2]
 
-        # Run YOLO inference
-        if self.config["track_mode"]:
-            results = self.model.track(
-                frame,
-                conf=self.config["conf_threshold"],
-                iou=self.config["iou_threshold"],
-                tracker=f"{self.config['tracker']}.yaml",
-                persist=True,
-            )
-        else:
-            results = self.model(
-                frame, conf=self.config["conf_threshold"], iou=self.config["iou_threshold"]
-            )
+        # Run YOLO inference with error recovery
+        try:
+            if self.config["track_mode"]:
+                results = self.model.track(
+                    frame,
+                    conf=self.config["conf_threshold"],
+                    iou=self.config["iou_threshold"],
+                    tracker=f"{self.config['tracker']}.yaml",
+                    persist=True,
+                )
+            else:
+                results = self.model(
+                    frame, conf=self.config["conf_threshold"], iou=self.config["iou_threshold"]
+                )
+        except AttributeError as e:
+            if "'Conv' object has no attribute 'bn'" in str(e):
+                self.logger.warning("Model corruption detected, reinitializing YOLO model...")
+                try:
+                    # Reinitialize the model
+                    self._initialize_model()
+                    # Retry the inference
+                    if self.config["track_mode"]:
+                        results = self.model.track(
+                            frame,
+                            conf=self.config["conf_threshold"],
+                            iou=self.config["iou_threshold"],
+                            tracker=f"{self.config['tracker']}.yaml",
+                            persist=True,
+                        )
+                    else:
+                        results = self.model(
+                            frame, conf=self.config["conf_threshold"], iou=self.config["iou_threshold"]
+                        )
+                except Exception as retry_e:
+                    self.logger.error(f"Failed to recover from model corruption: {retry_e}")
+                    return []
+            else:
+                raise
 
         annotations = []
 

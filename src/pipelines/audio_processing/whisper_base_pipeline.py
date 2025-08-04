@@ -178,9 +178,17 @@ class WhisperBasePipeline(BasePipeline):
             if self.config.get("use_fp16", True) and self.device.type == "cuda":
                 model_kwargs["torch_dtype"] = torch.float16
                 
-            self.whisper_model = WhisperForConditionalGeneration.from_pretrained(
+            model = WhisperForConditionalGeneration.from_pretrained(
                 model_id, **model_kwargs
-            ).to(self.device)
+            )
+            # Handle meta tensor properly for newer PyTorch versions
+            try:
+                self.whisper_model = model.to(self.device)
+            except RuntimeError as e:
+                if "meta tensor" in str(e):
+                    self.whisper_model = model.to_empty(device=self.device)
+                else:
+                    raise
             
             # Set to evaluation mode
             self.whisper_model.eval()

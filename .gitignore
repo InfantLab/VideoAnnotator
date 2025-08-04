@@ -58,6 +58,7 @@ coverage.xml
 
 # Django stuff:
 *.log
+logs/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -153,6 +154,7 @@ code/__temp__.mp4
 mydata
 
 # Project specific outputs and caches
+*_out/
 batch_results/
 demo_results/
 test_output/

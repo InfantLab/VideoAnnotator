@@ -113,8 +113,8 @@ class FailureRecovery:
             Updated job ready for retry
         """
         job.retry_count += 1
-        job.status = JobStatus.RETRYING
-        job.error_message = str(error)
+        job.status = JobStatus.PENDING  # Reset to pending for retry
+        job.error_message = None  # Clear error message for clean retry
         
         # Clear partial results if needed
         if self._should_clear_partial_results(error):
@@ -243,25 +243,22 @@ class FailureRecovery:
     
     def _is_permanent_error(self, error: Exception) -> bool:
         """Check if an error is permanent and shouldn't be retried."""
-        permanent_errors = [
-            FileNotFoundError,  # Video file missing
-            PermissionError,    # Access denied
-            ValueError,         # Invalid configuration
-        ]
-        
-        # Check for specific error messages that indicate permanent issues
+        # Be more conservative - only truly permanent errors should not be retried
         error_str = str(error).lower()
-        permanent_messages = [
-            'file not found',
-            'permission denied',
+        
+        # Only these specific patterns are considered truly permanent
+        permanent_patterns = [
             'invalid video format',
             'codec not supported',
+            'invalid configuration',
+            'malformed input',
         ]
         
-        return (
-            type(error) in permanent_errors or
-            any(msg in error_str for msg in permanent_messages)
-        )
+        # Permission errors might be temporary (file lock, etc.)
+        # File not found might be temporary (network mount, etc.)
+        # Most other errors could be transient
+        
+        return any(pattern in error_str for pattern in permanent_patterns)
     
     def _is_catastrophic_error(self, error: Exception) -> bool:
         """Check if an error is catastrophic and affects the entire job."""
