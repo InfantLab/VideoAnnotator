@@ -8,9 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial v1.1.0 development
+- Future development
 
-## [1.1.0] - 2025-01-04
+## [1.1.1] - 2025-08-04
+
+### Fixed
+- **PyTorch Meta Tensor Errors**: Fixed "Cannot copy out of meta tensor" errors in face analysis and audio pipelines by implementing proper `to_empty()` fallback handling
+- **Person Pipeline Model Corruption**: Added robust error recovery for "'Conv' object has no attribute 'bn'" errors with automatic model reinitialization
+- **Batch Processing Stability**: Enhanced error handling and recovery mechanisms across all pipelines
+
+### Improved
+- **Logging System**: Suppressed verbose debug output from ByteTracker, YOLO, and numba for cleaner batch processing logs
+- **Performance Optimization**: Pre-initialize all pipelines during setup instead of lazy loading for each video, significantly improving batch processing speed
+- **GPU Memory Management**: Added proper cleanup methods with CUDA cache clearing and resource management
+- **Error Recovery**: Implemented automatic model reinitialization when corruption is detected during processing
+
+### Changed
+- **Pipeline Initialization**: Models now load once during VideoAnnotator initialization rather than per-video for better batch performance
+- **Memory Management**: Added destructor and cleanup methods to prevent GPU memory leaks during batch processing
+
+## [1.1.0] - 2025-08-04
 
 ### Added - PersonID System
 - **PersonIdentityManager** for consistent person identification across pipelines
