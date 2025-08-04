@@ -30,6 +30,26 @@ person_tracking:
   pose_format: "coco_17"
   min_keypoint_confidence: 0.3
   max_persons: 10
+  
+  # Person identity and automatic labeling
+  person_identity:
+    enabled: true
+    id_format: "semantic"  # "semantic" (person_video_001) or "integer" (1, 2, 3)
+    
+    # Automatic labeling with size-based inference (enabled by default)
+    automatic_labeling:
+      enabled: true
+      confidence_threshold: 0.7
+      
+      # Size-based labeling - primary method for adult/child classification
+      size_based:
+        enabled: true
+        height_threshold: 0.4  # Normalized height threshold for child/adult
+        confidence: 0.7
+        adult_label: "parent"
+        child_label: "infant"
+        use_simple_analyzer: true  # Use simplified size-based analyzer by default
+        min_detections_for_analysis: 2  # Minimum detections needed for classification
 
 # Face Analysis Pipeline
 face_analysis:

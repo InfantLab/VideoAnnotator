@@ -36,6 +36,26 @@ person_tracking:
   max_persons: 20
   min_track_length: 3
   trajectory_smoothing: true
+  
+  # Person identity and automatic labeling (high-performance settings)
+  person_identity:
+    enabled: true
+    id_format: "semantic"
+    
+    # Enhanced automatic labeling for high-performance processing
+    automatic_labeling:
+      enabled: true
+      confidence_threshold: 0.6  # Lower threshold for more labels
+      
+      # Size-based labeling with enhanced settings
+      size_based:
+        enabled: true
+        height_threshold: 0.4
+        confidence: 0.8  # Higher confidence in high-performance mode
+        adult_label: "parent"
+        child_label: "infant"
+        use_simple_analyzer: true  # Use simplified analyzer for better performance
+        min_detections_for_analysis: 1  # Lower minimum for faster processing
 
 # Face Analysis Pipeline
 face_analysis:

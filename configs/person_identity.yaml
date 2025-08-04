@@ -28,6 +28,10 @@ person_tracking:
         confidence: 0.7
         adult_label: "parent"
         child_label: "infant"
+        
+        # First version settings - simplified size-based inference
+        use_simple_analyzer: true  # Use simplified size-based analyzer instead of full automatic labeling
+        min_detections_for_analysis: 2  # Minimum detections needed for classification
       
       # Position-based labeling  
       position_based:
