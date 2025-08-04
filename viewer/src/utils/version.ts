@@ -41,7 +41,7 @@ if (typeof window !== 'undefined') {
     getAppTitle,
     logVersionInfo
   };
-  
+
   // Auto-log version on startup
   logVersionInfo();
 }

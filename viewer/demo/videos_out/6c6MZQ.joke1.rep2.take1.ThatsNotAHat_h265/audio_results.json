@@ -1,0 +1,205 @@
+[
+  {
+    "pipeline": "speech_recognition",
+    "format": "webvtt",
+    "data": [
+      {
+        "video_id": "audio_segment",
+        "timestamp": 0.0,
+        "transcript": "Joshi, it'll be funny, huh? It'll be funny, huh? Yeah!",
+        "language": "en",
+        "confidence": 0.0,
+        "words": [
+          {
+            "word": "Joshi,",
+            "start": 0.0,
+            "end": 0.64,
+            "confidence": 0.616625502705574
+          },
+          {
+            "word": "it'll",
+            "start": 1.0,
+            "end": 1.28,
+            "confidence": 0.401588574051857
+          },
+          {
+            "word": "be",
+            "start": 1.28,
+            "end": 1.42,
+            "confidence": 0.2683483064174652
+          },
+          {
+            "word": "funny,",
+            "start": 1.42,
+            "end": 1.62,
+            "confidence": 0.3155297040939331
+          },
+          {
+            "word": "huh?",
+            "start": 1.74,
+            "end": 1.86,
+            "confidence": 0.15378427505493164
+          },
+          {
+            "word": "It'll",
+            "start": 3.22,
+            "end": 3.7,
+            "confidence": 0.45032069087028503
+          },
+          {
+            "word": "be",
+            "start": 3.7,
+            "end": 3.88,
+            "confidence": 0.8768195509910583
+          },
+          {
+            "word": "funny,",
+            "start": 3.88,
+            "end": 4.06,
+            "confidence": 0.9661272764205933
+          },
+          {
+            "word": "huh?",
+            "start": 4.26,
+            "end": 4.32,
+            "confidence": 0.893302857875824
+          },
+          {
+            "word": "Yeah!",
+            "start": 5.96,
+            "end": 6.44,
+            "confidence": 0.7581143379211426
+          }
+        ],
+        "metadata": {
+          "model": "base",
+          "task": "transcribe",
+          "num_segments": 3,
+          "num_words": 10,
+          "start_time": 0.0,
+          "end_time": 6.44,
+          "total_duration": 6.44,
+          "segments": [
+            {
+              "id": 0,
+              "start": 0.0,
+              "end": 1.86,
+              "text": "Joshi, it'll be funny, huh?",
+              "tokens": [
+                50364,
+                9785,
+                72,
+                11,
+                309,
+                603,
+                312,
+                4074,
+                11,
+                7020,
+                30,
+                50464
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.791501338665302,
+              "compression_ratio": 1.2272727272727273,
+              "no_speech_prob": 0.07689092308282852
+            },
+            {
+              "id": 1,
+              "start": 3.22,
+              "end": 4.32,
+              "text": "It'll be funny, huh?",
+              "tokens": [
+                50539,
+                467,
+                603,
+                312,
+                4074,
+                11,
+                7020,
+                30,
+                50614
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.791501338665302,
+              "compression_ratio": 1.2272727272727273,
+              "no_speech_prob": 0.07689092308282852
+            },
+            {
+              "id": 2,
+              "start": 5.96,
+              "end": 6.44,
+              "text": "Yeah!",
+              "tokens": [
+                50664,
+                865,
+                0,
+                50714
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.791501338665302,
+              "compression_ratio": 1.2272727272727273,
+              "no_speech_prob": 0.07689092308282852
+            }
+          ]
+        }
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speech_recognition",
+      "output_format": "webvtt",
+      "processed_segments": 1
+    }
+  },
+  {
+    "pipeline": "speaker_diarization",
+    "format": "rttm",
+    "data": [
+      {
+        "file_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_temp_audio",
+        "start_time": 0.09846875000000001,
+        "duration": 0.421875,
+        "end_time": 0.52034375,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_temp_audio",
+        "start_time": 1.1953437500000001,
+        "duration": 0.8775,
+        "end_time": 2.07284375,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_temp_audio",
+        "start_time": 3.87846875,
+        "duration": 0.81,
+        "end_time": 4.68846875,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_temp_audio",
+        "start_time": 6.105968750000001,
+        "duration": 0.6412499999999994,
+        "end_time": 6.74721875,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speaker_diarization",
+      "output_format": "rttm",
+      "processed_segments": 4
+    }
+  }
+]

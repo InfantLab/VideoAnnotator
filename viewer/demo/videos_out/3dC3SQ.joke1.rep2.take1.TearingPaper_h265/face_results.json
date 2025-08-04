@@ -1,0 +1,937 @@
+[
+  {
+    "id": 1,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_0",
+    "category_id": 100,
+    "bbox": [
+      196.0,
+      111.0,
+      133.0,
+      133.0
+    ],
+    "area": 17689.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 0,
+    "timestamp": 0.0,
+    "frame_number": 0,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "astonishment_surprise": {
+          "score": 0.8344993591308594,
+          "rank": 1,
+          "raw_score": 42.31999588012695
+        },
+        "pleasure_ecstasy": {
+          "score": 0.13217303156852722,
+          "rank": 2,
+          "raw_score": 40.47727584838867
+        },
+        "contentment": {
+          "score": 0.019542543217539787,
+          "rank": 3,
+          "raw_score": 38.565757751464844
+        },
+        "amusement": {
+          "score": 0.012963777408003807,
+          "rank": 4,
+          "raw_score": 38.15532302856445
+        },
+        "interest": {
+          "score": 0.000669357308652252,
+          "rank": 5,
+          "raw_score": 35.19172668457031
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 2,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_7",
+    "category_id": 100,
+    "bbox": [
+      209.0,
+      106.0,
+      116.0,
+      116.0
+    ],
+    "area": 13456.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 0,
+    "timestamp": 0.9640909090909091,
+    "frame_number": 7,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "pleasure_ecstasy": {
+          "score": 0.864090085029602,
+          "rank": 1,
+          "raw_score": 30.534038543701172
+        },
+        "astonishment_surprise": {
+          "score": 0.134679913520813,
+          "rank": 2,
+          "raw_score": 28.675262451171875
+        },
+        "emotional_vulnerability": {
+          "score": 0.0010413838317617774,
+          "rank": 3,
+          "raw_score": 23.812911987304688
+        },
+        "interest": {
+          "score": 0.0001050548380590044,
+          "rank": 4,
+          "raw_score": 21.519088745117188
+        },
+        "arousal": {
+          "score": 7.930136780487373e-05,
+          "rank": 5,
+          "raw_score": 21.23786163330078
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 3,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_14",
+    "category_id": 100,
+    "bbox": [
+      464.0,
+      238.0,
+      52.0,
+      52.0
+    ],
+    "area": 2704.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 0,
+    "timestamp": 1.9281818181818182,
+    "frame_number": 14,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "embarrassment": {
+          "score": 0.9542184472084045,
+          "rank": 1,
+          "raw_score": 32.361507415771484
+        },
+        "concentration": {
+          "score": 0.04575053229928017,
+          "rank": 2,
+          "raw_score": 29.32381820678711
+        },
+        "distress": {
+          "score": 1.8705712136579677e-05,
+          "rank": 3,
+          "raw_score": 21.52168846130371
+        },
+        "arousal": {
+          "score": 6.268664947128855e-06,
+          "rank": 4,
+          "raw_score": 20.428422927856445
+        },
+        "interest": {
+          "score": 2.8016122541885125e-06,
+          "rank": 5,
+          "raw_score": 19.62305450439453
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 4,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_14",
+    "category_id": 100,
+    "bbox": [
+      253.0,
+      323.0,
+      76.0,
+      76.0
+    ],
+    "area": 5776.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 1,
+    "timestamp": 1.9281818181818182,
+    "frame_number": 14,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "amusement": {
+          "score": 0.8907760381698608,
+          "rank": 1,
+          "raw_score": 35.701473236083984
+        },
+        "elation": {
+          "score": 0.09036511927843094,
+          "rank": 2,
+          "raw_score": 33.413238525390625
+        },
+        "pleasure_ecstasy": {
+          "score": 0.01876349374651909,
+          "rank": 3,
+          "raw_score": 31.841293334960938
+        },
+        "distress": {
+          "score": 5.315080125001259e-05,
+          "rank": 4,
+          "raw_score": 25.97475814819336
+        },
+        "arousal": {
+          "score": 4.115621413802728e-05,
+          "rank": 5,
+          "raw_score": 25.7189998626709
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 5,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_14",
+    "category_id": 100,
+    "bbox": [
+      437.0,
+      361.0,
+      92.0,
+      92.0
+    ],
+    "area": 8464.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 2,
+    "timestamp": 1.9281818181818182,
+    "frame_number": 14,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "concentration": {
+          "score": 0.999713122844696,
+          "rank": 1,
+          "raw_score": 40.796104431152344
+        },
+        "pleasure_ecstasy": {
+          "score": 0.00028680372633971274,
+          "rank": 2,
+          "raw_score": 32.639678955078125
+        },
+        "interest": {
+          "score": 2.2958226431057938e-09,
+          "rank": 3,
+          "raw_score": 20.904216766357422
+        },
+        "affection": {
+          "score": 1.1147195388971909e-09,
+          "rank": 4,
+          "raw_score": 20.18172836303711
+        },
+        "fatigue_exhaustion": {
+          "score": 6.620639037002718e-10,
+          "rank": 5,
+          "raw_score": 19.66073226928711
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 6,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_14",
+    "category_id": 100,
+    "bbox": [
+      207.0,
+      123.0,
+      114.0,
+      114.0
+    ],
+    "area": 12996.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 3,
+    "timestamp": 1.9281818181818182,
+    "frame_number": 14,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "pleasure_ecstasy": {
+          "score": 0.9992087483406067,
+          "rank": 1,
+          "raw_score": 39.37105941772461
+        },
+        "interest": {
+          "score": 0.0007755695260129869,
+          "rank": 2,
+          "raw_score": 32.209938049316406
+        },
+        "embarrassment": {
+          "score": 1.2535388123069424e-05,
+          "rank": 3,
+          "raw_score": 28.084896087646484
+        },
+        "affection": {
+          "score": 1.886016434582416e-06,
+          "rank": 4,
+          "raw_score": 26.190807342529297
+        },
+        "sexual_lust": {
+          "score": 9.109748475566448e-07,
+          "rank": 5,
+          "raw_score": 25.46310043334961
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 7,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_14",
+    "category_id": 100,
+    "bbox": [
+      486.0,
+      68.0,
+      124.0,
+      124.0
+    ],
+    "area": 15376.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 4,
+    "timestamp": 1.9281818181818182,
+    "frame_number": 14,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "pleasure_ecstasy": {
+          "score": 0.5509553551673889,
+          "rank": 1,
+          "raw_score": 36.22870635986328
+        },
+        "concentration": {
+          "score": 0.23728586733341217,
+          "rank": 2,
+          "raw_score": 35.38631820678711
+        },
+        "astonishment_surprise": {
+          "score": 0.19439467787742615,
+          "rank": 3,
+          "raw_score": 35.18694305419922
+        },
+        "arousal": {
+          "score": 0.017284009605646133,
+          "rank": 4,
+          "raw_score": 32.7668342590332
+        },
+        "elation": {
+          "score": 7.107989222276956e-05,
+          "rank": 5,
+          "raw_score": 27.273101806640625
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 8,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_21",
+    "category_id": 100,
+    "bbox": [
+      575.0,
+      230.0,
+      55.0,
+      55.0
+    ],
+    "area": 3025.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 0,
+    "timestamp": 2.892272727272727,
+    "frame_number": 21,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "concentration": {
+          "score": 0.9999527931213379,
+          "rank": 1,
+          "raw_score": 39.985496520996094
+        },
+        "astonishment_surprise": {
+          "score": 4.7173918574117124e-05,
+          "rank": 2,
+          "raw_score": 30.023874282836914
+        },
+        "arousal": {
+          "score": 2.4730423930918732e-08,
+          "rank": 3,
+          "raw_score": 22.470312118530273
+        },
+        "interest": {
+          "score": 3.5305050549716555e-11,
+          "rank": 4,
+          "raw_score": 15.918547630310059
+        },
+        "emotional_numbness": {
+          "score": 1.2404079228599957e-13,
+          "rank": 5,
+          "raw_score": 10.267377853393555
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 9,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_21",
+    "category_id": 100,
+    "bbox": [
+      195.0,
+      109.0,
+      124.0,
+      124.0
+    ],
+    "area": 15376.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 1,
+    "timestamp": 2.892272727272727,
+    "frame_number": 21,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "pleasure_ecstasy": {
+          "score": 0.99994957447052,
+          "rank": 1,
+          "raw_score": 41.375064849853516
+        },
+        "contentment": {
+          "score": 3.5586897865869105e-05,
+          "rank": 2,
+          "raw_score": 31.131582260131836
+        },
+        "interest": {
+          "score": 6.699179721181281e-06,
+          "rank": 3,
+          "raw_score": 29.461589813232422
+        },
+        "astonishment_surprise": {
+          "score": 6.552224022016162e-06,
+          "rank": 4,
+          "raw_score": 29.439409255981445
+        },
+        "affection": {
+          "score": 1.5927463437037659e-06,
+          "rank": 5,
+          "raw_score": 28.02506446838379
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 10,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_28",
+    "category_id": 100,
+    "bbox": [
+      427.0,
+      16.0,
+      43.0,
+      43.0
+    ],
+    "area": 1849.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 0,
+    "timestamp": 3.8563636363636364,
+    "frame_number": 28,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "concentration": {
+          "score": 1.0,
+          "rank": 1,
+          "raw_score": 37.388832092285156
+        },
+        "pleasure_ecstasy": {
+          "score": 2.152104716657277e-09,
+          "rank": 2,
+          "raw_score": 17.4320125579834
+        },
+        "distress": {
+          "score": 6.422825604701643e-10,
+          "rank": 3,
+          "raw_score": 16.22283935546875
+        },
+        "contemplation": {
+          "score": 3.102139933819359e-10,
+          "rank": 4,
+          "raw_score": 15.495073318481445
+        },
+        "astonishment_surprise": {
+          "score": 1.2769264812195757e-10,
+          "rank": 5,
+          "raw_score": 14.607436180114746
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 11,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_28",
+    "category_id": 100,
+    "bbox": [
+      200.0,
+      117.0,
+      115.0,
+      115.0
+    ],
+    "area": 13225.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 1,
+    "timestamp": 3.8563636363636364,
+    "frame_number": 28,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "pleasure_ecstasy": {
+          "score": 0.9999866485595703,
+          "rank": 1,
+          "raw_score": 39.922550201416016
+        },
+        "sexual_lust": {
+          "score": 8.410454029217362e-06,
+          "rank": 2,
+          "raw_score": 28.236528396606445
+        },
+        "amusement": {
+          "score": 2.4473899884469574e-06,
+          "rank": 3,
+          "raw_score": 27.0020751953125
+        },
+        "interest": {
+          "score": 2.323493390576914e-06,
+          "rank": 4,
+          "raw_score": 26.950124740600586
+        },
+        "emotional_vulnerability": {
+          "score": 6.050299106163948e-08,
+          "rank": 5,
+          "raw_score": 23.301990509033203
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 12,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_28",
+    "category_id": 100,
+    "bbox": [
+      272.0,
+      177.0,
+      126.0,
+      126.0
+    ],
+    "area": 15876.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 2,
+    "timestamp": 3.8563636363636364,
+    "frame_number": 28,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "concentration": {
+          "score": 0.9959425330162048,
+          "rank": 1,
+          "raw_score": 33.874908447265625
+        },
+        "arousal": {
+          "score": 0.004056316800415516,
+          "rank": 2,
+          "raw_score": 28.37149429321289
+        },
+        "pleasure_ecstasy": {
+          "score": 1.074712827175972e-06,
+          "rank": 3,
+          "raw_score": 20.135517120361328
+        },
+        "anger": {
+          "score": 2.628571849072614e-08,
+          "rank": 4,
+          "raw_score": 16.424734115600586
+        },
+        "emotional_numbness": {
+          "score": 1.8063989193350949e-09,
+          "rank": 5,
+          "raw_score": 13.747042655944824
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 13,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_49",
+    "category_id": 100,
+    "bbox": [
+      158.0,
+      213.0,
+      61.0,
+      61.0
+    ],
+    "area": 3721.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 0,
+    "timestamp": 6.748636363636364,
+    "frame_number": 49,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "concentration": {
+          "score": 1.0,
+          "rank": 1,
+          "raw_score": 60.497291564941406
+        },
+        "interest": {
+          "score": 3.1121512034104626e-09,
+          "rank": 2,
+          "raw_score": 40.909339904785156
+        },
+        "pleasure_ecstasy": {
+          "score": 9.708718273770955e-10,
+          "rank": 3,
+          "raw_score": 39.74446487426758
+        },
+        "astonishment_surprise": {
+          "score": 2.1114481555317352e-14,
+          "rank": 4,
+          "raw_score": 29.008474349975586
+        },
+        "arousal": {
+          "score": 1.429736981340161e-15,
+          "rank": 5,
+          "raw_score": 26.31600570678711
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 14,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_63",
+    "category_id": 100,
+    "bbox": [
+      543.0,
+      213.0,
+      42.0,
+      42.0
+    ],
+    "area": 1764.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 0,
+    "timestamp": 8.676818181818183,
+    "frame_number": 63,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "concentration": {
+          "score": 0.9987200498580933,
+          "rank": 1,
+          "raw_score": 39.804080963134766
+        },
+        "contemplation": {
+          "score": 0.001264518010430038,
+          "rank": 2,
+          "raw_score": 33.13229751586914
+        },
+        "pleasure_ecstasy": {
+          "score": 1.521053764008684e-05,
+          "rank": 3,
+          "raw_score": 28.71183967590332
+        },
+        "distress": {
+          "score": 2.5659744551376207e-07,
+          "rank": 4,
+          "raw_score": 24.62960433959961
+        },
+        "astonishment_surprise": {
+          "score": 3.266310955041263e-08,
+          "rank": 5,
+          "raw_score": 22.568342208862305
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 15,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_77",
+    "category_id": 100,
+    "bbox": [
+      195.0,
+      133.0,
+      134.0,
+      134.0
+    ],
+    "area": 17956.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 0,
+    "timestamp": 10.605,
+    "frame_number": 77,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "amusement": {
+          "score": 0.9987421631813049,
+          "rank": 1,
+          "raw_score": 60.1515998840332
+        },
+        "pleasure_ecstasy": {
+          "score": 0.0012535809073597193,
+          "rank": 2,
+          "raw_score": 53.471107482910156
+        },
+        "elation": {
+          "score": 4.297590749047231e-06,
+          "rank": 3,
+          "raw_score": 47.79540252685547
+        },
+        "emotional_vulnerability": {
+          "score": 5.426915583583991e-10,
+          "rank": 4,
+          "raw_score": 38.81837844848633
+        },
+        "arousal": {
+          "score": 4.4025828122018495e-11,
+          "rank": 5,
+          "raw_score": 36.30661392211914
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 16,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_84",
+    "category_id": 100,
+    "bbox": [
+      508.0,
+      226.0,
+      38.0,
+      38.0
+    ],
+    "area": 1444.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 0,
+    "timestamp": 11.569090909090908,
+    "frame_number": 84,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "pleasure_ecstasy": {
+          "score": 0.9780599474906921,
+          "rank": 1,
+          "raw_score": 39.2627067565918
+        },
+        "concentration": {
+          "score": 0.018021471798419952,
+          "rank": 2,
+          "raw_score": 35.268699645996094
+        },
+        "elation": {
+          "score": 0.0038901972584426403,
+          "rank": 3,
+          "raw_score": 33.735595703125
+        },
+        "arousal": {
+          "score": 2.0582234355970286e-05,
+          "rank": 4,
+          "raw_score": 28.49380874633789
+        },
+        "amusement": {
+          "score": 3.773877097046352e-06,
+          "rank": 5,
+          "raw_score": 26.797483444213867
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  },
+  {
+    "id": 17,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_84",
+    "category_id": 100,
+    "bbox": [
+      216.0,
+      139.0,
+      133.0,
+      133.0
+    ],
+    "area": 17689.0,
+    "iscrowd": 0,
+    "score": 1.0,
+    "face_id": 1,
+    "timestamp": 11.569090909090908,
+    "frame_number": 84,
+    "backend": "opencv",
+    "person_id": "unknown",
+    "person_label": "unknown",
+    "person_label_confidence": 0.0,
+    "person_labeling_method": "none",
+    "attributes": {
+      "emotions": {
+        "amusement": {
+          "score": 0.9977019429206848,
+          "rank": 1,
+          "raw_score": 61.08185958862305
+        },
+        "pleasure_ecstasy": {
+          "score": 0.002295664045959711,
+          "rank": 2,
+          "raw_score": 55.00742721557617
+        },
+        "elation": {
+          "score": 2.410204160696594e-06,
+          "rank": 3,
+          "raw_score": 48.14836120605469
+        },
+        "contentment": {
+          "score": 7.674392371592731e-11,
+          "rank": 4,
+          "raw_score": 37.79361343383789
+        },
+        "arousal": {
+          "score": 1.2582695302354452e-12,
+          "rank": 5,
+          "raw_score": 33.68287658691406
+        }
+      },
+      "model_info": {
+        "model_size": "small",
+        "embedding_dim": 1152
+      }
+    }
+  }
+]

@@ -1,0 +1,48 @@
+{
+  "video_id": "2UWdXP.joke1.rep2.take1.Peekaboo_h265",
+  "person_tracks": [
+    {
+      "person_id": "person_2UWdXP.joke1.rep2.take1.Peekaboo_h265_001",
+      "track_id": 334,
+      "video_id": "2UWdXP.joke1.rep2.take1.Peekaboo_h265",
+      "label": "parent",
+      "confidence": 0.7,
+      "method": "automatic_size_based",
+      "timestamp": null
+    },
+    {
+      "person_id": "person_2UWdXP.joke1.rep2.take1.Peekaboo_h265_002",
+      "track_id": 382,
+      "video_id": "2UWdXP.joke1.rep2.take1.Peekaboo_h265"
+    },
+    {
+      "person_id": "person_2UWdXP.joke1.rep2.take1.Peekaboo_h265_003",
+      "track_id": 383,
+      "video_id": "2UWdXP.joke1.rep2.take1.Peekaboo_h265"
+    },
+    {
+      "person_id": "person_2UWdXP.joke1.rep2.take1.Peekaboo_h265_004",
+      "track_id": 384,
+      "video_id": "2UWdXP.joke1.rep2.take1.Peekaboo_h265"
+    },
+    {
+      "person_id": "person_2UWdXP.joke1.rep2.take1.Peekaboo_h265_005",
+      "track_id": 387,
+      "video_id": "2UWdXP.joke1.rep2.take1.Peekaboo_h265",
+      "label": "parent",
+      "confidence": 0.7,
+      "method": "automatic_size_based",
+      "timestamp": null
+    }
+  ],
+  "labeling_metadata": {
+    "total_persons": 5,
+    "labeled_persons": 7,
+    "id_format": "semantic",
+    "detections_summary": {
+      "total_detections": 22,
+      "unique_persons": 5,
+      "labeled_persons": 2
+    }
+  }
+}

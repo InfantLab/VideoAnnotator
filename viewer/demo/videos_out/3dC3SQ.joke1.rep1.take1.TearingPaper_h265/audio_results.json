@@ -1,0 +1,143 @@
+[
+  {
+    "pipeline": "speech_recognition",
+    "format": "webvtt",
+    "data": [
+      {
+        "video_id": "audio_segment",
+        "timestamp": 0.0,
+        "transcript": "Hi, sir. What happened?",
+        "language": "en",
+        "confidence": 0.0,
+        "words": [
+          {
+            "word": "Hi,",
+            "start": 0.0,
+            "end": 2.68,
+            "confidence": 0.07170180976390839
+          },
+          {
+            "word": "sir.",
+            "start": 2.78,
+            "end": 2.98,
+            "confidence": 0.33667755126953125
+          },
+          {
+            "word": "What",
+            "start": 8.239999999999998,
+            "end": 9.639999999999999,
+            "confidence": 0.5836648941040039
+          },
+          {
+            "word": "happened?",
+            "start": 9.639999999999999,
+            "end": 11.04,
+            "confidence": 0.9616861939430237
+          }
+        ],
+        "metadata": {
+          "model": "base",
+          "task": "transcribe",
+          "num_segments": 2,
+          "num_words": 4,
+          "start_time": 0.0,
+          "end_time": 11.04,
+          "total_duration": 11.04,
+          "segments": [
+            {
+              "id": 0,
+              "start": 0.0,
+              "end": 2.98,
+              "text": "Hi, sir.",
+              "tokens": [
+                50364,
+                2421,
+                11,
+                4735,
+                13,
+                50564
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -1.18893297513326,
+              "compression_ratio": 0.7419354838709677,
+              "no_speech_prob": 0.21378402411937714
+            },
+            {
+              "id": 1,
+              "start": 8.239999999999998,
+              "end": 11.04,
+              "text": "What happened?",
+              "tokens": [
+                50564,
+                708,
+                2011,
+                30,
+                50964
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -1.18893297513326,
+              "compression_ratio": 0.7419354838709677,
+              "no_speech_prob": 0.21378402411937714
+            }
+          ]
+        }
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speech_recognition",
+      "output_format": "webvtt",
+      "processed_segments": 1
+    }
+  },
+  {
+    "pipeline": "speaker_diarization",
+    "format": "rttm",
+    "data": [
+      {
+        "file_id": "3dC3SQ.joke1.rep1.take1.TearingPaper_h265_temp_audio",
+        "start_time": 2.5959687500000004,
+        "duration": 0.43874999999999975,
+        "end_time": 3.03471875,
+        "speaker_id": "SPEAKER_01",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "3dC3SQ.joke1.rep1.take1.TearingPaper_h265_temp_audio",
+        "start_time": 3.3215937500000003,
+        "duration": 0.0674999999999999,
+        "end_time": 3.3890937500000002,
+        "speaker_id": "SPEAKER_01",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "3dC3SQ.joke1.rep1.take1.TearingPaper_h265_temp_audio",
+        "start_time": 8.24909375,
+        "duration": 0.1687499999999993,
+        "end_time": 8.41784375,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "3dC3SQ.joke1.rep1.take1.TearingPaper_h265_temp_audio",
+        "start_time": 10.35846875,
+        "duration": 1.5187500000000007,
+        "end_time": 11.87721875,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speaker_diarization",
+      "output_format": "rttm",
+      "processed_segments": 4
+    }
+  }
+]

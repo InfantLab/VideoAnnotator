@@ -1,0 +1,210 @@
+{
+  "info": {
+    "description": "VideoAnnotator COCO Export",
+    "version": "1.0",
+    "year": 2025,
+    "contributor": "VideoAnnotator",
+    "date_created": "2025-01-01T00:00:00Z"
+  },
+  "licenses": [],
+  "images": [
+    {
+      "id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_0",
+      "width": 640,
+      "height": 480,
+      "file_name": "4JDccE.joke5.rep3.take1.TearingPaper_h265.mp4",
+      "timestamp": 0.0,
+      "frame_number": 0
+    },
+    {
+      "id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_14",
+      "width": 640,
+      "height": 480,
+      "file_name": "4JDccE.joke5.rep3.take1.TearingPaper_h265.mp4",
+      "timestamp": 0.9678260869565217,
+      "frame_number": 14
+    },
+    {
+      "id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_42",
+      "width": 640,
+      "height": 480,
+      "file_name": "4JDccE.joke5.rep3.take1.TearingPaper_h265.mp4",
+      "timestamp": 2.9034782608695653,
+      "frame_number": 42
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_0",
+      "category_id": 100,
+      "bbox": [
+        74.0,
+        4.0,
+        119.0,
+        119.0
+      ],
+      "area": 14161.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 0.0,
+      "frame_number": 0,
+      "backend": "opencv",
+      "person_id": "unknown",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none",
+      "attributes": {
+        "emotions": {
+          "interest": {
+            "score": 0.9994731545448303,
+            "rank": 1,
+            "raw_score": 40.674800872802734
+          },
+          "concentration": {
+            "score": 0.0004139991360716522,
+            "rank": 2,
+            "raw_score": 32.88568115234375
+          },
+          "arousal": {
+            "score": 0.00010859901522053406,
+            "rank": 3,
+            "raw_score": 31.5474796295166
+          },
+          "distress": {
+            "score": 4.217263267491944e-06,
+            "rank": 4,
+            "raw_score": 28.29900360107422
+          },
+          "emotional_vulnerability": {
+            "score": 5.446140960430057e-08,
+            "rank": 5,
+            "raw_score": 23.949554443359375
+          }
+        },
+        "model_info": {
+          "model_size": "small",
+          "embedding_dim": 1152
+        }
+      }
+    },
+    {
+      "id": 2,
+      "image_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_14",
+      "category_id": 100,
+      "bbox": [
+        59.0,
+        352.0,
+        68.0,
+        68.0
+      ],
+      "area": 4624.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 0.9678260869565217,
+      "frame_number": 14,
+      "backend": "opencv",
+      "person_id": "unknown",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none",
+      "attributes": {
+        "emotions": {
+          "astonishment_surprise": {
+            "score": 0.5204888582229614,
+            "rank": 1,
+            "raw_score": 30.63714027404785
+          },
+          "concentration": {
+            "score": 0.4437142014503479,
+            "rank": 2,
+            "raw_score": 30.47755241394043
+          },
+          "contemplation": {
+            "score": 0.01971990428864956,
+            "rank": 3,
+            "raw_score": 27.36400032043457
+          },
+          "distress": {
+            "score": 0.008950348943471909,
+            "rank": 4,
+            "raw_score": 26.574064254760742
+          },
+          "interest": {
+            "score": 0.007090470753610134,
+            "rank": 5,
+            "raw_score": 26.341123580932617
+          }
+        },
+        "model_info": {
+          "model_size": "small",
+          "embedding_dim": 1152
+        }
+      }
+    },
+    {
+      "id": 3,
+      "image_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_42",
+      "category_id": 100,
+      "bbox": [
+        106.0,
+        69.0,
+        86.0,
+        86.0
+      ],
+      "area": 7396.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 2.9034782608695653,
+      "frame_number": 42,
+      "backend": "opencv",
+      "person_id": "unknown",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none",
+      "attributes": {
+        "emotions": {
+          "interest": {
+            "score": 0.8704599738121033,
+            "rank": 1,
+            "raw_score": 32.84388732910156
+          },
+          "concentration": {
+            "score": 0.09655989706516266,
+            "rank": 2,
+            "raw_score": 30.645029067993164
+          },
+          "pain": {
+            "score": 0.025415251031517982,
+            "rank": 3,
+            "raw_score": 29.31021499633789
+          },
+          "arousal": {
+            "score": 0.0074691991321742535,
+            "rank": 4,
+            "raw_score": 28.08565330505371
+          },
+          "contemplation": {
+            "score": 5.425713970907964e-05,
+            "rank": 5,
+            "raw_score": 23.160844802856445
+          }
+        },
+        "model_info": {
+          "model_size": "small",
+          "embedding_dim": 1152
+        }
+      }
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "person",
+      "supercategory": "person"
+    }
+  ]
+}

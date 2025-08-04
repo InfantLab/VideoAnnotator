@@ -1,0 +1,33 @@
+{
+  "video_id": "3dC3SQ.joke1.rep1.take1.TearingPaper_h265",
+  "person_tracks": [
+    {
+      "person_id": "person_3dC3SQ.joke1.rep1.take1.TearingPaper_h265_001",
+      "track_id": 334,
+      "video_id": "3dC3SQ.joke1.rep1.take1.TearingPaper_h265",
+      "label": "parent",
+      "confidence": 0.7,
+      "method": "automatic_size_based",
+      "timestamp": null
+    },
+    {
+      "person_id": "person_3dC3SQ.joke1.rep1.take1.TearingPaper_h265_002",
+      "track_id": 433,
+      "video_id": "3dC3SQ.joke1.rep1.take1.TearingPaper_h265",
+      "label": "parent",
+      "confidence": 0.7,
+      "method": "automatic_size_based",
+      "timestamp": null
+    }
+  ],
+  "labeling_metadata": {
+    "total_persons": 2,
+    "labeled_persons": 2,
+    "id_format": "semantic",
+    "detections_summary": {
+      "total_detections": 32,
+      "unique_persons": 2,
+      "labeled_persons": 2
+    }
+  }
+}

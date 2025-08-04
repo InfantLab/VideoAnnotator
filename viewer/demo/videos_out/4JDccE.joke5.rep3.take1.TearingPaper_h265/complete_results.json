@@ -1,0 +1,530 @@
+{
+  "video_path": "demovideos\\babyjokes\\4JDccE.joke5.rep3.take1.TearingPaper_h265.mp4",
+  "output_dir": "demovideos_out\\4JDccE.joke5.rep3.take1.TearingPaper_h265",
+  "start_time": "2025-08-04T22:56:38.685427",
+  "config": {
+    "scene_detection": {
+      "enabled": true,
+      "threshold": 0.3,
+      "min_scene_length": 1.0
+    },
+    "person_tracking": {
+      "enabled": true,
+      "model_name": "yolo11s",
+      "confidence_threshold": 0.5
+    },
+    "face_analysis": {
+      "enabled": true,
+      "backend": "laion",
+      "detection_confidence": 0.7,
+      "enable_action_units": true,
+      "enable_head_pose": true,
+      "enable_gaze": true,
+      "max_faces": 5
+    },
+    "audio_processing": {
+      "enabled": true,
+      "whisper_model": "base",
+      "sample_rate": 16000
+    }
+  },
+  "pipeline_results": {
+    "scene": {
+      "results": [
+        {
+          "id": 1,
+          "image_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_000023",
+          "category_id": 1,
+          "bbox": [
+            0,
+            0,
+            640,
+            480
+          ],
+          "area": 307200,
+          "iscrowd": 0,
+          "score": 1.0,
+          "video_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265",
+          "timestamp": 1.59,
+          "start_time": 0.0,
+          "end_time": 3.18,
+          "duration": 3.18,
+          "scene_type": "unknown",
+          "frame_start": 0,
+          "frame_end": 46,
+          "all_scores": {}
+        }
+      ],
+      "processing_time": 0.10833334922790527,
+      "status": "completed"
+    },
+    "person": {
+      "results": [
+        {
+          "id": 1,
+          "image_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_0",
+          "category_id": 1,
+          "keypoints": [
+            167.0330352783203,
+            81.33741760253906,
+            2,
+            190.57452392578125,
+            58.9639892578125,
+            2,
+            137.4645233154297,
+            47.54473876953125,
+            2,
+            205.93417358398438,
+            81.83306884765625,
+            0,
+            75.75957489013672,
+            58.19537353515625,
+            2,
+            214.62841796875,
+            230.46829223632812,
+            2,
+            25.802810668945312,
+            212.71630859375,
+            2,
+            240.229248046875,
+            430.5745849609375,
+            2,
+            42.95403289794922,
+            432.088623046875,
+            0,
+            290.2978515625,
+            453.547119140625,
+            2,
+            102.06382751464844,
+            457.92364501953125,
+            0,
+            207.7737274169922,
+            480.0,
+            0,
+            77.8355484008789,
+            480.0,
+            0,
+            303.8160400390625,
+            448.9530029296875,
+            0,
+            131.14013671875,
+            455.70892333984375,
+            0,
+            285.84674072265625,
+            477.8749694824219,
+            0,
+            150.27508544921875,
+            480.0,
+            0
+          ],
+          "num_keypoints": 8,
+          "bbox": [
+            0.0,
+            1.2577601671218872,
+            341.2894287109375,
+            478.620361328125
+          ],
+          "area": 163348.06968709826,
+          "iscrowd": 0,
+          "score": 0.7747198343276978,
+          "track_id": 510,
+          "timestamp": 0.0,
+          "frame_number": 0,
+          "person_id": "person_4JDccE.joke5.rep3.take1.TearingPaper_h265_001"
+        },
+        {
+          "id": 2,
+          "image_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_14",
+          "category_id": 1,
+          "keypoints": [
+            156.453125,
+            114.31657409667969,
+            2,
+            160.53147888183594,
+            97.08348083496094,
+            0,
+            141.298828125,
+            87.62368774414062,
+            2,
+            127.9028091430664,
+            103.1002197265625,
+            0,
+            70.82585906982422,
+            84.43165588378906,
+            2,
+            100.6262435913086,
+            209.87106323242188,
+            2,
+            17.172779083251953,
+            212.7109832763672,
+            2,
+            136.33694458007812,
+            365.1619873046875,
+            2,
+            56.2886962890625,
+            393.450927734375,
+            0,
+            189.7407989501953,
+            321.62799072265625,
+            2,
+            142.8809814453125,
+            315.03863525390625,
+            2,
+            128.19729614257812,
+            456.4016418457031,
+            2,
+            68.60848236083984,
+            468.174560546875,
+            0,
+            156.62693786621094,
+            468.5875549316406,
+            0,
+            99.21144104003906,
+            480.0,
+            0,
+            154.6663055419922,
+            472.01708984375,
+            0,
+            119.82647705078125,
+            460.7237854003906,
+            0
+          ],
+          "num_keypoints": 9,
+          "bbox": [
+            0.0,
+            0.35266533493995667,
+            311.3353271484375,
+            479.6108703613281
+          ],
+          "area": 149319.80722789094,
+          "iscrowd": 0,
+          "score": 0.6367772817611694,
+          "track_id": 510,
+          "timestamp": 0.9678260869565217,
+          "frame_number": 14,
+          "person_id": "person_4JDccE.joke5.rep3.take1.TearingPaper_h265_001"
+        },
+        {
+          "id": 3,
+          "image_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_28",
+          "category_id": 1,
+          "keypoints": [
+            173.47267150878906,
+            129.50991821289062,
+            2,
+            173.71542358398438,
+            107.92796325683594,
+            0,
+            166.07382202148438,
+            100.87454223632812,
+            2,
+            128.220458984375,
+            101.08198547363281,
+            0,
+            105.25593566894531,
+            85.88517761230469,
+            2,
+            92.40503692626953,
+            204.46295166015625,
+            2,
+            33.686363220214844,
+            231.01177978515625,
+            2,
+            136.73175048828125,
+            364.0513610839844,
+            2,
+            89.8056411743164,
+            440.22900390625,
+            2,
+            227.59011840820312,
+            258.6138916015625,
+            2,
+            215.28988647460938,
+            270.2290344238281,
+            2,
+            138.72604370117188,
+            473.218017578125,
+            0,
+            100.02928924560547,
+            480.0,
+            0,
+            206.1864013671875,
+            431.3840026855469,
+            0,
+            168.13214111328125,
+            463.09820556640625,
+            0,
+            223.1580352783203,
+            480.0,
+            0,
+            225.89007568359375,
+            480.0,
+            0
+          ],
+          "num_keypoints": 9,
+          "bbox": [
+            0.0,
+            0.018552357330918312,
+            326.34130859375,
+            479.5747375488281
+          ],
+          "area": 156505.04742018878,
+          "iscrowd": 0,
+          "score": 0.8492941856384277,
+          "track_id": 510,
+          "timestamp": 1.9356521739130435,
+          "frame_number": 28,
+          "person_id": "person_4JDccE.joke5.rep3.take1.TearingPaper_h265_001"
+        },
+        {
+          "id": 4,
+          "image_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_42",
+          "category_id": 1,
+          "keypoints": [
+            151.5233917236328,
+            125.61543273925781,
+            2,
+            160.3148193359375,
+            104.89532470703125,
+            2,
+            136.70249938964844,
+            92.45277404785156,
+            2,
+            135.93247985839844,
+            106.47288513183594,
+            0,
+            66.33198547363281,
+            76.41905212402344,
+            2,
+            104.93696594238281,
+            214.04031372070312,
+            2,
+            0.0,
+            219.51669311523438,
+            0,
+            202.1185760498047,
+            306.1515197753906,
+            2,
+            58.97608184814453,
+            392.59515380859375,
+            0,
+            313.6007080078125,
+            227.07000732421875,
+            2,
+            210.70217895507812,
+            339.9363708496094,
+            0,
+            132.20892333984375,
+            470.08563232421875,
+            0,
+            57.593505859375,
+            480.0,
+            0,
+            235.66705322265625,
+            466.13555908203125,
+            0,
+            154.12945556640625,
+            480.0,
+            0,
+            266.1095886230469,
+            480.0,
+            0,
+            208.29318237304688,
+            480.0,
+            0
+          ],
+          "num_keypoints": 7,
+          "bbox": [
+            21.621915817260742,
+            0.0,
+            339.29888916015625,
+            479.8537902832031
+          ],
+          "area": 162813.8580023814,
+          "iscrowd": 0,
+          "score": 0.8118783235549927,
+          "track_id": 510,
+          "timestamp": 2.9034782608695653,
+          "frame_number": 42,
+          "person_id": "person_4JDccE.joke5.rep3.take1.TearingPaper_h265_001"
+        }
+      ],
+      "processing_time": 1.951936960220337,
+      "status": "completed"
+    },
+    "face": {
+      "results": [
+        {
+          "id": 1,
+          "image_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_0",
+          "category_id": 100,
+          "bbox": [
+            74.0,
+            4.0,
+            119.0,
+            119.0
+          ],
+          "area": 14161.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 0,
+          "timestamp": 0.0,
+          "frame_number": 0,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "interest": {
+                "score": 0.9994731545448303,
+                "rank": 1,
+                "raw_score": 40.674800872802734
+              },
+              "concentration": {
+                "score": 0.0004139991360716522,
+                "rank": 2,
+                "raw_score": 32.88568115234375
+              },
+              "arousal": {
+                "score": 0.00010859901522053406,
+                "rank": 3,
+                "raw_score": 31.5474796295166
+              },
+              "distress": {
+                "score": 4.217263267491944e-06,
+                "rank": 4,
+                "raw_score": 28.29900360107422
+              },
+              "emotional_vulnerability": {
+                "score": 5.446140960430057e-08,
+                "rank": 5,
+                "raw_score": 23.949554443359375
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 2,
+          "image_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_14",
+          "category_id": 100,
+          "bbox": [
+            59.0,
+            352.0,
+            68.0,
+            68.0
+          ],
+          "area": 4624.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 0,
+          "timestamp": 0.9678260869565217,
+          "frame_number": 14,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "astonishment_surprise": {
+                "score": 0.5204888582229614,
+                "rank": 1,
+                "raw_score": 30.63714027404785
+              },
+              "concentration": {
+                "score": 0.4437142014503479,
+                "rank": 2,
+                "raw_score": 30.47755241394043
+              },
+              "contemplation": {
+                "score": 0.01971990428864956,
+                "rank": 3,
+                "raw_score": 27.36400032043457
+              },
+              "distress": {
+                "score": 0.008950348943471909,
+                "rank": 4,
+                "raw_score": 26.574064254760742
+              },
+              "interest": {
+                "score": 0.007090470753610134,
+                "rank": 5,
+                "raw_score": 26.341123580932617
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 3,
+          "image_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_frame_42",
+          "category_id": 100,
+          "bbox": [
+            106.0,
+            69.0,
+            86.0,
+            86.0
+          ],
+          "area": 7396.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 0,
+          "timestamp": 2.9034782608695653,
+          "frame_number": 42,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "interest": {
+                "score": 0.8704599738121033,
+                "rank": 1,
+                "raw_score": 32.84388732910156
+              },
+              "concentration": {
+                "score": 0.09655989706516266,
+                "rank": 2,
+                "raw_score": 30.645029067993164
+              },
+              "pain": {
+                "score": 0.025415251031517982,
+                "rank": 3,
+                "raw_score": 29.31021499633789
+              },
+              "arousal": {
+                "score": 0.0074691991321742535,
+                "rank": 4,
+                "raw_score": 28.08565330505371
+              },
+              "contemplation": {
+                "score": 5.425713970907964e-05,
+                "rank": 5,
+                "raw_score": 23.160844802856445
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        }
+      ],
+      "processing_time": 12.183119535446167,
+      "status": "completed"
+    }
+  },
+  "errors": [],
+  "end_time": "2025-08-04T22:56:52.931665",
+  "total_duration": 14.246817588806152
+}

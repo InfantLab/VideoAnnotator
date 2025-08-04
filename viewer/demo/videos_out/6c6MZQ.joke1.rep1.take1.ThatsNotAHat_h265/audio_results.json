@@ -1,0 +1,298 @@
+[
+  {
+    "pipeline": "speech_recognition",
+    "format": "webvtt",
+    "data": [
+      {
+        "video_id": "audio_segment",
+        "timestamp": 0.0,
+        "transcript": "Oh, it's not working. Shashi, look at my hat! Look at my hat! Is that funny? Okay.",
+        "language": "en",
+        "confidence": 0.0,
+        "words": [
+          {
+            "word": "Oh,",
+            "start": 1.2399999999999995,
+            "end": 1.78,
+            "confidence": 0.15763595700263977
+          },
+          {
+            "word": "it's",
+            "start": 2.08,
+            "end": 2.26,
+            "confidence": 0.892969936132431
+          },
+          {
+            "word": "not",
+            "start": 2.26,
+            "end": 2.38,
+            "confidence": 0.994059681892395
+          },
+          {
+            "word": "working.",
+            "start": 2.38,
+            "end": 2.64,
+            "confidence": 0.997751772403717
+          },
+          {
+            "word": "Shashi,",
+            "start": 7.14,
+            "end": 7.68,
+            "confidence": 0.4044797793030739
+          },
+          {
+            "word": "look",
+            "start": 7.96,
+            "end": 8.08,
+            "confidence": 0.9923487901687622
+          },
+          {
+            "word": "at",
+            "start": 8.08,
+            "end": 8.18,
+            "confidence": 0.9958735108375549
+          },
+          {
+            "word": "my",
+            "start": 8.18,
+            "end": 8.38,
+            "confidence": 0.9985526204109192
+          },
+          {
+            "word": "hat!",
+            "start": 8.38,
+            "end": 8.56,
+            "confidence": 0.6825903654098511
+          },
+          {
+            "word": "Look",
+            "start": 9.74,
+            "end": 9.92,
+            "confidence": 0.9862225651741028
+          },
+          {
+            "word": "at",
+            "start": 9.92,
+            "end": 10.04,
+            "confidence": 0.9970466494560242
+          },
+          {
+            "word": "my",
+            "start": 10.04,
+            "end": 10.24,
+            "confidence": 0.9971760511398315
+          },
+          {
+            "word": "hat!",
+            "start": 10.24,
+            "end": 10.42,
+            "confidence": 0.9524718523025513
+          },
+          {
+            "word": "Is",
+            "start": 11.12,
+            "end": 11.58,
+            "confidence": 0.13283352553844452
+          },
+          {
+            "word": "that",
+            "start": 11.58,
+            "end": 11.76,
+            "confidence": 0.9712604880332947
+          },
+          {
+            "word": "funny?",
+            "start": 11.76,
+            "end": 12.06,
+            "confidence": 0.9846003651618958
+          },
+          {
+            "word": "Okay.",
+            "start": 14.26,
+            "end": 14.8,
+            "confidence": 0.6524710655212402
+          }
+        ],
+        "metadata": {
+          "model": "base",
+          "task": "transcribe",
+          "num_segments": 4,
+          "num_words": 17,
+          "start_time": 0.0,
+          "end_time": 14.8,
+          "total_duration": 14.8,
+          "segments": [
+            {
+              "id": 0,
+              "start": 1.2399999999999995,
+              "end": 2.64,
+              "text": "Oh, it's not working.",
+              "tokens": [
+                50364,
+                876,
+                11,
+                309,
+                311,
+                406,
+                1364,
+                13,
+                50714
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.4610686710902623,
+              "compression_ratio": 1.0933333333333333,
+              "no_speech_prob": 0.0952596440911293
+            },
+            {
+              "id": 1,
+              "start": 7.14,
+              "end": 10.42,
+              "text": "Shashi, look at my hat! Look at my hat!",
+              "tokens": [
+                50714,
+                1160,
+                15612,
+                11,
+                574,
+                412,
+                452,
+                2385,
+                0,
+                2053,
+                412,
+                452,
+                2385,
+                0,
+                50914
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.4610686710902623,
+              "compression_ratio": 1.0933333333333333,
+              "no_speech_prob": 0.0952596440911293
+            },
+            {
+              "id": 2,
+              "start": 11.12,
+              "end": 12.06,
+              "text": "Is that funny?",
+              "tokens": [
+                50914,
+                1119,
+                300,
+                4074,
+                30,
+                51064
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.4610686710902623,
+              "compression_ratio": 1.0933333333333333,
+              "no_speech_prob": 0.0952596440911293
+            },
+            {
+              "id": 3,
+              "start": 14.26,
+              "end": 14.8,
+              "text": "Okay.",
+              "tokens": [
+                51064,
+                1033,
+                13,
+                51214
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.4610686710902623,
+              "compression_ratio": 1.0933333333333333,
+              "no_speech_prob": 0.0952596440911293
+            }
+          ]
+        }
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speech_recognition",
+      "output_format": "webvtt",
+      "processed_segments": 1
+    }
+  },
+  {
+    "pipeline": "speaker_diarization",
+    "format": "rttm",
+    "data": [
+      {
+        "file_id": "6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_temp_audio",
+        "start_time": 1.6340937500000001,
+        "duration": 0.3543749999999999,
+        "end_time": 1.98846875,
+        "speaker_id": "SPEAKER_01",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_temp_audio",
+        "start_time": 2.17409375,
+        "duration": 0.7256250000000004,
+        "end_time": 2.8997187500000003,
+        "speaker_id": "SPEAKER_01",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_temp_audio",
+        "start_time": 7.388468750000001,
+        "duration": 0.016874999999998863,
+        "end_time": 7.40534375,
+        "speaker_id": "SPEAKER_01",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_temp_audio",
+        "start_time": 7.40534375,
+        "duration": 1.5356249999999996,
+        "end_time": 8.94096875,
+        "speaker_id": "SPEAKER_02",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_temp_audio",
+        "start_time": 9.818468750000001,
+        "duration": 1.0631249999999994,
+        "end_time": 10.88159375,
+        "speaker_id": "SPEAKER_02",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_temp_audio",
+        "start_time": 11.45534375,
+        "duration": 0.8268750000000011,
+        "end_time": 12.282218750000002,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_temp_audio",
+        "start_time": 14.695343750000003,
+        "duration": 0.21937499999999943,
+        "end_time": 14.914718750000002,
+        "speaker_id": "SPEAKER_02",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speaker_diarization",
+      "output_format": "rttm",
+      "processed_segments": 7
+    }
+  }
+]

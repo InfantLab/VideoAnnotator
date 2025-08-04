@@ -18,7 +18,7 @@ export const WelcomeScreen = ({ onGetStarted, onViewDemo }: WelcomeScreenProps) 
     },
     {
       icon: <Play className="w-6 h-6" />,
-      title: "Synchronized Timeline", 
+      title: "Synchronized Timeline",
       description: "Navigate through rich timeline with waveforms, motion graphs, and event markers"
     },
     {
@@ -33,43 +33,43 @@ export const WelcomeScreen = ({ onGetStarted, onViewDemo }: WelcomeScreenProps) 
       {/* Hero Section */}
       <div className="relative overflow-hidden flex-1">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />
-        
+
         <div className="container mx-auto px-6 py-16 relative">
           <div className="text-center max-w-4xl mx-auto mb-12">
             <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Video Annotation Viewer
             </h1>
             <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
-              Advanced multimodal analysis tool for reviewing video annotations with pose detection, 
+              Advanced multimodal analysis tool for reviewing video annotations with pose detection,
               emotion recognition, audio analysis, and interactive timeline visualization.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 onClick={onGetStarted}
                 className="text-lg px-8 py-3 animate-pulse-glow"
               >
                 <Upload className="w-5 h-5 mr-2" />
                 Get Started
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="lg"
                 className="text-lg px-8 py-3"
                 onClick={onViewDemo}
               >
                 <Play className="w-5 h-5 mr-2" />
                 View Demo
-              </Button>  
+              </Button>
             </div>
           </div>
 
           {/* Interface Preview */}
           <div className="max-w-6xl mx-auto mb-16">
             <Card className="overflow-hidden border-0 shadow-2xl">
-              <img 
-                src={viewerPreview} 
+              <img
+                src={viewerPreview}
                 alt="Video Annotation Viewer Interface"
                 className="w-full h-auto"
               />
@@ -82,7 +82,7 @@ export const WelcomeScreen = ({ onGetStarted, onViewDemo }: WelcomeScreenProps) 
       <div className="py-16 bg-card/50">
         <div className="container mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-12">Powerful Analysis Features</h2>
-          
+
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {features.map((feature, index) => (
               <Card key={index} className="p-6 text-center hover:shadow-lg transition-shadow">
@@ -101,7 +101,7 @@ export const WelcomeScreen = ({ onGetStarted, onViewDemo }: WelcomeScreenProps) 
       <div className="py-16">
         <div className="container mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
-          
+
           <div className="max-w-4xl mx-auto">
             <div className="grid md:grid-cols-3 gap-8">
               <div className="text-center">
@@ -111,7 +111,7 @@ export const WelcomeScreen = ({ onGetStarted, onViewDemo }: WelcomeScreenProps) 
                 <h3 className="text-lg font-semibold mb-2">Load Your Files</h3>
                 <p className="text-muted-foreground">Upload a video file and its corresponding JSON annotation data</p>
               </div>
-              
+
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-accent rounded-full flex items-center justify-center text-accent-foreground text-2xl font-bold">
                   2
@@ -119,7 +119,7 @@ export const WelcomeScreen = ({ onGetStarted, onViewDemo }: WelcomeScreenProps) 
                 <h3 className="text-lg font-semibold mb-2">Configure Views</h3>
                 <p className="text-muted-foreground">Toggle different annotation overlays and timeline tracks to focus on what matters</p>
               </div>
-              
+
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-secondary rounded-full flex items-center justify-center text-secondary-foreground text-2xl font-bold">
                   3
@@ -139,8 +139,8 @@ export const WelcomeScreen = ({ onGetStarted, onViewDemo }: WelcomeScreenProps) 
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Start exploring your multimodal annotations with our powerful visualization tools.
           </p>
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             onClick={onGetStarted}
             className="text-lg px-8 py-3"
           >

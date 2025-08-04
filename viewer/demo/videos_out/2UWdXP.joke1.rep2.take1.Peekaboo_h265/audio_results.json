@@ -1,0 +1,283 @@
+[
+  {
+    "pipeline": "speech_recognition",
+    "format": "webvtt",
+    "data": [
+      {
+        "video_id": "audio_segment",
+        "timestamp": 0.0,
+        "transcript": "Hey! Hey! Swimpy! Look! Ah! Look, honey, pal! Look, pal! You know, peek-a-boo! Hey!",
+        "language": "en",
+        "confidence": 0.0,
+        "words": [
+          {
+            "word": "Hey!",
+            "start": 0.0,
+            "end": 0.64,
+            "confidence": 0.278030127286911
+          },
+          {
+            "word": "Hey!",
+            "start": 0.78,
+            "end": 1.54,
+            "confidence": 0.02903648093342781
+          },
+          {
+            "word": "Swimpy!",
+            "start": 2.06,
+            "end": 2.56,
+            "confidence": 0.43638700246810913
+          },
+          {
+            "word": "Look!",
+            "start": 3.22,
+            "end": 3.6,
+            "confidence": 0.962164044380188
+          },
+          {
+            "word": "Ah!",
+            "start": 4.24,
+            "end": 4.3,
+            "confidence": 0.15982085466384888
+          },
+          {
+            "word": "Look,",
+            "start": 5.32,
+            "end": 5.5,
+            "confidence": 0.27509990334510803
+          },
+          {
+            "word": "honey,",
+            "start": 5.64,
+            "end": 5.78,
+            "confidence": 0.14739197492599487
+          },
+          {
+            "word": "pal!",
+            "start": 5.88,
+            "end": 6.02,
+            "confidence": 0.08463545143604279
+          },
+          {
+            "word": "Look,",
+            "start": 6.86,
+            "end": 7.06,
+            "confidence": 0.0495787039399147
+          },
+          {
+            "word": "pal!",
+            "start": 7.4,
+            "end": 7.4,
+            "confidence": 0.496378630399704
+          },
+          {
+            "word": "You",
+            "start": 8.52,
+            "end": 8.86,
+            "confidence": 0.12475867569446564
+          },
+          {
+            "word": "know,",
+            "start": 8.86,
+            "end": 8.98,
+            "confidence": 0.9489533305168152
+          },
+          {
+            "word": "peek",
+            "start": 9.54,
+            "end": 9.72,
+            "confidence": 0.35113996267318726
+          },
+          {
+            "word": "-a",
+            "start": 9.72,
+            "end": 9.94,
+            "confidence": 0.6769548654556274
+          },
+          {
+            "word": "-boo!",
+            "start": 9.94,
+            "end": 10.26,
+            "confidence": 0.9307036399841309
+          },
+          {
+            "word": "Hey!",
+            "start": 11.72,
+            "end": 12.48,
+            "confidence": 0.4279904365539551
+          }
+        ],
+        "metadata": {
+          "model": "base",
+          "task": "transcribe",
+          "num_segments": 5,
+          "num_words": 16,
+          "start_time": 0.0,
+          "end_time": 12.48,
+          "total_duration": 12.48,
+          "segments": [
+            {
+              "id": 0,
+              "start": 0.0,
+              "end": 3.6,
+              "text": "Hey! Hey! Swimpy! Look!",
+              "tokens": [
+                50364,
+                1911,
+                0,
+                1911,
+                0,
+                3926,
+                332,
+                8200,
+                0,
+                2053,
+                0,
+                50564
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.9018670862371271,
+              "compression_ratio": 1.2205882352941178,
+              "no_speech_prob": 0.2028581202030182
+            },
+            {
+              "id": 1,
+              "start": 4.24,
+              "end": 6.02,
+              "text": "Ah! Look, honey, pal!",
+              "tokens": [
+                50564,
+                2438,
+                0,
+                2053,
+                11,
+                8330,
+                11,
+                3984,
+                0,
+                50714
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.9018670862371271,
+              "compression_ratio": 1.2205882352941178,
+              "no_speech_prob": 0.2028581202030182
+            },
+            {
+              "id": 2,
+              "start": 6.86,
+              "end": 7.4,
+              "text": "Look, pal!",
+              "tokens": [
+                50714,
+                2053,
+                11,
+                3984,
+                0,
+                50814
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.9018670862371271,
+              "compression_ratio": 1.2205882352941178,
+              "no_speech_prob": 0.2028581202030182
+            },
+            {
+              "id": 3,
+              "start": 8.52,
+              "end": 10.26,
+              "text": "You know, peek-a-boo!",
+              "tokens": [
+                50814,
+                509,
+                458,
+                11,
+                19604,
+                12,
+                64,
+                12,
+                19985,
+                0,
+                50964
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.9018670862371271,
+              "compression_ratio": 1.2205882352941178,
+              "no_speech_prob": 0.2028581202030182
+            },
+            {
+              "id": 4,
+              "start": 11.72,
+              "end": 12.48,
+              "text": "Hey!",
+              "tokens": [
+                50964,
+                1911,
+                0,
+                51064
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.9018670862371271,
+              "compression_ratio": 1.2205882352941178,
+              "no_speech_prob": 0.2028581202030182
+            }
+          ]
+        }
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speech_recognition",
+      "output_format": "webvtt",
+      "processed_segments": 1
+    }
+  },
+  {
+    "pipeline": "speaker_diarization",
+    "format": "rttm",
+    "data": [
+      {
+        "file_id": "2UWdXP.joke1.rep2.take1.Peekaboo_h265_temp_audio",
+        "start_time": 0.03096875,
+        "duration": 0.2025,
+        "end_time": 0.23346875,
+        "speaker_id": "SPEAKER_01",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "2UWdXP.joke1.rep2.take1.Peekaboo_h265_temp_audio",
+        "start_time": 2.22471875,
+        "duration": 0.45562499999999995,
+        "end_time": 2.68034375,
+        "speaker_id": "SPEAKER_01",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "2UWdXP.joke1.rep2.take1.Peekaboo_h265_temp_audio",
+        "start_time": 8.67096875,
+        "duration": 0.5737500000000004,
+        "end_time": 9.24471875,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "2UWdXP.joke1.rep2.take1.Peekaboo_h265_temp_audio",
+        "start_time": 12.180968750000002,
+        "duration": 0.5906249999999993,
+        "end_time": 12.771593750000001,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speaker_diarization",
+      "output_format": "rttm",
+      "processed_segments": 4
+    }
+  }
+]

@@ -1,0 +1,25 @@
+[
+  {
+    "id": 1,
+    "image_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_frame_000044",
+    "category_id": 1,
+    "bbox": [
+      0,
+      0,
+      640,
+      480
+    ],
+    "area": 307200,
+    "iscrowd": 0,
+    "score": 1.0,
+    "video_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265",
+    "timestamp": 6.0600000000000005,
+    "start_time": 0.0,
+    "end_time": 12.120000000000001,
+    "duration": 12.120000000000001,
+    "scene_type": "unknown",
+    "frame_start": 0,
+    "frame_end": 88,
+    "all_scores": {}
+  }
+]

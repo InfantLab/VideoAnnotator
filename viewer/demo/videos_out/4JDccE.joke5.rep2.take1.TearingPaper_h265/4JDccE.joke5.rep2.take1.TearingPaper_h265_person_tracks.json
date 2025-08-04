@@ -1,0 +1,20 @@
+{
+  "video_id": "4JDccE.joke5.rep2.take1.TearingPaper_h265",
+  "person_tracks": [
+    {
+      "person_id": "person_4JDccE.joke5.rep2.take1.TearingPaper_h265_001",
+      "track_id": 510,
+      "video_id": "4JDccE.joke5.rep2.take1.TearingPaper_h265"
+    }
+  ],
+  "labeling_metadata": {
+    "total_persons": 1,
+    "labeled_persons": 0,
+    "id_format": "semantic",
+    "detections_summary": {
+      "total_detections": 5,
+      "unique_persons": 1,
+      "labeled_persons": 0
+    }
+  }
+}

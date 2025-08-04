@@ -1,0 +1,313 @@
+[
+  {
+    "pipeline": "speech_recognition",
+    "format": "webvtt",
+    "data": [
+      {
+        "video_id": "audio_segment",
+        "timestamp": 0.0,
+        "transcript": "Ah, bye-bye. Look. Get on the seat. Ready? Ah. It's here. See?",
+        "language": "en",
+        "confidence": 0.0,
+        "words": [
+          {
+            "word": "Ah,",
+            "start": 0.0,
+            "end": 0.62,
+            "confidence": 0.03915533423423767
+          },
+          {
+            "word": "bye",
+            "start": 0.82,
+            "end": 1.0,
+            "confidence": 0.5973209142684937
+          },
+          {
+            "word": "-bye.",
+            "start": 1.0,
+            "end": 1.16,
+            "confidence": 0.5999746173620224
+          },
+          {
+            "word": "Look.",
+            "start": 1.54,
+            "end": 1.66,
+            "confidence": 0.16284139454364777
+          },
+          {
+            "word": "Get",
+            "start": 2.3,
+            "end": 2.4,
+            "confidence": 0.06572061032056808
+          },
+          {
+            "word": "on",
+            "start": 2.4,
+            "end": 2.52,
+            "confidence": 0.6949577331542969
+          },
+          {
+            "word": "the",
+            "start": 2.52,
+            "end": 2.74,
+            "confidence": 0.4762903153896332
+          },
+          {
+            "word": "seat.",
+            "start": 2.74,
+            "end": 2.8,
+            "confidence": 0.22547979652881622
+          },
+          {
+            "word": "Ready?",
+            "start": 3.56,
+            "end": 4.06,
+            "confidence": 0.9885368347167969
+          },
+          {
+            "word": "Ah.",
+            "start": 6.9,
+            "end": 7.2,
+            "confidence": 0.0573473684489727
+          },
+          {
+            "word": "It's",
+            "start": 8.14,
+            "end": 8.44,
+            "confidence": 0.3581189438700676
+          },
+          {
+            "word": "here.",
+            "start": 8.44,
+            "end": 8.72,
+            "confidence": 0.05795535072684288
+          },
+          {
+            "word": "See?",
+            "start": 8.72,
+            "end": 9.98,
+            "confidence": 0.0039918189868330956
+          }
+        ],
+        "metadata": {
+          "model": "base",
+          "task": "transcribe",
+          "num_segments": 7,
+          "num_words": 13,
+          "start_time": 0.0,
+          "end_time": 9.98,
+          "total_duration": 9.98,
+          "segments": [
+            {
+              "id": 0,
+              "start": 0.0,
+              "end": 1.16,
+              "text": "Ah, bye-bye.",
+              "tokens": [
+                50364,
+                2438,
+                11,
+                6543,
+                12,
+                6650,
+                13,
+                50414
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.8955442701067243,
+              "compression_ratio": 0.9047619047619048,
+              "no_speech_prob": 0.13054506480693817
+            },
+            {
+              "id": 1,
+              "start": 1.54,
+              "end": 1.66,
+              "text": "Look.",
+              "tokens": [
+                50414,
+                2053,
+                13,
+                50464
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.8955442701067243,
+              "compression_ratio": 0.9047619047619048,
+              "no_speech_prob": 0.13054506480693817
+            },
+            {
+              "id": 2,
+              "start": 2.3,
+              "end": 2.8,
+              "text": "Get on the seat.",
+              "tokens": [
+                50464,
+                3240,
+                322,
+                264,
+                6121,
+                13,
+                50514
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.8955442701067243,
+              "compression_ratio": 0.9047619047619048,
+              "no_speech_prob": 0.13054506480693817
+            },
+            {
+              "id": 3,
+              "start": 3.56,
+              "end": 4.06,
+              "text": "Ready?",
+              "tokens": [
+                50514,
+                9944,
+                30,
+                50564
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.8955442701067243,
+              "compression_ratio": 0.9047619047619048,
+              "no_speech_prob": 0.13054506480693817
+            },
+            {
+              "id": 4,
+              "start": 6.9,
+              "end": 7.2,
+              "text": "Ah.",
+              "tokens": [
+                50564,
+                2438,
+                13,
+                50614
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.8955442701067243,
+              "compression_ratio": 0.9047619047619048,
+              "no_speech_prob": 0.13054506480693817
+            },
+            {
+              "id": 5,
+              "start": 8.14,
+              "end": 8.72,
+              "text": "It's here.",
+              "tokens": [
+                50614,
+                467,
+                311,
+                510,
+                13,
+                50664
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.8955442701067243,
+              "compression_ratio": 0.9047619047619048,
+              "no_speech_prob": 0.13054506480693817
+            },
+            {
+              "id": 6,
+              "start": 8.72,
+              "end": 9.98,
+              "text": "See?",
+              "tokens": [
+                50414,
+                3008,
+                30,
+                50464
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -0.8946145057678223,
+              "compression_ratio": 0.3333333333333333,
+              "no_speech_prob": 0.6987985372543335
+            }
+          ]
+        }
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speech_recognition",
+      "output_format": "webvtt",
+      "processed_segments": 1
+    }
+  },
+  {
+    "pipeline": "speaker_diarization",
+    "format": "rttm",
+    "data": [
+      {
+        "file_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_temp_audio",
+        "start_time": 0.5372187500000001,
+        "duration": 0.16874999999999996,
+        "end_time": 0.70596875,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_temp_audio",
+        "start_time": 0.92534375,
+        "duration": 0.3375,
+        "end_time": 1.26284375,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_temp_audio",
+        "start_time": 1.53284375,
+        "duration": 0.23625000000000007,
+        "end_time": 1.7690937500000001,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_temp_audio",
+        "start_time": 2.14034375,
+        "duration": 0.9281250000000001,
+        "end_time": 3.06846875,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_temp_audio",
+        "start_time": 2.34284375,
+        "duration": 0.18562499999999993,
+        "end_time": 2.52846875,
+        "speaker_id": "SPEAKER_01",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_temp_audio",
+        "start_time": 3.79409375,
+        "duration": 0.47250000000000014,
+        "end_time": 4.26659375,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "3dC3SQ.joke1.rep2.take1.TearingPaper_h265_temp_audio",
+        "start_time": 8.181593750000001,
+        "duration": 0.7931249999999999,
+        "end_time": 8.974718750000001,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speaker_diarization",
+      "output_format": "rttm",
+      "processed_segments": 7
+    }
+  }
+]

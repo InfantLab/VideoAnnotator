@@ -1,0 +1,53 @@
+[
+  {
+    "pipeline": "speech_recognition",
+    "format": "webvtt",
+    "data": [],
+    "metadata": {
+      "pipeline_name": "speech_recognition",
+      "output_format": "webvtt",
+      "processed_segments": 0
+    }
+  },
+  {
+    "pipeline": "speaker_diarization",
+    "format": "rttm",
+    "data": [
+      {
+        "file_id": "4JDccE.joke5.rep2.take1.TearingPaper_h265_temp_audio",
+        "start_time": 1.6172187500000001,
+        "duration": 0.11812500000000004,
+        "end_time": 1.7353437500000002,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "4JDccE.joke5.rep2.take1.TearingPaper_h265_temp_audio",
+        "start_time": 1.93784375,
+        "duration": 0.10125000000000006,
+        "end_time": 2.03909375,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "4JDccE.joke5.rep2.take1.TearingPaper_h265_temp_audio",
+        "start_time": 2.2415937500000003,
+        "duration": 2.5818749999999997,
+        "end_time": 4.82346875,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speaker_diarization",
+      "output_format": "rttm",
+      "processed_segments": 3
+    }
+  }
+]

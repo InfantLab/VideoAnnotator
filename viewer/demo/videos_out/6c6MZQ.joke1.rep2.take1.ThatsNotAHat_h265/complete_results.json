@@ -1,0 +1,1872 @@
+{
+  "video_path": "demovideos\\babyjokes\\6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265.mp4",
+  "output_dir": "demovideos_out\\6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265",
+  "start_time": "2025-08-04T22:56:52.932666",
+  "config": {
+    "scene_detection": {
+      "enabled": true,
+      "threshold": 0.3,
+      "min_scene_length": 1.0
+    },
+    "person_tracking": {
+      "enabled": true,
+      "model_name": "yolo11s",
+      "confidence_threshold": 0.5
+    },
+    "face_analysis": {
+      "enabled": true,
+      "backend": "laion",
+      "detection_confidence": 0.7,
+      "enable_action_units": true,
+      "enable_head_pose": true,
+      "enable_gaze": true,
+      "max_faces": 5
+    },
+    "audio_processing": {
+      "enabled": true,
+      "whisper_model": "base",
+      "sample_rate": 16000
+    }
+  },
+  "pipeline_results": {
+    "scene": {
+      "results": [
+        {
+          "id": 1,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_000136",
+          "category_id": 1,
+          "bbox": [
+            0,
+            0,
+            640,
+            480
+          ],
+          "area": 307200,
+          "iscrowd": 0,
+          "score": 1.0,
+          "video_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265",
+          "timestamp": 4.55455,
+          "start_time": 0.0,
+          "end_time": 9.1091,
+          "duration": 9.1091,
+          "scene_type": "unknown",
+          "frame_start": 0,
+          "frame_end": 273,
+          "all_scores": {}
+        }
+      ],
+      "processing_time": 0.22853374481201172,
+      "status": "completed"
+    },
+    "person": {
+      "results": [
+        {
+          "id": 1,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_0",
+          "category_id": 1,
+          "keypoints": [
+            217.03701782226562,
+            280.7232666015625,
+            2,
+            207.02047729492188,
+            265.29937744140625,
+            0,
+            207.3276824951172,
+            263.194580078125,
+            2,
+            156.38995361328125,
+            269.124755859375,
+            0,
+            151.5455780029297,
+            271.57086181640625,
+            2,
+            154.23670959472656,
+            382.7889404296875,
+            2,
+            61.3983154296875,
+            409.3258056640625,
+            2,
+            173.38043212890625,
+            480.0,
+            0,
+            66.3263931274414,
+            480.0,
+            0,
+            231.01402282714844,
+            469.09814453125,
+            0,
+            203.46524047851562,
+            470.0361328125,
+            0,
+            143.2205047607422,
+            480.0,
+            0,
+            86.72994995117188,
+            480.0,
+            0,
+            241.8486328125,
+            435.27392578125,
+            0,
+            182.81784057617188,
+            479.1620788574219,
+            0,
+            226.32632446289062,
+            480.0,
+            0,
+            236.3909454345703,
+            480.0,
+            0
+          ],
+          "num_keypoints": 5,
+          "bbox": [
+            16.27866554260254,
+            176.9569854736328,
+            246.31065368652344,
+            302.985595703125
+          ],
+          "area": 74628.58013523743,
+          "iscrowd": 0,
+          "score": 0.6474167108535767,
+          "track_id": 510,
+          "timestamp": 0.0,
+          "frame_number": 0,
+          "person_id": "person_6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_001",
+          "person_label": "parent",
+          "label_confidence": 0.7,
+          "labeling_method": "automatic_size_based"
+        },
+        {
+          "id": 2,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_29",
+          "category_id": 1,
+          "keypoints": [
+            173.61915588378906,
+            284.0325622558594,
+            2,
+            172.974853515625,
+            268.98333740234375,
+            2,
+            163.0870819091797,
+            262.18865966796875,
+            2,
+            140.53623962402344,
+            268.01348876953125,
+            0,
+            104.52342224121094,
+            255.62353515625,
+            2,
+            113.60506439208984,
+            340.99554443359375,
+            2,
+            36.87535095214844,
+            376.8097839355469,
+            2,
+            178.35946655273438,
+            324.0797424316406,
+            2,
+            58.979888916015625,
+            478.3196105957031,
+            0,
+            193.00570678710938,
+            208.9567108154297,
+            2,
+            154.5595703125,
+            434.08453369140625,
+            2,
+            108.33467102050781,
+            476.4390869140625,
+            0,
+            58.33831024169922,
+            480.0,
+            0,
+            225.62294006347656,
+            440.3990478515625,
+            0,
+            187.71868896484375,
+            465.4951171875,
+            0,
+            233.25143432617188,
+            480.0,
+            0,
+            236.36871337890625,
+            480.0,
+            0
+          ],
+          "num_keypoints": 9,
+          "bbox": [
+            0.5843971371650696,
+            160.31898498535156,
+            261.8747863769531,
+            319.6461181640625
+          ],
+          "area": 83707.25891043618,
+          "iscrowd": 0,
+          "score": 0.6254837512969971,
+          "track_id": 510,
+          "timestamp": 0.9676333333333333,
+          "frame_number": 29,
+          "person_id": "person_6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_001",
+          "person_label": "parent",
+          "label_confidence": 0.7,
+          "labeling_method": "automatic_size_based"
+        },
+        {
+          "id": 3,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_58",
+          "category_id": 1,
+          "keypoints": [
+            170.51441955566406,
+            288.8964538574219,
+            2,
+            167.88258361816406,
+            274.6484375,
+            2,
+            160.98214721679688,
+            267.8992919921875,
+            2,
+            134.54388427734375,
+            274.32171630859375,
+            0,
+            104.65475463867188,
+            262.12664794921875,
+            2,
+            111.25270080566406,
+            347.7573547363281,
+            2,
+            33.86571502685547,
+            382.9395751953125,
+            2,
+            173.20758056640625,
+            336.495849609375,
+            2,
+            38.20741271972656,
+            480.0,
+            0,
+            197.48788452148438,
+            240.04222106933594,
+            2,
+            160.96182250976562,
+            480.0,
+            2,
+            107.41744995117188,
+            480.0,
+            0,
+            57.31902313232422,
+            480.0,
+            0,
+            217.02996826171875,
+            450.2227783203125,
+            0,
+            183.16049194335938,
+            476.280029296875,
+            0,
+            210.7626953125,
+            480.0,
+            0,
+            210.7027587890625,
+            480.0,
+            0
+          ],
+          "num_keypoints": 9,
+          "bbox": [
+            0.0,
+            175.02520751953125,
+            244.01727294921875,
+            304.96856689453125
+          ],
+          "area": 74417.59802883491,
+          "iscrowd": 0,
+          "score": 0.662207305431366,
+          "track_id": 510,
+          "timestamp": 1.9352666666666667,
+          "frame_number": 58,
+          "person_id": "person_6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_001",
+          "person_label": "parent",
+          "label_confidence": 0.7,
+          "labeling_method": "automatic_size_based"
+        },
+        {
+          "id": 4,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_87",
+          "category_id": 1,
+          "keypoints": [
+            172.00469970703125,
+            288.2650451660156,
+            2,
+            170.82855224609375,
+            273.74053955078125,
+            2,
+            160.6864471435547,
+            268.09283447265625,
+            2,
+            140.3442840576172,
+            270.34088134765625,
+            0,
+            100.92689514160156,
+            262.5743408203125,
+            2,
+            118.93016815185547,
+            334.4614562988281,
+            2,
+            34.87018585205078,
+            383.91058349609375,
+            2,
+            189.83226013183594,
+            306.00048828125,
+            2,
+            43.06897735595703,
+            474.3433837890625,
+            0,
+            180.06195068359375,
+            224.37130737304688,
+            2,
+            106.46383666992188,
+            455.7967529296875,
+            2,
+            108.05304718017578,
+            480.0,
+            0,
+            54.1871337890625,
+            480.0,
+            0,
+            179.17013549804688,
+            449.3037414550781,
+            0,
+            142.26539611816406,
+            476.57525634765625,
+            0,
+            177.85946655273438,
+            478.41595458984375,
+            0,
+            181.0545654296875,
+            472.6344909667969,
+            0
+          ],
+          "num_keypoints": 9,
+          "bbox": [
+            0.0,
+            175.2283172607422,
+            243.27362060546875,
+            304.77166748046875
+          ],
+          "area": 74142.90700593963,
+          "iscrowd": 0,
+          "score": 0.787123441696167,
+          "track_id": 510,
+          "timestamp": 2.9029000000000003,
+          "frame_number": 87,
+          "person_id": "person_6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_001",
+          "person_label": "parent",
+          "label_confidence": 0.7,
+          "labeling_method": "automatic_size_based"
+        },
+        {
+          "id": 5,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_116",
+          "category_id": 1,
+          "keypoints": [
+            168.47921752929688,
+            288.90789794921875,
+            2,
+            168.58526611328125,
+            273.4815368652344,
+            2,
+            158.11549377441406,
+            268.58251953125,
+            2,
+            140.01296997070312,
+            267.3285217285156,
+            0,
+            98.21351623535156,
+            260.463134765625,
+            2,
+            117.46859741210938,
+            331.26983642578125,
+            2,
+            32.6047248840332,
+            383.1949462890625,
+            2,
+            197.42645263671875,
+            316.11175537109375,
+            2,
+            41.76005935668945,
+            480.0,
+            0,
+            187.47317504882812,
+            223.89959716796875,
+            2,
+            117.03814697265625,
+            454.928466796875,
+            2,
+            105.18357849121094,
+            480.0,
+            0,
+            50.16571807861328,
+            480.0,
+            0,
+            171.04953002929688,
+            443.5822448730469,
+            0,
+            134.7760772705078,
+            469.63824462890625,
+            0,
+            177.9363250732422,
+            451.3280029296875,
+            0,
+            173.2928924560547,
+            441.64495849609375,
+            0
+          ],
+          "num_keypoints": 9,
+          "bbox": [
+            0.0,
+            178.0674285888672,
+            235.7350311279297,
+            301.93255615234375
+          ],
+          "area": 71176.08052310813,
+          "iscrowd": 0,
+          "score": 0.7768760323524475,
+          "track_id": 510,
+          "timestamp": 3.8705333333333334,
+          "frame_number": 116,
+          "person_id": "person_6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_001",
+          "person_label": "parent",
+          "label_confidence": 0.7,
+          "labeling_method": "automatic_size_based"
+        },
+        {
+          "id": 6,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_145",
+          "category_id": 1,
+          "keypoints": [
+            172.06890869140625,
+            292.09674072265625,
+            2,
+            171.92803955078125,
+            278.04656982421875,
+            2,
+            161.07933044433594,
+            271.44927978515625,
+            2,
+            140.2307891845703,
+            275.808349609375,
+            0,
+            100.14994812011719,
+            265.69964599609375,
+            2,
+            116.59054565429688,
+            339.1863098144531,
+            2,
+            30.562835693359375,
+            385.21807861328125,
+            2,
+            188.16943359375,
+            322.1894226074219,
+            2,
+            43.82238006591797,
+            478.9186096191406,
+            0,
+            174.76287841796875,
+            243.83969116210938,
+            2,
+            107.8254165649414,
+            461.5502624511719,
+            2,
+            104.66636657714844,
+            480.0,
+            0,
+            49.55442810058594,
+            480.0,
+            0,
+            177.71795654296875,
+            450.27276611328125,
+            0,
+            137.54388427734375,
+            475.0614318847656,
+            0,
+            178.8457794189453,
+            476.2074279785156,
+            0,
+            181.48284912109375,
+            466.0721435546875,
+            0
+          ],
+          "num_keypoints": 9,
+          "bbox": [
+            0.0,
+            179.26226806640625,
+            242.94642639160156,
+            300.73773193359375
+          ],
+          "area": 73063.15725438204,
+          "iscrowd": 0,
+          "score": 0.8152046799659729,
+          "track_id": 510,
+          "timestamp": 4.838166666666667,
+          "frame_number": 145,
+          "person_id": "person_6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_001",
+          "person_label": "parent",
+          "label_confidence": 0.7,
+          "labeling_method": "automatic_size_based"
+        },
+        {
+          "id": 7,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_174",
+          "category_id": 1,
+          "keypoints": [
+            172.4199676513672,
+            291.1428527832031,
+            2,
+            171.99514770507812,
+            276.58074951171875,
+            2,
+            160.3688201904297,
+            269.98809814453125,
+            2,
+            139.82203674316406,
+            275.2158508300781,
+            0,
+            98.15988159179688,
+            266.1653747558594,
+            2,
+            116.69477844238281,
+            343.219482421875,
+            2,
+            30.787078857421875,
+            389.3125305175781,
+            2,
+            186.40142822265625,
+            324.892822265625,
+            2,
+            44.238746643066406,
+            479.91351318359375,
+            0,
+            175.13189697265625,
+            242.68399047851562,
+            2,
+            112.6814193725586,
+            457.95025634765625,
+            2,
+            108.32893371582031,
+            480.0,
+            0,
+            53.530967712402344,
+            480.0,
+            0,
+            177.21783447265625,
+            446.6275329589844,
+            0,
+            138.44125366210938,
+            471.68365478515625,
+            0,
+            180.70767211914062,
+            468.4530029296875,
+            0,
+            185.45751953125,
+            459.89501953125,
+            0
+          ],
+          "num_keypoints": 9,
+          "bbox": [
+            0.0,
+            178.49337768554688,
+            237.8774871826172,
+            301.5066223144531
+          ],
+          "area": 71721.63768508052,
+          "iscrowd": 0,
+          "score": 0.8168869614601135,
+          "track_id": 510,
+          "timestamp": 5.8058000000000005,
+          "frame_number": 174,
+          "person_id": "person_6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_001",
+          "person_label": "parent",
+          "label_confidence": 0.7,
+          "labeling_method": "automatic_size_based"
+        },
+        {
+          "id": 8,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_203",
+          "category_id": 1,
+          "keypoints": [
+            176.43031311035156,
+            289.0606689453125,
+            2,
+            172.82806396484375,
+            275.6715393066406,
+            2,
+            166.50650024414062,
+            269.0107727050781,
+            2,
+            136.11203002929688,
+            273.9021301269531,
+            0,
+            106.82728576660156,
+            263.1354064941406,
+            2,
+            119.42349243164062,
+            345.1400451660156,
+            2,
+            35.90998077392578,
+            379.8150329589844,
+            2,
+            183.5300750732422,
+            347.14434814453125,
+            2,
+            47.154510498046875,
+            478.60760498046875,
+            0,
+            197.6049041748047,
+            246.12545776367188,
+            2,
+            128.87716674804688,
+            447.4761962890625,
+            2,
+            122.60986328125,
+            480.0,
+            0,
+            69.28910827636719,
+            480.0,
+            0,
+            182.6417694091797,
+            437.6700439453125,
+            0,
+            139.70269775390625,
+            461.240234375,
+            0,
+            198.57516479492188,
+            472.86602783203125,
+            0,
+            198.35842895507812,
+            471.7727966308594,
+            0
+          ],
+          "num_keypoints": 9,
+          "bbox": [
+            0.0,
+            176.85543823242188,
+            236.22073364257812,
+            303.1445617675781
+          ],
+          "area": 71609.03078049514,
+          "iscrowd": 0,
+          "score": 0.7283508777618408,
+          "track_id": 510,
+          "timestamp": 6.773433333333333,
+          "frame_number": 203,
+          "person_id": "person_6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_001",
+          "person_label": "parent",
+          "label_confidence": 0.7,
+          "labeling_method": "automatic_size_based"
+        },
+        {
+          "id": 9,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_232",
+          "category_id": 1,
+          "keypoints": [
+            121.56268310546875,
+            275.042236328125,
+            2,
+            143.40826416015625,
+            252.6421661376953,
+            2,
+            93.45307922363281,
+            249.56130981445312,
+            2,
+            160.87796020507812,
+            264.5772705078125,
+            2,
+            47.19655227661133,
+            262.48004150390625,
+            2,
+            135.54171752929688,
+            364.96331787109375,
+            2,
+            29.557113647460938,
+            388.98822021484375,
+            2,
+            164.13632202148438,
+            453.69549560546875,
+            2,
+            80.05384063720703,
+            480.0,
+            0,
+            227.72975158691406,
+            398.4227294921875,
+            2,
+            215.4449462890625,
+            418.7396240234375,
+            2,
+            120.51322937011719,
+            480.0,
+            0,
+            52.28374481201172,
+            480.0,
+            0,
+            231.6134796142578,
+            459.28472900390625,
+            0,
+            189.88583374023438,
+            480.0,
+            0,
+            214.00460815429688,
+            460.54931640625,
+            0,
+            215.22035217285156,
+            480.0,
+            0
+          ],
+          "num_keypoints": 10,
+          "bbox": [
+            11.94817066192627,
+            172.81137084960938,
+            243.23422241210938,
+            307.07611083984375
+          ],
+          "area": 74691.4190414641,
+          "iscrowd": 0,
+          "score": 0.9123939871788025,
+          "track_id": 510,
+          "timestamp": 7.741066666666667,
+          "frame_number": 232,
+          "person_id": "person_6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_001",
+          "person_label": "parent",
+          "label_confidence": 0.7,
+          "labeling_method": "automatic_size_based"
+        },
+        {
+          "id": 10,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_261",
+          "category_id": 1,
+          "keypoints": [
+            137.8820343017578,
+            301.2019958496094,
+            2,
+            159.9361572265625,
+            271.87310791015625,
+            2,
+            106.91630554199219,
+            276.0998229980469,
+            2,
+            182.0847930908203,
+            277.78363037109375,
+            2,
+            61.39716339111328,
+            291.70037841796875,
+            2,
+            161.53477478027344,
+            384.82891845703125,
+            2,
+            47.24432373046875,
+            428.8150939941406,
+            2,
+            175.9190673828125,
+            464.56256103515625,
+            2,
+            88.28414916992188,
+            480.0,
+            0,
+            228.12051391601562,
+            433.13232421875,
+            2,
+            211.83714294433594,
+            464.4229736328125,
+            0,
+            146.78477478027344,
+            480.0,
+            0,
+            76.08601379394531,
+            480.0,
+            0,
+            235.03228759765625,
+            473.27947998046875,
+            0,
+            191.02719116210938,
+            480.0,
+            0,
+            213.80136108398438,
+            458.1717224121094,
+            0,
+            225.30429077148438,
+            480.0,
+            0
+          ],
+          "num_keypoints": 9,
+          "bbox": [
+            15.26567554473877,
+            170.07176208496094,
+            249.3206024169922,
+            309.7855224609375
+          ],
+          "area": 77235.9130800236,
+          "iscrowd": 0,
+          "score": 0.8779215216636658,
+          "track_id": 510,
+          "timestamp": 8.7087,
+          "frame_number": 261,
+          "person_id": "person_6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_001",
+          "person_label": "parent",
+          "label_confidence": 0.7,
+          "labeling_method": "automatic_size_based"
+        }
+      ],
+      "processing_time": 0.8917944431304932,
+      "status": "completed"
+    },
+    "face": {
+      "results": [
+        {
+          "id": 1,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_0",
+          "category_id": 100,
+          "bbox": [
+            576.0,
+            410.0,
+            44.0,
+            44.0
+          ],
+          "area": 1936.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 0,
+          "timestamp": 0.0,
+          "frame_number": 0,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "pleasure_ecstasy": {
+                "score": 0.7777327299118042,
+                "rank": 1,
+                "raw_score": 36.83009719848633
+              },
+              "concentration": {
+                "score": 0.22200031578540802,
+                "rank": 2,
+                "raw_score": 35.576393127441406
+              },
+              "pain": {
+                "score": 0.00025049695977941155,
+                "rank": 3,
+                "raw_score": 28.789405822753906
+              },
+              "fatigue_exhaustion": {
+                "score": 1.6451907868031412e-05,
+                "rank": 4,
+                "raw_score": 26.0664005279541
+              },
+              "elation": {
+                "score": 4.884744164712629e-09,
+                "rank": 5,
+                "raw_score": 17.944320678710938
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 2,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_0",
+          "category_id": 100,
+          "bbox": [
+            491.0,
+            390.0,
+            50.0,
+            50.0
+          ],
+          "area": 2500.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 1,
+          "timestamp": 0.0,
+          "frame_number": 0,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "concentration": {
+                "score": 0.9998836517333984,
+                "rank": 1,
+                "raw_score": 41.796993255615234
+              },
+              "pleasure_ecstasy": {
+                "score": 6.885777111165226e-05,
+                "rank": 2,
+                "raw_score": 32.21364212036133
+              },
+              "affection": {
+                "score": 4.745944170281291e-05,
+                "rank": 3,
+                "raw_score": 31.841474533081055
+              },
+              "fatigue_exhaustion": {
+                "score": 3.0831078134951895e-08,
+                "rank": 4,
+                "raw_score": 24.50236701965332
+              },
+              "contemplation": {
+                "score": 1.1913495079340919e-08,
+                "rank": 5,
+                "raw_score": 23.551515579223633
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 3,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_0",
+          "category_id": 100,
+          "bbox": [
+            89.0,
+            85.0,
+            69.0,
+            69.0
+          ],
+          "area": 4761.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 2,
+          "timestamp": 0.0,
+          "frame_number": 0,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "emotional_vulnerability": {
+                "score": 0.8945489525794983,
+                "rank": 1,
+                "raw_score": 32.537391662597656
+              },
+              "distress": {
+                "score": 0.08616550266742706,
+                "rank": 2,
+                "raw_score": 30.197341918945312
+              },
+              "sadness": {
+                "score": 0.012646347284317017,
+                "rank": 3,
+                "raw_score": 28.278440475463867
+              },
+              "embarrassment": {
+                "score": 0.00662212772294879,
+                "rank": 4,
+                "raw_score": 27.631488800048828
+              },
+              "confusion": {
+                "score": 1.5018516933196224e-05,
+                "rank": 5,
+                "raw_score": 21.542600631713867
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 4,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_0",
+          "category_id": 100,
+          "bbox": [
+            162.0,
+            387.0,
+            71.0,
+            71.0
+          ],
+          "area": 5041.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 3,
+          "timestamp": 0.0,
+          "frame_number": 0,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "pleasure_ecstasy": {
+                "score": 0.9875083565711975,
+                "rank": 1,
+                "raw_score": 35.733943939208984
+              },
+              "concentration": {
+                "score": 0.012068493291735649,
+                "rank": 2,
+                "raw_score": 31.329357147216797
+              },
+              "distress": {
+                "score": 0.000228608405450359,
+                "rank": 3,
+                "raw_score": 27.363014221191406
+              },
+              "pain": {
+                "score": 0.00012184474326204509,
+                "rank": 4,
+                "raw_score": 26.73375129699707
+              },
+              "embarrassment": {
+                "score": 6.06205067015253e-05,
+                "rank": 5,
+                "raw_score": 26.03563690185547
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 5,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_29",
+          "category_id": 100,
+          "bbox": [
+            86.0,
+            84.0,
+            71.0,
+            71.0
+          ],
+          "area": 5041.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 0,
+          "timestamp": 0.9676333333333333,
+          "frame_number": 29,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "embarrassment": {
+                "score": 0.574596643447876,
+                "rank": 1,
+                "raw_score": 29.076194763183594
+              },
+              "emotional_vulnerability": {
+                "score": 0.3857034146785736,
+                "rank": 2,
+                "raw_score": 28.677595138549805
+              },
+              "distress": {
+                "score": 0.01996750943362713,
+                "rank": 3,
+                "raw_score": 25.716632843017578
+              },
+              "sadness": {
+                "score": 0.019670505076646805,
+                "rank": 4,
+                "raw_score": 25.70164680480957
+              },
+              "confusion": {
+                "score": 5.840816811542027e-05,
+                "rank": 5,
+                "raw_score": 19.882226943969727
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 6,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_29",
+          "category_id": 100,
+          "bbox": [
+            214.0,
+            262.0,
+            55.0,
+            55.0
+          ],
+          "area": 3025.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 1,
+          "timestamp": 0.9676333333333333,
+          "frame_number": 29,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "concentration": {
+                "score": 0.9985235333442688,
+                "rank": 1,
+                "raw_score": 31.744707107543945
+              },
+              "pain": {
+                "score": 0.0008279159083031118,
+                "rank": 2,
+                "raw_score": 24.649585723876953
+              },
+              "pleasure_ecstasy": {
+                "score": 0.0006314715719781816,
+                "rank": 3,
+                "raw_score": 24.378726959228516
+              },
+              "arousal": {
+                "score": 1.6126987247844227e-05,
+                "rank": 4,
+                "raw_score": 20.71116828918457
+              },
+              "interest": {
+                "score": 5.526578661374515e-07,
+                "rank": 5,
+                "raw_score": 17.337657928466797
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 7,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_58",
+          "category_id": 100,
+          "bbox": [
+            90.0,
+            86.0,
+            66.0,
+            66.0
+          ],
+          "area": 4356.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 0,
+          "timestamp": 1.9352666666666667,
+          "frame_number": 58,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "embarrassment": {
+                "score": 0.9028024077415466,
+                "rank": 1,
+                "raw_score": 28.639387130737305
+              },
+              "confusion": {
+                "score": 0.05056200921535492,
+                "rank": 2,
+                "raw_score": 25.757083892822266
+              },
+              "emotional_vulnerability": {
+                "score": 0.04431218281388283,
+                "rank": 3,
+                "raw_score": 25.62514305114746
+              },
+              "concentration": {
+                "score": 0.0011216035345569253,
+                "rank": 4,
+                "raw_score": 21.94864273071289
+              },
+              "distress": {
+                "score": 0.0007606495055370033,
+                "rank": 5,
+                "raw_score": 21.560300827026367
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 8,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_87",
+          "category_id": 100,
+          "bbox": [
+            179.0,
+            419.0,
+            43.0,
+            43.0
+          ],
+          "area": 1849.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 0,
+          "timestamp": 2.9029000000000003,
+          "frame_number": 87,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "concentration": {
+                "score": 0.9999936819076538,
+                "rank": 1,
+                "raw_score": 41.089263916015625
+              },
+              "astonishment_surprise": {
+                "score": 4.449892912816722e-06,
+                "rank": 2,
+                "raw_score": 28.766639709472656
+              },
+              "pleasure_ecstasy": {
+                "score": 1.670738583925413e-06,
+                "rank": 3,
+                "raw_score": 27.787025451660156
+              },
+              "contemplation": {
+                "score": 9.420988789088369e-08,
+                "rank": 4,
+                "raw_score": 24.911529541015625
+              },
+              "affection": {
+                "score": 5.9061736834564726e-08,
+                "rank": 5,
+                "raw_score": 24.44458770751953
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 9,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_87",
+          "category_id": 100,
+          "bbox": [
+            91.0,
+            86.0,
+            65.0,
+            65.0
+          ],
+          "area": 4225.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 1,
+          "timestamp": 2.9029000000000003,
+          "frame_number": 87,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "emotional_vulnerability": {
+                "score": 0.5509132742881775,
+                "rank": 1,
+                "raw_score": 29.24258041381836
+              },
+              "embarrassment": {
+                "score": 0.29544222354888916,
+                "rank": 2,
+                "raw_score": 28.619476318359375
+              },
+              "confusion": {
+                "score": 0.15260539948940277,
+                "rank": 3,
+                "raw_score": 27.958858489990234
+              },
+              "distress": {
+                "score": 0.0007410990656353533,
+                "rank": 4,
+                "raw_score": 22.63138198852539
+              },
+              "sadness": {
+                "score": 0.00029764141072519124,
+                "rank": 5,
+                "raw_score": 21.71913719177246
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 10,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_87",
+          "category_id": 100,
+          "bbox": [
+            490.0,
+            384.0,
+            60.0,
+            60.0
+          ],
+          "area": 3600.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 2,
+          "timestamp": 2.9029000000000003,
+          "frame_number": 87,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "concentration": {
+                "score": 0.9999992847442627,
+                "rank": 1,
+                "raw_score": 39.31089782714844
+              },
+              "fatigue_exhaustion": {
+                "score": 6.701196753056138e-07,
+                "rank": 2,
+                "raw_score": 25.095088958740234
+              },
+              "affection": {
+                "score": 6.107303818225773e-08,
+                "rank": 3,
+                "raw_score": 22.699703216552734
+              },
+              "pleasure_ecstasy": {
+                "score": 2.648273378369481e-09,
+                "rank": 4,
+                "raw_score": 19.561540603637695
+              },
+              "distress": {
+                "score": 1.6551654491436807e-09,
+                "rank": 5,
+                "raw_score": 19.091533660888672
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 11,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_116",
+          "category_id": 100,
+          "bbox": [
+            91.0,
+            85.0,
+            67.0,
+            67.0
+          ],
+          "area": 4489.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 0,
+          "timestamp": 3.8705333333333334,
+          "frame_number": 116,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "embarrassment": {
+                "score": 0.8922443389892578,
+                "rank": 1,
+                "raw_score": 31.856510162353516
+              },
+              "emotional_vulnerability": {
+                "score": 0.09963881224393845,
+                "rank": 2,
+                "raw_score": 29.664321899414062
+              },
+              "confusion": {
+                "score": 0.0074302153661847115,
+                "rank": 3,
+                "raw_score": 27.06832504272461
+              },
+              "distress": {
+                "score": 0.00036964230821467936,
+                "rank": 4,
+                "raw_score": 24.067550659179688
+              },
+              "sadness": {
+                "score": 0.0003165815433021635,
+                "rank": 5,
+                "raw_score": 23.912595748901367
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 12,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_145",
+          "category_id": 100,
+          "bbox": [
+            91.0,
+            84.0,
+            69.0,
+            69.0
+          ],
+          "area": 4761.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 0,
+          "timestamp": 4.838166666666667,
+          "frame_number": 145,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "confusion": {
+                "score": 0.4287262558937073,
+                "rank": 1,
+                "raw_score": 26.824174880981445
+              },
+              "embarrassment": {
+                "score": 0.39153337478637695,
+                "rank": 2,
+                "raw_score": 26.733427047729492
+              },
+              "emotional_vulnerability": {
+                "score": 0.1063193827867508,
+                "rank": 3,
+                "raw_score": 25.4298038482666
+              },
+              "distress": {
+                "score": 0.0725991427898407,
+                "rank": 4,
+                "raw_score": 25.048309326171875
+              },
+              "sadness": {
+                "score": 0.00046112106065265834,
+                "rank": 5,
+                "raw_score": 19.989261627197266
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 13,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_174",
+          "category_id": 100,
+          "bbox": [
+            92.0,
+            85.0,
+            68.0,
+            68.0
+          ],
+          "area": 4624.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 0,
+          "timestamp": 5.8058000000000005,
+          "frame_number": 174,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "emotional_vulnerability": {
+                "score": 0.7764453291893005,
+                "rank": 1,
+                "raw_score": 28.166709899902344
+              },
+              "embarrassment": {
+                "score": 0.13546128571033478,
+                "rank": 2,
+                "raw_score": 26.420669555664062
+              },
+              "confusion": {
+                "score": 0.04749618098139763,
+                "rank": 3,
+                "raw_score": 25.37263298034668
+              },
+              "distress": {
+                "score": 0.03927003964781761,
+                "rank": 4,
+                "raw_score": 25.182445526123047
+              },
+              "concentration": {
+                "score": 0.001318178721703589,
+                "rank": 5,
+                "raw_score": 21.78823471069336
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 14,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_203",
+          "category_id": 100,
+          "bbox": [
+            90.0,
+            86.0,
+            66.0,
+            66.0
+          ],
+          "area": 4356.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 0,
+          "timestamp": 6.773433333333333,
+          "frame_number": 203,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "emotional_vulnerability": {
+                "score": 0.9851701855659485,
+                "rank": 1,
+                "raw_score": 27.083782196044922
+              },
+              "distress": {
+                "score": 0.012226673774421215,
+                "rank": 2,
+                "raw_score": 22.69458770751953
+              },
+              "confusion": {
+                "score": 0.002565745497122407,
+                "rank": 3,
+                "raw_score": 21.133216857910156
+              },
+              "embarrassment": {
+                "score": 2.9462093152687885e-05,
+                "rank": 4,
+                "raw_score": 16.666316986083984
+              },
+              "sadness": {
+                "score": 7.618232757522492e-06,
+                "rank": 5,
+                "raw_score": 15.313756942749023
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 15,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_232",
+          "category_id": 100,
+          "bbox": [
+            98.0,
+            88.0,
+            60.0,
+            60.0
+          ],
+          "area": 3600.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 0,
+          "timestamp": 7.741066666666667,
+          "frame_number": 232,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "embarrassment": {
+                "score": 0.9997816681861877,
+                "rank": 1,
+                "raw_score": 28.997779846191406
+              },
+              "confusion": {
+                "score": 0.0002049130853265524,
+                "rank": 2,
+                "raw_score": 20.50507354736328
+              },
+              "emotional_vulnerability": {
+                "score": 1.241504833160434e-05,
+                "rank": 3,
+                "raw_score": 17.701396942138672
+              },
+              "concentration": {
+                "score": 9.936456990544684e-07,
+                "rank": 4,
+                "raw_score": 15.17611312866211
+              },
+              "sadness": {
+                "score": 3.851577545788132e-08,
+                "rank": 5,
+                "raw_score": 11.925801277160645
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 16,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_232",
+          "category_id": 100,
+          "bbox": [
+            50.0,
+            197.0,
+            134.0,
+            134.0
+          ],
+          "area": 17956.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 1,
+          "timestamp": 7.741066666666667,
+          "frame_number": 232,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "amusement": {
+                "score": 0.9953698515892029,
+                "rank": 1,
+                "raw_score": 54.921329498291016
+              },
+              "pleasure_ecstasy": {
+                "score": 0.0033632824197411537,
+                "rank": 2,
+                "raw_score": 49.23113250732422
+              },
+              "contentment": {
+                "score": 0.0012052368838340044,
+                "rank": 3,
+                "raw_score": 48.204891204833984
+              },
+              "elation": {
+                "score": 6.160841439850628e-05,
+                "rank": 4,
+                "raw_score": 45.231258392333984
+              },
+              "affection": {
+                "score": 1.7398518181721556e-08,
+                "rank": 5,
+                "raw_score": 37.05908966064453
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 17,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_261",
+          "category_id": 100,
+          "bbox": [
+            94.0,
+            86.0,
+            66.0,
+            66.0
+          ],
+          "area": 4356.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 0,
+          "timestamp": 8.7087,
+          "frame_number": 261,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "embarrassment": {
+                "score": 0.9949061870574951,
+                "rank": 1,
+                "raw_score": 30.332462310791016
+              },
+              "sadness": {
+                "score": 0.005047485698014498,
+                "rank": 2,
+                "raw_score": 25.048704147338867
+              },
+              "concentration": {
+                "score": 2.4499020582879893e-05,
+                "rank": 3,
+                "raw_score": 19.720691680908203
+              },
+              "confusion": {
+                "score": 1.3799597581964917e-05,
+                "rank": 4,
+                "raw_score": 19.146697998046875
+              },
+              "emotional_vulnerability": {
+                "score": 7.621471922902856e-06,
+                "rank": 5,
+                "raw_score": 18.553028106689453
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 18,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_261",
+          "category_id": 100,
+          "bbox": [
+            219.0,
+            374.0,
+            76.0,
+            76.0
+          ],
+          "area": 5776.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 1,
+          "timestamp": 8.7087,
+          "frame_number": 261,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "pleasure_ecstasy": {
+                "score": 0.9999995231628418,
+                "rank": 1,
+                "raw_score": 34.00896453857422
+              },
+              "arousal": {
+                "score": 2.4649651209074364e-07,
+                "rank": 2,
+                "raw_score": 18.793046951293945
+              },
+              "concentration": {
+                "score": 2.001794143779989e-07,
+                "rank": 3,
+                "raw_score": 18.58491325378418
+              },
+              "emotional_vulnerability": {
+                "score": 1.168702912224262e-08,
+                "rank": 4,
+                "raw_score": 15.74417781829834
+              },
+              "impatience_irritability": {
+                "score": 2.3419217676234894e-09,
+                "rank": 5,
+                "raw_score": 14.13667106628418
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        },
+        {
+          "id": 19,
+          "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_261",
+          "category_id": 100,
+          "bbox": [
+            60.0,
+            215.0,
+            149.0,
+            149.0
+          ],
+          "area": 22201.0,
+          "iscrowd": 0,
+          "score": 1.0,
+          "face_id": 2,
+          "timestamp": 8.7087,
+          "frame_number": 261,
+          "backend": "opencv",
+          "person_id": "unknown",
+          "person_label": "unknown",
+          "person_label_confidence": 0.0,
+          "person_labeling_method": "none",
+          "attributes": {
+            "emotions": {
+              "amusement": {
+                "score": 0.9999874830245972,
+                "rank": 1,
+                "raw_score": 60.03201675415039
+              },
+              "elation": {
+                "score": 6.314312486210838e-06,
+                "rank": 2,
+                "raw_score": 48.0593376159668
+              },
+              "pleasure_ecstasy": {
+                "score": 6.246274097065907e-06,
+                "rank": 3,
+                "raw_score": 48.04850387573242
+              },
+              "emotional_vulnerability": {
+                "score": 9.654312016493805e-09,
+                "rank": 4,
+                "raw_score": 41.576168060302734
+              },
+              "contentment": {
+                "score": 1.6586221285308511e-09,
+                "rank": 5,
+                "raw_score": 39.81475067138672
+              }
+            },
+            "model_info": {
+              "model_size": "small",
+              "embedding_dim": 1152
+            }
+          }
+        }
+      ],
+      "processing_time": 88.12723922729492,
+      "status": "completed"
+    }
+  },
+  "errors": [],
+  "end_time": "2025-08-04T22:58:22.183773",
+  "total_duration": 89.2511076927185
+}

@@ -42,13 +42,13 @@ export const VideoAnnotationViewer = () => {
   const handleViewDemo = useCallback(async () => {
     try {
       const demoKey = Object.keys(DEMO_DATA_SETS)[0] as keyof typeof DEMO_DATA_SETS;
-      
+
       // Load video and annotations in parallel
       const [videoFile, annotation] = await Promise.all([
         loadDemoVideo(demoKey),
         loadDemoAnnotations(demoKey)
       ]);
-      
+
       if (videoFile && annotation) {
         setVideoFile(videoFile);
         setAnnotationData(annotation);
@@ -241,7 +241,7 @@ export const VideoAnnotationViewer = () => {
             />
           </div>
         </div>
-        
+
         {/* Footer */}
         <Footer />
       </div>

@@ -1,0 +1,25 @@
+[
+  {
+    "id": 1,
+    "image_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_frame_000136",
+    "category_id": 1,
+    "bbox": [
+      0,
+      0,
+      640,
+      480
+    ],
+    "area": 307200,
+    "iscrowd": 0,
+    "score": 1.0,
+    "video_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265",
+    "timestamp": 4.55455,
+    "start_time": 0.0,
+    "end_time": 9.1091,
+    "duration": 9.1091,
+    "scene_type": "unknown",
+    "frame_start": 0,
+    "frame_end": 273,
+    "all_scores": {}
+  }
+]

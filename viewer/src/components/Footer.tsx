@@ -38,7 +38,7 @@ export const Footer = () => {
         {/* Copyright */}
         <div className="mt-4 pt-4 border-t text-center text-xs text-muted-foreground">
           <p>
-            © {new Date().getFullYear()} InfantLab. 
+            © {new Date().getFullYear()} InfantLab.
             Advanced multimodal video annotation analysis tool.
           </p>
         </div>

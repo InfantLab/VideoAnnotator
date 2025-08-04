@@ -1,0 +1,109 @@
+[
+  {
+    "pipeline": "speech_recognition",
+    "format": "webvtt",
+    "data": [
+      {
+        "video_id": "audio_segment",
+        "timestamp": 0.0,
+        "transcript": "\u00bfCu\u00e1l es el otro?",
+        "language": "es",
+        "confidence": 0.0,
+        "words": [
+          {
+            "word": "\u00bfCu\u00e1l",
+            "start": 0.32000000000000006,
+            "end": 0.56,
+            "confidence": 0.354403351744016
+          },
+          {
+            "word": "es",
+            "start": 0.56,
+            "end": 0.66,
+            "confidence": 0.6018050312995911
+          },
+          {
+            "word": "el",
+            "start": 0.66,
+            "end": 0.76,
+            "confidence": 0.5915953516960144
+          },
+          {
+            "word": "otro?",
+            "start": 0.76,
+            "end": 0.88,
+            "confidence": 0.08669104427099228
+          }
+        ],
+        "metadata": {
+          "model": "base",
+          "task": "transcribe",
+          "num_segments": 1,
+          "num_words": 4,
+          "start_time": 0.0,
+          "end_time": 0.88,
+          "total_duration": 0.88,
+          "segments": [
+            {
+              "id": 0,
+              "start": 0.32000000000000006,
+              "end": 0.88,
+              "text": "\u00bfCu\u00e1l es el otro?",
+              "tokens": [
+                50364,
+                3841,
+                35222,
+                11447,
+                785,
+                806,
+                11921,
+                30,
+                50464
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -1.0544448852539063,
+              "compression_ratio": 0.7037037037037037,
+              "no_speech_prob": 0.10468275099992752
+            }
+          ]
+        }
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speech_recognition",
+      "output_format": "webvtt",
+      "processed_segments": 1
+    }
+  },
+  {
+    "pipeline": "speaker_diarization",
+    "format": "rttm",
+    "data": [
+      {
+        "file_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_temp_audio",
+        "start_time": 0.25034375000000003,
+        "duration": 0.11812499999999998,
+        "end_time": 0.36846875,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      },
+      {
+        "file_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265_temp_audio",
+        "start_time": 0.41909375000000004,
+        "duration": 0.70875,
+        "end_time": 1.12784375,
+        "speaker_id": "SPEAKER_00",
+        "confidence": 1.0,
+        "pipeline": "speaker_diarization",
+        "format": "rttm"
+      }
+    ],
+    "metadata": {
+      "pipeline_name": "speaker_diarization",
+      "output_format": "rttm",
+      "processed_segments": 2
+    }
+  }
+]
