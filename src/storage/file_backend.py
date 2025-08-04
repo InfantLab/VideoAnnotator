@@ -22,7 +22,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from .base import StorageBackend
-from ..batch.types import BatchJob, JobStatus
+from ..batch.types import BatchJob, JobStatus, BatchReport
 
 
 class FileStorageBackend(StorageBackend):
@@ -37,11 +37,13 @@ class FileStorageBackend(StorageBackend):
         """
         self.base_dir = Path(base_dir)
         self.jobs_dir = self.base_dir / "jobs"
+        self.reports_dir = self.base_dir / "reports"
         self.batch_queue_file = self.base_dir / "batch_queue.json"
         
         # Create directory structure
         self.base_dir.mkdir(parents=True, exist_ok=True)
         self.jobs_dir.mkdir(exist_ok=True)
+        self.reports_dir.mkdir(exist_ok=True)
         
         self.logger = logging.getLogger(__name__)
     
@@ -150,7 +152,7 @@ class FileStorageBackend(StorageBackend):
         
         return sorted(job_ids)
     
-    def delete_job(self, job_id: str) -> None:
+    def delete_job(self, job_id: str) -> bool:
         """Delete all data for a job."""
         job_dir = self._get_job_dir(job_id)
         
@@ -158,8 +160,10 @@ class FileStorageBackend(StorageBackend):
             import shutil
             shutil.rmtree(job_dir)
             self.logger.info(f"Deleted job {job_id}")
+            return True
         else:
             self.logger.warning(f"Job directory not found: {job_dir}")
+            return False
     
     def get_stats(self) -> Dict[str, Any]:
         """Get storage statistics."""
@@ -248,3 +252,64 @@ class FileStorageBackend(StorageBackend):
             json.dump(export_data, f, indent=2, default=str)
         
         self.logger.info(f"Exported job {job_id} to {output_file}")
+    
+    def save_report(self, report: BatchReport) -> None:
+        """Save batch report."""
+        report_file = self.reports_dir / f"batch_report_{report.batch_id}.json"
+        
+        with open(report_file, 'w', encoding='utf-8') as f:
+            json.dump(report.to_dict(), f, indent=2, default=str)
+        
+        self.logger.info(f"Saved batch report {report.batch_id} to {report_file}")
+    
+    def load_report(self, batch_id: str) -> BatchReport:
+        """Load batch report."""
+        report_file = self.reports_dir / f"batch_report_{batch_id}.json"
+        
+        if not report_file.exists():
+            raise FileNotFoundError(f"Batch report not found: {report_file}")
+        
+        with open(report_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        return BatchReport.from_dict(data)
+    
+    def list_reports(self) -> List[str]:
+        """List all batch report IDs."""
+        report_ids = []
+        
+        if not self.reports_dir.exists():
+            return report_ids
+        
+        for report_file in self.reports_dir.glob("batch_report_*.json"):
+            # Extract batch_id from filename: batch_report_{batch_id}.json
+            batch_id = report_file.stem.replace("batch_report_", "")
+            report_ids.append(batch_id)
+        
+        return sorted(report_ids)
+    
+    def cleanup_old_files(self, max_age_days: int) -> tuple[int, int]:
+        """Clean up old files."""
+        from datetime import datetime, timedelta
+        
+        cutoff_time = datetime.now() - timedelta(days=max_age_days)
+        deleted_jobs = 0
+        deleted_reports = 0
+        
+        # Clean up old jobs
+        for job_dir in self.jobs_dir.iterdir():
+            if job_dir.is_dir():
+                # Check modification time
+                mod_time = datetime.fromtimestamp(job_dir.stat().st_mtime)
+                if mod_time < cutoff_time:
+                    if self.delete_job(job_dir.name):
+                        deleted_jobs += 1
+        
+        # Clean up old reports
+        for report_file in self.reports_dir.glob("batch_report_*.json"):
+            mod_time = datetime.fromtimestamp(report_file.stat().st_mtime)
+            if mod_time < cutoff_time:
+                report_file.unlink()
+                deleted_reports += 1
+        
+        return (deleted_jobs, deleted_reports)

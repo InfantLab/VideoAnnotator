@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "videoannotator"
-version = "1.0.0"
+version = "1.1.0"
 description = "A modern, modular toolkit for analyzing, processing, and visualizing human interaction videos"
 readme = "README.md"
 license = {text = "MIT"}
@@ -181,7 +181,6 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
-    "--asyncio-mode=auto",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",

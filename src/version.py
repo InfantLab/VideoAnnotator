@@ -10,9 +10,9 @@ from pathlib import Path
 import json
 
 # VideoAnnotator Version
-__version__ = "1.0.0"
-__version_info__ = (1, 0, 0)
-__release_date__ = "2025-07-10"
+__version__ = "1.1.0"
+__version_info__ = (1, 1, 0)
+__release_date__ = "2025-08-04"
 __author__ = "VideoAnnotator Team"
 __license__ = "MIT"
 

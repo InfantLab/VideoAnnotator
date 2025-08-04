@@ -106,7 +106,7 @@ VideoAnnotator generates structured JSON files with comprehensive metadata:
 {
   "metadata": {
     "videoannotator": {
-      "version": "1.0.0",
+      "version": "1.1.0",
       "git": {"commit_hash": "359d693e..."}
     },
     "pipeline": {"name": "SceneDetectionPipeline"},

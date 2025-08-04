@@ -19,6 +19,8 @@ from ...exporters.native_formats import (
     export_coco_json,
     validate_coco_json,
 )
+from ...utils.person_identity import PersonIdentityManager
+from ...utils.automatic_labeling import infer_person_labels_from_tracks
 
 # Optional imports
 try:
@@ -45,6 +47,34 @@ class PersonTrackingPipeline(BasePipeline):
             "tracker": "bytetrack",  # or "botsort"
             "pose_format": "coco_17",  # COCO 17 keypoints
             "min_keypoint_confidence": 0.3,
+            # Person identity configuration
+            "person_identity": {
+                "enabled": True,
+                "id_format": "semantic",  # "semantic" or "integer"
+                "automatic_labeling": {
+                    "enabled": True,
+                    "confidence_threshold": 0.7,
+                    "size_based": {
+                        "enabled": True,
+                        "height_threshold": 0.4,  # Normalized height threshold for child/adult
+                        "confidence": 0.7,
+                        "adult_label": "parent",
+                        "child_label": "infant"
+                    },
+                    "position_based": {
+                        "enabled": True,
+                        "center_bias_threshold": 0.7,  # Threshold for center positioning
+                        "confidence": 0.6,
+                        "primary_label": "infant",  # Center subject is often the child
+                        "secondary_label": "parent"
+                    },
+                    "temporal_consistency": {
+                        "enabled": True,
+                        "min_detections": 3,
+                        "consistency_threshold": 0.6
+                    }
+                }
+            }
         }
         if config:
             default_config.update(config)
@@ -52,6 +82,7 @@ class PersonTrackingPipeline(BasePipeline):
 
         self.logger = logging.getLogger(__name__)
         self.model = None
+        self.identity_manager = None  # Will be initialized per video
 
     def process(
         self,
@@ -62,14 +93,22 @@ class PersonTrackingPipeline(BasePipeline):
         output_dir: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Process video for person detection and tracking.
+        Process video for person detection and tracking with identity management.
 
         Returns:
-            List of COCO format annotation dictionaries with person detection and pose results.
+            List of COCO format annotation dictionaries with person detection, pose results, and identity information.
         """
 
         # Get video metadata
         video_metadata = self._get_video_metadata(video_path)
+        
+        # Initialize PersonIdentityManager if person identity is enabled
+        if self.config.get("person_identity", {}).get("enabled", True):
+            id_format = self.config["person_identity"].get("id_format", "semantic")
+            self.identity_manager = PersonIdentityManager(video_metadata["video_id"], id_format)
+            self.logger.info(f"Initialized PersonIdentityManager for video: {video_metadata['video_id']}")
+        else:
+            self.identity_manager = None
 
         # Ensure pipeline is initialized
         if not self.is_initialized:
@@ -120,9 +159,55 @@ class PersonTrackingPipeline(BasePipeline):
         finally:
             cap.release()
 
+        # Apply automatic person labeling if enabled
+        if self.identity_manager is not None and annotations:
+            auto_labeling_config = self.config.get("person_identity", {}).get("automatic_labeling", {})
+            if auto_labeling_config.get("enabled", True):
+                self.logger.info("Applying automatic person labeling...")
+                
+                # Get person tracks for labeling
+                person_tracks = [ann for ann in annotations if ann.get('person_id')]
+                
+                # Apply automatic labeling
+                automatic_labels = infer_person_labels_from_tracks(person_tracks, annotations, auto_labeling_config)
+                
+                # Update identity manager with automatic labels
+                for person_id, label_info in automatic_labels.items():
+                    if label_info['confidence'] >= auto_labeling_config.get('confidence_threshold', 0.7):
+                        self.identity_manager.set_person_label(
+                            person_id,
+                            label_info['label'],
+                            label_info['confidence'],
+                            label_info['method']
+                        )
+                        self.logger.info(f"Auto-labeled {person_id}: {label_info['label']} "
+                                       f"(confidence={label_info['confidence']:.2f})")
+                
+                # Update annotations with new labels
+                for annotation in annotations:
+                    person_id = annotation.get('person_id')
+                    if person_id:
+                        label_info = self.identity_manager.get_person_label(person_id)
+                        if label_info:
+                            annotation['person_label'] = label_info['label']
+                            annotation['label_confidence'] = label_info['confidence']
+                            annotation['labeling_method'] = label_info['method']
+
         # Save results if output directory specified
         if output_dir and annotations:
             self._save_coco_annotations(annotations, output_dir, video_metadata)
+            
+            # Save person tracks information if identity manager is enabled
+            if self.identity_manager is not None:
+                person_tracks_path = Path(output_dir) / f"{video_metadata['video_id']}_person_tracks.json"
+                detection_summary = {
+                    "total_detections": len(annotations),
+                    "unique_persons": len(self.identity_manager.get_all_person_ids()),
+                    "labeled_persons": len([p for p in self.identity_manager.get_all_person_ids() 
+                                          if self.identity_manager.get_person_label(p)])
+                }
+                self.identity_manager.save_person_tracks(str(person_tracks_path), detection_summary)
+                self.logger.info(f"Saved person tracks to: {person_tracks_path}")
 
         self.logger.info(f"Person tracking complete: {len(annotations)} detections")
         return annotations
@@ -257,6 +342,18 @@ class PersonTrackingPipeline(BasePipeline):
                                 timestamp=timestamp,
                                 frame_number=frame_number,
                             )
+
+                        # Add person identity information if enabled
+                        if self.identity_manager is not None:
+                            person_id = self.identity_manager.register_track(track_id)
+                            annotation['person_id'] = person_id
+                            
+                            # Add person labeling fields if available
+                            label_info = self.identity_manager.get_person_label(person_id)
+                            if label_info:
+                                annotation['person_label'] = label_info['label']
+                                annotation['label_confidence'] = label_info['confidence']
+                                annotation['labeling_method'] = label_info['method']
 
                         annotations.append(annotation)
 
@@ -409,7 +506,15 @@ class PersonTrackingPipeline(BasePipeline):
                     },
                     "num_keypoints": {"type": "integer", "description": "Number of visible keypoints"},
                     "score": {"type": "number", "description": "Detection confidence"},
-                    "track_id": {"type": ["integer", "null"], "description": "Tracking ID across frames"}
+                    "track_id": {"type": ["integer", "null"], "description": "Tracking ID across frames"},
+                    # Person identity extensions
+                    "person_id": {"type": ["string", "null"], "description": "Consistent person identifier"},
+                    "person_label": {"type": ["string", "null"], "description": "Semantic person label"},
+                    "label_confidence": {"type": ["number", "null"], "description": "Person label confidence"},
+                    "labeling_method": {"type": ["string", "null"], "description": "How the label was assigned"},
+                    # VideoAnnotator extensions
+                    "timestamp": {"type": ["number", "null"], "description": "Frame timestamp in seconds"},
+                    "frame_number": {"type": ["integer", "null"], "description": "Frame number"}
                 },
                 "required": ["id", "image_id", "category_id", "bbox", "area", "iscrowd"]
             }

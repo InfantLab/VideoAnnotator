@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Optional, TYPE_CHECKING
 from pathlib import Path
 
 if TYPE_CHECKING:
-    from ..batch.types import BatchJob
+    from ..batch.types import BatchJob, BatchReport
 
 
 class StorageBackend(ABC):
@@ -117,3 +117,51 @@ class StorageBackend(ABC):
             Dictionary with storage stats
         """
         pass
+    
+    @abstractmethod
+    def save_report(self, report: "BatchReport") -> None:
+        """
+        Save batch report.
+        
+        Args:
+            report: BatchReport instance
+        """
+        pass
+    
+    @abstractmethod
+    def load_report(self, batch_id: str) -> "BatchReport":
+        """
+        Load batch report.
+        
+        Args:
+            batch_id: Unique batch identifier
+            
+        Returns:
+            BatchReport instance
+            
+        Raises:
+            FileNotFoundError: If report doesn't exist
+        """
+        pass
+    
+    @abstractmethod
+    def list_reports(self) -> List[str]:
+        """
+        List all batch report IDs.
+        
+        Returns:
+            List of batch IDs
+        """
+        pass
+    
+    def cleanup_old_files(self, max_age_days: int) -> tuple[int, int]:
+        """
+        Clean up old files (optional implementation).
+        
+        Args:
+            max_age_days: Maximum age in days
+            
+        Returns:
+            Tuple of (deleted_jobs, deleted_reports)
+        """
+        return (0, 0)

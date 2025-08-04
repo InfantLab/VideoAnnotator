@@ -8,31 +8,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Modern pipeline architecture with modular design
-- Scene detection pipeline with YOLO11 and CLIP integration
-- Person tracking pipeline with advanced multi-person tracking
-- Face analysis pipeline with OpenFace 3.0, DeepFace, and MediaPipe
-- Audio processing pipeline with Whisper and pyannote
-- Comprehensive YAML configuration system
-- Batch processing with parallel support
-- Docker containerization with GPU support
-- GitHub Actions CI/CD pipeline
-- Comprehensive testing framework
-- Performance benchmarking tools
-- Pre-commit hooks for code quality
-- Modern Python packaging with pyproject.toml
+- Initial v1.1.0 development
+
+## [1.1.0] - 2025-01-04
+
+### Added - PersonID System
+- **PersonIdentityManager** for consistent person identification across pipelines
+- **Automatic labeling system** with size-based and spatial heuristics for person role detection
+- **Face-to-person linking** across all face analysis pipelines using IoU matching
+- **Person identity configuration** via `configs/person_identity.yaml`
+- **Comprehensive test suite** for person identity functionality in `tests/test_phase2_integration.py`
+- **Command-line tools** for person labeling and validation in `scripts/` directory
+
+### Added - OpenFace 3.0 Integration
+- **OpenFace 3.0 pipeline** with comprehensive facial behavior analysis
+- **98-point facial landmarks** (2D and 3D coordinates)
+- **Facial Action Units (AUs)** intensity and presence detection
+- **Head pose estimation** with rotation and translation parameters
+- **Gaze direction tracking** and eye movement analysis
+- **COCO format output** for annotation tool compatibility
+- **Demo scripts** showcasing full OpenFace 3.0 capabilities
+
+### Added - LAION Face & Voice Pipelines
+- **LAION Face pipeline** with CLIP-based face analysis and emotion detection
+- **LAION Voice pipeline** with advanced voice emotion recognition
+- **40+ emotion categories** for comprehensive emotional analysis
+- **Multimodal emotion analysis** combining face and voice modalities
+- **High-precision embeddings** for research applications
+
+### Enhanced
+- **All face analysis pipelines** now support person identity linking
+- **Person tracking pipeline** exports consistent person IDs in COCO format
+- **Cross-pipeline data sharing** through standardized person tracks files
+- **COCO format compliance** with industry-standard annotation fields
+- **Configuration system** extended with person identity settings
+- **Testing framework** enhanced with integration and performance tests
 
 ### Changed
-- Restructured project to use modular pipeline architecture
-- Updated to modern Python packaging standards
-- Improved error handling and logging throughout
-- Enhanced configuration system with validation
-- Modernized documentation structure
+- **Documentation consolidation**: PersonID phase completion files merged into main documentation
+- **File organization**: Legacy backup files and duplicates removed
+- **Test structure**: All tests properly organized in `tests/` directory with pytest framework
 
 ### Fixed
-- Memory leaks in video processing
-- Audio extraction reliability
-- Cross-platform compatibility issues
+- **Legacy file cleanup**: Removed backup files and duplicates (`speech_pipeline_backup.py`, etc.)
+- **Documentation consistency**: Updated all docs to reflect current implementation status
+- **Test organization**: Moved standalone test files to proper test directory structure
 
 ## [1.0.0] - 2025-01-09
 

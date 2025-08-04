@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, Any, Optional, List
 from pathlib import Path
+import json
 
 import cv2
 import numpy as np
@@ -11,6 +12,7 @@ from huggingface_hub import hf_hub_download  # new import
 from ..base_pipeline import BasePipeline
 from .face_pipeline import FaceAnalysisPipeline
 from ...exporters.native_formats import create_coco_image_entry, export_coco_json
+from ...utils.person_identity import PersonIdentityManager
 
 # List of emotion categories based on LAION taxonomy with correct file mappings
 EMOTION_LABELS = {
@@ -92,6 +94,14 @@ class LAIONFacePipeline(BasePipeline):
             # Performance configuration
             "batch_size": 32,
             "device": "auto",  # "cpu", "cuda", "auto"
+            
+            # Person identity configuration
+            "person_identity": {
+                "enabled": True,
+                "link_to_persons": True,
+                "iou_threshold": 0.5,
+                "require_person_id": False  # Graceful fallback
+            }
         }
         merged_config = default_config.copy()
         if config:
@@ -112,6 +122,121 @@ class LAIONFacePipeline(BasePipeline):
         self.device: Optional[torch.device] = None
         # Prepare classifier container
         self.classifiers: Dict[str, Any] = {}
+        
+        # Person identity management
+        self.identity_manager = None
+
+    def _load_person_tracks(self, video_path: str) -> Optional[List[Dict[str, Any]]]:
+        """Load person tracking data for face-person linking."""
+        if not self.config["person_identity"]["link_to_persons"]:
+            return None
+            
+        # Initialize person identity manager if needed
+        if self.identity_manager is None:
+            try:
+                self.identity_manager = PersonIdentityManager(
+                    config=self.config.get("person_identity", {})
+                )
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize PersonIdentityManager: {e}")
+                return None
+        
+        # Look for person tracking data
+        video_name = Path(video_path).stem
+        person_data_paths = [
+            Path(video_path).parent / f"person_tracking_{video_name}.json",
+            Path("data") / f"person_tracking_{video_name}.json",
+            Path("demo_results") / f"person_tracking_{video_name}.json"
+        ]
+        
+        for person_data_path in person_data_paths:
+            if person_data_path.exists():
+                try:
+                    with open(person_data_path, 'r') as f:
+                        person_data = json.load(f)
+                    
+                    # Extract annotations with person tracks
+                    if 'annotations' in person_data:
+                        self.logger.info(f"Loaded person tracks from {person_data_path}")
+                        return person_data['annotations']
+                except Exception as e:
+                    self.logger.warning(f"Failed to load person data from {person_data_path}: {e}")
+        
+        self.logger.info("No person tracking data found")
+        return None
+
+    def _get_frame_person_annotations(self, person_tracks: List[Dict[str, Any]], 
+                                    image_id: int, frame_num: int) -> List[Dict[str, Any]]:
+        """Get person annotations for a specific frame."""
+        if not person_tracks:
+            return []
+        
+        frame_persons = []
+        for ann in person_tracks:
+            # Support both image_id and frame number matching
+            if ann.get('image_id') == image_id or ann.get('frame_number') == frame_num:
+                frame_persons.append(ann)
+        
+        return frame_persons
+
+    def _link_face_to_person(self, face_bbox: List[float], 
+                           person_annotations: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Link a face detection to a person using IoU matching."""
+        if not person_annotations:
+            return {}
+        
+        iou_threshold = self.config["person_identity"]["iou_threshold"]
+        best_match = None
+        best_iou = 0.0
+        
+        for person_ann in person_annotations:
+            person_bbox = person_ann.get('bbox', [])
+            if len(person_bbox) == 4:
+                iou_score = self._calculate_iou(face_bbox, person_bbox)
+                if iou_score > best_iou and iou_score >= iou_threshold:
+                    best_iou = iou_score
+                    best_match = person_ann
+        
+        if best_match:
+            person_id = best_match.get('person_id', 'unknown')
+            person_label = best_match.get('person_label', 'unknown')
+            person_label_confidence = best_match.get('person_label_confidence', 0.0)
+            person_labeling_method = best_match.get('person_labeling_method', 'unknown')
+            
+            return {
+                'person_id': person_id,
+                'person_label': person_label,
+                'person_label_confidence': person_label_confidence,
+                'person_labeling_method': person_labeling_method,
+                'face_person_iou': best_iou
+            }
+        
+        return {}
+
+    def _calculate_iou(self, bbox1: List[float], bbox2: List[float]) -> float:
+        """Calculate Intersection over Union (IoU) between two bounding boxes."""
+        x1, y1, w1, h1 = bbox1
+        x2, y2, w2, h2 = bbox2
+        
+        # Convert to corner coordinates
+        x1_max, y1_max = x1 + w1, y1 + h1
+        x2_max, y2_max = x2 + w2, y2 + h2
+        
+        # Calculate intersection
+        inter_x1 = max(x1, x2)
+        inter_y1 = max(y1, y2)
+        inter_x2 = min(x1_max, x2_max)
+        inter_y2 = min(y1_max, y2_max)
+        
+        if inter_x2 <= inter_x1 or inter_y2 <= inter_y1:
+            return 0.0
+        
+        inter_area = (inter_x2 - inter_x1) * (inter_y2 - inter_y1)
+        area1 = w1 * h1
+        area2 = w2 * h2
+        union_area = area1 + area2 - inter_area
+        
+        return inter_area / union_area if union_area > 0 else 0.0
 
     def initialize(self) -> None:
         """Initialize the SigLIP encoder and face detector backend."""
@@ -165,6 +290,15 @@ class LAIONFacePipeline(BasePipeline):
         if not self.is_initialized:
             self.initialize()
 
+        # Load person tracking data for face-person linking
+        managed_person_tracks = self._load_person_tracks(video_path)
+        # Use managed tracks if available, otherwise fall back to provided tracks
+        active_person_tracks = managed_person_tracks or person_tracks
+        if active_person_tracks:
+            self.logger.info(f"Using person tracks for face-person linking")
+        elif self.config["person_identity"]["require_person_id"]:
+            raise ValueError("Person tracking data required but not found")
+
         # Open video capture and metadata
         video_path_obj = Path(video_path)
         cap = cv2.VideoCapture(str(video_path_obj))
@@ -183,17 +317,6 @@ class LAIONFacePipeline(BasePipeline):
         annotations: List[Dict[str, Any]] = []
         images: List[Dict[str, Any]] = []
         annotation_id = 1
-        # Helper IoU for matching to person tracks
-        def iou(a, b):
-            xa1, ya1, wa, ha = a
-            xa2, ya2 = xa1+wa, ya1+ha
-            xb1, yb1, wb, hb = b
-            xb2, yb2 = xb1+wb, yb1+hb
-            xi1, yi1 = max(xa1, xb1), max(ya1, yb1)
-            xi2, yi2 = min(xa2, xb2), min(ya2, yb2)
-            inter = max(0, xi2-xi1) * max(0, yi2-yi1)
-            union = wa*ha + wb*hb - inter
-            return inter/union if union>0 else 0
 
         # Process frames
         try:
@@ -317,14 +440,13 @@ class LAIONFacePipeline(BasePipeline):
                         emotions = {}
                     
                     # Build annotation with emotions and model info
-                    # Attach person_id via best IoU match if provided
-                    person_id = None
-                    if person_tracks:
-                        for p in person_tracks:
-                            if p.get('frame_number')==frame_num:
-                                if iou(bbox, p.get('bbox', []))>0.5:
-                                    person_id = p.get('track_id')
-                                    break
+                    # Get person annotations for this frame
+                    frame_persons = self._get_frame_person_annotations(
+                        active_person_tracks, image_id, frame_num
+                    ) if active_person_tracks else []
+                    
+                    # Link face to person using our PersonIdentity system
+                    person_info = self._link_face_to_person(bbox, frame_persons)
                     
                     # Create a copy of the detection and add our attributes
                     annotation = det.copy() if isinstance(det, dict) else {}
@@ -333,13 +455,17 @@ class LAIONFacePipeline(BasePipeline):
                         "timestamp": timestamp,
                         "frame_number": frame_num,
                         "image_id": image_id,
+                        # Add person identity information
+                        "person_id": person_info.get("person_id", "unknown"),
+                        "person_label": person_info.get("person_label", "unknown"),
+                        "person_label_confidence": person_info.get("person_label_confidence", 0.0),
+                        "person_labeling_method": person_info.get("person_labeling_method", "none"),
                         "attributes": {
                             "emotions": emotions,
                             "model_info": {
                                 "model_size": self.config["model_size"],
                                 "embedding_dim": embedding.shape[1]
-                            },
-                            **({"person_id": person_id} if person_id is not None else {})
+                            }
                         },
                         "id": annotation_id
                     })

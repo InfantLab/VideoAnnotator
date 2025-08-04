@@ -148,6 +148,7 @@ class BatchStatus:
     average_processing_time: float = 0.0
     estimated_completion_time: Optional[datetime] = None
     current_jobs: List[str] = field(default_factory=list)  # Currently running job IDs
+    start_time: Optional[datetime] = None
     
     @property
     def progress_percentage(self) -> float:
@@ -162,8 +163,13 @@ class BatchStatus:
         """Get success rate as percentage (0-100)."""
         completed = self.completed_jobs + self.failed_jobs + self.cancelled_jobs
         if completed == 0:
-            return 0.0
+            return 100.0  # Default optimistic when no finished jobs yet
         return (self.completed_jobs / completed) * 100.0
+    
+    @property
+    def estimated_completion(self) -> Optional[datetime]:
+        """Alias for estimated_completion_time for backward compatibility."""
+        return self.estimated_completion_time
 
 
 @dataclass
@@ -198,7 +204,7 @@ class BatchReport:
         """Convert to dictionary for serialization."""
         return {
             "batch_id": self.batch_id,
-            "start_time": self.start_time.isoformat(),
+            "start_time": self.start_time.isoformat() if self.start_time else None,
             "end_time": self.end_time.isoformat() if self.end_time else None,
             "total_jobs": self.total_jobs,
             "completed_jobs": self.completed_jobs,
@@ -210,6 +216,31 @@ class BatchReport:
             "jobs": [job.to_dict() for job in self.jobs],
             "errors": self.errors,
         }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "BatchReport":
+        """Create BatchReport from dictionary."""
+        from datetime import datetime
+        
+        # Parse datetime fields
+        start_time = datetime.fromisoformat(data["start_time"]) if data.get("start_time") else None
+        end_time = datetime.fromisoformat(data["end_time"]) if data.get("end_time") else None
+        
+        # Create jobs from data
+        jobs = [BatchJob.from_dict(job_data) for job_data in data.get("jobs", [])]
+        
+        return cls(
+            batch_id=data["batch_id"],
+            start_time=start_time,
+            end_time=end_time,
+            total_jobs=data.get("total_jobs", 0),
+            completed_jobs=data.get("completed_jobs", 0),
+            failed_jobs=data.get("failed_jobs", 0),
+            cancelled_jobs=data.get("cancelled_jobs", 0),
+            total_processing_time=data.get("total_processing_time", 0.0),
+            jobs=jobs,
+            errors=data.get("errors", []),
+        )
 
 
 # Type aliases for convenience

@@ -34,6 +34,23 @@ from src.pipelines.audio_processing import AudioPipeline
 from src.pipelines.audio_processing.laion_voice_pipeline import LAIONVoicePipeline
 from src.version import get_version_info, print_version_info
 
+# Suppress verbose debug output from third-party libraries
+import os
+import warnings
+os.environ['NUMBA_DISABLE_JIT'] = '0'  # Keep JIT enabled for performance
+os.environ['NUMBA_THREADING_LAYER'] = 'workqueue'  # Reduce threading warnings
+warnings.filterwarnings('ignore', category=UserWarning, module='numba')
+
+# Configure Numba logging to be less verbose
+import numba
+numba.config.THREADING_LAYER = 'workqueue'
+
+# Set specific logger levels to reduce noise
+logging.getLogger('numba').setLevel(logging.WARNING)
+logging.getLogger('numba.core').setLevel(logging.WARNING)
+logging.getLogger('numba.core.byteflow').setLevel(logging.WARNING)
+logging.getLogger('numba.core.interpreter').setLevel(logging.WARNING)
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -224,7 +241,7 @@ class VideoAnnotatorDemo:
     
     def run_scene_detection(self):
         """Run scene detection pipeline."""
-        logger.info("🎬 Running Scene Detection Pipeline...")
+        logger.info("Running Scene Detection Pipeline...")
         try:
             pipeline = SceneDetectionPipeline(self.configs["scene_detection"])
             
@@ -253,7 +270,7 @@ class VideoAnnotatorDemo:
     
     def run_person_tracking(self):
         """Run person tracking pipeline."""
-        logger.info("👤 Running Person Tracking Pipeline...")
+        logger.info("Running Person Tracking Pipeline...")
         try:
             pipeline = PersonTrackingPipeline(self.configs["person_tracking"])
             
@@ -314,13 +331,13 @@ class VideoAnnotatorDemo:
             logger.info(f"   [SUCCESS] Analyzed {face_count} faces in {duration:.2f}s")
             
         except Exception as e:
-            logger.error(f"   ❌ Face analysis failed: {e}")
+            logger.error(f"   Face analysis failed: {e}")
             self.results["face_analysis"] = {"status": "failed", "error": str(e)}
 
     def run_laion_face_analysis(self):
         """Run LAION face analysis pipeline."""
         model_size = self.configs["laion_face_analysis"].get("model_size", "small")
-        logger.info(f"🧠 Running LAION Face Analysis Pipeline ({model_size.upper()} model)...")
+        logger.info(f"Running LAION Face Analysis Pipeline ({model_size.upper()} model)...")
         try:
             pipeline = LAIONFacePipeline(self.configs["laion_face_analysis"])
             # Load previous person tracking results if available
@@ -354,12 +371,12 @@ class VideoAnnotatorDemo:
             logger.info(f"   [SUCCESS] Analyzed {face_count} faces with {model_size.upper()} model in {duration:.2f}s")
             
         except Exception as e:
-            logger.error(f"   ❌ LAION face analysis failed: {e}")
+            logger.error(f"   LAION face analysis failed: {e}")
             self.results["laion_face_analysis"] = {"status": "failed", "error": str(e)}
     
     def run_openface3_analysis(self):
         """Run OpenFace 3.0 analysis pipeline."""
-        logger.info("🔬 Running OpenFace 3.0 Analysis Pipeline...")
+        logger.info("Running OpenFace 3.0 Analysis Pipeline...")
         try:
             pipeline = OpenFace3Pipeline(self.configs["openface3_analysis"])
             
@@ -417,15 +434,15 @@ class VideoAnnotatorDemo:
                     "output_file": str(output_file),
                     "features": []
                 }
-                logger.info(f"   ✅ OpenFace 3.0 analysis completed in {duration:.2f}s (no faces detected)")
+                logger.info(f"   OpenFace 3.0 analysis completed in {duration:.2f}s (no faces detected)")
             
         except Exception as e:
-            logger.error(f"   ❌ OpenFace 3.0 analysis failed: {e}")
+            logger.error(f"   OpenFace 3.0 analysis failed: {e}")
             self.results["openface3_analysis"] = {"status": "failed", "error": str(e)}
     
     def run_audio_processing(self):
         """Run audio processing pipeline."""
-        logger.info("🎤 Running Audio Processing Pipeline...")
+        logger.info("Running Audio Processing Pipeline...")
         try:
             pipeline = AudioPipeline(self.configs["audio_processing"])
             
@@ -446,15 +463,15 @@ class VideoAnnotatorDemo:
                 "output_file": str(output_file)
             }
             
-            logger.info(f"   ✅ Processed {segment_count} audio segments in {duration:.2f}s")
+            logger.info(f"   Processed {segment_count} audio segments in {duration:.2f}s")
             
         except Exception as e:
-            logger.error(f"   ❌ Audio processing failed: {e}")
+            logger.error(f"   Audio processing failed: {e}")
             self.results["audio_processing"] = {"status": "failed", "error": str(e)}
 
     def run_laion_voice_analysis(self):
         """Run LAION voice emotion analysis pipeline."""
-        logger.info("🎭 Running LAION Voice Emotion Analysis Pipeline...")
+        logger.info("Running LAION Voice Emotion Analysis Pipeline...")
         try:
             pipeline = LAIONVoicePipeline(self.configs["laion_voice_analysis"])
             
@@ -487,15 +504,15 @@ class VideoAnnotatorDemo:
                 "output_file": str(output_file)
             }
             
-            logger.info(f"   ✅ Analyzed {segment_count} voice emotion segments in {duration:.2f}s")
+            logger.info(f"   Analyzed {segment_count} voice emotion segments in {duration:.2f}s")
             
         except Exception as e:
-            logger.error(f"   ❌ LAION voice analysis failed: {e}")
+            logger.error(f"   LAION voice analysis failed: {e}")
             self.results["laion_voice_analysis"] = {"status": "failed", "error": str(e)}
 
     def run_demo(self):
         """Run the complete demo."""
-        logger.info("🚀 VideoAnnotator Pipeline Demo")
+        logger.info("VideoAnnotator Pipeline Demo")
         logger.info("=" * 60)
         
         # Print version info
@@ -503,12 +520,12 @@ class VideoAnnotatorDemo:
         print()
         
         # Show configuration
-        logger.info(f"📁 Video: {self.video_path}")
-        logger.info(f"📁 Output: {self.output_dir}")
-        logger.info(f"⚙️  Quality: {'Fast' if self.args.fast else 'High Quality' if self.args.high_quality else 'Balanced'}")
+        logger.info(f"Video: {self.video_path}")
+        logger.info(f"Output: {self.output_dir}")
+        logger.info(f"Quality: {'Fast' if self.args.fast else 'High Quality' if self.args.high_quality else 'Balanced'}")
         
         enabled_pipelines = self._get_enabled_pipelines()
-        logger.info(f"🔧 Pipelines: {', '.join(enabled_pipelines)}")
+        logger.info(f"Pipelines: {', '.join(enabled_pipelines)}")
         print()
         
         # Run selected pipelines

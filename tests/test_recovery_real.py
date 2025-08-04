@@ -409,7 +409,7 @@ class TestFailureRecoveryRealistic:
         job.pipeline_results["scene_detection"] = PipelineResult(
             pipeline_name="scene_detection",
             status=JobStatus.COMPLETED,
-            output_data={"scenes": ["scene1", "scene2"]}
+            output_file="/path/to/scene_detection_output.json"
         )
         
         # Second pipeline fails
