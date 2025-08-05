@@ -2,7 +2,9 @@
 
 ## Overview
 
-This document outlines the implementation plan to migrate VideoViewer from its custom annotation format to industry-standard formats produced by [VideoAnnotator](https://github.com/InfantLab/VideoAnnotator). The goal is to achieve seamless integration while maintaining code quality and following best practices.
+This document outlines the implementation plan to integrate Video Action Viewer with the latest [VideoAnnotator v1.1.1](https://github.com/InfantLab/VideoAnnotator) outputs. The goal is to update our existing implementation to align with the current VideoAnnotator format specifications while maintaining code quality and extending functionality.
+
+**Current Status**: Video Action Viewer v0.1.0 was an alpha implementation. VideoAnnotator v1.1.1 is the first stable release, so we can update directly without backward compatibility concerns.
 
 ## VideoAnnotator Reference Links
 
@@ -25,16 +27,137 @@ This document outlines the implementation plan to migrate VideoViewer from its c
 }
 ```
 
-### Target VideoAnnotator Format
-- **Person Tracking**: COCO format JSON with keypoints
-- **Speech Recognition**: WebVTT files (.vtt)
-- **Speaker Diarization**: RTTM files (.rttm)
-- **Scene Detection**: Simple JSON arrays
-- **Audio**: Extracted WAV files (no embedded waveform)
+### VideoAnnotator v1.1.1 Format (Current)
+- **Unified Results**: `complete_results.json` with all pipeline outputs in single file
+- **Person Tracking**: Enhanced COCO format with `person_id`, `person_label`, `labeling_method`
+- **Face Analysis**: Full LAION integration with emotional analysis and facial landmarks
+- **Speech Recognition**: Standard WebVTT files (.vtt)
+- **Speaker Diarization**: NIST RTTM format files (.rttm)
+- **Scene Detection**: COCO-compliant JSON with detailed scene metadata
+- **Audio**: Extracted WAV files with consistent naming pattern
+- **Individual Files**: Maintains separate per-pipeline outputs with standardized naming
 
 ## Implementation Phases
 
-## Phase 1: Core Type System & Validation
+## 🚀 NEW: Phase 0: VideoAnnotator v1.1.1 Alignment (Priority: HIGH)
+
+### 0.1 Update Type Definitions for v1.1.1 Changes
+
+**File**: `src/types/annotations.ts`
+
+**New VideoAnnotator v1.1.1 Features to Support**:
+- [ ] Add support for unified `complete_results.json` format
+- [ ] Enhance `COCOPersonAnnotation` with new fields:
+  - `person_id: string` (e.g., "person_2UWdXP.joke1.rep3.take1.Peekaboo_h265_001")
+  - `person_label: string` (e.g., "parent", "child")
+  - `label_confidence: number`
+  - `labeling_method: string` (e.g., "automatic_size_based")
+- [ ] Add face analysis interfaces for LAION integration:
+  - `LAIONFaceAnnotation` with emotions, landmarks, and attributes
+  - Enhanced emotion analysis with detailed scores and rankings
+- [ ] Update scene detection to match COCO-compliant format
+- [ ] Add support for processing config metadata from `complete_results.json`
+
+**New Types for v1.1.1**:
+```typescript
+// Enhanced Person Annotation
+interface COCOPersonAnnotation {
+  id: number;
+  image_id: string;
+  category_id: number;
+  keypoints: number[];
+  bbox: [number, number, number, number];
+  area: number;
+  score: number;
+  track_id: number;
+  timestamp: number;
+  frame_number: number;
+  // NEW v1.1.1 fields
+  person_id: string;
+  person_label: string;
+  label_confidence: number;
+  labeling_method: string;
+}
+
+// NEW: LAION Face Analysis
+interface LAIONFaceAnnotation {
+  id: number;
+  image_id: string;
+  category_id: number;
+  bbox: [number, number, number, number];
+  area: number;
+  score: number;
+  face_id: number;
+  timestamp: number;
+  frame_number: number;
+  backend: string;
+  person_id: string;
+  person_label: string;
+  person_label_confidence: number;
+  person_labeling_method: string;
+  attributes: {
+    emotions: Record<string, {
+      score: number;
+      rank: number;
+      raw_score: number;
+    }>;
+    model_info: {
+      model_size: string;
+      embedding_dim: number;
+    };
+  };
+}
+
+// NEW: Complete Results Structure
+interface VideoAnnotatorCompleteResults {
+  video_path: string;
+  output_dir: string;
+  start_time: string;
+  config: {
+    scene_detection: any;
+    person_tracking: any;
+    face_analysis: any;
+    audio_processing: any;
+  };
+  pipeline_results: {
+    scene?: PipelineResult<SceneAnnotation>;
+    person?: PipelineResult<COCOPersonAnnotation>;
+    face?: PipelineResult<LAIONFaceAnnotation>;
+    audio?: PipelineResult<any>;
+  };
+  errors: any[];
+  end_time: string;
+  total_duration: number;
+}
+
+interface PipelineResult<T> {
+  results: T[];
+  processing_time: number;
+  status: string;
+}
+```
+
+### 0.2 Update Parser System for v1.1.1 Support
+
+**File**: `src/lib/parsers/merger.ts`
+
+**Actions**:
+- [ ] Replace existing parser with `complete_results.json` format support
+- [ ] Update file type detection to recognize v1.1.1 naming patterns
+- [ ] Simplify to unified format only (no backward compatibility needed)
+- [ ] Handle processing metadata and configuration information
+
+### 0.3 Enhance Face Analysis Support
+
+**File**: `src/lib/parsers/face.ts` (new)
+
+**Actions**:
+- [ ] Create parser for LAION face analysis format
+- [ ] Support emotion recognition data visualization
+- [ ] Handle face-to-person association
+- [ ] Parse facial landmarks and attributes
+
+## Phase 1: Core Type System & Validation (UPDATED)
 
 ### 1.1 Update Type Definitions
 
@@ -337,11 +460,11 @@ SPEAKER <file> <channel> <start> <duration> <ortho> <stype> <name> <conf> <slat>
 
 ## 🎯 PROJECT STATUS SUMMARY
 
-### ✅ **PHASES 1-5 COMPLETED** (v0.1.0)
+### ✅ **PHASES 1-5 COMPLETED** (v0.1.0) - **READY FOR v1.1.1 UPDATE**
 
 **Core Migration**: VideoViewer successfully migrated to VideoAnnotator standard formats
 - **Type System**: Complete StandardAnnotationData with COCO, WebVTT, RTTM, Scene interfaces
-- **Parser Engine**: Full support for all VideoAnnotator pipeline outputs
+- **Parser Engine**: Full support for all VideoAnnotator pipeline outputs  
 - **UI Integration**: Updated components with multi-file upload and real-time visualization
 - **Testing**: Validated with real VideoAnnotator demo datasets
 - **Documentation**: Comprehensive user and developer guides
@@ -369,9 +492,17 @@ SPEAKER <file> <channel> <start> <duration> <ortho> <stype> <name> <conf> <slat>
 - Professional UI with version tracking and GitHub integration
 - Built-in demo mode for immediate exploration
 
-### 🚀 **READY FOR PRODUCTION USE**
+### 🔄 **NEXT: VideoAnnotator v1.1.1 ALIGNMENT** (Target: v0.2.0)
 
-The Video Action Viewer is now a fully functional tool for researchers and analysts working with VideoAnnotator outputs. All core features are implemented, tested, and documented.
+**New Requirements from VideoAnnotator v1.1.1**:
+- 📋 **Unified Results Support**: Parse `complete_results.json` format
+- 👤 **Enhanced Person Tracking**: Support `person_id`, `person_label`, `labeling_method`
+- 😊 **Face Analysis Integration**: LAION emotion recognition and facial landmarks
+- 🎭 **Emotion Visualization**: Real-time emotion overlay display
+- 📊 **Processing Metadata**: Display pipeline configuration and timing
+- 🗂️ **Clean Migration**: Replace alpha implementation with stable v1.1.1 support
+
+**Implementation Priority**: Migrate to stable VideoAnnotator v1.1.1 format with face analysis support. No backward compatibility needed since both versions are pre-production.
 
 ## Dependencies & Libraries
 
@@ -422,37 +553,58 @@ src/
 
 ## Implementation Checklist
 
-### Phase 1: Core Type System ✅ COMPLETED
+### Phase 0: VideoAnnotator v1.1.1 Alignment (NEW PRIORITY)
+- [ ] **Update Type Definitions** - Add v1.1.1 fields to existing interfaces
+  - [ ] Enhance `COCOPersonAnnotation` with `person_id`, `person_label`, `label_confidence`, `labeling_method`
+  - [ ] Add `LAIONFaceAnnotation` interface for face analysis
+  - [ ] Add `VideoAnnotatorCompleteResults` interface for unified format
+  - [ ] Update `StandardAnnotationData` to include face analysis
+- [ ] **Update Parser System** - Migrate to unified format
+  - [ ] Replace existing parsers with `complete_results.json` support in `merger.ts`
+  - [ ] Create `face.ts` parser for LAION face analysis
+  - [ ] Update file type detection for v1.1.1 naming patterns
+  - [ ] Remove alpha demo data, use stable v1.1.1 datasets
+- [ ] **Enhance UI Components** - Add face analysis visualization
+  - [ ] Add face overlay rendering in `VideoPlayer.tsx`
+  - [ ] Add emotion visualization overlays
+  - [ ] Add face analysis track to `Timeline.tsx`
+  - [ ] Update overlay controls for face analysis options
+- [ ] **Update Demo Data** - Use latest VideoAnnotator v1.1.1 outputs
+  - [ ] Update demo data loading to support unified format
+  - [ ] Add face analysis to demo visualization
+  - [ ] Test with provided `demo/videos_out` datasets
+
+### Phase 1: Core Type System ✅ COMPLETED (v0.1.0)
 - [x] Update `src/types/annotations.ts` - Added standard format types (COCO, WebVTT, RTTM, Scene)
 - [x] Create `src/lib/validation.ts` - Added Zod schemas for all formats
 - [x] Add Zod schemas for all formats - Complete with error handling and validation functions
 
-### Phase 2: Parsers ✅ COMPLETED
+### Phase 2: Parsers ✅ COMPLETED (v0.1.0)
 - [x] Create WebVTT parser - Complete with timestamp parsing and validation
 - [x] Create RTTM parser - Complete with NIST format support and speaker merging
 - [x] Create COCO parser - Complete with keypoint parsing and track statistics
 - [x] Create scene detection parser - Complete with scene analysis and boundary detection
 - [x] Create data merger utility - Complete with file type detection and progress tracking
 
-### Phase 3: File Loading ✅ COMPLETED
+### Phase 3: File Loading ✅ COMPLETED (v0.1.0)
 - [x] Update FileUploader for multiple files - Complete with drag-and-drop interface
 - [x] Add file type detection - Complete with intelligent content analysis for JSON files  
 - [x] Add validation and error handling - Complete with file size validation and user feedback
 - [x] Create file utilities - Complete with comprehensive file type detection and validation
 
-### Phase 4: Components ✅ COMPLETED
+### Phase 4: Components ✅ COMPLETED (v0.1.0)
 - [x] Update VideoPlayer for COCO format - Complete with COCO keypoint rendering and track IDs
 - [x] Update Timeline for time-based events - Complete with WebVTT, RTTM, and Scene tracks
 - [x] Update OverlayControls component - Complete with new overlay options for standard formats
 - [x] Update VideoAnnotationViewer - Complete with StandardAnnotationData integration
 - [x] Update OverlaySettings and TimelineSettings - Complete with new format-specific options
 
-### Phase 5: Integration
+### Phase 5: Integration ✅ COMPLETED (v0.1.0)
 - ✅ Update main viewer component - **Complete VideoAnnotationViewer.tsx integration**
 - ✅ Test with demo data - **Full VideoAnnotator dataset testing completed**
 - ✅ Update documentation - **Comprehensive documentation suite created**
 
-### Phase 6: Advanced Features
+### Phase 6: Advanced Features (Future)
 - [ ] Add export capabilities
 - [ ] Enhance error handling
 - [ ] Performance optimizations
@@ -468,20 +620,29 @@ src/
 
 ## Timeline Estimate
 
-- **Phase 1-2**: 2-3 days (Core types and parsers)
-- **Phase 3**: 1-2 days (File loading)
-- **Phase 4**: 2-3 days (Component updates)
-- **Phase 5**: 1-2 days (Integration and testing)
-- **Phase 6**: 2-3 days (Advanced features)
+### VideoAnnotator v1.1.1 Migration (Phase 0)
+- **Type Updates**: 1 day (Enhanced interfaces for v1.1.1)
+- **Parser Migration**: 1-2 days (Replace with unified format + face analysis)
+- **UI Enhancement**: 1-2 days (Face visualization + emotion overlays)
+- **Demo Data Update**: 1 day (Replace alpha data with stable v1.1.1 datasets)
 
-**Total**: 8-13 days for complete implementation
+**Phase 0 Total**: 4-6 days (Clean migration, no compatibility overhead)
+
+### Original Implementation (Phases 1-6) ✅ COMPLETED
+- **Phase 1-2**: ✅ Completed (Core types and parsers)
+- **Phase 3**: ✅ Completed (File loading)
+- **Phase 4**: ✅ Completed (Component updates)
+- **Phase 5**: ✅ Completed (Integration and testing)
+- **Phase 6**: Future enhancement (Advanced features)
+
+**Current Status**: Ready for clean migration to stable v1.1.1 format
 
 ## Notes
 
-- Maintain backward compatibility option if needed
+- Clean migration to VideoAnnotator v1.1.1 (no backward compatibility needed)
 - Focus on TypeScript type safety throughout
 - Use existing UI components and patterns
 - Leverage Zod for runtime validation
 - Follow existing code style and patterns
-- Add comprehensive error handling
-- Document all new APIs and formats
+- Add comprehensive error handling for new face analysis features
+- Document all new APIs and formats, especially emotion recognition

@@ -20,6 +20,8 @@ export const OverlayControls = ({ settings, onChange }: OverlayControlsProps) =>
     { key: 'subtitles' as const, label: 'Speech Recognition (WebVTT)', color: 'annotation-subtitle' },
     { key: 'speakers' as const, label: 'Speaker Diarization (RTTM)', color: 'annotation-audio' },
     { key: 'scenes' as const, label: 'Scene Detection', color: 'annotation-event' },
+    { key: 'faces' as const, label: 'Face Detection (LAION)', color: 'annotation-face' },
+    { key: 'emotions' as const, label: 'Emotion Recognition', color: 'annotation-emotion' },
   ];
 
   return (

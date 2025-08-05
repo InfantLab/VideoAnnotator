@@ -6,7 +6,7 @@
 // STANDARD FORMAT TYPES (VideoAnnotator Compatible)
 // =============================================================================
 
-// COCO Format Types for Person Tracking
+// COCO Format Types for Person Tracking (VideoAnnotator v1.1.1)
 // Reference: https://cocodataset.org/#format-data
 export interface COCOPersonAnnotation {
   id: number;
@@ -18,9 +18,14 @@ export interface COCOPersonAnnotation {
   area: number;
   iscrowd: 0 | 1;
   score: number;
-  track_id?: number;
+  track_id: number;
   timestamp: number;
   frame_number: number;
+  // NEW v1.1.1 fields
+  person_id: string; // e.g., "person_2UWdXP.joke1.rep3.take1.Peekaboo_h265_001"
+  person_label: string; // e.g., "parent", "child"
+  label_confidence: number;
+  labeling_method: string; // e.g., "automatic_size_based"
 }
 
 // WebVTT Types for Speech Recognition
@@ -46,35 +51,107 @@ export interface RTTMSegment {
   format: 'rttm';
 }
 
-// Scene Detection Types
+// LAION Face Analysis Types (VideoAnnotator v1.1.1)
+// Reference: LAION face analysis backend
+export interface LAIONFaceAnnotation {
+  id: number;
+  image_id: string;
+  category_id: number;
+  bbox: [number, number, number, number]; // [x, y, width, height]
+  area: number;
+  iscrowd: 0 | 1;
+  score: number;
+  face_id: number;
+  timestamp: number;
+  frame_number: number;
+  backend: string; // e.g., "opencv", "laion"
+  person_id: string; // e.g., "unknown" or associated person
+  person_label: string; // e.g., "unknown", "parent", "child"
+  person_label_confidence: number;
+  person_labeling_method: string; // e.g., "none", "automatic_size_based"
+  attributes: {
+    emotions: Record<string, {
+      score: number;
+      rank: number;
+      raw_score: number;
+    }>;
+    model_info: {
+      model_size: string; // e.g., "small"
+      embedding_dim: number; // e.g., 1152
+    };
+  };
+}
+
+// Scene Detection Types (Updated for v1.1.1 COCO compliance)
 export interface SceneAnnotation {
   id: number;
+  image_id: string;
+  category_id: number;
+  bbox: [number, number, number, number]; // full frame typically
+  area: number;
+  iscrowd: 0 | 1;
+  score: number;
   video_id: string;
   timestamp: number; // scene center timestamp
   start_time: number;
   end_time: number;
   duration: number;
   scene_type: string;
-  bbox: [number, number, number, number]; // full frame typically
-  score: number;
   frame_start: number;
   frame_end: number;
   all_scores: Record<string, number>;
 }
 
-// Pipeline Result Wrappers (as produced by VideoAnnotator)
+// Pipeline Result Wrappers (VideoAnnotator v1.1.1)
 export interface PipelineResult<T> {
-  pipeline: string;
-  format: string;
-  data: T[];
-  metadata: {
-    pipeline_name: string;
-    output_format: string;
-    processed_segments: number;
-  };
+  results: T[];
+  processing_time: number;
+  status: string; // e.g., "completed", "failed"
 }
 
-// Unified Standard Annotation Data Structure
+// VideoAnnotator v1.1.1 Complete Results Structure
+export interface VideoAnnotatorCompleteResults {
+  video_path: string;
+  output_dir: string;
+  start_time: string; // ISO timestamp
+  config: {
+    scene_detection: {
+      enabled: boolean;
+      threshold: number;
+      min_scene_length: number;
+    };
+    person_tracking: {
+      enabled: boolean;
+      model_name: string;
+      confidence_threshold: number;
+    };
+    face_analysis: {
+      enabled: boolean;
+      backend: string;
+      detection_confidence: number;
+      enable_action_units: boolean;
+      enable_head_pose: boolean;
+      enable_gaze: boolean;
+      max_faces: number;
+    };
+    audio_processing: {
+      enabled: boolean;
+      whisper_model: string;
+      sample_rate: number;
+    };
+  };
+  pipeline_results: {
+    scene?: PipelineResult<SceneAnnotation>;
+    person?: PipelineResult<COCOPersonAnnotation>;
+    face?: PipelineResult<LAIONFaceAnnotation>;
+    audio?: PipelineResult<any>; // Audio results structure varies
+  };
+  errors: any[];
+  end_time: string; // ISO timestamp
+  total_duration: number; // seconds
+}
+
+// Unified Standard Annotation Data Structure (Updated for v1.1.1)
 export interface StandardAnnotationData {
   video_info: {
     filename: string;
@@ -87,16 +164,21 @@ export interface StandardAnnotationData {
   speech_recognition?: WebVTTCue[];
   speaker_diarization?: RTTMSegment[];
   scene_detection?: SceneAnnotation[];
+  face_analysis?: LAIONFaceAnnotation[]; // NEW: Face analysis support
   audio_file?: File; // Separate WAV file
   metadata?: {
     created: string;
     version: string;
     pipelines: string[];
     source: 'videoannotator' | 'custom';
+    // NEW: Processing information from VideoAnnotator
+    processing_config?: VideoAnnotatorCompleteResults['config'];
+    processing_time?: number;
+    total_duration?: number;
   };
 }
 
-// File Type Detection
+// File Type Detection (Updated for v1.1.1)
 export type SupportedFileType =
   | 'video/mp4'
   | 'video/webm'
@@ -105,6 +187,8 @@ export type SupportedFileType =
   | 'text/vtt'
   | 'text/plain' // for RTTM
   | 'application/json'
+  | 'application/json+complete_results' // NEW: VideoAnnotator complete results
+  | 'application/json+face_analysis' // NEW: LAION face analysis
   | 'audio/wav'
   | 'audio/mpeg';
 
@@ -203,6 +287,8 @@ export interface OverlaySettings {
   subtitles: boolean;      // WebVTT speech recognition text
   speakers: boolean;       // RTTM speaker diarization
   scenes: boolean;         // Scene detection boundaries
+  faces: boolean;          // NEW: LAION face detection and analysis
+  emotions: boolean;       // NEW: Emotion recognition overlays
 
   // Legacy fields for backward compatibility (deprecated)
   faceEmotion?: boolean;
@@ -215,6 +301,8 @@ export interface TimelineSettings {
   showSpeakers: boolean;     // RTTM speaker diarization  
   showScenes: boolean;       // Scene detection
   showMotion: boolean;       // Person tracking motion data
+  showFaces: boolean;        // NEW: Face analysis timeline
+  showEmotions: boolean;     // NEW: Emotion analysis timeline
 
   // Legacy fields for backward compatibility (deprecated)
   showEvents?: boolean;

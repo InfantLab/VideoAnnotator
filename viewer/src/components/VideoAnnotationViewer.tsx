@@ -24,6 +24,8 @@ export const VideoAnnotationViewer = () => {
     subtitles: true,
     speakers: true,
     scenes: true,
+    faces: true,
+    emotions: true,
   });
 
   const [timelineSettings, setTimelineSettings] = useState<TimelineSettings>({
@@ -31,6 +33,8 @@ export const VideoAnnotationViewer = () => {
     showSpeakers: true,
     showScenes: true,
     showMotion: true,
+    showFaces: true,
+    showEmotions: true,
   });
 
   const videoRef = useRef<HTMLVideoElement>(null);

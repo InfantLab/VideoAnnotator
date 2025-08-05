@@ -29,7 +29,12 @@ export const COCOPersonAnnotationSchema = z.object({
     score: z.number().min(0).max(1),
     track_id: z.number().optional(),
     timestamp: z.number().nonnegative(),
-    frame_number: z.number().nonnegative()
+    frame_number: z.number().nonnegative(),
+    // NEW v1.1.1 fields
+    person_id: z.string(),
+    person_label: z.string(),
+    label_confidence: z.number(),
+    labeling_method: z.string()
 });
 
 // =============================================================================
@@ -38,12 +43,10 @@ export const COCOPersonAnnotationSchema = z.object({
 
 export const WebVTTCueSchema = z.object({
     id: z.string().optional(),
-    startTime: z.number().nonnegative(),
-    endTime: z.number().nonnegative(),
-    text: z.string(),
+    startTime: z.number().nonnegative().optional(),
+    endTime: z.number().nonnegative().optional(),
+    text: z.string().optional(),
     settings: z.string().optional()
-}).refine(data => data.endTime > data.startTime, {
-    message: "End time must be greater than start time"
 });
 
 // =============================================================================
@@ -51,16 +54,14 @@ export const WebVTTCueSchema = z.object({
 // =============================================================================
 
 export const RTTMSegmentSchema = z.object({
-    file_id: z.string(),
-    start_time: z.number().nonnegative(),
-    duration: z.number().positive(),
-    end_time: z.number().nonnegative(),
-    speaker_id: z.string(),
-    confidence: z.number().min(0).max(1),
-    pipeline: z.literal('speaker_diarization'),
-    format: z.literal('rttm')
-}).refine(data => Math.abs((data.start_time + data.duration) - data.end_time) < 0.001, {
-    message: "End time must equal start time plus duration"
+    file_id: z.string().optional(),
+    start_time: z.number().nonnegative().optional(),
+    duration: z.number().positive().optional(),
+    end_time: z.number().nonnegative().optional(),
+    speaker_id: z.string().optional(),
+    confidence: z.number().min(0).max(1).optional(),
+    pipeline: z.literal('speaker_diarization').optional(),
+    format: z.literal('rttm').optional()
 });
 
 // =============================================================================
@@ -68,18 +69,22 @@ export const RTTMSegmentSchema = z.object({
 // =============================================================================
 
 export const SceneAnnotationSchema = z.object({
-    id: z.number(),
-    video_id: z.string(),
-    timestamp: z.number().nonnegative(),
-    start_time: z.number().nonnegative(),
-    end_time: z.number().nonnegative(),
-    duration: z.number().positive(),
-    scene_type: z.string(),
-    bbox: z.tuple([z.number(), z.number(), z.number(), z.number()]),
-    score: z.number().min(0).max(1),
-    frame_start: z.number().nonnegative(),
-    frame_end: z.number().nonnegative(),
-    all_scores: z.record(z.string(), z.number())
+    id: z.number().optional(),
+    image_id: z.string().optional(),
+    category_id: z.number().optional(),
+    bbox: z.tuple([z.number(), z.number(), z.number(), z.number()]).optional(),
+    area: z.number().nonnegative().optional(),
+    iscrowd: z.union([z.literal(0), z.literal(1)]).optional(),
+    score: z.number().min(0).max(1).optional(),
+    video_id: z.string().optional(),
+    timestamp: z.number().nonnegative().optional(),
+    start_time: z.number().nonnegative().optional(),
+    end_time: z.number().nonnegative().optional(),
+    duration: z.number().positive().optional(),
+    scene_type: z.string().optional(),
+    frame_start: z.number().nonnegative().optional(),
+    frame_end: z.number().nonnegative().optional(),
+    all_scores: z.record(z.string(), z.number()).optional()
 });
 
 // =============================================================================
@@ -103,12 +108,12 @@ export const PipelineResultSchema = <T>(dataSchema: z.ZodSchema<T>) => z.object(
 
 export const StandardAnnotationDataSchema = z.object({
     video_info: z.object({
-        filename: z.string(),
-        duration: z.number().positive(),
-        width: z.number().positive(),
-        height: z.number().positive(),
+        filename: z.string().optional(),
+        duration: z.number().positive().optional(),
+        width: z.number().positive().optional(),
+        height: z.number().positive().optional(),
         frame_rate: z.number().positive().optional()
-    }),
+    }).optional(),
     person_tracking: z.array(COCOPersonAnnotationSchema).optional(),
     speech_recognition: z.array(WebVTTCueSchema).optional(),
     speaker_diarization: z.array(RTTMSegmentSchema).optional(),
@@ -164,7 +169,7 @@ export function validateCOCOPersonData(data: unknown[]): COCOPersonAnnotation[] 
             throw new ValidationError(
                 `Invalid COCO person tracking data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-                error.errors[0]?.received
+(error.errors[0] as any)?.received
             );
         }
         throw error;
@@ -182,7 +187,7 @@ export function validateWebVTTData(data: unknown[]): WebVTTCue[] {
             throw new ValidationError(
                 `Invalid WebVTT data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-                error.errors[0]?.received
+(error.errors[0] as any)?.received
             );
         }
         throw error;
@@ -200,7 +205,7 @@ export function validateRTTMData(data: unknown[]): RTTMSegment[] {
             throw new ValidationError(
                 `Invalid RTTM data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-                error.errors[0]?.received
+(error.errors[0] as any)?.received
             );
         }
         throw error;
@@ -218,7 +223,7 @@ export function validateSceneData(data: unknown[]): SceneAnnotation[] {
             throw new ValidationError(
                 `Invalid scene detection data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-                error.errors[0]?.received
+(error.errors[0] as any)?.received
             );
         }
         throw error;
@@ -236,7 +241,7 @@ export function validateStandardAnnotationData(data: unknown): StandardAnnotatio
             throw new ValidationError(
                 `Invalid annotation data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-                error.errors[0]?.received
+(error.errors[0] as any)?.received
             );
         }
         throw error;

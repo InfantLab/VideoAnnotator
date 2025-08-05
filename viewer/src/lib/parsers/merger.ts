@@ -7,20 +7,23 @@ import type {
     COCOPersonAnnotation,
     WebVTTCue,
     RTTMSegment,
-    SceneAnnotation
+    SceneAnnotation,
+    LAIONFaceAnnotation,
+    VideoAnnotatorCompleteResults
 } from '@/types/annotations';
 
 import { parseWebVTT } from './webvtt';
 import { parseRTTM } from './rttm';
 import { parseCOCOPersonData } from './coco';
 import { parseSceneDetection } from './scene';
+// import { parseFaceAnalysis } from './face'; // Using local implementation
 
 /**
  * File type detection result
  */
 export interface DetectedFile {
     file: File;
-    type: 'video' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'audio' | 'unknown';
+    type: 'video' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'face_analysis' | 'complete_results' | 'audio' | 'unknown';
     pipeline?: string;
     confidence: number;
 }
@@ -97,6 +100,26 @@ async function detectJSONType(file: File): Promise<DetectedFile> {
         const sample = await file.slice(0, 5000).text();
         const data = JSON.parse(sample);
 
+        // Check for VideoAnnotator v1.1.1 complete results format
+        if (await isValidCompleteResults(file)) {
+            return {
+                file,
+                type: 'complete_results',
+                pipeline: 'complete_results',
+                confidence: 0.95
+            };
+        }
+
+        // Check for face analysis (LAION format)
+        if (await isValidFaceAnalysis(file)) {
+            return {
+                file,
+                type: 'face_analysis',
+                pipeline: 'face_analysis',
+                confidence: 0.8
+            };
+        }
+
         // Check for person tracking (COCO format)
         if (await isValidCOCOPersonData(file)) {
             return {
@@ -117,7 +140,15 @@ async function detectJSONType(file: File): Promise<DetectedFile> {
             };
         }
 
-        // Check filename patterns
+        // Check filename patterns for v1.1.1 naming
+        if (file.name.includes('complete_results')) {
+            return { file, type: 'complete_results', pipeline: 'complete_results', confidence: 0.7 };
+        }
+
+        if (file.name.includes('face_annotations') || file.name.includes('laion_face')) {
+            return { file, type: 'face_analysis', pipeline: 'face_analysis', confidence: 0.6 };
+        }
+
         if (file.name.includes('person') || file.name.includes('tracking')) {
             return { file, type: 'person_tracking', pipeline: 'person_tracking', confidence: 0.5 };
         }
@@ -180,10 +211,88 @@ async function isValidSceneDetection(file: File): Promise<boolean> {
         }
 
         return (data.results && Array.isArray(data.results)) ||
-            (data.scenes && Array.isArray(data.scenes));
+            (data.scenes && Array.isArray(data.scenes)) ||
+            (data.annotations && data.annotations[0] && 'scene_type' in data.annotations[0]);
     } catch {
         return false;
     }
+}
+
+async function isValidCompleteResults(file: File): Promise<boolean> {
+    try {
+        const sample = await file.slice(0, 3000).text();
+        const data = JSON.parse(sample);
+
+        return !!(data.video_path && 
+                 data.pipeline_results && 
+                 data.config && 
+                 data.start_time &&
+                 data.total_duration !== undefined);
+    } catch {
+        return false;
+    }
+}
+
+async function isValidFaceAnalysis(file: File): Promise<boolean> {
+    try {
+        const sample = await file.slice(0, 2000).text();
+        const data = JSON.parse(sample);
+
+        if (Array.isArray(data)) {
+            return data.length === 0 || (data[0] && 'face_id' in data[0] && 'attributes' in data[0]);
+        }
+
+        return (data.annotations && data.annotations[0] && 'face_id' in data.annotations[0]) ||
+               (data.results && data.results[0] && 'face_id' in data.results[0]);
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Parses VideoAnnotator v1.1.1 complete results format
+ */
+async function parseCompleteResults(file: File): Promise<{
+    personTracking: COCOPersonAnnotation[];
+    faceAnalysis: LAIONFaceAnnotation[];
+    sceneDetection: SceneAnnotation[];
+    config: VideoAnnotatorCompleteResults['config'];
+    processingTime: number;
+    totalDuration: number;
+}> {
+    const text = await file.text();
+    const data: VideoAnnotatorCompleteResults = JSON.parse(text);
+
+    return {
+        personTracking: data.pipeline_results.person?.results || [],
+        faceAnalysis: data.pipeline_results.face?.results || [],
+        sceneDetection: data.pipeline_results.scene?.results || [],
+        config: data.config,
+        processingTime: Object.values(data.pipeline_results).reduce((sum, result) => sum + (result?.processing_time || 0), 0),
+        totalDuration: data.total_duration
+    };
+}
+
+/**
+ * Parses face analysis file (LAION format)
+ */
+async function parseFaceAnalysis(file: File): Promise<LAIONFaceAnnotation[]> {
+    const text = await file.text();
+    const data = JSON.parse(text);
+
+    if (Array.isArray(data)) {
+        return data;
+    }
+
+    if (data.annotations && Array.isArray(data.annotations)) {
+        return data.annotations;
+    }
+
+    if (data.results && Array.isArray(data.results)) {
+        return data.results;
+    }
+
+    return [];
 }
 
 /**
@@ -233,11 +342,45 @@ export async function mergeAnnotationData(
     let speechRecognition: WebVTTCue[] = [];
     let speakerDiarization: RTTMSegment[] = [];
     let sceneDetection: SceneAnnotation[] = [];
+    let faceAnalysis: LAIONFaceAnnotation[] = [];
+
+    // Processing metadata from VideoAnnotator v1.1.1
+    let processingConfig: VideoAnnotatorCompleteResults['config'] | undefined;
+    let processingTime: number | undefined;
+    let totalDuration: number | undefined;
 
     const totalFiles = detectedFiles.length;
     let processedFiles = 0;
 
+    // Check for complete results file first (highest priority)
+    const completeResultsFile = detectedFiles.find(f => f.type === 'complete_results');
+    
+    if (completeResultsFile) {
+        try {
+            onProgress?.(`Processing ${completeResultsFile.file.name}`, processedFiles, totalFiles);
+            
+            const completeResults = await parseCompleteResults(completeResultsFile.file);
+            personTracking = completeResults.personTracking;
+            faceAnalysis = completeResults.faceAnalysis;
+            sceneDetection = completeResults.sceneDetection;
+            processingConfig = completeResults.config;
+            processingTime = completeResults.processingTime;
+            totalDuration = completeResults.totalDuration;
+
+            if (personTracking.length > 0) pipelinesFound.push('person_tracking');
+            if (faceAnalysis.length > 0) pipelinesFound.push('face_analysis');
+            if (sceneDetection.length > 0) pipelinesFound.push('scene_detection');
+
+            processedFiles++;
+        } catch (error) {
+            warnings.push(`Failed to parse complete results ${completeResultsFile.file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    // Process remaining files (for speech/speaker data or if no complete results)
     for (const detectedFile of detectedFiles) {
+        if (detectedFile === completeResultsFile) continue; // Skip already processed
+
         try {
             onProgress?.(`Processing ${detectedFile.file.name}`, processedFiles, totalFiles);
 
@@ -251,8 +394,17 @@ export async function mergeAnnotationData(
                     break;
 
                 case 'person_tracking':
-                    personTracking = await parseCOCOPersonData(detectedFile.file);
-                    pipelinesFound.push('person_tracking');
+                    if (personTracking.length === 0) { // Only if not from complete results
+                        personTracking = await parseCOCOPersonData(detectedFile.file);
+                        pipelinesFound.push('person_tracking');
+                    }
+                    break;
+
+                case 'face_analysis':
+                    if (faceAnalysis.length === 0) { // Only if not from complete results
+                        faceAnalysis = await parseFaceAnalysis(detectedFile.file);
+                        pipelinesFound.push('face_analysis');
+                    }
                     break;
 
                 case 'speech_recognition':
@@ -266,8 +418,10 @@ export async function mergeAnnotationData(
                     break;
 
                 case 'scene_detection':
-                    sceneDetection = await parseSceneDetection(detectedFile.file);
-                    pipelinesFound.push('scene_detection');
+                    if (sceneDetection.length === 0) { // Only if not from complete results
+                        sceneDetection = await parseSceneDetection(detectedFile.file);
+                        pipelinesFound.push('scene_detection');
+                    }
                     break;
 
                 case 'unknown':
@@ -294,9 +448,13 @@ export async function mergeAnnotationData(
         video_info,
         metadata: {
             created: new Date().toISOString(),
-            version: '1.0.0',
+            version: '1.1.1',
             pipelines: pipelinesFound,
-            source: 'videoannotator'
+            source: 'videoannotator',
+            // NEW v1.1.1 metadata
+            processing_config: processingConfig,
+            processing_time: processingTime,
+            total_duration: totalDuration
         }
     };
 
@@ -317,11 +475,15 @@ export async function mergeAnnotationData(
         data.scene_detection = sceneDetection;
     }
 
+    if (faceAnalysis.length > 0) {
+        data.face_analysis = faceAnalysis;
+    }
+
     if (audioFile) {
         data.audio_file = audioFile;
     }
 
-    const processingTime = Date.now() - startTime;
+    const totalProcessingTime = Date.now() - startTime;
 
     onProgress?.('Merging complete', totalFiles + 1, totalFiles + 1);
 
@@ -331,7 +493,7 @@ export async function mergeAnnotationData(
             filesProcessed: processedFiles,
             pipelinesFound,
             warnings,
-            processingTime
+            processingTime: totalProcessingTime
         }
     };
 }
@@ -368,7 +530,9 @@ export function validateFileSet(detectedFiles: DetectedFile[]): {
     const hasPipelineData = types.has('person_tracking') ||
         types.has('speech_recognition') ||
         types.has('speaker_diarization') ||
-        types.has('scene_detection');
+        types.has('scene_detection') ||
+        types.has('face_analysis') ||
+        types.has('complete_results');
 
     if (!hasPipelineData) {
         missing.push('Pipeline data');
@@ -413,6 +577,8 @@ export function getFilesSummary(detectedFiles: DetectedFile[]): {
             case 'speech_recognition':
             case 'speaker_diarization':
             case 'scene_detection':
+            case 'face_analysis':
+            case 'complete_results':
                 summary.pipelines.push({
                     name: detected.pipeline || detected.type,
                     file: detected.file.name,

@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useRef, useCallback, useState } from 'react';
-import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCue, RTTMSegment, SceneAnnotation, COCO_SKELETON_CONNECTIONS } from '@/types/annotations';
+import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCue, RTTMSegment, SceneAnnotation, LAIONFaceAnnotation, COCO_SKELETON_CONNECTIONS } from '@/types/annotations';
+import { getFacesAtTime, getDominantEmotion } from '@/lib/parsers/face';
 
 interface VideoPlayerProps {
   videoFile: File;
@@ -63,6 +64,13 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       return annotationData.scene_detection.find(scene =>
         currentTime >= scene.start_time && currentTime <= scene.end_time
       ) || null;
+    }, [currentTime, annotationData]);
+
+    // Get current face data
+    const getCurrentFaceData = useCallback((): LAIONFaceAnnotation[] => {
+      if (!annotationData?.face_analysis) return [];
+
+      return getFacesAtTime(annotationData.face_analysis, currentTime, 0.1);
     }, [currentTime, annotationData]);
 
     // Draw COCO pose overlay
@@ -186,6 +194,75 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       }
     }, [overlaySettings.scenes, getCurrentSceneData]);
 
+    // Draw face detection overlay
+    const drawFaces = useCallback((ctx: CanvasRenderingContext2D) => {
+      if (!overlaySettings.faces) return;
+
+      const currentFaces = getCurrentFaceData();
+      if (currentFaces.length === 0) return;
+
+      currentFaces.forEach((face, index) => {
+        const [x, y, width, height] = face.bbox;
+        
+        // Use different colors for different faces
+        const hue = (face.face_id * 137.508) % 360;
+        ctx.strokeStyle = `hsl(${hue}, 70%, 60%)`;
+        ctx.lineWidth = 2;
+
+        // Draw face bounding box
+        ctx.strokeRect(x, y, width, height);
+
+        // Draw face ID
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(x, y - 20, 60, 18);
+        ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+        ctx.font = '12px monospace';
+        ctx.fillText(`Face:${face.face_id}`, x + 2, y - 6);
+      });
+    }, [overlaySettings.faces, getCurrentFaceData]);
+
+    // Draw emotion recognition overlay
+    const drawEmotions = useCallback((ctx: CanvasRenderingContext2D) => {
+      if (!overlaySettings.emotions) return;
+
+      const currentFaces = getCurrentFaceData();
+      if (currentFaces.length === 0) return;
+
+      currentFaces.forEach((face, index) => {
+        const dominantEmotion = getDominantEmotion(face);
+        if (!dominantEmotion) return;
+
+        const [x, y, width, height] = face.bbox;
+        
+        // Position emotion label below face box
+        const labelY = y + height + 25;
+        const emotionText = `${dominantEmotion.emotion}: ${(dominantEmotion.score * 100).toFixed(1)}%`;
+        
+        // Measure text width for background
+        ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        const textWidth = ctx.measureText(emotionText).width;
+
+        // Draw background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(x, labelY - 15, textWidth + 8, 18);
+
+        // Draw emotion text with color based on emotion type
+        const emotionColors: Record<string, string> = {
+          'pleasure_ecstasy': 'hsl(60, 70%, 60%)',  // Yellow
+          'astonishment_surprise': 'hsl(30, 70%, 60%)', // Orange
+          'emotional_vulnerability': 'hsl(240, 70%, 60%)', // Blue
+          'pain': 'hsl(0, 70%, 60%)', // Red
+          'interest': 'hsl(120, 70%, 60%)', // Green
+          'arousal': 'hsl(300, 70%, 60%)', // Pink
+          'elation': 'hsl(45, 70%, 60%)', // Gold
+          'embarrassment': 'hsl(15, 70%, 60%)' // Red-orange
+        };
+
+        ctx.fillStyle = emotionColors[dominantEmotion.emotion] || 'hsl(180, 70%, 60%)';
+        ctx.fillText(emotionText, x + 4, labelY - 3);
+      });
+    }, [overlaySettings.emotions, getCurrentFaceData]);
+
     // Render all overlays
     const renderOverlays = useCallback(() => {
       const canvas = canvasRef.current;
@@ -205,7 +282,9 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       drawSubtitles(ctx);
       drawSpeakers(ctx);
       drawScenes(ctx);
-    }, [getCurrentPoseData, drawPose, drawSubtitles, drawSpeakers, drawScenes]);
+      drawFaces(ctx);
+      drawEmotions(ctx);
+    }, [getCurrentPoseData, drawPose, drawSubtitles, drawSpeakers, drawScenes, drawFaces, drawEmotions]);
 
     // Update overlays when current time changes
     useEffect(() => {
