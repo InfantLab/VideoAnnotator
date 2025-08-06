@@ -1,6 +1,6 @@
 # Supported File Formats
 
-Video Action Viewer supports industry-standard formats produced by the [VideoAnnotator](https://github.com/InfantLab/VideoAnnotator) pipeline and other computer vision tools.
+Video Annotation Viewer supports industry-standard formats produced by the [VideoAnnotator](https://github.com/InfantLab/VideoAnnotator) pipeline and other computer vision tools.
 
 ## Video Files
 

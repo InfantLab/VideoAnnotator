@@ -1,10 +1,10 @@
 # Debug Utils Guide
 
-This guide explains the debugging and testing utilities available in the Video Action Viewer console.
+This guide explains the debugging and testing utilities available in the Video Annotation Viewer console.
 
 ## Overview
 
-The Video Action Viewer provides comprehensive debugging utilities accessible through the browser console via `window.debugUtils`. These utilities are automatically loaded when the application starts and are designed for developers to test, debug, and inspect the VideoAnnotator pipeline data loading system.
+The Video Annotation Viewer provides comprehensive debugging utilities accessible through the browser console via `window.debugUtils`. These utilities are automatically loaded when the application starts and are designed for developers to test, debug, and inspect the VideoAnnotator pipeline data loading system.
 
 ## Available Functions
 
