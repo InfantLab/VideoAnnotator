@@ -3,7 +3,7 @@
  */
 
 export interface FileTypeInfo {
-    type: 'video' | 'audio' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'unknown';
+    type: 'video' | 'audio' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'face_analysis' | 'complete_results' | 'unknown';
     extension: string;
     mimeType?: string;
     confidence: 'high' | 'medium' | 'low';
@@ -166,6 +166,8 @@ export function getFileTypeDescription(type: FileTypeInfo['type']): string {
         case 'speech_recognition': return 'Speech Recognition (WebVTT)';
         case 'speaker_diarization': return 'Speaker Diarization (RTTM)';
         case 'scene_detection': return 'Scene Detection (JSON)';
+        case 'face_analysis': return 'Face Analysis (COCO)';
+        case 'complete_results': return 'Complete Results (VideoAnnotator)';
         default: return 'Unknown File Type';
     }
 }
@@ -190,7 +192,7 @@ export function validateFileSize(file: File): { valid: boolean; error?: string }
         return { valid: false, error: 'Audio file too large (max 100MB)' };
     }
 
-    if (['person_tracking', 'speech_recognition', 'speaker_diarization', 'scene_detection'].includes(typeInfo.type)
+    if (['person_tracking', 'speech_recognition', 'speaker_diarization', 'scene_detection', 'face_analysis', 'complete_results'].includes(typeInfo.type)
         && file.size > maxSizes.annotation) {
         return { valid: false, error: 'Annotation file too large (max 10MB)' };
     }
@@ -212,7 +214,7 @@ export function validateFileSet(files: File[]): { valid: boolean; missing: strin
     }
 
     // Warn if no annotation files
-    const annotationTypes: Array<FileTypeInfo['type']> = ['person_tracking', 'speech_recognition', 'speaker_diarization', 'scene_detection'];
+    const annotationTypes: Array<FileTypeInfo['type']> = ['person_tracking', 'speech_recognition', 'speaker_diarization', 'scene_detection', 'face_analysis', 'complete_results'];
     const hasAnnotations = annotationTypes.some(type => detectedTypes.includes(type));
 
     if (!hasAnnotations) {
@@ -250,6 +252,8 @@ export function generateFilesSummary(files: File[]): string {
     if (typeCounts.speech_recognition) parts.push(`${typeCounts.speech_recognition} speech recognition file(s)`);
     if (typeCounts.speaker_diarization) parts.push(`${typeCounts.speaker_diarization} speaker diarization file(s)`);
     if (typeCounts.scene_detection) parts.push(`${typeCounts.scene_detection} scene detection file(s)`);
+    if (typeCounts.face_analysis) parts.push(`${typeCounts.face_analysis} face analysis file(s)`);
+    if (typeCounts.complete_results) parts.push(`${typeCounts.complete_results} complete results file(s)`);
     if (typeCounts.unknown) parts.push(`${typeCounts.unknown} unknown file(s)`);
 
     return parts.length > 0 ? parts.join(', ') : 'No files';

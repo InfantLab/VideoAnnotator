@@ -22,33 +22,69 @@ export const DebugPanel = ({ isOpen, onClose }: DebugPanelProps) => {
 
   const testFileDetection = async (filename: string) => {
     try {
-      addLog(`Testing ${filename}...`);
+      addLog(`Testing ${filename} (simulating drag & drop)...`);
       const response = await fetch(`demo/videos_out/3/${filename}`);
+      
+      if (!response.ok) {
+        addLog(`❌ HTTP ${response.status}: ${response.statusText}`);
+        return;
+      }
+      
       const blob = await response.blob();
       const file = new File([blob], filename, { type: 'application/json' });
       
       addLog(`File size: ${file.size} bytes`);
       
-      // Show first 500 characters
-      const sample = await file.slice(0, 500).text();
-      addLog(`Content sample: ${sample.substring(0, 100)}...`);
+      // Show first 200 characters for preview
+      const sample = await file.slice(0, 200).text();
+      addLog(`Content sample: ${sample}${sample.length === 200 ? '...' : ''}`);
       
-      // Test detection
-      const detected = await detectFileType(file);
-      addLog(`Detection result: ${detected.type} (confidence: ${detected.confidence})`);
+      // === SIMULATE EXACT DRAG & DROP DETECTION PIPELINE ===
+      // This is the same code as FileUploader.tsx detectFiles function
       
-      try {
-        const data = JSON.parse(sample);
-        addLog(`JSON keys: ${Object.keys(data).slice(0, 10).join(', ')}`);
-        addLog(`Is array: ${Array.isArray(data)}`);
-        if (Array.isArray(data) && data.length > 0) {
-          addLog(`First item keys: ${Object.keys(data[0] || {}).slice(0, 5).join(', ')}`);
+      // Step 1: Initial fileUtils detection
+      const { detectFileType: fileUtilsDetect, detectJSONType } = await import('@/lib/fileUtils');
+      let detected = fileUtilsDetect(file);
+      addLog(`📝 Step 1 - fileUtils detection: ${detected.type} (${detected.confidence})`);
+      
+      // Step 2: JSON content analysis (if unknown JSON)
+      if (detected.type === 'unknown' && detected.extension === 'json') {
+        addLog(`🔍 Step 2 - JSON file detected as unknown, trying detectJSONType...`);
+        try {
+          detected = await detectJSONType(file);
+          addLog(`📝 Step 2 - detectJSONType result: ${detected.type} (${detected.confidence})`);
+          
+          // Step 3: Merger fallback (if still unknown)
+          if (detected.type === 'unknown') {
+            addLog(`🔍 Step 3 - Still unknown, trying merger fallback...`);
+            const { detectFileType: mergerDetect } = await import('@/lib/parsers/merger');
+            const mergerResult = await mergerDetect(file);
+            
+            // Convert merger result to fileUtils format (same as FileUploader)
+            detected = {
+              type: mergerResult.type === 'complete_results' ? 'unknown' : mergerResult.type as any,
+              extension: 'json',
+              mimeType: 'application/json',
+              confidence: mergerResult.confidence > 0.7 ? 'high' : 
+                         mergerResult.confidence > 0.4 ? 'medium' : 'low',
+              reason: `Detected via content analysis (${mergerResult.confidence.toFixed(2)} confidence)`
+            };
+            addLog(`📝 Step 3 - merger result: ${detected.type} (${detected.confidence}) - confidence: ${mergerResult.confidence.toFixed(3)}`);
+          }
+        } catch (error) {
+          addLog(`❌ JSON detection failed: ${error.message}`);
         }
-      } catch (e) {
-        addLog(`JSON parse failed: ${e.message}`);
       }
+      
+      addLog(`🎯 FINAL RESULT: ${detected.type} (${detected.confidence})`);
+      addLog(`   Reason: ${detected.reason}`);
+      
+      // Show if this would be accepted by FileUploader
+      const wouldBeAccepted = detected.type !== 'unknown';
+      addLog(`📋 Would be accepted by drag & drop: ${wouldBeAccepted ? '✅ YES' : '❌ NO - shows as "Unknown file type"'}`);
+      
     } catch (error) {
-      addLog(`Failed to load file: ${error.message}`);
+      addLog(`❌ Failed to load file: ${error.message}`);
     }
   };
 
@@ -56,15 +92,40 @@ export const DebugPanel = ({ isOpen, onClose }: DebugPanelProps) => {
     setIsRunning(true);
     clearLogs();
     
+    // Test files that we know exist based on the complete_results.json structure
     const testFiles = [
-      '3_face_analysis.json',
       '3_scene_detection.json', 
       'scene_results.json',
       '3_person_tracking.json'
     ];
     
+    // Also test additional VEATIC files
+    const additionalFiles = [
+      '3_laion_face_annotations.json',
+      'face_results.json',
+      'person_results.json',
+      '3_person_tracks.json',
+      'complete_results.json'
+    ];
+    
     for (const filename of testFiles) {
       await testFileDetection(filename);
+      addLog('---');
+    }
+    
+    addLog('Testing additional VEATIC files...');
+    for (const filename of additionalFiles) {
+      try {
+        const response = await fetch(`demo/videos_out/3/${filename}`);
+        if (response.ok) {
+          addLog(`✅ Found: ${filename}`);
+          await testFileDetection(filename);
+        } else {
+          addLog(`❌ Not found: ${filename} (${response.status})`);
+        }
+      } catch (error) {
+        addLog(`❌ Error checking ${filename}: ${error.message}`);
+      }
       addLog('---');
     }
     
@@ -76,11 +137,18 @@ export const DebugPanel = ({ isOpen, onClose }: DebugPanelProps) => {
     addLog('Testing all datasets...');
     
     try {
-      const { checkDataIntegrity } = await import('../utils/debugUtils');
+      // Access the function from the global window object
+      const debugUtils = (window as any).debugUtils;
+      if (!debugUtils || !debugUtils.checkDataIntegrity) {
+        addLog('❌ debugUtils.checkDataIntegrity not available');
+        addLog('Make sure debug utilities are loaded');
+        setIsRunning(false);
+        return;
+      }
       
       for (const [key, _] of Object.entries(DEMO_DATA_SETS)) {
         addLog(`Checking ${key}...`);
-        const result = await checkDataIntegrity(key as keyof typeof DEMO_DATA_SETS);
+        const result = await debugUtils.checkDataIntegrity(key);
         addLog(`${key}: ${result.valid ? '✅ Valid' : '❌ Issues found'}`);
         if (!result.valid) {
           result.issues.forEach(issue => addLog(`  - ${issue}`));

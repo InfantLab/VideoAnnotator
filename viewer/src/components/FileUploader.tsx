@@ -37,6 +37,8 @@ const FileTypeIcon = ({ type }: { type: FileTypeInfo['type'] }) => {
     case 'speech_recognition': return <FileText className="w-4 h-4" />;
     case 'speaker_diarization': return <Users className="w-4 h-4" />;
     case 'scene_detection': return <Eye className="w-4 h-4" />;
+    case 'face_analysis': return <Eye className="w-4 h-4" />;
+    case 'complete_results': return <CheckCircle2 className="w-4 h-4" />;
     default: return <AlertCircle className="w-4 h-4" />;
   }
 };
@@ -83,9 +85,31 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
 
       let detected = detectFileType(file);
 
-      // For JSON files, do content analysis
+      // For JSON files, do content analysis with both methods
       if (detected.type === 'unknown' && detected.extension === 'json') {
-        detected = await detectJSONType(file);
+        try {
+          // First try the simple fileUtils detection
+          detected = await detectJSONType(file);
+          
+          // If still unknown, use the more sophisticated merger detection
+          if (detected.type === 'unknown') {
+            const { detectFileType: mergerDetect } = await import('@/lib/parsers/merger');
+            const mergerResult = await mergerDetect(file);
+            
+            // Convert merger result to fileUtils format
+            detected = {
+              type: mergerResult.type as any, // Now that fileUtils supports all types, no conversion needed
+              extension: 'json',
+              mimeType: 'application/json',
+              confidence: mergerResult.confidence > 0.7 ? 'high' : 
+                         mergerResult.confidence > 0.4 ? 'medium' : 'low',
+              reason: `Detected via content analysis (${mergerResult.confidence.toFixed(2)} confidence)`
+            };
+          }
+        } catch (error) {
+          console.warn('JSON detection failed:', error);
+          // Keep as unknown if both methods fail
+        }
       }
 
       detectedFiles.push({
@@ -296,7 +320,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
   const hasFiles = fileStatuses.length > 0;
   const hasVideoFile = fileStatuses.some(f => f.detected.type === 'video');
   const hasPipelineData = fileStatuses.some(f =>
-    ['person_tracking', 'speech_recognition', 'speaker_diarization', 'scene_detection'].includes(f.detected.type)
+    ['person_tracking', 'speech_recognition', 'speaker_diarization', 'scene_detection', 'face_analysis', 'complete_results'].includes(f.detected.type)
   );
   const canProcess = hasVideoFile && hasPipelineData && !isProcessing;
 

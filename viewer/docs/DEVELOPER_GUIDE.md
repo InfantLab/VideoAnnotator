@@ -1,6 +1,6 @@
 # Developer Guide
 
-This guide covers the technical architecture, development setup, and extension points for Video Action Viewer.
+This guide covers the technical architecture, development setup, and extension points for Video Annotation Viewer v0.2.0.
 
 ## Architecture Overview
 
@@ -17,25 +17,32 @@ This guide covers the technical architecture, development setup, and extension p
 ```
 src/
 ├── components/              # React components
-│   ├── VideoPlayer.tsx      # Main video player with overlays
-│   ├── Timeline.tsx         # Interactive timeline
-│   ├── FileUploader.tsx     # Multi-file upload interface
-│   ├── OverlayControls.tsx  # Annotation toggle controls
-│   ├── WelcomeScreen.tsx    # Landing page
-│   ├── Footer.tsx           # Version and GitHub info
-│   └── ui/                  # shadcn/ui base components
+│   ├── VideoAnnotationViewer.tsx   # Main container component
+│   ├── VideoPlayer.tsx             # Video player with canvas overlays
+│   ├── Timeline.tsx                # Interactive multi-track timeline
+│   ├── UnifiedControls.tsx         # v0.2.0: Combined overlay/timeline controls
+│   ├── DebugPanel.tsx              # v0.2.0: Professional debugging interface  
+│   ├── FileUploader.tsx            # Multi-file upload with enhanced detection
+│   ├── FileViewer.tsx              # JSON data inspection components
+│   ├── VideoControls.tsx           # Video playback controls
+│   ├── WelcomeScreen.tsx           # Landing page interface
+│   ├── Footer.tsx                  # Version and VideoAnnotator links
+│   └── ui/                         # shadcn/ui base components
 ├── lib/                     # Core business logic
 │   ├── parsers/             # Format-specific parsers
+│   │   ├── merger.ts        # Enhanced file detection & data unification
 │   │   ├── coco.ts          # COCO keypoint parsing
 │   │   ├── webvtt.ts        # WebVTT subtitle parsing
-│   │   ├── rttm.ts          # RTTM speaker parsing
+│   │   ├── rttm.ts          # Speaker diarization parsing
 │   │   ├── scene.ts         # Scene detection parsing
-│   │   └── merger.ts        # Data integration
+│   │   └── face.ts          # Face analysis parsing
+│   ├── fileUtils.ts         # File type detection utilities
+│   ├── utils.ts             # General utilities
 │   └── validation.ts        # Zod schemas
 ├── types/                   # TypeScript definitions
 │   └── annotations.ts       # Standard format interfaces
 ├── utils/                   # Utility functions
-│   ├── debugUtils.ts        # Demo data loading
+│   ├── debugUtils.ts        # Enhanced demo data + integrity checking
 │   └── version.ts           # Version management
 ├── hooks/                   # Custom React hooks
 │   ├── use-mobile.tsx       # Mobile detection

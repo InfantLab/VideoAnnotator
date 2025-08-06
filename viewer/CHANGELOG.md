@@ -5,59 +5,95 @@ All notable changes to Video Annotation Viewer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2025-08-08
+## [0.2.0] - 2025-08-06
 
 ### 🎯 **Major Changes**
-- **Project Rebranding**: Renamed from "Video Action Viewer" to "Video Annotation Viewer" for consistency with VideoAnnotator ecosystem
-- **Repository Naming**: GitHub repository renamed to `video-annotation-viewer` following npm conventions
-- **Interface Showcase**: Added actual interface screenshot demonstrating multimodal annotation capabilities
+- **Unified Interface Design**: Complete UI overhaul with elegant two-column layout and professional controls
+- **Enhanced File Detection**: Sophisticated dual-method JSON detection supporting all VideoAnnotator formats
+- **Professional Debug System**: Built-in debugging panel with automated testing capabilities
+- **VEATIC Dataset Integration**: Added support for longer duration silent video analysis
 
 ### ✨ **Added**
-- New interface preview image (`VideoAnnotationViewer.png`) showcasing:
-  - Real-time pose detection overlays with COCO keypoints
-  - Facial emotion recognition visualization
-  - Speech recognition subtitles
-  - Speaker diarization timeline
-  - Scene detection markers
-  - Interactive timeline with multiple annotation tracks
-- Social media integration with Open Graph and Twitter Card meta tags
-- Enhanced README with interface screenshot and detailed feature descriptions
-- Comprehensive documentation updates across all files
+- **Unified Controls Panel**: 
+  - Combined overlay and timeline controls into single elegant interface
+  - Custom colored circle buttons replacing basic toggles
+  - Padlock functionality for synchronized control modes
+  - Individual JSON viewer buttons for each pipeline component
+- **Advanced File Detection**:
+  - Dual-method JSON detection (fileUtils + sophisticated merger fallback)
+  - Support for VEATIC dataset JSON files that were previously undetected
+  - Enhanced error reporting with specific file type confidence levels
+- **Debug Panel System**:
+  - Professional debugging interface accessible via Ctrl+Shift+D or button
+  - Automated file detection testing for VEATIC datasets
+  - Data integrity checking for all demo datasets
+  - Terminal-style logging with real-time test feedback
+- **Navigation Improvements**:
+  - "← Home" button for returning to landing page from viewer
+  - VideoAnnotator documentation link in footer with explanatory tooltip
+  - Updated browser favicon using VideoAnnotationViewer.png
+- **New Demo Dataset**: VEATIC Silent Video (3.mp4) for pose tracking analysis
 
 ### 🔧 **Changed**
-- **Package Configuration**: 
-  - Updated `package.json` name to maintain npm compatibility
-  - Updated repository URLs to point to `video-annotation-viewer`
-  - Version bumped to 0.2.0
-- **Branding Updates**:
-  - Application title in `index.html` updated to "Video Annotation Viewer v0.2.0"
-  - Welcome screen now uses new interface preview image
-  - All documentation references updated to new project name
-- **File Organization**:
-  - Moved interface preview to `public/` folder for GitHub accessibility
-  - Updated import paths in components to use new image asset
+- **Interface Layout**: 
+  - Redesigned from three-column to elegant two-column layout
+  - Video Player + Controls on left, Unified Controls on right
+  - Timeline positioned below for optimal space utilization
+  - Proper responsive behavior and alignment
+- **Control System**:
+  - Replaced toggle switches with intuitive colored circle buttons
+  - Color-coded components matching their overlay colors
+  - Bulk controls renamed to "All On/All Off" for clarity
+  - Lock functionality creates single-column elegant mode
+- **File Processing**:
+  - Enhanced JSON detection with larger sample sizes (10KB vs 500 bytes)
+  - String-based content indicators for better format recognition
+  - Comprehensive debug output for unknown file analysis
+- **User Experience**:
+  - Improved subtitle positioning centered at video bottom
+  - Better error handling with user-friendly messages
+  - Enhanced progress feedback during file processing
+
+### 🐛 **Fixed**
+- **Layout Issues**: Resolved three-column alignment problems and control visibility
+- **File Detection**: Fixed "Unknown file type" errors for VEATIC dataset JSON files
+- **Control Functionality**: Fixed Timeline Lock to Overlays button operation
+- **Visual Issues**: Corrected color visibility problems with overlay toggles
+- **Debug Access**: Fixed debug panel availability on file loading page
+- **Timeline Controls**: Standardized JSON button naming and functionality
 
 ### 📚 **Documentation**
-- **README.md**: Complete overhaul with:
-  - Professional interface screenshot with descriptive caption
-  - Updated project name and branding throughout
-  - Enhanced feature descriptions and use cases
-  - Corrected GitHub repository links
-- **Developer Guide**: Updated file structure and repository references
-- **Debug Utils Guide**: Updated project name references
-- **File Formats Documentation**: Updated tool name references
+- **CLAUDE.md**: Updated with comprehensive v0.2.0 architecture and patterns
+- **QA Checklist**: Complete testing checklist with manual verification steps
+- **Implementation Guides**: Detailed v0.2.0 implementation status and progress tracking
+- **Debug Utils Guide**: Enhanced with new debugging panel capabilities
 
 ### 🔗 **Integration**
-- GitHub repository properly renamed and configured
-- Automatic redirects maintained for old repository URL
-- Social sharing optimized with interface preview images
-- All documentation links updated for consistency
+- **VideoAnnotator Ecosystem**: 
+  - Footer link to VideoAnnotator documentation
+  - Explanation that VideoAnnotator generates the data files
+  - Updated copyright text referencing VideoAnnotator pipeline outputs
+- **Developer Experience**:
+  - Restored window.debugUtils with enhanced capabilities
+  - Data integrity checking functions for all datasets
+  - Automated testing workflows for file detection
 
 ### 🎨 **User Experience**
-- Welcome screen now displays actual interface preview
-- Improved visual representation of tool capabilities
-- Better onboarding experience with realistic interface preview
-- Enhanced social media sharing with interface screenshots
+- **Professional Interface**: Clean, modern design with consistent color theming
+- **Intuitive Controls**: Color-coded buttons with clear visual feedback
+- **Enhanced Navigation**: Easy return to landing page and external documentation
+- **Better Onboarding**: Improved demo loading with multiple dataset options
+- **Debug-Friendly**: Professional debugging tools for developers and testers
+
+### ⚡ **Performance**
+- **File Detection**: Optimized JSON parsing with smart sampling techniques
+- **UI Responsiveness**: Smoother control interactions and state management
+- **Error Handling**: Graceful degradation with helpful user feedback
+
+### 🗑️ **Removed**
+- Basic toggle switches (replaced with colored circle buttons)
+- Three-column layout constraints (replaced with flexible two-column design)
+- Simple file detection (enhanced with sophisticated fallback system)
 
 ## [0.1.0] - 2025-08-06
 

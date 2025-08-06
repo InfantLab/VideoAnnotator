@@ -52,7 +52,11 @@ export const DEMO_DATA_SETS = {
     complete_results: 'demo/videos_out/3/complete_results.json',
     webvtt: 'demo/videos_out/3/3_speech_recognition.vtt',
     rttm: 'demo/videos_out/3/3_speaker_diarization.rttm',
-    audio: 'demo/videos_out/3/3_audio.wav'
+    audio: 'demo/videos_out/3/3_audio.wav',
+    // Additional individual files for manual testing
+    person_tracking: 'demo/videos_out/3/3_person_tracking.json',
+    scene_detection: 'demo/videos_out/3/3_scene_detection.json',
+    scene_results: 'demo/videos_out/3/scene_results.json'
   }
 } as const
 

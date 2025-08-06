@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Video Action Viewer is a React-based web application for analyzing multimodal video annotations. It displays VideoAnnotator pipeline outputs including COCO pose keypoints, WebVTT speech transcripts, RTTM speaker segments, and scene detection data synchronized with video playback.
+Video Annotation Viewer is a React-based web application for analyzing multimodal video annotations. It displays VideoAnnotator pipeline outputs including COCO pose keypoints, WebVTT speech transcripts, RTTM speaker segments, and scene detection data synchronized with video playback.
 
 **Key Architecture**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui components
 
@@ -38,15 +38,23 @@ src/
 │   ├── VideoAnnotationViewer.tsx    # Main container component
 │   ├── VideoPlayer.tsx              # Video + canvas overlay rendering
 │   ├── Timeline.tsx                 # Multi-track timeline
-│   └── FileUploader.tsx             # Multi-file drag/drop
+│   ├── UnifiedControls.tsx          # v0.2.0: Combined overlay/timeline controls
+│   ├── DebugPanel.tsx               # v0.2.0: Professional debugging interface
+│   ├── FileUploader.tsx             # Multi-file drag/drop with enhanced detection
+│   ├── FileViewer.tsx               # JSON data inspection components
+│   ├── VideoControls.tsx            # Video playback controls
+│   ├── WelcomeScreen.tsx            # Landing page interface
+│   └── Footer.tsx                   # Footer with VideoAnnotator link
 ├── lib/parsers/
-│   ├── merger.ts                    # File detection & data unification
+│   ├── merger.ts                    # Enhanced file detection & data unification
 │   ├── coco.ts                      # COCO pose parsing
 │   ├── webvtt.ts                    # Speech transcript parsing
 │   ├── rttm.ts                      # Speaker diarization parsing
-│   └── scene.ts                     # Scene detection parsing
+│   ├── scene.ts                     # Scene detection parsing
+│   └── face.ts                      # Face analysis parsing
+├── lib/fileUtils.ts                 # File type detection utilities
 ├── types/annotations.ts             # All TypeScript interfaces
-└── utils/debugUtils.ts              # Demo data loading
+└── utils/debugUtils.ts              # Enhanced demo data + integrity checking
 ```
 
 ### Data Types System
@@ -55,6 +63,24 @@ src/
 - `WebVTTCue`: Speech recognition segments
 - `RTTMSegment`: Speaker diarization segments
 - `SceneAnnotation`: Scene boundary detection
+
+### v0.2.0 UI Architecture
+**Two-Column Layout**: Elegant responsive design
+- **Left Column**: Video Player + Video Controls (play/pause, seeking, frame step)
+- **Right Column**: Unified Controls Panel (w-96 fixed width)
+- **Bottom**: Timeline Section (h-64 fixed height)
+
+**Unified Controls Panel**: Combines overlay and timeline controls
+- **Color-coded Components**: Each pipeline has distinct colored circle buttons
+- **Lock Functionality**: Padlock button synchronizes overlay/timeline settings
+- **JSON Viewers**: Individual data inspection for each component
+- **Bulk Controls**: "All On/All Off" buttons for quick management
+
+**Debug System**: Professional debugging interface
+- **Access**: Ctrl+Shift+D keyboard shortcut or 🐛 button
+- **Terminal UI**: Black background with green text logging
+- **Automated Tests**: File detection and data integrity checking
+- **VEATIC Support**: Specialized testing for VEATIC dataset files
 
 ### Canvas Overlay Rendering
 Video overlays use HTML5 Canvas with real-time sync:

@@ -121,6 +121,17 @@ export const VideoAnnotationViewer = () => {
     }
   }, []);
 
+  const handleBackToHome = useCallback(() => {
+    // Reset all state and return to welcome screen
+    setVideoFile(null);
+    setAnnotationData(null);
+    setCurrentTime(0);
+    setIsPlaying(false);
+    setDuration(0);
+    setPlaybackRate(1);
+    setShowWelcome(true);
+  }, []);
+
   // Debug panel keyboard shortcut
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (event.ctrlKey && event.shiftKey && event.key === 'D') {
@@ -129,7 +140,7 @@ export const VideoAnnotationViewer = () => {
     }
   }, []);
 
-  // Add keyboard listener
+  // Add keyboard listener (works on all pages)
   React.useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -137,36 +148,66 @@ export const VideoAnnotationViewer = () => {
 
   // Show welcome screen first
   if (showWelcome) {
-    return <WelcomeScreen onGetStarted={handleGetStarted} onViewDemo={handleViewDemo} />;
+    return (
+      <>
+        <WelcomeScreen onGetStarted={handleGetStarted} onViewDemo={handleViewDemo} />
+        {/* Debug Panel - Available on all pages */}
+        <DebugPanel 
+          isOpen={showDebugPanel}
+          onClose={() => setShowDebugPanel(false)}
+        />
+      </>
+    );
   }
 
   // Show file uploader if no files loaded
   if (!videoFile || !annotationData) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Video Annotation Viewer</h1>
-            <p className="text-muted-foreground">
-              Load a video file and its corresponding annotation data to begin analysis
-            </p>
+      <>
+        <div className="min-h-screen bg-background p-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold mb-2">Video Annotation Viewer</h1>
+              <p className="text-muted-foreground">
+                Load a video file and its corresponding annotation data to begin analysis
+              </p>
+            </div>
+            <div className="flex flex-col items-center gap-4 mb-6">
+              <button
+                className="px-6 py-2 rounded bg-primary text-primary-foreground font-semibold shadow hover:bg-primary/90 transition"
+                onClick={handleViewDemo}
+                type="button"
+              >
+                ▶️ View Demo
+              </button>
+              <span className="text-xs text-muted-foreground">Loads sample video and annotations from demo folder</span>
+            </div>
+            <FileUploader
+              onVideoLoad={handleVideoLoad}
+              onAnnotationLoad={handleAnnotationLoad}
+            />
+            
+            {/* Debug button for file uploader page */}
+            <div className="fixed bottom-4 right-4">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowDebugPanel(true)}
+                className="text-xs bg-background border"
+                title="Debug Panel (Ctrl+Shift+D)"
+              >
+                🐛
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-col items-center gap-4 mb-6">
-            <button
-              className="px-6 py-2 rounded bg-primary text-primary-foreground font-semibold shadow hover:bg-primary/90 transition"
-              onClick={handleViewDemo}
-              type="button"
-            >
-              ▶️ View Demo
-            </button>
-            <span className="text-xs text-muted-foreground">Loads sample video and annotations from demo folder</span>
-          </div>
-          <FileUploader
-            onVideoLoad={handleVideoLoad}
-            onAnnotationLoad={handleAnnotationLoad}
-          />
         </div>
-      </div>
+        
+        {/* Debug Panel - Available on all pages */}
+        <DebugPanel 
+          isOpen={showDebugPanel}
+          onClose={() => setShowDebugPanel(false)}
+        />
+      </>
     );
   }
 
@@ -176,7 +217,18 @@ export const VideoAnnotationViewer = () => {
         {/* Header */}
         <div className="flex-shrink-0 p-4 border-b border-border">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold">Video Annotation Viewer</h1>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleBackToHome}
+                className="flex items-center gap-2"
+                title="Back to Home"
+              >
+                ← Home
+              </Button>
+              <h1 className="text-xl font-semibold">Video Annotation Viewer</h1>
+            </div>
             <div className="flex items-center gap-4">
               <div className="text-sm text-muted-foreground">
                 {annotationData.video_info?.filename || videoFile.name}

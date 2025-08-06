@@ -31,10 +31,14 @@ Video Annotation Viewer is a sophisticated web-based application designed for re
 - **Hover Details**: Rich information tooltips for timeline events
 
 ### 🎛️ **Professional Controls**
-- **Overlay Management**: Toggle individual annotation layers on/off
-- **Timeline Configuration**: Customize visible tracks and display options
-- **Playback Controls**: Standard video controls plus frame stepping
-- **Demo Mode**: Built-in sample data for immediate exploration
+- **Unified Interface**: Elegant two-column layout with video player and integrated control panel
+- **Color-Coded Controls**: Intuitive colored circle buttons for each annotation component
+- **Smart Toggles**: Individual overlay management with synchronized timeline controls
+- **Lock Functionality**: Padlock feature for coordinated control modes
+- **JSON Viewers**: Individual data inspection buttons for each pipeline component
+- **Debug Panel**: Professional debugging interface (Ctrl+Shift+D) with automated testing
+- **Navigation**: Easy return to home and access to VideoAnnotator documentation
+- **Demo Datasets**: Multiple built-in sample datasets including VEATIC silent video
 
 ## 📁 Supported File Formats
 
@@ -193,6 +197,16 @@ For detailed release notes and changes, see [CHANGELOG.md](CHANGELOG.md).
   - Multi-file upload and automatic format detection
   - Interactive timeline with synchronized playback
   - Demo dataset integration
+
+## 📚 Documentation
+
+Comprehensive documentation is available in the [`docs/`](./docs/) directory:
+
+- **[Developer Guide](./docs/DEVELOPER_GUIDE.md)** - Technical architecture and development setup
+- **[File Formats](./docs/FILE_FORMATS.md)** - VideoAnnotator format specifications  
+- **[Debug Utils](./docs/DEBUGUTILS_GUIDE.md)** - Console debugging and testing tools
+- **[QA Testing](./docs/testing/QA_CHECKLIST_v0.2.0.md)** - Quality assurance procedures
+- **[Implementation History](./docs/development/)** - Development tracking and historical records
 
 ## 🤝 Contributing
 

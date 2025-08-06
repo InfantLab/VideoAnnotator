@@ -15,31 +15,54 @@ export const Footer = () => {
             </span>
           </div>
 
-          {/* GitHub Link */}
-          <Button
-            variant="ghost"
-            size="sm"
-            asChild
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <a
-              href={GITHUB_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2"
+          {/* Links */}
+          <div className="flex items-center gap-2">
+            {/* VideoAnnotator Documentation */}
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="text-muted-foreground hover:text-foreground"
             >
-              <Github className="w-4 h-4" />
-              <span>View on GitHub</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </Button>
+              <a
+                href="https://github.com/InfantLab/VideoAnnotator"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2"
+                title="VideoAnnotator generates the data files used by this viewer"
+              >
+                <span className="text-sm">🎬</span>
+                <span>VideoAnnotator</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </Button>
+
+              {/* GitHub Link */}
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <a
+                href={GITHUB_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2"
+              >
+                <Github className="w-4 h-4" />
+                <span>View on GitHub</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </Button>
+          </div>
         </div>
 
         {/* Copyright */}
         <div className="mt-4 pt-4 border-t text-center text-xs text-muted-foreground">
           <p>
             © {new Date().getFullYear()} InfantLab.
-            Advanced multimodal video annotation analysis tool.
+            Advanced multimodal video annotation analysis tool for VideoAnnotator pipeline outputs.
           </p>
         </div>
       </div>

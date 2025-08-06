@@ -252,6 +252,11 @@ async function isValidCOCOPersonData(file: File): Promise<boolean> {
 
         // Check for COCO format with metadata structure
         if (data.info && data.info.description && data.info.description.includes('COCO')) {
+            // But first check if it's actually scene detection data
+            if (sample.includes('"scene_type"') || sample.includes('"start_time"') || sample.includes('"end_time"')) {
+                console.log('✅ Found COCO format but with scene indicators - likely scene detection');
+                return false; // Let scene detection handler take it
+            }
             console.log('✅ Found COCO format indicator in metadata');
             return true;
         }
