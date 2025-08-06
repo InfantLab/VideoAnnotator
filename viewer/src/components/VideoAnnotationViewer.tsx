@@ -2,12 +2,14 @@ import { useState, useCallback, useRef } from 'react';
 import { DEMO_DATA_SETS, loadDemoAnnotations, loadDemoVideo } from '../utils/debugUtils';
 import { VideoPlayer } from './VideoPlayer';
 import { Timeline } from './Timeline';
-import { OverlayControls } from './OverlayControls';
+import { UnifiedControls } from './UnifiedControls';
 import { VideoControls } from './VideoControls';
+import { FileViewer } from './FileViewer';
 import { FileUploader } from './FileUploader';
 import { WelcomeScreen } from './WelcomeScreen';
 import { Footer } from './Footer';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { StandardAnnotationData, OverlaySettings, TimelineSettings } from '@/types/annotations';
 
 export const VideoAnnotationViewer = () => {
@@ -158,18 +160,29 @@ export const VideoAnnotationViewer = () => {
         <div className="flex-shrink-0 p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold">Video Annotation Viewer</h1>
-            <div className="text-sm text-muted-foreground">
-              {annotationData.video_info?.filename || videoFile.name}
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-muted-foreground">
+                {annotationData.video_info?.filename || videoFile.name}
+              </div>
+              <FileViewer 
+                annotationData={annotationData}
+                trigger={
+                  <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    📄 View Data
+                  </Button>
+                }
+              />
             </div>
           </div>
         </div>
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Video and Controls Section */}
+          {/* Two Column Layout: Video Player | Unified Controls */}
           <div className="flex-1 flex">
-            {/* Video Player Area */}
+            {/* Column 1: Video Player with Controls */}
             <div className="flex-1 flex flex-col bg-video-bg">
+              {/* Video Player */}
               <div className="flex-1 relative">
                 <VideoPlayer
                   ref={videoRef}
@@ -183,13 +196,14 @@ export const VideoAnnotationViewer = () => {
                 />
               </div>
 
-              {/* Video Controls */}
+              {/* Video Controls under video */}
               <div className="flex-shrink-0 p-4">
                 <VideoControls
                   isPlaying={isPlaying}
                   currentTime={currentTime}
                   duration={duration}
                   playbackRate={playbackRate}
+                  frameRate={annotationData?.video_info?.frame_rate || 30}
                   onPlayPause={handlePlayPause}
                   onSeek={handleSeek}
                   onFrameStep={handleFrameStep}
@@ -198,38 +212,16 @@ export const VideoAnnotationViewer = () => {
               </div>
             </div>
 
-            {/* Side Panel for Controls */}
-            <div className="w-80 bg-card border-l border-border flex flex-col">
-              <div className="p-4 border-b border-border">
-                <h3 className="font-medium mb-4">Overlay Controls</h3>
-                <OverlayControls
-                  settings={overlaySettings}
-                  onChange={setOverlaySettings}
+            {/* Column 2: Unified Controls */}
+            <div className="w-96 bg-card border-l border-border">
+              <div className="p-4 h-full overflow-y-auto">
+                <UnifiedControls
+                  overlaySettings={overlaySettings}
+                  timelineSettings={timelineSettings}
+                  onOverlayChange={setOverlaySettings}
+                  onTimelineChange={setTimelineSettings}
+                  annotationData={annotationData}
                 />
-              </div>
-
-              <div className="p-4">
-                <h3 className="font-medium mb-4">Timeline Settings</h3>
-                <div className="space-y-2">
-                  {Object.entries(timelineSettings).map(([key, value]) => (
-                    <label key={key} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={value}
-                        onChange={(e) =>
-                          setTimelineSettings(prev => ({
-                            ...prev,
-                            [key]: e.target.checked
-                          }))
-                        }
-                        className="rounded"
-                      />
-                      <span className="text-sm capitalize">
-                        {key.replace(/([A-Z])/g, ' $1').toLowerCase()}
-                      </span>
-                    </label>
-                  ))}
-                </div>
               </div>
             </div>
           </div>

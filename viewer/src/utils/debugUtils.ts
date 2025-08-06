@@ -142,11 +142,163 @@ export async function loadDemoVideo(datasetName: keyof typeof DEMO_DATA_SETS): P
   }
 }
 
+/**
+ * Load demo dataset and switch to viewer (for console testing)
+ */
+export async function loadDemoDataset(datasetKey: keyof typeof DEMO_DATA_SETS): Promise<void> {
+  console.log(`🔄 Loading demo dataset: ${datasetKey}`)
+  
+  try {
+    const [videoFile, annotation] = await Promise.all([
+      loadDemoVideo(datasetKey),
+      loadDemoAnnotations(datasetKey)
+    ])
+
+    if (videoFile && annotation) {
+      console.log('✅ Demo dataset loaded successfully:', {
+        video: videoFile.name,
+        pipelines: annotation.metadata?.pipelines?.length || 0,
+        person_tracking: annotation.person_tracking?.length || 0,
+        face_analysis: annotation.face_analysis?.length || 0,
+        speech_recognition: annotation.speech_recognition?.length || 0,
+        speaker_diarization: annotation.speaker_diarization?.length || 0,
+        scene_detection: annotation.scene_detection?.length || 0
+      })
+
+      // Try to trigger the viewer (would need app integration)
+      console.log('ℹ️ To view this dataset, use the "View Demo" button or FileUploader demo selection')
+      
+      return Promise.resolve()
+    } else {
+      throw new Error('Failed to load demo files')
+    }
+  } catch (error) {
+    console.error('❌ Failed to load demo dataset:', error)
+    throw error
+  }
+}
+
 // Make utilities available globally for browser console testing
 if (typeof window !== 'undefined') {
   (window as any).debugUtils = {
     loadDemoAnnotations,
     loadDemoVideo,
-    DEMO_DATA_SETS
+    loadDemoDataset,
+    DEMO_DATA_SETS,
+    
+    // Helper for quick testing
+    async testAllDatasets() {
+      console.log('🧪 Testing all demo datasets...')
+      const results = {}
+      
+      for (const [key, paths] of Object.entries(DEMO_DATA_SETS)) {
+        try {
+          console.log(`\n📋 Testing ${key}:`)
+          await loadDemoDataset(key as keyof typeof DEMO_DATA_SETS)
+          results[key] = '✅ SUCCESS'
+        } catch (error) {
+          console.error(`❌ ${key} failed:`, error)
+          results[key] = '❌ FAILED'
+        }
+      }
+      
+      console.log('\n📊 Test Results Summary:', results)
+      return results
+    },
+
+    // Check data integrity for a specific dataset
+    async checkDataIntegrity(datasetKey: keyof typeof DEMO_DATA_SETS) {
+      console.log(`🔍 Checking data integrity for ${datasetKey}`)
+      const paths = DEMO_DATA_SETS[datasetKey]
+      const issues = []
+
+      try {
+        // Test complete_results.json if it exists
+        if (paths.complete_results) {
+          console.log('  📄 Testing complete_results.json...')
+          const response = await fetch(paths.complete_results)
+          const text = await response.text()
+          
+          try {
+            const data = JSON.parse(text)
+            console.log('    ✅ JSON is valid')
+            console.log('    📊 Structure:', {
+              has_video_path: !!data.video_path,
+              has_pipeline_results: !!data.pipeline_results,
+              has_config: !!data.config,
+              pipeline_keys: Object.keys(data.pipeline_results || {})
+            })
+          } catch (parseError) {
+            console.error('    ❌ JSON parse error:', parseError)
+            console.log('    🔍 First 300 characters:', text.substring(0, 300))
+            issues.push(`Malformed complete_results.json: ${parseError.message}`)
+          }
+        }
+
+        // Test other files
+        const fileTests = [
+          { name: 'Video', path: paths.video },
+          { name: 'WebVTT', path: paths.webvtt },
+          { name: 'RTTM', path: paths.rttm },
+          { name: 'Audio', path: paths.audio }
+        ]
+
+        for (const test of fileTests) {
+          if (test.path) {
+            try {
+              const response = await fetch(test.path)
+              if (response.ok) {
+                console.log(`    ✅ ${test.name} file accessible`)
+              } else {
+                console.log(`    ❌ ${test.name} file not accessible (${response.status})`)
+                issues.push(`${test.name} file not accessible`)
+              }
+            } catch (error) {
+              console.log(`    ❌ ${test.name} file failed:`, error)
+              issues.push(`${test.name} file failed: ${error.message}`)
+            }
+          }
+        }
+
+        if (issues.length === 0) {
+          console.log('  ✅ Dataset integrity check passed')
+        } else {
+          console.log('  ⚠️ Dataset has issues:', issues)
+        }
+
+        return { valid: issues.length === 0, issues }
+      } catch (error) {
+        console.error('  ❌ Integrity check failed:', error)
+        return { valid: false, issues: [error.message] }
+      }
+    },
+    
+    // Quick dataset info
+    listDatasets() {
+      console.log('📋 Available demo datasets:')
+      Object.entries(DEMO_DATA_SETS).forEach(([key, paths]) => {
+        console.log(`  • ${key}:`)
+        console.log(`    - Video: ${paths.video}`)
+        console.log(`    - Data: ${paths.complete_results || 'No complete results'}`)
+        console.log(`    - Speech: ${paths.webvtt || 'No WebVTT'}`)
+        console.log(`    - Speakers: ${paths.rttm || 'No RTTM'}`)
+      })
+      return DEMO_DATA_SETS
+    }
   }
+
+  // Add help message
+  console.log(`
+🎯 VideoActionViewer Debug Utils Available:
+   
+📋 window.debugUtils.listDatasets() - Show available datasets
+🔄 window.debugUtils.loadDemoDataset('peekaboo-rep3-v1.1.1') - Load specific dataset  
+🧪 window.debugUtils.testAllDatasets() - Test all datasets
+🔍 window.debugUtils.checkDataIntegrity('dataset-name') - Check file integrity
+📊 window.debugUtils.DEMO_DATA_SETS - Raw dataset configuration
+
+Available datasets: ${Object.keys(DEMO_DATA_SETS).join(', ')}
+
+⚠️  Known Issue: peekaboo-rep2-v1.1.1 has malformed complete_results.json
+`)
 }

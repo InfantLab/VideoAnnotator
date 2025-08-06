@@ -229,6 +229,11 @@ async function isValidCompleteResults(file: File): Promise<boolean> {
     try {
         // For complete_results.json, read the entire file since we need it anyway
         const text = await file.text();
+        
+        // DEBUG: Show first 200 characters of file for debugging malformed JSON
+        console.log('🔍 isValidCompleteResults for', file.name);
+        console.log('  - First 200 chars:', text.substring(0, 200));
+        
         const data = JSON.parse(text);
 
         const isValid = !!(data.video_path && 
@@ -238,7 +243,6 @@ async function isValidCompleteResults(file: File): Promise<boolean> {
                           data.total_duration !== undefined);
 
         // DEBUG: Log file detection results
-        console.log('🔍 isValidCompleteResults for', file.name);
         console.log('  - has video_path:', !!data.video_path);
         console.log('  - has pipeline_results:', !!data.pipeline_results);
         console.log('  - has config:', !!data.config);
@@ -249,6 +253,19 @@ async function isValidCompleteResults(file: File): Promise<boolean> {
         return isValid;
     } catch (error) {
         console.log('❌ isValidCompleteResults failed for', file.name, ':', error);
+        
+        // Try to show problematic area of JSON
+        try {
+            const text = await file.text();
+            const lines = text.split('\n');
+            console.log('  - JSON structure around error:');
+            lines.slice(0, 5).forEach((line, idx) => {
+                console.log(`    Line ${idx + 1}: ${line}`);
+            });
+        } catch (debugError) {
+            console.log('  - Could not debug malformed JSON');
+        }
+        
         return false;
     }
 }

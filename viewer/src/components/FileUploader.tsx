@@ -11,7 +11,6 @@ import {
   getFileTypeDescription,
   validateFileSize,
   validateFileSet,
-  generateFilesSummary,
   type FileTypeInfo
 } from '@/lib/fileUtils';
 import {
@@ -61,48 +60,61 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const detectFiles = useCallback(async (files: File[]) => {
+    if (files.length === 0) return;
+
+    setProcessingStage('Detecting file types...');
+    setProcessingProgress(10);
+
+    // Process each file individually
+    const detectedFiles: FileStatus[] = [];
+    for (const file of files) {
+      // Validate file size first
+      const sizeValidation = validateFileSize(file);
+      if (!sizeValidation.valid) {
+        detectedFiles.push({
+          file,
+          detected: detectFileType(file),
+          status: 'error',
+          error: sizeValidation.error
+        });
+        continue;
+      }
+
+      let detected = detectFileType(file);
+
+      // For JSON files, do content analysis
+      if (detected.type === 'unknown' && detected.extension === 'json') {
+        detected = await detectJSONType(file);
+      }
+
+      detectedFiles.push({
+        file,
+        detected,
+        status: 'pending'
+      });
+    }
+
+    // Add to existing files instead of replacing
+    setFileStatuses(prev => [...prev, ...detectedFiles]);
+    setProcessingProgress(30);
+  }, []);
+
   const handleFilesSelected = useCallback(async (files: File[]) => {
     if (files.length === 0) return;
+    await detectFiles(files);
+  }, [detectFiles]);
+
+  const processFiles = useCallback(async () => {
+    if (fileStatuses.length === 0) return;
 
     try {
       setIsProcessing(true);
-      setProcessingStage('Detecting file types...');
+      setProcessingStage('Validating file set...');
       setProcessingProgress(10);
 
-      // Process each file individually
-      const detectedFiles: FileStatus[] = [];
-      for (const file of files) {
-        // Validate file size first
-        const sizeValidation = validateFileSize(file);
-        if (!sizeValidation.valid) {
-          detectedFiles.push({
-            file,
-            detected: detectFileType(file),
-            status: 'error',
-            error: sizeValidation.error
-          });
-          continue;
-        }
-
-        let detected = detectFileType(file);
-
-        // For JSON files, do content analysis
-        if (detected.type === 'unknown' && detected.extension === 'json') {
-          detected = await detectJSONType(file);
-        }
-
-        detectedFiles.push({
-          file,
-          detected,
-          status: 'pending'
-        });
-      }
-
-      setFileStatuses(detectedFiles);
-      setProcessingProgress(30);
-
       // Validate file set
-      const fileList = detectedFiles.map(fs => fs.file);
+      const fileList = fileStatuses.map(fs => fs.file);
       const validation = validateFileSet(fileList);
 
       if (!validation.valid) {
@@ -126,16 +138,28 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
       setProcessingStage('Processing files...');
       setProcessingProgress(50);
 
-      // Convert to legacy merger format for now
-      const legacyDetectedFiles = detectedFiles.map(fs => ({
-        file: fs.file,
-        type: fs.detected.type as any, // Convert to legacy type
-        confidence: fs.detected.confidence === 'high' ? 0.9 :
-          fs.detected.confidence === 'medium' ? 0.7 : 0.5
+      // Convert to merger format
+      const detectedFiles = await Promise.all(fileStatuses.map(async (fs) => {
+        // For JSON files that still show as unknown, do deeper detection using merger
+        if (fs.detected.type === 'unknown' && fs.detected.extension === 'json') {
+          const { detectFileType } = await import('@/lib/parsers/merger');
+          const mergerResult = await detectFileType(fs.file);
+          return mergerResult;
+        } else {
+          // Convert fileUtils result to merger format
+          const confidence = fs.detected.confidence === 'high' ? 0.9 :
+            fs.detected.confidence === 'medium' ? 0.7 : 0.5;
+          return {
+            file: fs.file,
+            type: fs.detected.type as any,
+            confidence,
+            pipeline: fs.detected.type !== 'video' && fs.detected.type !== 'audio' ? fs.detected.type : undefined
+          };
+        }
       }));
 
       // Parse and merge data using existing merger
-      const result = await mergeAnnotationData(legacyDetectedFiles, (stage, progress, total) => {
+      const result = await mergeAnnotationData(detectedFiles, (stage, progress, total) => {
         setProcessingStage(stage);
         setProcessingProgress(50 + (progress / total) * 40);
       });
@@ -163,7 +187,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
       }
 
       // Find video file and pass data to parent
-      const videoFile = detectedFiles.find(f => f.detected.type === 'video')?.file;
+      const videoFile = fileStatuses.find(f => f.detected.type === 'video')?.file;
       if (videoFile) {
         onVideoLoad(videoFile);
       }
@@ -188,7 +212,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
       setProcessingStage('');
       setProcessingProgress(0);
     }
-  }, [onVideoLoad, onAnnotationLoad, toast]);
+  }, [fileStatuses, onVideoLoad, onAnnotationLoad, toast]);
 
   const handleFileInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -220,41 +244,46 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
     }
   }, []);
 
-  const loadSampleData = useCallback(async () => {
+  const handleDemoLoad = useCallback(async (datasetKey: string) => {
     try {
       setIsProcessing(true);
-      setProcessingStage('Loading sample data...');
-      setProcessingProgress(50);
+      setProcessingStage(`Loading ${datasetKey} demo dataset...`);
+      setProcessingProgress(10);
 
-      // Create sample video file info (no actual file)
-      const sampleData: StandardAnnotationData = {
-        video_info: {
-          filename: "sample-video.mp4",
-          duration: 60,
-          width: 1920,
-          height: 1080,
-          frame_rate: 30
-        },
-        metadata: {
-          created: new Date().toISOString(),
-          version: '1.0.0',
-          pipelines: ['sample'],
-          source: 'custom'
-        }
-      };
+      // Import the demo loading utilities
+      const { loadDemoAnnotations, loadDemoVideo } = await import('../utils/debugUtils');
+      
+      setProcessingStage('Fetching demo files...');
+      setProcessingProgress(30);
 
-      setProcessingProgress(100);
+      // Load video and annotations in parallel
+      const [videoFile, annotation] = await Promise.all([
+        loadDemoVideo(datasetKey as any),
+        loadDemoAnnotations(datasetKey as any)
+      ]);
 
-      toast({
-        title: "Sample data loaded",
-        description: "You can now explore the viewer with sample annotation data.",
-      });
+      setProcessingProgress(80);
 
-      onAnnotationLoad(sampleData);
+      if (videoFile && annotation) {
+        setProcessingStage('Loading demo data...');
+        setProcessingProgress(90);
+
+        onVideoLoad(videoFile);
+        onAnnotationLoad(annotation);
+        
+        setProcessingProgress(100);
+        
+        toast({
+          title: "Demo dataset loaded",
+          description: `Successfully loaded ${datasetKey} with ${annotation.metadata?.pipelines?.length || 0} pipelines.`,
+        });
+      } else {
+        throw new Error('Failed to load demo video or annotations');
+      }
     } catch (error) {
       toast({
-        title: "Error loading sample data",
-        description: "Failed to create sample data",
+        title: "Error loading demo dataset",
+        description: error instanceof Error ? error.message : "Failed to load demo data",
         variant: "destructive",
       });
     } finally {
@@ -262,7 +291,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
       setProcessingStage('');
       setProcessingProgress(0);
     }
-  }, [onAnnotationLoad, toast]);
+  }, [onVideoLoad, onAnnotationLoad, toast]);
 
   const hasFiles = fileStatuses.length > 0;
   const hasVideoFile = fileStatuses.some(f => f.detected.type === 'video');
@@ -403,10 +432,10 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
         )}
 
         {/* Action Buttons */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           {hasFiles && (
             <Button
-              onClick={() => { }} // Will trigger processing automatically when files are selected
+              onClick={processFiles}
               disabled={!canProcess}
               className="w-full"
               size="lg"
@@ -417,23 +446,54 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
                   Processing...
                 </>
               ) : (
-                `Process ${fileStatuses.length} Files`
+                `🚀 Process ${fileStatuses.length} Files`
               )}
             </Button>
           )}
 
           <div className="text-center">
-            <span className="text-sm text-muted-foreground">or</span>
+            <span className="text-sm text-muted-foreground">or choose a demo dataset</span>
           </div>
 
-          <Button
-            variant="outline"
-            onClick={loadSampleData}
-            disabled={isProcessing}
-            className="w-full"
-          >
-            Try with Sample Data
-          </Button>
+          {/* Demo Dataset Selection */}
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="outline"
+              onClick={() => handleDemoLoad('peekaboo-rep3-v1.1.1')}
+              disabled={isProcessing}
+              className="text-left flex-col h-auto p-4"
+            >
+              <div className="font-medium">🍼 Peekaboo Rep3</div>
+              <div className="text-xs text-muted-foreground">Parent-child interaction</div>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleDemoLoad('peekaboo-rep2-v1.1.1')}
+              disabled={isProcessing}
+              className="text-left flex-col h-auto p-4"
+            >
+              <div className="font-medium">🍼 Peekaboo Rep2</div>
+              <div className="text-xs text-muted-foreground">Alternative interaction</div>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleDemoLoad('tearingpaper-rep1-v1.1.1')}
+              disabled={isProcessing}
+              className="text-left flex-col h-auto p-4"
+            >
+              <div className="font-medium">📄 Tearing Paper</div>
+              <div className="text-xs text-muted-foreground">Object manipulation</div>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleDemoLoad('thatsnotahat-rep1-v1.1.1')}
+              disabled={isProcessing}
+              className="text-left flex-col h-auto p-4"
+            >
+              <div className="font-medium">🎩 That's Not A Hat</div>
+              <div className="text-xs text-muted-foreground">Social interaction</div>
+            </Button>
+          </div>
         </div>
 
         {/* Format Information */}

@@ -340,28 +340,44 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       onPlayStateChange(false);
     }, [onPlayStateChange]);
 
-    // Resize canvas to match video
-    useEffect(() => {
+    // Resize canvas to match video exactly
+    const resizeCanvas = useCallback(() => {
       const canvas = canvasRef.current;
-      const container = containerRef.current;
-      if (!canvas || !container || !dimensions.width || !dimensions.height) return;
+      const video = ref as React.MutableRefObject<HTMLVideoElement>;
+      
+      if (!canvas || !video.current || !dimensions.width || !dimensions.height) return;
 
-      const containerRect = container.getBoundingClientRect();
-      const aspectRatio = dimensions.width / dimensions.height;
+      const videoRect = video.current.getBoundingClientRect();
+      
+      // Set canvas size to match video display size exactly
+      canvas.width = videoRect.width;
+      canvas.height = videoRect.height;
+      canvas.style.width = `${videoRect.width}px`;
+      canvas.style.height = `${videoRect.height}px`;
+      
+      // Position canvas to match video position exactly
+      canvas.style.position = 'absolute';
+      canvas.style.top = '0';
+      canvas.style.left = '0';
+      
+      // Re-render overlays after resize
+      renderOverlays();
+    }, [dimensions, ref, renderOverlays]);
 
-      let width = containerRect.width;
-      let height = width / aspectRatio;
+    // Resize canvas when dimensions change
+    useEffect(() => {
+      resizeCanvas();
+    }, [resizeCanvas]);
 
-      if (height > containerRect.height) {
-        height = containerRect.height;
-        width = height * aspectRatio;
-      }
+    // Resize canvas on window resize
+    useEffect(() => {
+      const handleResize = () => {
+        setTimeout(resizeCanvas, 100); // Delay to ensure video has resized
+      };
 
-      canvas.width = width;
-      canvas.height = height;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-    }, [dimensions]);
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }, [resizeCanvas]);
 
     return (
       <div ref={containerRef} className="relative w-full h-full flex items-center justify-center">
@@ -378,12 +394,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           />
           <canvas
             ref={canvasRef}
-            className="absolute top-0 left-0 pointer-events-none"
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain'
-            }}
+            className="pointer-events-none"
           />
         </div>
       </div>
