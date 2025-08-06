@@ -97,11 +97,13 @@ export async function detectFileType(file: File): Promise<DetectedFile> {
  */
 async function detectJSONType(file: File): Promise<DetectedFile> {
     try {
-        const sample = await file.slice(0, 5000).text();
-        const data = JSON.parse(sample);
+        // DEBUG: Log JSON detection attempt
+        console.log('🔍 detectJSONType for', file.name);
 
-        // Check for VideoAnnotator v1.1.1 complete results format
+        // Check for VideoAnnotator v1.1.1 complete results format FIRST
+        // (before trying to parse partial JSON)
         if (await isValidCompleteResults(file)) {
+            console.log('✅ Detected as complete_results');
             return {
                 file,
                 type: 'complete_results',
@@ -109,6 +111,10 @@ async function detectJSONType(file: File): Promise<DetectedFile> {
                 confidence: 0.95
             };
         }
+
+        // If not complete results, try parsing a sample for other JSON types
+        const sample = await file.slice(0, 5000).text();
+        const data = JSON.parse(sample);
 
         // Check for face analysis (LAION format)
         if (await isValidFaceAnalysis(file)) {
@@ -159,7 +165,8 @@ async function detectJSONType(file: File): Promise<DetectedFile> {
 
         return { file, type: 'unknown', confidence: 0.2 };
 
-    } catch {
+    } catch (error) {
+        console.log('❌ detectJSONType failed for', file.name, ':', error);
         return { file, type: 'unknown', confidence: 0.0 };
     }
 }
@@ -220,15 +227,28 @@ async function isValidSceneDetection(file: File): Promise<boolean> {
 
 async function isValidCompleteResults(file: File): Promise<boolean> {
     try {
-        const sample = await file.slice(0, 3000).text();
-        const data = JSON.parse(sample);
+        // For complete_results.json, read the entire file since we need it anyway
+        const text = await file.text();
+        const data = JSON.parse(text);
 
-        return !!(data.video_path && 
-                 data.pipeline_results && 
-                 data.config && 
-                 data.start_time &&
-                 data.total_duration !== undefined);
-    } catch {
+        const isValid = !!(data.video_path && 
+                          data.pipeline_results && 
+                          data.config && 
+                          data.start_time &&
+                          data.total_duration !== undefined);
+
+        // DEBUG: Log file detection results
+        console.log('🔍 isValidCompleteResults for', file.name);
+        console.log('  - has video_path:', !!data.video_path);
+        console.log('  - has pipeline_results:', !!data.pipeline_results);
+        console.log('  - has config:', !!data.config);
+        console.log('  - has start_time:', !!data.start_time);
+        console.log('  - has total_duration:', data.total_duration !== undefined);
+        console.log('  - overall valid:', isValid);
+
+        return isValid;
+    } catch (error) {
+        console.log('❌ isValidCompleteResults failed for', file.name, ':', error);
         return false;
     }
 }
@@ -263,10 +283,25 @@ async function parseCompleteResults(file: File): Promise<{
     const text = await file.text();
     const data: VideoAnnotatorCompleteResults = JSON.parse(text);
 
+    // DEBUG: Log raw data structure
+    console.log('🔍 parseCompleteResults: Raw data structure');
+    console.log('  - pipeline_results keys:', Object.keys(data.pipeline_results || {}));
+    console.log('  - person section exists:', !!data.pipeline_results.person);
+    console.log('  - person results count:', data.pipeline_results.person?.results?.length || 0);
+
+    const personTracking = data.pipeline_results.person?.results || [];
+    const faceAnalysis = data.pipeline_results.face?.results || [];
+    const sceneDetection = data.pipeline_results.scene?.results || [];
+
+    console.log('🔍 parseCompleteResults: Parsed arrays');
+    console.log('  - personTracking length:', personTracking.length);
+    console.log('  - faceAnalysis length:', faceAnalysis.length);
+    console.log('  - sceneDetection length:', sceneDetection.length);
+
     return {
-        personTracking: data.pipeline_results.person?.results || [],
-        faceAnalysis: data.pipeline_results.face?.results || [],
-        sceneDetection: data.pipeline_results.scene?.results || [],
+        personTracking,
+        faceAnalysis,
+        sceneDetection,
         config: data.config,
         processingTime: Object.values(data.pipeline_results).reduce((sum, result) => sum + (result?.processing_time || 0), 0),
         totalDuration: data.total_duration
@@ -332,6 +367,12 @@ export async function mergeAnnotationData(
     detectedFiles: DetectedFile[],
     onProgress?: ProgressCallback
 ): Promise<ParseResult> {
+    // DEBUG: Log incoming files
+    console.log('🔍 mergeAnnotationData called with', detectedFiles.length, 'detected files:');
+    detectedFiles.forEach((df, i) => {
+        console.log(`  ${i}: ${df.file.name} -> type: ${df.type}, pipeline: ${df.pipeline}, confidence: ${df.confidence}`);
+    });
+
     const startTime = Date.now();
     const warnings: string[] = [];
     const pipelinesFound: string[] = [];
@@ -364,6 +405,15 @@ export async function mergeAnnotationData(
             faceAnalysis = completeResults.faceAnalysis;
             sceneDetection = completeResults.sceneDetection;
             processingConfig = completeResults.config;
+            
+            // DEBUG: Log parsing results
+            console.log('🔍 Complete results parsed:');
+            console.log('  - Person tracking entries:', personTracking?.length || 0);
+            console.log('  - Face analysis entries:', faceAnalysis?.length || 0);
+            console.log('  - Scene detection entries:', sceneDetection?.length || 0);
+            if (personTracking && personTracking.length > 0) {
+                console.log('  - First person entry:', personTracking[0]);
+            }
             processingTime = completeResults.processingTime;
             totalDuration = completeResults.totalDuration;
 

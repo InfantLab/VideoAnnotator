@@ -335,13 +335,14 @@ export const COCO_KEYPOINT_NAMES = [
   'right_ankle'     // 16
 ] as const;
 
-// COCO Skeleton Connections (which keypoints to connect)
+// YOLO/Ultralytics Skeleton Connections (converted from 1-based to 0-based indexing)
+// Based on Ultralytics YOLO pose estimation standard
 export const COCO_SKELETON_CONNECTIONS: [number, number][] = [
-  [15, 13], [13, 11], [16, 14], [14, 12], [11, 12], // legs
-  [5, 7], [7, 9], [6, 8], [8, 10], [5, 6],         // arms
-  [5, 11], [6, 12],                                 // torso
-  [0, 1], [0, 2], [1, 3], [2, 4],                  // head
-  [3, 5], [4, 6]                                    // head to shoulders
+  [15, 13], [13, 11], [16, 14], [14, 12], [11, 12], // legs: ankle->knee->hip
+  [5, 11], [6, 12], [5, 6],                         // torso: shoulder->hip, shoulder-shoulder
+  [5, 7], [6, 8], [7, 9], [8, 10],                  // arms: shoulder->elbow->wrist
+  [1, 2], [0, 1], [0, 2], [1, 3], [2, 4],          // head: ear-ear, nose-ear, eye-ear  
+  [3, 5], [4, 6]                                    // eye to shoulder connections
 ];
 
 // Visibility flags for COCO keypoints
@@ -350,3 +351,33 @@ export enum COCOVisibility {
   LABELED_NOT_VISIBLE = 1,
   LABELED_VISIBLE = 2
 }
+
+// YOLO/Ultralytics Color Palette for Pose Estimation
+// Based on Ultralytics pose_palette colors
+export const YOLO_POSE_PALETTE = [
+  [255, 128, 0],   // 0: orange
+  [255, 153, 51],  // 1: light orange  
+  [255, 178, 102], // 2: lighter orange
+  [230, 230, 0],   // 3: yellow
+  [255, 153, 255], // 4: pink
+  [153, 204, 255], // 5: light blue
+  [255, 102, 255], // 6: magenta
+  [255, 51, 255],  // 7: bright magenta
+  [102, 178, 255], // 8: blue
+  [51, 153, 255],  // 9: bright blue
+  [255, 153, 153], // 10: light red
+  [255, 102, 102], // 11: red
+  [255, 51, 51],   // 12: bright red
+  [153, 255, 153], // 13: light green
+  [102, 255, 102], // 14: green
+  [51, 255, 51],   // 15: bright green
+  [0, 255, 0],     // 16: pure green
+  [0, 0, 255],     // 17: pure blue
+  [255, 0, 0],     // 18: pure red
+];
+
+// YOLO Limb Colors (indices into pose_palette)
+export const YOLO_LIMB_COLORS = [9, 9, 9, 9, 7, 7, 7, 0, 0, 0, 0, 0, 16, 16, 16, 16, 16, 16, 16];
+
+// YOLO Keypoint Colors (indices into pose_palette)  
+export const YOLO_KEYPOINT_COLORS = [16, 16, 16, 16, 16, 0, 0, 0, 0, 0, 0, 9, 9, 9, 9, 9, 9];

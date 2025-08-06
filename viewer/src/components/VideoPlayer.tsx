@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useRef, useCallback, useState } from 'react';
-import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCue, RTTMSegment, SceneAnnotation, LAIONFaceAnnotation, COCO_SKELETON_CONNECTIONS } from '@/types/annotations';
+import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCue, RTTMSegment, SceneAnnotation, LAIONFaceAnnotation, COCO_SKELETON_CONNECTIONS, YOLO_POSE_PALETTE, YOLO_LIMB_COLORS, YOLO_KEYPOINT_COLORS } from '@/types/annotations';
 import { getFacesAtTime, getDominantEmotion } from '@/lib/parsers/face';
 
 interface VideoPlayerProps {
@@ -32,8 +32,8 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const getCurrentPoseData = useCallback((): COCOPersonAnnotation[] => {
       if (!annotationData?.person_tracking) return [];
 
-      // Find poses within a small time window around current time (±0.1 seconds)
-      const timeWindow = 0.1;
+      // Find poses within a small time window around current time (±0.5 seconds for debugging)
+      const timeWindow = 0.5;
       return annotationData.person_tracking.filter(pose =>
         Math.abs(pose.timestamp - currentTime) <= timeWindow
       );
@@ -73,17 +73,11 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       return getFacesAtTime(annotationData.face_analysis, currentTime, 0.1);
     }, [currentTime, annotationData]);
 
-    // Draw COCO pose overlay
+    // Draw COCO pose overlay with YOLO/Ultralytics colors
     const drawPose = useCallback((ctx: CanvasRenderingContext2D, poses: COCOPersonAnnotation[]) => {
       if (!overlaySettings.pose || poses.length === 0) return;
 
       poses.forEach((person, index) => {
-        // Use different colors for different people/tracks
-        const hue = person.track_id ? (person.track_id * 137.508) % 360 : (index * 137.508) % 360;
-        ctx.strokeStyle = `hsl(${hue}, 70%, 60%)`;
-        ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
-        ctx.lineWidth = 2;
-
         // COCO keypoints are stored as [x1, y1, visibility1, x2, y2, visibility2, ...]
         // Convert to array of keypoint objects for easier handling
         const keypoints = [];
@@ -95,20 +89,29 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           });
         }
 
-        // Draw keypoints (only visible ones)
-        keypoints.forEach((keypoint) => {
-          if (keypoint.visibility === 2) { // Only draw visible keypoints
+        // Draw keypoints with YOLO colors (only visible ones)
+        keypoints.forEach((keypoint, keypointIndex) => {
+          if (keypoint.visibility === 2 && keypointIndex < YOLO_KEYPOINT_COLORS.length) { 
+            const colorIndex = YOLO_KEYPOINT_COLORS[keypointIndex];
+            const [r, g, b] = YOLO_POSE_PALETTE[colorIndex] || [255, 255, 255];
+            
+            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
             ctx.beginPath();
             ctx.arc(keypoint.x, keypoint.y, 4, 0, 2 * Math.PI);
             ctx.fill();
           }
         });
 
-        // Draw skeleton connections using COCO connections
-        COCO_SKELETON_CONNECTIONS.forEach(([i, j]) => {
+        // Draw skeleton connections using YOLO colors
+        COCO_SKELETON_CONNECTIONS.forEach(([i, j], connectionIndex) => {
           const kp1 = keypoints[i];
           const kp2 = keypoints[j];
-          if (kp1 && kp2 && kp1.visibility === 2 && kp2.visibility === 2) {
+          if (kp1 && kp2 && kp1.visibility === 2 && kp2.visibility === 2 && connectionIndex < YOLO_LIMB_COLORS.length) {
+            const colorIndex = YOLO_LIMB_COLORS[connectionIndex];
+            const [r, g, b] = YOLO_POSE_PALETTE[colorIndex] || [255, 255, 255];
+            
+            ctx.strokeStyle = `rgb(${r}, ${g}, ${b})`;
+            ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(kp1.x, kp1.y);
             ctx.lineTo(kp2.x, kp2.y);
@@ -118,6 +121,8 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
 
         // Draw bounding box if enabled
         if (person.bbox && person.bbox.length === 4) {
+          // Use person-specific color based on track_id or index
+          const hue = ((person.track_id || index) * 137.508) % 360;
           ctx.strokeStyle = `hsl(${hue}, 70%, 40%)`;
           ctx.lineWidth = 1;
           ctx.strokeRect(person.bbox[0], person.bbox[1], person.bbox[2], person.bbox[3]);
@@ -277,6 +282,23 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       // Get current data
       const poseData = getCurrentPoseData();
 
+      // DEBUG: Log pose data to console
+      if (annotationData?.person_tracking && annotationData.person_tracking.length > 0) {
+        if (poseData.length > 0) {
+          console.log('🎯 Person tracking data found:', poseData.length, 'people at time', currentTime);
+          console.log('  - First person keypoints:', poseData[0].keypoints.length, 'values');
+          console.log('  - Person has bbox:', !!poseData[0].bbox);
+          console.log('  - Overlay settings pose enabled:', overlaySettings.pose);
+        } else {
+          console.log('❌ No person tracking data at current time', currentTime, 'but have', annotationData.person_tracking.length, 'total entries');
+          console.log('  - Available timestamps:', annotationData.person_tracking.slice(0, 5).map(p => p.timestamp));
+          console.log('  - Current time window: ±0.5 seconds around', currentTime);
+        }
+      } else {
+        console.log('❌ No person tracking data loaded at all');
+        console.log('Available annotation data keys:', Object.keys(annotationData || {}));
+      }
+
       // Draw all enabled overlays
       drawPose(ctx, poseData);
       drawSubtitles(ctx);
@@ -284,7 +306,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       drawScenes(ctx);
       drawFaces(ctx);
       drawEmotions(ctx);
-    }, [getCurrentPoseData, drawPose, drawSubtitles, drawSpeakers, drawScenes, drawFaces, drawEmotions]);
+    }, [getCurrentPoseData, drawPose, drawSubtitles, drawSpeakers, drawScenes, drawFaces, drawEmotions, currentTime, overlaySettings.pose, annotationData]);
 
     // Update overlays when current time changes
     useEffect(() => {
