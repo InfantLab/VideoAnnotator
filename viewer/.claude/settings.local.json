@@ -11,7 +11,8 @@
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(python:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(bun test:*)"
     ],
     "deny": []
   }

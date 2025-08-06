@@ -19,7 +19,10 @@ bun run lint         # ESLint validation
 bun run preview      # Preview production build
 
 # Testing
-# No test framework configured - manual testing with demo data
+bun test             # Run tests in watch mode
+bun run test:run     # Run tests once
+bun run test:ui      # Open browser test UI
+bun run test:coverage # Generate coverage report
 ```
 
 ## Core Architecture
