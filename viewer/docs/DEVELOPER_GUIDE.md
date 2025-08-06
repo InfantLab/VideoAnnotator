@@ -41,7 +41,7 @@ src/
 │   ├── use-mobile.tsx       # Mobile detection
 │   └── use-toast.ts         # Toast notifications
 └── assets/                  # Static assets
-    └── viewer-interface-preview.jpg
+    └── VideoAnnotationViewer.png
 ```
 
 ## Development Setup

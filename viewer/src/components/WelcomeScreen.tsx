@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Play, Upload, FileText, Eye } from 'lucide-react';
-import viewerPreview from '@/assets/viewer-interface-preview.jpg';
+import viewerPreview from '@/assets/VideoAnnotationViewer.png';
 import { Footer } from './Footer';
 
 interface WelcomeScreenProps {
