@@ -43,13 +43,12 @@
 - [x] **Keypoints visible**: 17 keypoints render as colored circles ✅ 2025-08-06
 - [x] **Skeleton connections**: Lines connect keypoints following YOLO standard ✅ 2025-08-06 
 - [x] **Color scheme**: Uses YOLO pose palette colors (oranges, blues, greens, etc.) ✅ 2025-08-06
-- [f] **Proper connections**:
+- [x] **Proper connections**: ✅ 2025-08-06
   - Nose connects to eyes/ears
   - Arms: shoulder → elbow → wrist
   - Legs: hip → knee → ankle
   - Torso connections present
-    Not quite -ear points seem to connect to shoulders. Need to review with other videos to see torso and legs
-
+    
 ### Tracking Verification
 - [x] **Multiple people**: If >1 person, each has different colored bounding box ✅ 2025-08-06
 - [x] **Track IDs**: Person bounding boxes show "ID:X" labels ✅ 2025-08-06
@@ -138,14 +137,14 @@ Subtitles still rendering below the screen
 
 ### Loading Performance
 - [x] **Demo loading**: Completes within 5 seconds ✅ 2025-08-06
-- [ ] **Large datasets**: >1000 person tracking entries load without freezing
-- [ ] **Memory usage**: No obvious memory leaks during extended use
+- [>] **Large datasets**: >1000 person tracking entries load without freezing
+- [>] **Memory usage**: No obvious memory leaks during extended use
 
 ### Rendering Performance
-- [ ] **Smooth playback**: 30fps video maintains smooth overlay rendering
-- [ ] **Multiple people**: Performance acceptable with 3+ people in frame
-- [ ] **All overlays**: No significant lag with all overlay types enabled
-
+- [f] **Smooth playback**: 30fps video maintains smooth overlay rendering
+- [f] **Multiple people**: Performance acceptable with 3+ people in frame
+- [f] **All overlays**: No significant lag with all overlay types enabled
+- Some timing issues with the VEATIC 3.mp4 Patch Adams video. It also doesn't show good tracking for all the people in the video. But this might be a problem with the VideoAnnotator pipeline. So needs further investigation.
 ---
 
 ## 8. Browser Compatibility

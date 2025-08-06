@@ -493,6 +493,15 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
               <div className="font-medium">🎩 That's Not A Hat</div>
               <div className="text-xs text-muted-foreground">Social interaction</div>
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleDemoLoad('veatic-3-silent')}
+              disabled={isProcessing}
+              className="text-left flex-col h-auto p-4 col-span-2"
+            >
+              <div className="font-medium">🔇 VEATIC Silent Video</div>
+              <div className="text-xs text-muted-foreground">Longer duration, no speech/audio - ideal for pose tracking</div>
+            </Button>
           </div>
         </div>
 

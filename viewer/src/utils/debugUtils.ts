@@ -46,6 +46,13 @@ export const DEMO_DATA_SETS = {
     webvtt: 'demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_speech_recognition.vtt',
     rttm: 'demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_speaker_diarization.rttm',
     audio: 'demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_audio.wav'
+  },
+  'veatic-3-silent': {
+    video: 'demo/videos/3.mp4',
+    complete_results: 'demo/videos_out/3/complete_results.json',
+    webvtt: 'demo/videos_out/3/3_speech_recognition.vtt',
+    rttm: 'demo/videos_out/3/3_speaker_diarization.rttm',
+    audio: 'demo/videos_out/3/3_audio.wav'
   }
 } as const
 
@@ -300,5 +307,6 @@ if (typeof window !== 'undefined') {
 Available datasets: ${Object.keys(DEMO_DATA_SETS).join(', ')}
 
 ⚠️  Known Issue: peekaboo-rep2-v1.1.1 has malformed complete_results.json
+🔇 New: veatic-3-silent - longer duration video without speech/audio data
 `)
 }

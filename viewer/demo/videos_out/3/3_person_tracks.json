@@ -1,0 +1,138 @@
+{
+  "video_id": "3",
+  "person_tracks": [
+    {
+      "person_id": "person_3_001",
+      "track_id": 647,
+      "video_id": "3",
+      "label": "parent",
+      "confidence": 0.7,
+      "method": "automatic_size_based",
+      "timestamp": null
+    },
+    {
+      "person_id": "person_3_002",
+      "track_id": 646,
+      "video_id": "3",
+      "label": "parent",
+      "confidence": 0.7,
+      "method": "automatic_size_based",
+      "timestamp": null
+    },
+    {
+      "person_id": "person_3_003",
+      "track_id": 648,
+      "video_id": "3"
+    },
+    {
+      "person_id": "person_3_004",
+      "track_id": 649,
+      "video_id": "3"
+    },
+    {
+      "person_id": "person_3_005",
+      "track_id": 656,
+      "video_id": "3"
+    },
+    {
+      "person_id": "person_3_006",
+      "track_id": 657,
+      "video_id": "3"
+    },
+    {
+      "person_id": "person_3_007",
+      "track_id": 658,
+      "video_id": "3"
+    },
+    {
+      "person_id": "person_3_008",
+      "track_id": 669,
+      "video_id": "3"
+    },
+    {
+      "person_id": "person_3_009",
+      "track_id": 670,
+      "video_id": "3"
+    },
+    {
+      "person_id": "person_3_010",
+      "track_id": 671,
+      "video_id": "3",
+      "label": "parent",
+      "confidence": 0.7,
+      "method": "automatic_size_based",
+      "timestamp": null
+    },
+    {
+      "person_id": "person_3_011",
+      "track_id": 672,
+      "video_id": "3",
+      "label": "parent",
+      "confidence": 0.7,
+      "method": "automatic_size_based",
+      "timestamp": null
+    },
+    {
+      "person_id": "person_3_012",
+      "track_id": 675,
+      "video_id": "3",
+      "label": "parent",
+      "confidence": 0.7,
+      "method": "automatic_size_based",
+      "timestamp": null
+    },
+    {
+      "person_id": "person_3_013",
+      "track_id": 729,
+      "video_id": "3"
+    },
+    {
+      "person_id": "person_3_014",
+      "track_id": 730,
+      "video_id": "3"
+    },
+    {
+      "person_id": "person_3_015",
+      "track_id": 731,
+      "video_id": "3"
+    },
+    {
+      "person_id": "person_3_016",
+      "track_id": 757,
+      "video_id": "3",
+      "label": "parent",
+      "confidence": 0.7,
+      "method": "automatic_size_based",
+      "timestamp": null
+    },
+    {
+      "person_id": "person_3_017",
+      "track_id": 794,
+      "video_id": "3",
+      "label": "parent",
+      "confidence": 0.7,
+      "method": "automatic_size_based",
+      "timestamp": null
+    },
+    {
+      "person_id": "person_3_018",
+      "track_id": 795,
+      "video_id": "3"
+    },
+    {
+      "person_id": "person_3_019",
+      "track_id": 796,
+      "video_id": "3"
+    }
+  ],
+  "labeling_metadata": {
+    "total_persons": 19,
+    "labeled_persons": 7,
+    "id_format": "semantic",
+    "detections_summary": {
+      "total_detections": 187,
+      "unique_persons": 19,
+      "labeled_persons": 7
+    }
+  }
+}

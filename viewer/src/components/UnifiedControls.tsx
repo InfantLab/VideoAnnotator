@@ -233,7 +233,7 @@ export const UnifiedControls = ({
               disabled={!anyAvailable}
               className="text-xs h-4 px-2 mt-1"
             >
-              {allOverlaysEnabled ? 'All Off' : 'All On'}
+              {allOverlaysEnabled ? 'All On' : 'All Off'} 
             </Button>
           </div>
         </div>
@@ -251,7 +251,7 @@ export const UnifiedControls = ({
               disabled={!anyAvailable}
               className="text-xs h-4 px-2 mt-1"
             >
-              {allOverlaysEnabled ? 'All Off' : 'All On'}
+              {allOverlaysEnabled ? 'All On' : 'All Off'}
             </Button>
           </div>
           <div className="col-span-2 text-center">
@@ -263,7 +263,7 @@ export const UnifiedControls = ({
               disabled={!anyAvailable || isLocked}
               className="text-xs h-4 px-2 mt-1"
             >
-              {allTimelinesEnabled ? 'All Off' : 'All On'}
+              {allTimelinesEnabled ? 'All On' : 'All Off'}
             </Button>
           </div>
           <div className="col-span-1"></div>

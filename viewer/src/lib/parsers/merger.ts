@@ -113,11 +113,14 @@ async function detectJSONType(file: File): Promise<DetectedFile> {
         }
 
         // If not complete results, try parsing a sample for other JSON types
-        const sample = await file.slice(0, 5000).text();
-        const data = JSON.parse(sample);
+        // Use larger sample for better detection of complex structures
+        const sampleSize = Math.min(10000, file.size);
+        const sample = await file.slice(0, sampleSize).text();
 
         // Check for face analysis (LAION format)
+        console.log('🔍 Checking face analysis format...');
         if (await isValidFaceAnalysis(file)) {
+            console.log('✅ Detected as face_analysis');
             return {
                 file,
                 type: 'face_analysis',
@@ -127,7 +130,9 @@ async function detectJSONType(file: File): Promise<DetectedFile> {
         }
 
         // Check for person tracking (COCO format)
+        console.log('🔍 Checking person tracking format...');
         if (await isValidCOCOPersonData(file)) {
+            console.log('✅ Detected as person_tracking');
             return {
                 file,
                 type: 'person_tracking',
@@ -137,7 +142,9 @@ async function detectJSONType(file: File): Promise<DetectedFile> {
         }
 
         // Check for scene detection
+        console.log('🔍 Checking scene detection format...');
         if (await isValidSceneDetection(file)) {
+            console.log('✅ Detected as scene_detection');
             return {
                 file,
                 type: 'scene_detection',
@@ -147,26 +154,58 @@ async function detectJSONType(file: File): Promise<DetectedFile> {
         }
 
         // Check filename patterns for v1.1.1 naming
+        console.log('🔍 Checking filename patterns for:', file.name);
+        
         if (file.name.includes('complete_results')) {
+            console.log('✅ Matched complete_results pattern');
             return { file, type: 'complete_results', pipeline: 'complete_results', confidence: 0.7 };
         }
 
-        if (file.name.includes('face_annotations') || file.name.includes('laion_face')) {
+        // Enhanced face analysis patterns
+        if (file.name.includes('face_annotations') || file.name.includes('laion_face') || file.name.includes('face_analysis')) {
+            console.log('✅ Matched face_analysis pattern');
             return { file, type: 'face_analysis', pipeline: 'face_analysis', confidence: 0.6 };
         }
 
-        if (file.name.includes('person') || file.name.includes('tracking')) {
+        // Enhanced person tracking patterns  
+        if (file.name.includes('person') || file.name.includes('tracking') || file.name.includes('pose') || file.name.includes('keypoints')) {
+            console.log('✅ Matched person_tracking pattern');
             return { file, type: 'person_tracking', pipeline: 'person_tracking', confidence: 0.5 };
         }
 
-        if (file.name.includes('scene')) {
+        // Enhanced scene detection patterns
+        if (file.name.includes('scene') || file.name.includes('scenes')) {
+            console.log('✅ Matched scene_detection pattern');
             return { file, type: 'scene_detection', pipeline: 'scene_detection', confidence: 0.5 };
+        }
+
+        // Additional VEATIC dataset patterns (if they have different naming)
+        if (file.name.match(/^\d+/) && file.name.includes('.json')) {
+            console.log('🔍 Possible VEATIC numeric filename, trying content detection...');
+            // Fall through to unknown - the debug info will help us identify the format
         }
 
         return { file, type: 'unknown', confidence: 0.2 };
 
     } catch (error) {
         console.log('❌ detectJSONType failed for', file.name, ':', error);
+        
+        // Enhanced debugging for unknown files
+        try {
+            const sample = await file.slice(0, 1000).text();
+            console.log('📄 File content sample:', sample);
+            
+            // Try basic JSON parsing to see if it's valid JSON at all
+            const data = JSON.parse(sample);
+            console.log('📊 JSON keys:', Object.keys(data).slice(0, 10));
+            console.log('📈 Data type:', Array.isArray(data) ? 'Array' : 'Object');
+            if (Array.isArray(data) && data.length > 0) {
+                console.log('🔍 First array item keys:', Object.keys(data[0] || {}));
+            }
+        } catch (debugError) {
+            console.log('❌ File is not valid JSON or has other issues');
+        }
+        
         return { file, type: 'unknown', confidence: 0.0 };
     }
 }
@@ -194,33 +233,71 @@ async function isValidRTTM(file: File): Promise<boolean> {
 
 async function isValidCOCOPersonData(file: File): Promise<boolean> {
     try {
-        const sample = await file.slice(0, 2000).text();
+        // For large COCO files, we need to read more content to get past the metadata
+        const sampleSize = Math.min(10000, file.size);
+        const sample = await file.slice(0, sampleSize).text();
+        
+        // Try to find JSON structure indicators without full parsing
+        if (sample.includes('"keypoints"') && sample.includes('"bbox"')) {
+            console.log('✅ Found COCO keypoints/bbox indicators');
+            return true;
+        }
+        
+        // Try parsing what we have
         const data = JSON.parse(sample);
 
         if (Array.isArray(data)) {
             return data.length === 0 || (data[0] && 'keypoints' in data[0] && 'bbox' in data[0]);
         }
 
+        // Check for COCO format with metadata structure
+        if (data.info && data.info.description && data.info.description.includes('COCO')) {
+            console.log('✅ Found COCO format indicator in metadata');
+            return true;
+        }
+
         return (data.annotations && Array.isArray(data.annotations)) ||
             (data.results && Array.isArray(data.results));
-    } catch {
+    } catch (error) {
+        console.log('⚠️ COCO validation error:', error.message);
         return false;
     }
 }
 
 async function isValidSceneDetection(file: File): Promise<boolean> {
     try {
-        const sample = await file.slice(0, 2000).text();
+        const sampleSize = Math.min(5000, file.size);
+        const sample = await file.slice(0, sampleSize).text();
+        
+        // Look for scene detection indicators without full parsing
+        if (sample.includes('"scene_type"') || sample.includes('"start_time"') || sample.includes('"end_time"')) {
+            console.log('✅ Found scene detection indicators');
+            return true;
+        }
+        
         const data = JSON.parse(sample);
 
         if (Array.isArray(data)) {
-            return data.length === 0 || (data[0] && ('start_time' in data[0] || 'startTime' in data[0]));
+            return data.length === 0 || (data[0] && ('start_time' in data[0] || 'startTime' in data[0] || 'scene_type' in data[0]));
+        }
+
+        // Check for COCO format scene annotations
+        if (data.info && data.annotations && Array.isArray(data.annotations)) {
+            // Look for scene-related content in a small sample of annotations
+            const hasSceneMarkers = sample.includes('"scene_type"') || 
+                                  sample.includes('"start_time"') || 
+                                  sample.includes('"end_time"');
+            if (hasSceneMarkers) {
+                console.log('✅ Found COCO-style scene annotations');
+                return true;
+            }
         }
 
         return (data.results && Array.isArray(data.results)) ||
             (data.scenes && Array.isArray(data.scenes)) ||
             (data.annotations && data.annotations[0] && 'scene_type' in data.annotations[0]);
-    } catch {
+    } catch (error) {
+        console.log('⚠️ Scene detection validation error:', error.message);
         return false;
     }
 }
@@ -272,7 +349,24 @@ async function isValidCompleteResults(file: File): Promise<boolean> {
 
 async function isValidFaceAnalysis(file: File): Promise<boolean> {
     try {
-        const sample = await file.slice(0, 2000).text();
+        const sampleSize = Math.min(8000, file.size);
+        const sample = await file.slice(0, sampleSize).text();
+        
+        // Look for face analysis indicators without full parsing
+        if (sample.includes('"face_id"') || sample.includes('"attributes"') || sample.includes('"emotions"')) {
+            console.log('✅ Found face analysis indicators');
+            return true;
+        }
+        
+        // Check filename patterns for face analysis
+        if (file.name.toLowerCase().includes('face')) {
+            // If filename suggests face analysis, try harder to validate
+            if (sample.includes('"bbox"') && sample.includes('"score"')) {
+                console.log('✅ Filename + bbox/score suggests face analysis');
+                return true;
+            }
+        }
+        
         const data = JSON.parse(sample);
 
         if (Array.isArray(data)) {
@@ -281,7 +375,8 @@ async function isValidFaceAnalysis(file: File): Promise<boolean> {
 
         return (data.annotations && data.annotations[0] && 'face_id' in data.annotations[0]) ||
                (data.results && data.results[0] && 'face_id' in data.results[0]);
-    } catch {
+    } catch (error) {
+        console.log('⚠️ Face analysis validation error:', error.message);
         return false;
     }
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { DEMO_DATA_SETS, loadDemoAnnotations, loadDemoVideo } from '../utils/debugUtils';
 import { VideoPlayer } from './VideoPlayer';
 import { Timeline } from './Timeline';
@@ -8,6 +8,7 @@ import { FileViewer } from './FileViewer';
 import { FileUploader } from './FileUploader';
 import { WelcomeScreen } from './WelcomeScreen';
 import { Footer } from './Footer';
+import { DebugPanel } from './DebugPanel';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StandardAnnotationData, OverlaySettings, TimelineSettings } from '@/types/annotations';
@@ -38,6 +39,8 @@ export const VideoAnnotationViewer = () => {
     showFaces: true,
     showEmotions: true,
   });
+
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -118,6 +121,20 @@ export const VideoAnnotationViewer = () => {
     }
   }, []);
 
+  // Debug panel keyboard shortcut
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+      event.preventDefault();
+      setShowDebugPanel(true);
+    }
+  }, []);
+
+  // Add keyboard listener
+  React.useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
   // Show welcome screen first
   if (showWelcome) {
     return <WelcomeScreen onGetStarted={handleGetStarted} onViewDemo={handleViewDemo} />;
@@ -164,14 +181,25 @@ export const VideoAnnotationViewer = () => {
               <div className="text-sm text-muted-foreground">
                 {annotationData.video_info?.filename || videoFile.name}
               </div>
-              <FileViewer 
-                annotationData={annotationData}
-                trigger={
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    📄 View Data
-                  </Button>
-                }
-              />
+              <div className="flex gap-2">
+                <FileViewer 
+                  annotationData={annotationData}
+                  trigger={
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
+                      📄 View Data
+                    </Button>
+                  }
+                />
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowDebugPanel(true)}
+                  className="text-xs"
+                  title="Debug Panel (Ctrl+Shift+D)"
+                >
+                  🐛
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -241,6 +269,12 @@ export const VideoAnnotationViewer = () => {
         {/* Footer */}
         <Footer />
       </div>
+      
+      {/* Debug Panel */}
+      <DebugPanel 
+        isOpen={showDebugPanel}
+        onClose={() => setShowDebugPanel(false)}
+      />
     </div>
   );
 };
