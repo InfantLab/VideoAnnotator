@@ -1,4 +1,7 @@
-# Video Annotation Viewer v0.2.0
+<div align="center">
+  <img src="public/icon-32x32.png" alt="Video Annotation Viewer Icon" width="64" height="64">
+  <h1>Video Annotation Viewer v0.2.0</h1>
+</div>
 
 Advanced multimodal video annotation analysis tool for reviewing [VideoAnnotator](https://github.com/InfantLab/VideoAnnotator) pipeline outputs with synchronized pose detection, speech recognition, speaker diarization, and scene detection visualization.
 
