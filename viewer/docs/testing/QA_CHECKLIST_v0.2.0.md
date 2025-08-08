@@ -124,7 +124,7 @@ Subtitles still rendering below the screen
 	almost - currently says 'unknown file type'
 - [f] **Missing data**: Handle empty pipeline results
       Need to improve loading screen (see above)
-- [ ] **Large files**: Performance acceptable for >10MB annotation files
+- [>] **Large files**: Performance acceptable for >10MB annotation files
 
 ### Playback Edge Cases
 - [x] **Video start/end**: Overlays behave correctly at 0s and end time ✅ 2025-08-06
@@ -188,12 +188,12 @@ Subtitles still rendering below the screen
 
 ---
 ## 11. Additional changes
-- [ ] Change the browser icon from lovable icon to something video related (use cc licenced icons)
-- [ ] Once viewer works we will replace images in landing with screenshots of the viewer
-- [ ] Add a link to the VideoAnnotator documentation in the footer with explanation taht it gnereates the data files used by this viewer.
-- [ ] Add option to go back to landing page from viewer
-- [ ] Refreshing page should reload the viewer with the last loaded video and annotations, NOt go back to landing page as at present.
-- [ ] Ought to have some online docmentation for the viewer. And explanation of VidoeAnnoatator and its pipelines .
+- [x] Change the browser icon from lovable icon to something video related (use cc licenced icons)
+- [x] Once viewer works we will replace images in landing with screenshots of the viewer
+- [x] Add a link to the VideoAnnotator documentation in the footer with explanation taht it gnereates the data files used by this viewer.
+- [>] Add option to go back to landing page from viewer
+- [>] Refreshing page should reload the viewer with the last loaded video and annotations, NOt go back to landing page as at present.
+- [>] Ought to have some online docmentation for the viewer. And explanation of VidoeAnnoatator and its pipelines .
 
 ## Bug Reporting Format
 
