@@ -4,7 +4,17 @@
       "Bash(python test:*)",
       "Bash(python:*)",
       "Bash(rm:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(conda info:*)",
+      "Bash(C:Userscasparanaconda3Scriptsconda.exe info --envs)",
+      "Bash(cmd /c:*)",
+      "Bash(echo $CONDA_DEFAULT_ENV)",
+      "Bash(conda activate:*)",
+      "Bash(source:*)",
+      "Bash(echo $SHELL)",
+      "Bash(echo $PATH)",
+      "Bash(pwsh:*)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": []
   }

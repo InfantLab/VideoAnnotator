@@ -1,5 +1,6 @@
-# OpenFace 3.0 Configuration for VideoAnnotator
+# OpenFace 3.0 Complete Configuration for VideoAnnotator
 # This configuration enables comprehensive facial behavior analysis using OpenFace 3.0
+# with all advanced features and full pipeline support
 
 scene_detection:
   enabled: true
@@ -8,58 +9,55 @@ scene_detection:
 
 person_tracking:
   enabled: true
-  model_name: 'yolo11s'
-  confidence_threshold: 0.5
+  model: 'yolo11n-pose.pt'
+  conf_threshold: 0.4
+  iou_threshold: 0.7
+  track_mode: true
+  tracker: "bytetrack"
 
 face_analysis:
   enabled: true
-  backend: 'openface3'  # Use OpenFace 3.0 for face analysis
+  backend: 'openface3'  # Use OpenFace 3.0 for comprehensive facial behavior analysis
   
   # Model paths (working configuration)
   face_detector_model: "./weights/Alignment_RetinaFace.pth"
-  landmark_model: "./weights/Landmark_98.pkl"  # 98-point landmarks (68-point has compatibility issues)
+  landmark_model: "./weights/Landmark_98.pkl"  # 98-point landmarks
   
   # Detection settings
-  detection_confidence: 0.5
+  detection_confidence: 0.7
   max_faces: 5
   track_faces: true
+  landmark_points: 98  # Use 98-point landmarks for full OpenFace 3.0 capabilities
   
-  # Feature extraction settings - COMPREHENSIVE OPENFACE 3.0 ANALYSIS
-  landmark_points: 98  # Use 98-point landmarks (working configuration)
-  enable_3d_landmarks: true   # Enable 3D facial landmarks
-  enable_action_units: true   # Enable Action Units (AU) intensity and presence
-  enable_head_pose: true      # Enable head pose estimation (3D orientation)
-  enable_gaze: true          # Enable gaze direction estimation  
-  enable_emotions: true      # Enable emotion recognition
+  # COMPREHENSIVE OPENFACE 3.0 FEATURE EXTRACTION
+  enable_3d_landmarks: true   # 3D facial landmark coordinates
+  enable_action_units: true   # Facial Action Units (AU) intensity and presence
+  enable_head_pose: true      # 3D head pose estimation (rotation & translation)
+  enable_gaze: true          # Eye gaze direction estimation
+  enable_emotions: true      # Emotion recognition from facial expressions
   
-  # Advanced feature settings
+  # Advanced feature configuration
   action_units:
-    intensity_threshold: 0.5
-    presence_threshold: 0.3
-    normalize_range: [0, 5]
+    intensity_threshold: 0.5     # Minimum intensity to register AU presence
+    presence_threshold: 0.3      # Threshold for AU presence detection
+    normalize_range: [0, 5]      # Intensity scale normalization
     
   head_pose:
-    angle_units: "degrees"
-    coordinate_system: "opencv"
+    angle_units: "degrees"       # Output angles in degrees
+    coordinate_system: "opencv"  # Use OpenCV coordinate system
     
   gaze:
-    use_head_pose_proxy: true
-    confidence_threshold: 0.6
+    use_head_pose_proxy: true    # Use head pose as gaze direction proxy when eye tracking unavailable
+    confidence_threshold: 0.6    # Minimum confidence for gaze detection
     
   emotions:
-    probability_threshold: 0.1
-    normalize_probabilities: true
-    include_valence_arousal: true
-  enable_head_pose: true      # Enable head pose estimation (rotation & translation)
-  enable_gaze: true           # Enable gaze tracking and eye gaze direction
-  enable_emotions: true       # Enable emotion recognition from facial expressions
+    probability_threshold: 0.1   # Minimum probability to include emotion
+    normalize_probabilities: true  # Apply softmax normalization
+    include_valence_arousal: true  # Calculate valence/arousal dimensions
   
-  # Performance settings
+  # Performance and output settings
   batch_size: 1
-  device: 'cpu'  # 'cpu' or 'cuda' (tested with CPU)
-  confidence_threshold: 0.5
-  
-  # Output settings
+  device: 'auto'  # auto-detect best device (cpu/cuda)
   save_landmarks: true
   save_face_crops: false
   save_visualizations: true
@@ -69,7 +67,7 @@ audio_processing:
   whisper_model: 'base'
   sample_rate: 16000
 
-# Processing settings
+# Processing settings optimized for OpenFace 3.0
 processing:
-  max_workers: 1  # OpenFace 3.0 can be memory intensive
-  chunk_size: 1000  # Process videos in chunks to manage memory
+  max_workers: 1  # OpenFace 3.0 can be memory intensive, use single worker
+  chunk_size: 1000  # Process videos in chunks to manage memory usage

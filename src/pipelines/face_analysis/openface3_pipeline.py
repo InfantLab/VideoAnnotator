@@ -154,9 +154,16 @@ class OpenFace3Pipeline(BasePipeline):
                 landmark_model_path = model_type
             else:
                 landmark_model_path = f"./weights/Landmark_{model_type.split('_')[0]}.pkl"
+            # Configure device IDs for CUDA
+            if device == "cuda":
+                device_ids = [0]  # Use first GPU device
+            else:
+                device_ids = [-1]  # CPU mode
+                
             self.landmark_detector = LandmarkDetector(
                 model_path=landmark_model_path,
-                device=device
+                device=device,
+                device_ids=device_ids
             )
             
             # Initialize multitask predictor for Action Units, Head Pose, Gaze, etc.
@@ -556,7 +563,12 @@ class OpenFace3Pipeline(BasePipeline):
             video_name = Path(video_path).stem
             output_file = output_path / f"{video_name}_openface3_analysis.json"
             
-            export_coco_json(coco_dataset, str(output_file))
+            export_coco_json(
+                annotations=coco_dataset["annotations"],
+                images=coco_dataset["images"], 
+                output_path=str(output_file),
+                categories=coco_dataset["categories"]
+            )
             
             # Validate COCO format
             if validate_coco_json(str(output_file)):

@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 VideoAnnotator is a research-focused video analysis toolkit that processes human interaction videos through modular pipelines. The system uses modern AI models (YOLO11, OpenFace 3.0, Whisper, LAION) to extract comprehensive behavioral annotations in standardized formats compatible with annotation tools like CVAT, LabelStudio, and ELAN.
 
+**Current Version**: 1.1.1 (2025-08-04) - Recent improvements include enhanced batch processing stability, GPU memory optimization, and robust error recovery mechanisms.
+
 ## Core Architecture
 
 ### Pipeline System
@@ -93,14 +95,18 @@ python main.py --input videos/ --batch --parallel 4
 
 ### Model Management
 - Models auto-download on first use to `models/` directory
+- **Pre-initialization**: All pipelines now initialize during VideoAnnotator startup for optimal batch processing performance
 - OpenFace 3.0 requires separate installation (see requirements_openface.txt)
 - LAION models stored in `models/laion_face/` and `models/laion_voice/`
 - YOLO models cached in project root
+- **Error Recovery**: Automatic model reinitialization when corruption is detected
 
 ### GPU Acceleration
 - PyTorch with CUDA support recommended for 10x speedup
 - Install separately: `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128`
 - Automatic device detection (CUDA/MPS/CPU) in pipeline initialization
+- **Memory Management**: Automatic GPU cache clearing and resource cleanup to prevent memory leaks
+- **Meta Tensor Handling**: Robust PyTorch model loading with `to_empty()` fallback for newer PyTorch versions
 
 ### Testing Strategy
 - Comprehensive test suite in `tests/` directory with 94% success rate
@@ -160,8 +166,16 @@ The project includes a sophisticated person identity system:
 - Large videos may require processing in segments
 - Adjust batch sizes in config files for available GPU memory
 - Use `lightweight.yaml` config for resource-constrained environments
+- **v1.1.1**: Improved memory management with automatic cleanup and CUDA cache clearing
+
+### Batch Processing Issues (v1.1.1 Fixes)
+- **Clean Logs**: Verbose debug output from ByteTracker, YOLO, and numba is now suppressed
+- **Model Errors**: PyTorch meta tensor errors automatically handled with fallback loading
+- **Corruption Recovery**: Person pipeline automatically recovers from model corruption
+- **Performance**: Pre-initialized pipelines provide significant speed improvements for batch processing
 
 ### Testing Debugging
 - Use `pytest -v -s` for detailed test output
 - Individual pipeline tests can be run in isolation
 - Check `htmlcov/` directory for coverage reports after running tests
+- openface3 pip package is called openface-test
