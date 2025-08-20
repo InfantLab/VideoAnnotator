@@ -16,6 +16,7 @@ import { parseWebVTT } from './webvtt';
 import { parseRTTM } from './rttm';
 import { parseCOCOPersonData } from './coco';
 import { parseSceneDetection } from './scene';
+import { parseCOCOOpenFace3Data } from './cocoOpenface3';
 // import { parseFaceAnalysis } from './face'; // Using local implementation
 
 /**
@@ -23,7 +24,7 @@ import { parseSceneDetection } from './scene';
  */
 export interface DetectedFile {
     file: File;
-    type: 'video' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'face_analysis' | 'complete_results' | 'audio' | 'unknown';
+    type: 'video' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'face_analysis' | 'openface3_faces' | 'complete_results' | 'audio' | 'unknown';
     pipeline?: string;
     confidence: number;
 }
@@ -126,6 +127,30 @@ async function detectJSONType(file: File): Promise<DetectedFile> {
                 type: 'face_analysis',
                 pipeline: 'face_analysis',
                 confidence: 0.8
+            };
+        }
+
+        // Check for OpenFace3 format (native format)
+        console.log('🔍 Checking OpenFace3 native format...');
+        if (await isValidOpenFace3Data(file)) {
+            console.log('✅ Detected as openface3_faces (native format)');
+            return {
+                file,
+                type: 'openface3_faces',
+                pipeline: 'openface3',
+                confidence: 0.85
+            };
+        }
+
+        // Check for COCO+OpenFace3 format (VideoAnnotator export)
+        console.log('🔍 Checking COCO+OpenFace3 format...');
+        if (await isValidCOCOOpenFace3Data(file)) {
+            console.log('✅ Detected as openface3_faces (COCO+OpenFace3 format)');
+            return {
+                file,
+                type: 'openface3_faces',
+                pipeline: 'openface3',
+                confidence: 0.90
             };
         }
 
@@ -387,6 +412,94 @@ async function isValidFaceAnalysis(file: File): Promise<boolean> {
 }
 
 /**
+ * Validates COCO+OpenFace3 JSON format (VideoAnnotator export)
+ */
+async function isValidCOCOOpenFace3Data(file: File): Promise<boolean> {
+    try {
+        const sampleSize = Math.min(15000, file.size);
+        const sample = await file.slice(0, sampleSize).text();
+        
+        // Look for COCO structure with embedded OpenFace3 data
+        if (sample.includes('"info"') && 
+            sample.includes('"images"') && 
+            sample.includes('"annotations"') &&
+            sample.includes('"openface3"') &&
+            sample.includes('VideoAnnotator')) {
+            
+            // Try to parse the sample to validate structure
+            const data = JSON.parse(sample);
+            
+            // Check for COCO+OpenFace3 structure
+            if (data.info && 
+                data.info.description && 
+                data.info.description.includes('VideoAnnotator') &&
+                Array.isArray(data.images) &&
+                Array.isArray(data.annotations) &&
+                data.annotations.length > 0 &&
+                data.annotations[0].openface3) {
+                
+                console.log('✅ Found COCO+OpenFace3 structure');
+                return true;
+            }
+        }
+        
+        // Check filename patterns for OpenFace3 analysis files
+        if (file.name.toLowerCase().includes('openface3_analysis') || 
+            file.name.toLowerCase().includes('openface3_detailed')) {
+            console.log('✅ Filename suggests COCO+OpenFace3');
+            return true;
+        }
+        
+        return false;
+    } catch (error) {
+        console.log('⚠️ COCO+OpenFace3 validation error:', error.message);
+        return false;
+    }
+}
+
+/**
+ * Validates OpenFace3 JSON format
+ */
+async function isValidOpenFace3Data(file: File): Promise<boolean> {
+    try {
+        const sampleSize = Math.min(12000, file.size);
+        const sample = await file.slice(0, sampleSize).text();
+        
+        // Look for OpenFace3 indicators in the sample
+        if (sample.includes('"metadata"') && 
+            sample.includes('"faces"') && 
+            sample.includes('"pipeline"') &&
+            sample.includes('"model_info"')) {
+            
+            // Try to parse the sample to validate structure
+            const data = JSON.parse(sample);
+            
+            // Check for OpenFace3 structure
+            if (data.metadata && 
+                data.metadata.pipeline && 
+                data.metadata.model_info &&
+                Array.isArray(data.faces)) {
+                
+                console.log('✅ Found OpenFace3 structure');
+                return true;
+            }
+        }
+        
+        // Check filename patterns for OpenFace3
+        if (file.name.toLowerCase().includes('openface') || 
+            file.name.toLowerCase().includes('of3')) {
+            console.log('✅ Filename suggests OpenFace3');
+            return true;
+        }
+        
+        return false;
+    } catch (error) {
+        console.log('⚠️ OpenFace3 validation error:', error.message);
+        return false;
+    }
+}
+
+/**
  * Parses VideoAnnotator v1.1.1 complete results format
  */
 async function parseCompleteResults(file: File): Promise<{
@@ -501,6 +614,7 @@ export async function mergeAnnotationData(
     let speakerDiarization: RTTMSegment[] = [];
     let sceneDetection: SceneAnnotation[] = [];
     let faceAnalysis: LAIONFaceAnnotation[] = [];
+    let openface3Faces: any[] = []; // OpenFace3 faces data
 
     // Processing metadata from VideoAnnotator v1.1.1
     let processingConfig: VideoAnnotatorCompleteResults['config'] | undefined;
@@ -574,6 +688,25 @@ export async function mergeAnnotationData(
                     }
                     break;
 
+                case 'openface3_faces':
+                    if (openface3Faces.length === 0) {
+                        // Check if it's COCO+OpenFace3 format or native OpenFace3 format
+                        const fileContent = await detectedFile.file.text();
+                        const data = JSON.parse(fileContent);
+                        
+                        if (data.info && data.images && data.annotations && data.annotations[0]?.openface3) {
+                            // COCO+OpenFace3 format (VideoAnnotator export)
+                            openface3Faces = await parseCOCOOpenFace3Data(detectedFile.file);
+                        } else {
+                            // Native OpenFace3 format
+                            const { OpenFace3Parser } = await import('./openface3Parser');
+                            const parser = OpenFace3Parser.getInstance();
+                            openface3Faces = parser.parseOpenFace3Data(data);
+                        }
+                        pipelinesFound.push('openface3');
+                    }
+                    break;
+
                 case 'speech_recognition':
                     speechRecognition = await parseWebVTT(detectedFile.file);
                     pipelinesFound.push('speech_recognition');
@@ -644,6 +777,10 @@ export async function mergeAnnotationData(
 
     if (faceAnalysis.length > 0) {
         data.face_analysis = faceAnalysis;
+    }
+
+    if (openface3Faces.length > 0) {
+        data.openface3_faces = openface3Faces;
     }
 
     if (audioFile) {
@@ -745,6 +882,7 @@ export function getFilesSummary(detectedFiles: DetectedFile[]): {
             case 'speaker_diarization':
             case 'scene_detection':
             case 'face_analysis':
+            case 'openface3_faces':
             case 'complete_results':
                 summary.pipelines.push({
                     name: detected.pipeline || detected.type,

@@ -3,8 +3,172 @@
 // Reference: https://github.com/InfantLab/VideoAnnotator
 
 // =============================================================================
+// OPENFACE3 INTEGRATION TYPES (NEW)
+// =============================================================================
+
+// OpenFace3 2D Landmark (x, y coordinates)
+export interface OpenFace3Landmark {
+  x: number;
+  y: number;
+}
+
+// OpenFace3 Action Unit with intensity and presence
+export interface OpenFace3ActionUnit {
+  intensity: number;
+  presence: boolean;
+}
+
+// OpenFace3 Action Units - All 8 supported AUs
+export interface OpenFace3ActionUnits {
+  AU01_Inner_Brow_Raiser: OpenFace3ActionUnit;
+  AU02_Outer_Brow_Raiser: OpenFace3ActionUnit;
+  AU04_Brow_Lowerer: OpenFace3ActionUnit;
+  AU05_Upper_Lid_Raiser: OpenFace3ActionUnit;
+  AU06_Cheek_Raiser: OpenFace3ActionUnit;
+  AU07_Lid_Tightener: OpenFace3ActionUnit;
+  AU09_Nose_Wrinkler: OpenFace3ActionUnit;
+  AU10_Upper_Lip_Raiser: OpenFace3ActionUnit;
+}
+
+// OpenFace3 Head Pose (3D orientation)
+export interface OpenFace3HeadPose {
+  pitch: number;      // degrees (up/down rotation)
+  yaw: number;        // degrees (left/right rotation)  
+  roll: number;       // degrees (tilt rotation)
+  confidence: number; // 0-1 confidence score
+}
+
+// OpenFace3 Gaze Direction (3D vector)
+export interface OpenFace3Gaze {
+  direction_x: number;  // X component of gaze vector
+  direction_y: number;  // Y component of gaze vector
+  direction_z: number;  // Z component of gaze vector
+  confidence: number;   // 0-1 confidence score
+}
+
+// OpenFace3 Emotion Analysis (8 categories + valence/arousal)
+export interface OpenFace3Emotion {
+  dominant: string;     // Name of dominant emotion
+  probabilities: {
+    neutral: number;
+    happiness: number;
+    sadness: number;
+    anger: number;
+    fear: number;
+    surprise: number;
+    disgust: number;
+    contempt: number;
+  };
+  valence: number;      // -1 to 1 (negative to positive)
+  arousal: number;      // -1 to 1 (calm to excited)
+  confidence: number;   // Confidence in dominant emotion
+}
+
+// OpenFace3 Face Annotation (single face detection with all features)
+export interface OpenFace3FaceAnnotation {
+  annotation_id: number;
+  bbox: [number, number, number, number]; // [x, y, width, height]
+  timestamp: number;                      // Time in seconds
+  features: {
+    confidence: number;                   // Overall detection confidence
+    landmarks_2d: OpenFace3Landmark[];    // 98 facial landmarks
+    action_units: OpenFace3ActionUnits;   // Facial muscle activations
+    head_pose: OpenFace3HeadPose;         // 3D head orientation
+    gaze: OpenFace3Gaze;                  // Eye gaze direction
+    emotion: OpenFace3Emotion;            // Emotion classification
+  };
+}
+
+// OpenFace3 Complete Data Structure
+export interface OpenFace3Data {
+  metadata: {
+    pipeline: string;
+    model_info: {
+      model_name: string;
+      version: string;
+      device: string;
+      landmark_model: string;
+      features: {
+        landmarks: boolean;
+        "3d_landmarks": boolean;
+        action_units: boolean;
+        head_pose: boolean;
+        gaze: boolean;
+        emotions: boolean;
+        face_tracking: boolean;
+      };
+    };
+    config: {
+      detection_confidence: number;
+      landmark_model: string;
+      enable_3d_landmarks: boolean;
+      enable_action_units: boolean;
+      enable_head_pose: boolean;
+      enable_gaze: boolean;
+      enable_emotions: boolean;
+      batch_size: number;
+      device: string;
+      model_path: string | null;
+      max_faces: number;
+      track_faces: boolean;
+      person_identity: {
+        enabled: boolean;
+        link_to_persons: boolean;
+        iou_threshold: number;
+        require_person_id: boolean;
+      };
+      enabled: boolean;
+      backend: string;
+      face_detector_model: string;
+      landmark_points: number;
+      action_units: {
+        intensity_threshold: number;
+        presence_threshold: number;
+        normalize_range: [number, number];
+      };
+      head_pose: {
+        angle_units: string;
+        coordinate_system: string;
+      };
+      gaze: {
+        use_head_pose_proxy: boolean;
+        confidence_threshold: number;
+      };
+      emotions: {
+        probability_threshold: number;
+        normalize_probabilities: boolean;
+        include_valence_arousal: boolean;
+      };
+      save_landmarks: boolean;
+      save_face_crops: boolean;
+      save_visualizations: boolean;
+    };
+    processing_stats: {
+      total_faces: number;
+      avg_processing_time: number;
+    };
+  };
+  faces: OpenFace3FaceAnnotation[];
+}
+
+// =============================================================================
 // STANDARD FORMAT TYPES (VideoAnnotator Compatible)
 // =============================================================================
+
+// Standard face annotation compatible with existing overlay system
+export interface StandardFaceAnnotation {
+  annotation_id: number;
+  bbox: [number, number, number, number];
+  timestamp: number;
+  face_confidence?: number;
+  openface3?: {
+    landmarks_2d?: OpenFace3Landmark[];
+    action_units?: OpenFace3ActionUnits;
+    head_pose?: OpenFace3HeadPose;
+    gaze?: OpenFace3Gaze;
+    emotion?: OpenFace3Emotion;
+  };
+}
 
 // COCO Format Types for Person Tracking (VideoAnnotator v1.1.1)
 // Reference: https://cocodataset.org/#format-data
@@ -164,7 +328,8 @@ export interface StandardAnnotationData {
   speech_recognition?: WebVTTCue[];
   speaker_diarization?: RTTMSegment[];
   scene_detection?: SceneAnnotation[];
-  face_analysis?: LAIONFaceAnnotation[]; // NEW: Face analysis support
+  face_analysis?: LAIONFaceAnnotation[]; // Legacy face analysis support
+  openface3_faces?: StandardFaceAnnotation[]; // NEW: OpenFace3 face analysis support
   audio_file?: File; // Separate WAV file
   metadata?: {
     created: string;

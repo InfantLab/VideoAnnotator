@@ -9,6 +9,7 @@ import { FileUploader } from './FileUploader';
 import { WelcomeScreen } from './WelcomeScreen';
 import { Footer } from './Footer';
 import { DebugPanel } from './DebugPanel';
+import { OpenFace3Controls, OpenFace3Settings, defaultOpenFace3Settings } from './OpenFace3Controls';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StandardAnnotationData, OverlaySettings, TimelineSettings } from '@/types/annotations';
@@ -39,6 +40,8 @@ export const VideoAnnotationViewer = () => {
     showFaces: true,
     showEmotions: true,
   });
+
+  const [openface3Settings, setOpenface3Settings] = useState<OpenFace3Settings>(defaultOpenFace3Settings);
 
   const [showDebugPanel, setShowDebugPanel] = useState(false);
 
@@ -270,6 +273,7 @@ export const VideoAnnotationViewer = () => {
                   annotationData={annotationData}
                   currentTime={currentTime}
                   overlaySettings={overlaySettings}
+                  openface3Settings={openface3Settings}
                   onTimeUpdate={handleTimeUpdate}
                   onDurationChange={setDuration}
                   onPlayStateChange={setIsPlaying}
@@ -310,13 +314,20 @@ export const VideoAnnotationViewer = () => {
 
             {/* Column 2: Unified Controls */}
             <div className="w-96 bg-card border-l border-border flex-shrink-0">
-              <div className="p-4 h-full overflow-y-auto">
+              <div className="p-4 h-full overflow-y-auto space-y-6">
                 <UnifiedControls
                   overlaySettings={overlaySettings}
                   timelineSettings={timelineSettings}
                   onOverlayChange={setOverlaySettings}
                   onTimelineChange={setTimelineSettings}
                   annotationData={annotationData}
+                />
+                
+                {/* OpenFace3 Controls */}
+                <OpenFace3Controls
+                  settings={openface3Settings}
+                  onChange={setOpenface3Settings}
+                  faceData={annotationData?.openface3_faces}
                 />
               </div>
             </div>

@@ -126,7 +126,6 @@ Based on QA Checklist testing (✅ 2025-08-06), v0.2.0 successfully delivered:
 
 - [ ] **Skeleton Connection Review**
   - Verify YOLO connections with additional test videos
-  - Fix ear-to-shoulder connections (should connect to head)
   - Test across diverse pose datasets
   - Document connection accuracy improvements
 

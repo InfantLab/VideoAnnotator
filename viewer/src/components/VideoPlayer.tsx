@@ -1,19 +1,21 @@
 import { forwardRef, useEffect, useRef, useCallback, useState } from 'react';
 import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCue, RTTMSegment, SceneAnnotation, LAIONFaceAnnotation, COCO_SKELETON_CONNECTIONS, YOLO_POSE_PALETTE, YOLO_LIMB_COLORS, YOLO_KEYPOINT_COLORS } from '@/types/annotations';
 import { getFacesAtTime, getDominantEmotion } from '@/lib/parsers/face';
+import { OpenFace3Settings } from './OpenFace3Controls';
 
 interface VideoPlayerProps {
   videoFile: File;
   annotationData: StandardAnnotationData;
   currentTime: number;
   overlaySettings: OverlaySettings;
+  openface3Settings?: OpenFace3Settings;
   onTimeUpdate: (time: number) => void;
   onDurationChange: (duration: number) => void;
   onPlayStateChange: (playing: boolean) => void;
 }
 
 export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
-  ({ videoFile, annotationData, currentTime, overlaySettings, onTimeUpdate, onDurationChange, onPlayStateChange }, ref) => {
+  ({ videoFile, annotationData, currentTime, overlaySettings, openface3Settings, onTimeUpdate, onDurationChange, onPlayStateChange }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [videoUrl, setVideoUrl] = useState<string>('');
@@ -297,6 +299,333 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       });
     }, [overlaySettings.emotions, getCurrentFaceData, dimensions]);
 
+    // =============================================================================
+    // OPENFACE3 OVERLAY RENDERING FUNCTIONS
+    // =============================================================================
+
+    // Get current OpenFace3 face data at the current timestamp
+    const getCurrentOpenFace3Data = useCallback(() => {
+      if (!annotationData?.openface3_faces) return [];
+      
+      return annotationData.openface3_faces.filter(face => 
+        Math.abs(face.timestamp - currentTime) < 0.1 // 100ms tolerance
+      );
+    }, [annotationData?.openface3_faces, currentTime]);
+
+    // Draw OpenFace3 98-point facial landmarks
+    const drawOpenFace3Landmarks = useCallback((ctx: CanvasRenderingContext2D) => {
+      if (!openface3Settings?.landmarks_2d || !openface3Settings.enabled) return;
+
+      const currentFaces = getCurrentOpenFace3Data();
+      if (currentFaces.length === 0) return;
+
+      const scaleX = ctx.canvas.width / dimensions.width;
+      const scaleY = ctx.canvas.height / dimensions.height;
+
+      currentFaces.forEach((face, faceIndex) => {
+        if (!face.openface3?.landmarks_2d) return;
+        
+        const landmarks = face.openface3.landmarks_2d;
+        const hue = (faceIndex * 137.508) % 360;
+        
+        // Draw landmarks as small circles
+        ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+        landmarks.forEach((landmark, pointIndex) => {
+          const scaledX = landmark.x * scaleX;
+          const scaledY = landmark.y * scaleY;
+          
+          ctx.beginPath();
+          ctx.arc(scaledX, scaledY, 1.5, 0, 2 * Math.PI);
+          ctx.fill();
+          
+          // Draw point numbers for key landmarks if labels enabled
+          if (openface3Settings.show_feature_labels && pointIndex % 10 === 0) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.font = '8px monospace';
+            ctx.fillText(pointIndex.toString(), scaledX + 3, scaledY - 3);
+            ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+          }
+        });
+      });
+    }, [getCurrentOpenFace3Data, openface3Settings?.landmarks_2d, openface3Settings?.enabled, openface3Settings?.show_feature_labels, dimensions]);
+
+    // Draw OpenFace3 Action Units
+    const drawOpenFace3ActionUnits = useCallback((ctx: CanvasRenderingContext2D) => {
+      if (!openface3Settings?.action_units || !openface3Settings.enabled) return;
+
+      const currentFaces = getCurrentOpenFace3Data();
+      if (currentFaces.length === 0) return;
+
+      const scaleX = ctx.canvas.width / dimensions.width;
+      const scaleY = ctx.canvas.height / dimensions.height;
+
+      currentFaces.forEach((face, faceIndex) => {
+        if (!face.openface3?.action_units) return;
+        
+        const aus = face.openface3.action_units;
+        const [x, y, width, height] = face.bbox;
+        const scaledX = x * scaleX;
+        const scaledY = y * scaleY;
+        
+        // Display active Action Units
+        const activeAUs = Object.entries(aus).filter(([_, au]) => {
+          const actionUnit = au as any; // Type assertion for now
+          return actionUnit.presence && actionUnit.intensity > 0.5;
+        });
+        
+        if (activeAUs.length > 0) {
+          const labelY = scaledY + (height * scaleY) + 25;
+          const auText = activeAUs.map(([name, au]) => {
+            const actionUnit = au as any; // Type assertion for now
+            return `${name.replace('AU', '').replace('_', ' ')}: ${actionUnit.intensity.toFixed(1)}`;
+          }).join(', ');
+          
+          // Background
+          const textWidth = ctx.measureText(auText).width;
+          ctx.fillStyle = 'rgba(128, 0, 128, 0.8)'; // Purple background
+          ctx.fillRect(scaledX, labelY - 15, textWidth + 8, 18);
+          
+          // Text
+          ctx.fillStyle = 'white';
+          ctx.font = '11px monospace';
+          ctx.fillText(auText, scaledX + 4, labelY - 3);
+        }
+      });
+    }, [getCurrentOpenFace3Data, openface3Settings?.action_units, openface3Settings?.enabled, dimensions]);
+
+    // Draw OpenFace3 Head Pose (3D orientation)
+    const drawOpenFace3HeadPose = useCallback((ctx: CanvasRenderingContext2D) => {
+      if (!openface3Settings?.head_pose || !openface3Settings.enabled) return;
+
+      const currentFaces = getCurrentOpenFace3Data();
+      if (currentFaces.length === 0) return;
+
+      const scaleX = ctx.canvas.width / dimensions.width;
+      const scaleY = ctx.canvas.height / dimensions.height;
+
+      currentFaces.forEach((face, faceIndex) => {
+        if (!face.openface3?.head_pose) return;
+        
+        const headPose = face.openface3.head_pose;
+        const [x, y, width, height] = face.bbox;
+        const centerX = (x + width / 2) * scaleX;
+        const centerY = (y + height / 2) * scaleY;
+        
+        // Draw orientation vectors
+        const arrowLength = 30;
+        const pitch = headPose.pitch * Math.PI / 180;
+        const yaw = headPose.yaw * Math.PI / 180;
+        const roll = headPose.roll * Math.PI / 180;
+        
+        // Draw coordinate axes (simplified)
+        ctx.lineWidth = 2;
+        
+        // Yaw (horizontal rotation) - Red
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX + Math.cos(yaw) * arrowLength, centerY + Math.sin(yaw) * arrowLength);
+        ctx.stroke();
+        
+        // Pitch (vertical rotation) - Green  
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)';
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX, centerY + Math.sin(pitch) * arrowLength);
+        ctx.stroke();
+        
+        // Show numerical values if labels enabled
+        if (openface3Settings.show_feature_labels) {
+          const poseText = `P:${headPose.pitch.toFixed(0)}° Y:${headPose.yaw.toFixed(0)}° R:${headPose.roll.toFixed(0)}°`;
+          const labelY = (y + height) * scaleY + 45;
+          
+          ctx.fillStyle = 'rgba(0, 0, 255, 0.8)'; // Blue background
+          const textWidth = ctx.measureText(poseText).width;
+          ctx.fillRect(centerX - textWidth/2 - 4, labelY - 15, textWidth + 8, 18);
+          
+          ctx.fillStyle = 'white';
+          ctx.font = '10px monospace';
+          ctx.fillText(poseText, centerX - textWidth/2, labelY - 3);
+        }
+      });
+    }, [getCurrentOpenFace3Data, openface3Settings?.head_pose, openface3Settings?.enabled, openface3Settings?.show_feature_labels, dimensions]);
+
+    // Draw OpenFace3 Gaze Direction
+    const drawOpenFace3Gaze = useCallback((ctx: CanvasRenderingContext2D) => {
+      if (!openface3Settings?.gaze || !openface3Settings.enabled) return;
+
+      const currentFaces = getCurrentOpenFace3Data();
+      if (currentFaces.length === 0) return;
+
+      const scaleX = ctx.canvas.width / dimensions.width;
+      const scaleY = ctx.canvas.height / dimensions.height;
+
+      currentFaces.forEach((face, faceIndex) => {
+        if (!face.openface3?.gaze) return;
+        
+        const gaze = face.openface3.gaze;
+        const [x, y, width, height] = face.bbox;
+        
+        // Estimate eye positions (approximate)
+        const leftEyeX = (x + width * 0.35) * scaleX;
+        const rightEyeX = (x + width * 0.65) * scaleX;
+        const eyeY = (y + height * 0.4) * scaleY;
+        
+        // Draw gaze vectors from both eyes
+        const gazeLength = 40;
+        const gazeEndX = gaze.direction_x * gazeLength;
+        const gazeEndY = gaze.direction_y * gazeLength;
+        
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.9)'; // Cyan
+        ctx.lineWidth = 2;
+        
+        // Left eye gaze
+        ctx.beginPath();
+        ctx.moveTo(leftEyeX, eyeY);
+        ctx.lineTo(leftEyeX + gazeEndX, eyeY + gazeEndY);
+        ctx.stroke();
+        
+        // Right eye gaze
+        ctx.beginPath();
+        ctx.moveTo(rightEyeX, eyeY);
+        ctx.lineTo(rightEyeX + gazeEndX, eyeY + gazeEndY);
+        ctx.stroke();
+        
+        // Draw eye points
+        ctx.fillStyle = 'rgba(0, 255, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(leftEyeX, eyeY, 3, 0, 2 * Math.PI);
+        ctx.arc(rightEyeX, eyeY, 3, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Show confidence if labels enabled
+        if (openface3Settings.show_feature_labels) {
+          const gazeText = `Gaze: ${(gaze.confidence * 100).toFixed(0)}%`;
+          const labelY = (y + height) * scaleY + 65;
+          
+          ctx.fillStyle = 'rgba(0, 128, 128, 0.8)'; // Teal background
+          const textWidth = ctx.measureText(gazeText).width;
+          ctx.fillRect((x + width/2) * scaleX - textWidth/2 - 4, labelY - 15, textWidth + 8, 18);
+          
+          ctx.fillStyle = 'white';
+          ctx.font = '10px monospace';
+          ctx.fillText(gazeText, (x + width/2) * scaleX - textWidth/2, labelY - 3);
+        }
+      });
+    }, [getCurrentOpenFace3Data, openface3Settings?.gaze, openface3Settings?.enabled, openface3Settings?.show_feature_labels, dimensions]);
+
+    // Draw OpenFace3 Enhanced Emotions (8 categories + valence/arousal)
+    const drawOpenFace3Emotions = useCallback((ctx: CanvasRenderingContext2D) => {
+      if (!openface3Settings?.emotions || !openface3Settings.enabled) return;
+
+      const currentFaces = getCurrentOpenFace3Data();
+      if (currentFaces.length === 0) return;
+
+      const scaleX = ctx.canvas.width / dimensions.width;
+      const scaleY = ctx.canvas.height / dimensions.height;
+
+      currentFaces.forEach((face, faceIndex) => {
+        if (!face.openface3?.emotion) return;
+        
+        const emotion = face.openface3.emotion;
+        const [x, y, width, height] = face.bbox;
+        const scaledX = x * scaleX;
+        const scaledY = y * scaleY;
+        
+        // Main emotion display
+        const emotionText = `${emotion.dominant} (${(emotion.confidence * 100).toFixed(0)}%)`;
+        const labelY = scaledY + (height * scaleY) + 5;
+        
+        // Emotion-specific colors
+        const emotionColors: Record<string, string> = {
+          'happiness': 'hsl(60, 100%, 50%)',      // Yellow
+          'sadness': 'hsl(240, 100%, 60%)',      // Blue
+          'anger': 'hsl(0, 100%, 60%)',          // Red
+          'fear': 'hsl(270, 100%, 60%)',         // Purple
+          'surprise': 'hsl(30, 100%, 60%)',      // Orange
+          'disgust': 'hsl(120, 100%, 30%)',      // Dark Green
+          'contempt': 'hsl(300, 100%, 40%)',     // Magenta
+          'neutral': 'hsl(0, 0%, 60%)'           // Gray
+        };
+        
+        const emotionColor = emotionColors[emotion.dominant.toLowerCase()] || 'hsl(180, 70%, 60%)';
+        
+        // Background
+        const textWidth = ctx.measureText(emotionText).width;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(scaledX, labelY - 15, textWidth + 8, 18);
+        
+        // Text
+        ctx.fillStyle = emotionColor;
+        ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillText(emotionText, scaledX + 4, labelY - 3);
+        
+        // Show valence/arousal if labels enabled
+        if (openface3Settings.show_feature_labels) {
+          const vaText = `V:${emotion.valence.toFixed(1)} A:${emotion.arousal.toFixed(1)}`;
+          const vaLabelY = labelY + 20;
+          
+          ctx.fillStyle = 'rgba(255, 165, 0, 0.8)'; // Orange background
+          const vaTextWidth = ctx.measureText(vaText).width;
+          ctx.fillRect(scaledX, vaLabelY - 15, vaTextWidth + 8, 18);
+          
+          ctx.fillStyle = 'white';
+          ctx.font = '10px monospace';
+          ctx.fillText(vaText, scaledX + 4, vaLabelY - 3);
+        }
+      });
+    }, [getCurrentOpenFace3Data, openface3Settings?.emotions, openface3Settings?.enabled, openface3Settings?.show_feature_labels, dimensions]);
+
+    // Draw OpenFace3 Enhanced Face Boxes
+    const drawOpenFace3FaceBoxes = useCallback((ctx: CanvasRenderingContext2D) => {
+      if (!openface3Settings?.face_boxes || !openface3Settings.enabled) return;
+
+      const currentFaces = getCurrentOpenFace3Data();
+      if (currentFaces.length === 0) return;
+
+      const scaleX = ctx.canvas.width / dimensions.width;
+      const scaleY = ctx.canvas.height / dimensions.height;
+
+      currentFaces.forEach((face, faceIndex) => {
+        const [x, y, width, height] = face.bbox;
+        
+        // Scale bounding box coordinates
+        const scaledX = x * scaleX;
+        const scaledY = y * scaleY;
+        const scaledWidth = width * scaleX;
+        const scaledHeight = height * scaleY;
+        
+        // Face-specific color
+        const hue = (face.annotation_id * 137.508) % 360;
+        const confidence = face.face_confidence || 0;
+        
+        // Box color changes with confidence
+        ctx.strokeStyle = `hsl(${hue}, 70%, ${40 + confidence * 20}%)`;
+        ctx.lineWidth = confidence > 0.7 ? 3 : 2;
+
+        // Draw face bounding box
+        ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+
+        // Draw face info
+        const faceText = `OF3:${face.annotation_id}`;
+        ctx.fillStyle = 'rgba(0, 100, 255, 0.8)'; // Blue background for OF3
+        ctx.fillRect(scaledX, scaledY - 20, 65, 18);
+        ctx.fillStyle = `hsl(${hue}, 70%, 80%)`;
+        ctx.font = '11px monospace';
+        ctx.fillText(faceText, scaledX + 2, scaledY - 6);
+        
+        // Show confidence if enabled
+        if (openface3Settings.show_confidence_scores && face.face_confidence) {
+          const confText = `${(face.face_confidence * 100).toFixed(0)}%`;
+          ctx.fillStyle = 'rgba(0, 100, 255, 0.8)';
+          ctx.fillRect(scaledX + 70, scaledY - 20, 35, 18);
+          ctx.fillStyle = 'white';
+          ctx.font = '10px monospace';
+          ctx.fillText(confText, scaledX + 73, scaledY - 6);
+        }
+      });
+    }, [getCurrentOpenFace3Data, openface3Settings?.face_boxes, openface3Settings?.enabled, openface3Settings?.show_confidence_scores, dimensions]);
+
     // Render all overlays
     const renderOverlays = useCallback(() => {
       const canvas = canvasRef.current;
@@ -335,12 +664,25 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       drawScenes(ctx);
       drawFaces(ctx);
       drawEmotions(ctx);
-    }, [getCurrentPoseData, drawPose, drawSubtitles, drawSpeakers, drawScenes, drawFaces, drawEmotions, currentTime, overlaySettings.pose, annotationData]);
+      
+      // Draw OpenFace3 overlays if enabled and available
+      if (openface3Settings?.enabled) {
+        drawOpenFace3FaceBoxes(ctx);
+        drawOpenFace3Landmarks(ctx);
+        drawOpenFace3ActionUnits(ctx);
+        drawOpenFace3HeadPose(ctx);
+        drawOpenFace3Gaze(ctx);
+        drawOpenFace3Emotions(ctx);
+      }
+    }, [getCurrentPoseData, drawPose, drawSubtitles, drawSpeakers, drawScenes, drawFaces, drawEmotions, 
+        getCurrentOpenFace3Data, drawOpenFace3FaceBoxes, drawOpenFace3Landmarks, drawOpenFace3ActionUnits,
+        drawOpenFace3HeadPose, drawOpenFace3Gaze, drawOpenFace3Emotions, 
+        currentTime, overlaySettings.pose, annotationData, openface3Settings]);
 
     // Update overlays when current time changes
     useEffect(() => {
       renderOverlays();
-    }, [currentTime, overlaySettings, renderOverlays]);
+    }, [currentTime, overlaySettings, openface3Settings, renderOverlays]);
 
     // Handle video events
     const handleLoadedMetadata = useCallback(() => {

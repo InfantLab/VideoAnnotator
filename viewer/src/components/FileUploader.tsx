@@ -38,6 +38,7 @@ const FileTypeIcon = ({ type }: { type: FileTypeInfo['type'] }) => {
     case 'speaker_diarization': return <Users className="w-4 h-4" />;
     case 'scene_detection': return <Eye className="w-4 h-4" />;
     case 'face_analysis': return <Eye className="w-4 h-4" />;
+    case 'openface3_faces': return <Eye className="w-4 h-4" />;
     case 'complete_results': return <CheckCircle2 className="w-4 h-4" />;
     default: return <AlertCircle className="w-4 h-4" />;
   }
@@ -320,7 +321,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
   const hasFiles = fileStatuses.length > 0;
   const hasVideoFile = fileStatuses.some(f => f.detected.type === 'video');
   const hasPipelineData = fileStatuses.some(f =>
-    ['person_tracking', 'speech_recognition', 'speaker_diarization', 'scene_detection', 'face_analysis', 'complete_results'].includes(f.detected.type)
+    ['person_tracking', 'speech_recognition', 'speaker_diarization', 'scene_detection', 'face_analysis', 'openface3_faces', 'complete_results'].includes(f.detected.type)
   );
   const canProcess = hasVideoFile && hasPipelineData && !isProcessing;
 
@@ -488,7 +489,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
               className="text-left flex-col h-auto p-4"
             >
               <div className="font-medium">🍼 Peekaboo Rep3</div>
-              <div className="text-xs text-muted-foreground">Parent-child interaction</div>
+              <div className="text-xs text-muted-foreground">Parent-child + OpenFace3</div>
             </Button>
             <Button
               variant="outline"
@@ -497,7 +498,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
               className="text-left flex-col h-auto p-4"
             >
               <div className="font-medium">🍼 Peekaboo Rep2</div>
-              <div className="text-xs text-muted-foreground">Alternative interaction</div>
+              <div className="text-xs text-muted-foreground">Alternative + OpenFace3</div>
             </Button>
             <Button
               variant="outline"
@@ -506,7 +507,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
               className="text-left flex-col h-auto p-4"
             >
               <div className="font-medium">📄 Tearing Paper</div>
-              <div className="text-xs text-muted-foreground">Object manipulation</div>
+              <div className="text-xs text-muted-foreground">Object + OpenFace3</div>
             </Button>
             <Button
               variant="outline"
@@ -515,7 +516,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
               className="text-left flex-col h-auto p-4"
             >
               <div className="font-medium">🎩 That's Not A Hat</div>
-              <div className="text-xs text-muted-foreground">Social interaction</div>
+              <div className="text-xs text-muted-foreground">Social + OpenFace3</div>
             </Button>
             <Button
               variant="outline"
@@ -533,6 +534,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
         <div className="text-xs text-muted-foreground space-y-1 border-t pt-4">
           <p><strong>Supported VideoAnnotator formats:</strong></p>
           <p>• Person Tracking: COCO JSON format with keypoints</p>
+          <p>• Face Analysis: OpenFace3 JSON with 98 landmarks, emotions, head pose, gaze</p>
           <p>• Speech Recognition: WebVTT files (.vtt)</p>
           <p>• Speaker Diarization: RTTM files (.rttm)</p>
           <p>• Scene Detection: JSON arrays with scene data</p>

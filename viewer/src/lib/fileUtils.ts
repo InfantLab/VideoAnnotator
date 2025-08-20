@@ -3,7 +3,7 @@
  */
 
 export interface FileTypeInfo {
-    type: 'video' | 'audio' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'face_analysis' | 'complete_results' | 'unknown';
+    type: 'video' | 'audio' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'face_analysis' | 'openface3_faces' | 'complete_results' | 'unknown';
     extension: string;
     mimeType?: string;
     confidence: 'high' | 'medium' | 'low';
@@ -91,15 +91,46 @@ export async function detectJSONType(file: File): Promise<FileTypeInfo> {
         const text = await file.text();
         const data = JSON.parse(text);
 
-        // COCO format detection (person tracking)
+        // COCO format detection - check for OpenFace3 data first
         if (data.annotations && Array.isArray(data.annotations) &&
             data.annotations.length > 0 && data.annotations[0].keypoints) {
+            
+            // Check if COCO annotations contain OpenFace3 data
+            if (data.annotations[0].openface3 && 
+                (data.annotations[0].openface3.landmarks_2d || 
+                 data.annotations[0].openface3.action_units ||
+                 data.annotations[0].openface3.head_pose ||
+                 data.annotations[0].openface3.gaze ||
+                 data.annotations[0].openface3.emotion)) {
+                return {
+                    type: 'openface3_faces',
+                    extension: 'json',
+                    mimeType: 'application/json',
+                    confidence: 'high',
+                    reason: 'COCO format with embedded OpenFace3 data detected'
+                };
+            }
+            
+            // Standard COCO format (person tracking only)
             return {
                 type: 'person_tracking',
                 extension: 'json',
                 mimeType: 'application/json',
                 confidence: 'high',
                 reason: 'COCO format with keypoints detected'
+            };
+        }
+
+        // OpenFace3 format detection
+        if (data.metadata && data.faces && Array.isArray(data.faces) &&
+            data.metadata.pipeline && data.metadata.model_info &&
+            data.faces.length > 0 && data.faces[0].features) {
+            return {
+                type: 'openface3_faces',
+                extension: 'json',
+                mimeType: 'application/json',
+                confidence: 'high',
+                reason: 'OpenFace3 format with metadata and faces detected'
             };
         }
 
@@ -167,6 +198,7 @@ export function getFileTypeDescription(type: FileTypeInfo['type']): string {
         case 'speaker_diarization': return 'Speaker Diarization (RTTM)';
         case 'scene_detection': return 'Scene Detection (JSON)';
         case 'face_analysis': return 'Face Analysis (COCO)';
+        case 'openface3_faces': return 'OpenFace3 Analysis (JSON)';
         case 'complete_results': return 'Complete Results (VideoAnnotator)';
         default: return 'Unknown File Type';
     }
