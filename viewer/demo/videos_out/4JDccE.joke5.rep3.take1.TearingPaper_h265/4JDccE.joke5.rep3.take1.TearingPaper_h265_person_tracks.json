@@ -3,17 +3,22 @@
   "person_tracks": [
     {
       "person_id": "person_4JDccE.joke5.rep3.take1.TearingPaper_h265_001",
-      "track_id": 510,
+      "track_id": 82,
+      "video_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265"
+    },
+    {
+      "person_id": "person_4JDccE.joke5.rep3.take1.TearingPaper_h265_002",
+      "track_id": 91,
       "video_id": "4JDccE.joke5.rep3.take1.TearingPaper_h265"
     }
   ],
   "labeling_metadata": {
-    "total_persons": 1,
+    "total_persons": 2,
     "labeled_persons": 0,
     "id_format": "semantic",
     "detections_summary": {
-      "total_detections": 4,
-      "unique_persons": 1,
+      "total_detections": 8,
+      "unique_persons": 2,
       "labeled_persons": 0
     }
   }

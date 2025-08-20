@@ -2,11 +2,75 @@
   {
     "pipeline": "speech_recognition",
     "format": "webvtt",
-    "data": [],
+    "data": [
+      {
+        "video_id": "audio_segment",
+        "timestamp": 0.0,
+        "transcript": "Can you hear me?",
+        "language": "en",
+        "confidence": 0.0,
+        "words": [
+          {
+            "word": "Can",
+            "start": 0.0,
+            "end": 0.9,
+            "confidence": 0.0055552260018885136
+          },
+          {
+            "word": "you",
+            "start": 0.9,
+            "end": 1.08,
+            "confidence": 0.25990331172943115
+          },
+          {
+            "word": "hear",
+            "start": 1.08,
+            "end": 1.52,
+            "confidence": 0.2074507474899292
+          },
+          {
+            "word": "me?",
+            "start": 1.52,
+            "end": 3.02,
+            "confidence": 0.8059362769126892
+          }
+        ],
+        "metadata": {
+          "model": "base",
+          "task": "transcribe",
+          "num_segments": 1,
+          "num_words": 4,
+          "start_time": 0.0,
+          "end_time": 3.02,
+          "total_duration": 3.02,
+          "segments": [
+            {
+              "id": 0,
+              "start": 0.0,
+              "end": 3.02,
+              "text": "Can you hear me?",
+              "tokens": [
+                50364,
+                1664,
+                291,
+                1568,
+                385,
+                30,
+                50589
+              ],
+              "temperature": 0.0,
+              "avg_logprob": -1.4773362874984741,
+              "compression_ratio": 0.6666666666666666,
+              "no_speech_prob": 0.5019776225090027
+            }
+          ]
+        }
+      }
+    ],
     "metadata": {
       "pipeline_name": "speech_recognition",
       "output_format": "webvtt",
-      "processed_segments": 0
+      "processed_segments": 1
     }
   },
   {

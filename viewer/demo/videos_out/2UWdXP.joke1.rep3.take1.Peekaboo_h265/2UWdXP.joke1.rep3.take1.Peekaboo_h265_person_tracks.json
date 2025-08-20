@@ -3,7 +3,7 @@
   "person_tracks": [
     {
       "person_id": "person_2UWdXP.joke1.rep3.take1.Peekaboo_h265_001",
-      "track_id": 334,
+      "track_id": 31,
       "video_id": "2UWdXP.joke1.rep3.take1.Peekaboo_h265",
       "label": "parent",
       "confidence": 0.7,
@@ -12,7 +12,7 @@
     },
     {
       "person_id": "person_2UWdXP.joke1.rep3.take1.Peekaboo_h265_002",
-      "track_id": 387,
+      "track_id": 53,
       "video_id": "2UWdXP.joke1.rep3.take1.Peekaboo_h265",
       "label": "parent",
       "confidence": 0.7,

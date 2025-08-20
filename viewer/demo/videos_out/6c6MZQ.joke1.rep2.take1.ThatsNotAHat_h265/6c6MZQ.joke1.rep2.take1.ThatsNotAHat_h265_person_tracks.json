@@ -3,7 +3,16 @@
   "person_tracks": [
     {
       "person_id": "person_6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_001",
-      "track_id": 510,
+      "track_id": 82,
+      "video_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265",
+      "label": "parent",
+      "confidence": 0.7,
+      "method": "automatic_size_based",
+      "timestamp": null
+    },
+    {
+      "person_id": "person_6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265_002",
+      "track_id": 91,
       "video_id": "6c6MZQ.joke1.rep2.take1.ThatsNotAHat_h265",
       "label": "parent",
       "confidence": 0.7,
@@ -12,13 +21,13 @@
     }
   ],
   "labeling_metadata": {
-    "total_persons": 1,
-    "labeled_persons": 1,
+    "total_persons": 2,
+    "labeled_persons": 2,
     "id_format": "semantic",
     "detections_summary": {
-      "total_detections": 10,
-      "unique_persons": 1,
-      "labeled_persons": 1
+      "total_detections": 20,
+      "unique_persons": 2,
+      "labeled_persons": 2
     }
   }
 }
