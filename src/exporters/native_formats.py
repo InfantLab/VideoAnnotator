@@ -22,6 +22,9 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Union, NamedTuple, TYPE_CHECKING
 
+# Import version information
+from ..version import __version__
+
 if TYPE_CHECKING:
     try:
         from pycocotools.coco import COCO
@@ -170,7 +173,7 @@ def export_coco_json(
     coco_data = {
         "info": {
             "description": "VideoAnnotator COCO Export",
-            "version": "1.0",
+            "version": __version__,
             "year": 2025,
             "contributor": "VideoAnnotator",
             "date_created": "2025-01-01T00:00:00Z",

@@ -20,6 +20,7 @@ from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from huggingface_hub import hf_hub_download
 
 from .whisper_base_pipeline import WhisperBasePipeline
+from ...version import __version__
 
 # Import WebVTT exporter
 from ...exporters.native_formats import export_webvtt
@@ -967,7 +968,7 @@ class LAIONVoicePipeline(WhisperBasePipeline):
         """Get information about the LAION Voice Pipeline."""
         return {
             "name": "LAIONVoicePipeline",
-            "version": "1.0.0",
+            "version": __version__,
             "capabilities": {
                 "audio_processing": True,
                 "emotion_analysis": True,

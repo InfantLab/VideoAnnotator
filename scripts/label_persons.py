@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from src.utils.person_identity import PersonIdentityManager, normalize_person_label, get_available_labels
 from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
+from src.version import __version__
 
 
 def load_person_tracking_results(video_path: str, results_dir: str) -> Optional[List[Dict]]:
@@ -254,7 +255,7 @@ def save_updated_annotations(annotations: List[Dict],
         "annotations": annotations,
         "info": {
             "description": "Person tracking results with manual labels",
-            "version": "1.0",
+            "version": __version__,
             "date_labeled": str(Path().cwd())
         }
     }

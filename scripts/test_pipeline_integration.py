@@ -32,7 +32,7 @@ def test_pipeline_imports():
             
             # Test pipeline configuration
             config = {
-                "model": "yolo11n-pose.pt",
+                "model": "models/yolo/yolo11n-pose.pt",
                 "person_identity": {
                     "enabled": True,
                     "id_format": "semantic",

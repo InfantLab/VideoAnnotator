@@ -13,6 +13,7 @@ from typing import Dict, List, Any, Optional
 from pathlib import Path
 
 from ..base_pipeline import BasePipeline
+from ...version import __version__
 from ...exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
@@ -83,7 +84,7 @@ class FaceAnalysisPipeline(BasePipeline):
         """Get the output schema for face analysis annotations."""
         return {
             "type": "coco_annotation",
-            "format_version": "1.0",
+            "format_version": __version__,
             "categories": [
                 {
                     "id": 1,

@@ -15,6 +15,7 @@ import time
 import json
 
 from ..base_pipeline import BasePipeline
+from ...version import __version__
 from ...exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
@@ -324,7 +325,7 @@ class OpenFace3Pipeline(BasePipeline):
         """Get the output schema for OpenFace 3.0 face analysis annotations."""
         return {
             "type": "coco_annotation",
-            "format_version": "1.0",
+            "format_version": __version__,
             "categories": [
                 {
                     "id": 1,
@@ -376,7 +377,7 @@ class OpenFace3Pipeline(BasePipeline):
         """Get the output schema for OpenFace 3.0 face analysis annotations."""
         return {
             "type": "coco_annotation",
-            "format_version": "1.0",
+            "format_version": __version__,
             "categories": [
                 {
                     "id": 1,
@@ -545,7 +546,7 @@ class OpenFace3Pipeline(BasePipeline):
         coco_dataset = {
             "info": {
                 "description": "OpenFace 3.0 Face Analysis",
-                "version": "1.0",
+                "version": __version__,
                 "year": 2025,
                 "contributor": "VideoAnnotator",
                 "date_created": time.strftime("%Y-%m-%d %H:%M:%S")
@@ -821,7 +822,7 @@ class OpenFace3Pipeline(BasePipeline):
         """Get information about the OpenFace 3.0 pipeline."""
         info = {
             "name": "OpenFace3Pipeline",
-            "version": "1.0.0",
+            "version": __version__,
             "description": "Facial behavior analysis using OpenFace 3.0",
             "capabilities": [
                 "face_detection",

@@ -67,7 +67,7 @@ class TestPersonTrackingSizeAnalysisIntegration:
     def pipeline_config(self):
         """Configuration for person tracking pipeline with size-based analysis."""
         return {
-            "model": "yolo11n-pose.pt",
+            "model": "models/yolo/yolo11n-pose.pt",
             "conf_threshold": 0.4,
             "iou_threshold": 0.7,
             "track_mode": True,
@@ -252,7 +252,7 @@ class TestPersonTrackingSizeAnalysisIntegration:
         """Test that pipeline works with old configuration format."""
         # Old configuration without size-based analysis
         old_config = {
-            "model": "yolo11n-pose.pt",
+            "model": "models/yolo/yolo11n-pose.pt",
             "conf_threshold": 0.4,
             "person_identity": {
                 "enabled": False  # Old way of disabling
@@ -266,7 +266,7 @@ class TestPersonTrackingSizeAnalysisIntegration:
         
         # New configuration should override defaults properly
         new_config = {
-            "model": "yolo11n-pose.pt",
+            "model": "models/yolo/yolo11n-pose.pt",
             "person_identity": {
                 "enabled": True,
                 "automatic_labeling": {

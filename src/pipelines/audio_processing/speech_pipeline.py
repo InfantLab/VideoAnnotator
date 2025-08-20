@@ -24,6 +24,7 @@ except ImportError:
     logging.warning("whisper not available. Speech recognition will be disabled.")
 
 from .whisper_base_pipeline import WhisperBasePipeline
+from ...version import __version__
 
 
 class SpeechPipeline(WhisperBasePipeline):
@@ -303,7 +304,7 @@ class SpeechPipeline(WhisperBasePipeline):
         """Get information about the speech recognition pipeline."""
         return {
             "name": "SpeechPipeline",
-            "version": "1.0.0",
+            "version": __version__,
             "capabilities": {
                 "speech_recognition": WHISPER_AVAILABLE,
                 "word_timestamps": True,

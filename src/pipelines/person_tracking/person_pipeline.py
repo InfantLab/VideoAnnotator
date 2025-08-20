@@ -40,7 +40,7 @@ class PersonTrackingPipeline(BasePipeline):
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         default_config = {
-            "model": "yolo11n-pose.pt",  # YOLO11 pose model
+            "model": "models/yolo/yolo11n-pose.pt",  # YOLO11 pose model
             "conf_threshold": 0.4,
             "iou_threshold": 0.7,
             "track_mode": True,  # Enable tracking

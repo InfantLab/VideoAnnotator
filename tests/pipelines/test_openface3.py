@@ -20,6 +20,7 @@ from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, Any, List
 
 from src.pipelines.face_analysis.openface3_pipeline import OpenFace3Pipeline, OPENFACE3_AVAILABLE
+from src.version import __version__
 
 
 @pytest.mark.unit
@@ -79,7 +80,7 @@ class TestOpenFace3Pipeline:
         schema = pipeline.get_schema()
         
         assert schema["type"] == "coco_annotation"
-        assert schema["format_version"] == "1.0"
+        assert schema["format_version"] == __version__
         assert len(schema["categories"]) == 1
         assert schema["categories"][0]["name"] == "face"
         
@@ -102,7 +103,7 @@ class TestOpenFace3Pipeline:
         info = pipeline.get_pipeline_info()
         
         assert info["name"] == "OpenFace3Pipeline"
-        assert info["version"] == "1.0.0"
+        assert info["version"] == __version__
         assert info["output_format"] == "COCO"
         assert "face_detection" in info["capabilities"]
         assert "action_units" in info["capabilities"]

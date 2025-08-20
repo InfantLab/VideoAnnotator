@@ -16,7 +16,8 @@
       "Bash(pwsh:*)",
       "WebFetch(domain:github.com)",
       "Bash(mkdir:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

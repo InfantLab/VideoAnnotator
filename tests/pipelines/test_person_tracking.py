@@ -22,14 +22,14 @@ class TestPersonTrackingPipeline:
     def test_pipeline_initialization(self):
         """Test pipeline initialization with custom configuration."""
         config = {
-            "model": "yolo11s-pose.pt",
+            "model": "models/yolo/yolo11s-pose.pt",
             "conf_threshold": 0.6,
             "tracker": "bytetrack",
             "track_mode": True
         }
         pipeline = PersonTrackingPipeline(config)
         
-        assert pipeline.config["model"] == "yolo11s-pose.pt"
+        assert pipeline.config["model"] == "models/yolo/yolo11s-pose.pt"
         assert pipeline.config["conf_threshold"] == 0.6
         assert pipeline.config["tracker"] == "bytetrack"
         assert pipeline.config["track_mode"] == True
@@ -39,7 +39,7 @@ class TestPersonTrackingPipeline:
         pipeline = PersonTrackingPipeline()
         
         # Verify current default configuration
-        assert pipeline.config["model"] == "yolo11n-pose.pt"
+        assert pipeline.config["model"] == "models/yolo/yolo11n-pose.pt"
         assert pipeline.config["conf_threshold"] == 0.4
         assert pipeline.config["iou_threshold"] == 0.7
         assert pipeline.config["tracker"] == "bytetrack"
@@ -136,12 +136,12 @@ class TestPersonTrackingAdvanced:
         """Test pose estimation configuration - YOLO11 pose model support."""
         # Test that pipeline supports pose estimation models
         pipeline = PersonTrackingPipeline({
-            "model": "yolo11n-pose.pt",  # Pose estimation model
+            "model": "models/yolo/yolo11n-pose.pt",  # Pose estimation model
             "conf_threshold": 0.4,
         })
         
         # Verify pose model configuration is accepted
-        assert pipeline.config["model"] == "yolo11n-pose.pt"
+        assert pipeline.config["model"] == "models/yolo/yolo11n-pose.pt"
         assert "pose" in pipeline.config["model"]
         
         # Verify schema includes keypoint structure

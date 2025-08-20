@@ -11,6 +11,7 @@ from pathlib import Path
 import logging
 
 from ..base_pipeline import BasePipeline
+from ...version import __version__
 from ...exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
@@ -423,7 +424,7 @@ class SceneDetectionPipeline(BasePipeline):
         """Get information about the scene detection pipeline."""
         return {
             "name": "SceneDetectionPipeline",
-            "version": "1.0.0",
+            "version": __version__,
             "capabilities": {
                 "scene_detection": SCENEDETECT_AVAILABLE,
                 "scene_classification": CLIP_AVAILABLE,
