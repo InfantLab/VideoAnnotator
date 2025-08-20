@@ -244,10 +244,23 @@ export const Timeline = ({ annotationData, currentTime, duration, settings, onSe
           )}
         </div>
 
-        {/* Time Markers */}
-        <div className="flex justify-between text-xs text-muted-foreground mt-1">
+        {/* Enhanced Time Markers with Progress Info */}
+        <div className="flex justify-between items-center text-xs text-muted-foreground mt-1">
           <span>0:00</span>
+          
+          {/* Center: Current Progress */}
+          <div className="flex items-center gap-2 text-primary font-mono">
+            <span>{Math.floor(currentTime / 60)}:{(currentTime % 60).toFixed(2).padStart(5, '0')}</span>
+            <span className="text-muted-foreground">|</span>
+            <span>{((currentTime / duration) * 100).toFixed(1)}%</span>
+          </div>
+          
           <span>{Math.floor(duration / 60)}:{(duration % 60).toFixed(0).padStart(2, '0')}</span>
+        </div>
+
+        {/* Progress Indicator */}
+        <div className="mt-1 text-xs text-muted-foreground text-center">
+          Click timeline to scrub • Tracks sync with overlay controls
         </div>
       </div>
     </div>

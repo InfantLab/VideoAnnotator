@@ -77,14 +77,18 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const drawPose = useCallback((ctx: CanvasRenderingContext2D, poses: COCOPersonAnnotation[]) => {
       if (!overlaySettings.pose || poses.length === 0) return;
 
+      // Calculate scaling factors from original video dimensions to canvas dimensions
+      const scaleX = ctx.canvas.width / dimensions.width;
+      const scaleY = ctx.canvas.height / dimensions.height;
+
       poses.forEach((person, index) => {
         // COCO keypoints are stored as [x1, y1, visibility1, x2, y2, visibility2, ...]
         // Convert to array of keypoint objects for easier handling
         const keypoints = [];
         for (let i = 0; i < person.keypoints.length; i += 3) {
           keypoints.push({
-            x: person.keypoints[i],
-            y: person.keypoints[i + 1],
+            x: person.keypoints[i] * scaleX,      // Scale X coordinate
+            y: person.keypoints[i + 1] * scaleY,  // Scale Y coordinate
             visibility: person.keypoints[i + 2] // 0=not labeled, 1=labeled but not visible, 2=labeled and visible
           });
         }
@@ -121,23 +125,29 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
 
         // Draw bounding box if enabled
         if (person.bbox && person.bbox.length === 4) {
+          // Scale bounding box coordinates
+          const scaledX = person.bbox[0] * scaleX;
+          const scaledY = person.bbox[1] * scaleY;
+          const scaledWidth = person.bbox[2] * scaleX;
+          const scaledHeight = person.bbox[3] * scaleY;
+
           // Use person-specific color based on track_id or index
           const hue = ((person.track_id || index) * 137.508) % 360;
           ctx.strokeStyle = `hsl(${hue}, 70%, 40%)`;
           ctx.lineWidth = 1;
-          ctx.strokeRect(person.bbox[0], person.bbox[1], person.bbox[2], person.bbox[3]);
+          ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
 
           // Draw track ID if available
           if (person.track_id !== undefined) {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(person.bbox[0], person.bbox[1] - 20, 40, 18);
+            ctx.fillRect(scaledX, scaledY - 20, 40, 18);
             ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
             ctx.font = '12px monospace';
-            ctx.fillText(`ID:${person.track_id}`, person.bbox[0] + 2, person.bbox[1] - 6);
+            ctx.fillText(`ID:${person.track_id}`, scaledX + 2, scaledY - 6);
           }
         }
       });
-    }, [overlaySettings.pose]);
+    }, [overlaySettings.pose, dimensions]);
 
     // Draw subtitle overlay (from WebVTT)
     const drawSubtitles = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -206,8 +216,18 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       const currentFaces = getCurrentFaceData();
       if (currentFaces.length === 0) return;
 
+      // Calculate scaling factors from original video dimensions to canvas dimensions
+      const scaleX = ctx.canvas.width / dimensions.width;
+      const scaleY = ctx.canvas.height / dimensions.height;
+
       currentFaces.forEach((face, index) => {
         const [x, y, width, height] = face.bbox;
+        
+        // Scale bounding box coordinates
+        const scaledX = x * scaleX;
+        const scaledY = y * scaleY;
+        const scaledWidth = width * scaleX;
+        const scaledHeight = height * scaleY;
         
         // Use different colors for different faces
         const hue = (face.face_id * 137.508) % 360;
@@ -215,16 +235,16 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         ctx.lineWidth = 2;
 
         // Draw face bounding box
-        ctx.strokeRect(x, y, width, height);
+        ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
 
         // Draw face ID
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(x, y - 20, 60, 18);
+        ctx.fillRect(scaledX, scaledY - 20, 60, 18);
         ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
         ctx.font = '12px monospace';
-        ctx.fillText(`Face:${face.face_id}`, x + 2, y - 6);
+        ctx.fillText(`Face:${face.face_id}`, scaledX + 2, scaledY - 6);
       });
-    }, [overlaySettings.faces, getCurrentFaceData]);
+    }, [overlaySettings.faces, getCurrentFaceData, dimensions]);
 
     // Draw emotion recognition overlay
     const drawEmotions = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -233,14 +253,23 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       const currentFaces = getCurrentFaceData();
       if (currentFaces.length === 0) return;
 
+      // Calculate scaling factors from original video dimensions to canvas dimensions
+      const scaleX = ctx.canvas.width / dimensions.width;
+      const scaleY = ctx.canvas.height / dimensions.height;
+
       currentFaces.forEach((face, index) => {
         const dominantEmotion = getDominantEmotion(face);
         if (!dominantEmotion) return;
 
         const [x, y, width, height] = face.bbox;
         
+        // Scale coordinates
+        const scaledX = x * scaleX;
+        const scaledY = y * scaleY;
+        const scaledHeight = height * scaleY;
+        
         // Position emotion label below face box
-        const labelY = y + height + 25;
+        const labelY = scaledY + scaledHeight + 25;
         const emotionText = `${dominantEmotion.emotion}: ${(dominantEmotion.score * 100).toFixed(1)}%`;
         
         // Measure text width for background
@@ -249,7 +278,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
 
         // Draw background
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillRect(x, labelY - 15, textWidth + 8, 18);
+        ctx.fillRect(scaledX, labelY - 15, textWidth + 8, 18);
 
         // Draw emotion text with color based on emotion type
         const emotionColors: Record<string, string> = {
@@ -264,9 +293,9 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         };
 
         ctx.fillStyle = emotionColors[dominantEmotion.emotion] || 'hsl(180, 70%, 60%)';
-        ctx.fillText(emotionText, x + 4, labelY - 3);
+        ctx.fillText(emotionText, scaledX + 4, labelY - 3);
       });
-    }, [overlaySettings.emotions, getCurrentFaceData]);
+    }, [overlaySettings.emotions, getCurrentFaceData, dimensions]);
 
     // Render all overlays
     const renderOverlays = useCallback(() => {
@@ -344,21 +373,43 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const resizeCanvas = useCallback(() => {
       const canvas = canvasRef.current;
       const video = ref as React.MutableRefObject<HTMLVideoElement>;
+      const container = containerRef.current;
       
-      if (!canvas || !video.current || !dimensions.width || !dimensions.height) return;
+      if (!canvas || !video.current || !container || !dimensions.width || !dimensions.height) return;
 
+      // Get the actual displayed video dimensions (after object-contain scaling)
       const videoRect = video.current.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
       
-      // Set canvas size to match video display size exactly
-      canvas.width = videoRect.width;
-      canvas.height = videoRect.height;
-      canvas.style.width = `${videoRect.width}px`;
-      canvas.style.height = `${videoRect.height}px`;
+      // Calculate the actual video display size within the container
+      const videoAspectRatio = dimensions.width / dimensions.height;
+      const containerAspectRatio = containerRect.width / containerRect.height;
       
-      // Position canvas to match video position exactly
+      let displayWidth, displayHeight;
+      
+      if (videoAspectRatio > containerAspectRatio) {
+        // Video is wider - constrained by container width
+        displayWidth = containerRect.width;
+        displayHeight = containerRect.width / videoAspectRatio;
+      } else {
+        // Video is taller - constrained by container height
+        displayHeight = containerRect.height;
+        displayWidth = containerRect.height * videoAspectRatio;
+      }
+      
+      // Set canvas size to match the actual video display size
+      canvas.width = displayWidth;
+      canvas.height = displayHeight;
+      canvas.style.width = `${displayWidth}px`;
+      canvas.style.height = `${displayHeight}px`;
+      
+      // Center the canvas within the container
+      const leftOffset = (containerRect.width - displayWidth) / 2;
+      const topOffset = (containerRect.height - displayHeight) / 2;
+      
       canvas.style.position = 'absolute';
-      canvas.style.top = '0';
-      canvas.style.left = '0';
+      canvas.style.left = `${leftOffset}px`;
+      canvas.style.top = `${topOffset}px`;
       
       // Re-render overlays after resize
       renderOverlays();
@@ -366,26 +417,38 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
 
     // Resize canvas when dimensions change
     useEffect(() => {
-      resizeCanvas();
+      const timeoutId = setTimeout(resizeCanvas, 10); // Small delay to ensure DOM updates
+      return () => clearTimeout(timeoutId);
     }, [resizeCanvas]);
 
-    // Resize canvas on window resize
+    // Resize canvas on window resize and container size changes
     useEffect(() => {
       const handleResize = () => {
-        setTimeout(resizeCanvas, 100); // Delay to ensure video has resized
+        setTimeout(resizeCanvas, 100); // Delay to ensure all elements have resized
       };
 
+      // Use ResizeObserver for more precise container size tracking
+      const resizeObserver = new ResizeObserver(handleResize);
+      if (containerRef.current) {
+        resizeObserver.observe(containerRef.current);
+      }
+
+      // Fallback to window resize events
       window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
+      
+      return () => {
+        resizeObserver.disconnect();
+        window.removeEventListener('resize', handleResize);
+      };
     }, [resizeCanvas]);
 
     return (
-      <div ref={containerRef} className="relative w-full h-full flex items-center justify-center">
-        <div className="relative">
+      <div ref={containerRef} className="relative w-full h-full flex items-center justify-center bg-video-bg">
+        <div className="relative w-full h-full">
           <video
             ref={ref}
             src={videoUrl}
-            className="max-w-full max-h-full"
+            className="w-full h-full object-contain"
             onLoadedMetadata={handleLoadedMetadata}
             onTimeUpdate={handleTimeUpdate}
             onPlay={handlePlay}
@@ -394,7 +457,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           />
           <canvas
             ref={canvasRef}
-            className="pointer-events-none"
+            className="absolute inset-0 pointer-events-none"
           />
         </div>
       </div>

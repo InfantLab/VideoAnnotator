@@ -256,14 +256,14 @@ export const VideoAnnotationViewer = () => {
           </div>
         </div>
 
-        {/* Main Content */}
+        {/* Main Content - Full height container */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Two Column Layout: Video Player | Unified Controls */}
-          <div className="flex-1 flex">
-            {/* Column 1: Video Player with Controls */}
-            <div className="flex-1 flex flex-col bg-video-bg">
-              {/* Video Player */}
-              <div className="flex-1 relative">
+          {/* Two Column Layout: Video Player + Controls | Right Panel */}
+          <div className="flex-1 flex min-h-0">
+            {/* Column 1: Video Player with Controls and Timeline */}
+            <div className="flex-1 flex flex-col bg-video-bg min-w-0">
+              {/* Video Player - takes remaining space after controls */}
+              <div className="flex-1 relative min-h-0">
                 <VideoPlayer
                   ref={videoRef}
                   videoFile={videoFile}
@@ -276,8 +276,8 @@ export const VideoAnnotationViewer = () => {
                 />
               </div>
 
-              {/* Video Controls under video */}
-              <div className="flex-shrink-0 p-4">
+              {/* Video Controls */}
+              <div className="flex-shrink-0 p-2 border-b border-border">
                 <VideoControls
                   isPlaying={isPlaying}
                   currentTime={currentTime}
@@ -290,10 +290,26 @@ export const VideoAnnotationViewer = () => {
                   onPlaybackRateChange={handlePlaybackRateChange}
                 />
               </div>
+
+              {/* Timeline Section */}
+              <div className="flex-shrink-0 h-40 bg-video-timeline border-b border-border">
+                <Timeline
+                  annotationData={annotationData}
+                  currentTime={currentTime}
+                  duration={duration}
+                  settings={timelineSettings}
+                  onSeek={handleSeek}
+                />
+              </div>
+
+              {/* Footer - compact version */}
+              <div className="flex-shrink-0">
+                <Footer />
+              </div>
             </div>
 
             {/* Column 2: Unified Controls */}
-            <div className="w-96 bg-card border-l border-border">
+            <div className="w-96 bg-card border-l border-border flex-shrink-0">
               <div className="p-4 h-full overflow-y-auto">
                 <UnifiedControls
                   overlaySettings={overlaySettings}
@@ -305,21 +321,7 @@ export const VideoAnnotationViewer = () => {
               </div>
             </div>
           </div>
-
-          {/* Timeline Section */}
-          <div className="flex-shrink-0 h-64 bg-video-timeline border-t border-border">
-            <Timeline
-              annotationData={annotationData}
-              currentTime={currentTime}
-              duration={duration}
-              settings={timelineSettings}
-              onSeek={handleSeek}
-            />
-          </div>
         </div>
-
-        {/* Footer */}
-        <Footer />
       </div>
       
       {/* Debug Panel */}
