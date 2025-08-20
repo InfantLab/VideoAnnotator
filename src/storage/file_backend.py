@@ -121,7 +121,7 @@ class FileStorageBackend(StorageBackend):
         metadata_file = self._get_metadata_file(job_id)
         
         if not metadata_file.exists():
-            return None
+            raise FileNotFoundError(f"Job metadata not found for job_id: {job_id}")
         
         try:
             with open(metadata_file, 'r', encoding='utf-8') as f:
@@ -131,8 +131,32 @@ class FileStorageBackend(StorageBackend):
             self.logger.error(f"Failed to load job metadata for {job_id}: {e}")
             return None
     
-    def list_jobs(self, status_filter: Optional[str] = None) -> List[BatchJob]:
-        """List all jobs with full metadata, optionally filtered by status."""
+    def list_jobs(self, status_filter: Optional[str] = None) -> List[str]:
+        """List all job IDs, optionally filtered by status."""
+        job_ids = []
+        
+        if not self.jobs_dir.exists():
+            return job_ids
+        
+        for job_dir in self.jobs_dir.iterdir():
+            if job_dir.is_dir():
+                job_id = job_dir.name
+                
+                # Apply status filter if specified
+                if status_filter:
+                    try:
+                        job = self.load_job_metadata(job_id)
+                        if job.status.value != status_filter:
+                            continue
+                    except FileNotFoundError:
+                        continue
+                
+                job_ids.append(job_id)
+        
+        return sorted(job_ids)
+    
+    def get_all_jobs(self, status_filter: Optional[str] = None) -> List[BatchJob]:
+        """Get all job objects with full metadata, optionally filtered by status."""
         jobs = []
         
         if not self.jobs_dir.exists():
@@ -141,23 +165,18 @@ class FileStorageBackend(StorageBackend):
         for job_dir in self.jobs_dir.iterdir():
             if job_dir.is_dir():
                 job_id = job_dir.name
-                job = self.load_job_metadata(job_id)
-                
-                if job is None:
+                try:
+                    job = self.load_job_metadata(job_id)
+                    
+                    # Apply status filter if specified
+                    if status_filter and job.status.value != status_filter:
+                        continue
+                    
+                    jobs.append(job)
+                except FileNotFoundError:
                     continue
-                
-                # Apply status filter if specified
-                if status_filter and job.status.value != status_filter:
-                    continue
-                
-                jobs.append(job)
         
         return sorted(jobs, key=lambda j: j.created_at)
-    
-    def list_job_ids(self, status_filter: Optional[str] = None) -> List[str]:
-        """List all job IDs, optionally filtered by status."""
-        jobs = self.list_jobs(status_filter)
-        return [job.job_id for job in jobs]
     
     def delete_job(self, job_id: str) -> bool:
         """Delete all data for a job."""

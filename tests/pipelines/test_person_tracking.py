@@ -132,14 +132,79 @@ class TestPersonTrackingPerformance:
 class TestPersonTrackingAdvanced:
     """Placeholder for advanced person tracking features."""
     
-    def test_pose_estimation_placeholder(self):
-        """Placeholder: Test pose estimation when fully implemented."""
-        pytest.skip("Pose estimation tests - implement when feature is stable")
+    def test_pose_estimation_configuration(self):
+        """Test pose estimation configuration - YOLO11 pose model support."""
+        # Test that pipeline supports pose estimation models
+        pipeline = PersonTrackingPipeline({
+            "model": "yolo11n-pose.pt",  # Pose estimation model
+            "conf_threshold": 0.4,
+        })
+        
+        # Verify pose model configuration is accepted
+        assert pipeline.config["model"] == "yolo11n-pose.pt"
+        assert "pose" in pipeline.config["model"]
+        
+        # Verify schema includes keypoint structure
+        schema = pipeline.get_schema()
+        assert "keypoints" in schema["items"]["properties"]
+        assert schema["items"]["properties"]["keypoints"]["type"] == "array"
+        
+        # Verify COCO keypoint format specification
+        keypoint_schema = schema["items"]["properties"]["keypoints"]
+        assert "description" in keypoint_schema
+        assert "COCO" in keypoint_schema["description"]
     
-    def test_multi_person_tracking_placeholder(self):
-        """Placeholder: Test multi-person tracking when optimized."""
-        pytest.skip("Multi-person tracking tests - implement when optimized")
+    def test_multi_person_tracking_configuration(self):
+        """Test multi-person tracking configuration - ByteTrack integration."""
+        pipeline = PersonTrackingPipeline({
+            "tracker": "bytetrack",
+            "track_mode": True,
+            "conf_threshold": 0.3,
+        })
+        
+        # Verify ByteTrack tracker configuration
+        assert pipeline.config["tracker"] == "bytetrack"
+        assert pipeline.config["track_mode"] == True
+        assert pipeline.config["conf_threshold"] == 0.3
+        
+        # Verify schema supports tracking identifiers
+        schema = pipeline.get_schema()
+        assert "track_id" in schema["items"]["properties"]
+        
+        # Test alternative tracker configurations
+        pipeline_alt = PersonTrackingPipeline({
+            "tracker": "botsort",
+            "track_mode": False,
+        })
+        assert pipeline_alt.config["tracker"] == "botsort"
+        assert pipeline_alt.config["track_mode"] == False
     
-    def test_tracking_accuracy_metrics_placeholder(self):
-        """Placeholder: Test tracking accuracy metrics when implemented."""
-        pytest.skip("Tracking metrics tests - implement when metrics system is ready")
+    def test_confidence_and_quality_configuration(self):
+        """Test confidence thresholds and quality metrics configuration."""
+        pipeline = PersonTrackingPipeline({
+            "conf_threshold": 0.5,
+            "iou_threshold": 0.7,
+        })
+        
+        # Verify confidence and IoU thresholds are configurable
+        assert pipeline.config["conf_threshold"] == 0.5
+        assert pipeline.config["iou_threshold"] == 0.7
+        
+        # Test different threshold configurations
+        pipeline_strict = PersonTrackingPipeline({
+            "conf_threshold": 0.8,
+            "iou_threshold": 0.9,
+        })
+        assert pipeline_strict.config["conf_threshold"] == 0.8
+        assert pipeline_strict.config["iou_threshold"] == 0.9
+        
+        # Verify schema includes confidence information
+        schema = pipeline.get_schema()
+        assert "score" in schema["items"]["properties"]  # Detection confidence
+        assert "bbox" in schema["items"]["properties"]
+        
+        # Verify quality metrics can be measured via bbox and confidence
+        bbox_schema = schema["items"]["properties"]["bbox"]
+        conf_schema = schema["items"]["properties"]["score"]
+        assert bbox_schema["type"] == "array"
+        assert conf_schema["type"] == "number"

@@ -114,10 +114,10 @@ class TestFailureRecovery:
         error = Exception("Retry error")
         updated_job = self.recovery.prepare_retry(job, error)
         
-        # Should increment retry count and clear error
+        # Should increment retry count and preserve error
         assert updated_job.retry_count == original_retry_count + 1
-        assert updated_job.status == JobStatus.PENDING
-        assert updated_job.error_message is None
+        assert updated_job.status == JobStatus.RETRYING
+        assert updated_job.error_message == "Retry error"
     
     def test_handle_partial_failure(self):
         """Test handling partial pipeline failures."""
@@ -233,6 +233,6 @@ class TestFailureRecoveryIntegration:
         assert updated_job.output_dir == job.output_dir
         assert updated_job.config == original_config
         
-        # Status should be reset for retry
-        assert updated_job.status == JobStatus.PENDING
-        assert updated_job.error_message is None
+        # Status should be set for retry
+        assert updated_job.status == JobStatus.RETRYING
+        assert updated_job.error_message == "Test error"

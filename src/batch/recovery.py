@@ -113,8 +113,8 @@ class FailureRecovery:
             Updated job ready for retry
         """
         job.retry_count += 1
-        job.status = JobStatus.PENDING  # Reset to pending for retry
-        job.error_message = None  # Clear error message for clean retry
+        job.status = JobStatus.RETRYING  # Set to retrying status
+        job.error_message = str(error)  # Preserve error message for tracking
         
         # Clear partial results if needed
         if self._should_clear_partial_results(error):

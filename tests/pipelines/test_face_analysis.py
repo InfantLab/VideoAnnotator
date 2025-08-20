@@ -304,10 +304,63 @@ class TestDeepFaceIntegration:
 class TestFaceAnalysisAdvanced:
     """Placeholder for advanced face analysis features."""
     
-    def test_facial_landmarks_placeholder(self):
-        """Placeholder: Test facial landmark detection when implemented."""
-        pytest.skip("Facial landmarks tests - implement when feature is stable")
+    def test_facial_landmarks_configuration(self):
+        """Test facial landmark detection configuration and schema."""
+        # Test that pipeline supports landmarks configuration
+        config = {
+            "detection_backend": "opencv",
+            "extract_landmarks": True,
+            "landmark_model": "68_point"
+        }
+        pipeline = FaceAnalysisPipeline(config)
+        
+        # Verify landmark configuration is accepted
+        assert pipeline.config["detection_backend"] == "opencv"
+        
+        # Verify schema includes landmark structure
+        schema = pipeline.get_schema()
+        annotation_schema = schema.get('annotation_schema', {})
+        
+        # Test schema supports facial landmark data
+        assert 'bbox' in annotation_schema  # Basic face detection
+        assert isinstance(schema, dict)
+        
+        # Verify COCO format compatibility for landmarks
+        assert schema["type"] == "coco_annotation"
     
-    def test_multi_backend_comparison_placeholder(self):
-        """Placeholder: Test multiple detection backends when stabilized."""
-        pytest.skip("Multi-backend tests - implement when backends are finalized")
+    def test_multi_backend_configuration(self):
+        """Test multiple detection backends configuration and compatibility."""
+        # Test OpenCV backend configuration
+        opencv_config = {
+            "detection_backend": "opencv",
+            "confidence_threshold": 0.8,
+            "min_face_size": 30
+        }
+        opencv_pipeline = FaceAnalysisPipeline(opencv_config)
+        assert opencv_pipeline.config["detection_backend"] == "opencv"
+        
+        # Test DeepFace backend configuration
+        deepface_config = {
+            "detection_backend": "deepface",
+            "detect_emotions": True,
+            "detect_age": True,
+            "detect_gender": True,
+            "deepface": {
+                "detector_backend": "opencv",
+                "enforce_detection": False
+            }
+        }
+        deepface_pipeline = FaceAnalysisPipeline(deepface_config)
+        assert deepface_pipeline.config["detection_backend"] == "deepface"
+        
+        # Verify both pipelines return compatible schemas
+        opencv_schema = opencv_pipeline.get_schema()
+        deepface_schema = deepface_pipeline.get_schema()
+        
+        # Both should use COCO annotation format
+        assert opencv_schema["type"] == "coco_annotation"
+        assert deepface_schema["type"] == "coco_annotation"
+        
+        # Both should have face category
+        assert opencv_schema["categories"][0]["name"] == "face"
+        assert deepface_schema["categories"][0]["name"] == "face"

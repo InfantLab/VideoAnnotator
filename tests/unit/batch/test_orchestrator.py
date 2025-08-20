@@ -265,6 +265,7 @@ class TestBatchOrchestratorErrorHandling:
         self.orchestrator.should_stop = True
         assert self.orchestrator.should_stop
 
+    @pytest.mark.asyncio
     async def test_multiple_starts(self):
         """Test starting orchestrator multiple times."""
         async def mock_start():
