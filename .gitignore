@@ -155,6 +155,7 @@ mydata
 
 # Project specific outputs and caches
 *_out/
+api_results/
 batch_results/
 demo_results/
 test_output/

@@ -4667,6 +4667,7 @@ dev = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "httpx" },
     { name = "pytest-asyncio" },
 ]
 
@@ -4741,7 +4742,10 @@ requires-dist = [
 provides-extras = ["dev", "annotation", "all"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest-asyncio", specifier = ">=1.1.0" }]
+dev = [
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "pytest-asyncio", specifier = ">=1.1.0" },
+]
 
 [[package]]
 name = "virtualenv"
