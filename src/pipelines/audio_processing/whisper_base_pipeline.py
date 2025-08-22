@@ -31,6 +31,7 @@ warnings.filterwarnings('ignore', category=UserWarning, module='librosa')
 
 from ..base_pipeline import BasePipeline
 from .ffmpeg_utils import check_ffmpeg_available, extract_audio_from_video as ffmpeg_extract
+from ...utils.model_loader import log_model_download
 
 # Try to import both standard Whisper and HF Whisper
 try:
@@ -212,12 +213,15 @@ class WhisperBasePipeline(BasePipeline):
             # Handle FP16 for CUDA
             fp16 = self.config.get("use_fp16", True) and self.device.type == "cuda"
             
-            # Load model
-            self.whisper_model = whisper.load_model(
-                model_size, 
+            # Load model with enhanced logging
+            self.whisper_model = log_model_download(
+                f"OpenAI Whisper {model_size.upper()} Model",
+                f"whisper-{model_size}",
+                whisper.load_model,
+                model_size,
                 device=self.device.type,
                 download_root=self.config.get("cache_dir"),
-                in_memory=True,
+                in_memory=True
             )
             
             self.logger.info(f"Standard Whisper model '{model_size}' loaded successfully to {self.device}")

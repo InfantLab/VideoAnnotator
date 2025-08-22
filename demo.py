@@ -27,6 +27,7 @@ from typing import List, Optional
 # Add project root to path for version info
 sys.path.insert(0, str(Path(__file__).parent))
 from src.version import print_version_info
+from src.utils.model_loader import setup_download_logging, log_first_run_info
 
 
 def find_demo_video() -> Optional[Path]:
@@ -144,6 +145,14 @@ def run_main_pipeline(args) -> int:
 
 def main():
     """Main demo function."""
+    # Set up enhanced model download logging
+    setup_download_logging()
+    
+    # Show first-run information
+    models_dir = Path("models")
+    if not models_dir.exists() or not any(models_dir.iterdir()):
+        log_first_run_info()
+    
     parser = argparse.ArgumentParser(
         description='VideoAnnotator Pipeline Demo - Simplified Interface',
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -37,6 +37,7 @@ from src.pipelines.face_analysis import (
     OPENFACE3_AVAILABLE
 )
 from src.pipelines.audio_processing import AudioPipeline as AudioProcessingPipeline
+from src.utils.model_loader import setup_download_logging, log_first_run_info
 
 
 # Global variables for interrupt handling
@@ -679,6 +680,14 @@ def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
 
 def main():
     """Main entry point for the VideoAnnotator system."""
+    # Set up enhanced model download logging
+    setup_download_logging()
+    
+    # Show first-run information if models directory doesn't exist or is empty
+    models_dir = Path("models")
+    if not models_dir.exists() or not any(models_dir.iterdir()):
+        log_first_run_info()
+    
     parser = argparse.ArgumentParser(
         description='VideoAnnotator - Modern Video Annotation Pipeline',
         formatter_class=argparse.RawDescriptionHelpFormatter,

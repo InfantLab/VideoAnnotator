@@ -78,7 +78,7 @@ async def health_check():
     return {
         "status": "healthy",
         "api_version": "1.2.0",
-        "videoannotator_version": "1.1.1",
+        "videoannotator_version": "1.2.0",
         "message": "VideoAnnotator API is running"
     }
 
@@ -237,9 +237,14 @@ async def detailed_health():
     }
 
 if __name__ == "__main__":
-    print("Starting VideoAnnotator API Server v1.2.0")
-    print("API documentation: http://localhost:8000/docs")
-    print("Development mode - using mock implementations")
+    print("=" * 60)
+    print("🚀 VideoAnnotator API Server v1.2.0")
+    print("=" * 60)
+    print("📖 API Documentation: http://localhost:8000/docs")
+    print("🔧 Development Mode: Using mock implementations")
+    print("💡 Tip: Use 'uv run uvicorn api_server:app --reload' for auto-reload")
+    print("⚡ Fast startup - AI models load on-demand")
+    print("=" * 60)
     
     uvicorn.run(
         app,

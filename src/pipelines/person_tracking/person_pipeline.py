@@ -21,6 +21,7 @@ from ...exporters.native_formats import (
 )
 from ...utils.person_identity import PersonIdentityManager
 from ...utils.automatic_labeling import infer_person_labels_from_tracks
+from ...utils.model_loader import log_model_download
 
 # Optional imports
 try:
@@ -238,15 +239,21 @@ class PersonTrackingPipeline(BasePipeline):
         }
 
     def _initialize_model(self):
-        """Initialize YOLO11 pose model."""
+        """Initialize YOLO11 pose model with enhanced logging."""
         if not YOLO_AVAILABLE:
             raise ImportError("ultralytics package required for person tracking")
 
         try:
-            self.model = YOLO(self.config["model"])
-            self.logger.info(f"Initialized YOLO model: {self.config['model']}")
+            # Load model with enhanced download logging
+            self.model = log_model_download(
+                "YOLO11 Pose Detection Model",
+                self.config["model"], 
+                YOLO,
+                self.config["model"]
+            )
+            self.logger.info(f"✅ YOLO model ready: {self.config['model']}")
         except Exception as e:
-            self.logger.error(f"Failed to initialize YOLO model: {e}")
+            self.logger.error(f"❌ Failed to initialize YOLO model: {e}")
             raise
 
     def _process_frame(

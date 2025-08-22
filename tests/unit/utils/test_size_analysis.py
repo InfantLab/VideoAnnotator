@@ -9,11 +9,24 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 import numpy as np
 
-# Mock cv2 and ultralytics to avoid dependency issues in tests
+# Mock cv2 and ultralytics before any imports to avoid dependency issues  
 import sys
-sys.modules['cv2'] = Mock()
-sys.modules['ultralytics'] = Mock()
+from unittest.mock import Mock
 
+# Set up comprehensive mocks before any imports
+mock_cv2 = Mock()
+mock_cv2.__spec__ = Mock()
+mock_cv2.__spec__.name = 'cv2'
+sys.modules['cv2'] = mock_cv2
+
+mock_ultralytics = Mock()
+sys.modules['ultralytics'] = mock_ultralytics
+
+# Mock transformers components 
+mock_transformers = Mock()
+sys.modules['transformers'] = mock_transformers
+
+# Import after mocking
 from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
 
 

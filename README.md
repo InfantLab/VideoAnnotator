@@ -1,72 +1,236 @@
 # VideoAnnotator
 
+[![FastAPI](https://img.shields.io/badge/FastAPI-REST%20API-009688?logo=fastapi&logoColor=white)](http://localhost:8000/docs)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/badge/uv-package%20manager-FF4B4B?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![Ruff](https://img.shields.io/badge/Ruff-linting-D7FF64?logo=ruff&logoColor=black)](https://github.com/astral-sh/ruff)
+[![Docker](https://img.shields.io/badge/Docker-GPU%20Ready-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/)
 [![Tests](https://img.shields.io/badge/tests-83%25%20passing-brightgreen.svg)](tests/)
 
-A **modern, research-focused toolkit** for comprehensive video analysis of human interactions. Built with simplified schemas, standards-based pipelines, and seamless annotation tool integration.
+A **modern REST API and toolkit** for comprehensive video analysis of human interactions. Built with FastAPI, simplified schemas, standards-based pipelines, and seamless annotation tool integration.
+
+**🎯 Perfect for researchers** who need to integrate video analysis into their workflows via a simple HTTP API.
+
+## 🚀 **API Server - Get Started in 30 Seconds**
+
+VideoAnnotator now features a **modern FastAPI server** for easy integration into your research workflow:
+
+```bash
+# Quick setup
+curl -LsSf https://astral.sh/uv/install.sh | sh  # Install uv package manager
+git clone https://github.com/InfantLab/VideoAnnotator.git && cd VideoAnnotator
+uv sync  # Install dependencies (30 seconds)
+
+# Start the API server
+uv run python api_server.py
+```
+
+**🎉 That's it!** Your API server is now running at:
+- **📖 Interactive API docs**: http://localhost:8000/docs  
+- **⚡ JSON API**: http://localhost:8000/
+- **🔄 Health check**: http://localhost:8000/health
+
+### 🔥 **Why Use the API Server?**
+
+- **⚡ Fast startup** - Models load on-demand, not at boot
+- **📱 Easy integration** - RESTful API works with any language  
+- **🔄 Async processing** - Handle multiple videos simultaneously
+- **📊 Real-time status** - Monitor job progress via API
+- **🐳 Container ready** - Deploy anywhere with Docker
 
 ## ✨ Key Features
 
 ### 🏗️ **Modern Architecture**
+- **FastAPI server** with automatic OpenAPI documentation
 - **YOLO11-powered** person tracking and scene detection
 - **Open-source models** for face analysis and audio processing  
 - **Simplified JSON schemas** for maximum interoperability
-- **Test-driven development** with 94% success rate
 
 ### 🎯 **Research Ready**
+- **RESTful API** for integration with research workflows
 - **Annotation tool integration**: Direct export to CVAT, LabelStudio, ELAN
-- **Flexible data formats**: String/integer IDs, extensible schemas
-- **Batch processing**: Efficient multi-video workflows
+- **Batch processing**: Efficient multi-video API endpoints
 - **Reproducible outputs**: Version-controlled processing
 
 ### 🚀 **Production Scalable**
+- **Async job processing** with status tracking
 - **GPU acceleration** for compute-intensive pipelines
-- **Configurable processing** via YAML configs
 - **Docker support** for containerized deployment
 - **Cross-platform** Windows/macOS/Linux compatibility
 
-## Quick Start
+## 📚 **API Usage Examples**
+
+### Process a Video via API
 
 ```bash
-# Install uv (fast, modern Python package manager)
-curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/Mac
-# Or on Windows: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# Clone and setup
-git clone https://github.com/InfantLab/VideoAnnotator.git
-cd VideoAnnotator
-uv sync  # Fast dependency installation
-
-# Process a video
-uv run python demo.py
-
-# Start API server
+# Start the server
 uv run python api_server.py
 
-# View results
-ls output/video/  # JSON files ready for analysis
+# Upload and process a video (in another terminal)
+curl -X POST "http://localhost:8000/v1/jobs/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "video_path": "/path/to/video.mp4",
+    "pipelines": ["person", "scene", "audio"],
+    "config": {"output_format": "coco"}
+  }'
+```
+
+### Monitor Job Progress
+
+```bash
+# Check job status
+curl "http://localhost:8000/v1/jobs/your-job-id"
+
+# Get results when complete
+curl "http://localhost:8000/v1/jobs/your-job-id/results"
+```
+
+### Interactive API Exploration
+
+Visit **http://localhost:8000/docs** for the full interactive API documentation with:
+- 🎮 **Try it out** - Test endpoints directly in your browser
+- 📋 **Request examples** - Copy-paste ready code snippets  
+- 📊 **Response schemas** - Understand data formats
+- 🔧 **Authentication** - API key setup and usage
+
+### 🔌 **Integration Examples**
+
+<details>
+<summary><strong>🐍 Python</strong></summary>
+
+```python
+import requests
+
+# Start a video processing job
+response = requests.post("http://localhost:8000/v1/jobs/", json={
+    "video_path": "video.mp4",
+    "pipelines": ["person", "scene"],
+    "config": {"output_format": "coco"}
+})
+job_id = response.json()["job_id"]
+
+# Check job status
+status = requests.get(f"http://localhost:8000/v1/jobs/{job_id}")
+print(f"Status: {status.json()['status']}")
+
+# Get results when complete
+results = requests.get(f"http://localhost:8000/v1/jobs/{job_id}/results")
+annotations = results.json()
+```
+</details>
+
+<details>
+<summary><strong>🌐 JavaScript/Node.js</strong></summary>
+
+```javascript
+// Start video processing job
+const jobResponse = await fetch('http://localhost:8000/v1/jobs/', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    video_path: 'video.mp4',
+    pipelines: ['person', 'scene'],
+    config: { output_format: 'coco' }
+  })
+});
+const { job_id } = await jobResponse.json();
+
+// Poll for completion
+const checkStatus = async () => {
+  const status = await fetch(`http://localhost:8000/v1/jobs/${job_id}`);
+  const data = await status.json();
+  
+  if (data.status === 'completed') {
+    const results = await fetch(`http://localhost:8000/v1/jobs/${job_id}/results`);
+    const annotations = await results.json();
+    console.log('Annotations ready:', annotations);
+  }
+};
+```
+</details>
+
+<details>
+<summary><strong>📊 R</strong></summary>
+
+```r
+library(httr)
+library(jsonlite)
+
+# Start video processing job
+response <- POST("http://localhost:8000/v1/jobs/", 
+  body = list(
+    video_path = "video.mp4",
+    pipelines = c("person", "scene"),
+    config = list(output_format = "coco")
+  ),
+  encode = "json"
+)
+job_id <- content(response)$job_id
+
+# Check job status
+status_response <- GET(paste0("http://localhost:8000/v1/jobs/", job_id))
+job_status <- content(status_response)$status
+
+# Get results when complete
+if (job_status == "completed") {
+  results <- GET(paste0("http://localhost:8000/v1/jobs/", job_id, "/results"))
+  annotations <- content(results)
+}
+```
+</details>
+
+## 🛠️ **Alternative Usage Methods**
+
+For users who prefer command-line tools:
+
+```bash
+# Direct video processing
+uv run python demo.py
+
+# Batch processing
+uv run python main.py --input videos/ --batch --parallel 4
 ```
 
 📖 **[Full Documentation](docs/)** | 🧪 **[Examples](examples/)** | 🔧 **[Installation Guide](docs/installation/INSTALLATION.md)**
 
-## Development Commands
+## 👨‍💻 **Development & Deployment**
+
+### API Server Development
 
 ```bash
 # Install with dev dependencies
 uv sync --extra dev
 
+# Start API server with auto-reload (for development)
+uv run uvicorn api_server:app --reload --host 0.0.0.0 --port 8000
+
+# Run API tests
+uv run pytest tests/api/ -v
+```
+
+### Code Quality
+
+```bash
 # Run linting and formatting
 uv run ruff check . && uv run ruff format .
 
-# Run tests
+# Run full test suite
 uv run pytest
 
-# Start API server with auto-reload
-uv run uvicorn api_server:app --reload
+# Type checking
+uv run mypy src
+```
+
+### Docker Deployment
+
+```bash
+# Build and run API server in container
+docker build -f Dockerfile.gpu -t videoannotator:api .
+docker run -p 8000:8000 --gpus all videoannotator:api
+
+# Access API at http://localhost:8000/docs
+```
 
 ## 🧩 Pipeline Architecture
 

@@ -15,13 +15,15 @@ from .version import (
     create_annotation_metadata,
 )
 
-from .pipelines import (
-    BasePipeline,
-    SceneDetectionPipeline,
-    PersonTrackingPipeline,
-    FaceAnalysisPipeline,
-    AudioPipeline,
-)
+# Heavy pipeline imports commented out to prevent pytest collection hangs
+# Uncomment when needed for production use
+# from .pipelines import (
+#     BasePipeline,
+#     SceneDetectionPipeline,
+#     PersonTrackingPipeline,
+#     FaceAnalysisPipeline,
+#     AudioPipeline,
+# )
 
 # Note: After standards migration, these schemas are no longer used
 # Pipelines now return native format dictionaries (COCO, WebVTT, RTTM, etc.)
