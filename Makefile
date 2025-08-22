@@ -1,95 +1,146 @@
-# VideoAnnotator Makefile
-# Common development and deployment tasks
+# VideoAnnotator v1.2.0 - Modern Development Workflow
+# Uses uv for fast, reliable package management
 
-.PHONY: help install install-dev install-all test test-unit test-integration test-performance
-.PHONY: lint format type-check quality-check clean build docker-build docker-run
-.PHONY: docs serve-docs benchmark security-scan pre-commit setup-pre-commit
+PY := uv run
+UV := export PATH="$$HOME/.local/bin:$$PATH" && uv
 
 # Default target
+.PHONY: help
 help:
-	@echo "VideoAnnotator Development Commands"
+	@echo "VideoAnnotator v1.2.0 - Development Commands"
 	@echo ""
-	@echo "Setup & Installation:"
-	@echo "  install          Install basic dependencies"
-	@echo "  install-dev      Install with development dependencies"
-	@echo "  install-all      Install with all optional dependencies"
-	@echo "  setup-pre-commit Setup pre-commit hooks"
+	@echo "Setup:"
+	@echo "  install        Install dependencies with uv"
+	@echo "  install-dev    Install dev dependencies and setup pre-commit"
+	@echo "  install-torch-cuda  Install PyTorch with CUDA support"
+	@echo ""
+	@echo "Code Quality:"
+	@echo "  lint           Run ruff linter"
+	@echo "  format         Format code with ruff"
+	@echo "  typecheck      Run mypy type checking"
+	@echo "  quality-check  Run all quality checks"
+	@echo ""
+	@echo "Testing:"
+	@echo "  test           Run pytest test suite"
+	@echo "  test-fast      Run fast unit tests (~30s)"
+	@echo "  test-integration  Run integration tests (~5min)"
+	@echo "  test-all       Run complete test suite"
+	@echo "  test-cov       Run tests with coverage report"
 	@echo ""
 	@echo "Development:"
-	@echo "  test             Run all tests"
-	@echo "  test-unit        Run unit tests only"
-	@echo "  test-integration Run integration tests only"
-	@echo "  test-performance Run performance tests only"
-	@echo "  lint             Run linting checks"
-	@echo "  format           Format code with black"
-	@echo "  type-check       Run type checking with mypy"
-	@echo "  quality-check    Run all quality checks"
+	@echo "  server         Start API server"
+	@echo "  server-dev     Start API server with auto-reload"
+	@echo "  demo           Run basic demo"
+	@echo "  demo-batch     Run batch processing demo"
 	@echo ""
-	@echo "Build & Deploy:"
-	@echo "  clean            Clean build artifacts"
-	@echo "  build            Build package"
-	@echo "  docker-build     Build Docker image"
-	@echo "  docker-run       Run Docker container"
+	@echo "Docker:"
+	@echo "  docker-build     Build CPU Docker image"
+	@echo "  docker-build-gpu Build GPU Docker image"
 	@echo ""
-	@echo "Documentation:"
-	@echo "  docs             Build documentation"
-	@echo "  serve-docs       Serve documentation locally"
-	@echo ""
-	@echo "Analysis:"
-	@echo "  benchmark        Run performance benchmarks"
-	@echo "  security-scan    Run security vulnerability scan"
+	@echo "Utilities:"
+	@echo "  clean          Clean build artifacts and cache"
+	@echo "  check-env      Check environment status"
+	@echo "  lock           Update lockfile"
+	@echo "  sync           Sync environment with lockfile"
+	@echo "  help           Show this help message"
 
-# Installation commands
+# Installation and environment
+.PHONY: install
 install:
-	pip install -e .
+	$(UV) sync
 
-install-dev:
-	pip install -e .[dev]
-
-install-all:
-	pip install -e .[all]
+.PHONY: install-dev
+install-dev: install
+	$(UV) add --dev ruff mypy pytest pre-commit
+	$(PY) pre-commit install
 
 # Testing commands
+.PHONY: test
 test:
-	pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html
+	$(PY) pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html
 
+.PHONY: test-unit
 test-unit:
-	pytest tests/ -v -m "unit" --cov=src --cov-report=term-missing
+	$(PY) pytest tests/ -v -m "unit" --cov=src --cov-report=term-missing
 
+.PHONY: test-integration
 test-integration:
-	pytest tests/ -v -m "integration" --cov=src --cov-report=term-missing
+	$(PY) pytest tests/ -v -m "integration" --cov=src --cov-report=term-missing
 
+.PHONY: test-performance
 test-performance:
-	pytest tests/ -v -m "performance" --benchmark-only
+	$(PY) pytest tests/ -v -m "performance" --benchmark-only
 
-# Code quality commands
+.PHONY: test-fast
+test-fast:
+	$(PY) python scripts/test_fast.py
+
+.PHONY: test-all
+test-all:
+	$(PY) python scripts/test_all.py
+
+# Code quality commands (now using Ruff)
+.PHONY: lint
 lint:
-	flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics
-	flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+	$(PY) ruff check .
 
+.PHONY: format
 format:
-	black src tests examples
-	isort src tests examples
+	$(PY) ruff format .
 
+.PHONY: format-check
+format-check:
+	$(PY) ruff format --check .
+
+.PHONY: type-check
 type-check:
-	mypy src
+	$(PY) mypy src
 
-quality-check: lint format type-check
+.PHONY: quality-check
+quality-check: lint format-check type-check
 	@echo "All quality checks passed!"
 
 # Build commands
+.PHONY: clean
 clean:
-	rm -rf build/
-	rm -rf dist/
-	rm -rf *.egg-info/
-	rm -rf .pytest_cache/
-	rm -rf .mypy_cache/
-	rm -rf htmlcov/
-	find . -type d -name __pycache__ -exec rm -rf {} +
+	rm -rf build/ dist/ *.egg-info/
+	rm -rf .pytest_cache/ .mypy_cache/ .ruff_cache/ htmlcov/
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
 
+.PHONY: build
 build: clean
-	python -m build
+	$(UV) build
+
+# API server commands
+.PHONY: server
+server:
+	$(PY) python api_server.py
+
+.PHONY: server-dev
+server-dev:
+	$(PY) uvicorn api_server:app --host 0.0.0.0 --port 8000 --reload
+
+# PyTorch CUDA installation helper
+.PHONY: install-torch-cuda
+install-torch-cuda:
+	@echo "Installing PyTorch with CUDA support..."
+	@echo "Check https://pytorch.org/get-started/locally/ for latest versions"
+	$(UV) add "torch>=2.4.0" "torchvision>=0.19.0" "torchaudio>=2.4.0" --index-url https://download.pytorch.org/whl/cu124
+
+# Environment helpers
+.PHONY: check-env
+check-env:
+	@echo "UV Version: $$($(UV) --version || echo 'uv not found')"
+	@echo "Python Version: $$($(PY) python --version || echo 'Python not available')"
+
+.PHONY: lock
+lock:
+	$(UV) lock
+
+.PHONY: sync
+sync:
+	$(UV) sync
 
 # Docker commands
 docker-build:

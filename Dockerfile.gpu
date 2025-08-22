@@ -1,0 +1,18 @@
+# Choose a CUDA runtime matching your torch build (e.g., 12.4)
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+
+SHELL ["/bin/bash","-lc"]
+RUN apt-get update && apt-get install -y curl python3 python3-venv python3-pip && rm -rf /var/lib/apt/lists/*
+
+# uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
+
+WORKDIR /app
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-editable
+# Install torch for CUDA build selected (match to pytorch.org command)
+RUN uv add "torch==2.4.*+cu124" "torchvision==0.19.*+cu124" --index-url https://download.pytorch.org/whl/cu124
+
+COPY . .
+CMD ["uv", "run", "python", "api_server.py"]

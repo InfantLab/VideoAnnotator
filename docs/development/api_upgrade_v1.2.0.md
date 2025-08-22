@@ -10,7 +10,7 @@ VideoAnnotator v1.2.0 introduces a major API modernization to transform the tool
 
 ---
 
-## <¯ Core API Objectives
+## <ï¿½ Core API Objectives
 
 ### 1. Service-Oriented Architecture
 Transform VideoAnnotator from a Python library to a full-service platform:
@@ -36,7 +36,7 @@ Modern API design following industry standards:
 
 ---
 
-## <× New API Architecture
+## <ï¿½ New API Architecture
 
 ### Current Architecture (v1.1.1)
 ```python
@@ -64,7 +64,7 @@ results = annotator.process(video_path, pipelines=["person_tracking"])
 
 ---
 
-## =€ New REST API Endpoints
+## =ï¿½ New REST API Endpoints
 
 ### Core Processing Endpoints
 ```
@@ -125,7 +125,7 @@ videoannotator config validate my_config.yaml
 
 ---
 
-## =Ê Database Integration
+## =ï¿½ Database Integration
 
 ### New Persistent Storage
 Replace file-based metadata with proper database:
@@ -187,7 +187,7 @@ async def protected_endpoint(user: User = Depends(get_current_user)):
 
 ---
 
-## =È Async Processing System
+## =ï¿½ Async Processing System
 
 ### Job Queue Implementation
 ```python
@@ -244,7 +244,7 @@ videoannotator job results $JOB_ID --format coco
 
 ---
 
-## =Å Implementation Timeline
+## =ï¿½ Implementation Timeline
 
 ### Month 1-2: Core API Foundation
 - [ ] FastAPI server implementation
@@ -266,7 +266,7 @@ videoannotator job results $JOB_ID --format coco
 
 ---
 
-##   Breaking Changes & Compatibility
+## ï¿½ Breaking Changes & Compatibility
 
 ### Minimal Breaking Changes
 - **Import paths**: New recommended imports, old paths deprecated but functional
@@ -285,8 +285,8 @@ videoannotator job results $JOB_ID --format coco
 
 ---
 
-## >ê Testing & Validation
-
+## >ï¿½ Testing & Validation
+ 
 ### API Testing Strategy
 - **Unit Tests**: All new API endpoints and services
 - **Integration Tests**: End-to-end workflow validation

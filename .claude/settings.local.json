@@ -19,7 +19,13 @@
       "Bash(cp:*)",
       "Bash(find:*)",
       "Bash(git rm:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(conda:*)",
+      "Bash(uv:*)",
+      "Bash(C:Userscasparanaconda3Scriptsconda.exe activate videoannotator)",
+      "Bash(where cmake)",
+      "Bash(make:*)",
+      "Bash($env:PATH)"
     ],
     "deny": []
   }

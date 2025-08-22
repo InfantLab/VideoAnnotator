@@ -1,17 +1,18 @@
 # VideoAnnotator Documentation
 
-## Current Release: v1.1.1
-## Current Development: v1.1.2  
-## Next Release: v1.2.0
+## Current Release: v1.2.0 ✨
+**Major modernization complete!** Now using uv package manager, Ruff linting, FastAPI server, and modern Python 3.12+ development workflow.
+
+## Next Development: v1.2.1
 
 This documentation is organized into clear sections for different user types and development phases.
 
 ## 📖 User Documentation
 
 ### Installation
-- [Installation Guide](installation/INSTALLATION.md) - Complete setup instructions including CUDA and OpenFace 3.0
-- [Environment Setup](installation/ENVIRONMENT_SETUP.md) - Environment configuration details
-- [OpenFace 3.0 Guide](installation/OPENFACE3_GUIDE.md) - Detailed OpenFace installation and setup
+- [Installation Guide](installation/INSTALLATION.md) - **Modern uv-based setup** with CUDA support  
+- [Environment Setup](installation/ENVIRONMENT_SETUP.md) - HuggingFace and configuration  
+- [Python Development 2025](installation/PythonDev2025.md) - **Modern development practices** with uv, Ruff, and Docker
 
 ### Usage  
 - [Getting Started](usage/GETTING_STARTED.md) - Quick start guide for new users

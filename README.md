@@ -1,9 +1,11 @@
 # VideoAnnotator
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![uv](https://img.shields.io/badge/uv-package%20manager-FF4B4B?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![Tests](https://img.shields.io/badge/tests-94%25%20passing-brightgreen.svg)](tests/)
+[![Ruff](https://img.shields.io/badge/Ruff-linting-D7FF64?logo=ruff&logoColor=black)](https://github.com/astral-sh/ruff)
+[![Tests](https://img.shields.io/badge/tests-83%25%20passing-brightgreen.svg)](tests/)
 
 A **modern, research-focused toolkit** for comprehensive video analysis of human interactions. Built with simplified schemas, standards-based pipelines, and seamless annotation tool integration.
 
@@ -30,23 +32,41 @@ A **modern, research-focused toolkit** for comprehensive video analysis of human
 ## Quick Start
 
 ```bash
+# Install uv (fast, modern Python package manager)
+curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/Mac
+# Or on Windows: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
 # Clone and setup
 git clone https://github.com/InfantLab/VideoAnnotator.git
 cd VideoAnnotator
-pip install -r requirements.txt
+uv sync  # Fast dependency installation
 
 # Process a video
-python -m videoannotator process video.mp4
+uv run python demo.py
+
+# Start API server
+uv run python api_server.py
 
 # View results
 ls output/video/  # JSON files ready for analysis
 ```
 
-📖 **[Full Documentation](docs/)** | 🧪 **[Examples](examples/)** | 🔧 **[Installation Guide](docs/INSTALLATION.md)**
-python main.py --input video.mp4 --config configs/high_performance.yaml
+📖 **[Full Documentation](docs/)** | 🧪 **[Examples](examples/)** | 🔧 **[Installation Guide](docs/installation/INSTALLATION.md)**
 
-# Batch process multiple videos
-python main.py --input videos/ --batch --parallel 4
+## Development Commands
+
+```bash
+# Install with dev dependencies
+uv sync --extra dev
+
+# Run linting and formatting
+uv run ruff check . && uv run ruff format .
+
+# Run tests
+uv run pytest
+
+# Start API server with auto-reload
+uv run uvicorn api_server:app --reload
 
 ## 🧩 Pipeline Architecture
 

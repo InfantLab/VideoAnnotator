@@ -1,14 +1,13 @@
-# 🚀 VideoAnnotator Installation Guide
+# VideoAnnotator v1.2.0 Installation Guide
 
-VideoAnnotator is a powerful video analysis tool that leverages GPU-accelerated machine learning models for high-performance video processing. This guide will help you set up a CUDA-enabled environment for optimal performance.
+VideoAnnotator is a modern video analysis toolkit that uses AI models for comprehensive behavioral annotation. This guide covers installation using our modern **uv-based workflow** for fast, reliable dependency management.
 
 ## Prerequisites
 
-- **Python 3.12** (recommended)
-- **Git** for cloning repositories
-- **Visual Studio Build Tools** (Windows) or **GCC** (Linux/Mac)
-- **CMake** (version 3.22 or higher)
-- **CUDA Toolkit 12.8** (recommended for GPU acceleration)
+- **Python 3.12+** (required)
+- **Git** for cloning repositories 
+- **uv** package manager (fast, modern Python dependency management)
+- **CUDA Toolkit 12.4** (recommended for GPU acceleration)
 - **NVIDIA GPU** with CUDA support (GTX 1060 6GB+ or better recommended)
 
 ## System Requirements
@@ -27,35 +26,49 @@ VideoAnnotator is a powerful video analysis tool that leverages GPU-accelerated 
 - **GPU**: NVIDIA RTX 3060 12GB or better
 - **OS**: Windows 11, Ubuntu 22.04+, or macOS 12+
 
-## Installation Steps
+## Quick Start (Recommended)
 
-### 1. Create Conda Environment
+### 1. Install uv Package Manager
 
 ```bash
-# Create and activate the conda environment
-conda env create -f environment.yml
-conda activate VideoAnnotator
+# Install uv (fast, modern Python package manager)
+# Linux/Mac:
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell):
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-### 2. Install PyTorch with CUDA Support
+### 2. Clone and Setup Environment
 
 ```bash
-# Install CUDA-enabled PyTorch (CUDA 12.8)
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+# Clone the repository
+git clone https://github.com/your-org/VideoAnnotator.git
+cd VideoAnnotator
+
+# Install all dependencies with uv (fast and reliable)
+uv sync
+
+# Install development dependencies
+uv sync --extra dev
 ```
 
-### 3. Install TensorFlow with CUDA Support (for DeepFace)
+### 3. Install CUDA-enabled PyTorch (GPU acceleration)
 
 ```bash
-# Install TensorFlow 2.15 with CUDA support for Python 3.12
-pip install tensorflow==2.15.0
+# Install PyTorch with CUDA 12.4 support (for GPU acceleration)
+uv add "torch==2.4.*+cu124" "torchvision==0.19.*+cu124" --index-url https://download.pytorch.org/whl/cu124
 ```
 
-### 4. Install Dependencies
+### 4. Install Native Dependencies (if needed)
+
+Some dependencies like `dlib` require system-level installation:
 
 ```bash
-# Install all other Python dependencies
-pip install -r requirements.txt
+# If using conda for native dependencies:
+conda install -n videoannotator cmake dlib -c conda-forge
+
+# Otherwise, install cmake system-wide from cmake.org
 ```
 
 ### 2. Install OpenFace 3.0 (Manual Installation Required)
@@ -106,273 +119,145 @@ cd ../python
 python setup.py install
 ```
 
-### 3. Verify Installation
+## Verify Installation
 
-```python
-# Test CUDA availability with PyTorch
+```bash
+# Test the installation
+uv run python -c "
 import torch
-print(f"PyTorch version: {torch.__version__}")
-print(f"CUDA available: {torch.cuda.is_available()}")
+print(f'PyTorch version: {torch.__version__}')
+print(f'CUDA available: {torch.cuda.is_available()}')
 if torch.cuda.is_available():
-    print(f"CUDA version: {torch.version.cuda}")
-    print(f"GPU device: {torch.cuda.get_device_name(0)}")
-
-# Test TensorFlow CUDA availability
-import tensorflow as tf
-print(f"TensorFlow version: {tf.__version__}")
-print(f"TensorFlow sees GPU: {len(tf.config.list_physical_devices('GPU')) > 0}")
-if len(tf.config.list_physical_devices('GPU')) > 0:
-    print(f"GPU devices: {tf.config.list_physical_devices('GPU')}")
+    print(f'CUDA version: {torch.version.cuda}')
+    print(f'GPU device: {torch.cuda.get_device_name(0)}')
 
 # Test YOLO11 installation
 from ultralytics import YOLO
-model = YOLO('yolo11n.pt')
-print("YOLO11 installed successfully!")
-
-# Test OpenFace (after manual installation)
-try:
-    import openface
-    print("OpenFace 3.0 installed successfully!")
-except ImportError:
-    print("OpenFace 3.0 requires manual installation - see above")
+print('YOLO11 available!')
 
 # Test other key components
-import cv2
-import transformers
-import scenedetect
-import deepface
-print("All core dependencies installed!")
+import cv2, transformers, scenedetect
+print('All core dependencies installed!')
+"
+
+# Test the API server
+uv run python api_server.py
+# Should start server on http://localhost:8000
 ```
 
-### 4. Download Required Models
+## Development Commands
+
+Once installed, use these commands for development:
 
 ```bash
-# Download YOLO11 models
-python -c "from ultralytics import YOLO; YOLO('yolo11n.pt'); YOLO('yolo11n-pose.pt')"
+# Start API server
+uv run python api_server.py
 
-# Download CLIP models
-python -c "import clip; clip.load('ViT-B/32')"
+# Run linting and formatting
+uv run ruff check .
+uv run ruff format .
 
-# Download face recognition models (happens automatically on first use)
-python -c "import deepface; deepface.DeepFace.represent('test.jpg', model_name='VGG-Face')" || echo "Will download on first use"
+# Run type checking  
+uv run mypy src
+
+# Run tests
+uv run pytest
+
+# Process a video
+uv run python demo.py
+uv run python main.py --input video.mp4 --output results/
 ```
 
-## Alternative Installation Methods
+## Docker Installation (Alternative)
 
-### Using pip only (without conda)
-
+### CPU Container
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install CUDA-enabled PyTorch first
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-
-# Install other requirements
-pip install -r requirements.txt
+# Build and run CPU version
+docker build -f Dockerfile.cpu -t videoannotator:cpu .
+docker run --rm -v $(pwd)/data:/app/data videoannotator:cpu
 ```
 
-### Docker Installation (GPU-enabled)
-
+### GPU Container (Requires NVIDIA Container Toolkit)
 ```bash
-# Build Docker image with GPU support
-docker build -t videoannotator .
-
-# Run with NVIDIA GPU support
-docker run --gpus all -it videoannotator
-
-# Verify CUDA is available inside the container
-docker run --gpus all -it videoannotator python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}'); print(f'GPU device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else None}')"
+# Build and run GPU version
+docker build -f Dockerfile.gpu -t videoannotator:gpu .
+docker run --gpus all --rm -v $(pwd)/data:/app/data videoannotator:gpu
 ```
+
+### Dev Container (VS Code)
+Open the project in VS Code and use "Reopen in Container" for a complete GPU-enabled development environment.
 
 ## Troubleshooting
 
-### CUDA/GPU Issues
+### uv Installation Issues
 
-1. **CUDA not found**: Run `nvidia-smi` to check if your GPU is detected. Update GPU drivers if needed.
-
-2. **PyTorch doesn't detect CUDA**: Ensure you installed the CUDA-enabled version of PyTorch. Verify with:
-   ```python
-   import torch
-   print(f"CUDA available: {torch.cuda.is_available()}")
+1. **uv command not found**: 
+   ```bash
+   # Restart your terminal or run:
+   export PATH="$HOME/.local/bin:$PATH"
    ```
 
-3. **CUDA version mismatch**: Ensure your CUDA Toolkit version matches the PyTorch CUDA version.
+2. **Permission errors**: 
+   ```bash
+   # On Windows, run PowerShell as Administrator
+   # On Linux/Mac, ensure you have write permissions to ~/.local/
+   ```
+
+3. **Slow dependency resolution**: uv is typically very fast, but large ML dependencies can take time on first install.
+
+### CUDA/GPU Issues
+
+1. **CUDA not found**: Run `nvidia-smi` to check GPU detection. Update drivers if needed.
+
+2. **PyTorch doesn't detect CUDA**: 
+   ```bash
+   # Verify CUDA-enabled PyTorch installation
+   uv run python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+   ```
+
+3. **CUDA version mismatch**: Ensure CUDA Toolkit matches PyTorch CUDA version:
    - Check CUDA Toolkit: `nvcc --version`
-   - Check PyTorch CUDA: `python -c "import torch; print(torch.version.cuda)"`
+   - Check PyTorch CUDA: `uv run python -c "import torch; print(torch.version.cuda)"`
 
-4. **Out of memory errors**: Try:
-   - Reduce batch size
-   - Use a smaller model
-   - Free unused tensors with `del variable` and `torch.cuda.empty_cache()`
-   - Use model checkpointing for large models
+### Native Dependencies
 
-### Common Installation Issues
+1. **dlib/cmake errors**: Install cmake system-wide or use conda for native dependencies
+2. **OpenFace compilation**: Requires manual setup - see OpenFace section above
+3. **Build tool errors**: Ensure you have Visual Studio Build Tools (Windows) or GCC (Linux/Mac)
 
-1. **OpenFace compilation errors**: Ensure you have all build tools installed
-2. **Package conflicts**: Try installing dependencies one by one to identify conflicts
-3. **Memory issues**: Some models require significant RAM/VRAM
-4. **Import errors**: Ensure all dependencies are installed in the active environment
+## Modern Architecture
 
-## CUDA and PyTorch Installation
+VideoAnnotator v1.2.0 uses:
 
-### 1. Install CUDA Toolkit
-
-Ensure you have the CUDA Toolkit installed on your system:
-
-- Download from [NVIDIA CUDA Toolkit](https://developer.nvidia.com/cuda-downloads)
-- Current recommended version: CUDA 12.8
-- Verify installation with `nvcc --version`
-
-### 2. Install CUDA-enabled PyTorch
-
-```bash
-# Install CUDA-enabled PyTorch (CUDA 12.8)
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-```
-
-### 3. Verify CUDA Support
-
-```python
-# Verify CUDA is available and working
-python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'CUDA version: {torch.version.cuda}'); print(f'GPU device count: {torch.cuda.device_count()}'); print(f'Current device: {torch.cuda.current_device()}'); print(f'Device name: {torch.cuda.get_device_name(0)}')"
-```
-
-### 4. Common CUDA/PyTorch Issues
-
-- **CUDA not detected**: Ensure your GPU drivers are up-to-date
-- **Version mismatch**: Ensure PyTorch CUDA version matches your CUDA Toolkit
-- **Memory errors**: Reduce batch sizes or model sizes
-- **Import errors**: Ensure you've installed the CUDA-enabled PyTorch packages
-- **Multiple GPUs**: Set `CUDA_VISIBLE_DEVICES` environment variable to select specific GPUs
-
-### Performance Optimization
-
-- **GPU Support**: With CUDA-enabled PyTorch, inference will be significantly faster
-- **Model Caching**: Models will be cached after first download
-- **Batch Processing**: Process multiple videos in batches for efficiency
-- **Mixed Precision**: Use `torch.cuda.amp` for faster inference with minimal accuracy loss
-
-## Environment Management
-
-### Conda + Pip Hybrid Approach
-
-This project uses a hybrid approach for dependency management:
-
-1. **Conda** for system-level packages and environment management
-   - Creates an isolated Python 3.12 environment
-   - Handles C/C++ dependencies that are hard to install with pip
-   - Provides consistent environment across platforms
-
-2. **Pip** for Python-specific packages
-   - Installs PyTorch with CUDA support
-   - Installs all other Python dependencies
-   - Ensures compatibility with Python 3.12
-
-### Managing Environment Updates
-
-To update your environment:
-
-```bash
-# Update conda environment
-conda env update -f environment.yml
-
-# Update pip packages
-pip install -r requirements.txt --upgrade
-```
-
-### Multiple GPU Management
-
-If you have multiple GPUs, you can select which ones to use:
-
-```bash
-# Set visible devices before running your script
-# Windows PowerShell
-$env:CUDA_VISIBLE_DEVICES="0,1"  # Use GPUs 0 and 1
-
-# Linux/Mac
-export CUDA_VISIBLE_DEVICES="0,1"  # Use GPUs 0 and 1
-```
-
-Or within Python:
-
-```python
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"  # Use GPUs 0 and 1
-import torch
-```
-
-## OpenFace 3.0 Features
-
-Once installed, OpenFace 3.0 provides:
-- ✅ **Face Detection & Tracking**
-- ✅ **Facial Landmark Detection** (68-point model)
-- ✅ **Gaze Estimation** (head pose and eye gaze)
-- ✅ **Facial Action Units** (muscle movements)
-- ✅ **Emotion Recognition** (7 basic emotions)
-- ✅ **Age & Gender Estimation**
-- ✅ **Real-time Processing** capabilities
+- **uv** - Fast, reliable Python package management
+- **Ruff** - Unified linting and formatting (replaces Black, isort, flake8)
+- **FastAPI** - Modern API framework
+- **Hatchling/setuptools** - Modern build backend
+- **Docker** - CPU and GPU containerization
+- **Python 3.12+** - Latest Python with performance improvements
 
 ## Dependencies Overview
 
 | Category | Tools | Purpose | CUDA Support |
 |----------|-------|---------|-------------|
-| **Detection** | YOLO11 | Person/object detection | ✅ (YOLO11) |
-| **Tracking** | YOLO11 tracking, ByteTrack | Multi-object tracking | ✅ |
-| **Scene** | PySceneDetect, CLIP | Scene segmentation & classification | ✅ (CLIP) |
-| **Face** | OpenFace 3.0, DeepFace | Face analysis & emotion | ✅ (OpenFace) |
+| **Detection** | YOLO11 | Person/object detection | ✅ |
+| **Tracking** | ByteTrack | Multi-object tracking | ✅ |
+| **Scene** | PySceneDetect, OpenCLIP | Scene segmentation & classification | ✅ |
+| **Face** | OpenFace 3.0, LAION Face | Face analysis & emotion | ✅ |
 | **Audio** | Whisper, pyannote.audio | Speech & audio processing | ✅ |
-| **Annotation** | Label Studio, FiftyOne | Data annotation & visualization | N/A |
-
-### Python 3.12 Compatibility Notes
-
-Some packages require specific installation steps for Python 3.12:
-
-- **TensorFlow**: TensorFlow 2.15+ is compatible with Python 3.12 and can be installed with:
-  ```bash
-  pip install tensorflow==2.15.0
-  ```
-
-- **DeepFace**: Compatible with Python 3.12 when TensorFlow 2.15+ is installed
-
-- **face-recognition**: May require manual compilation for Python 3.12
-
-Alternative compatible packages are provided in the codebase.
+| **API** | FastAPI, uvicorn | REST API server | N/A |
 
 ## Next Steps
 
-After installation, see:
-- `README.md` for usage examples
-- `docs/` directory for detailed documentation
-- `src/pipelines/` for pipeline implementations
-- `configs/` for configuration examples
+After installation:
+- See `docs/usage/GETTING_STARTED.md` for usage examples
+- Check `docs/development/` for development workflows  
+- Review `configs/` for configuration options
+- Use `uv run python demo.py` to test the installation
 
-## CUDA Performance Optimization
+## Performance Tips
 
-### Model Acceleration
-
-1. **Precision Reduction**
-   ```python
-   # Use mixed precision for faster inference
-   from torch.cuda.amp import autocast
-   with autocast():
-       outputs = model(inputs)
-   ```
-
-2. **Batch Processing**
-   ```python
-   # Process multiple inputs at once
-   batch_inputs = torch.stack([input1, input2, input3])
-   batch_outputs = model(batch_inputs)
-   ```
-
-3. **Model Optimization**
-   ```python
-   # Convert model to TorchScript for faster inference
-   scripted_model = torch.jit.script(model)
-   outputs = scripted_model(inputs)
-   
-   # Or quantize model for reduced memory usage
-   quantized_model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
-   ```
+- **GPU acceleration**: Install CUDA-enabled PyTorch for 10x speedup
+- **Batch processing**: Process multiple videos for efficiency
+- **Memory management**: Use appropriate model sizes for your GPU
+- **Container deployment**: Use Docker for consistent environments

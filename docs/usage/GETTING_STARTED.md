@@ -1,43 +1,48 @@
-# Getting Started with VideoAnnotator
+# Getting Started with VideoAnnotator v1.2.0
 
-This guide will help you get up and running with VideoAnnotator quickly.
+This guide will help you get up and running with VideoAnnotator's modern uv-based workflow.
 
 ## Prerequisites
 
-- Python 3.8 or higher
-- FFmpeg (for audio/video processing)
-- Git (for version control)
-- Optional: CUDA-compatible GPU for faster processing
+- **Python 3.12+** (required)
+- **uv** package manager (fast, modern dependency management)  
+- **Git** (for version control)
+- Optional: **CUDA-compatible GPU** for faster processing
 
 ## Quick Installation
 
-### 1. Clone the Repository
+### 1. Install uv Package Manager
+
+```bash
+# Linux/Mac
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+### 2. Clone and Setup
 
 ```bash
 git clone https://github.com/InfantLab/VideoAnnotator.git
 cd VideoAnnotator
-```
 
-### 2. Create Virtual Environment
+# Install all dependencies (fast!)
+uv sync
 
-```bash
-# Using conda (recommended)
-conda env create -f environment.yml
-conda activate VideoAnnotator
-
-# Or using pip
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+# Install development dependencies  
+uv sync --extra dev
 ```
 
 ### 3. Verify Installation
 
 ```bash
-python test_demo.py
-```
+# Test the installation
+uv run python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 
-This will run a quick test on sample videos to verify all pipelines are working correctly.
+# Quick demo
+uv run python demo.py
+```
 
 ## Basic Usage
 
@@ -45,13 +50,31 @@ This will run a quick test on sample videos to verify all pipelines are working 
 
 ```bash
 # Basic processing with default settings
-python -m src.pipelines.scene_detection.scene_pipeline --input video.mp4
+uv run python demo.py
 
-# Process with person tracking
-python -m src.pipelines.person_tracking.person_pipeline --input video.mp4
+# Process specific video
+uv run python main.py --input video.mp4
 
 # Custom output directory
-python -m src.pipelines.scene_detection.scene_pipeline --input video.mp4 --output results/
+uv run python main.py --input video.mp4 --output results/
+
+# High-performance processing with GPU
+uv run python main.py --input video.mp4 --config configs/high_performance.yaml
+
+# Batch process multiple videos
+uv run python main.py --input videos/ --batch --parallel 4
+```
+
+### API Server
+
+```bash
+# Start the modern FastAPI server
+uv run python api_server.py
+
+# Development server with auto-reload
+uv run uvicorn api_server:app --reload
+
+# Access API documentation at http://localhost:8000/docs
 ```
 
 ### Using the Python API

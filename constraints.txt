@@ -1,8 +1,0 @@
-# Pin critical audio stack versions for reproducibility and compatibility
-librosa==0.11.0
-numpy>=1.24.0
-numba>=0.57.0
-llvmlite>=0.40.0
-scipy>=1.11.0
-soundfile>=0.12.0
-# Add any other packages you want to pin tightly for audio stability

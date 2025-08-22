@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 VideoAnnotator is a research-focused video analysis toolkit that processes human interaction videos through modular pipelines. The system uses modern AI models (YOLO11, OpenFace 3.0, Whisper, LAION) to extract comprehensive behavioral annotations in standardized formats compatible with annotation tools like CVAT, LabelStudio, and ELAN.
 
-**Current Version**: 1.1.1 (2025-08-04) - Recent improvements include enhanced batch processing stability, GPU memory optimization, and robust error recovery mechanisms.
+**Current Version**: 1.2.0 (2025-08-22) - Major modernization: migrated to uv package manager, Ruff linting/formatting, FastAPI server, and modern Python 3.12+ development workflow.
 
 ## Core Architecture
 
@@ -40,71 +40,74 @@ Pipelines output native industry formats rather than custom schemas:
 
 ## Development Commands
 
-### Essential Commands
+### Essential Commands (uv-based workflow)
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+uv sync                                         # Install all dependencies
+uv sync --extra dev                             # Install with dev dependencies
 
 # Run tests - 3-tier system (83.2% success rate)
 # Fast development feedback (recommended)
-python scripts/test_fast.py                    # ~30 seconds, 125+ unit tests
+uv run python scripts/test_fast.py             # ~30 seconds, 125+ unit tests
 
 # Pre-commit validation  
-python scripts/test_integration.py             # ~5 minutes, unit + integration
+uv run python scripts/test_integration.py      # ~5 minutes, unit + integration
 
 # Complete validation
-python scripts/test_all.py                     # Full suite with reporting
+uv run python scripts/test_all.py              # Full suite with reporting
 
-# Traditional pytest commands
-make test
-pytest tests/ -v --cov=src --cov-report=html
+# Modern pytest commands
+uv run pytest tests/ -v --cov=src --cov-report=html
 
 # Run specific test tiers
-pytest tests/unit/ -v                          # Unit tests only
-pytest tests/integration/ -v                   # Integration tests
-pytest tests/pipelines/ -v                     # Pipeline tests
+uv run pytest tests/unit/ -v                   # Unit tests only
+uv run pytest tests/integration/ -v            # Integration tests
+uv run pytest tests/pipelines/ -v              # Pipeline tests
 
 # Run by markers
-pytest -m unit                                  # Unit tests
-pytest -m integration                           # Integration tests
-pytest -m pipeline                              # Pipeline tests
+uv run pytest -m unit                          # Unit tests
+uv run pytest -m integration                   # Integration tests
+uv run pytest -m pipeline                      # Pipeline tests
 
-# Code quality checks
-make lint          # Run flake8 linting
-make format        # Format with black + isort
-make type-check    # Run mypy type checking
-make quality-check # Run all quality checks
+# Code quality checks (Ruff-based)
+uv run ruff check .                             # Run Ruff linting
+uv run ruff format .                            # Format with Ruff
+uv run mypy src                                 # Run mypy type checking
 
 # Performance testing
-pytest tests/ -m performance --benchmark-only
+uv run pytest tests/ -m performance --benchmark-only
 
-# Docker builds
-make docker-build     # CPU version
-make docker-build-gpu # GPU version
+# Docker builds (modern)
+docker build -f Dockerfile.cpu -t videoannotator:cpu .      # CPU version
+docker build -f Dockerfile.gpu -t videoannotator:gpu .      # GPU version
 ```
 
 ### Demo and Examples
 ```bash
 # Quick demo with sample video
-python demo.py
+uv run python demo.py
+
+# API server
+uv run python api_server.py                    # Start API server
+uv run uvicorn api_server:app --reload         # Development server with auto-reload
 
 # Individual pipeline testing
-python -m src.pipelines.scene_detection.scene_pipeline --input video.mp4
-python -m src.pipelines.person_tracking.person_pipeline --input video.mp4
+uv run python -m src.pipelines.scene_detection.scene_pipeline --input video.mp4
+uv run python -m src.pipelines.person_tracking.person_pipeline --input video.mp4
 
 # Example scripts
-python examples/basic_video_processing.py
-python examples/batch_processing.py
-python examples/test_individual_pipelines.py
+uv run python examples/basic_video_processing.py
+uv run python examples/batch_processing.py
+uv run python examples/test_individual_pipelines.py
 ```
 
 ### Batch Processing
 ```bash
 # Process multiple videos
-python batch_demo.py --input_dir videos/ --output_dir results/
+uv run python batch_demo.py --input_dir videos/ --output_dir results/
 
 # Using main CLI
-python main.py --input videos/ --batch --parallel 4
+uv run python main.py --input videos/ --batch --parallel 4
 ```
 
 ## Key Technical Details
