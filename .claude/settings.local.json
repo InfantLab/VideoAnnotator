@@ -17,7 +17,9 @@
       "WebFetch(domain:github.com)",
       "Bash(mkdir:*)",
       "Bash(cp:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

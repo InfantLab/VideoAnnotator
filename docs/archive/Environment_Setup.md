@@ -1,0 +1,3 @@
+# Environment Setup Guide
+
+...existing content from ENVIRONMENT_SETUP.md...

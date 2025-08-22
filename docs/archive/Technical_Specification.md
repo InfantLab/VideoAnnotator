@@ -1,0 +1,3 @@
+# VideoAnnotator Technical Specification
+
+...existing content from TECHNICAL_SPECIFICATION.md...
