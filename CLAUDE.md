@@ -229,4 +229,33 @@ The project includes a sophisticated person identity system:
 - **Environment Variables**: Set `TEST_INTEGRATION=1` for real model testing
 - **Known Issues**: Size analysis integration test may fail (functionality under development)
 - **Package Names**: openface3 pip package is called `openface-test`
-- claude.md
+
+## Documentation Organization
+
+This project follows a systematic documentation structure in the `docs/` folder:
+
+### **Canonical User Documentation** (No Version Suffixes)
+- **`docs/installation/`** - Setup and installation guides that are maintained and updated as functionality evolves
+- **`docs/usage/`** - Reference documentation (pipeline_specs.md, demo_commands.md, etc.) - these are living documents that reflect current system capabilities
+- **`docs/deployment/`** - Deployment and containerization guides
+
+### **Versioned Development Documentation** 
+- **`docs/development/`** - Active development plans and implementation docs with version suffixes:
+  - `feature_name_v1.1.2.md` - Current development cycle
+  - `feature_name_v1.2.0.md` - Next major release planning
+- **`docs/testing/`** - QA checklists and testing documentation with version suffixes:
+  - `testing_plan_v1.1.1.md` - Current release testing
+  - `qa_checklist_v1.1.2.md` - Development cycle QA
+
+### **Document Lifecycle Management**
+1. **Active Development**: Documents in development/ and testing/ are tagged with version numbers
+2. **Completion**: When development cycles complete, versioned docs move to `docs/archive/`
+3. **User Docs Evolution**: Usage docs like `pipeline_specs.md` are updated in place to reflect new functionality
+4. **Navigation**: `docs/README.md` provides comprehensive index of all documentation
+
+### **Version Tracking**
+- **Current Release**: v1.1.1 (stable production)
+- **Current Development**: v1.1.2 (bug fixes and enhancements) 
+- **Next Release**: v1.2.0 (major API changes and new features)
+
+This approach ensures users always have current reference documentation while development work is clearly tracked by version cycle.
