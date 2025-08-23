@@ -1,7 +1,45 @@
 
 # Implementation Plan · Web UI (`video-annotation-viewer`)
 
-**Goal:** Extend the existing Viewer with a *Create/Batch* UI that orchestrates annotation jobs via the new API, then opens completed outputs in the existing playback/overlay views.
+**Goal:** Extend the existing Viewer with a *Create/Batch* UI that orchestrates annotation jobs via the new API, then opens completed outputs in the existing playback/overlay views. 
+
+The backend is provided by the VideoAnnotator project https://github.com/InfantLab/VideoAnnotator 
+
+And if this is running locally API documentation will be available at
+http://localhost:8000/docs
+
+### VideoAnnotator API Specifications
+
+**Architecture:**
+- FastAPI-based RESTful API with async job processing
+- GPU acceleration support (CUDA required for optimal performance)
+- Cross-platform compatibility (Linux/Windows/macOS)
+- Batch processing capabilities for multiple videos
+
+**Available Processing Pipelines:**
+1. **Scene Detection** - PySceneDetect + CLIP integration for intelligent scene boundary detection
+2. **Person Tracking** - YOLO11 + ByteTrack for multi-person tracking with persistent IDs
+3. **Face Analysis** - OpenFace 3.0, LAION Face, and OpenCV for comprehensive facial feature extraction
+4. **Audio Processing** - Whisper ASR + pyannote.audio for speech recognition and speaker diarization
+
+**Input/Output Formats:**
+- **Input:** Video files (MP4, WebM, AVI, MOV formats supported)
+- **Output:** JSON arrays in COCO format for all annotation pipelines
+- **Export Compatibility:** CVAT, LabelStudio, ELAN for downstream analysis tools
+
+**Deployment Options:**
+```bash
+# Docker deployment with GPU support (recommended for production)
+docker build -f Dockerfile.gpu -t videoannotator:api .
+docker run -p 8000:8000 --gpus all videoannotator:api
+
+# Direct installation for development
+curl -LsSf https://astral.sh/uv/install.sh | sh
+git clone https://github.com/InfantLab/VideoAnnotator.git
+uv sync
+```
+
+**API Key Endpoints:** Interactive documentation available at `/docs` when running locally
 
 ---
 
@@ -90,7 +128,7 @@
 **Generate types & hooks (example with `openapi-typescript`):**
 
 ```bash
-npx openapi-typescript http://localhost:8080/openapi.json -o src/api/schema.d.ts
+npx openapi-typescript http://localhost:8000/openapi.json -o src/api/schema.d.ts
 ```
 
 Create a thin `api.ts` wrapper with `fetch` and auth header injection.
@@ -127,7 +165,7 @@ Consume `ArtifactManifest.viewer_hint` plus `outputs[video]` roles. Example:
 
 (Adapt parameterization to your current Viewer query scheme.)
 
----
+--- 
 
 ## 9) Error Handling & UX
 
@@ -235,14 +273,19 @@ def get_artifacts(job_id: str, _: bool = Depends(auth)):
 # configs/presets/lightweight_realtime.yaml
 name: lightweight_realtime
 pipelines:
-  speech_whisper:
-    model: "small"
+  audio_processing:
+    whisper_model: "small"
     language: "auto"
     diarization: true
-  scenes_adaptive:
+  scene_detection:
     min_scene_len_sec: 8
-  tracks_person:
-    conf_thresh: 0.5
+    use_clip: true
+  person_tracking:
+    yolo_conf_thresh: 0.5
+    bytetrack_enabled: true
+  face_analysis:
+    openface3_enabled: true
+    laion_face_enabled: false
 ```
 
 ---

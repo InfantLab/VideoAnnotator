@@ -177,3 +177,4 @@ window.version.getAppTitle()
 **Rendering Performance**: Canvas operations in `VideoPlayer.tsx`
 **Type Errors**: Verify interfaces in `types/annotations.ts`
 **Timeline Sync**: Time-based lookups in component render methods
+- remember qa checklist lives in docs/testing

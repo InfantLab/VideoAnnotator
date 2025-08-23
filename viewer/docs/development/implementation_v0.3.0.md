@@ -4,7 +4,7 @@
 
 ## 🎯 **VERSION 0.3.0 OVERVIEW**
 
-Building on the **successful v0.2.0 foundation**, v0.3.0 focuses on **performance optimization**, **cross-browser compatibility**, and **enhanced user experience** based on comprehensive QA testing results from August 2025.
+Building on the **successful v0.2.0 foundation**, v0.3.0 **expands the project scope** to include a **VideoAnnotator GUI integration** as the primary focus, enabling users to create annotation jobs via the VideoAnnotator API and then view results in the existing playback interface. Secondary priorities include performance optimization and enhanced user experience based on comprehensive QA testing results from August 2025.
 
 ### **🎉 v0.2.0 ACHIEVEMENTS** 
 Based on QA Checklist testing (✅ 2025-08-06), v0.2.0 successfully delivered:
@@ -90,16 +90,64 @@ Based on QA Checklist testing (✅ 2025-08-06), v0.2.0 successfully delivered:
 
 ## 🚀 **v0.3.0 FEATURE ROADMAP**
 
-### **Phase 1: Performance & Minor Fixes** (Week 1-2)
+### **Phase 1: VideoAnnotator GUI Integration** (Week 1-4) 🔴 **TOP PRIORITY**
 
-#### **1.1 Performance Optimization** 🔴 HIGH PRIORITY
+#### **1.1 Core API Integration Infrastructure** 
+- [ ] **API Client & Type Generation**
+  - Generate TypeScript types from VideoAnnotator OpenAPI schema (`http://localhost:8000/openapi.json`)
+  - Create API client wrapper with authentication and error handling
+  - Implement Server-Sent Events (SSE) connection for real-time job updates
+  - Set up React Query or Zustand for state management
+
+- [ ] **Routing & Navigation Structure**
+  - Add `/create` route section to existing React Router setup
+  - Implement sub-routes: `/create/datasets`, `/create/new`, `/create/jobs`, `/create/jobs/:id`
+  - Update main navigation to include "Create Annotations" section
+  - Maintain existing viewer functionality at root routes
+
+#### **1.2 Dataset Management Interface**
+- [ ] **Dataset Registration & Management**
+  - `DatasetManager.tsx` component for listing registered datasets (`GET /datasets`)
+  - "Register Dataset" form with name and base_path (`POST /datasets`)
+  - Optional video scanning functionality (`POST /datasets/{id}/videos/scan`)
+  - Dataset details view with video file listings
+
+#### **1.3 Annotation Job Creation Wizard**
+- [ ] **Multi-Step Job Creation Wizard**
+  - Step 1: Dataset selection and video file picker with checkboxes
+  - Step 2: Pipeline configuration using presets (`GET /presets`) or custom parameters
+  - Step 3: Job confirmation with estimated runtime/storage display
+  - `VideoPicker.tsx`, `PipelinePicker.tsx`, `PresetEditor.tsx` components
+
+- [ ] **Pipeline Configuration Interface** 
+  - Load available pipelines from VideoAnnotator API (`GET /pipelines`)
+  - Support for 4 core pipelines: Scene Detection, Person Tracking, Face Analysis, Audio Processing
+  - Parameter editors for each pipeline with validation
+  - Preset management (save/load/edit custom pipeline configurations)
+
+#### **1.4 Job Monitoring & Results**
+- [ ] **Job Management Interface**
+  - `JobTable.tsx` with real-time status updates via SSE (`/events/stream`)
+  - Job filtering by state, tags, creation date
+  - Columns: ID, Created, State, Progress, Tags, Actions
+  - `JobDetail.tsx` with progress bars, logs tail, and artifact listing
+
+- [ ] **Results Integration**
+  - Fetch job artifacts when completed (`GET /jobs/{id}/artifacts`)
+  - "Open in Viewer" deep link integration using artifact manifest
+  - Seamless transition from job completion to existing playback interface
+  - Support for COCO format outputs from all VideoAnnotator pipelines
+
+### **Phase 2: Performance & Minor Fixes** (Week 5-6)
+
+#### **2.1 Performance Optimization** 🔴 HIGH PRIORITY
 - [ ] **Fix Multi-Person Rendering Performance**
   - Optimize canvas rendering for 3+ people in frame
   - Resolve timing issues with VEATIC video datasets (Patch Adams video)
   - Implement efficient frame-based overlay caching
   - Add performance monitoring and metrics
 
-#### **1.2 Minor UI Improvements** 🟠 MEDIUM PRIORITY  
+#### **2.2 Minor UI Improvements** 🟠 MEDIUM PRIORITY  
 - [ ] **Audio Button Functionality**
   - Fix speaker button behavior (currently doesn't toggle audio)
   - Clarify audio control functionality or remove if not applicable
@@ -279,30 +327,30 @@ Based on QA Checklist testing (✅ 2025-08-06), v0.2.0 successfully delivered:
 
 ## 🗓️ **DEVELOPMENT TIMELINE**
 
-### **Sprint 1 (Week 1-2): Performance & Critical Fixes**
-- **Goal**: Resolve performance issues and critical UX problems identified in v0.2.0 QA
-- **Deliverables**: Multi-person rendering optimization, audio button fix, error message improvements
-- **Success Criteria**: Smooth performance with 3+ people, resolved VEATIC video timing issues
+### **Sprint 1 (Week 1-2): VideoAnnotator API Foundation**
+- **Goal**: Establish core API integration infrastructure and routing
+- **Deliverables**: API client generation, SSE setup, routing structure, navigation updates
+- **Success Criteria**: Functional API connection, basic routing to `/create` section
 
-### **Sprint 2 (Week 3-4): Browser Compatibility & Polish**  
-- **Goal**: Complete cross-browser testing and minor UX improvements
-- **Deliverables**: Chrome/Safari verification, combined speech/speaker display
-- **Success Criteria**: 100% browser compatibility, improved user experience
+### **Sprint 2 (Week 3-4): Dataset & Job Management Core**  
+- **Goal**: Implement dataset management and job creation wizard
+- **Deliverables**: Dataset registration, video picker, pipeline configuration, job submission
+- **Success Criteria**: Complete job creation workflow from dataset to submission
 
-### **Sprint 3 (Week 5-6): Enhanced Features**
-- **Goal**: Implement deferred features that enhance analysis capabilities
-- **Deliverables**: Persistent state management, enhanced person tracking options
-- **Success Criteria**: Professional workflow improvements, advanced tracking features
+### **Sprint 3 (Week 5-6): Job Monitoring & Results Integration**
+- **Goal**: Complete job monitoring interface and results integration
+- **Deliverables**: Real-time job tracking, progress displays, "Open in Viewer" deep linking
+- **Success Criteria**: Full end-to-end workflow from job creation to viewing results
 
-### **Sprint 4 (Week 7-8): Timeline & Motion Analysis**
-- **Goal**: Advanced timeline visualization and motion analysis
-- **Deliverables**: Motion intensity algorithms, multi-person timeline tracks
-- **Success Criteria**: Industry-standard motion analysis capabilities
+### **Sprint 4 (Week 7-8): Performance & Critical Fixes**
+- **Goal**: Address performance issues and critical UX problems from v0.2.0 QA
+- **Deliverables**: Multi-person rendering optimization, audio button fix, error handling
+- **Success Criteria**: Smooth performance with 3+ people, resolved VEATIC timing issues
 
-### **Sprint 5 (Week 9-10): Advanced Features & Performance**
-- **Goal**: Advanced face analysis and performance optimization
-- **Deliverables**: Enhanced face detection, large file support, memory optimization
-- **Success Criteria**: Production-ready performance with complex datasets
+### **Sprint 5 (Week 9-10): Browser Compatibility & Polish**
+- **Goal**: Complete cross-browser testing and UX improvements
+- **Deliverables**: Chrome/Safari verification, combined speech/speaker display, persistent state
+- **Success Criteria**: 100% browser compatibility, enhanced user experience
 
 ### **Sprint 6 (Week 11-12): Testing & Documentation**
 - **Goal**: Comprehensive quality assurance and documentation
@@ -313,24 +361,32 @@ Based on QA Checklist testing (✅ 2025-08-06), v0.2.0 successfully delivered:
 
 ## 🎯 **PRIORITIZATION FRAMEWORK**
 
-### **Priority 1: Performance Critical (Must Have)**
+### **Priority 1: VideoAnnotator GUI Integration (Must Have for v0.3.0)**
+- VideoAnnotator API client and type generation
+- Dataset management interface (register, list, scan)
+- Annotation job creation wizard (dataset → videos → pipelines → confirm)
+- Job monitoring with real-time SSE updates
+- Results integration with "Open in Viewer" deep linking
+- Support for all 4 VideoAnnotator pipelines (Scene, Person, Face, Audio)
+
+### **Priority 2: Performance Critical (Should Have)**
 - Multi-person rendering performance optimization (3+ people lag)
 - VEATIC video timing issues resolution
 - Canvas rendering optimization for complex scenes
 
-### **Priority 2: UX Improvements (Should Have)**
+### **Priority 3: UX Improvements (Should Have)**
 - Audio button functionality clarification/fix
 - Error message improvements for file loading
 - Combined speech/speaker display enhancement
 - Persistent state management (reload last video on refresh)
 
-### **Priority 3: Enhanced Features (Could Have)**
+### **Priority 4: Enhanced Features (Could Have)**
 - Motion intensity algorithms and visualization
 - Enhanced person tracking sub-options
 - Audio waveform integration
 - Advanced face analysis features
 
-### **Priority 4: Future Enhancements (Won't Have in v0.3.0)**
+### **Priority 5: Future Enhancements (Won't Have in v0.3.0)**
 - Navigation back to landing page
 - Online documentation system
 - Legacy format support removal
@@ -349,10 +405,13 @@ Based on QA Checklist testing (✅ 2025-08-06), v0.2.0 successfully delivered:
 - [ ] **Memory Usage**: No memory leaks during extended use (deferred from v0.2.0)
 
 ### **Functionality Targets**
+- [ ] **VideoAnnotator Integration**: Complete end-to-end workflow from job creation to result viewing
+- [ ] **API Connectivity**: Stable connection to VideoAnnotator backend with error handling
+- [ ] **Real-time Updates**: Live job progress monitoring via Server-Sent Events
+- [ ] **Pipeline Support**: Full integration with all 4 VideoAnnotator pipelines
 - [ ] **Core Features**: Maintain 100% functionality of all ✅ verified features from v0.2.0
 - [ ] **Performance Issues**: Resolve all identified performance bottlenecks
 - [ ] **Browser Compatibility**: Complete Chrome and Safari testing and verification
-- [ ] **User Experience**: Implement priority UX improvements
 
 ### **Quality Targets**
 - [ ] **Regression Prevention**: Ensure no v0.2.0 working features break

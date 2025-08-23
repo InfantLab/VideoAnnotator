@@ -1,8 +1,9 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Upload, FileText, Eye } from 'lucide-react';
+import { Play, Upload, FileText, Eye, Plus } from 'lucide-react';
 import viewerPreview from '@/assets/VideoAnnotationViewer.png';
 import { Footer } from './Footer';
+import { Link } from 'react-router-dom';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
@@ -53,6 +54,18 @@ export const WelcomeScreen = ({ onGetStarted, onViewDemo }: WelcomeScreenProps) 
                 <Upload className="w-5 h-5 mr-2" />
                 Get Started
               </Button>
+              
+              <Link to="/create">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="text-lg px-8 py-3 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Create Annotations
+                </Button>
+              </Link>
+              
               <Button
                 variant="outline"
                 size="lg"

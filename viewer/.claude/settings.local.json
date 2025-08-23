@@ -13,7 +13,12 @@
       "Bash(python:*)",
       "Bash(mkdir:*)",
       "Bash(bun test:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(bun add:*)",
+      "Bash(npm install:*)",
+      "Bash(npx openapi-typescript:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": []
   }
