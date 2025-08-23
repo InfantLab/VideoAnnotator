@@ -163,9 +163,9 @@ uv run mypy src
 # Run tests
 uv run pytest
 
-# Process a video
-uv run python demo.py
-uv run python main.py --input video.mp4 --output results/
+# Start API server
+uv run python -m src.cli server
+uv run python api_server.py
 ```
 
 ## Docker Installation (Alternative)
@@ -253,7 +253,8 @@ After installation:
 - See `docs/usage/GETTING_STARTED.md` for usage examples
 - Check `docs/development/` for development workflows  
 - Review `configs/` for configuration options
-- Use `uv run python demo.py` to test the installation
+- Use `uv run python -m src.cli --help` to test the CLI
+- Use `uv run python api_server.py` to start the server
 
 ## Performance Tips
 

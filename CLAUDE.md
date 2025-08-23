@@ -38,6 +38,33 @@ Pipelines output native industry formats rather than custom schemas:
 - Audio → WebVTT for transcripts, RTTM for diarization
 - Scene detection → Simple timestamped JSON arrays
 
+## Development Guidelines & Common Issues
+
+### Windows Console Encoding Issue ⚠️
+**CRITICAL**: Windows console (cmd/PowerShell) cannot display Unicode emojis and will crash with:
+```
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in position 0
+```
+
+**Solution**: Always use ASCII-safe alternatives in print statements:
+```python
+# ❌ DON'T DO THIS:
+print("🚀 Starting server...")
+print("✅ Success!")
+
+# ✅ DO THIS INSTEAD:
+print("[START] Starting server...")
+print("[OK] Success!")
+print("=== VideoAnnotator v1.2.0 ===")
+```
+
+This affects:
+- Print statements in scripts
+- Logging messages  
+- CLI output
+- Test output
+- API server startup messages
+
 ## Development Commands
 
 ### Essential Commands (uv-based workflow)
@@ -82,11 +109,8 @@ docker build -f Dockerfile.cpu -t videoannotator:cpu .      # CPU version
 docker build -f Dockerfile.gpu -t videoannotator:gpu .      # GPU version
 ```
 
-### Demo and Examples
+### API Server and Examples
 ```bash
-# Quick demo with sample video
-uv run python demo.py
-
 # API server
 uv run python api_server.py                    # Start API server
 uv run uvicorn api_server:app --reload         # Development server with auto-reload
@@ -101,13 +125,11 @@ uv run python examples/batch_processing.py
 uv run python examples/test_individual_pipelines.py
 ```
 
-### Batch Processing
+### CLI Usage
 ```bash
-# Process multiple videos
-uv run python batch_demo.py --input_dir videos/ --output_dir results/
-
-# Using main CLI
-uv run python main.py --input videos/ --batch --parallel 4
+# Modern CLI interface
+uv run python -m src.cli --input video.mp4 --output results/
+uv run python -m src.cli --input videos/ --batch --parallel 4
 ```
 
 ## Key Technical Details

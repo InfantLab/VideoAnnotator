@@ -202,18 +202,15 @@ example-pipelines:
 example-config:
 	python examples/custom_pipeline_config.py
 
-# Main CLI examples
+# CLI examples
 demo-default:
-	python main.py --help
+	uv run python -m src.cli --help
 
-demo-config:
-	python main.py --config configs/default.yaml --help
+demo-server:
+	uv run python -m src.cli server --help
 
-demo-lightweight:
-	python main.py --config configs/lightweight.yaml --help
-
-demo-high-performance:
-	python main.py --config configs/high_performance.yaml --help
+demo-version:
+	uv run python -m src.cli version
 
 # Development environment setup
 dev-setup: install-dev setup-pre-commit

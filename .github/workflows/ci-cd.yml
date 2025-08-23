@@ -122,8 +122,8 @@ jobs:
     
     - name: Test CLI interface
       run: |
-        python main.py --help
-        python main.py --config configs/default.yaml --input tests/data/sample_video.mp4 --output test_output --dry-run
+        uv run python -m src.cli --help
+        uv run python -m src.cli server --help
 
   performance-test:
     runs-on: ubuntu-latest

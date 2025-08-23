@@ -19,22 +19,22 @@ from src.utils.model_loader import log_model_download, setup_download_logging, l
 class TestEnhancedLoggingIntegration:
     """Integration tests for enhanced logging with pipeline components."""
     
-    def test_demo_script_logging_setup(self, caplog):
-        """Test that demo script logging setup works correctly."""
-        # Simulate what demo.py does
+    def test_api_server_logging_setup(self, caplog):
+        """Test that API server logging setup works correctly."""
+        # Simulate what API server does
         with caplog.at_level(logging.INFO):
             setup_download_logging()
             log_first_run_info()
         
         log_messages = [record.message for record in caplog.records]
         
-        # Check welcome message appears
-        assert any("🎉 Welcome to VideoAnnotator" in msg for msg in log_messages)
+        # Check welcome message appears (note: should be ASCII-safe now)
+        assert any("Welcome to VideoAnnotator" in msg for msg in log_messages)
         assert any("FIRST RUN:" in msg for msg in log_messages)
 
-    def test_main_script_logging_setup(self, caplog):
-        """Test that main.py logging setup works correctly."""
-        # Simulate what main.py does
+    def test_cli_logging_setup(self, caplog):
+        """Test that CLI logging setup works correctly."""
+        # Simulate what CLI does
         with caplog.at_level(logging.INFO):
             setup_download_logging()
             # Simulate checking if models directory exists

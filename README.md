@@ -185,11 +185,11 @@ if (job_status == "completed") {
 For users who prefer command-line tools:
 
 ```bash
-# Direct video processing
-uv run python demo.py
+# Start API server
+uv run python -m src.cli server --host 0.0.0.0 --port 8000
 
-# Batch processing
-uv run python main.py --input videos/ --batch --parallel 4
+# API-based processing (submit jobs via web interface or curl)
+curl -X POST "http://localhost:8000/api/v1/jobs" -H "Content-Type: application/json" -d '{"video_path": "video.mp4"}'
 ```
 
 📖 **[Full Documentation](docs/)** | 🧪 **[Examples](examples/)** | 🔧 **[Installation Guide](docs/installation/INSTALLATION.md)**

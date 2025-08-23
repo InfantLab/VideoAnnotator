@@ -25,7 +25,8 @@
       "Bash(C:Userscasparanaconda3Scriptsconda.exe activate videoannotator)",
       "Bash(where cmake)",
       "Bash(make:*)",
-      "Bash($env:PATH)"
+      "Bash($env:PATH)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

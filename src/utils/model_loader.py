@@ -25,17 +25,17 @@ def log_model_download(model_name: str, model_path: str, loader_func: Callable, 
         The loaded model object
     """
     logger.info("=" * 60)
-    logger.info(f"🤖 Loading {model_name}")
-    logger.info(f"📁 Model: {model_path}")
+    logger.info(f"[LOAD] Loading {model_name}")
+    logger.info(f"[PATH] Model: {model_path}")
     
     # Check if model file exists locally
     if isinstance(model_path, (str, Path)):
         model_file = Path(model_path)
         if model_file.exists():
-            logger.info(f"✅ Model file found locally: {model_file}")
+            logger.info(f"[OK] Model file found locally: {model_file}")
         else:
-            logger.info(f"📥 Model not found locally - will download: {model_path}")
-            logger.info("⏳ This may take a few minutes on first run...")
+            logger.info(f"[DOWNLOAD] Model not found locally - will download: {model_path}")
+            logger.info("[WAIT] This may take a few minutes on first run...")
             
             # Show expected download info
             if "yolo" in model_path.lower():
@@ -49,20 +49,20 @@ def log_model_download(model_name: str, model_path: str, loader_func: Callable, 
     
     try:
         # Load the model
-        logger.info(f"🔄 Initializing {model_name}...")
+        logger.info(f"[INIT] Initializing {model_name}...")
         model = loader_func(*args, **kwargs)
         
         load_time = time.time() - start_time
-        logger.info(f"✅ {model_name} loaded successfully!")
-        logger.info(f"⏱️  Load time: {load_time:.1f} seconds")
+        logger.info(f"[OK] {model_name} loaded successfully!")
+        logger.info(f"[TIME] Load time: {load_time:.1f} seconds")
         logger.info("=" * 60)
         
         return model
         
     except Exception as e:
         load_time = time.time() - start_time
-        logger.error(f"❌ Failed to load {model_name} after {load_time:.1f} seconds")
-        logger.error(f"🔍 Error: {e}")
+        logger.error(f"[ERROR] Failed to load {model_name} after {load_time:.1f} seconds")
+        logger.error(f"[ERROR] {e}")
         logger.info("=" * 60)
         raise
 
@@ -99,17 +99,17 @@ def setup_download_logging():
 
 def log_first_run_info():
     """Display helpful information about first-run model downloads."""
-    logger.info("🎉 Welcome to VideoAnnotator v1.2.0!")
+    logger.info("[WELCOME] Welcome to VideoAnnotator v1.2.0!")
     logger.info("")
-    logger.info("📥 FIRST RUN: Downloading AI Models")
+    logger.info("[FIRST RUN] Downloading AI Models")
     logger.info("   VideoAnnotator uses several AI models for video analysis:")
-    logger.info("   • YOLO11: Person detection & pose estimation (~100MB)")
-    logger.info("   • Whisper: Speech recognition (~150MB-1.5GB)")
-    logger.info("   • OpenCLIP: Scene understanding (~300MB)")
-    logger.info("   • PyAnnote: Audio diarization (~200MB)")
+    logger.info("   - YOLO11: Person detection & pose estimation (~100MB)")
+    logger.info("   - Whisper: Speech recognition (~150MB-1.5GB)")
+    logger.info("   - OpenCLIP: Scene understanding (~300MB)")
+    logger.info("   - PyAnnote: Audio diarization (~200MB)")
     logger.info("")
-    logger.info("   ⏳ Models download automatically and are cached for future use")
-    logger.info("   🚀 Subsequent runs will be much faster!")
+    logger.info("   [INFO] Models download automatically and are cached for future use")
+    logger.info("   [INFO] Subsequent runs will be much faster!")
     logger.info("")
     logger.info("=" * 60)
 
@@ -123,14 +123,14 @@ class ModelDownloadProgress:
     
     def __enter__(self):
         self.start_time = time.time()
-        logger.info(f"🔄 Starting download: {self.model_name}")
-        logger.info("   ⏳ Please wait... (this may take several minutes)")
+        logger.info(f"[START] Starting download: {self.model_name}")
+        logger.info("   [WAIT] Please wait... (this may take several minutes)")
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.start_time:
             elapsed = time.time() - self.start_time
             if exc_type is None:
-                logger.info(f"✅ {self.model_name} downloaded successfully in {elapsed:.1f} seconds")
+                logger.info(f"[OK] {self.model_name} downloaded successfully in {elapsed:.1f} seconds")
             else:
-                logger.error(f"❌ {self.model_name} download failed after {elapsed:.1f} seconds")
+                logger.error(f"[ERROR] {self.model_name} download failed after {elapsed:.1f} seconds")

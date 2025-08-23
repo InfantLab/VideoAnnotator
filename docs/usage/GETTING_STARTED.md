@@ -40,41 +40,36 @@ uv sync --extra dev
 # Test the installation
 uv run python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 
-# Quick demo
-uv run python demo.py
+# Test CLI interface
+uv run python -m src.cli --help
 ```
 
 ## Basic Usage
 
-### Process a Single Video
+### API Server Mode (Recommended)
 
 ```bash
-# Basic processing with default settings
-uv run python demo.py
+# Start the API server
+uv run python -m src.cli server --host 0.0.0.0 --port 8000
 
-# Process specific video
-uv run python main.py --input video.mp4
-
-# Custom output directory
-uv run python main.py --input video.mp4 --output results/
-
-# High-performance processing with GPU
-uv run python main.py --input video.mp4 --config configs/high_performance.yaml
-
-# Batch process multiple videos
-uv run python main.py --input videos/ --batch --parallel 4
-```
-
-### API Server
-
-```bash
-# Start the modern FastAPI server
+# Alternative: Start server directly
 uv run python api_server.py
 
-# Development server with auto-reload
-uv run uvicorn api_server:app --reload
+# View API documentation at http://localhost:8000/docs
+```
 
-# Access API documentation at http://localhost:8000/docs
+### Processing Videos via API
+
+Once the server is running, submit processing jobs via:
+
+```bash
+# Submit a video processing job
+curl -X POST "http://localhost:8000/api/v1/jobs" \
+  -H "Content-Type: application/json" \
+  -d '{"video_path": "video.mp4", "pipelines": ["scene", "person"]}'
+
+# Check job status
+curl "http://localhost:8000/api/v1/jobs/{job_id}/status"
 ```
 
 ### Using the Python API

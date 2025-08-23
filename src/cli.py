@@ -22,8 +22,8 @@ def server(
     workers: int = typer.Option(1, help="Number of worker processes"),
 ):
     """Start the VideoAnnotator API server."""
-    typer.echo(f"🚀 Starting VideoAnnotator API server on http://{host}:{port}")
-    typer.echo("📖 API documentation available at http://{host}:{port}/docs")
+    typer.echo(f"[START] Starting VideoAnnotator API server on http://{host}:{port}")
+    typer.echo(f"[INFO] API documentation available at http://{host}:{port}/docs")
     
     try:
         uvicorn.run(
@@ -35,7 +35,7 @@ def server(
             log_level="info"
         )
     except Exception as e:
-        typer.echo(f"❌ Failed to start server: {e}", err=True)
+        typer.echo(f"[ERROR] Failed to start server: {e}", err=True)
         raise typer.Exit(code=1)
 
 
@@ -47,40 +47,40 @@ def process(
     config: Optional[Path] = typer.Option(None, help="Path to configuration file"),
 ):
     """Process a single video file (legacy mode)."""
-    typer.echo(f"🎥 Processing video: {video}")
+    typer.echo(f"[PROCESS] Processing video: {video}")
     
     if not video.exists():
-        typer.echo(f"❌ Video file not found: {video}", err=True)
+        typer.echo(f"[ERROR] Video file not found: {video}", err=True)
         raise typer.Exit(code=1)
     
     # TODO: Implement direct video processing using existing pipelines
-    typer.echo("⚠️  Direct processing not yet implemented in v1.2.0")
-    typer.echo("💡 Use 'videoannotator server' and submit jobs via API")
-    typer.echo("📖 See API docs at http://localhost:8000/docs")
+    typer.echo("[WARNING] Direct processing not yet implemented in v1.2.0")
+    typer.echo("[INFO] Use 'videoannotator server' and submit jobs via API")
+    typer.echo("[INFO] See API docs at http://localhost:8000/docs")
 
 
 @app.command()  
 def job():
     """Manage remote processing jobs."""
-    typer.echo("⚠️  Job management CLI not yet implemented")
-    typer.echo("💡 Use the API directly at http://localhost:8000/docs")
-    typer.echo("🔧 Coming in next development iteration")
+    typer.echo("[WARNING] Job management CLI not yet implemented")
+    typer.echo("[INFO] Use the API directly at http://localhost:8000/docs")
+    typer.echo("[INFO] Coming in next development iteration")
 
 
 @app.command()
 def pipelines():
     """List available processing pipelines."""
-    typer.echo("⚠️  Pipeline listing CLI not yet implemented")
-    typer.echo("💡 Use GET /api/v1/pipelines endpoint")
-    typer.echo("📖 See API docs at http://localhost:8000/docs")
+    typer.echo("[WARNING] Pipeline listing CLI not yet implemented")
+    typer.echo("[INFO] Use GET /api/v1/pipelines endpoint")
+    typer.echo("[INFO] See API docs at http://localhost:8000/docs")
 
 
 @app.command()
 def config():
     """Validate and manage configuration."""
-    typer.echo("⚠️  Config management CLI not yet implemented")  
-    typer.echo("💡 Use GET /api/v1/system/config endpoint")
-    typer.echo("🔧 Coming in next development iteration")
+    typer.echo("[WARNING] Config management CLI not yet implemented")  
+    typer.echo("[INFO] Use GET /api/v1/system/config endpoint")
+    typer.echo("[INFO] Coming in next development iteration")
 
 
 @app.command()

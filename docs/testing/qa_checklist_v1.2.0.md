@@ -37,19 +37,23 @@
 ### ✅ Core System Validation
 
 #### Backward Compatibility
-- [ ] **v1.1.1 Library Interface** - All existing pipeline code works unchanged
-- [ ] **Configuration Files** - Legacy YAML configs still function properly
-- [ ] **CLI Scripts** - Old command-line scripts run with deprecation warnings only
-- [ ] **Output Formats** - COCO, WebVTT, RTTM outputs remain consistent
-- [ ] **Import Paths** - Existing `from src.pipelines` imports work without errors
+- [x] **v1.1.1 Library Interface** - All existing pipeline code works unchanged
+- [p] **Configuration Files** - Legacy YAML configs still function properly
+Yes, but can you explain to me what makes them legacy? What do we do instead? 
+- [p] **CLI Scripts** - Old command-line scripts run with deprecation warnings only
+Let's just get rid of old CLI functions now we have this new approach.
+Let's update all demos and docs too. 
+- [x] **Output Formats** - COCO, WebVTT, RTTM outputs remain consistent
+- [x] **Import Paths** - Existing `from src.pipelines` imports work without errors
 
 #### Pipeline Functionality
-- [ ] **Person Tracking** - YOLO11 + ByteTrack integration stable
-- [ ] **Face Analysis** - OpenFace 3.0, LAION Face, DeepFace backends operational
-- [ ] **Audio Processing** - Whisper + pyannote.audio diarization working
-- [ ] **Scene Detection** - PySceneDetect + CLIP classification accurate
-- [ ] **Person Identity** - Cross-pipeline person linking functional
-- [ ] **Batch Processing** - Multi-video processing with job recovery
+- [x] **Person Tracking** - YOLO11 + ByteTrack integration stable
+- [x] **Face Analysis** - OpenFace 3.0, LAION Face, DeepFace backends operational
+- [p] **Audio Processing** - Whisper + pyannote.audio diarization working
+we also have LAION audio. needs to be in list. 
+- [x] **Scene Detection** - PySceneDetect + CLIP classification accurate
+- [x] **Person Identity** - Cross-pipeline person linking functional
+- [x] **Batch Processing** - Multi-video processing with job recovery
 
 ---
 
