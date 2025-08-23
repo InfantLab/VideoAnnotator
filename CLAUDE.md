@@ -8,6 +8,26 @@ VideoAnnotator is a research-focused video analysis toolkit that processes human
 
 **Current Version**: 1.2.0 (2025-08-22) - Major modernization: migrated to uv package manager, Ruff linting/formatting, FastAPI server, and modern Python 3.12+ development workflow.
 
+## Primary Use Case & Design Philosophy
+
+### Target Users: Experimental Psychologists & Behavioral Researchers
+VideoAnnotator's **primary use case (90% of users)** is individual researchers who need to:
+- Install and run locally on their own machines (Windows/Mac/Linux)
+- Process research videos without IT support or complex infrastructure
+- Focus on their research, not system administration
+- Easily backup, share, and archive their annotation projects
+
+**Key Design Principle**: Any researcher should be able to run `pip install videoannotator` and `videoannotator server` and have a working system immediately, with no additional setup, services, or configuration required.
+
+### Secondary Use Case: Multi-User Research Labs
+A smaller percentage (10%) are larger research centers that need:
+- Multi-user access and collaboration
+- Centralized lab servers with shared resources
+- Advanced user management and data governance
+- Higher performance and scalability
+
+**Design Strategy**: All features should work perfectly for the primary use case, with optional complexity available for enterprise users without forcing it on individual researchers.
+
 ## Core Architecture
 
 ### Pipeline System

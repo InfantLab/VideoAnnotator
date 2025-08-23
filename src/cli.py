@@ -84,6 +84,69 @@ def config():
 
 
 @app.command()
+def info():
+    """Show VideoAnnotator system information including database status."""
+    from .version import __version__
+    from .api.database import get_database_info, check_database_health
+    
+    typer.echo(f"VideoAnnotator v{__version__}")
+    typer.echo("API Version: 1.2.0")
+    typer.echo("")
+    
+    # Database information
+    try:
+        is_healthy, health_message = check_database_health()
+        db_info = get_database_info()
+        
+        if is_healthy:
+            typer.echo("[OK] Database Status: Healthy")
+        else:
+            typer.echo(f"[ERROR] Database Status: {health_message}")
+        
+        typer.echo(f"Backend: {db_info['backend_type']}")
+        
+        if db_info['backend_type'] == 'sqlite':
+            conn_info = db_info['connection_info']
+            typer.echo(f"Database file: {conn_info['database_path']}")
+            typer.echo(f"Database size: {conn_info['database_size_mb']} MB")
+        
+        # Job statistics
+        stats = db_info['statistics']
+        typer.echo("")
+        typer.echo("Job Statistics:")
+        typer.echo(f"  Total jobs: {stats['total_jobs']}")
+        typer.echo(f"  Pending: {stats['pending_jobs']}")
+        typer.echo(f"  Running: {stats['running_jobs']}")  
+        typer.echo(f"  Completed: {stats['completed_jobs']}")
+        typer.echo(f"  Failed: {stats['failed_jobs']}")
+        typer.echo(f"  Total annotations: {stats['total_annotations']}")
+        
+    except Exception as e:
+        typer.echo(f"[ERROR] Failed to get database info: {e}")
+
+@app.command()
+def backup(
+    output_path: Path = typer.Argument(..., help="Path where to save backup file")
+):
+    """Backup database to specified location (SQLite only)."""
+    from .api.database import backup_database, get_current_database_path
+    
+    try:
+        current_path = get_current_database_path()
+        
+        if backup_database(output_path):
+            typer.echo(f"[OK] Database backed up successfully")
+            typer.echo(f"Source: {current_path}")
+            typer.echo(f"Backup: {output_path}")
+        else:
+            typer.echo("[ERROR] Backup failed - see logs for details")
+            
+    except ValueError as e:
+        typer.echo(f"[ERROR] {e}")
+    except Exception as e:
+        typer.echo(f"[ERROR] Backup failed: {e}")
+
+@app.command()
 def version():
     """Show version information."""
     from .version import __version__

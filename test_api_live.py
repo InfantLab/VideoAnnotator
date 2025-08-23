@@ -147,7 +147,7 @@ async def main():
     # Start API server
     print("Starting API server...")
     server_process = subprocess.Popen([
-        sys.executable, "api_server_db.py"
+        sys.executable, "api_server.py"
     ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     
     try:

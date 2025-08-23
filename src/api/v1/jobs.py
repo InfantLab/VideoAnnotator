@@ -11,53 +11,18 @@ import tempfile
 import os
 
 from pydantic import BaseModel, Field
-# TODO: Import batch system after fixing dependencies
-# from ...batch.batch_orchestrator import BatchOrchestrator  
-# from ...batch.types import BatchJob, JobStatus
+from pathlib import Path
 
-# Temporary mock classes for API development
-class MockJobStatus:
-    PENDING = "pending"
-    RUNNING = "running" 
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-class MockBatchJob:
-    def __init__(self, video_path, config=None, selected_pipelines=None):
-        import uuid
-        from datetime import datetime
-        self.id = uuid.uuid4()
-        self.video_path = video_path
-        self.config = config
-        self.selected_pipelines = selected_pipelines
-        self.status = MockJobStatus.PENDING
-        self.created_at = datetime.utcnow()
-        self.completed_at = None
-        self.error_message = None
-
-class MockBatchOrchestrator:
-    def __init__(self):
-        self.jobs = []
-    
-    def add_job(self, video_path, config=None, selected_pipelines=None):
-        job = MockBatchJob(video_path, config, selected_pipelines)
-        self.jobs.append(job)
-        return str(job.id)
+from ...batch.types import BatchJob, JobStatus
+from ...storage.base import StorageBackend
+from ..database import get_storage_backend
 
 
 router = APIRouter()
 
-# TODO: Replace with proper dependency injection from database
-# For now, use a simple in-memory store
-_batch_orchestrator = None
-
-
-def get_batch_orchestrator() -> MockBatchOrchestrator:
-    """Get batch orchestrator instance."""
-    global _batch_orchestrator
-    if _batch_orchestrator is None:
-        _batch_orchestrator = MockBatchOrchestrator()
-    return _batch_orchestrator
+def get_storage() -> StorageBackend:
+    """Get storage backend for job management."""
+    return get_storage_backend()
 
 
 # Pydantic models for API
@@ -92,7 +57,7 @@ async def submit_job(
     video: UploadFile = File(..., description="Video file to process"),
     config: Optional[str] = Form(None, description="JSON configuration"),
     selected_pipelines: Optional[str] = Form(None, description="Comma-separated pipeline names"),
-    orchestrator: MockBatchOrchestrator = Depends(get_batch_orchestrator)
+    storage: StorageBackend = Depends(get_storage)
 ):
     """
     Submit a video processing job.
@@ -131,34 +96,26 @@ async def submit_job(
             content = await video.read()
             f.write(content)
         
-        # Submit job to batch orchestrator
-        job_id = orchestrator.add_job(
-            video_path=video_path,
-            config=parsed_config,
+        # Create BatchJob instance
+        batch_job = BatchJob(
+            video_path=Path(video_path),
+            output_dir=None,  # Will be set by processing system
+            config=parsed_config or {},
+            status=JobStatus.PENDING,
             selected_pipelines=parsed_pipelines
         )
         
-        # Find the job in orchestrator to return details
-        job = None
-        for batch_job in orchestrator.jobs:
-            if str(batch_job.id) == job_id:
-                job = batch_job
-                break
-        
-        if not job:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Job created but not found in orchestrator"
-            )
+        # Save job to database
+        storage.save_job_metadata(batch_job)
         
         return JobResponse(
-            id=str(job.id),
-            status=job.status.value,
-            video_path=job.video_path,
-            config=job.config,
-            selected_pipelines=job.selected_pipelines,
-            created_at=job.created_at,
-            completed_at=job.completed_at
+            id=batch_job.job_id,
+            status=batch_job.status.value,
+            video_path=str(batch_job.video_path),
+            config=batch_job.config,
+            selected_pipelines=batch_job.selected_pipelines,
+            created_at=batch_job.created_at,
+            completed_at=batch_job.completed_at
         )
         
     except Exception as e:
@@ -171,7 +128,7 @@ async def submit_job(
 @router.get("/{job_id}", response_model=JobResponse)
 async def get_job_status(
     job_id: str,
-    orchestrator: MockBatchOrchestrator = Depends(get_batch_orchestrator)
+    storage: StorageBackend = Depends(get_storage)
 ):
     """
     Get job status and details.
@@ -183,32 +140,25 @@ async def get_job_status(
         Job information including current status
     """
     try:
-        # Find job in orchestrator
-        job = None
-        for batch_job in orchestrator.jobs:
-            if str(batch_job.id) == job_id:
-                job = batch_job
-                break
-        
-        if not job:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Job {job_id} not found"
-            )
+        # Load job from database
+        job = storage.load_job_metadata(job_id)
         
         return JobResponse(
-            id=str(job.id),
+            id=job.job_id,
             status=job.status.value,
-            video_path=job.video_path,
+            video_path=str(job.video_path) if job.video_path else None,
             config=job.config,
             selected_pipelines=job.selected_pipelines,
             created_at=job.created_at,
             completed_at=job.completed_at,
-            error_message=getattr(job, 'error_message', None)
+            error_message=job.error_message
         )
         
-    except HTTPException:
-        raise
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job {job_id} not found"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -221,7 +171,7 @@ async def list_jobs(
     page: int = 1,
     per_page: int = 10,
     status_filter: Optional[str] = None,
-    orchestrator: MockBatchOrchestrator = Depends(get_batch_orchestrator)
+    storage: StorageBackend = Depends(get_storage)
 ):
     """
     List jobs with pagination and filtering.
@@ -235,33 +185,33 @@ async def list_jobs(
         Paginated list of jobs
     """
     try:
-        # Get all jobs
-        all_jobs = orchestrator.jobs
-        
-        # Apply status filter if provided
-        if status_filter:
-            all_jobs = [job for job in all_jobs if job.status.value == status_filter]
+        # Get job IDs from storage
+        all_job_ids = storage.list_jobs(status_filter=status_filter)
         
         # Apply pagination
-        total = len(all_jobs)
+        total = len(all_job_ids)
         start_idx = (page - 1) * per_page
         end_idx = start_idx + per_page
-        page_jobs = all_jobs[start_idx:end_idx]
+        page_job_ids = all_job_ids[start_idx:end_idx]
         
-        # Convert to response format
-        job_responses = [
-            JobResponse(
-                id=str(job.id),
-                status=job.status.value,
-                video_path=job.video_path,
-                config=job.config,
-                selected_pipelines=job.selected_pipelines,
-                created_at=job.created_at,
-                completed_at=job.completed_at,
-                error_message=getattr(job, 'error_message', None)
-            )
-            for job in page_jobs
-        ]
+        # Load job details for this page
+        job_responses = []
+        for job_id in page_job_ids:
+            try:
+                job = storage.load_job_metadata(job_id)
+                job_responses.append(JobResponse(
+                    id=job.job_id,
+                    status=job.status.value,
+                    video_path=str(job.video_path) if job.video_path else None,
+                    config=job.config,
+                    selected_pipelines=job.selected_pipelines,
+                    created_at=job.created_at,
+                    completed_at=job.completed_at,
+                    error_message=job.error_message
+                ))
+            except FileNotFoundError:
+                # Skip jobs that can't be loaded (shouldn't happen but be defensive)
+                continue
         
         return JobListResponse(
             jobs=job_responses,
@@ -280,7 +230,7 @@ async def list_jobs(
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def cancel_job(
     job_id: str,
-    orchestrator: MockBatchOrchestrator = Depends(get_batch_orchestrator)
+    storage: StorageBackend = Depends(get_storage)
 ):
     """
     Cancel/delete a job.
@@ -289,23 +239,18 @@ async def cancel_job(
         job_id: Job ID to cancel
     """
     try:
-        # Find job in orchestrator
-        job = None
-        for batch_job in orchestrator.jobs:
-            if str(batch_job.id) == job_id:
-                job = batch_job
-                break
-        
-        if not job:
+        # Check if job exists
+        try:
+            job = storage.load_job_metadata(job_id)
+        except FileNotFoundError:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Job {job_id} not found"
             )
         
         # TODO: Implement proper job cancellation logic
-        # For now, just remove from list if not completed
-        if job.status not in [JobStatus.COMPLETED, JobStatus.FAILED]:
-            orchestrator.jobs.remove(job)
+        # For now, allow deletion of any job
+        storage.delete_job(job_id)
         
         return
         

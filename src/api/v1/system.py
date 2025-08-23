@@ -9,9 +9,34 @@ import platform
 from datetime import datetime
 
 from ...version import __version__ as videoannotator_version
+from ..database import get_storage_backend, check_database_health, get_database_info
 
 
 router = APIRouter()
+
+
+def _get_disk_usage_percent() -> float:
+    """Get disk usage percentage, handling Windows vs Unix."""
+    try:
+        if platform.system() == 'Windows':
+            disk = psutil.disk_usage('C:/')
+        else:
+            disk = psutil.disk_usage('/')
+        return (disk.used / disk.total * 100) if disk.total > 0 else 0.0
+    except Exception:
+        return 0.0
+
+
+def _get_database_status() -> Dict[str, Any]:
+    """Get database status for health check."""
+    try:
+        is_healthy, message = check_database_health()
+        if is_healthy:
+            return {"status": "healthy", "message": message}
+        else:
+            return {"status": "unhealthy", "message": message}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 @router.get("/health")
@@ -26,7 +51,16 @@ async def detailed_health_check():
         # Get system information
         cpu_percent = psutil.cpu_percent(interval=1)
         memory = psutil.virtual_memory()
-        disk = psutil.disk_usage('/')
+        
+        # Get disk usage - handle Windows vs Unix paths
+        try:
+            if platform.system() == 'Windows':
+                disk = psutil.disk_usage('C:/')
+            else:
+                disk = psutil.disk_usage('/')
+        except Exception:
+            # Fallback if disk check fails
+            disk = type('MockDisk', (), {'total': 0, 'used': 0, 'free': 0})()
         
         # Get GPU information if available
         gpu_info = None
@@ -48,7 +82,7 @@ async def detailed_health_check():
         
         return {
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now().isoformat(),
             "api_version": "1.2.0",
             "videoannotator_version": videoannotator_version,
             "system": {
@@ -67,12 +101,12 @@ async def detailed_health_check():
                     "total": disk.total,
                     "used": disk.used,
                     "free": disk.free,
-                    "percent": (disk.used / disk.total) * 100
+                    "percent": (disk.used / disk.total) * 100 if disk.total > 0 else 0
                 }
             },
             "gpu": gpu_info,
             "services": {
-                "database": "not_implemented",  # TODO: Check database connection
+                "database": _get_database_status(),
                 "job_queue": "not_implemented",  # TODO: Check Redis/Celery connection
                 "pipelines": "ready"  # TODO: Check pipeline initialization status
             }
@@ -81,7 +115,7 @@ async def detailed_health_check():
     except Exception as e:
         return {
             "status": "unhealthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now().isoformat(),
             "error": str(e),
             "api_version": "1.2.0",
             "videoannotator_version": videoannotator_version
@@ -97,16 +131,20 @@ async def get_system_metrics():
         System performance and usage metrics
     """
     try:
-        # TODO: Implement proper metrics collection
-        # This is a placeholder for Prometheus-style metrics
+        # Get database statistics
+        db_info = get_database_info()
+        db_stats = db_info.get("statistics", {})
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now().isoformat(),
             "metrics": {
-                "jobs_total": 0,  # TODO: Get from database/orchestrator
-                "jobs_active": 0,  # TODO: Get active job count
-                "jobs_completed": 0,  # TODO: Get completed job count
-                "jobs_failed": 0,  # TODO: Get failed job count
+                "jobs_total": db_stats.get("total_jobs", 0),
+                "jobs_active": db_stats.get("running_jobs", 0) + db_stats.get("pending_jobs", 0),
+                "jobs_completed": db_stats.get("completed_jobs", 0),
+                "jobs_failed": db_stats.get("failed_jobs", 0),
+                "jobs_pending": db_stats.get("pending_jobs", 0),
+                "jobs_running": db_stats.get("running_jobs", 0),
+                "total_annotations": db_stats.get("total_annotations", 0),
                 "api_requests_total": 0,  # TODO: Implement request counting
                 "response_time_avg": 0.0,  # TODO: Implement response time tracking
                 "pipeline_processing_time_avg": 0.0,  # TODO: Track pipeline performance
@@ -115,7 +153,7 @@ async def get_system_metrics():
             "performance": {
                 "cpu_usage": psutil.cpu_percent(),
                 "memory_usage": psutil.virtual_memory().percent,
-                "disk_usage": psutil.disk_usage('/').used / psutil.disk_usage('/').total * 100,
+                "disk_usage": _get_disk_usage_percent(),
             }
         }
         
@@ -164,4 +202,22 @@ async def get_system_config():
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get config: {str(e)}"
+        )
+
+
+@router.get("/database")
+async def get_database_info_endpoint():
+    """
+    Get database information and statistics.
+    
+    Returns:
+        Database configuration and statistics
+    """
+    try:
+        return get_database_info()
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get database info: {str(e)}"
         )
