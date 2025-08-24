@@ -6,6 +6,8 @@ from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Dict, Any, Optional
 
+from ..auth import get_token_manager
+
 # Security scheme for Bearer tokens
 security = HTTPBearer()
 
@@ -14,14 +16,10 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> Dict[str, Any]:
     """
-    Get current user from API token.
-    
-    This is a simplified implementation for v1.2.0 development.
-    In production, this should validate against the database.
+    Get current user from API token using secure token manager.
     """
     token = credentials.credentials
     
-    # For development, accept any non-empty token
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -29,22 +27,35 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Simple token validation for development
-    if token in ["dev-token", "test-token"]:
-        return {
-            "id": "test-user-123",
-            "username": "test_user",
-            "email": "test@example.com",
-            "is_active": True
-        }
+    # Use token manager for validation
+    token_manager = get_token_manager()
+    token_info = token_manager.validate_token(token)
     
-    # TODO: Implement proper token validation against database
-    # For now, accept any token as valid
+    if not token_info:
+        # Fallback for development tokens
+        if token in ["dev-token", "test-token"]:
+            return {
+                "id": "test-user-123",
+                "username": "test_user",
+                "email": "test@example.com",
+                "is_active": True,
+                "scopes": ["read", "write", "debug"]
+            }
+        
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
     return {
-        "id": f"user-{hash(token) % 1000}",
-        "username": "api_user", 
-        "email": "user@example.com",
-        "is_active": True
+        "id": token_info.user_id,
+        "username": token_info.username,
+        "email": token_info.email,
+        "is_active": token_info.is_active,
+        "scopes": token_info.scopes,
+        "token_type": token_info.token_type.value,
+        "token_id": token_info.token_id
     }
 
 
