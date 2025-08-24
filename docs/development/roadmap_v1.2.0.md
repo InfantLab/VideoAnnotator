@@ -1,167 +1,215 @@
-# 🚀 VideoAnnotator v1.2.0 Development Roadmap
+# 🚀 VideoAnnotator v1.2.0 Development Roadmap (UPDATED)
 
 ## Release Overview
 
-VideoAnnotator v1.2.0 represents a major API modernization and enhancement release, building on the stable v1.1.1 foundation. This release focuses on **API standardization**, **enhanced integrations**, and **advanced features** for production deployment.
+VideoAnnotator v1.2.0 represents a major API modernization and enhancement release, building on the stable v1.1.1 foundation. This release focuses on **API standardization**, **production readiness**, and **server-side improvements** based on front-end tester feedback and QA findings.
 
 **Target Release**: Q2 2025  
-**Current Status**: Planning Phase  
-**Main Goal**: Production-ready API with advanced annotation capabilities
+**Current Status**: Core API Complete - Integration & Performance Phase  
+**Main Goal**: Production-ready API with complete video processing integration
 
 ---
 
-## ✅ Completed (v1.1.1 - Current Release)
+## ✅ Completed (Core API Foundation)
 
-Based on CHANGELOG.md, the following major components are stable and complete:
+### API Server Infrastructure ✅
+- ✅ **FastAPI Server** - HTTP REST service with OpenAPI documentation
+- ✅ **Database Integration** - SQLAlchemy ORM with SQLite/PostgreSQL support
+- ✅ **Authentication System** - API key generation and Bearer token validation
+- ✅ **Basic Job Management** - Submit, track, retrieve, and delete jobs
+- ✅ **Health Monitoring** - System health checks with database status
+- ✅ **Error Handling** - Comprehensive error responses and logging
+- ✅ **Testing Infrastructure** - 95.5% test success rate (179 tests)
 
-### Core System (v1.0.0 - v1.1.1)
-- ✅ **Complete Pipeline Architecture** - Modular `src/pipelines/` structure with `BasePipeline`
-- ✅ **Person Identity System** - Cross-pipeline person linking with automatic labeling
-- ✅ **OpenFace 3.0 Integration** - Full facial behavior analysis with AU detection
-- ✅ **LAION Face & Voice Pipelines** - Advanced emotion recognition (40+ categories)
-- ✅ **YOLO11 Integration** - Modern detection/pose/tracking pipeline
-- ✅ **Robust Error Recovery** - PyTorch meta tensor handling, model corruption recovery
-- ✅ **Performance Optimization** - Pre-initialized pipelines, GPU memory management
-- ✅ **3-Tier Testing System** - 83.2% success rate across unit/integration/pipeline tests
-- ✅ **COCO Format Compliance** - Industry-standard annotation formats
-- ✅ **Comprehensive Documentation** - Installation, usage, and development guides
+### Pipeline Integration ✅
+- ✅ **Batch System Connection** - API connects to existing batch orchestrator
+- ✅ **Pipeline Enumeration** - Available pipelines endpoint functional
+- ✅ **Core Pipeline Support** - YOLO11, OpenFace 3.0, LAION Face ready
+- ✅ **Output Formats** - COCO, WebVTT, RTTM compatibility maintained
 
 ---
 
-## 🎯 v1.2.0 Primary Goal: API Modernization
+## 🎯 CRITICAL v1.2.0 Issues (Must Fix Before Release)
 
-**MAIN OBJECTIVE**: Transform VideoAnnotator from a Python library into a production-ready API service while maintaining backward compatibility.
+### 🚨 CRITICAL Server-Side Issues (From Front-End Tester Feedback)
 
-### 🏆 Core API Development (CRITICAL PATH)
+Based on docs/testing/SERVER_SIDE_IMPROVEMENTS.md, these blocking issues MUST be resolved:
 
-#### Phase 1: API Foundation (MUST HAVE)
-- [ ] **FastAPI Server Implementation** - HTTP REST service with OpenAPI documentation
-- [ ] **Job Management System** - Submit, track, and retrieve video processing jobs
-- [ ] **Async Processing Queue** - Celery/Redis-based background job processing
-- [ ] **Basic Authentication** - API key generation and validation
-- [ ] **Database Backend** - PostgreSQL schema for jobs, users, annotations
-- [ ] **File Upload/Storage** - Video upload and result storage management
+#### 0. **Critical API Endpoints Missing** [BLOCKING - SPRINT 1]
+- [ ] **SSE Endpoint Implementation** - `/api/v1/events/stream` returns 404, real-time job monitoring broken
+- [ ] **Health Endpoint Reliability** - `/api/v1/system/health` initially returns 404, then works
+- [ ] **Authentication Error Handling** - No clear feedback for API token failures
 
-#### Phase 2: Production API Features (HIGH PRIORITY)
-- [ ] **User Management** - Registration, authentication, role-based access
-- [ ] **Rate Limiting & Quotas** - API usage controls and throttling
-- [ ] **Job Status Tracking** - Real-time progress updates and notifications
-- [ ] **Multiple Output Formats** - COCO, Label Studio, FiftyOne export support
-- [ ] **Error Handling & Recovery** - Robust error responses and job recovery
-- [ ] **API Versioning** - v1 namespace with future compatibility
+### 🚨 High Priority Server-Side Improvements
 
-#### Phase 3: API Enhancement (NICE TO HAVE)
-- [ ] **Webhook System** - Event notifications for job completion
-- [ ] **Batch Job Submission** - Process multiple videos in single request
-- [ ] **Custom Pipeline Configuration** - User-defined processing workflows
-- [ ] **API Analytics** - Usage metrics and performance monitoring
+Based on front-end tester feedback and QA findings, these issues MUST be resolved:
 
-### 🖥️ New CLI Interface (SUPPORTING API)
+#### 1. **Complete Video Processing Integration** [BLOCKING]
+- [ ] **Fix job processing pipeline** - Full video processing through API (currently incomplete)
+- [ ] **Result retrieval endpoint** - `GET /api/v1/jobs/{id}/results` implementation
+- [ ] **Video upload handling** - `POST /api/v1/videos` with proper storage
+- [ ] **Processing status updates** - Real-time job progress tracking
+- [ ] **Resource cleanup** - Proper file and memory cleanup after jobs
 
-#### Essential CLI Commands
-- [ ] **videoannotator server** - Start/stop API server
-- [ ] **videoannotator process** - Direct video processing (legacy mode)
-- [ ] **videoannotator job** - Submit and manage remote jobs
-- [ ] **videoannotator auth** - API key management
+#### 2. **Async Job Queue System** [BLOCKING]
+- [ ] **Celery/Redis integration** - Background job processing (currently missing)
+- [ ] **Concurrent processing** - Multiple video jobs simultaneously
+- [ ] **Job recovery system** - Failed job retry and cleanup mechanisms
+- [ ] **Resource allocation** - GPU memory management for concurrent jobs
+- [ ] **Timeout handling** - Long-running job timeouts and cleanup
+
+#### 3. **Performance & Security Hardening** [CRITICAL]
+- [ ] **Rate limiting implementation** - Per-user API request throttling
+- [ ] **Request size limits** - Large file upload handling and validation
+- [ ] **Load testing validation** - System stable under 10+ concurrent users
+- [ ] **Memory leak prevention** - Long-running operation memory management
+- [ ] **Database query optimization** - Ensure <100ms query response times
+
+### 🔧 CLI Implementation & Legacy Cleanup
+
+Based on QA checklist feedback (lines 42-45, 53):
+
+#### 4. **Complete CLI Implementation** [HIGH PRIORITY]
+- [ ] **videoannotator server** - Start/stop API server command
+- [ ] **videoannotator process** - Single video processing (legacy mode)
+- [ ] **videoannotator job** - Remote job submission and monitoring
+- [ ] **videoannotator auth** - API key management commands
 - [ ] **videoannotator config** - Configuration validation and management
 
-### 📊 Supporting Infrastructure (AS NEEDED FOR API)
+#### 5. **Legacy System Cleanup** [QA REQUIREMENT]
+- [ ] **Remove old CLI scripts** - Clean up deprecated command-line interfaces
+- [ ] **Update all documentation** - Remove references to old patterns
+- [ ] **Configuration modernization** - Clarify legacy vs modern config patterns
+- [ ] **Add LAION Audio pipeline** - Missing from pipeline enumeration
+- [ ] **Demo script updates** - Update all examples to use new CLI
 
-#### Database & Storage
-- [ ] **PostgreSQL Schema** - Users, jobs, annotations tables
-- [ ] **File Storage Strategy** - Local/S3 video and result storage
-- [ ] **Database Migrations** - Version-controlled schema evolution
-- [ ] **Data Backup/Recovery** - Production data safety
+### 📊 Data Integrity & Advanced Features
 
-#### Deployment & Operations
-- [ ] **Docker Containers** - API server containerization
-- [ ] **Health Checks** - System monitoring and alerting
-- [ ] **Logging System** - Structured logging for debugging
-- [ ] **Configuration Management** - Environment-based config
+#### 6. **Database & Storage Improvements** [MEDIUM PRIORITY]
+- [ ] **Foreign key constraints** - Ensure referential integrity
+- [ ] **Transaction handling** - ACID properties for complex operations
+- [ ] **Backup/restore procedures** - Production data safety
+- [ ] **Data cleanup automation** - Old jobs and files cleanup
 
-### ❌ Explicitly NOT in v1.2.0 Scope
+#### 7. **Enhanced API Features** [HIGH PRIORITY - SPRINT 2]
+- [ ] **Pipeline Information API** - Detailed pipeline configuration options with parameters
+- [ ] **Job Configuration Support** - Accept `db_location` and `output_directory` parameters
+- [ ] **Job Artifacts Management** - `/api/v1/jobs/{id}/artifacts` endpoint for file retrieval
+- [ ] **Error Response Standardization** - Consistent error formats across all endpoints
 
-**These items are deferred to maintain focus on API development:**
-
-- ❌ **New Pipeline Development** - No new computer vision models or pipelines
-- ❌ **Algorithm Improvements** - No changes to existing YOLO11, OpenFace, etc.
-- ❌ **Multi-modal Analysis** - Advanced cross-pipeline fusion deferred to v1.3.0  
-- ❌ **Real-time Streaming** - Live video processing postponed
-- ❌ **Advanced ML Features** - Active learning, quality assessment deferred
-- ❌ **Desktop GUI** - Web interface development not included
-- ❌ **Mobile Support** - API designed for server deployment only
-- ❌ **Plugin System** - Custom model integration delayed to v1.3.0
-
-**Rationale**: v1.2.0 success depends on delivering a robust, production-ready API. Feature creep risks delaying the core API modernization goal.
+#### 8. **API Enhancement** [MEDIUM PRIORITY - SPRINT 3]
+- [ ] **JWT token support** - Enhanced authentication beyond API keys
+- [ ] **Role-based access control** - Admin/Researcher/Analyst/Guest roles
+- [ ] **Configuration Templates** - Server-side presets storage and user preferences
+- [ ] **Batch job submission** - Native server-side multiple video processing
 
 ---
 
-## 📅 API-First Development Timeline
+## 🚀 Updated Development Timeline
 
-### Month 1: Core API Server
-**Goal**: Working REST API with basic job management
-- [ ] FastAPI server foundation with OpenAPI docs
-- [ ] PostgreSQL database schema and connections
-- [ ] Basic job submission and status endpoints
-- [ ] File upload for video processing
-- [ ] API key authentication system
+### **Sprint 1: Critical API Issues (Week 1)** [CURRENT - BLOCKING]
+**Goal**: Fix critical server issues identified by front-end testers
 
-### Month 2: Async Processing Integration  
-**Goal**: Background job processing with existing pipelines
-- [ ] Celery/Redis async job queue setup
-- [ ] Integration with existing v1.1.1 pipelines
-- [ ] Job progress tracking and updates
-- [ ] Error handling and recovery mechanisms
-- [ ] Result storage and retrieval system
+- [ ] **SSE Endpoint Implementation** - `/api/v1/events/stream` for real-time job monitoring
+- [ ] **Health Endpoint Fix** - Reliable `/api/v1/system/health` responses
+- [ ] **Authentication Error Handling** - Clear API token failure feedback
+- [ ] **Error Response Standardization** - Consistent error formats with proper HTTP codes
 
-### Month 3: Production API Features
-**Goal**: User management and production controls
-- [ ] User registration and role-based access
-- [ ] Rate limiting and API quotas
-- [ ] Multiple output format support
-- [ ] API versioning (v1 namespace)
-- [ ] Comprehensive API testing suite
+### **Sprint 2: Core Integration (Week 2-3)** [HIGH PRIORITY]
+**Goal**: Complete video processing and enhance API functionality
 
-### Month 4: CLI and Developer Experience
-**Goal**: Complete developer tooling
-- [ ] Unified `videoannotator` CLI implementation
-- [ ] Python client library for API
-- [ ] Enhanced documentation and examples
-- [ ] Migration tools from v1.1.1
-- [ ] Performance optimization and testing
+- [ ] **Complete video processing integration** - End-to-end video processing via API
+- [ ] **Pipeline Information API** - Detailed configuration options and parameters  
+- [ ] **Job Artifacts Management** - File retrieval and download system
+- [ ] **Job Configuration Support** - Custom database/output directory options
 
-### Month 5: Advanced Features & Integrations
-**Goal**: Enhanced API capabilities
-- [ ] Webhook system for notifications
-- [ ] Batch job processing endpoints
-- [ ] Label Studio/FiftyOne export integrations
-- [ ] API analytics and monitoring
-- [ ] Security hardening
+### **Sprint 3: Async Processing (Week 4-5)** [CRITICAL]
+**Goal**: Implement background processing and performance features
 
-### Month 6: Production Readiness & Release
-**Goal**: Deploy-ready v1.2.0 release
-- [ ] Docker containerization and K8s manifests
-- [ ] Comprehensive QA testing (see qa_checklist_v1.2.0.md)
-- [ ] Performance benchmarking vs v1.1.1
-- [ ] Documentation finalization
-- [ ] Release candidate and beta testing
+- [ ] **Implement async job queue** - Celery/Redis background processing
+- [ ] **Concurrent processing** - Multiple video jobs simultaneously  
+- [ ] **Resource management** - GPU memory allocation and cleanup
+- [ ] **Performance optimization** - Memory leaks and query performance
 
----
+### **Sprint 4: CLI & Legacy Cleanup (Week 6-7)**
+**Goal**: Complete CLI implementation and clean up legacy systems
 
-## 📈 Success Metrics for v1.2.0
+- [ ] **Implement all CLI commands** - videoannotator server/process/job/auth/config
+- [ ] **Remove deprecated scripts** - Clean up old command-line interfaces
+- [ ] **Update documentation** - Remove legacy references, add LAION Audio
+- [ ] **Modernize configuration** - Clear separation between old and new patterns
 
-### Technical Goals
-- **API Performance**: <200ms response time for status queries
-- **Scalability**: Support 10+ concurrent video processing jobs
-- **Reliability**: 99.9% uptime for API services
-- **Processing Speed**: Maintain >1x real-time processing with new features
+### **Sprint 5: Security & Advanced Features (Week 8-9)**
+**Goal**: Production-ready security and advanced capabilities
 
-### Integration Goals  
-- **Production Deployments**: 3+ organizations using v1.2.0 in production
-- **API Adoption**: 50+ external integrations via REST API
-- **Community Growth**: 200+ GitHub stars, 20+ contributors
-- **Documentation Quality**: 95% user success rate following setup guides
+- [ ] **Implement rate limiting** - API request throttling and quotas
+- [ ] **Configuration Templates** - Server-side presets and user preferences
+- [ ] **Security hardening** - Input validation, request limits
+- [ ] **Load testing & optimization** - 10+ concurrent user support
+
+### **Sprint 6: Integration & Testing (Week 10-11)**
+**Goal**: Complete integration testing and validation
+
+- [ ] **End-to-end testing** - Full API workflow validation
+- [ ] **Performance benchmarking** - Ensure ≤ v1.1.1 processing times
+- [ ] **OpenAPI documentation** - Complete specification updates
+- [ ] **Database optimization** - Query performance and integrity
+
+### **Sprint 7: Release Preparation (Week 12-13)**
+**Goal**: Production deployment readiness
+
+- [ ] **Docker containerization** - Container builds and deployment
+- [ ] **Deployment testing** - Staging environment validation
+- [ ] **Final QA validation** - Complete checklist sign-off
+- [ ] **Release candidate** - Beta testing and feedback integration
 
 ---
 
-*Last Updated: January 2025 | Target Release: Q2 2025*
+## 📈 Success Criteria for v1.2.0
+
+### **Technical Requirements** (MUST MEET)
+- ✅ **API Functionality**: All endpoints fully functional with complete video processing
+- ✅ **Performance**: ≤200ms API response times, ≤v1.1.1 processing speed
+- ✅ **Scalability**: 10+ concurrent video processing jobs without degradation
+- ✅ **Reliability**: 99.9% uptime, robust error recovery
+- ✅ **Security**: Rate limiting, input validation, authentication working
+
+### **Integration Requirements** (MUST HAVE)
+- ✅ **CLI Completeness**: All videoannotator commands functional
+- ✅ **Legacy Compatibility**: v1.1.1 code works without breaking changes
+- ✅ **Documentation**: Complete API docs, migration guides, troubleshooting
+- ✅ **Testing**: >95% test success rate, load testing validated
+
+---
+
+## ❌ Deferred to v1.3.0
+
+**These features are explicitly moved to v1.3.0 to focus on core API stability:**
+
+- ❌ **Advanced ML Features** - Active learning, quality assessment
+- ❌ **Real-time Streaming** - Live video processing capabilities  
+- ❌ **Multi-modal Analysis** - Advanced cross-pipeline fusion
+- ❌ **Plugin System** - Custom model integration framework
+- ❌ **Desktop GUI** - Web interface development
+- ❌ **Cloud Provider Integration** - AWS/Azure/GCP specific features
+- ❌ **Advanced Analytics** - Usage metrics and monitoring dashboards
+
+---
+
+## 🚨 Risk Mitigation
+
+### **High Risk Items**
+1. **Async Processing Complexity** - Celery/Redis integration may introduce stability issues
+2. **Performance Regression** - New API layer may impact processing speed
+3. **Memory Management** - Concurrent processing may cause memory leaks
+
+### **Mitigation Strategies**
+- **Extensive Load Testing** - Validate performance under realistic conditions
+- **Gradual Rollout** - Optional API mode alongside existing CLI
+- **Comprehensive Monitoring** - Health checks and performance metrics
+- **Quick Rollback Plan** - Ability to revert to v1.1.1 if critical issues found
+
+---
+
+*Last Updated: January 2025 | Target Release: Q2 2025*  
+*Updated Based On: QA Checklist v1.2.0 & Front-end Tester Feedback*
