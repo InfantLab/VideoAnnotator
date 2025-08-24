@@ -19,7 +19,10 @@ const CreateJobDetail = () => {
     queryKey: ["job", jobId],
     queryFn: () => apiClient.getJob(jobId!),
     enabled: !!jobId,
-    refetchInterval: job?.status === "running" || job?.status === "pending" ? 2000 : false,
+    refetchInterval: (data) => {
+      const status = data?.status;
+      return status === "running" || status === "pending" ? 2000 : false;
+    },
   });
 
   const getStatusColor = (status: string) => {

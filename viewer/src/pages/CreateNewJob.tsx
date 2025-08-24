@@ -306,7 +306,7 @@ const VideoUploadStep = ({
       <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
         <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
         <h3 className="text-lg font-medium mb-2">Upload Video Files</h3>
-        <p className="text-gray-600 mb-4">
+        <p className="text-gray-700 mb-4">
           Select video files to process. Supports batch processing. Formats: MP4, WebM, AVI, MOV
         </p>
         
@@ -372,7 +372,7 @@ const PipelineSelectionStep = ({
 
   return (
     <div className="space-y-6">
-      <p className="text-gray-600">
+      <p className="text-gray-700">
         Select the annotation pipelines you want to run on your videos.
       </p>
       
@@ -387,8 +387,8 @@ const PipelineSelectionStep = ({
               disabled={!pipeline.enabled}
             />
             <div className="flex-1">
-              <div className="font-medium">{pipeline.displayName}</div>
-              <div className="text-sm text-gray-600">
+              <div className="font-medium text-gray-900">{pipeline.displayName}</div>
+              <div className="text-sm text-gray-700">
                 {pipeline.description}
               </div>
             </div>
@@ -417,7 +417,7 @@ const ConfigurationStep = ({
 }) => {
   return (
     <div className="space-y-6">
-      <p className="text-gray-600">
+      <p className="text-gray-700">
         Configure pipeline parameters. You can modify the configuration or use the default settings.
       </p>
       
@@ -434,7 +434,7 @@ const ConfigurationStep = ({
                 // Invalid JSON, don't update
               }
             }}
-            className="w-full h-64 text-sm font-mono resize-none border-0 focus:ring-0"
+            className="w-full h-64 text-sm font-mono resize-none border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded px-3 py-2 text-gray-900 bg-white"
             placeholder="Pipeline configuration JSON..."
           />
         </div>
@@ -470,7 +470,7 @@ const ReviewStep = ({
 
   return (
     <div className="space-y-6">
-      <p className="text-gray-600">
+      <p className="text-gray-700">
         Review your job configuration before submission.
       </p>
       
