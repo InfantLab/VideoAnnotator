@@ -18,7 +18,10 @@
       "Bash(npm install:*)",
       "Bash(npx openapi-typescript:*)",
       "Bash(npm run build:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(pkill:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": []
   }

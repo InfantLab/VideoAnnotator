@@ -14,15 +14,16 @@ This comprehensive QA checklist covers the new VideoAnnotator pipeline running f
 ## 📋 **SECTION 1: VideoAnnotator API Integration**
 
 ### **1.1 API Client & Connection**
-- [ ] **API Health Check**: `http://localhost:8000/health` returns status  
-- [ ] **Detailed Health**: `/api/v1/system/health` provides system information  
-- [ ] **Authentication**: API token authentication works correctly  
-- [ ] **Error Handling**: Network errors display appropriate messages  
-- [ ] **Environment Variables**: VITE_API_BASE_URL and VITE_API_TOKEN configurable  
+- [x] **API Health Check**: `http://localhost:8000/health` returns status  
+- [f] **Detailed Health**: `/api/v1/system/health` provides system information  
+- [p] **Authentication**: API token authentication works correctly  
+- [x] **Error Handling**: Network errors display appropriate messages  
+- [x] **Environment Variables**: VITE_API_BASE_URL and VITE_API_TOKEN configurable  
 
 **Issues Found:**
 ```
-[List any API connectivity issues]
+intitially detailed health url gave {"detail":"Not Found"}. But then gave full check details.
+how do tell that API token is working? What does user do if it isn't?
 ```
 
 ### **1.2 Server-Sent Events (SSE)**
@@ -35,7 +36,12 @@ This comprehensive QA checklist covers the new VideoAnnotator pipeline running f
 
 **Issues Found:**
 ```
-[List any SSE-related issues]
+SSE Disconnected
+:8000/api/v1/events/stream?token=dev-token:1   Failed to load resource: the server responded with a status of 404 (Not Found)
+SSEContext.tsx:33 SSE Disconnected
+:8000/api/v1/events/stream?token=dev-token:1   Failed to load resource: the server responded with a status of 404 (Not Found)
+hook.js:608  SSE Error: Error: SSE connection failed after maximum retry attempts
+    at eventSource.onerror (useSSE.ts:140:25)
 ```
 
 ---
@@ -46,8 +52,8 @@ This comprehensive QA checklist covers the new VideoAnnotator pipeline running f
 - [ ] **Main Routes**: `/` (viewer), `/create` (annotation jobs) work  
 - [ ] **Create Sub-routes**: `/create/jobs`, `/create/new`, `/create/datasets` accessible  
 - [ ] **Job Details**: `/create/jobs/:id` displays job-specific information  
-- [ ] **Navigation Menu**: Links to Create Annotations section present  
-- [ ] **Back Navigation**: Back buttons work correctly throughout wizard  
+- [x] **Navigation Menu**: Links to Create Annotations section present  
+- [x] **Back Navigation**: Back buttons work correctly throughout wizard  
 
 **Issues Found:**
 ```
@@ -59,17 +65,20 @@ This comprehensive QA checklist covers the new VideoAnnotator pipeline running f
 ## 📋 **SECTION 3: Job Creation Wizard**
 
 ### **3.1 Step 1: Video Upload**
-- [ ] **File Selection**: Video file picker accepts MP4, WebM, AVI, MOV  
-- [ ] **File Information**: Displays name, size, type after selection  
-- [ ] **File Validation**: Rejects non-video files appropriately  
-- [ ] **Large Files**: Handles files >100MB without crashing  
-- [ ] **Progress Indicator**: Step progress shows 25% completion  
-- [ ] **Next Button**: Disabled until file selected, enabled after  
+- [x] **File Selection**: Video file picker accepts MP4, WebM, AVI, MOV  
+- [x] **File Information**: Displays name, size, type after selection  
+- [x] **File Validation**: Rejects non-video files appropriately  
+- [>] **Large Files**: Handles files >100MB without crashing  
+- [x] **Progress Indicator**: Step progress shows 25% completion  
+- [x] **Next Button**: Disabled until file selected, enabled after  
 
 **Test Files:** Upload various video formats and sizes  
 **Issues Found:**
 ```
-[List any file upload issues]
+All pages in v-a-v ought to show our icon next to name. 
+Let's match colour scheme of UI to complement main colours in icon. (do this with minimal hardcoding)
+All pages should have our standard footer.
+version 0.4.0: Would be useful to have a 'select folder' option. 
 ```
 
 ### **3.2 Step 2: Pipeline Selection**
@@ -82,7 +91,14 @@ This comprehensive QA checklist covers the new VideoAnnotator pipeline running f
 
 **Issues Found:**
 ```
-[List any pipeline selection issues]
++ UI uses lots of dark gray text on black background - hard to read.
++ The Select Pipelines page is very basic. Needs to give detailed information about each possible pipeline
+and give control over all of them. 
+Face pipeline doesn't list all opions. 
+Audio pipeline doesn't separate pyannote, whisper and LAION.
+I guess we need a mechanism for VideoAnnotator to provide this information. 
+
+
 ```
 
 ### **3.3 Step 3: Configuration**
@@ -94,20 +110,23 @@ This comprehensive QA checklist covers the new VideoAnnotator pipeline running f
 
 **Issues Found:**
 ```
-[List any configuration issues]
++ Configure Pipelines json box has white text on white background! More generally, page is no use to a naive user. As first step we must give simple on screen example of available options. As a further step we should make this into a proper UI. For example many pipelines have some params in common (predictions per second - i think) and so could make some controls as well as raw json. 
+Finally, we ought to have a mechanism to remember users last choices or preferences.
+
 ```
 
 ### **3.4 Step 4: Review & Submit**
-- [ ] **File Summary**: Shows selected video file name  
-- [ ] **Pipeline Summary**: Lists all selected pipelines  
-- [ ] **Time Estimate**: Displays "~5-10 minutes" estimate  
-- [ ] **Submit Button**: Currently shows "Submit Job (Coming Soon)"  
-- [ ] **Progress Indicator**: Shows 100% completion  
-- [ ] **Final Review**: All information accurate  
+- [x] **File Summary**: Shows selected video file name  
+- [x] **Pipeline Summary**: Lists all selected pipelines  
+- [x] **Time Estimate**: Displays "~5-10 minutes" estimate  
+- [p] **Submit Button**: Does it work  
+- [x] **Progress Indicator**: Shows 100% completion  
+- [p] **Final Review**: All information accurate  
 
 **Issues Found:**
 ```
-[List any review step issues]
+Feels like this page also ought to specify and let us modify db location and output directory location. 
+
 ```
 
 ---
@@ -115,16 +134,47 @@ This comprehensive QA checklist covers the new VideoAnnotator pipeline running f
 ## 📋 **SECTION 4: Job Management Interface**
 
 ### **4.1 Jobs List Page (`/create/jobs`)**
-- [ ] **Page Load**: `/create/jobs` loads without errors  
-- [ ] **Job Table**: Displays jobs list (when available)  
-- [ ] **Create New Job**: Button links to `/create/new`  
-- [ ] **Job Status**: Shows job states and progress  
-- [ ] **Real-time Updates**: SSE updates job statuses live  
-- [ ] **Job Navigation**: Can click jobs to view details  
+- [p] **Page Load**: `/create/jobs` loads without errors  
+- [x] **Job Table**: Displays jobs list (when available)  
+- [x] **Create New Job**: Button links to `/create/new`  
+- [f] **Job Status**: Shows job states and progress  
+- [f] **Real-time Updates**: SSE updates job statuses live  
+- [f] **Job Navigation**: Can click jobs to view details  
 
 **Issues Found:**
 ```
-[List any jobs list issues]
++ hook.js:608 
+ ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. Error Component Stack
+    at SSEProvider (SSEContext.tsx:21:3)
+overrideMethod	@	hook.js:608
++ :8000/api/v1/events/stream?token=dev-token:1   Failed to load resource: the server responded with a status of 404 (Not Found)
++ hook.js:608 
+ The above error occurred in the <CreateJobDetail> component:
+
+    at CreateJobDetail (http://localhost:8080/src/pages/CreateJobDetail.tsx:33:23)
+    at RenderedRoute (http://localhost:8080/node_modules/.vite/deps/react-router-dom.js?v=dbc932f2:4088:5)
+    at Outlet (http://localhost:8080/node_modules/.vite/deps/react-router-dom.js?v=dbc932f2:4494:26)
+    at div
+    at _c (http://localhost:8080/src/components/ui/card.tsx:23:53)
+    at div
+    at div
+    at CreateLayout (http://localhost:8080/src/pages/Create.tsx:29:22)
+    at RenderedRoute (http://localhost:8080/node_modules/.vite/deps/react-router-dom.js?v=dbc932f2:4088:5)
+    at Routes (http://localhost:8080/node_modules/.vite/deps/react-router-dom.js?v=dbc932f2:4558:5)
+    at Router (http://localhost:8080/node_modules/.vite/deps/react-router-dom.js?v=dbc932f2:4501:15)
+    at BrowserRouter (http://localhost:8080/node_modules/.vite/deps/react-router-dom.js?v=dbc932f2:5247:5)
+    at Provider (http://localhost:8080/node_modules/.vite/deps/chunk-RS7FYEF2.js?v=dbc932f2:48:15)
+    at TooltipProvider (http://localhost:8080/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=dbc932f2:62:5)
+    at SSEProvider (http://localhost:8080/src/contexts/SSEContext.tsx:25:31)
+    at QueryClientProvider (http://localhost:8080/node_modules/.vite/deps/@tanstack_react-query.js?v=dbc932f2:2934:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+react-dom.development.js:12056 
+ Uncaught ReferenceError: Cannot access 'job' before initialization
+    at CreateJobDetail (CreateJobDetail.tsx:22:22)
+
 ```
 
 ### **4.2 Job Detail Page (`/create/jobs/:id`)**

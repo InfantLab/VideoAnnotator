@@ -17,9 +17,9 @@ Based on QA Checklist testing (✅ 2025-08-06), v0.2.0 successfully delivered:
 
 ---
 
-## 📋 **ISSUES FROM v0.2.0 QA TESTING** 
+## 📋 **QA TESTING RESULTS - AUGUST 2025**
 
-### **VERIFIED WORKING (✅ Passed in QA Checklist v0.2.0)**
+### **✅ VERIFIED WORKING (Passed in QA Testing)**
 - **All Core Video Loading**: Demo datasets load correctly ✅ 2025-08-06
 - **Person Tracking Overlays**: YOLO skeleton rendering fully functional ✅ 2025-08-06 
 - **COCO Keypoints**: All 17 keypoints render with proper connections ✅ 2025-08-06
@@ -31,60 +31,82 @@ Based on QA Checklist testing (✅ 2025-08-06), v0.2.0 successfully delivered:
 - **Browser Compatibility**: Firefox and Edge fully functional ✅ 2025-08-06
 - **Debug Utils**: `window.debugUtils` available and datasets accessible ✅ 2025-08-06
 
-### **IDENTIFIED ISSUES (Failed [f] or Future [>] from QA Testing)**
+### **🔴 CRITICAL ISSUES (Must Fix for v0.3.0 Release)**
 
-#### **Performance Issues** 🔴 HIGH PRIORITY
-1. **Rendering Performance with Multiple People** � 
-   - **Issue**: Lag with 3+ people in frame, timing issues with VEATIC videos
-   - **QA Status**: [f] Failed - "Some timing issues with the VEATIC 3.mp4 Patch Adams video"
-   - **Impact**: Limits practical usage with complex scenes
-   - **Files**: `VideoPlayer.tsx` rendering optimization
-   - **Effort**: 8-12 hours
+#### **1. SSE Endpoint Missing - Server Side** 🔴 BLOCKING
+- **Issue**: `/api/v1/events/stream` returns 404 Not Found - real-time job monitoring completely broken
+- **QA Evidence**: `SSE Error: Error: SSE connection failed after maximum retry attempts`
+- **Impact**: Job progress tracking, live logs, completion notifications all non-functional
+- **Files**: Server-side implementation required (not client issue)
+- **Status**: ⏳ **AWAITING SERVER FIX**
 
-#### **Minor UI Issues** 🟠 MEDIUM PRIORITY  
-2. **Audio Button Behavior** 🟠
-   - **Issue**: "The speaker button on controls doesn't toggle sound on/off"
-   - **QA Status**: Noted in section 5 testing
-   - **Impact**: User confusion about audio controls
-   - **Files**: `VideoControls.tsx` or `UnifiedControls.tsx`
-   - **Effort**: 2-4 hours
+#### **2. CreateJobDetail Page Crashes** 🔴 HIGH PRIORITY
+- **Issue**: `Uncaught ReferenceError: Cannot access 'job' before initialization`
+- **QA Evidence**: Component crashes with React error boundary activation
+- **Impact**: Cannot view individual job details
+- **Files**: `CreateJobDetail.tsx:22:22`
+- **Effort**: 2-3 hours
+- **Status**: 🔧 **NEEDS CLIENT FIX**
 
-3. **Error Message Improvement** 🟠
-   - **Issue**: Malformed JSON shows generic "unknown file type" instead of helpful message
-   - **QA Status**: "almost - currently says 'unknown file type'"
-   - **Impact**: Poor user feedback for errors
-   - **Files**: File parsing and error handling
-   - **Effort**: 2-3 hours
+### **🟠 HIGH PRIORITY ISSUES (Should Fix for Release)**
 
-#### **Browser Compatibility Gaps** 🟡 LOW PRIORITY
-4. **Chrome and Safari Testing** 🟡
-   - **Issue**: Chrome and Safari not fully tested yet
-   - **QA Status**: [ ] Unchecked boxes for Chrome and Safari
-   - **Impact**: Unknown compatibility issues
-   - **Effort**: 4-6 hours testing
+#### **3. UI Accessibility & Color Issues** 🟠 HIGH PRIORITY
+- **Issue**: "Dark gray text on black background - hard to read" + "White text on white background in JSON editor"
+- **QA Evidence**: Configuration step unusable, poor readability throughout UI
+- **Impact**: Users cannot effectively use configuration and pipeline selection
+- **Files**: CSS/Tailwind classes across wizard components
+- **Effort**: 4-6 hours
+- **Status**: 🔧 **NEEDS CLIENT FIX**
 
-#### **Enhancement Opportunities** 🟡 FUTURE VERSIONS
-5. **Combined Speech/Speaker Display** 🟡 LOW
-   - **Issue**: "Speaker ID and Subtitles not yet combined"
-   - **QA Status**: Noted as current behavior difference
-   - **Impact**: User experience improvement opportunity
-   - **Files**: `VideoPlayer.tsx` overlay rendering
-   - **Effort**: 4-6 hours
+#### **4. Pipeline Selection Enhancement** 🟠 HIGH PRIORITY
+- **Issue**: "Very basic" pipeline selection, missing detailed information, incomplete face/audio options
+- **QA Evidence**: "Face pipeline doesn't list all options. Audio pipeline doesn't separate pyannote, whisper and LAION"
+- **Impact**: Users can't make informed pipeline choices
+- **Files**: `PipelineSelectionStep` component + requires enhanced server API
+- **Effort**: 8-12 hours (client) + server-side work
+- **Status**: 🔧 **NEEDS CLIENT + SERVER FIX**
 
-6. **Persistent State Missing** 🟡 LOW
-   - **Issue**: "Refreshing page should reload the viewer with the last loaded video"
-   - **QA Status**: [>] Marked for next minor version
-   - **Impact**: User workflow interruption
-   - **Files**: `VideoAnnotationViewer.tsx`, localStorage implementation
-   - **Effort**: 6-8 hours
+### **🟡 MEDIUM PRIORITY ISSUES (Could Fix)**
 
-### **DEFERRED TO FUTURE (Marked [>] or [>>] in QA)**
-- **Motion Track Implementation**: Per-person motion tracking lanes [>]
-- **Large File Performance**: >10MB annotation files [>] 
-- **Memory Leak Prevention**: Extended use monitoring [>]
-- **Back to Landing Page**: Navigation option [>]
-- **Online Documentation**: Viewer and VideoAnnotator docs [>]
-- **Legacy Format Removal**: Clean up obsolete version support [>]
+#### **5. Branding & Visual Consistency** 🟡 MEDIUM
+- **Issue**: "All pages should show our icon next to name" + "match colour scheme to complement icon"
+- **QA Evidence**: Inconsistent branding across pages, missing footer on wizard pages
+- **Impact**: Unprofessional appearance, poor brand consistency
+- **Files**: Layout components, favicon, CSS theme
+- **Effort**: 3-4 hours
+- **Status**: 🎨 **POLISH IMPROVEMENT**
+
+#### **6. Configuration User Experience** 🟡 MEDIUM
+- **Issue**: "Page is no use to a naive user" - JSON configuration too technical
+- **QA Evidence**: Users need simple UI controls rather than raw JSON editing
+- **Impact**: Poor user experience for non-technical users
+- **Files**: `ConfigurationStep` component
+- **Effort**: 8-10 hours for UI-based config editor
+- **Status**: 🎯 **UX ENHANCEMENT**
+
+### **🟢 LOW PRIORITY / FUTURE VERSIONS**
+
+#### **7. Enhanced Features for v0.4.0**
+- **Select Folder Option**: Bulk video selection from directory
+- **Output Location Control**: UI for database and output directory configuration  
+- **Persistent User Preferences**: Remember pipeline and config choices
+- **Advanced Pipeline Controls**: Granular parameter adjustment UI
+- **Chrome/Safari Testing**: Complete cross-browser compatibility verification
+
+---
+
+## 🚀 **UPDATED v0.3.0 IMPLEMENTATION PLAN**
+
+### **IMMEDIATE FIXES (This Sprint)**
+
+#### **Client-Side Fixes (Can implement now)**
+1. **Fix CreateJobDetail crash** - Variable initialization issue
+2. **UI Color/Accessibility fixes** - Dark text readability, white-on-white JSON editor
+3. **Add branding consistency** - Icon, footer, color scheme alignment
+
+#### **Awaiting Server-Side (Blocking release)**
+1. **SSE endpoint implementation** - Critical for job monitoring
+2. **Enhanced pipeline API** - Detailed pipeline information and options
 
 ---
 

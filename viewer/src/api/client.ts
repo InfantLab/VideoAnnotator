@@ -121,15 +121,16 @@ class APIClient {
     const formData = new FormData();
     formData.append('video', video);
     
+    // API expects comma-separated string, not JSON array
     if (selectedPipelines && selectedPipelines.length > 0) {
-      formData.append('selected_pipelines', JSON.stringify(selectedPipelines));
+      formData.append('selected_pipelines', selectedPipelines.join(','));
     }
     
     if (config) {
       formData.append('config', JSON.stringify(config));
     }
 
-    return this.request('/api/v1/jobs', {
+    return this.request('/api/v1/jobs/', {
       method: 'POST',
       body: formData,
     });

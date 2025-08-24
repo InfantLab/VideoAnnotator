@@ -4,47 +4,7 @@
  */
 
 export interface paths {
-    "/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Health Check
-         * @description Basic health check.
-         */
-        get: operations["health_check_health_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/system/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Detailed Health
-         * @description Detailed system health check.
-         */
-        get: operations["detailed_health_api_v1_system_health_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/jobs": {
+    "/api/v1/jobs/": {
         parameters: {
             query?: never;
             header?: never;
@@ -53,15 +13,31 @@ export interface paths {
         };
         /**
          * List Jobs
-         * @description List jobs with pagination.
+         * @description List jobs with pagination and filtering.
+         *
+         *     Args:
+         *         page: Page number (1-based)
+         *         per_page: Items per page
+         *         status_filter: Optional status filter
+         *
+         *     Returns:
+         *         Paginated list of jobs
          */
-        get: operations["list_jobs_api_v1_jobs_get"];
+        get: operations["list_jobs_api_v1_jobs__get"];
         put?: never;
         /**
          * Submit Job
          * @description Submit a video processing job.
+         *
+         *     Args:
+         *         video: Video file to process
+         *         config: Optional JSON configuration string
+         *         selected_pipelines: Optional comma-separated pipeline names
+         *
+         *     Returns:
+         *         Job information including ID and status
          */
-        post: operations["submit_job_api_v1_jobs_post"];
+        post: operations["submit_job_api_v1_jobs__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -77,22 +53,31 @@ export interface paths {
         };
         /**
          * Get Job Status
-         * @description Get job status by ID.
+         * @description Get job status and details.
+         *
+         *     Args:
+         *         job_id: Job ID to query
+         *
+         *     Returns:
+         *         Job information including current status
          */
         get: operations["get_job_status_api_v1_jobs__job_id__get"];
         put?: never;
         post?: never;
         /**
-         * Delete Job
-         * @description Delete a job.
+         * Cancel Job
+         * @description Cancel/delete a job.
+         *
+         *     Args:
+         *         job_id: Job ID to cancel
          */
-        delete: operations["delete_job_api_v1_jobs__job_id__delete"];
+        delete: operations["cancel_job_api_v1_jobs__job_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/pipelines": {
+    "/api/v1/pipelines/": {
         parameters: {
             query?: never;
             header?: never;
@@ -101,9 +86,177 @@ export interface paths {
         };
         /**
          * List Pipelines
-         * @description List available pipelines.
+         * @description List all available pipelines.
+         *
+         *     Returns:
+         *         List of available pipelines with their configurations
          */
-        get: operations["list_pipelines_api_v1_pipelines_get"];
+        get: operations["list_pipelines_api_v1_pipelines__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pipelines/{pipeline_name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Pipeline Info
+         * @description Get detailed information about a specific pipeline.
+         *
+         *     Args:
+         *         pipeline_name: Name of the pipeline
+         *
+         *     Returns:
+         *         Detailed pipeline information
+         */
+        get: operations["get_pipeline_info_api_v1_pipelines__pipeline_name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pipelines/{pipeline_name}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Pipeline Config
+         * @description Validate a pipeline configuration.
+         *
+         *     Args:
+         *         pipeline_name: Name of the pipeline
+         *         config: Configuration to validate
+         *
+         *     Returns:
+         *         Validation result
+         */
+        post: operations["validate_pipeline_config_api_v1_pipelines__pipeline_name__validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detailed Health Check
+         * @description Detailed system health check.
+         *
+         *     Returns:
+         *         Comprehensive system health information
+         */
+        get: operations["detailed_health_check_api_v1_system_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get System Metrics
+         * @description Get system performance metrics.
+         *
+         *     Returns:
+         *         System performance and usage metrics
+         */
+        get: operations["get_system_metrics_api_v1_system_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get System Config
+         * @description Get current system configuration.
+         *
+         *     Returns:
+         *         System configuration information (non-sensitive)
+         */
+        get: operations["get_system_config_api_v1_system_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/database": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Database Info Endpoint
+         * @description Get database information and statistics.
+         *
+         *     Returns:
+         *         Database configuration and statistics
+         */
+        get: operations["get_database_info_endpoint_api_v1_system_database_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Health Check
+         * @description Basic health check endpoint.
+         */
+        get: operations["health_check_health_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -116,16 +269,23 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** Body_submit_job_api_v1_jobs_post */
-        Body_submit_job_api_v1_jobs_post: {
+        /** Body_submit_job_api_v1_jobs__post */
+        Body_submit_job_api_v1_jobs__post: {
             /**
              * Video
              * Format: binary
+             * @description Video file to process
              */
             video: string;
-            /** Config */
+            /**
+             * Config
+             * @description JSON configuration
+             */
             config?: string | null;
-            /** Selected Pipelines */
+            /**
+             * Selected Pipelines
+             * @description Comma-separated pipeline names
+             */
             selected_pipelines?: string | null;
         };
         /** HTTPValidationError */
@@ -133,7 +293,10 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
-        /** JobListResponse */
+        /**
+         * JobListResponse
+         * @description Response model for job listing.
+         */
         JobListResponse: {
             /** Jobs */
             jobs: components["schemas"]["JobResponse"][];
@@ -144,7 +307,10 @@ export interface components {
             /** Per Page */
             per_page: number;
         };
-        /** JobResponse */
+        /**
+         * JobResponse
+         * @description Response model for job information.
+         */
         JobResponse: {
             /** Id */
             id: string;
@@ -152,59 +318,44 @@ export interface components {
             status: string;
             /** Video Path */
             video_path?: string | null;
-            /** Video Filename */
-            video_filename?: string | null;
-            /** Video Size Bytes */
-            video_size_bytes?: number | null;
-            /** Video Duration Seconds */
-            video_duration_seconds?: number | null;
-            /** Selected Pipelines */
-            selected_pipelines?: string[] | null;
             /** Config */
             config?: {
                 [key: string]: unknown;
             } | null;
+            /** Selected Pipelines */
+            selected_pipelines?: string[] | null;
             /** Created At */
             created_at?: string | null;
-            /** Started At */
-            started_at?: string | null;
             /** Completed At */
             completed_at?: string | null;
-            /** Updated At */
-            updated_at?: string | null;
-            /** Result Path */
-            result_path?: string | null;
             /** Error Message */
             error_message?: string | null;
-            /** Progress Percentage */
-            progress_percentage?: number | null;
-            /** Duration Seconds */
-            duration_seconds?: number | null;
-            /** Is Complete */
-            is_complete?: boolean | null;
-            /** Metadata */
-            metadata?: {
-                [key: string]: unknown;
-            } | null;
         };
-        /** SystemHealth */
-        SystemHealth: {
-            /** Status */
-            status: string;
-            /** Api Version */
-            api_version: string;
-            /** Videoannotator Version */
-            videoannotator_version: string;
-            /** Timestamp */
-            timestamp: string;
-            /** Database */
-            database: {
+        /**
+         * PipelineInfo
+         * @description Information about an available pipeline.
+         */
+        PipelineInfo: {
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Config Schema */
+            config_schema: {
                 [key: string]: unknown;
             };
-            /** System */
-            system: {
-                [key: string]: unknown;
-            };
+        };
+        /**
+         * PipelineListResponse
+         * @description Response for pipeline listing.
+         */
+        PipelineListResponse: {
+            /** Pipelines */
+            pipelines: components["schemas"]["PipelineInfo"][];
+            /** Total */
+            total: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -224,52 +375,12 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    health_check_health_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    detailed_health_api_v1_system_health_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SystemHealth"];
-                };
-            };
-        };
-    };
-    list_jobs_api_v1_jobs_get: {
+    list_jobs_api_v1_jobs__get: {
         parameters: {
             query?: {
-                limit?: number;
-                offset?: number;
-                status?: string | null;
+                page?: number;
+                per_page?: number;
+                status_filter?: string | null;
             };
             header?: never;
             path?: never;
@@ -297,7 +408,7 @@ export interface operations {
             };
         };
     };
-    submit_job_api_v1_jobs_post: {
+    submit_job_api_v1_jobs__post: {
         parameters: {
             query?: never;
             header?: never;
@@ -306,12 +417,12 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["Body_submit_job_api_v1_jobs_post"];
+                "multipart/form-data": components["schemas"]["Body_submit_job_api_v1_jobs__post"];
             };
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -361,7 +472,7 @@ export interface operations {
             };
         };
     };
-    delete_job_api_v1_jobs__job_id__delete: {
+    cancel_job_api_v1_jobs__job_id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -371,6 +482,92 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pipelines_api_v1_pipelines__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineListResponse"];
+                };
+            };
+        };
+    };
+    get_pipeline_info_api_v1_pipelines__pipeline_name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pipeline_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_pipeline_config_api_v1_pipelines__pipeline_name__validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pipeline_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -392,7 +589,87 @@ export interface operations {
             };
         };
     };
-    list_pipelines_api_v1_pipelines_get: {
+    detailed_health_check_api_v1_system_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_system_metrics_api_v1_system_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_system_config_api_v1_system_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_database_info_endpoint_api_v1_system_database_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    health_check_health_get: {
         parameters: {
             query?: never;
             header?: never;
