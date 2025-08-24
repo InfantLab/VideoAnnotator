@@ -304,3 +304,4 @@ This project follows a systematic documentation structure in the `docs/` folder:
 - **Next Release**: v1.2.0 (major API changes and new features)
 
 This approach ensures users always have current reference documentation while development work is clearly tracked by version cycle.
+- remember windows has a charmap problem with emoji

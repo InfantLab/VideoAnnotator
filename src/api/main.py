@@ -12,18 +12,27 @@ from typing import AsyncGenerator
 
 from ..version import __version__ as videoannotator_version
 from .v1 import api_router
+from .middleware import RequestLoggingMiddleware, ErrorLoggingMiddleware
+from ..utils.logging_config import setup_videoannotator_logging, get_logger
 
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Set up enhanced logging
+setup_videoannotator_logging()
+logger = get_logger("api")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
     # Startup
-    logger.info("VideoAnnotator API server starting up...")
+    logger.info("VideoAnnotator API server starting up...", extra={"event": "startup"})
+    
+    # Log server configuration
+    logger.info("Server configuration initialized", extra={
+        "api_version": "1.2.0",
+        "videoannotator_version": videoannotator_version,
+        "logging": "enhanced",
+        "middleware": ["CORS", "RequestLogging", "ErrorLogging"]
+    })
     
     # TODO: Initialize database connections
     # TODO: Initialize pipeline cache
@@ -32,7 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
     
     # Shutdown
-    logger.info("VideoAnnotator API server shutting down...")
+    logger.info("VideoAnnotator API server shutting down...", extra={"event": "shutdown"})
     
     # TODO: Cleanup database connections
     # TODO: Cleanup pipeline resources
@@ -52,7 +61,17 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
     
-    # Add CORS middleware
+    # Add middleware in correct order (last added = first executed)
+    
+    # Error logging middleware (innermost)
+    app.add_middleware(ErrorLoggingMiddleware)
+    
+    # Request logging middleware
+    app.add_middleware(RequestLoggingMiddleware, exclude_paths={
+        "/health", "/docs", "/redoc", "/openapi.json", "/favicon.ico"
+    })
+    
+    # CORS middleware (outermost)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],  # Configure appropriately for production
@@ -68,11 +87,13 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health_check():
         """Basic health check endpoint."""
+        logger.debug("Health check requested")
         return {
             "status": "healthy",
             "api_version": "1.2.0",
             "videoannotator_version": videoannotator_version,
-            "message": "VideoAnnotator API is running"
+            "message": "VideoAnnotator API is running",
+            "logging": "enhanced"
         }
     
     return app

@@ -23,14 +23,11 @@ import uvicorn
 
 # Import the main API application
 from src.api.main import create_app
+from src.utils.logging_config import setup_videoannotator_logging, get_logger
 
-def setup_logging(level: str = "INFO"):
-    """Set up logging configuration."""
-    logging.basicConfig(
-        level=getattr(logging, level.upper()),
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.StreamHandler(sys.stdout)]
-    )
+def setup_logging(level: str = "INFO", logs_dir: str = "logs"):
+    """Set up enhanced logging configuration."""
+    setup_videoannotator_logging(logs_dir=logs_dir, log_level=level)
 
 def main():
     """Main entry point for the API server."""
@@ -40,12 +37,13 @@ def main():
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload for development")
     parser.add_argument("--workers", type=int, default=1, help="Number of worker processes")
     parser.add_argument("--log-level", default="info", choices=["debug", "info", "warning", "error"], help="Log level")
+    parser.add_argument("--logs-dir", default="logs", help="Directory for log files (default: logs)")
     
     args = parser.parse_args()
     
-    # Set up logging
-    setup_logging(args.log_level)
-    logger = logging.getLogger(__name__)
+    # Set up enhanced logging
+    setup_logging(args.log_level, args.logs_dir)
+    logger = get_logger("api")
     
     # Create the FastAPI app
     app = create_app()

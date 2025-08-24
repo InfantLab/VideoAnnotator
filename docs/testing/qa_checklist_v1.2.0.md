@@ -8,7 +8,15 @@
 - **Development Focus**: API Modernization & Production Readiness
 - **Current Status**: Core API implementation complete, testing in progress
 
-## 🎯 Implementation Status (January 2025)
+### Testing checkbox format
+- [ ] unchecked boxes for tests that need doing
+- [x] ticked boxes for passed tests ✅ 2025-08-06
+- [f] f is for fail
+      with explanatory comments below
+- [>] > for next minor version
+- [>>] >> for next major version
+
+## 🎯 Implementation Status (August 2025)
 
 ### ✅ Completed & Verified
 - **REST API Foundation**: FastAPI server with database integration
@@ -86,6 +94,13 @@ we also have LAION audio. needs to be in list.
 - [ ] **Progress Tracking** - Real-time job progress updates
 - [ ] **Timeout Handling** - Long-running jobs handled appropriately
 
+#### issues
++ CRITICAL - Current api_server is not creating any files in our logs directory. 
+
++ Detailed health check saya CUDA not available. it ought to be so this needs investigating
+{"status":"healthy","timestamp":"2025-08-24T09:49:15.277617","api_version":"1.2.0","videoannotator_version":"1.2.0","system":{"platform":"Windows-11-10.0.26200-SP0","python_version":"3.12.9","cpu_count":24,"cpu_percent":18.9,"memory":{"total":33413771264,"available":6448492544,"percent":80.7,"used":26965278720,"free":6448492544},"disk":{"total":1022545096704,"used":367774208000,"free":654770888704,"percent":35.96655142012391}},"gpu":{"available":false,"reason":"CUDA not available"},"services":{"database":{"status":"healthy","message":"Database healthy - 0 jobs in sqlite backend"},"job_queue":"not_implemented","pipelines":"ready"}}
+
+
 ---
 
 ### 🖥️ New CLI Interface
@@ -112,10 +127,14 @@ we also have LAION audio. needs to be in list.
 
 #### Data Persistence
 - [x] **User Management** - User creation, authentication, role assignment ✅ *Implemented*
-- [x] **Job Metadata** - Job history stored and queryable ✅ *Implemented*
+- [p] **Job Metadata** - Job history stored and queryable ✅ *Implemented*
 - [x] **Annotation Storage** - Results stored in structured format ✅ *Framework ready*
 - [x] **File Management** - Video uploads tracked and managed ✅ *Basic implementation*
 - [x] **Database Migrations** - Schema upgrades work smoothly ✅ *Tested*
+
+Not clear if job metadata has detailed timing by pipelines? We ought to think of best way to 
+handle this.. And put on the Roadmap for future development a mechanism to give processing
+time estimates based on past performance.
 
 #### Data Integrity
 - [ ] **Foreign Key Constraints** - Referential integrity maintained
@@ -159,6 +178,8 @@ we also have LAION audio. needs to be in list.
 - [ ] **Concurrent Users** - API handles multiple concurrent users
 - [ ] **Load Testing** - System stable under simulated load
 
+
+
 ---
 
 ### 🔄 Integration Testing
@@ -178,6 +199,9 @@ we also have LAION audio. needs to be in list.
 - [ ] **OpenAPI Spec** - Swagger documentation accurate and complete
 
 ---
+
+
+
 
 ### 🧪 Testing Infrastructure
 
