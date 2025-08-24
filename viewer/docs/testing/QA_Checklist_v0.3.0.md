@@ -9,6 +9,13 @@ This comprehensive QA checklist covers the new VideoAnnotator pipeline running f
 **Browser:** ___________  
 **OS:** ___________
 
+### Testing checkbox format
+- [ ] unchecked boxes for tests that need doing
+- [x] ticked boxes for passed tests ✅ 2025-08-06
+- [f] f is for fail
+      with explanatory comments below
+- [>] > for next minor version
+- [>>] >> for next major version
 ---
 
 ## 📋 **SECTION 1: VideoAnnotator API Integration**

@@ -1,0 +1,120 @@
+{
+  "test_run": {
+    "timestamp": "2025-08-24T16:14:03.956843",
+    "base_url": "http://localhost:8000",
+    "total_tests": 18,
+    "passed": 18,
+    "failed": 0,
+    "pass_rate": 100.0
+  },
+  "results": [
+    {
+      "test": "Basic Health Check",
+      "passed": true,
+      "details": "Status: 200, Server status: healthy",
+      "timestamp": "2025-08-24T16:14:00.666018"
+    },
+    {
+      "test": "Detailed Health Check",
+      "passed": true,
+      "details": "Status: 200, DB status: healthy",
+      "timestamp": "2025-08-24T16:14:03.896214"
+    },
+    {
+      "test": "Authentication Test",
+      "passed": true,
+      "details": "Status: 200, Jobs accessible: 5 jobs",
+      "timestamp": "2025-08-24T16:14:03.914604"
+    },
+    {
+      "test": "Token Debug Info",
+      "passed": true,
+      "details": "Token valid: True, Permissions: 5",
+      "timestamp": "2025-08-24T16:14:03.915910"
+    },
+    {
+      "test": "Pipeline List",
+      "passed": true,
+      "details": "Status: 200, Available: 4 pipelines (scene_detection, person_tracking, face_analysis)",
+      "timestamp": "2025-08-24T16:14:03.917906"
+    },
+    {
+      "test": "Pipeline Debug Info",
+      "passed": true,
+      "details": "Debug info available for 4 pipelines",
+      "timestamp": "2025-08-24T16:14:03.918906"
+    },
+    {
+      "test": "Job List",
+      "passed": true,
+      "details": "Status: 200, Total jobs: 5",
+      "timestamp": "2025-08-24T16:14:03.925475"
+    },
+    {
+      "test": "Job Submission",
+      "passed": true,
+      "details": "Status: 201, Job ID: 5d33a053-5b81-467e-a721-fd58bac813c6",
+      "timestamp": "2025-08-24T16:14:03.933931"
+    },
+    {
+      "test": "Job Status Retrieval",
+      "passed": true,
+      "details": "Status: 200, Job status: pending",
+      "timestamp": "2025-08-24T16:14:03.942309"
+    },
+    {
+      "test": "SSE Endpoint Endpoint",
+      "passed": true,
+      "details": "Status: 404 (Missing as expected)",
+      "timestamp": "2025-08-24T16:14:03.944305"
+    },
+    {
+      "test": "Job Results Download Endpoint",
+      "passed": true,
+      "details": "Status: 404 (Missing as expected)",
+      "timestamp": "2025-08-24T16:14:03.945418"
+    },
+    {
+      "test": "Job Artifacts Endpoint",
+      "passed": true,
+      "details": "Status: 404 (Missing as expected)",
+      "timestamp": "2025-08-24T16:14:03.946419"
+    },
+    {
+      "test": "Video Upload Endpoint",
+      "passed": true,
+      "details": "Status: 404 (Missing as expected)",
+      "timestamp": "2025-08-24T16:14:03.947178"
+    },
+    {
+      "test": "Server Info Debug",
+      "passed": true,
+      "details": "Debug endpoint working",
+      "timestamp": "2025-08-24T16:14:03.951386"
+    },
+    {
+      "test": "Token Info Debug",
+      "passed": true,
+      "details": "Debug endpoint working",
+      "timestamp": "2025-08-24T16:14:03.952844"
+    },
+    {
+      "test": "Pipeline Debug Debug",
+      "passed": true,
+      "details": "Debug endpoint working",
+      "timestamp": "2025-08-24T16:14:03.953848"
+    },
+    {
+      "test": "Request Log Debug",
+      "passed": true,
+      "details": "Debug endpoint working",
+      "timestamp": "2025-08-24T16:14:03.954843"
+    },
+    {
+      "test": "SSE Connection",
+      "passed": true,
+      "details": "SSE endpoint not implemented yet (expected)",
+      "timestamp": "2025-08-24T16:14:03.955847"
+    }
+  ]
+}

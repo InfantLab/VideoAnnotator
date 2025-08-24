@@ -11,6 +11,7 @@ import CreateJobs from "./pages/CreateJobs";
 import CreateJobDetail from "./pages/CreateJobDetail";
 import CreateNewJob from "./pages/CreateNewJob";
 import CreateDatasets from "./pages/CreateDatasets";
+import CreateSettings from "./pages/CreateSettings";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
               <Route path="jobs/:jobId" element={<CreateJobDetail />} />
               <Route path="new" element={<CreateNewJob />} />
               <Route path="datasets" element={<CreateDatasets />} />
+              <Route path="settings" element={<CreateSettings />} />
               <Route index element={<CreateJobs />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

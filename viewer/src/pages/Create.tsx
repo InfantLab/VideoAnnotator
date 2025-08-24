@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import { Plus, Database, List, Settings, ArrowLeft } from "lucide-react";
 import { Footer } from "@/components/Footer";
+import { TokenStatusIndicator } from "@/components/TokenStatusIndicator";
 
 const CreateLayout = () => {
   const location = useLocation();
@@ -12,6 +13,7 @@ const CreateLayout = () => {
     { path: "/create/jobs", label: "Jobs", icon: List },
     { path: "/create/new", label: "New Job", icon: Plus },
     { path: "/create/datasets", label: "Datasets", icon: Database },
+    { path: "/create/settings", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -41,19 +43,22 @@ const CreateLayout = () => {
 
         {/* Navigation */}
         <div className="mb-6">
-          <nav className="flex space-x-2">
-            {navigationItems.map(({ path, label, icon: Icon }) => (
-              <Link key={path} to={path}>
-                <Button
-                  variant={location.pathname === path ? "default" : "outline"}
-                  className="flex items-center gap-2"
-                >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </Button>
-              </Link>
-            ))}
-          </nav>
+          <div className="flex items-center justify-between">
+            <nav className="flex space-x-2">
+              {navigationItems.map(({ path, label, icon: Icon }) => (
+                <Link key={path} to={path}>
+                  <Button
+                    variant={location.pathname === path ? "default" : "outline"}
+                    className="flex items-center gap-2"
+                  >
+                    <Icon className="h-4 w-4" />
+                    {label}
+                  </Button>
+                </Link>
+              ))}
+            </nav>
+            <TokenStatusIndicator showDetails={true} />
+          </div>
         </div>
 
           {/* Content */}

@@ -1,8 +1,17 @@
 import type { paths } from './schema';
 
-// API configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'dev-token';
+// API configuration with localStorage fallback
+const getApiBaseUrl = () => {
+  return localStorage.getItem('videoannotator_api_url') || 
+         import.meta.env.VITE_API_BASE_URL || 
+         'http://localhost:8000';
+};
+
+const getApiToken = () => {
+  return localStorage.getItem('videoannotator_api_token') || 
+         import.meta.env.VITE_API_TOKEN || 
+         'dev-token';
+};
 
 // Type definitions from OpenAPI schema
 export type JobResponse = paths['/api/v1/jobs']['get']['responses']['200']['content']['application/json']['jobs'][0];
@@ -24,12 +33,26 @@ export class APIError extends Error {
 
 // HTTP client with authentication and error handling
 class APIClient {
-  private baseURL: string;
-  private token: string;
+  public baseURL: string;
+  public token: string;
 
-  constructor(baseURL: string = API_BASE_URL, token: string = API_TOKEN) {
-    this.baseURL = baseURL.replace(/\/$/, ''); // Remove trailing slash
-    this.token = token;
+  constructor(baseURL?: string, token?: string) {
+    this.baseURL = (baseURL || getApiBaseUrl()).replace(/\/$/, ''); // Remove trailing slash
+    this.token = token || getApiToken();
+  }
+
+  // Update configuration dynamically
+  updateConfig(baseURL?: string, token?: string) {
+    if (baseURL) this.baseURL = baseURL.replace(/\/$/, '');
+    if (token) this.token = token;
+  }
+
+  // Get current configuration
+  getConfig() {
+    return {
+      baseURL: this.baseURL,
+      token: this.token
+    };
   }
 
   private async request<T>(
@@ -39,7 +62,7 @@ class APIClient {
     const url = `${this.baseURL}${endpoint}`;
     
     const defaultHeaders: Record<string, string> = {
-      'X-API-Key': this.token,
+      'Authorization': `Bearer ${this.token}`,
     };
 
     // Only add Content-Type for non-FormData requests
@@ -157,6 +180,57 @@ class APIClient {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  // Validate token and get user info
+  async validateToken(): Promise<{
+    isValid: boolean;
+    user?: string;
+    permissions?: string[];
+    expiresAt?: string;
+    error?: string;
+  }> {
+    try {
+      // Try health check first
+      await this.healthCheck();
+      
+      // Try to get detailed token info if available
+      try {
+        const response = await fetch(`${this.baseURL}/api/v1/debug/token-info`, {
+          headers: { 'Authorization': `Bearer ${this.token}` }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          return {
+            isValid: true,
+            user: data.token?.user_id,
+            permissions: data.token?.permissions,
+            expiresAt: data.token?.expires_at
+          };
+        }
+      } catch {
+        // Debug endpoint might not exist
+      }
+      
+      // Fallback: try an authenticated endpoint
+      const response = await fetch(`${this.baseURL}/api/v1/jobs?per_page=1`, {
+        headers: { 'Authorization': `Bearer ${this.token}` }
+      });
+      
+      if (response.ok || response.status === 404) {
+        return { isValid: true };
+      } else if (response.status === 401) {
+        return { isValid: false, error: 'Invalid or expired token' };
+      } else {
+        return { isValid: false, error: `Unexpected response: ${response.status}` };
+      }
+    } catch (error) {
+      return {
+        isValid: false,
+        error: error instanceof Error ? error.message : 'Network error'
+      };
     }
   }
 }

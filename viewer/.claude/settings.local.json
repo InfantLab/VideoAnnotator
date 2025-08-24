@@ -21,7 +21,8 @@
       "Bash(npm run dev:*)",
       "WebFetch(domain:localhost)",
       "Bash(pkill:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(gh pr:*)"
     ],
     "deny": []
   }
