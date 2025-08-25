@@ -106,6 +106,8 @@ dependencies = [
     "praatio>=6.2.0",
     "pyjwt>=2.10.1",
     "cryptography>=45.0.6",
+    "openface-test>=0.1.13",
+    "scikit-image>=0.25.2",
 ]
 
 [project.optional-dependencies]

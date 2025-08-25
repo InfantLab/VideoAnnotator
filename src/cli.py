@@ -59,28 +59,325 @@ def process(
     typer.echo("[INFO] See API docs at http://localhost:8000/docs")
 
 
-@app.command()  
-def job():
-    """Manage remote processing jobs."""
-    typer.echo("[WARNING] Job management CLI not yet implemented")
-    typer.echo("[INFO] Use the API directly at http://localhost:8000/docs")
-    typer.echo("[INFO] Coming in next development iteration")
+@app.command()
+def worker(
+    poll_interval: int = typer.Option(5, help="Seconds between database polls"),
+    max_concurrent: int = typer.Option(2, help="Maximum concurrent jobs"),
+):
+    """Start the background job processing worker."""
+    import asyncio
+    from .worker import run_job_processor
+    from .utils.logging_config import setup_videoannotator_logging
+    
+    # Setup logging
+    setup_videoannotator_logging()
+    
+    typer.echo("[START] Starting VideoAnnotator background job processor")
+    typer.echo(f"[CONFIG] Poll interval: {poll_interval}s, Max concurrent: {max_concurrent}")
+    typer.echo("[INFO] Press Ctrl+C to stop gracefully")
+    
+    try:
+        asyncio.run(run_job_processor(
+            poll_interval=poll_interval,
+            max_concurrent_jobs=max_concurrent
+        ))
+    except KeyboardInterrupt:
+        typer.echo("\n[STOP] Worker stopped by user")
+    except Exception as e:
+        typer.echo(f"[ERROR] Worker failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+# Create a sub-app for job management
+job_app = typer.Typer(name="job", help="Manage remote processing jobs")
+app.add_typer(job_app, name="job")
+
+
+@job_app.command("submit")
+def submit_job(
+    video: Path = typer.Argument(..., help="Path to video file to process"),
+    pipelines: Optional[str] = typer.Option(None, help="Comma-separated list of pipelines to run"),
+    config: Optional[Path] = typer.Option(None, help="Path to configuration file"),
+    server: str = typer.Option("http://localhost:8000", help="API server URL"),
+):
+    """Submit a video processing job to the API server."""
+    import requests
+    import json
+    
+    typer.echo(f"[SUBMIT] Submitting job for video: {video}")
+    
+    if not video.exists():
+        typer.echo(f"[ERROR] Video file not found: {video}", err=True)
+        raise typer.Exit(code=1)
+    
+    try:
+        # Prepare files and data
+        files = {"video": (video.name, open(video, "rb"), "video/mp4")}
+        data = {}
+        
+        if pipelines:
+            data["selected_pipelines"] = pipelines
+        
+        if config and config.exists():
+            with open(config) as f:
+                config_data = json.load(f)
+                data["config"] = json.dumps(config_data)
+        
+        # Submit job
+        response = requests.post(f"{server}/api/v1/jobs/", files=files, data=data, timeout=30)
+        
+        if response.status_code == 201:
+            job_data = response.json()
+            typer.echo(f"[OK] Job submitted successfully!")
+            typer.echo(f"Job ID: {job_data['id']}")
+            typer.echo(f"Status: {job_data['status']}")
+            typer.echo(f"[INFO] Track progress with: videoannotator job status {job_data['id']}")
+        else:
+            typer.echo(f"[ERROR] Job submission failed: {response.status_code}")
+            typer.echo(f"Response: {response.text}")
+            raise typer.Exit(code=1)
+            
+    except requests.RequestException as e:
+        typer.echo(f"[ERROR] Failed to connect to API server: {e}", err=True)
+        typer.echo(f"[INFO] Make sure server is running: videoannotator server")
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.echo(f"[ERROR] Job submission failed: {e}", err=True)
+        raise typer.Exit(code=1)
+    finally:
+        # Close file handles
+        for file_tuple in files.values():
+            if hasattr(file_tuple[1], 'close'):
+                file_tuple[1].close()
+
+
+@job_app.command("status")
+def job_status(
+    job_id: str = typer.Argument(..., help="Job ID to check status for"),
+    server: str = typer.Option("http://localhost:8000", help="API server URL"),
+):
+    """Check the status of a processing job."""
+    import requests
+    
+    typer.echo(f"[STATUS] Checking status for job: {job_id}")
+    
+    try:
+        response = requests.get(f"{server}/api/v1/jobs/{job_id}", timeout=10)
+        
+        if response.status_code == 200:
+            job_data = response.json()
+            typer.echo(f"[OK] Job Status: {job_data['status']}")
+            typer.echo(f"Created: {job_data.get('created_at', 'Unknown')}")
+            if job_data.get('completed_at'):
+                typer.echo(f"Completed: {job_data['completed_at']}")
+            if job_data.get('error_message'):
+                typer.echo(f"Error: {job_data['error_message']}")
+            if job_data.get('selected_pipelines'):
+                typer.echo(f"Pipelines: {', '.join(job_data['selected_pipelines'])}")
+        elif response.status_code == 404:
+            typer.echo(f"[ERROR] Job {job_id} not found", err=True)
+            raise typer.Exit(code=1)
+        else:
+            typer.echo(f"[ERROR] Failed to get job status: {response.status_code}")
+            typer.echo(f"Response: {response.text}")
+            raise typer.Exit(code=1)
+            
+    except requests.RequestException as e:
+        typer.echo(f"[ERROR] Failed to connect to API server: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+@job_app.command("results")
+def job_results(
+    job_id: str = typer.Argument(..., help="Job ID to get results for"),
+    server: str = typer.Option("http://localhost:8000", help="API server URL"),
+    download: Optional[str] = typer.Option(None, help="Pipeline name to download results for"),
+):
+    """Get detailed results for a completed job."""
+    import requests
+    
+    typer.echo(f"[RESULTS] Getting results for job: {job_id}")
+    
+    try:
+        response = requests.get(f"{server}/api/v1/jobs/{job_id}/results", timeout=10)
+        
+        if response.status_code == 200:
+            results = response.json()
+            typer.echo(f"[OK] Job Status: {results['status']}")
+            typer.echo(f"Output Directory: {results.get('output_dir', 'N/A')}")
+            typer.echo("")
+            typer.echo("Pipeline Results:")
+            
+            for pipeline_name, result in results['pipeline_results'].items():
+                typer.echo(f"  {pipeline_name}:")
+                typer.echo(f"    Status: {result['status']}")
+                if result.get('processing_time'):
+                    typer.echo(f"    Processing Time: {result['processing_time']:.2f}s")
+                if result.get('annotation_count'):
+                    typer.echo(f"    Annotations: {result['annotation_count']}")
+                if result.get('output_file'):
+                    typer.echo(f"    Output File: {result['output_file']}")
+                if result.get('error_message'):
+                    typer.echo(f"    Error: {result['error_message']}")
+                typer.echo("")
+        elif response.status_code == 404:
+            typer.echo(f"[ERROR] Job {job_id} not found", err=True)
+            raise typer.Exit(code=1)
+        else:
+            typer.echo(f"[ERROR] Failed to get job results: {response.status_code}")
+            raise typer.Exit(code=1)
+            
+    except requests.RequestException as e:
+        typer.echo(f"[ERROR] Failed to connect to API server: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+@job_app.command("list") 
+def list_jobs(
+    server: str = typer.Option("http://localhost:8000", help="API server URL"),
+    status_filter: Optional[str] = typer.Option(None, help="Filter by status (pending, running, completed, failed)"),
+    page: int = typer.Option(1, help="Page number"),
+    per_page: int = typer.Option(10, help="Jobs per page"),
+):
+    """List processing jobs."""
+    import requests
+    
+    typer.echo("[LIST] Getting job list...")
+    
+    try:
+        params = {"page": page, "per_page": per_page}
+        if status_filter:
+            params["status_filter"] = status_filter
+            
+        response = requests.get(f"{server}/api/v1/jobs/", params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            jobs = data["jobs"]
+            total = data["total"]
+            
+            typer.echo(f"[OK] Found {total} total jobs (showing page {page})")
+            typer.echo("")
+            
+            if not jobs:
+                typer.echo("No jobs found.")
+                return
+                
+            for job in jobs:
+                typer.echo(f"Job ID: {job['id']}")
+                typer.echo(f"  Status: {job['status']}")
+                typer.echo(f"  Created: {job.get('created_at', 'Unknown')}")
+                if job.get('video_path'):
+                    typer.echo(f"  Video: {Path(job['video_path']).name}")
+                if job.get('selected_pipelines'):
+                    typer.echo(f"  Pipelines: {', '.join(job['selected_pipelines'])}")
+                typer.echo("")
+        else:
+            typer.echo(f"[ERROR] Failed to list jobs: {response.status_code}")
+            raise typer.Exit(code=1)
+            
+    except requests.RequestException as e:
+        typer.echo(f"[ERROR] Failed to connect to API server: {e}", err=True)
+        raise typer.Exit(code=1)
 
 
 @app.command()
-def pipelines():
+def pipelines(
+    server: str = typer.Option("http://localhost:8000", help="API server URL"),
+    detailed: bool = typer.Option(False, help="Show detailed pipeline information"),
+):
     """List available processing pipelines."""
-    typer.echo("[WARNING] Pipeline listing CLI not yet implemented")
-    typer.echo("[INFO] Use GET /api/v1/pipelines endpoint")
-    typer.echo("[INFO] See API docs at http://localhost:8000/docs")
+    import requests
+    
+    typer.echo("[PIPELINES] Getting available pipelines...")
+    
+    try:
+        response = requests.get(f"{server}/api/v1/pipelines", timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            pipelines = data.get("pipelines", [])
+            
+            typer.echo(f"[OK] Found {len(pipelines)} available pipelines:")
+            typer.echo("")
+            
+            for pipeline in pipelines:
+                typer.echo(f"• {pipeline['name']}")
+                if detailed:
+                    typer.echo(f"  Description: {pipeline.get('description', 'No description')}")
+                    typer.echo(f"  Category: {pipeline.get('category', 'Unknown')}")
+                    if pipeline.get('config_schema'):
+                        typer.echo(f"  Configurable: Yes")
+                    typer.echo("")
+        else:
+            typer.echo(f"[ERROR] Failed to get pipelines: {response.status_code}")
+            raise typer.Exit(code=1)
+            
+    except requests.RequestException as e:
+        typer.echo(f"[ERROR] Failed to connect to API server: {e}", err=True)
+        typer.echo(f"[INFO] Make sure server is running: videoannotator server")
+        raise typer.Exit(code=1)
 
 
 @app.command()
-def config():
+def config(
+    validate: Optional[Path] = typer.Option(None, help="Path to configuration file to validate"),
+    server: str = typer.Option("http://localhost:8000", help="API server URL"),
+    show_default: bool = typer.Option(False, help="Show default configuration"),
+):
     """Validate and manage configuration."""
-    typer.echo("[WARNING] Config management CLI not yet implemented")  
-    typer.echo("[INFO] Use GET /api/v1/system/config endpoint")
-    typer.echo("[INFO] Coming in next development iteration")
+    import requests
+    import json
+    import yaml
+    
+    if show_default:
+        typer.echo("[CONFIG] Getting default configuration...")
+        try:
+            response = requests.get(f"{server}/api/v1/system/config", timeout=10)
+            if response.status_code == 200:
+                config_data = response.json()
+                typer.echo("[OK] Default configuration:")
+                typer.echo(json.dumps(config_data, indent=2))
+            else:
+                typer.echo(f"[ERROR] Failed to get default config: {response.status_code}")
+        except requests.RequestException as e:
+            typer.echo(f"[ERROR] Failed to connect to API server: {e}", err=True)
+        return
+    
+    if validate:
+        typer.echo(f"[VALIDATE] Validating configuration file: {validate}")
+        
+        if not validate.exists():
+            typer.echo(f"[ERROR] Configuration file not found: {validate}", err=True)
+            raise typer.Exit(code=1)
+        
+        try:
+            # Load and parse the configuration file
+            with open(validate) as f:
+                if validate.suffix.lower() in ['.yaml', '.yml']:
+                    config_data = yaml.safe_load(f)
+                else:
+                    config_data = json.load(f)
+            
+            typer.echo("[OK] Configuration file is valid JSON/YAML")
+            
+            # TODO: Add schema validation against pipeline requirements
+            typer.echo("[INFO] Schema validation not yet implemented")
+            typer.echo("[INFO] Basic syntax validation passed")
+            
+        except (json.JSONDecodeError, yaml.YAMLError) as e:
+            typer.echo(f"[ERROR] Invalid configuration file: {e}", err=True)
+            raise typer.Exit(code=1)
+        except Exception as e:
+            typer.echo(f"[ERROR] Failed to validate config: {e}", err=True)
+            raise typer.Exit(code=1)
+    else:
+        typer.echo("[CONFIG] Configuration management")
+        typer.echo("")
+        typer.echo("Usage:")
+        typer.echo("  videoannotator config --validate path/to/config.yaml")
+        typer.echo("  videoannotator config --show-default")
+        typer.echo("")
+        typer.echo("Configuration files can be in JSON or YAML format.")
 
 
 @app.command()

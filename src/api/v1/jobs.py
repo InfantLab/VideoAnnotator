@@ -3,6 +3,7 @@ Job management endpoints for VideoAnnotator API
 """
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, status
+from fastapi.responses import FileResponse, JSONResponse
 from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime
@@ -50,6 +51,28 @@ class JobListResponse(BaseModel):
     total: int
     page: int
     per_page: int
+
+
+class PipelineResultResponse(BaseModel):
+    """Response model for individual pipeline results."""
+    pipeline_name: str
+    status: str
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    processing_time: Optional[float] = None
+    annotation_count: Optional[int] = None
+    output_file: Optional[str] = None
+    error_message: Optional[str] = None
+
+
+class JobResultsResponse(BaseModel):
+    """Response model for job results."""
+    job_id: str
+    status: str
+    pipeline_results: Dict[str, PipelineResultResponse]
+    created_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    output_dir: Optional[str] = None
 
 
 @router.post("/", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
@@ -260,4 +283,138 @@ async def cancel_job(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to cancel job: {str(e)}"
+        )
+
+
+@router.get("/{job_id}/results", response_model=JobResultsResponse)
+async def get_job_results(
+    job_id: str,
+    storage: StorageBackend = Depends(get_storage)
+):
+    """
+    Get detailed results for a completed job.
+    
+    Args:
+        job_id: Job ID to get results for
+        
+    Returns:
+        Detailed job results including pipeline outputs and file paths
+    """
+    try:
+        # Load job from database
+        job = storage.load_job_metadata(job_id)
+        
+        # Check if job exists
+        if not job:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Job {job_id} not found"
+            )
+        
+        # Convert pipeline results to response format
+        pipeline_results = {}
+        for name, result in job.pipeline_results.items():
+            pipeline_results[name] = PipelineResultResponse(
+                pipeline_name=result.pipeline_name,
+                status=result.status.value,
+                start_time=result.start_time,
+                end_time=result.end_time,
+                processing_time=result.processing_time,
+                annotation_count=result.annotation_count,
+                output_file=str(result.output_file) if result.output_file else None,
+                error_message=result.error_message
+            )
+        
+        return JobResultsResponse(
+            job_id=job.job_id,
+            status=job.status.value,
+            pipeline_results=pipeline_results,
+            created_at=job.created_at,
+            completed_at=job.completed_at,
+            output_dir=str(job.output_dir) if job.output_dir else None
+        )
+        
+    except HTTPException:
+        raise
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job {job_id} not found"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get job results: {str(e)}"
+        )
+
+
+@router.get("/{job_id}/results/files/{pipeline_name}")
+async def download_result_file(
+    job_id: str,
+    pipeline_name: str,
+    storage: StorageBackend = Depends(get_storage)
+):
+    """
+    Download a specific result file from a job.
+    
+    Args:
+        job_id: Job ID
+        pipeline_name: Name of pipeline to download results for
+        
+    Returns:
+        File download response
+    """
+    try:
+        # Load job from database
+        job = storage.load_job_metadata(job_id)
+        
+        if not job:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Job {job_id} not found"
+            )
+        
+        # Check if pipeline result exists
+        if pipeline_name not in job.pipeline_results:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Pipeline '{pipeline_name}' results not found for job {job_id}"
+            )
+        
+        result = job.pipeline_results[pipeline_name]
+        
+        # Check if output file exists
+        if not result.output_file:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No output file for pipeline '{pipeline_name}' in job {job_id}"
+            )
+        
+        output_file_path = Path(result.output_file)
+        
+        # Verify file exists on disk
+        if not output_file_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Output file not found: {output_file_path}"
+            )
+        
+        # Return file
+        return FileResponse(
+            path=str(output_file_path),
+            filename=output_file_path.name,
+            media_type='application/octet-stream'
+        )
+        
+    except HTTPException:
+        raise
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job {job_id} not found"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to download result file: {str(e)}"
         )

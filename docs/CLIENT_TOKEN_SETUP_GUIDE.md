@@ -574,6 +574,6 @@ videoannotator-client  # Automatically uses production config
 ---
 
 **Document Version**: v1.0  
-**Last Updated**: January 2025  
+**Last Updated**: 24 August 2025  
 **Compatible With**: VideoAnnotator API v1.2.0+  
 **Status**: Production ready with comprehensive security features

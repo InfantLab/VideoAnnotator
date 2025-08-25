@@ -498,6 +498,42 @@ async def mock_sse_events(
     )
 
 
+@router.get("/background-jobs")
+async def get_background_jobs_status():
+    """
+    Get status of background job processing system.
+    
+    Returns information about the background job manager
+    including currently processing jobs and system status.
+    """
+    try:
+        from ..background_tasks import get_background_manager
+        
+        manager = get_background_manager()
+        status = manager.get_status()
+        
+        # Add additional system info
+        import os
+        import psutil
+        
+        return {
+            "background_processing": status,
+            "system_info": {
+                "pid": os.getpid(),
+                "memory_usage_mb": round(psutil.Process().memory_info().rss / 1024 / 1024, 2),
+                "cpu_percent": psutil.Process().cpu_percent()
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "error": f"Failed to get background job status: {str(e)}",
+            "background_processing": {"running": False, "error": str(e)},
+            "timestamp": datetime.now().isoformat()
+        }
+
+
 def _get_pipeline_status() -> Dict[str, Any]:
     """Get current pipeline initialization status"""
     # TODO: Replace with actual pipeline status checking

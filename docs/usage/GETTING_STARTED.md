@@ -1,6 +1,14 @@
 # Getting Started with VideoAnnotator v1.2.0
 
-This guide will help you get up and running with VideoAnnotator's modern uv-based workflow.
+Welcome to VideoAnnotator v1.2.0! This guide will help you get up and running with our modern production-ready API system and integrated background processing.
+
+## What's New in v1.2.0 🎉
+
+- **🚀 Production-Ready API Server** - Complete REST API with integrated background job processing
+- **⚡ Integrated Processing** - No separate worker processes needed - everything runs in one server
+- **🛠️ Modern CLI Interface** - Complete command-line tools for server management and job control
+- **🔧 Enhanced Pipeline Support** - All pipelines (scene, person, face, audio) working through API
+- **📊 Real-time Job Status** - Live job tracking and detailed results retrieval
 
 ## Prerequisites
 
@@ -41,35 +49,75 @@ uv sync --extra dev
 uv run python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 
 # Test CLI interface
-uv run python -m src.cli --help
+uv run videoannotator --help
 ```
 
 ## Basic Usage
 
-### API Server Mode (Recommended)
+### 🚀 Start the API Server
+
+VideoAnnotator v1.2.0 runs everything through one integrated API server with built-in background processing:
 
 ```bash
-# Start the API server
-uv run python -m src.cli server --host 0.0.0.0 --port 8000
+# Start the API server (recommended)
+uv run videoannotator server --host 0.0.0.0 --port 8000
 
-# Alternative: Start server directly
-uv run python api_server.py
-
-# View API documentation at http://localhost:8000/docs
+# View interactive API documentation at http://localhost:8000/docs
+# Server includes integrated background job processing - no separate worker needed!
 ```
 
-### Processing Videos via API
+### 📹 Process Videos via CLI
 
-Once the server is running, submit processing jobs via:
+The modern CLI makes video processing simple:
 
 ```bash
 # Submit a video processing job
-curl -X POST "http://localhost:8000/api/v1/jobs" \
-  -H "Content-Type: application/json" \
-  -d '{"video_path": "video.mp4", "pipelines": ["scene", "person"]}'
+uv run videoannotator job submit video.mp4 --pipelines "scene,person,face"
+
+# Check job status (returns job ID from submit command)
+uv run videoannotator job status <job_id>
+
+# Get detailed results
+uv run videoannotator job results <job_id>
+
+# List all jobs
+uv run videoannotator job list --status completed
+```
+
+### 🔧 Other CLI Commands
+
+```bash
+# List available pipelines
+uv run videoannotator pipelines --detailed
+
+# Show system information and database status
+uv run videoannotator info
+
+# Validate configuration files
+uv run videoannotator config --validate config.yaml
+
+# Backup database
+uv run videoannotator backup backup.db
+```
+
+### 🌐 Processing Videos via HTTP API
+
+Direct API access for integration with other systems:
+
+```bash
+# Submit a video processing job
+curl -X POST "http://localhost:8000/api/v1/jobs/" \
+  -F "video=@video.mp4" \
+  -F "selected_pipelines=scene,person,face"
 
 # Check job status
-curl "http://localhost:8000/api/v1/jobs/{job_id}/status"
+curl "http://localhost:8000/api/v1/jobs/{job_id}"
+
+# Get detailed results with pipeline outputs
+curl "http://localhost:8000/api/v1/jobs/{job_id}/results"
+
+# Download specific pipeline result files
+curl "http://localhost:8000/api/v1/jobs/{job_id}/results/files/scene_detection" -O
 ```
 
 ### Using the Python API
@@ -141,14 +189,16 @@ VideoAnnotator generates structured JSON files with comprehensive metadata:
 }
 ```
 
-## Available Pipelines
+## Available Pipelines (All Working Through API!)
 
-| Pipeline | Description | Output |
-|----------|-------------|--------|
-| **Scene Detection** | Detects scene boundaries and classifies environments | `{video}_scenes.json` |
-| **Person Tracking** | Tracks people across frames with pose estimation | `{video}_person_detections.json` |
-| **Face Analysis** | Detects faces and analyzes emotions | `{video}_faces.json` |
-| **Audio Processing** | Speech recognition and speaker diarization | `{video}_speech.json` |
+| Pipeline | Description | Output | Status |
+|----------|-------------|--------|--------|
+| **scene_detection** | Scene boundary detection + CLIP environment classification | `*_scene_detection.json` | ✅ Ready |
+| **person_tracking** | YOLO11 + ByteTrack multi-person pose tracking | `*_person_tracking.json` | ✅ Ready |
+| **face_analysis** | OpenFace 3.0 + LAION facial behavior analysis | `*_laion_face_annotations.json` | ✅ Ready |
+| **audio_processing** | Whisper speech recognition + pyannote diarization | `*_speech_recognition.vtt` | ✅ Ready |
+
+All pipelines are fully integrated with the API server and process through the background job system!
 
 ## Next Steps
 

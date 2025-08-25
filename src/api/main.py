@@ -15,8 +15,26 @@ from .v1 import api_router
 from .middleware import RequestLoggingMiddleware, ErrorLoggingMiddleware
 from ..utils.logging_config import setup_videoannotator_logging, get_logger
 
-# Set up enhanced logging
-setup_videoannotator_logging()
+# Apply SciPy compatibility patch for OpenFace 3.0 before any pipeline imports
+def apply_scipy_compatibility_patch():
+    """Apply SciPy compatibility patch for OpenFace 3.0 globally."""
+    try:
+        import scipy.integrate
+        if not hasattr(scipy.integrate, 'simps'):
+            import logging
+            logging.info("Applying scipy.integrate.simps compatibility patch for OpenFace 3.0")
+            scipy.integrate.simps = scipy.integrate.simpson
+            logging.info("Successfully patched scipy.integrate.simps")
+    except ImportError:
+        pass  # SciPy not available
+    except Exception as e:
+        import logging
+        logging.warning(f"Failed to apply scipy compatibility patch: {e}")
+
+# Apply patch early
+apply_scipy_compatibility_patch()
+
+# Note: Logging is set up by api_server.py - no need to duplicate
 logger = get_logger("api")
 
 
@@ -31,21 +49,28 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         "api_version": "1.2.0",
         "videoannotator_version": videoannotator_version,
         "logging": "enhanced",
-        "middleware": ["CORS", "RequestLogging", "ErrorLogging"]
+        "middleware": ["CORS", "RequestLogging", "ErrorLogging"],
+        "background_processing": "enabled"
     })
     
-    # TODO: Initialize database connections
+    # Start background job processing
+    from .background_tasks import start_background_processing
+    await start_background_processing()
+    logger.info("Background job processing started", extra={"component": "background_tasks"})
+    
     # TODO: Initialize pipeline cache
-    # TODO: Initialize job queue connections
     
     yield
     
     # Shutdown
     logger.info("VideoAnnotator API server shutting down...", extra={"event": "shutdown"})
     
-    # TODO: Cleanup database connections
+    # Stop background job processing
+    from .background_tasks import stop_background_processing
+    await stop_background_processing()
+    logger.info("Background job processing stopped", extra={"component": "background_tasks"})
+    
     # TODO: Cleanup pipeline resources
-    # TODO: Cleanup job queue connections
 
 
 def create_app() -> FastAPI:

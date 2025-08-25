@@ -230,3 +230,11 @@ benchmark_results/
 
 # Coverage reports
 htmlcov/
+
+# Database files  
+videoannotator.db
+test_*.db
+*.sqlite
+*.sqlite3
+
+

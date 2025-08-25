@@ -152,6 +152,8 @@ class VideoAnnotatorLoggingConfig:
         
         # Main API logger
         api_logger = logging.getLogger("videoannotator.api")
+        # Clear existing handlers to prevent duplicates
+        api_logger.handlers.clear()
         api_logger.addHandler(console_handler)
         api_logger.addHandler(api_handler)
         api_logger.addHandler(error_handler)
