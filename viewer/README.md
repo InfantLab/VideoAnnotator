@@ -248,6 +248,8 @@ For detailed release notes and changes, see [CHANGELOG.md](CHANGELOG.md).
 
 Comprehensive documentation is available in the [`docs/`](./docs/) directory:
 
+- **[Interactive Documentation](https://deepwiki.com/InfantLab/video-annotation-viewer)** - Explore the codebase with deepwiki's AI-powered documentation
+
 - **[Developer Guide](./docs/DEVELOPER_GUIDE.md)** - Technical architecture and development setup
 - **[File Formats](./docs/FILE_FORMATS.md)** - VideoAnnotator format specifications  
 - **[Debug Utils](./docs/DEBUGUTILS_GUIDE.md)** - Console debugging and testing tools

@@ -47,6 +47,24 @@ export const Footer = () => {
               className="text-muted-foreground hover:text-foreground h-6 px-2 text-xs"
             >
               <a
+                href="https://deepwiki.com/InfantLab/video-annotation-viewer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1"
+                title="AI-powered interactive codebase documentation"
+              >
+                <span>🤖</span>
+                <span>Docs</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="text-muted-foreground hover:text-foreground h-6 px-2 text-xs"
+            >
+              <a
                 href={GITHUB_URL}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -54,7 +72,7 @@ export const Footer = () => {
                 title="Source code and documentation for this viewer interface"
               >
                 <Github className="w-3 h-3" />
-                <span>Source & Docs</span>
+                <span>Source</span>
                 <ExternalLink className="w-2.5 h-2.5" />
               </a>
             </Button>
