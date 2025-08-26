@@ -11,6 +11,15 @@ A **modern REST API and toolkit** for comprehensive video analysis of human inte
 
 **🎯 Perfect for researchers** who need to integrate video analysis into their workflows via a simple HTTP API.
 
+## 🔗 **Visualization & Analysis**
+
+**This project is designed to be used in conjunction with [Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)** for interactive visualization and analysis of your results:
+
+**Your Video Files → [VideoAnnotator Processing] → Annotation Files → [Video Annotation Viewer] → Interactive Analysis**
+
+- **VideoAnnotator** (this repository): Processes videos to generate comprehensive annotation data
+- **[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)**: Provides interactive visualization, timeline scrubbing, and collaborative review tools for the generated annotations
+
 ## 🚀 **API Server - Get Started in 30 Seconds**
 
 VideoAnnotator now features a **modern FastAPI server** for easy integration into your research workflow:
@@ -411,8 +420,45 @@ python -m pytest tests/ --cov=src --cov-report=html
 3. **Update Docs**: Keep documentation current with changes
 4. **Quality Check**: Ensure test suite maintains 90%+ success rate
 
-## 📄 **License & Acknowledgments**
+## 📄 **License**
 
-**License**: MIT - see [LICENSE](LICENSE) for details
+MIT License - see [LICENSE](LICENSE) for details.
 
-**Acknowledgments**: Built on the shoulders of giants including YOLO, Whisper, PyTorch, and the open-source ML community. Special thanks to research communities advancing computer vision and audio processing.
+## 🙏 **Credits & Acknowledgments**
+
+### Development Team
+- **Caspar Addyman** (infantologist@gmail.com) - Lead Developer & Research Director
+
+### Funding & Support
+- **The Global Parenting Initiative** (Funded by The LEGO Foundation)
+
+### Citation
+If you use VideoAnnotator in your research, please cite:
+```
+Addyman, C. (2025). VideoAnnotator: Modern REST API toolkit for comprehensive video analysis of human interactions.
+Zenodo. https://doi.org/10.5281/zenodo.[TO_BE_ASSIGNED]
+```
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.[TO_BE_ASSIGNED].svg)](https://doi.org/10.5281/zenodo.[TO_BE_ASSIGNED])
+
+### Related Projects
+- **[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)** - Interactive visualization companion tool
+
+### Technical Acknowledgments
+Built with and grateful to the open-source community, including:
+- **[YOLO](https://github.com/ultralytics/ultralytics) & [Ultralytics](https://ultralytics.com/)** - Object detection and tracking
+- **[OpenFace 3.0](https://github.com/CMU-MultiComp-Lab/OpenFace-3.0)** - Facial behavior analysis  
+- **[OpenAI Whisper](https://github.com/openai/whisper)** - Speech recognition
+- **[FastAPI](https://github.com/tiangolo/fastapi) & [Uvicorn](https://github.com/encode/uvicorn)** - Modern web framework
+- **[PyTorch](https://pytorch.org/) & [Transformers](https://github.com/huggingface/transformers)** - Machine learning infrastructure
+- **[pyannote.audio](https://github.com/pyannote/pyannote-audio)** - Speaker diarization
+- **[PySceneDetect](https://github.com/Breakthrough/PySceneDetect)** - Scene boundary detection
+- **[LAION](https://laion.ai/)** - Open-source AI models and datasets
+- **[ByteTrack](https://github.com/ifzhang/ByteTrack)** - Multi-object tracking
+- **[CLIP](https://github.com/openai/CLIP)** - Vision-language understanding
+- **[Typer](https://github.com/tiangolo/typer)** - Modern CLI framework
+- **[uv](https://github.com/astral-sh/uv)** - Fast Python package installer
+- The broader **computer vision and audio processing research communities**
+
+### License
+MIT License - Full terms in [LICENSE](LICENSE)

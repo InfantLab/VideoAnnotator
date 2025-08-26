@@ -202,11 +202,12 @@ All pipelines are fully integrated with the API server and process through the b
 
 ## Next Steps
 
-- 📖 Read the [Full Installation Guide](INSTALLATION.md) for detailed setup
-- 🔧 Explore [Configuration Options](../configs/README.md)
-- 📊 Learn about [Output Formats](OUTPUT_FORMATS.md)
-- 🧪 Check out [Testing Standards](TESTING_STANDARDS.md)
-- 🗺️ See the [Development Roadmap](ROADMAP.md)
+- 📖 Read the [Full Installation Guide](../installation/INSTALLATION.md) for detailed setup
+- 🔧 Explore [Pipeline Specifications](pipeline_specs.md) for detailed pipeline documentation
+- 📊 Learn about [Demo Commands](demo_commands.md) for complete usage examples
+- 🧪 Check out [Testing Overview](../testing/testing_overview.md) for QA information
+- 🗺️ See the [v1.2.0 Roadmap](../development/roadmap_v1.2.0.md) for development progress
+- 🎯 Try the [v1.2.1 Examples Update](../development/EXAMPLES_CLI_UPDATE_CHECKLIST.md) for latest CLI patterns
 
 ## Common Issues
 

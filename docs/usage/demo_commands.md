@@ -1,167 +1,193 @@
-# Improved Demo Commands
+# VideoAnnotator v1.2.0 Demo Commands & Usage
 
-The demo script has been enhanced to match main.py's interface while providing sensible defaults and batch processing capabilities.
+> 📖 **Navigation**: [Getting Started](GETTING_STARTED.md) | [Pipeline Specs](pipeline_specs.md) | [Installation Guide](../installation/INSTALLATION.md) | [Main Documentation](../README.md)
 
-## 🎯 Quick Start Commands
+This guide demonstrates how to use VideoAnnotator v1.2.0 with its modern API server and CLI interface for video processing.
 
-### Auto-Detect and Run with Size-Based Analysis (Default)
+## 🚀 Quick Start Commands
+
+### Start API Server
 ```bash
-# Automatically finds demo video and runs with size-based person analysis enabled
-python demo.py
+# Start the VideoAnnotator API server
+uv run videoannotator server --port 8000
+
+# Server will be available at http://localhost:8000
+# Interactive documentation at http://localhost:8000/docs
 ```
 
-### Single Video with Person Tracking
+### Process Single Video via CLI
 ```bash
-# Process specific video with person tracking (includes size-based analysis)
-python demo.py --video_path "demovideos/babyjokes/2UWdXP.joke1.rep2.take1.Peekaboo_h265.mp4" --pipeline person
+# Submit a video processing job through CLI
+uv run videoannotator job submit video.mp4 --pipelines scene,person,face
+
+# Check job status  
+uv run videoannotator job status <job_id>
+
+# Get detailed results
+uv run videoannotator job results <job_id>
 ```
 
-### Batch Process All Baby Joke Videos
+### Process Video via HTTP API
 ```bash
-# Process all videos in babyjokes folder with person tracking
-python demo.py --batch_dir demovideos/babyjokes/ --pipeline person
+# Submit job via HTTP POST
+curl -X POST "http://localhost:8000/api/v1/jobs/" \
+  -F "video=@video.mp4" \
+  -F "selected_pipelines=scene,person,face"
+
+# Check status
+curl "http://localhost:8000/api/v1/jobs/{job_id}"
 ```
 
-### Recursive Batch Processing
+## 🛠️ CLI Management Commands
+
+### System Information
 ```bash
-# Process all videos in demovideos/ recursively with custom output
-python demo.py --batch_dir demovideos/ --output_dir my_results/ --recursive --pipeline person
+# Show system status and database info
+uv run videoannotator info
+
+# List available pipelines
+uv run videoannotator pipelines --detailed
+
+# Validate configuration files
+uv run videoannotator config --validate configs/default.yaml
 ```
 
-## 🚀 Key Improvements
-
-### 1. Same Parameters as main.py
-- `--video_path` (instead of `--video`)
-- `--batch_dir` for batch processing
-- `--output_dir` (instead of `--output`)
-- `--pipeline` with same choices: `scene`, `person`, `face`, `audio`
-- `--recursive` for recursive directory search
-- `--max_workers` for parallel processing
-
-### 2. Sensible Defaults
-- **Auto-detect demo videos** if no input specified
-- **Auto-generate output directories** with timestamps if not specified
-- **Size-based analysis enabled by default** through default.yaml configuration
-- **Smart path handling** for both files and directories
-
-### 3. Batch Processing Support
+### Job Management
 ```bash
-# Process with parallel workers
-python demo.py --batch_dir demovideos/babyjokes/ --max_workers 4 --pipeline person
+# List all jobs
+uv run videoannotator job list
 
-# Recursive search in subdirectories
-python demo.py --batch_dir demovideos/ --recursive --pipeline person
+# List completed jobs only
+uv run videoannotator job list --status completed
+
+# Get job results with details
+uv run videoannotator job results <job_id>
 ```
 
-### 4. Quality Presets
-```bash
-# Fast processing (lightweight.yaml)
-python demo.py --fast --pipeline person
+## 🚀 Modern API-First Architecture
 
-# High quality processing (high_performance.yaml) 
-python demo.py --high_quality --pipeline person
+### Key Features in v1.2.0:
+- **Integrated Background Processing** - No separate worker processes needed
+- **Real-time Job Status** - Live job tracking and progress updates  
+- **Complete Pipeline Integration** - All pipelines working through API
+- **Modern CLI Interface** - Comprehensive command-line tools
+- **Production Ready** - Designed for research and production workflows
+
+## 📋 Complete API Reference
+
+### Available Pipelines
+- **scene_detection** - Scene boundary detection with CLIP classification
+- **person_tracking** - YOLO11 + ByteTrack multi-person pose tracking  
+- **face_analysis** - OpenFace 3.0 + LAION facial behavior analysis
+- **audio_processing** - Whisper speech recognition + pyannote diarization
+
+### Pipeline Combinations
+```bash
+# Run all pipelines
+uv run videoannotator job submit video.mp4 --pipelines scene,person,face,audio
+
+# Scene + person analysis
+uv run videoannotator job submit video.mp4 --pipelines scene,person
+
+# Face analysis only
+uv run videoannotator job submit video.mp4 --pipelines face
 ```
 
-## 📋 Complete Command Reference
+## 🔄 Working with Job Results
 
-### Basic Usage
+### Get Job Results
 ```bash
-# Default: auto-detect video, auto-generate output, all pipelines
-python demo.py
+# Get summary of job results
+uv run videoannotator job results <job_id>
 
-# Specific video
-python demo.py --video_path path/to/video.mp4
+# API endpoint for results
+curl "http://localhost:8000/api/v1/jobs/{job_id}/results"
 
-# Specific pipelines only
-python demo.py --pipeline person face
-
-# Custom output directory
-python demo.py --output_dir results/my_demo/
-```
-
-### Batch Processing
-```bash
-# Batch process directory
-python demo.py --batch_dir demovideos/babyjokes/
-
-# Recursive batch processing
-python demo.py --batch_dir demovideos/ --recursive
-
-# Parallel batch processing
-python demo.py --batch_dir demovideos/babyjokes/ --max_workers 4
-
-# Batch with custom output and specific pipelines
-python demo.py --batch_dir demovideos/babyjokes/ --output_dir batch_results/ --pipeline person
+# Download specific pipeline result file
+curl "http://localhost:8000/api/v1/jobs/{job_id}/results/files/scene_detection" -O
 ```
 
 ### Configuration Options
 ```bash
-# Use custom config file
-python demo.py --config configs/person_identity.yaml
+# Use custom configuration
+uv run videoannotator job submit video.mp4 --config configs/high_performance.yaml
 
-# Fast processing (lightweight.yaml)
-python demo.py --fast
+# Validate config before use
+uv run videoannotator config --validate configs/high_performance.yaml
 
-# High quality processing (high_performance.yaml)
-python demo.py --high_quality
-
-# Custom log level
-python demo.py --log_level DEBUG
+# View default configuration
+uv run videoannotator config --show-default
 ```
 
-### Information Commands
+### System Management
 ```bash
-# Show version
-python demo.py --version
+# Show version and system info
+uv run videoannotator version
+uv run videoannotator info
 
-# Show pipeline information
-python demo.py --info
+# Backup database
+uv run videoannotator backup backup_$(date +%Y%m%d).db
 
-# Help message
-python demo.py --help
+# Server management
+uv run videoannotator server --host 0.0.0.0 --port 8000
 ```
 
-## 📊 Expected Output with Size-Based Analysis
+## 📊 Expected Output Format
 
-When running person tracking, you'll see:
-
-### Log Messages
-```
-INFO - Using simplified size-based person analysis...
-INFO - Size-based analysis completed: 2 persons labeled
-INFO - Auto-labeled person_babyvideo_001: parent (confidence=0.70, method=size_based_inference)
-INFO - Auto-labeled person_babyvideo_002: infant (confidence=0.70, method=size_based_inference)
-```
-
-### Demo Summary
-```
-[SUCCESS] Person
-    Detections: 45
-    Unique Persons: 2
-    Person Labels: parent, infant
-    Time: 12.34s
+### Job Submission Response
+```json
+{
+  "id": "job_abc123",
+  "status": "pending", 
+  "video_path": "/path/to/video.mp4",
+  "selected_pipelines": ["scene", "person", "face"],
+  "created_at": "2025-08-26T10:30:00Z"
+}
 ```
 
-### Output Files
-- `{video_name}_person_tracking.json` - COCO format with person labels
-- `{video_name}_person_tracks.json` - Person identity summary
-- `complete_results.json` - Full processing results
-
-## 🎯 Recommended Commands for Testing Size-Based Analysis
-
-### Single Video Test
-```bash
-python demo.py --video_path "demovideos/babyjokes/2UWdXP.joke1.rep2.take1.Peekaboo_h265.mp4" --pipeline person
+### Job Status Response
+```json
+{
+  "id": "job_abc123",
+  "status": "completed",
+  "created_at": "2025-08-26T10:30:00Z", 
+  "completed_at": "2025-08-26T10:32:15Z",
+  "selected_pipelines": ["scene", "person", "face"]
+}
 ```
 
-### Batch Test (All Baby Jokes)
-```bash
-python demo.py --batch_dir demovideos/babyjokes/ --pipeline person --max_workers 2
+### Job Results Response
+```json
+{
+  "job_id": "job_abc123",
+  "status": "completed",
+  "pipeline_results": {
+    "scene_detection": {
+      "status": "completed",
+      "processing_time": 15.2,
+      "annotation_count": 8,
+      "output_file": "/path/to/output/video_scene_detection.json"
+    },
+    "person_tracking": {
+      "status": "completed", 
+      "processing_time": 45.7,
+      "annotation_count": 156,
+      "output_file": "/path/to/output/video_person_tracking.json"
+    }
+  },
+  "output_dir": "/path/to/output/"
+}
 ```
 
-### Fast Test
-```bash
-python demo.py --fast --pipeline person
-```
+## 🎯 Next Steps
 
-These commands will automatically run size-based person analysis and show you the results with person labels (parent/infant) based on relative heights!
+1. **Start the server**: `uv run videoannotator server`
+2. **Submit a job**: `uv run videoannotator job submit your_video.mp4`
+3. **Monitor progress**: `uv run videoannotator job status <job_id>`
+4. **Get results**: `uv run videoannotator job results <job_id>`
+5. **Explore API**: Visit `http://localhost:8000/docs` for interactive documentation
+
+For more advanced usage, see:
+- [Getting Started Guide](GETTING_STARTED.md) - Complete setup and workflow
+- [Pipeline Specifications](pipeline_specs.md) - Detailed pipeline documentation
+- [API Documentation](http://localhost:8000/docs) - Interactive API reference

@@ -1,5 +1,7 @@
 # VideoAnnotator Pipeline Specifications
 
+> 📖 **Navigation**: [Getting Started](GETTING_STARTED.md) | [Demo Commands](demo_commands.md) | [Installation Guide](../installation/INSTALLATION.md) | [Main Documentation](../README.md)
+
 This document outlines the modern, standards-based pipeline architecture for VideoAnnotator. Our pipelines are designed for research flexibility, production scalability, and seamless integration with annotation tools.
 
 ## 🧠 Overview
@@ -58,12 +60,14 @@ class ModernPipeline(BasePipeline):
 **Purpose**: Detect and track people across video frames  
 **Output**: Normalized bounding boxes with persistent person IDs
 
-```python
-# Usage
-from src.pipelines.person_tracking import PersonPipeline
+```bash
+# Modern API Usage (v1.2.0)
+uv run videoannotator job submit video.mp4 --pipelines person
 
-pipeline = PersonPipeline()
-annotations = pipeline.process("video.mp4")
+# Legacy Direct Usage (for development)
+# from src.pipelines.person_tracking import PersonPipeline
+# pipeline = PersonPipeline()
+# annotations = pipeline.process("video.mp4")
 ```
 
 **Output Format**:
