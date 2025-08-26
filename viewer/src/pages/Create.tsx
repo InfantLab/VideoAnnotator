@@ -5,6 +5,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Plus, Database, List, Settings, ArrowLeft } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { TokenStatusIndicator } from "@/components/TokenStatusIndicator";
+import vavIcon from "@/assets/v-a-v.icon.png";
 
 const CreateLayout = () => {
   const location = useLocation();
@@ -30,7 +31,7 @@ const CreateLayout = () => {
                 </Button>
               </Link>
               <div className="flex items-center gap-3">
-                <img src="/icon-32x32.png" alt="Video Annotation Viewer" className="w-8 h-8" />
+                <img src={vavIcon} alt="VideoAnnotator" className="w-8 h-8" />
                 <h1 className="text-3xl font-bold text-gray-900">
                   VideoAnnotator Control Panel
                 </h1>

@@ -1,9 +1,9 @@
 <div align="center">
   <img src="public/icon-32x32.png" alt="Video Annotation Viewer Icon" width="64" height="64">
-  <h1>Video Annotation Viewer v0.2.0</h1>
+  <h1>Video Annotation Viewer v0.3.0</h1>
 </div>
 
-Advanced multimodal video annotation analysis tool for reviewing [VideoAnnotator](https://github.com/InfantLab/VideoAnnotator) pipeline outputs with synchronized pose detection, speech recognition, speaker diarization, and scene detection visualization.
+Advanced multimodal video annotation analysis tool for both **reviewing VideoAnnotator pipeline outputs** and **creating new annotation jobs**. Features synchronized pose detection, speech recognition, speaker diarization, and scene detection visualization with integrated job management.
 
 ## Overview
 
@@ -19,6 +19,13 @@ Video Annotation Viewer is a sophisticated web-based application designed for re
 - **Standard Formats**: COCO keypoints, WebVTT subtitles, RTTM speaker data, scene detection JSON
 - **Multi-file Loading**: Drag-and-drop interface for video + annotation files
 - **Automatic Detection**: Intelligent file type recognition and validation
+
+### 🎬 **Job Creation & Management** *(New in v0.3.0)*
+- **Create Annotation Jobs**: Submit videos for processing through VideoAnnotator API
+- **Pipeline Selection**: Choose from scene detection, person tracking, face analysis, and audio processing
+- **Batch Processing**: Handle multiple videos simultaneously
+- **Real-time Monitoring**: Track job progress with live status updates
+- **Job Management**: View, monitor, and manage all annotation jobs in one interface
 
 ### 🎥 **Multimodal Visualization**
 - **Pose Detection**: COCO-format human pose keypoints with 17-point skeleton rendering
@@ -72,6 +79,15 @@ Video Annotation Viewer is a sophisticated web-based application designed for re
    - Multiple annotation files (e.g., `person_tracking.json`, `speech.vtt`, `speakers.rttm`, `scenes.json`)
 3. The system automatically detects and validates file formats
 4. Click **"Start Viewing"** to begin analysis
+
+### Create New Annotation Jobs *(New in v0.3.0)*
+1. Click **"Create Annotations"** from the main interface
+2. Navigate to **"New Job"** in the job management panel
+3. Upload your video files (supports batch processing)
+4. Select annotation pipelines (scene detection, person tracking, face analysis, audio processing)
+5. Configure pipeline parameters or use defaults
+6. Submit jobs and monitor progress in real-time
+7. View completed results directly in the annotation viewer
 
 ## 📊 Data Structure Examples
 
@@ -178,17 +194,44 @@ src/
 - **Social Interaction**: Study group dynamics and communication patterns
 - **Movement Analysis**: Assess motor skills and physical therapy progress
 
-## 🔗 Integration
+## 🔗 Integration with VideoAnnotator
 
-Video Annotation Viewer is designed to work seamlessly with:
-- **[VideoAnnotator](https://github.com/InfantLab/VideoAnnotator)**: Primary annotation pipeline
-- **Research Workflows**: Export-ready data formats
-- **Analysis Tools**: Standard format compatibility for further processing
+**Important**: This project is designed to be used **in conjunction with VideoAnnotator**. Here's how they work together:
+
+### The Two-Step Process
+1. **VideoAnnotator** processes your videos to generate annotation data:
+   - Analyzes video files using advanced computer vision and ML pipelines
+   - Outputs standardized annotation files (COCO, WebVTT, RTTM, JSON)
+   - Handles the computationally intensive analysis work
+
+2. **Video Annotation Viewer** (this project) visualizes and reviews those results:
+   - Loads VideoAnnotator output files alongside original videos
+   - Provides interactive visualization and playback controls
+   - Enables detailed review and quality assessment
+
+### Workflow Integration
+```
+Your Video Files → [VideoAnnotator Processing] → Annotation Files → [This Viewer] → Interactive Analysis
+```
+
+### Related Projects
+Video Annotation Viewer integrates seamlessly with:
+- **[VideoAnnotator](https://github.com/InfantLab/VideoAnnotator)**: Primary annotation processing pipeline
+- **Research Workflows**: Export-ready data formats for further analysis
+- **Analysis Tools**: Standard format compatibility for statistical processing
 
 ## 📈 Version History
 
 For detailed release notes and changes, see [CHANGELOG.md](CHANGELOG.md).
 
+- **v0.3.0**: VideoAnnotator Job Creation & Management (August 2025)
+  - **Job Creation Wizard**: Create new annotation jobs through VideoAnnotator API
+  - **Pipeline Management**: Select and configure scene detection, person tracking, face analysis, and audio processing
+  - **Batch Processing**: Submit multiple videos simultaneously
+  - **Real-time Monitoring**: Live job status updates and progress tracking
+  - **Professional Interface**: Enhanced UI with consistent branding and improved user experience
+  - **API Integration**: Full VideoAnnotator server integration with authentication and error handling
+  
 - **v0.2.0**: Enhanced interface and improved functionality (August 2025)
   - Updated project branding to "Video Annotation Viewer" 
   - Consistent GitHub repository naming (`video-annotation-viewer`)
@@ -208,8 +251,10 @@ Comprehensive documentation is available in the [`docs/`](./docs/) directory:
 - **[Developer Guide](./docs/DEVELOPER_GUIDE.md)** - Technical architecture and development setup
 - **[File Formats](./docs/FILE_FORMATS.md)** - VideoAnnotator format specifications  
 - **[Debug Utils](./docs/DEBUGUTILS_GUIDE.md)** - Console debugging and testing tools
-- **[QA Testing](./docs/testing/QA_CHECKLIST_v0.2.0.md)** - Quality assurance procedures
+- **[Client-Server Guide](./docs/CLIENT_SERVER_COLLABORATION_GUIDE.md)** - VideoAnnotator API integration *(New in v0.3.0)*
+- **[QA Testing v0.3.0](./docs/testing/QA_Checklist_v0.3.0.md)** - Current quality assurance procedures
 - **[Implementation History](./docs/development/)** - Development tracking and historical records
+- **[v0.4.0 Roadmap](./docs/development/ROADMAP_v0.4.0.md)** - Future feature planning
 
 ## 🤝 Contributing
 
@@ -222,6 +267,33 @@ This project is part of the InfantLab research ecosystem. For contributions, iss
 ## 📄 License
 
 See the LICENSE file for details.
+
+---
+
+## 📚 Citations, Credits & Contact
+
+### 👨‍💻 Development
+**Developed by:** Caspar Addyman <infantologist@gmail.com>
+
+### 📖 Citation
+If you use this software in your research, please cite:
+
+```
+Addyman, C. (2025). Video Annotation Viewer: Interactive visualization tool for multimodal video annotation data. 
+DOI: [Zenodo DOI - Coming Soon]
+```
+
+**Zenodo DOI:** *[Will be created upon final release]*
+
+### 🤝 Contact & Support
+
+**For Questions:** Please contact the developers at <infantologist@gmail.com>
+
+**For Bug Reports:** Please raise a GitHub issue at:  
+https://github.com/InfantLab/video-annotation-viewer/issues
+
+**For VideoAnnotator Questions:** Visit the main VideoAnnotator repository:  
+https://github.com/InfantLab/VideoAnnotator
 
 ---
 

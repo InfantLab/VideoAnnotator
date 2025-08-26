@@ -127,16 +127,28 @@ export const useSSE = (options: UseSSEOptions = {}) => {
       eventSource.onerror = (event) => {
         setIsConnected(false);
         
-        // Attempt to reconnect with exponential backoff
+        // Check if this is a 404 error (endpoint doesn't exist)
+        // EventSource doesn't give us HTTP status, but we can infer from readyState
+        if (eventSource.readyState === EventSource.CLOSED) {
+          console.log('🔌 SSE endpoint unavailable, stopping reconnection attempts');
+          const error = new Error('SSE endpoint not available (likely 404). Server may not support real-time events.');
+          onError?.(error);
+          return;
+        }
+        
+        // Attempt to reconnect with exponential backoff for other errors
         if (reconnectAttempts.current < maxReconnectAttempts) {
           const delay = Math.pow(2, reconnectAttempts.current) * 1000; // 1s, 2s, 4s, 8s, 16s
           reconnectAttempts.current++;
+          
+          console.log(`🔄 SSE reconnect attempt ${reconnectAttempts.current}/${maxReconnectAttempts} in ${delay/1000}s`);
           
           reconnectTimeoutRef.current = setTimeout(() => {
             disconnect();
             connect();
           }, delay);
         } else {
+          console.error('❌ SSE connection failed after maximum retry attempts');
           const error = new Error('SSE connection failed after maximum retry attempts');
           onError?.(error);
         }

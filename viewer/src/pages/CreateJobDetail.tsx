@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/api/client";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ExternalLink, Download, Eye } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import vavIcon from "@/assets/v-a-v.icon.png";
 
 const CreateJobDetail = () => {
   const { jobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
 
   const {
     data: job,
@@ -17,10 +19,14 @@ const CreateJobDetail = () => {
     error,
   } = useQuery({
     queryKey: ["job", jobId],
-    queryFn: () => apiClient.getJob(jobId!),
+    queryFn: () => {
+      if (!jobId) throw new Error("Job ID is required");
+      return apiClient.getJob(jobId);
+    },
     enabled: !!jobId,
     refetchInterval: (data) => {
-      const status = data?.status;
+      if (!data) return false;
+      const status = data.status;
       return status === "running" || status === "pending" ? 2000 : false;
     },
   });
@@ -43,6 +49,64 @@ const CreateJobDetail = () => {
       failed: 0,
     };
     return progressMap[status as keyof typeof progressMap] || 0;
+  };
+
+  // Button handlers
+  const handleOpenInViewer = () => {
+    if (!job) return;
+    
+    if (job.status !== 'completed') {
+      alert(`Job ${job.id} is not yet completed (status: ${job.status}).\n\nOnly completed jobs can be opened in the viewer.`);
+      return;
+    }
+    
+    // TODO: Implement proper job results loading
+    // This requires API endpoints to fetch job output files
+    const shouldProceed = confirm(
+      `Opening job ${job.id} in viewer...\n\n` +
+      `Current limitation: The integration between completed jobs and the annotation viewer is not yet fully implemented.\n\n` +
+      `Would you like to:\n` +
+      `• Click "OK" to go to the main viewer (you'll need to manually upload result files)\n` +
+      `• Click "Cancel" to stay on this page\n\n` +
+      `Full integration coming in v0.4.0`
+    );
+    
+    if (shouldProceed) {
+      navigate('/');
+    }
+  };
+
+  const handleDownloadResults = async () => {
+    if (!job) return;
+    
+    try {
+      // TODO: Implement actual download from API
+      // For now, show placeholder
+      alert(`Download functionality coming soon for job ${job.id}`);
+    } catch (error) {
+      console.error("Download failed:", error);
+      alert("Download failed. Please try again.");
+    }
+  };
+
+  const handleViewRawData = () => {
+    if (!job) return;
+    
+    // TODO: Navigate to raw data view or open in new tab
+    // For now, show job data in new window
+    const dataWindow = window.open("", "_blank");
+    if (dataWindow) {
+      dataWindow.document.write(`
+        <html>
+          <head><title>Job ${job.id} - Raw Data</title></head>
+          <body>
+            <h1>Job ${job.id} Raw Data</h1>
+            <pre>${JSON.stringify(job, null, 2)}</pre>
+          </body>
+        </html>
+      `);
+      dataWindow.document.close();
+    }
   };
 
   if (isLoading) {
@@ -82,14 +146,17 @@ const CreateJobDetail = () => {
               Back
             </Button>
           </Link>
-          <div>
-            <h2 className="text-2xl font-bold">Job Details</h2>
-            <p className="text-gray-600 font-mono text-sm">{job.id}</p>
+          <div className="flex items-center gap-3">
+            <img src={vavIcon} alt="VideoAnnotator" className="h-8 w-8" />
+            <div>
+              <h2 className="text-2xl font-bold">Job Details</h2>
+              <p className="text-muted-foreground font-mono text-sm">{job.id}</p>
+            </div>
           </div>
         </div>
         
         {job.status === "completed" && (
-          <Button>
+          <Button onClick={handleOpenInViewer}>
             <Eye className="h-4 w-4 mr-2" />
             Open in Viewer
           </Button>
@@ -143,11 +210,11 @@ const CreateJobDetail = () => {
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-600">Filename</label>
+              <label className="text-sm font-medium text-muted-foreground">Filename</label>
               <p className="mt-1">{job.video_filename || "N/A"}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">File Size</label>
+              <label className="text-sm font-medium text-muted-foreground">File Size</label>
               <p className="mt-1">
                 {job.video_size_bytes 
                   ? `${(job.video_size_bytes / (1024 * 1024)).toFixed(1)} MB`
@@ -156,7 +223,7 @@ const CreateJobDetail = () => {
               </p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Duration</label>
+              <label className="text-sm font-medium text-muted-foreground">Duration</label>
               <p className="mt-1">
                 {job.video_duration_seconds
                   ? `${Math.floor(job.video_duration_seconds / 60)}:${(job.video_duration_seconds % 60).toFixed(0).padStart(2, '0')}`
@@ -165,7 +232,7 @@ const CreateJobDetail = () => {
               </p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Path</label>
+              <label className="text-sm font-medium text-muted-foreground">Path</label>
               <p className="mt-1 font-mono text-sm break-all">
                 {job.video_path || "N/A"}
               </p>
@@ -182,20 +249,20 @@ const CreateJobDetail = () => {
         <CardContent>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-600">Selected Pipelines</label>
+              <label className="text-sm font-medium text-muted-foreground">Selected Pipelines</label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {job.selected_pipelines?.map((pipeline) => (
                   <Badge key={pipeline} variant="outline">
                     {pipeline}
                   </Badge>
-                )) || <span className="text-gray-500">No pipelines selected</span>}
+                )) || <span className="text-muted-foreground">No pipelines selected</span>}
               </div>
             </div>
             
             {job.config && (
               <div>
-                <label className="text-sm font-medium text-gray-600">Configuration</label>
-                <pre className="mt-2 p-3 bg-gray-50 rounded-md text-sm overflow-x-auto">
+                <label className="text-sm font-medium text-muted-foreground">Configuration</label>
+                <pre className="mt-2 p-3 bg-muted rounded-md text-sm overflow-x-auto text-foreground">
                   {JSON.stringify(job.config, null, 2)}
                 </pre>
               </div>
@@ -212,20 +279,20 @@ const CreateJobDetail = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Job completed successfully! Results are ready for viewing.
               </p>
               
               <div className="flex gap-2">
-                <Button>
+                <Button onClick={handleOpenInViewer}>
                   <Eye className="h-4 w-4 mr-2" />
                   Open in Viewer
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleDownloadResults}>
                   <Download className="h-4 w-4 mr-2" />
                   Download Results
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleViewRawData}>
                   <ExternalLink className="h-4 w-4 mr-2" />
                   View Raw Data
                 </Button>

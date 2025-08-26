@@ -1,6 +1,6 @@
 # Developer Guide
 
-This guide covers the technical architecture, development setup, and extension points for Video Annotation Viewer v0.2.0.
+This guide covers the technical architecture, development setup, and extension points for Video Annotation Viewer v0.3.0.
 
 ## Architecture Overview
 
@@ -27,6 +27,8 @@ src/
 │   ├── VideoControls.tsx           # Video playback controls
 │   ├── WelcomeScreen.tsx           # Landing page interface
 │   ├── Footer.tsx                  # Version and VideoAnnotator links
+│   ├── TokenSetup.tsx              # v0.3.0: API token configuration
+│   ├── TokenStatusIndicator.tsx    # v0.3.0: API connection status
 │   └── ui/                         # shadcn/ui base components
 ├── lib/                     # Core business logic
 │   ├── parsers/             # Format-specific parsers
@@ -46,9 +48,24 @@ src/
 │   └── version.ts           # Version management
 ├── hooks/                   # Custom React hooks
 │   ├── use-mobile.tsx       # Mobile detection
-│   └── use-toast.ts         # Toast notifications
+│   ├── use-toast.ts         # Toast notifications
+│   ├── useSSE.ts            # v0.3.0: Server-Sent Events integration
+│   └── useTokenStatus.ts    # v0.3.0: API token status management
+├── pages/                   # v0.3.0: Route-based page components
+│   ├── Index.tsx            # Main viewer page
+│   ├── Create.tsx           # Job management layout
+│   ├── CreateJobs.tsx       # Job listing page
+│   ├── CreateJobDetail.tsx  # Individual job details
+│   ├── CreateNewJob.tsx     # Job creation wizard
+│   ├── CreateSettings.tsx   # API configuration
+│   └── CreateDatasets.tsx   # Dataset management
+├── contexts/                # v0.3.0: React contexts
+│   └── SSEContext.tsx       # Server-Sent Events context
+├── api/                     # v0.3.0: API integration
+│   └── client.ts            # VideoAnnotator API client
 └── assets/                  # Static assets
-    └── VideoAnnotationViewer.png
+    ├── VideoAnnotationViewer.png
+    └── v-a-v.icon.png       # v0.3.0: Application icon
 ```
 
 ## Development Setup
@@ -439,6 +456,90 @@ await window.debugUtils.loadDemoAnnotations('peekaboo-rep3');
 - Hot module reloading enabled
 - Source maps for debugging
 - Error overlay in browser
+
+## v0.3.0 API Integration
+
+### VideoAnnotator Server Integration
+
+The v0.3.0 release introduces full integration with the VideoAnnotator API server for job creation and management.
+
+#### API Client Configuration
+
+```typescript
+// src/api/client.ts
+class APIClient {
+  constructor(baseURL: string, token?: string) {
+    this.baseURL = baseURL;
+    this.token = token;
+  }
+
+  async submitJob(video: File, pipelines: string[], config?: object): Promise<JobResponse> {
+    const formData = new FormData();
+    formData.append('video', video);
+    formData.append('selected_pipelines', pipelines.join(','));
+    if (config) formData.append('config', JSON.stringify(config));
+    
+    return this.request('/api/v1/jobs/', { method: 'POST', body: formData });
+  }
+}
+```
+
+#### Server-Sent Events (SSE)
+
+Real-time job monitoring through SSE:
+
+```typescript
+// src/hooks/useSSE.ts
+export function useSSE(jobId?: string) {
+  const [events, setEvents] = useState<SSEEvent[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    const eventSource = apiClient.createEventSource(jobId);
+    
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setEvents(prev => [...prev, data]);
+    };
+
+    return () => eventSource.close();
+  }, [jobId]);
+
+  return { events, isConnected };
+}
+```
+
+#### Route Structure (v0.3.0)
+
+```
+/                     - Main annotation viewer
+/create               - Job management layout
+/create/jobs          - List all jobs
+/create/jobs/:id      - Job detail page
+/create/new           - Job creation wizard
+/create/settings      - API configuration
+/create/datasets      - Dataset management
+```
+
+#### Job Creation Workflow
+
+1. **Upload Videos**: Multi-file selection in `CreateNewJob.tsx`
+2. **Select Pipelines**: Choose from available processing pipelines
+3. **Configure**: Set pipeline parameters via JSON or UI controls
+4. **Submit**: POST to VideoAnnotator API with authentication
+5. **Monitor**: Real-time progress via SSE connection
+
+#### Authentication
+
+Token-based authentication with localStorage persistence:
+
+```typescript
+// Token setup in CreateSettings.tsx
+const token = localStorage.getItem('videoannotator_api_token');
+const apiClient = new APIClient('http://localhost:8000', token);
+```
+
+For detailed API integration, see [CLIENT_SERVER_COLLABORATION_GUIDE.md](./CLIENT_SERVER_COLLABORATION_GUIDE.md).
 
 ## Contributing
 

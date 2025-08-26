@@ -4,7 +4,7 @@
 
 // For production builds, this would read from package.json
 // For now, we'll export the version as a constant
-export const VERSION = '0.2.0';
+export const VERSION = '0.3.0';
 export const GITHUB_URL = 'https://github.com/InfantLab/video-annotation-viewer';
 export const APP_NAME = 'Video Annotation Viewer';
 

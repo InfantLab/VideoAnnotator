@@ -204,6 +204,85 @@ export async function loadDemoDataset(datasetKey: keyof typeof DEMO_DATA_SETS): 
   }
 }
 
+// API Testing utilities (from browser_debug_console.js)
+const createVideoAnnotatorDebug = () => {
+  const API_BASE = 'http://localhost:8000'  // VideoAnnotator API server
+  const DEFAULT_TOKEN = typeof window !== 'undefined' ? (localStorage.getItem('api_token') || 'video-annotator-dev-token-please-change') : 'dev-token'
+  
+  return {
+    apiBase: API_BASE,
+    defaultToken: DEFAULT_TOKEN,
+    logRequests: true,
+    
+    async checkHealth() {
+      console.log('🏥 Checking API health...')
+      try {
+        const response = await fetch(`${this.apiBase}/health`)
+        const data = await response.json()
+        
+        console.log('✅ Basic Health:', response.status === 200 ? 'OK' : 'FAIL')
+        console.table({
+          'Status': data.status,
+          'API Version': data.api_version,
+          'Server': data.videoannotator_version
+        })
+        
+        return data
+      } catch (error) {
+        console.error('❌ Health check failed:', error)
+        return null
+      }
+    },
+
+    async checkAuth(token = null) {
+      const authToken = token || this.defaultToken
+      console.log(`🔐 Testing authentication with token: ${authToken.substring(0, 10)}...`)
+      
+      try {
+        const response = await fetch(`${this.apiBase}/api/v1/debug/token-info`, {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          console.log('✅ Authentication: Valid')
+          console.table({
+            'User ID': data.token?.user_id,
+            'Valid': data.token?.valid,
+            'Permissions': data.token?.permissions?.join(', '),
+            'Rate Limit': `${data.token?.rate_limit?.remaining_this_minute || '?'}/min remaining`
+          })
+          return data
+        } else {
+          console.error('❌ Authentication failed:', response.status, await response.text())
+          return null
+        }
+      } catch (error) {
+        console.error('❌ Auth check failed:', error)
+        return null
+      }
+    },
+
+    async runAllTests(token = null) {
+      console.log('🧪 Running comprehensive API tests...')
+      console.log('='.repeat(50))
+      
+      const results = {
+        health: await this.checkHealth(),
+        auth: await this.checkAuth(token)
+      }
+      
+      console.log('='.repeat(50))
+      console.log('📊 Test Results Summary:')
+      Object.entries(results).forEach(([test, result]) => {
+        console.log(`- ${test}: ${result ? '✅' : '❌'}`)
+      })
+      
+      return results
+    }
+  }
+}
+
 // Make utilities available globally for browser console testing
 if (typeof window !== 'undefined') {
   (window as any).debugUtils = {
@@ -313,15 +392,24 @@ if (typeof window !== 'undefined') {
     }
   }
 
+  // Add VideoAnnotatorDebug for API testing
+  ;(window as any).VideoAnnotatorDebug = createVideoAnnotatorDebug()
+
   // Add help message
   console.log(`
 🎯 VideoActionViewer Debug Utils Available:
-   
-📋 window.debugUtils.listDatasets() - Show available datasets
-🔄 window.debugUtils.loadDemoDataset('peekaboo-rep3-v1.1.1') - Load specific dataset  
-🧪 window.debugUtils.testAllDatasets() - Test all datasets
-🔍 window.debugUtils.checkDataIntegrity('dataset-name') - Check file integrity
-📊 window.debugUtils.DEMO_DATA_SETS - Raw dataset configuration
+
+📋 Demo Data Testing:
+   window.debugUtils.listDatasets() - Show available datasets
+   window.debugUtils.loadDemoDataset('peekaboo-rep3-v1.1.1') - Load specific dataset  
+   window.debugUtils.testAllDatasets() - Test all datasets
+   window.debugUtils.checkDataIntegrity('dataset-name') - Check file integrity
+   window.debugUtils.DEMO_DATA_SETS - Raw dataset configuration
+
+🔧 API Testing:
+   VideoAnnotatorDebug.runAllTests() - Run comprehensive API tests
+   VideoAnnotatorDebug.checkHealth() - Test API health endpoints
+   VideoAnnotatorDebug.checkAuth() - Test authentication
 
 Available datasets: ${Object.keys(DEMO_DATA_SETS).join(', ')}
 

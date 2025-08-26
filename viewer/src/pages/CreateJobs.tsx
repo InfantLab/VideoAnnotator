@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import vavIcon from "@/assets/v-a-v.icon.png";
 
 const CreateJobs = () => {
   const [page, setPage] = useState(1);
@@ -78,9 +79,12 @@ const CreateJobs = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Annotation Jobs</h2>
-          <p className="text-gray-600">Monitor and manage your annotation jobs</p>
+        <div className="flex items-center gap-3">
+          <img src={vavIcon} alt="VideoAnnotator" className="h-8 w-8" />
+          <div>
+            <h2 className="text-2xl font-bold">Annotation Jobs</h2>
+            <p className="text-gray-600">Monitor and manage your annotation jobs</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => refetch()} variant="outline" size="sm">

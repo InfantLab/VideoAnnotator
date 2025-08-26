@@ -31,6 +31,12 @@ Optimize for large-scale usage with memory management, progressive loading, and 
 ### **Phase 1: UI/UX Excellence** (Weeks 1-4)
 
 #### **1.1 Professional Branding & Design System** 🎨
+- [ ] **Landing Page Redesign**
+  - Complete homepage overhaul to showcase dual functionality (viewer + runner)
+  - Clear navigation to both "View Annotations" and "Create Annotations" workflows
+  - Feature showcase with screenshots/demos of key capabilities
+  - Getting started guide and onboarding flow
+
 - [ ] **Consistent Visual Identity**
   - VideoAnnotator icon integration across all pages
   - Color scheme derived from brand colors with minimal hardcoding
@@ -104,7 +110,20 @@ Optimize for large-scale usage with memory management, progressive loading, and 
 
 ### **Phase 3: Enhanced Viewer Experience** (Weeks 9-12)
 
-#### **3.1 Advanced Annotation Visualization** 📊
+#### **3.1 Job Results Integration** 🔗
+- [ ] **Complete Job-to-Viewer Workflow**
+  - API endpoints for fetching completed job output files
+  - Automatic loading of COCO/WebVTT/RTTM files from VideoAnnotator results
+  - Seamless transition from "Open in Viewer" buttons to annotation playback
+  - Video file retrieval and automatic playback of processed videos
+
+- [ ] **Results Management System**
+  - Job artifacts browser and file management
+  - Multiple output format support (COCO, WebVTT, RTTM, scene detection)
+  - Result file validation and error handling
+  - Progress indicators for large result file loading
+
+#### **3.2 Advanced Annotation Visualization** 📊
 - [ ] **Motion Analysis Enhancement**
   - Industry-standard motion intensity algorithms
   - Per-person motion tracking lanes in timeline
@@ -352,7 +371,37 @@ Optimize for large-scale usage with memory management, progressive loading, and 
 
 ---
 
+---
+
+## 📝 **QA FEEDBACK INTEGRATION** (From v0.3.0 Testing)
+
+### **High Priority Items Added from QA**
+- [ ] **Job Results Integration**: Fix "Open in Viewer" buttons - currently redirect to landing page without loading job results
+- [ ] **Landing Page Redesign**: Redesign homepage to showcase both viewer and runner functionality with clear navigation
+- [ ] **JSON Configuration Display Fix**: White text on white background in Configure Pipelines ✅ v0.3.0 Fixed
+- [ ] **Pipeline Information Enhancement**: Detailed descriptions and controls for all pipelines ✅ v0.3.0 Partial
+- [ ] **Color Scheme Issues**: Dark gray text on black background readability problems ✅ v0.3.0 Fixed
+- [ ] **Face Pipeline Completeness**: Show all available OpenFace3 options
+- [ ] **Audio Pipeline Separation**: Distinguish pyannote, Whisper, and LAION components
+
+### **Medium Priority Additions**
+- [ ] **SSE Error Handling**: Improve handling of missing SSE endpoints
+- [ ] **React Router Future Flags**: Update to prevent console warnings ✅ v0.3.0 Fixed
+- [ ] **Error Boundary Implementation**: Better error recovery for job detail pages ✅ v0.3.0 Fixed
+- [ ] **Token Onboarding Flow**: Enhanced user guidance for API token setup
+- [ ] **Job Detail Buttons**: Enable functionality for Download Results and View Raw Data buttons ✅ v0.3.0 Partial
+
+### **Enhanced from QA Insights**
+- **Phase 1.1 Professional Branding**: Now includes fixing contrast issues identified in QA
+- **Phase 2.2 Advanced Pipeline Control**: Expanded based on specific QA feedback about pipeline options
+- **Phase 1.2 Configuration Interface**: Higher priority given JSON editor usability issues
+
+---
+
 **Roadmap Version**: v0.4.0  
-**Last Updated**: 2025-08-24  
+**Last Updated**: 2025-08-25 (QA Feedback Integrated)  
 **Status**: Planning Phase  
 **Dependencies**: Successful v0.3.0 release with server-side SSE implementation
+
+## 📋 **NOTE**: 
+Remember that roadmaps are stored in `docs/development/` subfolder, not directly in `docs/`.

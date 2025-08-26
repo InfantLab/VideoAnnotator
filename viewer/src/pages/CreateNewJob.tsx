@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle } from "lucide-reac
 import { Link, useNavigate } from "react-router-dom";
 import { apiClient, handleAPIError } from "@/api/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import vavIcon from "@/assets/v-a-v.icon.png";
 
 // Wizard steps
 const STEPS = [
@@ -20,25 +21,25 @@ const AVAILABLE_PIPELINES = [
   {
     name: "scene_detection",
     displayName: "Scene Detection",
-    description: "Detect scene boundaries using PySceneDetect + CLIP",
+    description: "Identifies scene changes and transitions in video using PySceneDetect + CLIP. Detects cuts, fades, and content-based scene boundaries.",
     enabled: true
   },
   {
     name: "person_tracking", 
     displayName: "Person Tracking",
-    description: "Track people using YOLO11 + ByteTrack",
+    description: "Tracks people movement throughout the video using YOLO11 + ByteTrack. Provides bounding boxes, pose keypoints, and persistent person IDs.",
     enabled: true
   },
   {
     name: "face_analysis",
     displayName: "Face Analysis", 
-    description: "Analyze faces using OpenFace 3.0",
+    description: "Facial expression analysis, demographic estimation, and facial landmark detection using OpenFace 3.0. Includes age, gender, and emotion recognition.",
     enabled: true
   },
   {
     name: "audio_processing",
     displayName: "Audio Processing",
-    description: "Speech recognition and speaker diarization",
+    description: "Speech recognition with Whisper and speaker diarization with pyannote. Transcribes speech and identifies different speakers with timestamps.",
     enabled: true
   }
 ];
@@ -89,8 +90,18 @@ const CreateNewJob = () => {
   };
 
   const handleSubmitJobs = async () => {
+    console.log('🚀 Submit button clicked - starting job submission');
+    console.log('Selected files:', selectedFiles.map(f => f.name));
+    console.log('Selected pipelines:', selectedPipelines);
+    console.log('Config:', config);
+    
     if (selectedFiles.length === 0) {
       setSubmitError("No videos selected");
+      return;
+    }
+
+    if (selectedPipelines.length === 0) {
+      setSubmitError("No pipelines selected");
       return;
     }
 
@@ -102,16 +113,21 @@ const CreateNewJob = () => {
     const errors: string[] = [];
 
     try {
+      console.log(`📤 Submitting ${selectedFiles.length} job(s) to VideoAnnotator API...`);
+      
       // Submit each video as a separate job
       for (const file of selectedFiles) {
         try {
+          console.log(`📹 Submitting job for: ${file.name}`);
           const response = await apiClient.submitJob(
             file,
             selectedPipelines,
             config
           );
+          console.log(`✅ Job created successfully: ${response.id}`);
           jobIds.push(response.id);
         } catch (error) {
+          console.error(`❌ Job submission failed for ${file.name}:`, error);
           const errorMsg = handleAPIError(error);
           errors.push(`${file.name}: ${errorMsg}`);
         }
@@ -129,12 +145,26 @@ const CreateNewJob = () => {
       }
 
       if (errors.length > 0) {
+        console.warn(`⚠️ Some jobs failed: ${errors.length} out of ${selectedFiles.length}`);
         setSubmitError(`Failed to submit ${errors.length} job(s): \n${errors.join('\n')}`);
       }
+      
+      if (jobIds.length === 0 && errors.length > 0) {
+        console.error('❌ All job submissions failed');
+        setSubmitError(
+          `All job submissions failed. Common issues:\n\n` +
+          `• VideoAnnotator API server not running (check http://localhost:8000)\n` +
+          `• Invalid API token or authentication\n` +
+          `• Network connectivity issues\n\n` +
+          `Errors:\n${errors.join('\n')}`
+        );
+      }
     } catch (error) {
+      console.error('💥 Unexpected error during job submission:', error);
       setSubmitError(handleAPIError(error));
     } finally {
       setIsSubmitting(false);
+      console.log('🏁 Job submission process completed');
     }
   };
 
@@ -202,9 +232,12 @@ const CreateNewJob = () => {
             Back
           </Button>
         </Link>
-        <div>
-          <h2 className="text-2xl font-bold">Create New Annotation Jobs</h2>
-          <p className="text-gray-600">Process videos through the VideoAnnotator pipeline (supports batch processing)</p>
+        <div className="flex items-center gap-3">
+          <img src={vavIcon} alt="VideoAnnotator" className="h-8 w-8" />
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Create New Annotation Jobs</h2>
+            <p className="text-muted-foreground">Process videos through the VideoAnnotator pipeline (supports batch processing)</p>
+          </div>
         </div>
       </div>
 
@@ -227,7 +260,7 @@ const CreateNewJob = () => {
                       ? "text-blue-600"
                       : step.id < currentStep
                       ? "text-green-600"
-                      : "text-gray-400"
+                      : "text-muted-foreground"
                   }`}
                 >
                   <div className="text-sm font-medium">{step.title}</div>
@@ -306,7 +339,7 @@ const VideoUploadStep = ({
       <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
         <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
         <h3 className="text-lg font-medium mb-2">Upload Video Files</h3>
-        <p className="text-gray-700 mb-4">
+        <p className="text-muted-foreground mb-4">
           Select video files to process. Supports batch processing. Formats: MP4, WebM, AVI, MOV
         </p>
         
@@ -372,13 +405,13 @@ const PipelineSelectionStep = ({
 
   return (
     <div className="space-y-6">
-      <p className="text-gray-700">
+      <p className="text-foreground">
         Select the annotation pipelines you want to run on your videos.
       </p>
       
       <div className="space-y-4">
         {AVAILABLE_PIPELINES.map((pipeline) => (
-          <div key={pipeline.name} className="flex items-center space-x-3 p-3 border rounded-lg">
+          <div key={pipeline.name} className="flex items-center space-x-3 p-3 border rounded-lg bg-card">
             <input 
               type="checkbox" 
               className="rounded" 
@@ -387,8 +420,8 @@ const PipelineSelectionStep = ({
               disabled={!pipeline.enabled}
             />
             <div className="flex-1">
-              <div className="font-medium text-gray-900">{pipeline.displayName}</div>
-              <div className="text-sm text-gray-700">
+              <div className="font-medium text-foreground">{pipeline.displayName}</div>
+              <div className="text-sm text-muted-foreground">
                 {pipeline.description}
               </div>
             </div>
@@ -417,7 +450,7 @@ const ConfigurationStep = ({
 }) => {
   return (
     <div className="space-y-6">
-      <p className="text-gray-700">
+      <p className="text-muted-foreground">
         Configure pipeline parameters. You can modify the configuration or use the default settings.
       </p>
       
@@ -434,7 +467,7 @@ const ConfigurationStep = ({
                 // Invalid JSON, don't update
               }
             }}
-            className="w-full h-64 text-sm font-mono resize-none border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded px-3 py-2 text-gray-900 bg-white"
+            className="w-full h-64 text-sm font-mono resize-none border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded px-3 py-2 text-foreground bg-background"
             placeholder="Pipeline configuration JSON..."
           />
         </div>
@@ -470,7 +503,7 @@ const ReviewStep = ({
 
   return (
     <div className="space-y-6">
-      <p className="text-gray-700">
+      <p className="text-muted-foreground">
         Review your job configuration before submission.
       </p>
       
@@ -497,14 +530,14 @@ const ReviewStep = ({
           <h4 className="font-medium mb-2">Video Files ({selectedFiles.length})</h4>
           <div className="space-y-1">
             {selectedFiles.slice(0, 3).map((file, index) => (
-              <p key={index} className="text-sm text-gray-700">
+              <p key={index} className="text-sm text-foreground">
                 {file.name} ({(file.size / (1024 * 1024)).toFixed(1)} MB)
               </p>
             ))}
             {selectedFiles.length > 3 && (
-              <p className="text-sm text-gray-500">...and {selectedFiles.length - 3} more files</p>
+              <p className="text-sm text-muted-foreground">...and {selectedFiles.length - 3} more files</p>
             )}
-            <p className="text-sm font-medium text-gray-600">
+            <p className="text-sm font-medium text-muted-foreground">
               Total size: {(totalSize / (1024 * 1024)).toFixed(1)} MB
             </p>
           </div>
@@ -522,7 +555,7 @@ const ReviewStep = ({
         
         <div className="p-4 border rounded-lg">
           <h4 className="font-medium mb-2">Configuration Preview</h4>
-          <pre className="text-xs text-gray-600 bg-gray-50 p-2 rounded overflow-x-auto">
+          <pre className="text-xs text-muted-foreground bg-muted p-2 rounded overflow-x-auto">
             {JSON.stringify(config, null, 2)}
           </pre>
         </div>
