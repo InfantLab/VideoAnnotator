@@ -22,7 +22,8 @@
       "WebFetch(domain:localhost)",
       "Bash(pkill:*)",
       "Bash(taskkill:*)",
-      "Bash(gh pr:*)"
+      "Bash(gh pr:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }
