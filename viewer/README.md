@@ -280,10 +280,11 @@ If you use this software in your research, please cite:
 
 ```
 Addyman, C. (2025). Video Annotation Viewer: Interactive visualization tool for multimodal video annotation data. 
-DOI: [Zenodo DOI - Coming Soon]
+DOI: [10.5281/zenodo.16948764](https://doi.org/10.5281/zenodo.16948764)
 ```
 
-**Zenodo DOI:** *[Will be created upon final release]*
+**Zenodo DOI:** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.16948764.svg)](https://doi.org/10.5281/zenodo.16948764)
+
 
 ### 🤝 Contact & Support
 
