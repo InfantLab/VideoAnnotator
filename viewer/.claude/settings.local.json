@@ -23,7 +23,10 @@
       "Bash(pkill:*)",
       "Bash(taskkill:*)",
       "Bash(gh pr:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git tag:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }

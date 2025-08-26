@@ -295,6 +295,9 @@ https://github.com/InfantLab/video-annotation-viewer/issues
 **For VideoAnnotator Questions:** Visit the main VideoAnnotator repository:  
 https://github.com/InfantLab/VideoAnnotator
 
+### Acknowledgements
+This work was supported by the Global Parenting Initiative (Funded by The LEGO Foundation).
+
 ---
 
 **🏗️ Built with modern web technologies** | **⚡ Powered by Bun runtime** | **🔬 Made for researchers**
