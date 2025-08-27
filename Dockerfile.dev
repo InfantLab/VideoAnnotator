@@ -1,0 +1,57 @@
+# VideoAnnotator Development Docker Image - Simple Approach
+# This image includes GPU support AND your local model cache for instant testing
+# Copies your existing models/ and weights/ directories
+#
+# Usage:
+#   docker build -f dockerfile.dev -t videoannotator:dev .
+#   docker run --gpus all --rm -p 8000:8000 -v ${PWD}/data:/app/data videoannotator:dev
+
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+
+SHELL ["/bin/bash","-lc"]
+RUN apt-get update && apt-get install -y \
+    curl python3 python3-venv python3-pip git \
+    libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# uv package manager
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
+
+WORKDIR /app
+
+# Copy source code (excluding models via .dockerignore)
+COPY . .
+
+# Copy your local models and weights (the reliable approach)
+# These should contain exactly what your pipelines need
+COPY models/ /app/models/
+COPY weights/ /app/weights/
+
+# Install dependencies (excluding torch to avoid conflicts)
+RUN uv sync --frozen --no-editable
+
+# Install CUDA PyTorch for GPU acceleration (override CPU version)
+RUN uv pip install "torch==2.4.0+cu124" "torchvision==0.19.0+cu124" "torchaudio==2.4.0+cu124" --index-url https://download.pytorch.org/whl/cu124
+
+# Verify GPU access and model cache (no model downloading needed!)
+RUN uv run python3 -c "\
+import torch; \
+from pathlib import Path; \
+print(f'[DEV BUILD] CUDA available: {torch.cuda.is_available()}'); \
+models_count = len(list(Path('/app/models').rglob('*'))) if Path('/app/models').exists() else 0; \
+weights_count = len(list(Path('/app/weights').rglob('*'))) if Path('/app/weights').exists() else 0; \
+print(f'[DEV BUILD] Models directory: {models_count} files'); \
+print(f'[DEV BUILD] Weights directory: {weights_count} files'); \
+print('[DEV BUILD] Development image ready with local model cache!');"
+
+# Set environment for development
+ENV PYTHONUNBUFFERED=1
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Create directories for mounted volumes
+RUN mkdir -p /app/data /app/output /app/logs
+
+EXPOSE 8000
+
+CMD ["uv", "run", "python3", "api_server.py", "--log-level", "info"]

@@ -7,7 +7,7 @@ name = "videoannotator"
 version = "1.2.0"
 description = "A modern, modular toolkit for analyzing, processing, and visualizing human interaction videos"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "VideoAnnotator Team", email = "info@videoannotator.com"}
 ]
@@ -15,13 +15,12 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research", 
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Multimedia :: Video",
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     # Core dependencies - Python 3.12 Compatible
     "fastapi>=0.115.0",

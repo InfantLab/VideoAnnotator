@@ -57,6 +57,36 @@ services:
     profiles:
       - gpu
 
+  # Development service with GPU and pre-cached models
+  videoannotator-dev-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        - DOCKERIGNORE_FILE=.dockerignore.dev
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+      - ./logs:/app/logs
+      - ./database:/app/database  # Persistent database for development
+    environment:
+      - PYTHONPATH=/app
+      - CUDA_VISIBLE_DEVICES=0
+      - VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator_dev.db
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    ports:
+      - "8000:8000"  # FastAPI server
+    command: ["uv", "run", "python", "api_server.py", "--log-level", "info"]
+    profiles:
+      - dev-gpu
+
   # Jupyter service for development
   jupyter:
     build:

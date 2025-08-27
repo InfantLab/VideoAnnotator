@@ -37,7 +37,7 @@ async def event_stream() -> AsyncGenerator[str, None]:
             
     except asyncio.CancelledError:
         logger.info("SSE stream cancelled by client")
-        break
+        return
     except Exception as e:
         logger.error(f"Error in SSE stream: {e}")
         error_data = {

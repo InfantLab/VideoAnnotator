@@ -1,18 +1,47 @@
-# Choose a CUDA runtime matching your torch build (e.g., 12.4)
+# VideoAnnotator Production Docker Image - GPU Version
+# This image does NOT include models/weights - they download automatically on first use
+#
+# Usage:
+#   docker build -f Dockerfile.gpu -t videoannotator:gpu .
+#   docker run --gpus all --rm -p 8000:8000 -v ${PWD}/data:/app/data videoannotator:gpu
+
 FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
 
 SHELL ["/bin/bash","-lc"]
-RUN apt-get update && apt-get install -y curl python3 python3-venv python3-pip && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    curl python3 python3-venv python3-pip git \
+    libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
 
-# uv
+# uv package manager
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:${PATH}"
 
 WORKDIR /app
-COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-editable
-# Install torch for CUDA build selected (match to pytorch.org command)
-RUN uv add "torch==2.4.*+cu124" "torchvision==0.19.*+cu124" --index-url https://download.pytorch.org/whl/cu124
 
+# Copy source code (excluding models via .dockerignore)
 COPY . .
-CMD ["uv", "run", "python", "api_server.py"]
+
+# Install dependencies (excluding torch to avoid conflicts)
+RUN uv sync --frozen --no-editable
+
+# Install CUDA PyTorch for GPU acceleration (override CPU version)
+RUN uv pip install "torch==2.4.0+cu124" "torchvision==0.19.0+cu124" "torchaudio==2.4.0+cu124" --index-url https://download.pytorch.org/whl/cu124
+
+# Verify GPU access (no model downloading needed!)
+RUN uv run python3 -c "\
+import torch; \
+print(f'[GPU BUILD] CUDA available: {torch.cuda.is_available()}'); \
+print(f'[GPU BUILD] PyTorch version: {torch.__version__}'); \
+print('[GPU BUILD] Production image ready - models will download on first use');"
+
+# Set environment for production
+ENV PYTHONUNBUFFERED=1
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Create directories for mounted volumes
+RUN mkdir -p /app/data /app/output /app/logs
+
+EXPOSE 8000
+
+CMD ["uv", "run", "python3", "api_server.py", "--log-level", "info"]

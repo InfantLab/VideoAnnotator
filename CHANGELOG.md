@@ -7,8 +7,161 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Future development
+### Planned
+- Enhanced pipeline configuration system
+- Advanced batch processing optimizations
+- Extended annotation tool integration
+- Multi-language CLI support
+
+## [1.2.0] - 2025-08-26
+
+### 🚀 Major Features - Production-Ready API System
+
+#### Added
+- **🎯 Modern FastAPI Server**: Complete REST API with interactive documentation at `/docs`
+- **⚡ Integrated Background Processing**: Built-in job processing system - no separate worker processes needed
+- **🛠️ Modern CLI Interface**: Comprehensive `uv run videoannotator` command-line tools for server and job management
+- **📊 Real-time Job Status**: Live job tracking with detailed progress updates and results retrieval
+- **🔄 Async Job Processing**: Handle multiple video processing jobs simultaneously
+- **🌐 Cross-platform API**: RESTful endpoints compatible with Python, JavaScript, R, and any HTTP client
+
+#### Enhanced Architecture
+- **🏗️ API-First Design**: All pipelines accessible through standardized HTTP endpoints
+- **📋 Job Management System**: Complete job lifecycle with submit → status → results workflow  
+- **🔧 Configuration API**: Validate and manage pipeline configurations via API
+- **📁 File Management**: Secure video upload, processing, and result file downloads
+- **🔐 Authentication Ready**: JWT token infrastructure for secure API access
+
+#### Modern Development Stack
+- **📦 uv Package Manager**: Migrated from pip to uv for 10x faster dependency management
+- **🧹 Ruff Integration**: Modern linting and formatting with Ruff (replaces Black, isort, flake8)
+- **🐳 Fixed Docker Support**: Resolved build issues with proper file copying and modern license formats
+- **📖 DeepWiki Integration**: Interactive documentation available at deepwiki.com/InfantLab/VideoAnnotator
+
+### 🛠️ API Endpoints & Usage
+
+#### Core Job Management
+```bash
+# Submit video processing job
+POST /api/v1/jobs/
+# Monitor job status  
+GET /api/v1/jobs/{job_id}
+# Retrieve detailed results
+GET /api/v1/jobs/{job_id}/results
+# Download specific pipeline outputs
+GET /api/v1/jobs/{job_id}/results/files/{pipeline}
+```
+
+#### System Management
+```bash
+# Health check and server info
+GET /health
+GET /api/v1/debug/server-info
+# List available pipelines
+GET /api/v1/pipelines
+# Configuration validation
+POST /api/v1/config/validate
+```
+
+#### Modern CLI Commands
+```bash
+# Start integrated API server
+uv run videoannotator server --port 8000
+
+# Job management via CLI
+uv run videoannotator job submit video.mp4 --pipelines scene,person,face
+uv run videoannotator job status <job_id>  
+uv run videoannotator job results <job_id>
+uv run videoannotator job list --status completed
+
+# System information
+uv run videoannotator info
+uv run videoannotator pipelines --detailed
+```
+
+### 📚 Documentation & User Experience
+
+#### Updated Documentation
+- **📖 Complete Documentation Refresh**: Updated all docs for v1.2.0 with modern API patterns
+- **🧭 Navigation System**: Added consistent navigation bars across all documentation files
+- **🎮 Interactive Examples**: Updated demo_commands.md with modern CLI and API usage patterns  
+- **🔗 Cross-references**: Fixed all internal documentation links with proper relative paths
+- **📋 API Reference**: Complete API documentation with request/response examples
+
+#### Migration from Legacy Patterns
+- **Replaced**: Old `python demo.py` patterns → Modern `uv run videoannotator` CLI
+- **Updated**: Direct pipeline usage → API-first architecture examples
+- **Enhanced**: Configuration examples with modern YAML structure
+- **Improved**: Getting started guide with 30-second setup process
+
+### 🔧 Technical Improvements
+
+#### Development Workflow
+- **⚡ Fast Package Management**: uv provides 10-100x faster dependency resolution
+- **🧹 Unified Tooling**: Single Ruff command replaces multiple linting/formatting tools
+- **🏗️ Modern Build System**: Updated pyproject.toml with modern license format and dependency groups
+- **🐳 Container Optimization**: Fixed Docker builds with proper source file copying
+
+#### Infrastructure
+- **🔄 Integrated Processing**: Background job processing runs within API server process
+- **📊 Status Tracking**: Real-time job status updates with detailed pipeline progress
+- **🗄️ Database Integration**: SQLite-based job storage with full CRUD operations
+- **🔐 Security Framework**: JWT authentication ready for production deployment
+
+### 🛡️ Compatibility & Migration
+
+#### Breaking Changes
+- **CLI Interface**: Legacy `python demo.py` replaced with `uv run videoannotator` commands
+- **Configuration**: Updated to API-first workflow - direct pipeline usage now for development only
+- **Dependencies**: Requires uv package manager for optimal performance
+
+#### Migration Path
+```bash
+# Install uv package manager
+curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/Mac
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
+
+# Update existing installation
+uv sync  # Fast dependency installation
+uv sync --extra dev  # Include development dependencies
+
+# Start using modern API server
+uv run videoannotator server  # Replaces old direct processing
+```
+
+#### Backward Compatibility
+- **✅ Pipeline Architecture**: All pipelines remain fully functional with same output formats
+- **✅ Configuration Files**: Existing YAML configs work with new API system
+- **✅ Output Formats**: JSON schemas unchanged - existing analysis code continues working
+- **✅ Docker Support**: Updated containers with same functionality
+
+### 🎯 Production Readiness
+
+#### Deployment Features  
+- **🚀 Single Command Startup**: `uv run videoannotator server` starts complete system
+- **📊 Health Monitoring**: Built-in health endpoints for system monitoring
+- **🔄 Graceful Shutdowns**: Proper cleanup of background processes and resources
+- **📱 API Documentation**: Auto-generated OpenAPI/Swagger documentation
+- **🐳 Container Support**: Fixed Docker builds for both CPU and GPU deployment
+
+#### Performance & Reliability
+- **⚡ Fast Startup**: Models load on-demand, reducing initial startup time  
+- **🔄 Concurrent Processing**: Handle multiple video jobs simultaneously
+- **💾 Resource Management**: Proper cleanup prevents memory leaks
+- **🛡️ Error Recovery**: Robust error handling with detailed status reporting
+
+### 🧪 Quality Assurance
+
+#### Testing & Validation
+- **✅ Comprehensive API Testing**: Full test coverage for job management and processing workflows
+- **✅ Integration Testing**: End-to-end tests with real video processing
+- **✅ Docker Validation**: Verified container builds and deployments  
+- **✅ Documentation Accuracy**: All examples tested and validated for v1.2.0
+
+#### Development Standards
+- **🧹 Modern Code Quality**: Ruff-based linting and formatting with consistent style
+- **📋 Type Safety**: Maintained mypy type checking across codebase
+- **📊 Test Coverage**: High test coverage maintained across API and processing layers
 
 ## [1.1.1] - 2025-08-04
 

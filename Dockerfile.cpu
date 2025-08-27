@@ -1,15 +1,46 @@
+# VideoAnnotator Production Docker Image - CPU Version
+# This image does NOT include models/weights - they download automatically on first use
+#
+# Usage:
+#   docker build -f Dockerfile.cpu -t videoannotator:cpu .
+#   docker run --rm -p 8000:8000 -v ${PWD}/data:/app/data videoannotator:cpu
+
 FROM python:3.12-slim
 
-# system basics
-RUN apt-get update && apt-get install -y curl build-essential && rm -rf /var/lib/apt/lists/*
+SHELL ["/bin/bash","-lc"]
+RUN apt-get update && apt-get install -y \
+    curl python3 python3-venv python3-pip git \
+    libgl1-mesa-dri libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
 
-# uv installer
+# uv package manager
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:${PATH}"
 
 WORKDIR /app
-COPY pyproject.toml uv.lock ./
+
+# Copy source code (excluding models via .dockerignore)
+COPY . .
+
+# Install dependencies (excluding torch to avoid conflicts)
 RUN uv sync --frozen --no-editable
 
-COPY . .
-CMD ["uv", "run", "python", "api_server.py"]
+# Install CPU-only PyTorch (override any CUDA versions)
+RUN uv pip install "torch==2.4.0+cpu" "torchvision==0.19.0+cpu" "torchaudio==2.4.0+cpu" --index-url https://download.pytorch.org/whl/cpu
+
+# Verify CPU setup (no GPU packages installed)
+RUN uv run python3 -c "\
+import torch; \
+print(f'[CPU BUILD] CUDA available: {torch.cuda.is_available()}'); \
+print(f'[CPU BUILD] PyTorch version: {torch.__version__}'); \
+print('[CPU BUILD] Production image ready - models will download on first use');"
+
+# Set environment for production
+ENV PYTHONUNBUFFERED=1
+
+# Create directories for mounted volumes
+RUN mkdir -p /app/data /app/output /app/logs
+
+EXPOSE 8000
+
+CMD ["uv", "run", "python3", "api_server.py", "--log-level", "info"]

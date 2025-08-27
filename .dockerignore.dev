@@ -1,0 +1,48 @@
+# Development Docker build - INCLUDES models/ and weights/ via explicit COPY commands
+# Use with: docker build -f Dockerfile.dev --dockerignore-file .dockerignore.dev
+
+# Standard ignores
+.git
+.gitignore
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+venv
+.venv
+.env
+
+# IDE files
+.vscode
+.idea
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project outputs and temp files
+output/
+outputs/
+logs/
+*.log
+temp/
+tmp/
+test_*.db
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Documentation that doesn't need to be in container
+docs/
+examples/
+tests/
+
+# NOTE: We do NOT exclude models/ and weights/ here
+# because we explicitly COPY them in the Dockerfile
+# This gives us the best of both worlds:
+# - Reliable, consistent model cache
+# - Smaller build context for everything else
