@@ -302,15 +302,15 @@ print(f"Detected {df['person_id'].nunique()} unique people")
 If you use VideoAnnotator in your research, please cite:
 ```
 Addyman, C. (2025). VideoAnnotator: Automated video analysis toolkit for human interaction research.
-Zenodo. https://doi.org/10.5281/zenodo.[TO_BE_ASSIGNED]
+Zenodo. https://Zenodo. doi.org/10.5281/zenodo.16961751
 ```
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.16961751.svg)](https://doi.org/10.5281/zenodo.16961751)
 
 ### **License**
 MIT License - Full terms in [LICENSE](LICENSE)
 
 ### **Funding & Support**
 - **The Global Parenting Initiative** (Funded by The LEGO Foundation)
-- **Birkbeck, University of London** - InfantLab research group
 
 ## 🙏 Acknowledgments
 
