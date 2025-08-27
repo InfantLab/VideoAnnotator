@@ -51,7 +51,8 @@
       "Bash(dir test_*)",
       "Bash(del /F test_fix_output_dir.db)",
       "Bash(del:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(git tag:*)"
     ],
     "deny": []
   }

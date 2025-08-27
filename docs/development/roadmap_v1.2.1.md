@@ -117,6 +117,14 @@ src/registry/
 
 ## 🐛 **Minor Bug Fixes**
 
+### **CI/CD & Testing Issues**
+- [ ] **🚨 GitHub Actions CI/CD Failure** - Investigate and fix CI/CD pipeline failure from v1.2.0 release
+  - **Issue**: GitHub Actions run failed with git operation errors (exit code 128)
+  - **URL**: https://github.com/InfantLab/VideoAnnotator/actions/runs/17261547713
+  - **Impact**: 19 errors across multiple OS/Python version combinations
+  - **Investigation needed**: Git repository configuration, dependency compatibility, test environment setup
+  - **Priority**: High - affects automated testing and release validation
+
 ### **Logging & Diagnostics**
 - [ ] **Fix logging directory creation** - API server should create logs/ directory
 - [ ] **Improve CUDA detection** - More accurate GPU availability reporting
@@ -178,10 +186,11 @@ src/registry/
 ## ⚡ **Fast-Track Items (1 week)**
 These can be completed quickly for immediate release:
 
-1. **examples/README.md CLI syntax updates** (2 hours)
-2. **Basic logging directory fix** (1 hour)  
-3. **CLI error message improvements** (3 hours)
-4. **Add 1-2 new API examples** (4 hours)
+1. **🚨 CI/CD Pipeline Fix** (4-6 hours) - **PRIORITY**: Fix GitHub Actions failure from v1.2.0
+2. **examples/README.md CLI syntax updates** (2 hours)
+3. **Basic logging directory fix** (1 hour)  
+4. **CLI error message improvements** (3 hours)
+5. **Add 1-2 new API examples** (4 hours)
 
 ## 🎯 **Pipeline Documentation System (Priority)**
 This comprehensive system should be implemented as the cornerstone of v1.2.1:

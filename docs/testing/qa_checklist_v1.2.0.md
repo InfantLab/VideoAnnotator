@@ -214,7 +214,7 @@ time estimates based on past performance.
 - [>>] **FiftyOne Integration** - Dataset visualization works
 - [>>] **Cloud Storage** - S3/Azure/GCS upload/download functional
 - [x] **Webhook System** - Event notifications sent properly
-- [ ] **Docker Deployment** - Container builds and runs correctly
+- [x] **Docker Deployment** - Containers builds and runs correctly
 - [>>] **Kubernetes Deploy** - K8s manifests deploy successfully
 
 #### Client Libraries & SDKs
