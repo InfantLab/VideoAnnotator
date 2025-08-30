@@ -287,7 +287,7 @@ print(f"Detected {df['person_id'].nunique()} unique people")
 ### **Getting Involved**
 - **🐛 Report issues**: [GitHub Issues](https://github.com/InfantLab/VideoAnnotator/issues)
 - **💬 Discussions**: [GitHub Discussions](https://github.com/InfantLab/VideoAnnotator/discussions) 
-- **📧 Contact**: Research team at infantlab@bbk.ac.uk
+- **📧 Contact**: Caspar Addyman at infantologist@gmail.com 
 - **🔬 Collaborations**: Open to research partnerships
 
 ### **Development**
