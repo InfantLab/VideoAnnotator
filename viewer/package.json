@@ -17,10 +17,10 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-  "test:coverage": "vitest run --coverage",
-  "e2e": "playwright test",
-  "e2e:install": "playwright install --with-deps",
-  "lhci": "lhci autorun --config=./lighthouserc.json"
+    "test:coverage": "vitest run --coverage",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install --with-deps",
+    "lhci": "lhci autorun --config=./lighthouserc.json"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -76,8 +76,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
-  "@lhci/cli": "^0.13.0",
-  "@playwright/test": "^1.47.2",
+    "@lhci/cli": "^0.13.0",
+    "@playwright/test": "^1.47.2",
     "@tailwindcss/typography": "^0.5.15",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^14.2.1",

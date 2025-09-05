@@ -245,6 +245,51 @@ Optimize for large-scale usage with memory management, progressive loading, and 
 
 ---
 
+### ✅ Pre-release Quality Gates (to enforce at v0.4.0 RC)
+
+Non-blocking during active development; will become required checks for the v0.4.0 pre-release:
+
+- Build & Types
+  - [ ] Vite production build succeeds (no warnings promoted to errors)
+  - [ ] TypeScript typecheck (tsc --noEmit) passes
+  - [ ] ESLint passes (no error-level rules)
+
+- Tests & Coverage
+  - [ ] Vitest unit/integration tests pass on CI
+  - [ ] Test coverage meets thresholds (proposed defaults):
+        Lines ≥ 80%, Branches ≥ 70%, Functions ≥ 80%, Statements ≥ 80%
+  - [ ] Codecov upload succeeds; coverage badge reflects latest main
+
+- E2E & Cross-browser
+  - [ ] Playwright smoke tests pass (Chromium, Firefox, WebKit)
+  - [ ] Core flows: load demo, toggle overlays, seek/timeline, job list open
+
+- Accessibility & Performance
+  - [ ] Lighthouse CI: Performance ≥ 90, Accessibility ≥ 90, Best Practices ≥ 90
+  - [ ] Axe checks pass on key pages (no critical violations)
+
+- Bundle & Security
+  - [ ] Bundle size budgets respected (e.g., app chunk < 300KB gzip; vendor < 500KB)
+  - [ ] npm audit (production) shows 0 high/critical vulnerabilities
+
+- Docs & Release Hygiene
+  - [ ] CHANGELOG updated and version bumped
+  - [ ] README badges and screenshots updated
+  - [ ] Release notes generated (Changesets or GH Release)
+
+- Repo Settings (to enable at RC)
+  - [ ] Protect main: require status checks (build, lint, typecheck, tests, coverage, e2e)
+  - [ ] Require PR reviews and linear history
+  - [ ] Require up-to-date with base branch
+
+Implementation notes (for later enablement):
+- Coverage thresholds: set in `vitest.config.ts -> test.coverage.thresholds`.
+- Codecov: repo connected; token only needed for private repos.
+- Playwright: add `@playwright/test`, basic smoke specs, and GitHub Action.
+- Lighthouse CI: add `@lhci/cli` with minimal config and CI step.
+- Size budgets: add `size-limit` (or vite-plugin bundle analyzer) with CI step.
+- Branch protection: configure in GitHub settings when RC branch is cut.
+
 ## 🗓️ **DEVELOPMENT TIMELINE**
 
 ### **Sprint 1-2 (Weeks 1-4): UI Foundation**
