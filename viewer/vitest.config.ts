@@ -13,7 +13,8 @@ export default defineConfig({
     css: true,
     // Include files in test coverage report
     coverage: {
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'lcov'],
+      reportsDirectory: './coverage',
       exclude: [
         'node_modules/',
         'src/test/',

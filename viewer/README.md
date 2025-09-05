@@ -1,7 +1,23 @@
 <div align="center">
-  <img src="public/icon-32x32.png" alt="Video Annotation Viewer Icon" width="64" height="64">
+  <img src="public/icon-64x64.png" alt="Video Annotation Viewer Icon" width="64" height="64">
   <h1>Video Annotation Viewer v0.3.0</h1>
 </div>
+
+[![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React 18](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![Node >=18](https://img.shields.io/badge/Node-%3E%3D18-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Vite 5](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Bun 1.x](https://img.shields.io/badge/Bun-1.x-000000?logo=bun&logoColor=white)](https://bun.sh/)
+[![Vitest](https://img.shields.io/badge/Tests-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![CI Tests](https://github.com/InfantLab/video-annotation-viewer/actions/workflows/tests.yml/badge.svg)](https://github.com/InfantLab/video-annotation-viewer/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/InfantLab/video-annotation-viewer/branch/main/graph/badge.svg)](https://codecov.io/gh/InfantLab/video-annotation-viewer)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/InfantLab/video-annotation-viewer)
+
+
+
+
 
 Advanced multimodal video annotation analysis tool for both **reviewing VideoAnnotator pipeline outputs** and **creating new annotation jobs**. Features synchronized pose detection, speech recognition, speaker diarization, and scene detection visualization with integrated job management.
 

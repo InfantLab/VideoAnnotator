@@ -1,0 +1,74 @@
+name: tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.x'
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Run tests
+        run: bun run test:run
+
+      - name: Coverage (optional)
+        run: bun run test:coverage
+        continue-on-error: true
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+          verbose: true
+
+  e2e:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    needs: build-and-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.x'
+      - name: Install deps
+        run: bun install
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Run E2E tests
+        run: npx playwright test
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    needs: build-and-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.x'
+      - name: Install deps
+        run: bun install
+      - name: Run Lighthouse CI
+        run: npx lhci autorun --config=./lighthouserc.json

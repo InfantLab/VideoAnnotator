@@ -77,6 +77,13 @@ Opens `coverage/index.html` showing:
 - **Function Coverage**: % of functions called
 - **Statement Coverage**: % of statements executed
 
+### CI Coverage & Badge (Codecov)
+- CI runs coverage and uploads LCOV to Codecov.
+- Coverage badge is in the README and updates after main gets a CI run.
+- For private repos, set `CODECOV_TOKEN` in GitHub repo Secrets; public repos generally don’t need it.
+
+Codecov action lives at: `.github/workflows/tests.yml`.
+
 ## 🔧 **Test Configuration**
 
 ### **vitest.config.ts**
@@ -84,6 +91,20 @@ Opens `coverage/index.html` showing:
 - Sets up jsdom environment (simulates browser)
 - Configures path aliases (`@/` imports)
 - Coverage reporting settings
+
+Example coverage config (lcov enabled):
+```ts
+// vitest.config.ts
+export default defineConfig({
+  test: {
+    coverage: {
+      reporter: ["text", "json", "html", "lcov"],
+      reportsDirectory: "./coverage",
+      // thresholds: { lines: 80, branches: 70, functions: 80, statements: 80 }, // enable at v0.4.0 RC
+    },
+  },
+})
+```
 
 ### **src/test/setup.ts**
 - Mocks browser APIs (matchMedia, ResizeObserver)
@@ -217,3 +238,59 @@ With this testing framework, Video Annotation Viewer v0.2.0 is now enterprise-re
 - **Developer-friendly test workflow**
 
 Happy testing! 🧪✨
+
+---
+
+# CI, E2E, and Quality Gates
+
+## 🔄 Continuous Integration (CI)
+- CI workflow: `.github/workflows/tests.yml`
+  - Installs deps with Bun
+  - Lints (`bun run lint`)
+  - Runs tests (`bun run test:run`)
+  - Generates coverage (`bun run test:coverage`)
+  - Uploads `coverage/lcov.info` to Codecov
+- Badges in README: CI status and Codecov coverage
+
+## 🧪 End-to-End (E2E) Testing (Planned)
+- Tool: Playwright (`@playwright/test`)
+- Scope: Smoke tests for critical flows
+  - Load demo dataset
+  - Toggle overlays
+  - Seek on timeline
+  - Open Job list / details
+- CI: Add a separate Playwright job with Chromium, Firefox, WebKit
+- Local: `npx playwright install` then run tests; record videos on failures for debugging
+
+## 🌟 Performance & Accessibility (Planned)
+- Tool: Lighthouse CI (`@lhci/cli`)
+- Targets (at v0.4.0 RC): Performance ≥ 90, Accessibility ≥ 90, Best Practices ≥ 90
+- CI: Run against a preview build; upload reports as artifacts
+
+## 📦 Bundle Size Budgets (Planned)
+- Tool options: `size-limit` or `rollup-plugin-visualizer`/`vite-bundle-visualizer`
+- Targets (at v0.4.0 RC, example):
+  - App chunk < 300 KB gzip
+  - Vendor < 500 KB gzip
+- CI: Add a size-limit step to warn/fail if budgets exceeded
+
+## 🔐 Branch Protection (Enable at RC)
+- Protect `main`
+  - Require status checks: build, lint, typecheck, tests, coverage, e2e
+  - Require PR review(s) and up-to-date with base branch
+  - Enforce linear history (optional)
+
+## ✅ Pre-release Quality Gates (v0.4.0)
+Non-blocking during active development; enforced for v0.4.0 Release Candidate:
+- Build/Types: Vite build, `tsc --noEmit`, ESLint pass
+- Tests: Vitest pass; Coverage thresholds met (Lines ≥ 80, Branches ≥ 70, Functions ≥ 80, Statements ≥ 80)
+- E2E: Playwright smoke tests pass in Chromium/Firefox/WebKit
+- Perf/Accessibility: Lighthouse CI targets met
+- Bundle/Security: Size budgets respected; `npm audit` shows 0 high/critical
+- Docs/Release: CHANGELOG, README badges/screens updated; release notes prepared
+
+## 🧭 Setup Notes
+- Codecov: Public repos can upload without token; private repos need `CODECOV_TOKEN` secret
+- Thresholds: Add `coverage.thresholds` to `vitest.config.ts` when ready to gate
+- Playwright: Add minimal specs first, then expand coverage
+- Lighthouse: Run on built preview for stable scores
