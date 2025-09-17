@@ -6,6 +6,7 @@
 [![uv](https://img.shields.io/badge/uv-package%20manager-FF4B4B?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
 [![Docker](https://img.shields.io/badge/Docker-GPU%20Ready-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/)
 [![Tests](https://img.shields.io/badge/tests-83%25%20passing-brightgreen.svg)](tests/)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/InfantLab/VideoAnnotator)
 
 **Automated video analysis toolkit for human interaction research** - Extract comprehensive behavioral annotations from videos using AI pipelines, with an intuitive web interface for visualization and analysis.
 
@@ -287,7 +288,7 @@ print(f"Detected {df['person_id'].nunique()} unique people")
 ### **Getting Involved**
 - **🐛 Report issues**: [GitHub Issues](https://github.com/InfantLab/VideoAnnotator/issues)
 - **💬 Discussions**: [GitHub Discussions](https://github.com/InfantLab/VideoAnnotator/discussions) 
-- **📧 Contact**: Research team at infantlab@bbk.ac.uk
+- **📧 Contact**: Caspar Addyman at infantologist@gmail.com 
 - **🔬 Collaborations**: Open to research partnerships
 
 ### **Development**
