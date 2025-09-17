@@ -1,0 +1,42 @@
+name: person_tracking
+display_name: Person Tracking & Pose
+description: Track persons with YOLO11 + ByteTrack producing COCO person + keypoint annotations.
+pipeline_family: person
+variant: yolov11n-pose-bytetrack
+tasks:
+  - object-tracking
+  - pose-estimation
+modalities:
+  - video
+capabilities:
+  - real-time
+  - identity-persistence
+outputs:
+  - format: COCO
+    types: [person_detection, keypoints, tracking]
+config_schema:
+  model:
+    type: string
+    default: models/yolo/yolo11n-pose.pt
+    description: YOLO pose model path or tag
+  conf_threshold:
+    type: float
+    default: 0.4
+    description: Detection confidence threshold
+  iou_threshold:
+    type: float
+    default: 0.7
+    description: IoU threshold for NMS/tracking
+  track_mode:
+    type: boolean
+    default: true
+    description: Enable tracking logic
+examples:
+  - cli: videoannotator job submit demo.mp4 --pipelines person_tracking
+    description: Submit person tracking job
+  - api: POST /api/v1/jobs (selected_pipelines=["person_tracking"]) 
+    description: API job submission including person tracking
+version: 1
+stability: beta
+backends:
+  - pytorch

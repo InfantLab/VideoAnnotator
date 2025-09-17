@@ -1,0 +1,36 @@
+name: face_openface3_embedding
+display_name: OpenFace3 Face Embedding
+description: Generate 512-D face embeddings for recognition or clustering using OpenFace3.
+pipeline_family: face
+variant: openface3-embedding
+tasks:
+  - face-embedding
+modalities:
+  - image
+  - video
+capabilities:
+  - embedding
+outputs:
+  - format: JSON
+    types: [embeddings]
+config_schema:
+  model_path:
+    type: string
+    default: models/face/openface3.onnx
+    description: Path to OpenFace3 ONNX model
+  batch_size:
+    type: integer
+    default: 32
+    description: Inference batch size
+  min_face_size:
+    type: integer
+    default: 32
+    description: Minimum face size in pixels to consider
+examples:
+  - cli: videoannotator job submit demo.mp4 --pipelines face_openface3_embedding
+    description: Submit face embedding job
+version: 1
+stability: experimental
+backends:
+  - onnx
+  - pytorch

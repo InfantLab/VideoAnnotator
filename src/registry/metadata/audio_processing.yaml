@@ -1,0 +1,42 @@
+name: audio_processing
+display_name: Audio Processing (Speech + Diarization)
+description: Transcribe speech with Whisper and perform speaker diarization using pyannote.audio producing WebVTT + RTTM outputs.
+pipeline_family: audio
+variant: whisper-pyannote
+tasks:
+  - speech-transcription
+  - speaker-diarization
+modalities:
+  - audio
+capabilities:
+  - streaming
+  - embedding
+outputs:
+  - format: WebVTT
+    types: [transcript]
+  - format: RTTM
+    types: [speaker_turns]
+config_schema:
+  whisper_model:
+    type: string
+    default: base
+    description: Whisper model size
+  enable_diarization:
+    type: boolean
+    default: true
+    description: Perform speaker diarization
+  min_speakers:
+    type: integer
+    default: 1
+    description: Minimum number of speakers to consider
+  max_speakers:
+    type: integer
+    default: 10
+    description: Maximum number of speakers to consider
+examples:
+  - cli: videoannotator job submit demo.mp4 --pipelines audio_processing
+    description: Submit audio processing job
+version: 1
+stability: beta
+backends:
+  - pytorch

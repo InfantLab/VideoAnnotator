@@ -10,7 +10,23 @@ VideoAnnotator v1.3.0 represents the **Advanced Features and Innovation** releas
 
 ---
 
-## 📋 Features Deferred from v1.2.0
+## � Foundational Prerequisites (Delivered in v1.2.1)
+The following enabling components are introduced in v1.2.1 and treated as mandatory baselines for v1.3.0 scope:
+
+- Minimal Pipeline Registry (YAML-backed SSOT) powering CLI + API + docs
+- Basic pipeline metadata schema (name, category, outputs, config_schema, examples, schema_version)
+- Drift detection workflow (CI check: registry vs generated markdown)
+- Error envelope pattern (standard API error format groundwork)
+- Health endpoint enrichment (pipeline count, registry load status, GPU availability)
+- Initial config validation (presence + primitive type checks)
+
+These reduce architectural risk and accelerate: plugin sandboxing, adaptive processing, multi-modal correlation, and advanced validation layers.
+
+---
+
+---
+
+## �📋 Features Deferred from v1.2.0
 
 ### **Core Deferred Items** (High Priority for v1.3.0)
 - 🔄 **Advanced ML Features** - Active learning, quality assessment, model confidence scoring
@@ -19,6 +35,11 @@ VideoAnnotator v1.3.0 represents the **Advanced Features and Innovation** releas
 - 🔄 **Plugin System** - Custom model integration framework for research extensions
 - 🔄 **Cloud Provider Integration** - Native AWS/Azure/GCP deployment and scaling
 - 🔄 **Advanced Analytics** - Usage metrics, performance monitoring dashboards
+
+### **New Additions Enabled by v1.2.1 Foundations**
+- 🔄 **Capability-Aware Scheduling** - Use registry metadata to inform dynamic pipeline selection
+- 🔄 **Resource Modeling** - Extend registry with resource & modality fields (GPU/CPU/memory, streaming suitability)
+- 🔄 **Metadata Versioning & Migration** - Evolve schema_version for pipeline metadata (backwards compatibility plan)
 
 ### **v1.2.0 Advanced Features** (Medium Priority)
 - 🔄 **JWT Token Support** - Enhanced authentication beyond API keys
@@ -38,6 +59,7 @@ VideoAnnotator v1.3.0 represents the **Advanced Features and Innovation** releas
 - [ ] **Confidence Scoring** - Per-annotation confidence metrics and thresholds
 - [ ] **Model Ensemble System** - Multiple model voting and consensus mechanisms
 - [ ] **Adaptive Processing** - Dynamic pipeline selection based on video content
+	- Depends on: v1.2.1 registry extensibility & future capability/resource metadata extensions
 
 #### **Multi-Modal Analysis**
 - [ ] **Cross-Pipeline Correlation** - Synchronized analysis across person, face, and audio
@@ -67,6 +89,7 @@ VideoAnnotator v1.3.0 represents the **Advanced Features and Innovation** releas
 #### **Plugin System**
 - [ ] **Model Plugin Framework** - Custom AI model integration with standard interfaces
 - [ ] **Pipeline Plugin System** - User-defined processing workflows and stages
+	- Prereq: Registry extended with plugin discovery + capability contracts
 - [ ] **Webhook System** - Advanced event-driven integrations and notifications
 - [ ] **Custom Export Formats** - User-defined annotation export schemas
 - [ ] **Integration Marketplace** - Plugin discovery and distribution platform
@@ -77,6 +100,7 @@ VideoAnnotator v1.3.0 represents the **Advanced Features and Innovation** releas
 - [ ] **Version Control** - Annotation versioning and change tracking
 - [ ] **A/B Testing Framework** - Model comparison and evaluation tools
 - [ ] **Performance Profiling** - Detailed processing analytics and optimization
+	- Requires: Unified timing + job/pipeline metrics instrumentation (builds on v1.2.1 health enrichment)
 
 ### 📊 **Advanced Analytics & Monitoring**
 
@@ -100,6 +124,7 @@ VideoAnnotator v1.3.0 represents the **Advanced Features and Innovation** releas
 - [ ] **Real-time Video Streaming** - Live camera feed processing with low latency
 - [ ] **Edge Computing Support** - Optimized models for edge deployment
 - [ ] **Streaming API** - WebRTC and WebSocket-based real-time interfaces
+	- Requires: Low-latency pipeline warmup hooks & registry flag `supports_streaming`
 - [ ] **Mobile SDK** - iOS/Android integration for mobile applications
 - [ ] **IoT Integration** - Support for embedded devices and sensors
 
@@ -113,6 +138,7 @@ VideoAnnotator v1.3.0 represents the **Advanced Features and Innovation** releas
 - [ ] **Quality Assessment Pipeline** - Automated annotation validation
 - [ ] **Confidence Scoring System** - Per-annotation reliability metrics
 - [ ] **Multi-Modal Data Architecture** - Cross-pipeline data correlation
+	- Build on: Registry metadata extension (modalities, alignment model references)
 - [ ] **Active Learning Framework** - User feedback integration
 
 ### **Phase 2: Enterprise Features (Months 3-4)**
@@ -121,6 +147,7 @@ VideoAnnotator v1.3.0 represents the **Advanced Features and Innovation** releas
 - [ ] **Advanced Authentication** - SSO, RBAC, multi-tenancy
 - [ ] **Cloud Integration** - AWS/Azure/GCP native deployment
 - [ ] **Microservice Architecture** - Service decomposition and scaling
+	- Introduce: Registry service or shared metadata cache
 - [ ] **Audit & Compliance** - Security and governance controls
 
 ### **Phase 3: Plugin System & Extensibility (Months 5-6)**
@@ -130,6 +157,7 @@ VideoAnnotator v1.3.0 represents the **Advanced Features and Innovation** releas
 - [ ] **Pipeline Plugin System** - User-defined workflows
 - [ ] **GraphQL API** - Advanced query capabilities
 - [ ] **Webhook System** - Event-driven integrations
+	- Extend registry: Plugin manifest parsing & sandbox policy references
 
 ### **Phase 4: Analytics & Real-Time (Months 7-8)**
 **Goal**: Advanced monitoring and streaming capabilities
@@ -138,6 +166,7 @@ VideoAnnotator v1.3.0 represents the **Advanced Features and Innovation** releas
 - [ ] **Real-time Streaming** - Live video processing capabilities
 - [ ] **Performance Profiling** - Detailed system analytics
 - [ ] **Mobile SDK** - Cross-platform mobile integration
+	- Leverage: Aggregated metrics pipeline from registry + job telemetry
 
 ### **Phase 5: Research Tools & Integration (Months 9-10)**
 **Goal**: Advanced research and collaboration features
@@ -152,6 +181,7 @@ VideoAnnotator v1.3.0 represents the **Advanced Features and Innovation** releas
 
 - [ ] **Comprehensive Testing** - All feature integration validation
 - [ ] **Performance Optimization** - Scale testing and optimization
+	- Includes: Registry performance under high pipeline counts
 - [ ] **Security Hardening** - Enterprise security validation
 - [ ] **Documentation & Training** - Complete user and developer guides
 
@@ -186,6 +216,20 @@ VideoAnnotator v1.3.0 represents the **Advanced Features and Innovation** releas
 - v1.3.0 adds "Advanced API" layer for enterprise features
 - Plugin system allows custom extensions without core changes
 - Microservice architecture enables independent feature scaling
+ - Registry (from v1.2.1) evolves into capability/resource-aware orchestrator metadata store
+
+---
+
+## 🧭 Mapping from v1.2.1 Foundations → v1.3.0 Expansions
+| v1.2.1 Artifact | v1.3.0 Extension |
+| --------------- | ---------------- |
+| Minimal Registry | Plugin discovery, adaptive routing, multi-modal correlation graph |
+| Basic Config Schema | Template library, hierarchical overrides, org-level policies |
+| Health Enrichment | Real-time performance dashboard & autoscaling triggers |
+| Error Envelope | Unified error taxonomy + GraphQL error surfaces |
+| Markdown Generator | Marketplace listing & plugin metadata publishing |
+
+---
 
 ---
 

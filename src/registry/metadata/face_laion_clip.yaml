@@ -1,0 +1,39 @@
+name: face_laion_clip
+display_name: LAION CLIP Face Semantic Embedding
+description: Produce semantic face embeddings using a CLIP-derived model; supports zero-shot attribute and emotion tagging.
+pipeline_family: face
+variant: laion-clip-face
+tasks:
+  - face-embedding
+  - face-recognition
+  - emotion-recognition
+modalities:
+  - image
+  - video
+capabilities:
+  - zero-shot
+  - embedding
+  - real-time
+outputs:
+  - format: JSON
+    types: [embeddings, attributes]
+config_schema:
+  model_name:
+    type: string
+    default: laion/CLIP-ViT-B-32
+    description: CLIP model identifier
+  embedding_dim:
+    type: integer
+    default: 512
+    description: Output embedding dimensionality
+  enable_emotion:
+    type: boolean
+    default: true
+    description: Enable emotion category projection
+examples:
+  - cli: videoannotator job submit demo.mp4 --pipelines face_laion_clip
+    description: Submit LAION CLIP face embedding job
+version: 1
+stability: experimental
+backends:
+  - pytorch

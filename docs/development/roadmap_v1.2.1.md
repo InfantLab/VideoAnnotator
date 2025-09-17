@@ -1,60 +1,65 @@
-# VideoAnnotator v1.2.1 Roadmap - Polish & Documentation
+# VideoAnnotator v1.2.1 Roadmap - Polish, Pipeline Specification & Documentation
 
 ## 🎯 **Release Overview**
 **Target Release**: 1-2 weeks after v1.2.0  
-**Focus**: Documentation updates, example modernization, and minor polish  
-**Scope**: Non-breaking improvements and user experience enhancements
+**Focus**: Quick wins, documentation updates, example modernization, and foundational pipeline specification & discovery layer.  
+**Scope**: Non-breaking improvements; establish the single-source-of-truth (SSOT) pipeline registry needed for future (v1.3.0) advanced features.
+
+## 🔄 Scope Adjustment (Compared to Original Draft)
+This release now explicitly includes ONLY the following foundational and quick-win pillars:
+1. Pipeline Specification & Discovery (registry + metadata + basic generation)
+2. Documentation & Example Modernization
+3. CI / Logging / CLI UX polish
+
+All advanced AI, multi-modal correlation, plugin architecture, advanced analytics, streaming, RBAC/auth, and enterprise feature work are deferred to v1.3.0. See "Deferred to v1.3.0" section below.
+
+## 🧱 Foundational Principle for v1.2.1
+Introduce a maintainable, incremental Pipeline Registry that is minimal today but extensible for v1.3.0 (capabilities, resources, modality fusion, plugin injection points). Keep implementation intentionally lean (YAML + lightweight loader + adapters) to avoid blocking the polish timeline.
 
 ## 📚 **Documentation & Examples Modernization**
 
-### **Priority 1: Comprehensive Pipeline Documentation System** 🎯
-**Goal**: Create a unified, complete, and consistent pipeline documentation system that automatically generates documentation for CLI, API, and Markdown docs from a single source.
+### **Priority 1: Pipeline Specification & Documentation System (Foundational Slice)** 🎯
+**Goal (v1.2.1 scope)**: Introduce a minimal, functional single source of truth (SSOT) for pipeline metadata powering: CLI listing, API `/pipelines`, and generated Markdown docs. Advanced metadata (multi-modal correlation, resource modeling, plugin contracts) is intentionally deferred to v1.3.0.
 
-#### **Unified Pipeline Registry System**
-- [ ] **Create Pipeline Registry** - Single source of truth for all pipeline information
-  - Pipeline names, descriptions, and capabilities
-  - Input/output schemas and examples
-  - Configuration parameters and validation
-  - Dependencies and requirements
-  - Performance characteristics
-  
-- [ ] **Pipeline Metadata Schema** - Structured data format for complete pipeline information
-  ```python
-  # Example: src/schemas/pipeline_registry.py
-  @dataclass
-  class PipelineMetadata:
-      name: str
-      display_name: str  
-      description: str
-      category: str  # "detection", "tracking", "analysis", "preprocessing"
-      inputs: Dict[str, Any]
-      outputs: Dict[str, Any]
-      config_schema: Dict[str, Any]
-      requirements: List[str]  # GPU, CPU, external dependencies
-      examples: List[Dict[str, Any]]
-      performance_notes: str
+#### **Unified Pipeline Registry System (Minimal v1.2.1 Deliverable)**
+- [ ] **Create Minimal Pipeline Registry**
+  - Load YAML metadata files under `src/registry/metadata/`
+  - Provide `list_pipelines()` + `get_pipeline(name)` functions
+  - Return core fields: `name`, `display_name`, `description`, `category`, `config_schema`, `outputs`, `examples` (optional), `version` (schema version)
+  - Implement graceful fallback if metadata missing (warn, exclude, or mark experimental)
+- [ ] **Lightweight Metadata Schema (YAML)**
+  ```yaml
+  # Example: src/registry/metadata/person_tracking.yaml
+  name: person_tracking
+  display_name: Person Tracking & Pose
+  category: tracking
+  description: Track persons with YOLO11 + ByteTrack and generate COCO pose annotations.
+  outputs:
+    - format: COCO
+      types: [person_detection, keypoints]
+  config_schema:
+    model:
+      type: string
+      default: models/yolo/yolo11n-pose.pt
+      description: YOLO pose model path or alias
+    conf_threshold:
+      type: float
+      default: 0.4
+      description: Detection confidence threshold
+  examples:
+    - cli: videoannotator job submit demo.mp4 --pipelines person_tracking
+      description: Submit tracking job
+  version: 1
   ```
+- [ ] **Validation Layer (Basic)**: Ensure required keys present; warn if `outputs` missing.
+- [ ] **Extensibility Hooks (Document-only)**: Note future fields (resources, modalities, capabilities) reserved for v1.3.0.
 
-#### **Auto-Generated Documentation**
-- [ ] **CLI Help Generation** - Generate `--help` text from pipeline registry
-  ```bash
-  uv run videoannotator pipelines list --detailed  # Generated from registry
-  uv run videoannotator pipeline info scene_detection  # Complete pipeline docs
-  ```
-
-- [ ] **API Documentation** - Auto-generate FastAPI schema descriptions from registry
-  ```python
-  # Auto-generated endpoint docs with examples
-  @router.get("/pipelines/{pipeline_name}")
-  def get_pipeline_info(pipeline_name: str):
-      # Documentation auto-generated from PipelineMetadata
-  ```
-
-- [ ] **Markdown Documentation** - Generate pipeline_specs.md from registry
-  ```python
-  # Script to generate docs/usage/pipeline_specs.md from registry data
-  # Ensures CLI, API, and docs are always in sync
-  ```
+#### **Auto-Generated Documentation (Lean Slice)**
+- [ ] **CLI Pipeline Listing**: `videoannotator pipelines --detailed` surfaces registry fields
+- [ ] **API Endpoint Backed by Registry**: Replace mock `/api/v1/pipelines` implementation with dynamic registry data
+- [ ] **Markdown Generation Script**: `scripts/generate_pipeline_docs.py` creates `docs/usage/pipeline_specs.md` (fails CI if drift)
+- [ ] **Config Validation (Basic)**: `videoannotator config --validate` references `config_schema` types (presence + type check only in 1.2.1)
+- [ ] **Schema Version Tagging**: Include `schema_version` in generated markdown for future migration tracking
 
 #### **Complete Pipeline Coverage**
 - [ ] **Audit Current Pipelines** - Document ALL available pipelines
@@ -70,31 +75,16 @@
   - **Segmentation**: scene_detection, temporal_segmentation
   - **Preprocessing**: video_preprocessing, audio_extraction
 
-#### **Implementation Strategy**
-```python
-# Phase 1: Create registry system
-src/registry/
-├── pipeline_registry.py      # Core registry class
-├── metadata/                 # Individual pipeline metadata files
-│   ├── scene_detection.yaml
-│   ├── person_tracking.yaml
-│   └── face_analysis.yaml
-└── generators/               # Auto-documentation generators
-    ├── cli_help_generator.py
-    ├── api_doc_generator.py
-    └── markdown_generator.py
+#### **Implementation Strategy (Incremental)**
+Phase 1 (Day 1–2): Registry loader + 2 metadata files + API swap.
 
-# Phase 2: Integration
-# Update CLI commands to use registry
-# Update API endpoints to use registry  
-# Generate markdown docs from registry
+Phase 2 (Day 3): Add markdown generator + CLI integration + drift CI check.
 
-# Phase 3: Validation
-# CI checks to ensure docs stay in sync
-# Tests to validate registry completeness
-```
+Phase 3 (Day 4): Basic config validation + tests (registry integrity, endpoint parity, doc generation).
 
-### **Priority 2: CLI Documentation Updates**
+Phase 4 (Polish): Add examples linkage + schema version annotation + warnings for missing fields.
+
+### **Priority 2: CLI Documentation & Examples Updates**
 - [ ] **examples/README.md** - Update all CLI usage patterns to new `videoannotator` syntax
 - [ ] **docs/usage/GETTING_STARTED.md** - Verify all CLI examples are current  
 - [ ] **docs/usage/demo_commands.md** - Update command examples throughout
@@ -111,7 +101,7 @@ src/registry/
 - [ ] **examples/api_batch_processing.py** - Multi-video API processing
 - [ ] **examples/cli_workflow_example.py** - Modern CLI usage patterns
 
-### **Priority 3: Configuration Updates**
+### **Priority 3: Configuration & Validation Updates**
 - [ ] **configs/README.md** - Update for v1.2.0 API server usage
 - [ ] **Legacy config cleanup** - Document which configs are legacy vs. modern
 
@@ -126,14 +116,15 @@ src/registry/
   - **Priority**: High - affects automated testing and release validation
 
 ### **Logging & Diagnostics**
-- [ ] **Fix logging directory creation** - API server should create logs/ directory
-- [ ] **Improve CUDA detection** - More accurate GPU availability reporting
-- [ ] **Enhanced health checks** - Better system diagnostics in health endpoints
+- [ ] **(Reclassify) Logging directory creation** - CONFIRM & document existing behavior (already auto-created)
+- [ ] **Improve CUDA detection** - More accurate GPU availability reporting (basic GPU flag only in 1.2.1)
+- [ ] **Enhanced health checks (Foundational)** - Add: pipeline count, registry load status, GPU availability
 
 ### **CLI Improvements** 
-- [ ] **Better error messages** - More user-friendly CLI error reporting
-- [ ] **Config validation feedback** - Clearer config file validation messages
-- [ ] **Progress indicators** - Visual feedback for long-running CLI operations
+- [ ] **Better error messages** - Standardized helper + consistent prefixing
+- [ ] **Config validation feedback** - Use registry schema field types in messages
+- [ ] **Progress indicators (Optional)** - Lightweight status output (full TUI deferred to 1.3.0)
+- [ ] **Optional JSON output mode** - `--json` for scripting (color output deferred)
 
 ## 🔧 **Developer Experience**
 
@@ -149,24 +140,26 @@ src/registry/
 
 ## 📊 **Performance & Polish**
 
-### **API Enhancements**
-- [ ] **Response time optimization** - Profile and optimize slow endpoints
-- [ ] **Error response standardization** - Consistent error format across all endpoints
-- [ ] **Request validation improvements** - Better input validation messages
+### **API Enhancements (Minimal in 1.2.1)**
+- [ ] **Error response standardization (Foundational)** - Introduce simple error envelope pattern (code, message)
+- [ ] **Pipeline endpoint dynamic data** - Registry-backed
+- [ ] **Health endpoint enrichment** - See diagnostics above
+- [ ] (Deferred) Response time profiling → v1.3.0
+- [ ] (Deferred) Advanced request validation → v1.3.0
 
 ### **CLI Polish**
-- [ ] **Output formatting** - Consistent formatting across CLI commands
-- [ ] **Color support** - Add optional color output for better UX
-- [ ] **Configuration precedence** - Clear config file vs. CLI argument handling
+- [ ] **Output formatting consistency** - Shared formatter helper
+- [ ] **Configuration precedence doc** - Document order (CLI arg > job payload > config file > pipeline default)
+- [ ] (Deferred) Color support → v1.3.0
 
 ## 📋 **Success Criteria**
 
-### **Pipeline Documentation System**
-- ✅ **Single Source of Truth** - All pipeline info comes from registry
-- ✅ **Auto-Generated Consistency** - CLI help, API docs, and Markdown all match
-- ✅ **Complete Coverage** - Every available pipeline is fully documented
-- ✅ **User-Friendly** - Clear examples and use cases for each pipeline
-- ✅ **Maintainable** - New pipelines automatically get consistent documentation
+### **Pipeline Specification System (v1.2.1 Slice)**
+- ✅ **SSOT Introduced** - Registry exists & used by CLI + API + docs
+- ✅ **Drift Detection** - CI fails on markdown mismatch
+- ✅ **Coverage Threshold** - ≥ 3 core pipelines (person_tracking, scene_detection, audio_processing) documented
+- ✅ **Extensibility Reserved** - Future fields documented (resources, modalities, capabilities)
+- ✅ **Validation Minimum** - Basic type/presence validation supported
 
 ### **Documentation**
 - ✅ All CLI examples use modern `videoannotator` syntax
@@ -178,10 +171,11 @@ src/registry/
 - ✅ Configuration validation provides clear feedback
 - ✅ Examples run without modification on fresh installs
 
-### **Code Quality**
-- ✅ No deprecated code patterns in examples
-- ✅ Test coverage maintained above 90%
-- ✅ All new functions have proper documentation
+### **Code Quality (Right-Sized for v1.2.1)**
+- ✅ Examples free of deprecated patterns
+- ✅ New registry + generator code typed & documented
+- ✅ Tests for: registry load, endpoint parity, doc generation
+- (Informational) Overall coverage target unchanged; registry code must be ≥90% local coverage
 
 ## ⚡ **Fast-Track Items (1 week)**
 These can be completed quickly for immediate release:
@@ -192,34 +186,45 @@ These can be completed quickly for immediate release:
 4. **CLI error message improvements** (3 hours)
 5. **Add 1-2 new API examples** (4 hours)
 
-## 🎯 **Pipeline Documentation System (Priority)**
-This comprehensive system should be implemented as the cornerstone of v1.2.1:
+## ♻️ **Deferred to v1.3.0 (Out of 1.2.1 Scope)**
+Advanced items intentionally postponed:
+- Multi-modal correlation modeling (temporal relationships, behavioral analysis)
+- Active learning & quality assessment pipelines
+- Confidence scoring & ensemble systems
+- Plugin framework & extension sandboxing
+- Resource/capability scheduling & adaptive pipeline selection
+- Streaming/WebRTC + real-time low-latency pathways
+- Advanced request validation + performance profiling automation
+- Colorized + interactive CLI UI / progress bars
+- Rich config templating & precedence engine
+- RBAC, SSO, multi-tenancy, audit logging
+- Analytics dashboards & usage metrics
 
-### **Phase 1: Registry Foundation** (3-4 days)
-- Create pipeline registry infrastructure
-- Define metadata schema for all pipeline information
-- Implement registry loading and validation system
-
-### **Phase 2: Documentation Generation** (2-3 days) 
-- Build CLI help text generator from registry
-- Create API documentation auto-generator
-- Implement Markdown documentation generator
-
-### **Phase 3: Integration & Testing** (2-3 days)
-- Integrate registry with existing CLI commands
-- Update API endpoints to use registry data
-- Add tests to ensure documentation consistency
+All appear in the v1.3.0 roadmap under appropriate phases.
 
 ## 🎯 **Release Timeline**
 
-### **Week 1: Core Updates**
-- Documentation syntax updates
-- Basic example modernization
-- Logging fixes
+### **Updated Release Timeline (Lean)**
+Week 1:
+- Registry + 2 metadata files + API endpoint swap
+- Examples/README CLI syntax modernization
+- CI pipeline fix & logging confirmation
 
-### **Week 2: Polish & Testing**
-- New API examples
-- CLI improvements
-- Final testing and validation
+Week 2:
+- Markdown generator + drift check
+- Add config validation + enriched health endpoint
+- Third metadata file + tests + polish (error helper, JSON mode)
 
-**Total effort**: ~2-3 developer days spread over 2 weeks
+**Total engineering effort**: ~3 focused dev days spread over 2 weeks (parallelizable)
+
+## 🔗 Mapping Table (v1.2.1 → v1.3.0)
+| v1.2.1 Deliverable | Enables v1.3.0 Feature |
+| ------------------ | ----------------------- |
+| Registry (minimal) | Plugin system, adaptive processing |
+| Basic config schema | Advanced validation, templates |
+| Markdown generator | Documentation automation & marketplace entries |
+| Health enrichment | Performance profiling & monitoring foundation |
+| Error envelope pattern | Standardized API + GraphQL alignment |
+
+---
+*Last Updated*: September 2025

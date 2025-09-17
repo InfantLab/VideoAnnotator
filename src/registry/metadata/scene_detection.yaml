@@ -1,0 +1,36 @@
+name: scene_detection
+display_name: Scene Detection
+description: Detect hard cuts and scene boundaries using PySceneDetect with semantic labeling via CLIP.
+pipeline_family: scene
+variant: pyscenedetect-clip
+tasks:
+  - scene-detection
+  - scene-segmentation
+modalities:
+  - video
+capabilities:
+  - batch
+  - embedding
+outputs:
+  - format: JSON
+    types: [scene_boundary, scene_category]
+config_schema:
+  threshold:
+    type: float
+    default: 30.0
+    description: Scene cut detection threshold
+  min_scene_length:
+    type: float
+    default: 1.0
+    description: Minimum scene length in seconds
+  enable_clip_labels:
+    type: boolean
+    default: true
+    description: Use CLIP embeddings for environment labels
+examples:
+  - cli: videoannotator job submit demo.mp4 --pipelines scene_detection
+    description: Submit scene detection job
+version: 1
+stability: beta
+backends:
+  - pytorch

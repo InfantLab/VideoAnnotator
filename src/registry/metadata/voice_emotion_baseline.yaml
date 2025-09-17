@@ -1,0 +1,42 @@
+name: voice_emotion_baseline
+display_name: Voice Emotion + Transcription (Baseline)
+description: Performs speech transcription and basic vocal emotion recognition using a lightweight spectral CNN classifier over Whisper embeddings.
+pipeline_family: audio
+variant: whisper-spectral-emotion
+tasks:
+  - speech-transcription
+  - emotion-recognition
+modalities:
+  - audio
+capabilities:
+  - streaming
+  - embedding
+outputs:
+  - format: WebVTT
+    types: [transcript]
+  - format: JSON
+    types: [emotion_segments]
+config_schema:
+  whisper_model:
+    type: string
+    default: base
+    description: Whisper model size
+  emotion_window:
+    type: float
+    default: 2.0
+    description: Sliding window size (seconds) for emotion inference
+  emotion_stride:
+    type: float
+    default: 0.5
+    description: Step size (seconds) between emotion windows
+  enable_transcription:
+    type: boolean
+    default: true
+    description: Toggle transcription
+examples:
+  - cli: videoannotator job submit demo.mp4 --pipelines voice_emotion_baseline
+    description: Submit voice transcription + emotion job
+version: 1
+stability: experimental
+backends:
+  - pytorch
