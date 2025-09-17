@@ -10,9 +10,9 @@ from pathlib import Path
 import json
 
 # VideoAnnotator Version
-__version__ = "1.2.0"
-__version_info__ = (1, 2, 0)
-__release_date__ = "2025-08-22"
+__version__ = "1.2.1"
+__version_info__ = (1, 2, 1)
+__release_date__ = "2025-09-17"
 __author__ = "VideoAnnotator Team"
 __license__ = "MIT"
 
@@ -308,7 +308,8 @@ def print_version_info() -> None:
         gpu = system["gpu"]
         print("  GPU Information:")
         if "torch_cuda_available" in gpu:
-            cuda_status = "✅ Available" if gpu["torch_cuda_available"] else "❌ Not Available"
+            # ASCII-safe status markers for Windows consoles
+            cuda_status = "[OK] Available" if gpu["torch_cuda_available"] else "[WARNING] Not Available"
             print(f"    CUDA: {cuda_status}")
             if gpu.get("torch_cuda_available"):
                 if "torch_cuda_version" in gpu:
@@ -336,7 +337,8 @@ def print_version_info() -> None:
             elif status.startswith("error"):
                 status = f"⚠️  {status}"
             else:
-                status = f"✅ v{status}"
+                # Replace decorative emoji with plain ASCII tag
+                status = f"[OK] v{status}"
             print(f"  {dep}: {status}")
 
 

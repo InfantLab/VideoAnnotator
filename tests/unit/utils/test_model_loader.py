@@ -45,9 +45,9 @@ class TestLogModelDownload:
         
         # Check logging output
         log_messages = [record.message for record in caplog.records]
-        assert any("🤖 Loading Test Model" in msg for msg in log_messages)
-        assert any("📁 Model: test-model.pt" in msg for msg in log_messages)
-        assert any("✅ Test Model loaded successfully!" in msg for msg in log_messages)
+        assert any("[LOAD] Loading Test Model" in msg for msg in log_messages)
+        assert any("[PATH] Model: test-model.pt" in msg for msg in log_messages)
+        assert any("[OK] Test Model loaded successfully!" in msg for msg in log_messages)
 
     def test_model_loading_with_kwargs(self, caplog):
         """Test model loading with keyword arguments."""
@@ -83,7 +83,7 @@ class TestLogModelDownload:
         
         # Check error logging
         log_messages = [record.message for record in caplog.records]
-        assert any("❌ Failed to load Test Model" in msg for msg in log_messages)
+        assert any("[ERROR] Failed to load Test Model" in msg for msg in log_messages)
 
     def test_timing_measurement(self, caplog):
         """Test that loading time is measured and logged."""
@@ -190,10 +190,9 @@ class TestLogFirstRunInfo:
             log_first_run_info()
         
         log_messages = [record.message for record in caplog.records]
-        
         # Check for key first-run messages
-        assert any("🎉 Welcome to VideoAnnotator" in msg for msg in log_messages)
-        assert any("FIRST RUN:" in msg for msg in log_messages)
+        assert any("[WELCOME] Welcome to VideoAnnotator" in msg for msg in log_messages)
+        assert any("[FIRST RUN]" in msg for msg in log_messages)
         assert any("downloading" in msg.lower() or "download" in msg.lower() for msg in log_messages)
 
     def test_info_contains_helpful_tips(self, caplog):
@@ -222,7 +221,8 @@ class TestLogFirstRunInfo:
         # Check for emojis in welcome message
         welcome_messages = [msg for msg in log_messages if "Welcome" in msg]
         assert len(welcome_messages) >= 1
-        assert any("🎉" in msg or "🤖" in msg for msg in welcome_messages)
+        # Ensure ASCII tags present (no emojis per logging policy)
+        assert any("[WELCOME]" in msg for msg in welcome_messages)
 
 
 class TestModelLoaderIntegration:
@@ -355,10 +355,10 @@ class TestLoggingConfiguration:
             log_model_download("Test Model", "test.pt", mock_loader)
         
         log_messages = [record.message for record in caplog.records]
-        
-        # Check that emojis are present and properly formatted
-        emoji_messages = [msg for msg in log_messages if any(emoji in msg for emoji in ["🤖", "📁", "✅", "❌"])]
-        assert len(emoji_messages) >= 2  # At least loading and success messages
+        load_messages = [m for m in log_messages if "[LOAD]" in m]
+        ok_messages = [m for m in log_messages if "[OK]" in m or "[ERROR]" in m]
+        assert len(load_messages) >= 1
+        assert len(ok_messages) >= 1
 
     def test_long_model_names(self, caplog):
         """Test handling of very long model names."""
@@ -374,5 +374,5 @@ class TestLoggingConfiguration:
         assert any(long_name in msg for msg in log_messages)
         
         # Check that formatting isn't broken
-        loading_messages = [msg for msg in log_messages if "🤖 Loading" in msg]
+        loading_messages = [msg for msg in log_messages if "[LOAD] Loading" in msg]
         assert len(loading_messages) >= 1

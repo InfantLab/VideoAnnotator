@@ -5,6 +5,12 @@ API dependencies for VideoAnnotator v1.2.0
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Dict, Any, Optional
+from contextlib import contextmanager
+
+from sqlalchemy.orm import Session
+
+from ..database.database import SessionLocal
+from ..database.crud import APIKeyCRUD, UserCRUD
 
 from ..auth import get_token_manager
 
@@ -74,3 +80,64 @@ async def get_optional_user(
         return await get_current_user(credentials)
     except HTTPException:
         return None
+
+
+def _validate_api_key_header(raw: str, db: Session) -> Optional[Dict[str, Any]]:
+    """Helper to validate legacy API key header (va_ prefix keys).
+
+    Returns user dict if valid else None.
+    """
+    if not raw.startswith("va_"):
+        return None
+    user = APIKeyCRUD.authenticate(db, raw)
+    if not user:
+        return None
+    return {
+        "id": str(user.id),
+        "username": user.username,
+        "email": user.email,
+        "is_active": True,
+        "scopes": ["read", "write"],
+        "token_type": "api_key"
+    }
+
+
+async def validate_optional_api_key(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
+) -> Optional[Dict[str, Any]]:
+    """Validate API key if Authorization header present.
+
+    Behavior:
+    - No header: return None (anonymous allowed on some endpoints)
+    - Bearer value starts with va_: treat as legacy API key and validate via DB
+    - Other tokens: defer to get_current_user for structured token validation
+    - Invalid key provided: raise 401 with consistent detail
+    """
+    if not credentials:
+        return None
+
+    token = credentials.credentials
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization token is required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Legacy API key path
+    if token.startswith("va_"):
+        db = SessionLocal()
+        try:
+            user = _validate_api_key_header(token, db)
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid API key",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            return user
+        finally:
+            db.close()
+
+    # Non-legacy: attempt token manager path
+    return await get_current_user(credentials)

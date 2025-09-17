@@ -21,26 +21,62 @@ from src.database.migrations import init_database, create_admin_user
 
 
 class APITestClient:
-    """Test client wrapper for API testing."""
-    
-    def __init__(self, base_url: str = "http://localhost:8000", api_key: Optional[str] = None):
-        self.base_url = base_url
+    """Test client wrapper for API testing.
+
+    By default uses an in-process ASGI transport so we don't need an external
+    uvicorn server listening on localhost. This makes tests faster and avoids
+    connection refused errors when a server isn't started separately.
+    Set use_inprocess=False to fall back to real HTTP requests against a
+    running server at base_url.
+    """
+
+    def __init__(
+        self,
+        base_url: str = "http://localhost:8000",
+        api_key: Optional[str] = None,
+        use_inprocess: bool = True,
+    ):
+        self.base_url = base_url.rstrip("/")
         self.api_key = api_key
+        self.use_inprocess = use_inprocess
         self.headers = {}
         if api_key:
             self.headers["Authorization"] = f"Bearer {api_key}"
-    
+        self._client: Optional[httpx.AsyncClient] = None
+
+    def _ensure_client(self):
+        if self._client is not None:
+            return
+        if self.use_inprocess:
+            # Lazy import to avoid side effects during test collection
+            from src.api.main import create_app
+            app = create_app()
+            transport = httpx.ASGITransport(app=app)
+            # base_url must be set for relative URLs; follow_redirects to avoid 307 assertions
+            self._client = httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=True)
+        else:
+            # External client also follows redirects for consistent behavior
+            self._client = httpx.AsyncClient(base_url=self.base_url, follow_redirects=True)
+
     async def get(self, path: str, **kwargs):
-        async with httpx.AsyncClient() as client:
-            return await client.get(f"{self.base_url}{path}", headers=self.headers, **kwargs)
-    
+        self._ensure_client()
+        assert self._client is not None
+        return await self._client.get(path, headers=self.headers, **kwargs)
+
     async def post(self, path: str, **kwargs):
-        async with httpx.AsyncClient() as client:
-            return await client.post(f"{self.base_url}{path}", headers=self.headers, **kwargs)
-    
+        self._ensure_client()
+        assert self._client is not None
+        return await self._client.post(path, headers=self.headers, **kwargs)
+
     async def delete(self, path: str, **kwargs):
-        async with httpx.AsyncClient() as client:
-            return await client.delete(f"{self.base_url}{path}", headers=self.headers, **kwargs)
+        self._ensure_client()
+        assert self._client is not None
+        return await self._client.delete(path, headers=self.headers, **kwargs)
+
+    async def aclose(self):
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
 
 
 @pytest.fixture(scope="session")
@@ -344,7 +380,7 @@ async def test_api_server_startup():
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        print("✅ API server is running and healthy")
+        print("[OK] API server is running and healthy")
     except httpx.ConnectError:
         pytest.skip("API server is not running - start with 'python api_server_db.py'")
 
@@ -354,6 +390,5 @@ if __name__ == "__main__":
     async def main():
         print("Testing API server connectivity...")
         await test_api_server_startup()
-        print("✅ All connectivity tests passed")
-    
+        print("[OK] All connectivity tests passed")
     asyncio.run(main())

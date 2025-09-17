@@ -368,8 +368,8 @@ class SceneDetectionPipeline(BasePipeline):
         # Check OpenCV
         try:
             import cv2
-
-            self.logger.info(f"OpenCV available: {cv2.__version__}")
+            cv_version = getattr(cv2, "__version__", "unknown")
+            self.logger.info(f"OpenCV available: {cv_version}")
         except ImportError:
             self.logger.warning("OpenCV not available - video processing will be limited")
 

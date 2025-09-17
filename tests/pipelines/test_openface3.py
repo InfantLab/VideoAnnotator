@@ -14,7 +14,13 @@ import numpy as np
 import os
 import time
 import json
-import cv2
+# Optional OpenCV import; allow tests to run in environments without cv2
+try:  # pragma: no cover - availability shim
+    import cv2  # type: ignore
+    CV2_AVAILABLE = True
+except Exception:
+    CV2_AVAILABLE = False
+    cv2 = None  # type: ignore
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, Any, List
@@ -31,7 +37,7 @@ class TestOpenFace3Availability:
         """Test if OpenFace 3.0 is properly detected."""
         # This test will pass regardless of actual installation
         # In CI/CD, OPENFACE3_AVAILABLE might be False
-        assert isinstance(OPENFACE3_AVAILABLE, bool)
+    assert isinstance(OPENFACE3_AVAILABLE, bool)
     
     @pytest.mark.skipif(not OPENFACE3_AVAILABLE, reason="OpenFace 3.0 not available")
     def test_openface3_imports(self):

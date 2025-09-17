@@ -7,9 +7,12 @@ import uvicorn
 from typing import Optional, List
 from pathlib import Path
 
+from .version import __version__
+from .validation.emotion_validator import validate_emotion_file
+
 app = typer.Typer(
     name="videoannotator",
-    help="VideoAnnotator v1.2.0 - Production-ready video annotation toolkit",
+    help=f"VideoAnnotator v{__version__} - Production-ready video annotation toolkit",
     add_completion=False
 )
 
@@ -428,7 +431,7 @@ def info():
     from .api.database import get_database_info, check_database_health
     
     typer.echo(f"VideoAnnotator v{__version__}")
-    typer.echo("API Version: 1.2.0")
+    typer.echo(f"API Version: {__version__}")
     typer.echo("")
     
     # Database information
@@ -489,9 +492,27 @@ def version():
     """Show version information."""
     from .version import __version__
     typer.echo(f"VideoAnnotator v{__version__}")
-    typer.echo("API Version: 1.2.0")
+    typer.echo(f"API Version: {__version__}")
     typer.echo("https://github.com/your-org/VideoAnnotator")
 
 
 if __name__ == "__main__":
     app()
+
+@app.command("validate-emotion")
+def validate_emotion(
+    file: Path = typer.Argument(..., help="Path to .emotion.json file"),
+    quiet: bool = typer.Option(False, help="Suppress OK output; only print errors"),
+):
+    """Validate an emotion output JSON file against the spec."""
+    if not file.exists():
+        typer.echo(f"[ERROR] File not found: {file}", err=True)
+        raise typer.Exit(code=1)
+    errors = validate_emotion_file(file)
+    if errors:
+        typer.echo(f"[ERROR] Emotion file invalid: {file}")
+        for e in errors:
+            typer.echo(f" - {e}")
+        raise typer.Exit(code=1)
+    if not quiet:
+        typer.echo(f"[OK] Emotion file valid: {file}")

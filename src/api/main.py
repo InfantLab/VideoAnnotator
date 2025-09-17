@@ -14,6 +14,7 @@ from ..version import __version__ as videoannotator_version
 from .v1 import api_router
 from .middleware import RequestLoggingMiddleware, ErrorLoggingMiddleware
 from ..utils.logging_config import setup_videoannotator_logging, get_logger
+from .errors import register_error_handlers
 
 # Apply SciPy compatibility patch for OpenFace 3.0 before any pipeline imports
 def apply_scipy_compatibility_patch():
@@ -107,18 +108,37 @@ def create_app() -> FastAPI:
     
     # Include API routes
     app.include_router(api_router, prefix="/api/v1")
+
+    # Register standard error handlers
+    register_error_handlers(app)
     
     # Health check endpoint
     @app.get("/health")
     async def health_check():
         """Basic health check endpoint."""
         logger.debug("Health check requested")
+        # Lightweight system metrics (avoid heavy psutil calls here)
+        try:
+            import psutil  # local import to keep import cost low
+            mem = psutil.virtual_memory()
+            memory_percent = mem.percent
+        except Exception:
+            memory_percent = None
+        # Database quick status
+        try:
+            from .database import check_database_health
+            db_ok, db_msg = check_database_health()
+            db_status = {"status": "healthy" if db_ok else "unhealthy", "message": db_msg}
+        except Exception:
+            db_status = {"status": "unknown", "message": "database check failed"}
         return {
             "status": "healthy",
             "api_version": "1.2.0",
             "videoannotator_version": videoannotator_version,
             "message": "VideoAnnotator API is running",
-            "logging": "enhanced"
+            "logging": "enhanced",
+            "memory_percent": memory_percent,  # backward-compatible alias expected by some tests
+            "database": db_status
         }
     
     return app

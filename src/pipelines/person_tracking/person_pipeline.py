@@ -22,6 +22,7 @@ from ...exporters.native_formats import (
 from ...utils.person_identity import PersonIdentityManager
 from ...utils.automatic_labeling import infer_person_labels_from_tracks
 from ...utils.model_loader import log_model_download
+from ...utils.size_based_person_analysis import run_size_based_analysis
 
 # Optional imports
 try:
@@ -48,6 +49,14 @@ class PersonTrackingPipeline(BasePipeline):
             "tracker": "bytetrack",  # or "botsort"
             "pose_format": "coco_17",  # COCO 17 keypoints
             "min_keypoint_confidence": 0.3,
+            # Size-based analysis (integrated simple analyzer)
+            "size_analysis": {
+                "enabled": True,
+                "height_threshold": 0.4,
+                "confidence": 0.7,
+                "adult_label": "parent",
+                "child_label": "infant"
+            },
             # Person identity configuration
             "person_identity": {
                 "enabled": True,
@@ -194,6 +203,31 @@ class PersonTrackingPipeline(BasePipeline):
                             annotation['label_confidence'] = label_info['confidence']
                             annotation['labeling_method'] = label_info['method']
 
+        # Size-based analysis pass (independent of identity manager labels)
+        size_cfg = self.config.get("size_analysis", {})
+        if size_cfg.get("enabled", True) and annotations:
+            try:
+                # Run analyzer on all annotations that have person_id
+                size_labels = run_size_based_analysis(
+                    [a for a in annotations if a.get('person_id')],
+                    height_threshold=size_cfg.get("height_threshold", 0.4),
+                    confidence=size_cfg.get("confidence", 0.7)
+                )
+                # Merge results without overwriting existing higher-confidence labels
+                for ann in annotations:
+                    pid = ann.get('person_id')
+                    if pid and pid in size_labels:
+                        existing_conf = ann.get('label_confidence')
+                        new_conf = size_labels[pid]['confidence']
+                        if (existing_conf is None) or (new_conf >= existing_conf):
+                            ann['person_label'] = size_labels[pid]['label']
+                            ann['label_confidence'] = new_conf
+                            ann['labeling_method'] = size_labels[pid]['method']
+                            ann['size_based_reasoning'] = size_labels[pid].get('reasoning')
+                self.logger.info("Size-based person analysis applied (%d persons)", len(size_labels))
+            except Exception as e:
+                self.logger.warning(f"Size-based analysis failed: {e}")
+
         # Save results if output directory specified
         if output_dir and annotations:
             self._save_coco_annotations(annotations, output_dir, video_metadata)
@@ -251,7 +285,8 @@ class PersonTrackingPipeline(BasePipeline):
                 YOLO,
                 self.config["model"]
             )
-            self.logger.info(f"✅ YOLO model ready: {self.config['model']}")
+            # ASCII-safe success marker
+            self.logger.info(f"[OK] YOLO model ready: {self.config['model']}")
         except Exception as e:
             self.logger.error(f"❌ Failed to initialize YOLO model: {e}")
             raise

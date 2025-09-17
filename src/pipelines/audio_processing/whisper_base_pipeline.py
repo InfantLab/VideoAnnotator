@@ -93,6 +93,9 @@ class WhisperBasePipeline(BasePipeline):
         self.whisper_processor = None
         self.device = None
         self.model_type = None  # "standard" or "huggingface"
+        # Fallback state flags (for diagnostics/tests)
+        self.used_cuda_initially = False
+        self.fell_back_to_cpu = False
         
     def initialize(self) -> None:
         """Initialize the Whisper model and resources."""
@@ -100,15 +103,53 @@ class WhisperBasePipeline(BasePipeline):
             return
             
         # Setup device
-        if self.config["device"] == "auto":
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        requested_device = self.config.get("device", "auto")
+        explicit_cuda = (requested_device == "cuda")
+        if requested_device == "auto":
+            if torch.cuda.is_available():
+                self.device = torch.device("cuda")
+                self.used_cuda_initially = True
+            else:
+                self.device = torch.device("cpu")
         else:
-            self.device = torch.device(self.config["device"])
+            if explicit_cuda:
+                if torch.cuda.is_available():
+                    self.device = torch.device("cuda")
+                    self.used_cuda_initially = True
+                else:
+                    # Explicit CUDA request but unavailable: fail fast (no silent fallback)
+                    raise RuntimeError("CUDA device explicitly requested but not available")
+            else:
+                self.device = torch.device(requested_device)
             
         self.logger.info(f"Initializing WhisperBasePipeline with device: {self.device}")
             
-        # Load Whisper model
-        self._load_whisper_model()
+        # Load Whisper model with CUDA fallback handling
+        try:
+            self._load_whisper_model()
+        except RuntimeError as e:
+            err_lower = str(e).lower()
+            cuda_markers = [
+                "not compiled with cuda",
+                "cuda driver",
+                "no cuda gpus are available",
+                "cublas",
+                "cudnn",
+                "cuda error",
+                "cuda out of memory"
+            ]
+            # Fallback only if CUDA was opportunistic (auto) and failed with a CUDA-specific issue
+            if self.used_cuda_initially and requested_device == "auto" and any(m in err_lower for m in cuda_markers):
+                self.logger.warning("Opportunistic CUDA initialization failed (%s). Falling back to CPU and retrying...", e)
+                self.device = torch.device("cpu")
+                self.fell_back_to_cpu = True
+                try:
+                    self._load_whisper_model()
+                except Exception as retry_e:
+                    raise RuntimeError(f"Failed to load Whisper model after CPU fallback: {retry_e}") from retry_e
+            else:
+                # Explicit CUDA request or non-CUDA error: re-raise
+                raise
         
         self.is_initialized = True
         self.logger.info(f"WhisperBasePipeline initialized successfully")
@@ -227,8 +268,9 @@ class WhisperBasePipeline(BasePipeline):
             self.logger.info(f"Standard Whisper model '{model_size}' loaded successfully to {self.device}")
             
         except Exception as e:
+            # Propagate to outer initialize logic for potential fallback handling
             self.logger.error(f"Error loading standard Whisper model '{model_size}': {e}")
-            raise RuntimeError(f"Failed to load standard Whisper model: {e}")
+            raise RuntimeError(e)
     
     def extract_audio_from_video(self, video_path: Union[str, Path]) -> Tuple[np.ndarray, int]:
         """

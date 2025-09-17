@@ -45,6 +45,30 @@ def init_database(force: bool = False) -> bool:
             return False
         
         logger.info(f"Successfully created tables: {created_tables}")
+
+        # Align legacy jobs table schema with storage backend expectations
+        # The storage backend defines additional columns (output_dir, retry_count)
+        # that might not exist if database was initialized via legacy models.
+        if 'jobs' in created_tables:
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                try:
+                    # SQLite pragma to introspect columns
+                    result = conn.execute(text("PRAGMA table_info('jobs')"))
+                    existing_cols = {row[1] for row in result}  # row[1] is column name
+                    alter_performed = False
+                    if 'output_dir' not in existing_cols:
+                        logger.warning("[MIGRATION] Adding missing column jobs.output_dir")
+                        conn.execute(text("ALTER TABLE jobs ADD COLUMN output_dir VARCHAR"))
+                        alter_performed = True
+                    if 'retry_count' not in existing_cols:
+                        logger.warning("[MIGRATION] Adding missing column jobs.retry_count")
+                        conn.execute(text("ALTER TABLE jobs ADD COLUMN retry_count INTEGER DEFAULT 0"))
+                        alter_performed = True
+                    if alter_performed:
+                        logger.info("[MIGRATION] Jobs table schema updated for storage backend compatibility")
+                except Exception as mig_e:
+                    logger.error(f"[MIGRATION] Failed to align jobs table schema: {mig_e}")
         return True
         
     except Exception as e:

@@ -387,7 +387,8 @@ class COCOValidator:
         )
 
         for pipeline_name, result in results.items():
-            status = "✅ VALID" if result.is_valid else "❌ INVALID"
+            # Use ASCII-safe markers instead of emoji
+            status = "[OK] VALID" if result.is_valid else "[ERROR] INVALID"
             report_lines.append(f"🔧 {pipeline_name.upper()} Pipeline: {status}")
 
             if result.is_valid:

@@ -29,8 +29,7 @@ def validate_emotion_data(data: Dict[str, Any]) -> List[str]:
     for key in REQUIRED_TOP_LEVEL:
         if key not in data:
             _err(errors, f"Missing top-level field: {key}")
-    if errors:
-        return errors
+    # Do NOT early-return; accumulate additional type errors for better diagnostics
 
     # Types
     if not isinstance(data.get("schema_version"), int):
@@ -41,6 +40,7 @@ def validate_emotion_data(data: Dict[str, Any]) -> List[str]:
     emotions = data.get("emotions")
     if not isinstance(emotions, list) or len(emotions) == 0:
         _err(errors, "emotions must be a non-empty list")
+        # Continue collecting other top-level type errors but skip per-entry validation
         return errors
 
     for idx, entry in enumerate(emotions):

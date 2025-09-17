@@ -9,6 +9,10 @@ import platform
 from datetime import datetime
 
 from ...version import __version__ as videoannotator_version
+from ...registry.pipeline_registry import get_registry
+import time
+
+PROCESS_START_TIME = time.time()
 from ..database import get_storage_backend, check_database_health, get_database_info
 
 
@@ -80,36 +84,58 @@ async def detailed_health_check():
         except ImportError:
             gpu_info = {"available": False, "reason": "PyTorch not installed"}
         
+        # Registry enrichment (non-fatal)
+        reg = get_registry()
+        try:
+            reg.load()
+            reg_pipelines = reg.list()
+        except Exception:
+            reg_pipelines = []
+
+        uptime_seconds = int(time.time() - PROCESS_START_TIME)
+
+        db_status = _get_database_status()
+        system_info = {
+            "platform": platform.platform(),
+            "python_version": platform.python_version(),
+            "cpu_count": psutil.cpu_count(),
+            "cpu_percent": cpu_percent,
+            # Backward compat alias expected by older tests
+            "memory_percent": memory.percent,
+            "memory": {
+                "total": memory.total,
+                "available": memory.available,
+                "percent": memory.percent,
+                "used": memory.used,
+                "free": memory.free
+            },
+            "disk": {
+                "total": disk.total,
+                "used": disk.used,
+                "free": disk.free,
+                "percent": (disk.used / disk.total) * 100 if disk.total > 0 else 0
+            }
+        }
+
         return {
             "status": "healthy",
             "timestamp": datetime.now().isoformat(),
             "api_version": "1.2.0",
             "videoannotator_version": videoannotator_version,
-            "system": {
-                "platform": platform.platform(),
-                "python_version": platform.python_version(),
-                "cpu_count": psutil.cpu_count(),
-                "cpu_percent": cpu_percent,
-                "memory": {
-                    "total": memory.total,
-                    "available": memory.available,
-                    "percent": memory.percent,
-                    "used": memory.used,
-                    "free": memory.free
-                },
-                "disk": {
-                    "total": disk.total,
-                    "used": disk.used,
-                    "free": disk.free,
-                    "percent": (disk.used / disk.total) * 100 if disk.total > 0 else 0
-                }
-            },
+            "system": system_info,
+            # Top-level database key for backward compatibility (older tests expect this)
+            "database": db_status,
             "gpu": gpu_info,
+            "pipelines": {
+                "total": len(reg_pipelines),
+                "names": [p.name for p in reg_pipelines][:20],  # cap list
+            },
             "services": {
-                "database": _get_database_status(),
-                "job_queue": "not_implemented",  # TODO: Check Redis/Celery connection
-                "pipelines": "ready"  # TODO: Check pipeline initialization status
-            }
+                "database": db_status,
+                "job_queue": "embedded",  # in-process execution model
+                "pipelines": "ready"
+            },
+            "uptime_seconds": uptime_seconds
         }
         
     except Exception as e:

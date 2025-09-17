@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
 from pydantic import BaseModel
 from ...registry.pipeline_registry import get_registry, PipelineMetadata
+from ..errors import APIError
 import logging
 
 logger = logging.getLogger("videoannotator.api")
@@ -73,9 +74,11 @@ async def list_pipelines():
             ) for m in metas
         ]
         return PipelineListResponse(pipelines=pipeline_models, total=len(pipeline_models))
-    except Exception as e:  # fallback: consistent error envelope start (minimal)
+    except APIError:
+        raise
+    except Exception as e:  # fallback
         logger.error("Failed to list pipelines via registry: %s", e)
-        raise HTTPException(status_code=500, detail=f"Failed to list pipelines: {e}")
+        raise APIError(status_code=500, code="PIPELINES_LIST_FAILED", message="Failed to list pipelines", hint="Check server logs for details")
 
 
 @router.get("/{pipeline_name}", response_model=PipelineInfo)
@@ -93,7 +96,7 @@ async def get_pipeline_info(pipeline_name: str):
         reg = get_registry()
         meta = reg.get(pipeline_name)
         if not meta:
-            raise HTTPException(status_code=404, detail=f"Pipeline '{pipeline_name}' not found")
+            raise APIError(status_code=404, code="PIPELINE_NOT_FOUND", message=f"Pipeline '{pipeline_name}' not found", hint="Run 'videoannotator pipelines --detailed'")
         return PipelineInfo(
             name=meta.name,
             display_name=meta.display_name,
@@ -109,11 +112,11 @@ async def get_pipeline_info(pipeline_name: str):
             config_schema={k: {"type": v.type, "default": v.default, "description": v.description} for k, v in meta.config_schema.items()},
             examples=meta.examples,
         )
-    except HTTPException:
+    except APIError:
         raise
     except Exception as e:
         logger.error("Failed to get pipeline info '%s': %s", pipeline_name, e)
-        raise HTTPException(status_code=500, detail=f"Failed to get pipeline info: {e}")
+        raise APIError(status_code=500, code="PIPELINE_INFO_FAILED", message="Failed to get pipeline info", hint="Check server logs")
 
 
 @router.post("/{pipeline_name}/validate")
@@ -141,10 +144,7 @@ async def validate_pipeline_config(pipeline_name: str, config: Dict[str, Any]):
             "message": "Configuration is valid"
         }
 
-    except HTTPException:
+    except APIError:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to validate config: {str(e)}"
-        )
+        raise APIError(status_code=500, code="PIPELINE_CONFIG_VALIDATE_FAILED", message="Failed to validate config", hint="Check schema / server logs")

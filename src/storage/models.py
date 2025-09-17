@@ -29,6 +29,8 @@ class Job(Base):
     config = Column(JSON, default=dict)  # SQLite 3.38+ supports JSON
     status = Column(String, nullable=False, default="pending")
     selected_pipelines = Column(JSON)  # List[str] as JSON
+    # Progress tracking (keep in sync with database.models.Job)
+    progress_percentage = Column(Integer, nullable=False, default=0)
     
     # Timestamps
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

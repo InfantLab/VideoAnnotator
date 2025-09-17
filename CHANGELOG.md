@@ -13,14 +13,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extended annotation tool integration
 - Multi-language CLI support
 
+## [1.2.1] - 2025-09-17
+
 ### Added
 - Pipeline Registry: YAML-driven pipeline metadata under `src/registry/metadata/` dynamically exposed via `/api/v1/pipelines` (single source of truth).
 - Extended Taxonomy Fields: `pipeline_family`, `variant`, `tasks`, `modalities`, `capabilities`, `backends`, optional `stability` replacing the former coarse `category` concept.
 - Auto-generated Pipeline Specification: `docs/pipelines_spec.md` produced by `scripts/generate_pipeline_specs.py` (regenerate to update docs; diffs signal drift).
 - Emotion Output Format Specification: Standard segment-based JSON schema at `docs/specs/emotion_output_format.md` for emotion-recognition task outputs.
 - New Pipelines Registered: `face_openface3_embedding`, `face_laion_clip`, `voice_emotion_baseline` (with combined speech-transcription + emotion-recognition tasks).
-- CLI Enhancements: `videoannotator pipelines` now supports `--json` (machine readable) and `--detailed` (taxonomy columns) aligned with registry fields.
+- CLI Enhancements: `videoannotator pipelines` now supports `--json`, `--detailed`, and markdown table output.
 - API Enhancements: `/api/v1/pipelines` and `/api/v1/pipelines/{name}` now return full metadata including `display_name` and all taxonomy arrays.
+- Standard Error Envelope: Introduced `APIError` with consistent JSON structure (`error.code`, `error.message`, `error.hint`) across pipeline + job endpoints.
+- Health Enrichment: `/api/v1/system/health` now includes pipeline count, capped name list, uptime_seconds, and explicit embedded job queue status.
+- Error Handling Tests: Added unit test ensuring 404 pipeline detail uses standardized envelope.
+- CLI Emotion Validation: Added `videoannotator validate-emotion` command for schema checking `.emotion.json` outputs.
 - Output Naming Conventions Spec: Canonical file naming patterns documented at `docs/specs/output_naming_conventions.md` (frozen for v1.2.x).
 - Emotion Validator Utility: Lightweight schema validator in `src/validation/emotion_validator.py` with tests ensuring emotion JSON conformance.
 
@@ -28,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deprecated Single `category` Field: Replaced by multi-dimensional taxonomy (no longer emitted in API; remove any downstream reliance on it).
 - Documentation Alignment: README and release notes now direct users to `/api/v1/pipelines` and `docs/pipelines_spec.md` instead of hard-coded lists.
 - Canonical Discovery: All pipeline listings and attributes should be consumed from the API or generated spec, not ad hoc YAML enumeration in user code.
+- CLI Versioning: CLI now derives version from single source `src/version.py` (removed hardcoded API version strings).
+- OpenFace 3.0 Import Safety: Converted eager OpenFace imports to lazy loading in `openface3_pipeline` to prevent argparse side-effects and enable test collection without OpenFace installed.
 
 ### Migration / Guidance
 - If prior tooling referenced `category`, map logic to one or more of: `tasks`, `modalities`, or `pipeline_family` depending on intent.
@@ -38,6 +46,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Notes
 - These changes prepare the groundwork for richer capability/resource descriptors planned for v1.3.0 without introducing breaking runtime behaviors in existing pipelines.
 - All additions are backward compatible except for removal of the legacy `category` field; no other API contracts changed.
+
+#### Patch Update (Light Stabilization - Auth & Logging)
+
+Date: 2025-09-17 (post initial 1.2.1 feature merge)
+
+Added:
+- Optional legacy API key validation helper (`validate_optional_api_key`) enforcing 401 on explicitly invalid `va_` style keys while preserving anonymous access for endpoints that allowed it.
+
+Changed:
+- Replaced runtime and test console emojis with ASCII tags (`[OK]`, `[WARNING]`, `[ERROR]`) in `version.py`, `coco_validator.py`, person tracking pipeline logging, and integration test prints for Windows console compatibility.
+- Injected conditional auth dependency into job endpoints (no behavior change for anonymous requests unless an invalid key is supplied).
+
+Documentation:
+- Appended "Technical Debt & Deferred Stabilization Items" section to `docs/development/roadmap_v1.3.0.md` enumerating deferred heavier tasks (BatchStatus semantics, retry backoff policy, pipeline config defaults, synthetic video fixtures, storage lifecycle cleanup, Whisper CUDA fallback test adjustments, error envelope taxonomy, registry extensions, residual emoji cleanup, auth follow-up tests).
+
+Testing / Validation:
+- Targeted integration tests confirm: invalid API key now returns 401; anonymous job submission paths unaffected; no remaining emoji assumptions in modified tests.
+
+Backward Compatibility:
+- No breaking API changes; only invalid provided API keys now correctly rejected. Anonymous behavior unchanged where previously permitted.
+
+Rationale:
+- Scope intentionally limited to low-risk hardening and Windows-safe output formatting ahead of broader v1.3.0 feature work.
 
 ## [1.2.0] - 2025-08-26
 

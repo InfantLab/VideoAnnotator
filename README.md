@@ -90,6 +90,7 @@ Authoritative pipeline metadata (names, tasks, modalities, capabilities) is gene
 Additional Specs:
 - Output Naming Conventions: `docs/specs/output_naming_conventions.md` (stable patterns for downstream tooling)
 - Emotion Validator Utility: `src/validation/emotion_validator.py` (programmatic validation of `.emotion.json` files)
+ - CLI Validation: `videoannotator validate-emotion path/to/file.emotion.json` returns non-zero exit on failure
 Client tools (e.g. the Video Annotation Viewer) should rely on those sources or the `/api/v1/pipelines` endpoint rather than hard-coding pipeline assumptions.
 
 ### **Person Tracking Pipeline**

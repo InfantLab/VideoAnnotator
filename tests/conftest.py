@@ -3,10 +3,26 @@ import pytest
 # --- Speech Pipeline Robustness Fixture ---
 @pytest.fixture(autouse=True)
 def patch_speech_pipeline_cuda(monkeypatch):
-    """Patch torch.cuda.is_available to True for all tests."""
+    """Respect actual CUDA availability instead of forcing True.
+
+    Previous version forced torch.cuda.is_available() -> True which caused
+    GPU-only code paths (e.g., Whisper model allocation) to execute on systems
+    without CUDA support leading to failures. We now:
+      - Return the real torch.cuda.is_available() result
+      - Allow an opt-in override by setting TEST_FORCE_CUDA=1 in env
+    This keeps tests deterministic while remaining safe on CPU-only machines.
+    """
+    import os
     try:
-        monkeypatch.setattr("torch.cuda.is_available", lambda: True, raising=False)
+        import torch  # noqa: F401
+        if os.environ.get("TEST_FORCE_CUDA") == "1":
+            monkeypatch.setattr("torch.cuda.is_available", lambda: True, raising=False)
+        else:
+            # Wrap original to avoid accidental mutation; always boolean
+            orig = torch.cuda.is_available
+            monkeypatch.setattr("torch.cuda.is_available", lambda: bool(orig()), raising=False)
     except Exception:
+        # If torch not present or any issue, leave unpatched (defaults to no CUDA)
         pass
     yield
 
@@ -59,18 +75,18 @@ def temp_video_file():
         # Create a simple test video using OpenCV
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter(f.name, fourcc, 30.0, (640, 480))
-        
+
         # Write a few frames
         for i in range(90):  # 3 seconds at 30fps
             frame = np.zeros((480, 640, 3), dtype=np.uint8)
             # Add some variation to frames
             frame[:, :, i % 3] = (i * 5) % 255
             out.write(frame)
-        
+
         out.release()
-        
+
         yield Path(f.name)
-        
+
         # Cleanup
         Path(f.name).unlink(missing_ok=True)
 

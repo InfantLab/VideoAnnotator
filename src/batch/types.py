@@ -163,7 +163,9 @@ class BatchStatus:
         """Get success rate as percentage (0-100)."""
         finished_jobs = self.completed_jobs + self.failed_jobs + self.cancelled_jobs
         if finished_jobs == 0:
-            return 0.0  # No finished jobs means no success rate yet
+            # Optimistic interpretation: if nothing has failed yet, treat as 100%
+            # This aligns with integration test expectations for empty/new batches.
+            return 100.0
         return (self.completed_jobs / finished_jobs) * 100.0
     
     @property

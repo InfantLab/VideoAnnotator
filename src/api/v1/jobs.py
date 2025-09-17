@@ -16,7 +16,9 @@ from pathlib import Path
 
 from ...batch.types import BatchJob, JobStatus
 from ...storage.base import StorageBackend
+from ..errors import APIError
 from ..database import get_storage_backend
+from ..dependencies import validate_optional_api_key
 
 
 router = APIRouter()
@@ -34,7 +36,7 @@ class JobSubmissionRequest(BaseModel):
 
 
 class JobResponse(BaseModel):
-    """Response model for job information."""
+    """Response model for job information (aligned with DB Job model)."""
     id: str
     status: str
     video_path: Optional[str] = None
@@ -43,6 +45,7 @@ class JobResponse(BaseModel):
     created_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     error_message: Optional[str] = None
+    result_path: Optional[str] = None
 
 
 class JobListResponse(BaseModel):
@@ -66,13 +69,13 @@ class PipelineResultResponse(BaseModel):
 
 
 class JobResultsResponse(BaseModel):
-    """Response model for job results."""
+    """Response model for job results (aligned with DB schema)."""
     job_id: str
     status: str
     pipeline_results: Dict[str, PipelineResultResponse]
     created_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
-    output_dir: Optional[str] = None
+    result_path: Optional[str] = None
 
 
 @router.post("/", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
@@ -80,7 +83,8 @@ async def submit_job(
     video: UploadFile = File(..., description="Video file to process"),
     config: Optional[str] = Form(None, description="JSON configuration"),
     selected_pipelines: Optional[str] = Form(None, description="Comma-separated pipeline names"),
-    storage: StorageBackend = Depends(get_storage)
+    storage: StorageBackend = Depends(get_storage),
+    user: Optional[Dict[str, Any]] = Depends(validate_optional_api_key)
 ):
     """
     Submit a video processing job.
@@ -138,20 +142,21 @@ async def submit_job(
             config=batch_job.config,
             selected_pipelines=batch_job.selected_pipelines,
             created_at=batch_job.created_at,
-            completed_at=batch_job.completed_at
+            completed_at=batch_job.completed_at,
+            result_path=None
         )
         
+    except APIError:
+        raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to submit job: {str(e)}"
-        )
+        raise APIError(status_code=500, code="JOB_SUBMIT_FAILED", message="Failed to submit job", hint="Check server logs")
 
 
 @router.get("/{job_id}", response_model=JobResponse)
 async def get_job_status(
     job_id: str,
-    storage: StorageBackend = Depends(get_storage)
+    storage: StorageBackend = Depends(get_storage),
+    user: Optional[Dict[str, Any]] = Depends(validate_optional_api_key)
 ):
     """
     Get job status and details.
@@ -174,19 +179,17 @@ async def get_job_status(
             selected_pipelines=job.selected_pipelines,
             created_at=job.created_at,
             completed_at=job.completed_at,
-            error_message=job.error_message
+            error_message=job.error_message,
+            result_path=getattr(job, 'result_path', None)
         )
         
     except FileNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job {job_id} not found"
-        )
+        # Message must include exact substring expected by tests: "Job not found"
+        raise APIError(status_code=404, code="JOB_NOT_FOUND", message="Job not found", hint="List jobs with 'videoannotator job list'")
+    except APIError:
+        raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get job status: {str(e)}"
-        )
+        raise APIError(status_code=500, code="JOB_STATUS_FAILED", message="Failed to get job status", hint="Check server logs")
 
 
 @router.get("/", response_model=JobListResponse)
@@ -194,7 +197,8 @@ async def list_jobs(
     page: int = 1,
     per_page: int = 10,
     status_filter: Optional[str] = None,
-    storage: StorageBackend = Depends(get_storage)
+    storage: StorageBackend = Depends(get_storage),
+    user: Optional[Dict[str, Any]] = Depends(validate_optional_api_key)
 ):
     """
     List jobs with pagination and filtering.
@@ -230,7 +234,8 @@ async def list_jobs(
                     selected_pipelines=job.selected_pipelines,
                     created_at=job.created_at,
                     completed_at=job.completed_at,
-                    error_message=job.error_message
+                    error_message=job.error_message,
+                    result_path=getattr(job, 'result_path', None)
                 ))
             except FileNotFoundError:
                 # Skip jobs that can't be loaded (shouldn't happen but be defensive)
@@ -253,7 +258,8 @@ async def list_jobs(
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def cancel_job(
     job_id: str,
-    storage: StorageBackend = Depends(get_storage)
+    storage: StorageBackend = Depends(get_storage),
+    user: Optional[Dict[str, Any]] = Depends(validate_optional_api_key)
 ):
     """
     Cancel/delete a job.
@@ -289,7 +295,8 @@ async def cancel_job(
 @router.get("/{job_id}/results", response_model=JobResultsResponse)
 async def get_job_results(
     job_id: str,
-    storage: StorageBackend = Depends(get_storage)
+    storage: StorageBackend = Depends(get_storage),
+    user: Optional[Dict[str, Any]] = Depends(validate_optional_api_key)
 ):
     """
     Get detailed results for a completed job.
@@ -352,7 +359,8 @@ async def get_job_results(
 async def download_result_file(
     job_id: str,
     pipeline_name: str,
-    storage: StorageBackend = Depends(get_storage)
+    storage: StorageBackend = Depends(get_storage),
+    user: Optional[Dict[str, Any]] = Depends(validate_optional_api_key)
 ):
     """
     Download a specific result file from a job.

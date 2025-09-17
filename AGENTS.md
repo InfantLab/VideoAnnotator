@@ -22,7 +22,7 @@ AI agents MUST optimize for:
 ## 3. Output & Logging Rules
 | Concern | Rule | Rationale |
 | ------- | ---- | --------- |
-| Emoji / Unicode | Prohibited in console/log prints | Windows charmap crashes (see `CLAUDE.md`) |
+| Emoji / Unicode | Prohibited in console/log prints | Windows charmap crashes  |
 | Log Directory | Use `setup_videoannotator_logging()`; do not reinvent handlers | Central consistency |
 | Structured Logs | Prefer logger over `print`; CLI may still use `typer.echo` for UX | Unified diagnostics |
 | Error Prefix | Use `[ERROR]`, `[WARNING]`, `[OK]`, `[START]` | Consistency + plain ASCII |
@@ -181,8 +181,54 @@ Use labels/phrases to keep scope controlled:
 
 ## 20. Azure-Specific Guidance (If Applicable)
 If generating Azure deployment or infra code:
-- Reference best practices (storage SAS, managed identity) by invoking the @azure best practices rule.
-- Avoid embedding secrets; rely on environment-based configuration.
 
----
-This document supersedes fragmented assistant guidelines in `CLAUDE.md` (agent behavior portions) and internal Copilot notes. Non-agent contextual domain details remain in `CLAUDE.md`.
+## 21. Package & Environment Management (uv Mandatory)
+The project STANDARD is to use `uv` (https://github.com/astral-sh/uv) for all Python dependency resolution, execution, and testing. Assistants MUST NOT rely on a pre-activated conda / venv environment when giving commands or running tests.
+
+Required practices:
+1. Installation / Sync
+  - To sync the environment exactly to `pyproject.toml` + `uv.lock`:
+    - `uv sync` (never manually `pip install` inside the venv for project deps)
+2. Adding / Removing Dependencies
+  - Add runtime dependency: `uv add <package>`
+  - Add dev/test dependency: `uv add --dev <package>`
+  - Remove: `uv remove <package>`
+  - After changes: commit updated `uv.lock`.
+3. Running Code
+  - Module / script: `uv run python -m videoannotator ...`
+  - CLI entry (if defined): `uv run videoannotator ...`
+4. Tests & Quality
+  - Full test suite: `uv run pytest -q` (or with markers/coverage flags)
+  - Ruff lint (if configured): `uv run ruff check .`
+  - Mypy (if configured): `uv run mypy src/`
+5. REPL / One-off
+  - `uv run python` (never rely on external shell’s site-packages)
+6. Caching & Performance
+  - Let `uv` manage wheels; do not manually clear caches unless diagnosing a build issue.
+7. Consistency Enforcement
+  - If guidance or scripts previously referenced bare `pytest` / `python`, update them to `uv run` form.
+  - Any test failure reproduction steps in issues/PR descriptions MUST use `uv run`.
+8. CI Alignment
+  - CI should mirror: `uv sync` then `uv run pytest ...`. Do not introduce alternative installers.
+
+Common Anti-Patterns to Avoid (uv):
+- Using `pip install -e .` directly (use `uv sync` instead).
+- Activating a conda environment and running `pytest` without `uv run`.
+- Editing `requirements.txt` (the project is pyproject+lock driven; no requirements.txt unless generated artifact).
+
+Assistant Heuristic Update:
+- Before running tests, always ensure commands are prefixed with `uv run` unless explicitly operating inside a scripted `make` target that already does so.
+- If a user asks for install instructions, default to `uv` commands.
+
+Quick Reference:
+```
+uv sync                     # create/update environment
+uv run pytest -q            # run tests
+uv add requests             # add runtime dep
+uv add --dev pytest-cov     # add dev dep
+uv run videoannotator --help
+```
+
+If any discrepancy between an active shell environment and `uv run` behavior is suspected, treat the `uv run` result as canonical.
+
+
