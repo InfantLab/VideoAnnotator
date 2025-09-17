@@ -283,38 +283,79 @@ def list_jobs(
 @app.command()
 def pipelines(
     server: str = typer.Option("http://localhost:8000", help="API server URL"),
-    detailed: bool = typer.Option(False, help="Show detailed pipeline information"),
+    detailed: bool = typer.Option(False, help="Show extended pipeline information"),
+    json: bool = typer.Option(False, "--json", help="Output JSON for scripting"),
+    format: Optional[str] = typer.Option(None, help="Alternate output format (markdown)"),
 ):
-    """List available processing pipelines."""
-    import requests
-    
-    typer.echo("[PIPELINES] Getting available pipelines...")
-    
+    """List available processing pipelines (registry-backed)."""
+    import requests, json as jsonlib
+
     try:
         response = requests.get(f"{server}/api/v1/pipelines", timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            pipelines = data.get("pipelines", [])
-            
-            typer.echo(f"[OK] Found {len(pipelines)} available pipelines:")
-            typer.echo("")
-            
-            for pipeline in pipelines:
-                typer.echo(f"• {pipeline['name']}")
-                if detailed:
-                    typer.echo(f"  Description: {pipeline.get('description', 'No description')}")
-                    typer.echo(f"  Category: {pipeline.get('category', 'Unknown')}")
-                    if pipeline.get('config_schema'):
-                        typer.echo(f"  Configurable: Yes")
-                    typer.echo("")
-        else:
+        if response.status_code != 200:
             typer.echo(f"[ERROR] Failed to get pipelines: {response.status_code}")
             raise typer.Exit(code=1)
-            
+        data = response.json()
+        pipelines = data.get("pipelines", [])
+
+        if json:
+            typer.echo(jsonlib.dumps(pipelines, indent=2))
+            return
+
+        if format:
+            fmt = format.lower()
+            if fmt not in {"markdown", "md"}:
+                typer.echo(f"[ERROR] Unsupported format: {format}")
+                raise typer.Exit(code=1)
+            # Build markdown table similar to generated spec (subset columns)
+            cols = [
+                ("Name", lambda p: p.get("name", "")),
+                ("Display Name", lambda p: p.get("display_name") or p.get("name")),
+                ("Family", lambda p: p.get("pipeline_family") or "-"),
+                ("Variant", lambda p: p.get("variant") or "-"),
+                ("Tasks", lambda p: ",".join(p.get("tasks", [])) or "-"),
+                ("Modalities", lambda p: ",".join(p.get("modalities", [])) or "-"),
+                ("Capabilities", lambda p: ",".join(p.get("capabilities", [])) or "-"),
+                ("Backends", lambda p: ",".join(p.get("backends", [])) or "-"),
+                ("Outputs", lambda p: ";".join(f"{o['format']}:{'/'.join(o['types'])}" for o in p.get("outputs", []))),
+            ]
+            header = "| " + " | ".join(c for c, _ in cols) + " |"
+            sep = "| " + " | ".join(["---"] * len(cols)) + " |"
+            rows = []
+            for p in sorted(pipelines, key=lambda x: x.get("name", "")):
+                rows.append("| " + " | ".join(fn(p) for _, fn in cols) + " |")
+            typer.echo(header)
+            typer.echo(sep)
+            for r in rows:
+                typer.echo(r)
+            typer.echo("")
+            typer.echo(f"Total pipelines: {len(pipelines)}")
+            return
+
+        typer.echo(f"[OK] Pipelines: {len(pipelines)} found")
+        for p in pipelines:
+            typer.echo(f"- {p['name']}")
+            if detailed:
+                typer.echo(f"  Display: {p.get('display_name', p['name'])}")
+                if p.get('pipeline_family'):
+                    typer.echo(f"  Family: {p.get('pipeline_family')}  Variant: {p.get('variant', '-')}")
+                if p.get('tasks'):
+                    typer.echo(f"  Tasks: {', '.join(p.get('tasks'))}")
+                if p.get('modalities'):
+                    typer.echo(f"  Modalities: {', '.join(p.get('modalities'))}")
+                if p.get('capabilities'):
+                    typer.echo(f"  Capabilities: {', '.join(p.get('capabilities'))}")
+                if p.get('backends'):
+                    typer.echo(f"  Backends: {', '.join(p.get('backends'))}")
+                if p.get('stability'):
+                    typer.echo(f"  Stability: {p.get('stability')}")
+                typer.echo(f"  Outputs: {', '.join(f"{o['format']}[{','.join(o['types'])}]" for o in p.get('outputs', []))}")
+                if p.get('config_schema'):
+                    typer.echo(f"  Config Keys: {', '.join(p.get('config_schema').keys())}")
+                typer.echo("")
     except requests.RequestException as e:
         typer.echo(f"[ERROR] Failed to connect to API server: {e}", err=True)
-        typer.echo(f"[INFO] Make sure server is running: videoannotator server")
+        typer.echo("[INFO] Ensure server is running: videoannotator server")
         raise typer.Exit(code=1)
 
 

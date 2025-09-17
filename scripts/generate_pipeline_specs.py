@@ -1,7 +1,26 @@
 #!/usr/bin/env python
 """Generate pipelines_spec.md from registry metadata.
 
-Usage: python scripts/generate_pipeline_specs.py
+Usage (local):
+    uv run python scripts/generate_pipeline_specs.py
+
+Typical CI integration (pseudo):
+    uv run python scripts/generate_pipeline_specs.py
+    git diff --exit-code docs/pipelines_spec.md  # fail if uncommitted drift
+
+Purpose:
+    Single authoritative markdown summary of all registered pipelines. Downstream
+    docs and release notes MUST link to this instead of duplicating tables.
+
+When to re-run:
+    - Adding a new YAML under src/registry/metadata/
+    - Modifying taxonomy fields / outputs / config_schema of an existing pipeline
+    - Changing ordering logic here (rare)
+
+Notes:
+    - This file is intentionally ASCII-only (Windows console safety).
+    - Regeneration is idempotent aside from the timestamp line.
+    - Keep the column list (COLUMNS) minimal in v1.2.x; richer descriptors belong to v1.3.x+.
 """
 from pathlib import Path
 from datetime import datetime

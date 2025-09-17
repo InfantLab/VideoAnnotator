@@ -20,6 +20,7 @@ router = APIRouter()
 class PipelineInfo(BaseModel):
     """Information about an available pipeline (extended taxonomy)."""
     name: str
+    display_name: str | None = None
     description: str
     enabled: bool = True
     pipeline_family: str | None = None
@@ -57,6 +58,7 @@ async def list_pipelines():
         pipeline_models: List[PipelineInfo] = [
             PipelineInfo(
                 name=m.name,
+                display_name=m.display_name,
                 description=m.description,
                 pipeline_family=m.pipeline_family,
                 variant=m.variant,
@@ -94,6 +96,7 @@ async def get_pipeline_info(pipeline_name: str):
             raise HTTPException(status_code=404, detail=f"Pipeline '{pipeline_name}' not found")
         return PipelineInfo(
             name=meta.name,
+            display_name=meta.display_name,
             description=meta.description,
             pipeline_family=meta.pipeline_family,
             variant=meta.variant,

@@ -82,6 +82,16 @@ npm install && npm start
 
 ## 🧠 AI Pipelines & Capabilities
 
+Authoritative pipeline metadata (names, tasks, modalities, capabilities) is generated from the registry:
+
+- Pipeline specification table: `docs/pipelines_spec.md` (auto-generated; do not edit by hand)
+- Emotion output format spec: `docs/specs/emotion_output_format.md`
+
+Additional Specs:
+- Output Naming Conventions: `docs/specs/output_naming_conventions.md` (stable patterns for downstream tooling)
+- Emotion Validator Utility: `src/validation/emotion_validator.py` (programmatic validation of `.emotion.json` files)
+Client tools (e.g. the Video Annotation Viewer) should rely on those sources or the `/api/v1/pipelines` endpoint rather than hard-coding pipeline assumptions.
+
 ### **Person Tracking Pipeline**
 - **Technology**: YOLO11 + ByteTrack multi-object tracking
 - **Outputs**: Bounding boxes, pose keypoints, persistent person IDs

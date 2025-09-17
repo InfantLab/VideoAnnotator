@@ -13,6 +13,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extended annotation tool integration
 - Multi-language CLI support
 
+### Added
+- Pipeline Registry: YAML-driven pipeline metadata under `src/registry/metadata/` dynamically exposed via `/api/v1/pipelines` (single source of truth).
+- Extended Taxonomy Fields: `pipeline_family`, `variant`, `tasks`, `modalities`, `capabilities`, `backends`, optional `stability` replacing the former coarse `category` concept.
+- Auto-generated Pipeline Specification: `docs/pipelines_spec.md` produced by `scripts/generate_pipeline_specs.py` (regenerate to update docs; diffs signal drift).
+- Emotion Output Format Specification: Standard segment-based JSON schema at `docs/specs/emotion_output_format.md` for emotion-recognition task outputs.
+- New Pipelines Registered: `face_openface3_embedding`, `face_laion_clip`, `voice_emotion_baseline` (with combined speech-transcription + emotion-recognition tasks).
+- CLI Enhancements: `videoannotator pipelines` now supports `--json` (machine readable) and `--detailed` (taxonomy columns) aligned with registry fields.
+- API Enhancements: `/api/v1/pipelines` and `/api/v1/pipelines/{name}` now return full metadata including `display_name` and all taxonomy arrays.
+- Output Naming Conventions Spec: Canonical file naming patterns documented at `docs/specs/output_naming_conventions.md` (frozen for v1.2.x).
+- Emotion Validator Utility: Lightweight schema validator in `src/validation/emotion_validator.py` with tests ensuring emotion JSON conformance.
+
+### Changed
+- Deprecated Single `category` Field: Replaced by multi-dimensional taxonomy (no longer emitted in API; remove any downstream reliance on it).
+- Documentation Alignment: README and release notes now direct users to `/api/v1/pipelines` and `docs/pipelines_spec.md` instead of hard-coded lists.
+- Canonical Discovery: All pipeline listings and attributes should be consumed from the API or generated spec, not ad hoc YAML enumeration in user code.
+
+### Migration / Guidance
+- If prior tooling referenced `category`, map logic to one or more of: `tasks`, `modalities`, or `pipeline_family` depending on intent.
+- Update any scripts that enumerated pipelines manually to call: `videoannotator pipelines --json` for stable machine parsing.
+- To regenerate the pipeline spec after adding/editing metadata: run the provided generation script (see header comments in `scripts/generate_pipeline_specs.py`).
+- Emotion analysis consumers should validate outputs against the documented schema instead of reverse-engineering per-pipeline fields.
+
+### Notes
+- These changes prepare the groundwork for richer capability/resource descriptors planned for v1.3.0 without introducing breaking runtime behaviors in existing pipelines.
+- All additions are backward compatible except for removal of the legacy `category` field; no other API contracts changed.
+
 ## [1.2.0] - 2025-08-26
 
 ### 🚀 Major Features - Production-Ready API System
