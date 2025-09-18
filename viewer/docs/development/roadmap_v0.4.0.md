@@ -24,6 +24,9 @@ Enable enterprise-scale video processing with folder selection, batch management
 ### **Theme 4: Performance & Scalability** 🚀
 Optimize for large-scale usage with memory management, progressive loading, and handling of extensive annotation datasets.
 
+### **Theme 5: Deeper VideoAnnotator Integration (v1.2.x)** 🔌
+Leverage VideoAnnotator v1.2.1/1.2.2 pipeline‑querying APIs for dynamic pipeline discovery, parameter introspection, and health/status awareness.
+
 ---
 
 ## 📋 **FEATURE ROADMAP**
@@ -74,6 +77,13 @@ Optimize for large-scale usage with memory management, progressive loading, and 
   - Export/import configuration files
   - Team configuration sharing capabilities
 
+- [ ] **VideoAnnotator 1.2.x Introspection (Foundations)**
+  - Auto-discover pipelines from API (catalog endpoint)
+  - Fetch parameter schemas, defaults, constraints per pipeline
+  - Map server parameter types → UI controls (with validation)
+  - Fallback gracefully when server <1.2.1 (static schema)
+  - Environment: use `VITE_API_BASE_URL` (default `http://localhost:8000`)
+
 ### **Phase 2: Bulk Processing & Enterprise Features** (Weeks 5-8)
 
 #### **2.1 Advanced File Management** 📁
@@ -108,6 +118,12 @@ Optimize for large-scale usage with memory management, progressive loading, and 
   - Estimated completion time improvements
   - Hardware utilization monitoring
 
+- [ ] **VideoAnnotator 1.2.x Control & Status**
+  - Query live pipeline availability/health and supported capabilities
+  - Surface per-pipeline version and model info in UI
+  - Validate job requests against server-declared constraints
+  - Feature-detect endpoints; enable/disable UI accordingly
+
 ### **Phase 3: Enhanced Viewer Experience** (Weeks 9-12)
 
 #### **3.1 Job Results Integration** 🔗
@@ -122,6 +138,11 @@ Optimize for large-scale usage with memory management, progressive loading, and 
   - Multiple output format support (COCO, WebVTT, RTTM, scene detection)
   - Result file validation and error handling
   - Progress indicators for large result file loading
+
+- [ ] **Server-Aware Results (v1.2.x)**
+  - Use pipeline catalog to tailor expected artifacts per job
+  - Resolve artifact paths via new listing endpoints (if available)
+  - Warn when requested overlays lack corresponding server pipeline support
 
 #### **3.2 Advanced Annotation Visualization** 📊
 - [ ] **Motion Analysis Enhancement**
@@ -213,6 +234,20 @@ Optimize for large-scale usage with memory management, progressive loading, and 
   - Data validation and sanitization
   - Error recovery mechanisms
 
+- [ ] **VideoAnnotator v1.2.x Pipeline Introspection**
+  - Add typed client (`src/lib/api/videoAnnotatorClient.ts`) for v1.2.x
+  - Endpoints: pipeline catalog, schema, health/status, capabilities
+  - Version negotiation: detect server version and feature flags
+  - Backward compatibility: shim static schemas for <1.2.1 servers
+  - Cache pipeline metadata; invalidate on version change
+  - Error taxonomy: user-facing messages for auth/network/version issues
+
+- [ ] **Contract & E2E Tests (Local Server)**
+  - Add contract tests against `http://localhost:8000/` in dev
+  - Mock handlers for CI (no network) mirroring 1.2.1/1.2.2 responses
+  - Playwright flows: discover pipelines → create job → open in viewer
+  - Record test fixtures for pipeline schemas and capabilities
+
 ---
 
 ## 📊 **QUALITY & TESTING FRAMEWORK**
@@ -229,6 +264,11 @@ Optimize for large-scale usage with memory management, progressive loading, and 
   - Cross-browser testing automation
   - Visual regression testing
   - Load testing for large files
+
+- [ ] **API Compatibility Matrix (VA 1.2.x)**
+  - Tests for pipeline discovery on 1.2.1 and 1.2.2
+  - Fallback behavior tests for pre-1.2.1 servers
+  - Snapshot assertions for parameter schema rendering
 
 ### **Documentation & Training**
 - [ ] **Comprehensive Documentation**
@@ -263,6 +303,7 @@ Non-blocking during active development; will become required checks for the v0.4
 - E2E & Cross-browser
   - [ ] Playwright smoke tests pass (Chromium, Firefox, WebKit)
   - [ ] Core flows: load demo, toggle overlays, seek/timeline, job list open
+  - [ ] Pipeline discovery works against local VA server (1.2.x)
 
 - Accessibility & Performance
   - [ ] Lighthouse CI: Performance ≥ 90, Accessibility ≥ 90, Best Practices ≥ 90
@@ -276,6 +317,7 @@ Non-blocking during active development; will become required checks for the v0.4
   - [ ] CHANGELOG updated and version bumped
   - [ ] README badges and screenshots updated
   - [ ] Release notes generated (Changesets or GH Release)
+  - [ ] Client-Server guide updated for VA 1.2.1/1.2.2 endpoints
 
 - Repo Settings (to enable at RC)
   - [ ] Protect main: require status checks (build, lint, typecheck, tests, coverage, e2e)
@@ -305,6 +347,7 @@ Implementation notes (for later enablement):
 - Folder selection and batch processing
 - Storage management interface
 - Advanced pipeline control
+- VideoAnnotator 1.2.x pipeline health/status surfacing
 
 ### **Sprint 5-6 (Weeks 9-12): Enhanced Visualization**
 **Goal**: Advanced annotation features and export capabilities
@@ -312,6 +355,7 @@ Implementation notes (for later enablement):
 - Motion analysis visualization
 - Enhanced person tracking
 - Export functionality
+- Server-aware results mapping based on selected pipelines
 
 ### **Sprint 7-8 (Weeks 13-16): Performance & Polish**
 **Goal**: Production-ready performance and enterprise features
@@ -341,6 +385,7 @@ Implementation notes (for later enablement):
 - [ ] **Reliability**: 99.9% uptime with proper error handling
 - [ ] **Security**: Security audit completion with no critical vulnerabilities
 - [ ] **Integration**: API compatibility with major video analysis platforms
+  - VideoAnnotator v1.2.1/1.2.2 pipeline introspection coverage ≥ 95%
 
 ---
 
@@ -413,6 +458,8 @@ Implementation notes (for later enablement):
   - Deprecation notices and timelines
   - Migration guides for integrations
   - Backward compatibility testing
+  - Version negotiation for VA 1.2.x pipeline introspection
+  - Graceful degrade to static config on older servers
 
 ---
 
@@ -435,6 +482,7 @@ Implementation notes (for later enablement):
 - [ ] **Error Boundary Implementation**: Better error recovery for job detail pages ✅ v0.3.0 Fixed
 - [ ] **Token Onboarding Flow**: Enhanced user guidance for API token setup
 - [ ] **Job Detail Buttons**: Enable functionality for Download Results and View Raw Data buttons ✅ v0.3.0 Partial
+- [ ] **Pipeline Discovery UX**: Clearly indicate available pipelines from server; disable unsupported options
 
 ### **Enhanced from QA Insights**
 - **Phase 1.1 Professional Branding**: Now includes fixing contrast issues identified in QA
@@ -444,9 +492,9 @@ Implementation notes (for later enablement):
 ---
 
 **Roadmap Version**: v0.4.0  
-**Last Updated**: 2025-08-25 (QA Feedback Integrated)  
+**Last Updated**: 2025-09-18 (Added VideoAnnotator v1.2.x integration plan)  
 **Status**: Planning Phase  
-**Dependencies**: Successful v0.3.0 release with server-side SSE implementation
+**Dependencies**: Successful v0.3.0 release with server-side SSE implementation; VideoAnnotator server v1.2.1+ available at `http://localhost:8000/`
 
 ## 📋 **NOTE**: 
 Remember that roadmaps are stored in `docs/development/` subfolder, not directly in `docs/`.

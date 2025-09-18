@@ -269,6 +269,7 @@ Comprehensive documentation is available in the [`docs/`](./docs/) directory:
 - **[Interactive Documentation](https://deepwiki.com/InfantLab/video-annotation-viewer)** - Explore the codebase with deepwiki's AI-powered documentation
 
 - **[Developer Guide](./docs/DEVELOPER_GUIDE.md)** - Technical architecture and development setup
+- **[Agents Guide](./AGENTS.md)** - Instructions for AI coding agents working in this repo
 - **[File Formats](./docs/FILE_FORMATS.md)** - VideoAnnotator format specifications  
 - **[Debug Utils](./docs/DEBUGUTILS_GUIDE.md)** - Console debugging and testing tools
 - **[Client-Server Guide](./docs/CLIENT_SERVER_COLLABORATION_GUIDE.md)** - VideoAnnotator API integration *(New in v0.3.0)*

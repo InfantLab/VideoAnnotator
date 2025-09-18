@@ -2,6 +2,8 @@
 
 This guide covers the technical architecture, development setup, and extension points for Video Annotation Viewer v0.3.0.
 
+See also: AGENTS.md at the repo root for guidance specific to AI coding agents.
+
 ## Architecture Overview
 
 ### Tech Stack
