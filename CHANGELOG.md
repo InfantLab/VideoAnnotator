@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extended annotation tool integration
 - Multi-language CLI support
 
+### Pending (will become 1.2.2)
+- (placeholder) Minor fixes and doc refinements following 1.2.1 release
+
 ## [1.2.1] - 2025-09-17
 
 ### Added
