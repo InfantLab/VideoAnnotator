@@ -12,15 +12,15 @@ import json
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
-from ..base_pipeline import BasePipeline
-from ...version import __version__
-from ...exporters.native_formats import (
+from pipelines.base_pipeline import BasePipeline
+from version import __version__
+from exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
     export_coco_json,
     validate_coco_json,
 )
-from ...utils.person_identity import PersonIdentityManager
+from utils.person_identity import PersonIdentityManager
 
 # Optional import for enhanced face analysis
 try:

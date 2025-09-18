@@ -8,12 +8,12 @@ import psutil
 import platform
 from datetime import datetime
 
-from ...version import __version__ as videoannotator_version
-from ...registry.pipeline_registry import get_registry
+from version import __version__ as videoannotator_version
+from registry.pipeline_registry import get_registry
 import time
 
 PROCESS_START_TIME = time.time()
-from ..database import get_storage_backend, check_database_health, get_database_info
+from api.database import get_storage_backend, check_database_health, get_database_info
 
 
 router = APIRouter()

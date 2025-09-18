@@ -263,4 +263,39 @@ These reduce architectural risk and accelerate: plugin sandboxing, adaptive proc
 **Last Updated**: January 2025 | Target Release: Q3-Q4 2025  
 **Dependencies**: VideoAnnotator v1.2.0 stable release  
 **Status**: Planning phase - detailed specifications in development
+---
+
+## 🧩 Technical Debt & Structural Work – Package Layout Normalization (Added Post v1.2.1)
+
+Interim absolute-import flattening was applied after v1.2.1 to fix runtime `ModuleNotFoundError: No module named 'src'` and inconsistent deep relative imports. A full, namespaced package restructuring is scheduled for v1.3.0.
+
+### Interim Actions Completed
+- Converted mixed relative imports (`from .`, `from ..`) to absolute across API, pipelines, storage, auth, exporters, middleware
+- Standardized uvicorn target to `api.main:app` via console script `cli:app`
+- Restored API key / token validation paths under new absolute import model
+- Added smoke import verification (`import api.main`) to detect cascading issues
+
+### Planned Normalization (v1.3.0 Scope)
+1. Introduce canonical package directory `videoannotator/` (migrate modules incrementally)
+2. Add deprecation shims for legacy top-level imports (one minor release grace)
+3. Enforce import policy (no multi-level relative imports) via lint/CI script
+4. Separate optional heavy ML deps into extras: `[ml]`, `[face]`, `[audio]`
+5. Generate import graph; fail CI on new cycles
+6. Confirm parity of editable vs wheel installs (smoke tests: `videoannotator version`, `videoannotator pipelines`)
+
+### Success Criteria
+- All public imports under `videoannotator.*`
+- Wheel + editable produce identical module tree
+- No runtime import errors in `videoannotator server` start
+- Deprecation warnings emitted for legacy paths (removed in ≥ v1.4.0)
+
+### Risks & Mitigations
+| Risk | Mitigation |
+|------|------------|
+| Circular imports after move | Pre-move graph + staged migration |
+| Hidden optional dependency leakage | Extras with guarded imports |
+| Downstream breakage | Shims + migration guide |
+| Startup latency increase | Lazy-load heavy ML libs |
+
+---
 \n+---\n+\n+## Technical Debt & Deferred Stabilization Items (Carried from v1.2.1)\n+These engineering tasks were intentionally deferred during the light stabilization pass (logging cleanup, auth tightening) to preserve v1.2.x non-breaking scope. They form the early v1.3.0 backlog before major feature expansion.\n+\n+1. Batch / Job Semantics\n+   - Clarify `success_rate` when total pipelines == 0 (return 0.0 or null consistently; update tests)\n+   - Add `started_at` distinct from `queued_at` timestamps\n+2. Retry & Backoff Policy\n+   - First retry delay mismatch (observed ~2.0s vs expected 1.0s); expose configurable base/factor/jitter\n+3. Pipeline Config Defaults\n+   - Inject size analysis / annotation defaults to avoid KeyErrors when sections omitted\n+   - Centralize default expansion (registry-aware)\n+4. Test Media Fixtures\n+   - Deterministic synthetic video (frames, duration, optional audio) & capture mocking to eliminate flaky minimal-file errors\n+5. Storage Lifecycle\n+   - Consistent cleanup of temp job directories & orphaned artifacts\n+   - Retention policy scaffold (dry-run logging; disabled by default)\n+6. Whisper CUDA Adaptation\n+   - Treat CPU fallback as success in CUDA-absent environments; assert explicit fallback log line\n+7. Error Envelope Evolution\n+   - Expand minimal envelope to enumerated taxonomy (backwards-compatible)\n+8. Registry Incremental Enhancements\n+   - Capability/resource hint fields with safe defaults\n+   - Auto-generated pipeline spec docs with CI diff gate\n+9. Logging & Output Consistency\n+   - Remove residual emojis from packaged markdown destined for console contexts (low priority)\n+10. Auth Hardening Follow-ups\n+   - Unit tests for `validate_optional_api_key` (valid, invalid, anonymous)\n+   - Convergence strategy: legacy API key vs token manager tokens\n+\n+Suggested Labels: `type:batch-semantics`, `type:retry-policy`, `type:storage-lifecycle`, `type:config-defaults`, `type:test-fixture`, `needs:registry-extension`, `scope:v1.3.0`.\n+\n+---\n*** End Patch

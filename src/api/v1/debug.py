@@ -13,9 +13,9 @@ from datetime import datetime, timedelta
 import json
 from pathlib import Path
 
-from ...version import __version__ as videoannotator_version
-from ..database import get_storage_backend, get_database_info
-from ..dependencies import get_current_user
+from version import __version__ as videoannotator_version
+from api.database import get_storage_backend, get_database_info
+from api.dependencies import get_current_user
 
 # Store for request logging (in production, use Redis or database)
 _request_log: List[Dict[str, Any]] = []

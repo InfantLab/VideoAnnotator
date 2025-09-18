@@ -22,12 +22,12 @@ Introduce a maintainable, incremental Pipeline Registry that is minimal today bu
 **Goal (v1.2.1 scope)**: Introduce a minimal, functional single source of truth (SSOT) for pipeline metadata powering: CLI listing, API `/pipelines`, and generated Markdown docs. Advanced metadata (multi-modal correlation, resource modeling, plugin contracts) is intentionally deferred to v1.3.0.
 
 #### **Unified Pipeline Registry System (Minimal v1.2.1 Deliverable)**
-- [ ] **Create Minimal Pipeline Registry**
+- [x] **Create Minimal Pipeline Registry**
   - Load YAML metadata files under `src/registry/metadata/`
   - Provide `list_pipelines()` + `get_pipeline(name)` functions
   - Return core fields: `name`, `display_name`, `description`, `category`, `config_schema`, `outputs`, `examples` (optional), `version` (schema version)
   - Implement graceful fallback if metadata missing (warn, exclude, or mark experimental)
-- [ ] **Lightweight Metadata Schema (YAML)**
+- [x] **Lightweight Metadata Schema (YAML)**
   ```yaml
   # Example: src/registry/metadata/person_tracking.yaml
   name: person_tracking
@@ -51,25 +51,25 @@ Introduce a maintainable, incremental Pipeline Registry that is minimal today bu
       description: Submit tracking job
   version: 1
   ```
-- [ ] **Validation Layer (Basic)**: Ensure required keys present; warn if `outputs` missing.
-- [ ] **Extensibility Hooks (Document-only)**: Note future fields (resources, modalities, capabilities) reserved for v1.3.0.
+- [x] **Validation Layer (Basic)**: Ensure required keys present; warn if `outputs` missing.
+- [x] **Extensibility Hooks (Document-only)**: Note future fields (resources, modalities, capabilities) reserved for v1.3.0.
 
 #### **Auto-Generated Documentation (Lean Slice)**
-- [ ] **CLI Pipeline Listing**: `videoannotator pipelines --detailed` surfaces registry fields
-- [ ] **API Endpoint Backed by Registry**: Replace mock `/api/v1/pipelines` implementation with dynamic registry data
-- [ ] **Markdown Generation Script**: `scripts/generate_pipeline_docs.py` creates `docs/usage/pipeline_specs.md` (fails CI if drift)
-- [ ] **Config Validation (Basic)**: `videoannotator config --validate` references `config_schema` types (presence + type check only in 1.2.1)
-- [ ] **Schema Version Tagging**: Include `schema_version` in generated markdown for future migration tracking
+- [x] **CLI Pipeline Listing**: `videoannotator pipelines --detailed` surfaces registry fields
+- [x] **API Endpoint Backed by Registry**: Replace mock `/api/v1/pipelines` implementation with dynamic registry data
+- [x] **Markdown Generation Script**: `scripts/generate_pipeline_docs.py` creates `docs/usage/pipeline_specs.md` (fails CI if drift)
+- [x] **Config Validation (Basic)**: `videoannotator config --validate` references `config_schema` types (presence + type check only in 1.2.1)
+- [ ] **Schema Version Tagging**: Include `schema_version` in generated markdown for future migration tracking (DEFERRED to v1.3.0)
 
 #### **Complete Pipeline Coverage**
-- [ ] **Audit Current Pipelines** - Document ALL available pipelines
+- [x] **Audit Current Pipelines** - Document ALL available pipelines
   - scene_detection (PySceneDetect + CLIP)
   - person_tracking (YOLO11 + ByteTrack) 
   - face_analysis (OpenFace 3.0, LAION Face, OpenCV variants)
   - audio_processing (Whisper + pyannote)
   - Any experimental or development pipelines
 
-- [ ] **Pipeline Categories** - Organize pipelines into logical groups
+- [x] **Pipeline Categories** - Organize pipelines into logical groups
   - **Detection**: person_tracking, face_detection
   - **Analysis**: face_analysis, audio_processing, emotion_detection
   - **Segmentation**: scene_detection, temporal_segmentation
@@ -85,30 +85,30 @@ Phase 3 (Day 4): Basic config validation + tests (registry integrity, endpoint p
 Phase 4 (Polish): Add examples linkage + schema version annotation + warnings for missing fields.
 
 ### **Priority 2: CLI Documentation & Examples Updates**
-- [ ] **examples/README.md** - Update all CLI usage patterns to new `videoannotator` syntax
-- [ ] **docs/usage/GETTING_STARTED.md** - Verify all CLI examples are current  
-- [ ] **docs/usage/demo_commands.md** - Update command examples throughout
+- [x] **examples/README.md** - Update all CLI usage patterns to new `videoannotator` syntax (COMPLETED)
+- [x] **docs/usage/GETTING_STARTED.md** - Verify all CLI examples are current (COMPLETED)
+- [x] **docs/usage/demo_commands.md** - Update command examples throughout (COMPLETED)
 
 ### **Priority 2: Example Script Modernization**
 #### **Update Existing Examples**
-- [ ] **examples/basic_video_processing.py** - Add API integration alternative
-- [ ] **examples/batch_processing.py** - Show API-based batch processing
-- [ ] **examples/test_individual_pipelines.py** - Demonstrate CLI pipeline testing
-- [ ] **examples/custom_pipeline_config.py** - Show new config validation
+- [ ] **examples/basic_video_processing.py** - Add API integration alternative (IN PROGRESS / PARTIAL)
+- [ ] **examples/batch_processing.py** - Show API-based batch processing (PENDING)
+- [x] **examples/test_individual_pipelines.py** - Demonstrate CLI pipeline testing (COMPLETED)
+- [ ] **examples/custom_pipeline_config.py** - Show new config validation (PENDING)
 
 #### **Add New API-First Examples**
-- [ ] **examples/api_job_submission.py** - Complete API workflow example
-- [ ] **examples/api_batch_processing.py** - Multi-video API processing
-- [ ] **examples/cli_workflow_example.py** - Modern CLI usage patterns
+- [x] **examples/api_job_submission.py** - Complete API workflow example (COMPLETED)
+- [ ] **examples/api_batch_processing.py** - Multi-video API processing (PENDING)
+- [x] **examples/cli_workflow_example.py** - Modern CLI usage patterns (COMPLETED)
 
 ### **Priority 3: Configuration & Validation Updates**
-- [ ] **configs/README.md** - Update for v1.2.0 API server usage
-- [ ] **Legacy config cleanup** - Document which configs are legacy vs. modern
+- [x] **configs/README.md** - Update for v1.2.0 API server usage (COMPLETED)
+- [ ] **Legacy config cleanup** - Document which configs are legacy vs. modern (PENDING)
 
 ## 🐛 **Minor Bug Fixes**
 
 ### **CI/CD & Testing Issues**
-- [ ] **🚨 GitHub Actions CI/CD Failure** - Investigate and fix CI/CD pipeline failure from v1.2.0 release
+- [ ] **🚨 GitHub Actions CI/CD Failure** - Investigate and fix CI/CD pipeline failure from v1.2.0 release (PENDING)
   - **Issue**: GitHub Actions run failed with git operation errors (exit code 128)
   - **URL**: https://github.com/InfantLab/VideoAnnotator/actions/runs/17261547713
   - **Impact**: 19 errors across multiple OS/Python version combinations
@@ -116,40 +116,40 @@ Phase 4 (Polish): Add examples linkage + schema version annotation + warnings fo
   - **Priority**: High - affects automated testing and release validation
 
 ### **Logging & Diagnostics**
-- [ ] **(Reclassify) Logging directory creation** - CONFIRM & document existing behavior (already auto-created)
-- [ ] **Improve CUDA detection** - More accurate GPU availability reporting (basic GPU flag only in 1.2.1)
-- [ ] **Enhanced health checks (Foundational)** - Add: pipeline count, registry load status, GPU availability
+- [x] **(Reclassify) Logging directory creation** - CONFIRM & document existing behavior (already auto-created)
+- [ ] **Improve CUDA detection** - More accurate GPU availability reporting (DEFERRED)
+- [x] **Enhanced health checks (Foundational)** - Add: pipeline count, registry load status, GPU availability (COMPLETED)
 
 ### **CLI Improvements** 
-- [ ] **Better error messages** - Standardized helper + consistent prefixing
-- [ ] **Config validation feedback** - Use registry schema field types in messages
-- [ ] **Progress indicators (Optional)** - Lightweight status output (full TUI deferred to 1.3.0)
-- [ ] **Optional JSON output mode** - `--json` for scripting (color output deferred)
+- [x] **Better error messages** - Standardized helper + consistent prefixing (COMPLETED)
+- [x] **Config validation feedback** - Use registry schema field types in messages (BASIC COMPLETED)
+- [ ] **Progress indicators (Optional)** - Lightweight status output (DEFERRED)
+- [x] **Optional JSON output mode** - `--json` for scripting (COMPLETED: pipelines command)
 
 ## 🔧 **Developer Experience**
 
 ### **Testing Updates**
-- [ ] **Integration test documentation** - How to run and interpret tests
-- [ ] **Example test coverage** - Ensure all examples have basic tests
-- [ ] **CLI testing** - Add tests for new CLI commands
+- [ ] **Integration test documentation** - How to run and interpret tests (PENDING)
+- [ ] **Example test coverage** - Ensure all examples have basic tests (PARTIAL)
+- [ ] **CLI testing** - Add tests for new CLI commands (IN PROGRESS)
 
 ### **Code Quality**
-- [ ] **Remove deprecated imports** - Clean up old import patterns
-- [ ] **Update type hints** - Ensure all new CLI code is properly typed
-- [ ] **Docstring updates** - Complete docstring coverage for new functions
+- [x] **Remove deprecated imports** - Clean up old import patterns (COMPLETED via absolute import normalization)
+- [ ] **Update type hints** - Ensure all new CLI code is properly typed (PENDING)
+- [ ] **Docstring updates** - Complete docstring coverage for new functions (PENDING)
 
 ## 📊 **Performance & Polish**
 
 ### **API Enhancements (Minimal in 1.2.1)**
-- [ ] **Error response standardization (Foundational)** - Introduce simple error envelope pattern (code, message)
-- [ ] **Pipeline endpoint dynamic data** - Registry-backed
-- [ ] **Health endpoint enrichment** - See diagnostics above
+- [x] **Error response standardization (Foundational)** - Introduce simple error envelope pattern (code, message) (COMPLETED BASELINE)
+- [x] **Pipeline endpoint dynamic data** - Registry-backed (COMPLETED)
+- [x] **Health endpoint enrichment** - See diagnostics above (COMPLETED)
 - [ ] (Deferred) Response time profiling → v1.3.0
 - [ ] (Deferred) Advanced request validation → v1.3.0
 
 ### **CLI Polish**
-- [ ] **Output formatting consistency** - Shared formatter helper
-- [ ] **Configuration precedence doc** - Document order (CLI arg > job payload > config file > pipeline default)
+- [ ] **Output formatting consistency** - Shared formatter helper (PARTIAL)
+- [ ] **Configuration precedence doc** - Document order (PENDING)
 - [ ] (Deferred) Color support → v1.3.0
 
 ## 📋 **Success Criteria**

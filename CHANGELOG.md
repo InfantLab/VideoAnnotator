@@ -13,8 +13,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extended annotation tool integration
 - Multi-language CLI support
 
-### Pending (will become 1.2.2)
-- (placeholder) Minor fixes and doc refinements following 1.2.1 release
+### Pending (will become 1.2.3)
+- (placeholder) Minor fixes and doc refinements following 1.2.2 release
+
+## [1.2.2] - 2025-09-18
+
+### Changed
+- Uniform absolute import normalization across API, pipelines, storage, auth, exporters, and CLI to eliminate fragile `src.` and relative (`..`) paths after previous layout adjustments.
+- CLI server invocation now targets `api.main:app` directly (removing stale `src.` reference) improving reliability of `videoannotator server`.
+- Restored and merged accidentally truncated `docs/development/roadmap_v1.3.0.md` content; added explicit "Package Layout Normalization" technical debt section without loss of prior feature timeline, risks, or metrics.
+- Updated Windows console output in version/dependency reporting to ASCII-safe tags only (reinforcing earlier 1.2.1 patch policy) – ensured no reintroduction of emojis in modified modules.
+
+### Added
+- Status annotations in `docs/development/roadmap_v1.2.1.md` marking tasks as COMPLETED / DEFERRED / PARTIAL to synchronize roadmap with actual delivered scope.
+- Explicit release date + version bump in `src/version.py` for 1.2.2.
+- Technical debt narrative enumerating upcoming packaging namespace migration (planned for v1.3.0) and associated deprecation shim strategy.
+
+### Fixed
+- Server startup failure (`ModuleNotFoundError: No module named 'src'`) caused by inconsistent import paths after flattening; all runtime imports now resolvable when installed in editable or built form.
+- Documentation integrity regression where large sections of v1.3.0 roadmap were temporarily overwritten; fully restored from history.
+
+### Migration / Guidance
+- No API surface changes. Downstream code referencing `src.` prefixes should be updated to plain absolute module imports (e.g. `from api.main import app`).
+- Future v1.3.0 namespace migration will introduce `videoannotator.*` package paths; current absolute imports chosen to minimize churn (deprecation shims will map old paths temporarily).
+
+### Internal / Tooling Notes
+- Consolidated import approach reduces risk of duplicate module objects under mixed relative/absolute resolution, aiding forthcoming plugin/registry enhancements.
+- Roadmap adjustments documented to prevent silent scope shrinkage in strategic planning artifacts.
+
+### Testing / Validation
+- Smoke import test: `import api.main, pipelines.base_pipeline, exporters.native_formats` succeeds post-normalization.
+- API key optional validation behavior unchanged; 401 still returned only for explicitly invalid provided keys.
+
+### Backward Compatibility
+- Fully backward compatible at API & CLI command level; only internal import paths refactored. Any third-party code using undocumented relative imports must adjust.
+
+### Rationale
+- Establishes a clean, predictable import baseline before larger v1.3.0 restructuring (namespaced package, extras, plugin hooks) to reduce compounded technical debt.
 
 ## [1.2.1] - 2025-09-17
 

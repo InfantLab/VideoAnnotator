@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Union, NamedTuple, TYPE_CHECKING
 
 # Import version information
-from ..version import __version__
+from version import __version__
 
 if TYPE_CHECKING:
     try:

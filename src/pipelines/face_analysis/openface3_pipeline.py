@@ -14,15 +14,15 @@ from pathlib import Path
 import time
 import json
 
-from ..base_pipeline import BasePipeline
-from ...version import __version__
-from ...exporters.native_formats import (
+from pipelines.base_pipeline import BasePipeline
+from version import __version__
+from exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
     export_coco_json,
     validate_coco_json,
 )
-from ...utils.person_identity import PersonIdentityManager
+from utils.person_identity import PersonIdentityManager
 
 # Apply SciPy compatibility patch first - OpenFace 3.0 uses deprecated scipy.integrate.simps
 def patch_scipy_compatibility():

@@ -11,8 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-from ..batch.types import BatchJob, JobStatus, PipelineResult
-from ..utils.logging_config import get_logger
+from batch.types import BatchJob, JobStatus, PipelineResult
+from utils.logging_config import get_logger
 
 logger = get_logger("api")
 
@@ -34,14 +34,14 @@ class JobProcessor:
         """Import all available pipeline classes."""
         try:
             # Import standard pipelines
-            from ..pipelines.scene_detection import SceneDetectionPipeline
-            from ..pipelines.person_tracking import PersonTrackingPipeline
-            from ..pipelines.face_analysis import FaceAnalysisPipeline
-            from ..pipelines.audio_processing import AudioPipeline
+            from pipelines.scene_detection import SceneDetectionPipeline
+            from pipelines.person_tracking import PersonTrackingPipeline
+            from pipelines.face_analysis import FaceAnalysisPipeline
+            from pipelines.audio_processing import AudioPipeline
             
             # Import LAION pipelines
-            from ..pipelines.face_analysis.laion_face_pipeline import LAIONFacePipeline
-            from ..pipelines.audio_processing.laion_voice_pipeline import LAIONVoicePipeline
+            from pipelines.face_analysis.laion_face_pipeline import LAIONFacePipeline
+            from pipelines.audio_processing.laion_voice_pipeline import LAIONVoicePipeline
             
             self.pipeline_classes = {
                 'scene_detection': SceneDetectionPipeline,

@@ -5,8 +5,8 @@ Pipeline information endpoints for VideoAnnotator API
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
 from pydantic import BaseModel
-from ...registry.pipeline_registry import get_registry, PipelineMetadata
-from ..errors import APIError
+from registry.pipeline_registry import get_registry, PipelineMetadata
+from api.errors import APIError
 import logging
 
 logger = logging.getLogger("videoannotator.api")

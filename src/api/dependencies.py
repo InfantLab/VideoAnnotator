@@ -9,10 +9,9 @@ from contextlib import contextmanager
 
 from sqlalchemy.orm import Session
 
-from ..database.database import SessionLocal
-from ..database.crud import APIKeyCRUD, UserCRUD
-
-from ..auth import get_token_manager
+from auth.token_manager import get_token_manager
+from database import SessionLocal  # Provides DB session factory
+from database.crud import APIKeyCRUD
 
 # Security scheme for Bearer tokens
 security = HTTPBearer()
@@ -89,6 +88,7 @@ def _validate_api_key_header(raw: str, db: Session) -> Optional[Dict[str, Any]]:
     """
     if not raw.startswith("va_"):
         return None
+    # Perform lookup using CRUD (legacy compatibility path)
     user = APIKeyCRUD.authenticate(db, raw)
     if not user:
         return None

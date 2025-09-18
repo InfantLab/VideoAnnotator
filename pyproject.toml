@@ -139,7 +139,8 @@ Repository = "https://github.com/your-org/VideoAnnotator"
 Issues = "https://github.com/your-org/VideoAnnotator/issues"
 
 [project.scripts]
-videoannotator = "src.cli:app"
+# Flattened import style (Option A): modules installed top-level by setuptools package-dir mapping
+videoannotator = "cli:app"
 
 [tool.uv]
 # uv-native config - empty is fine for now

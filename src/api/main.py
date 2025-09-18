@@ -10,11 +10,11 @@ from contextlib import asynccontextmanager
 import logging
 from typing import AsyncGenerator
 
-from ..version import __version__ as videoannotator_version
-from .v1 import api_router
-from .middleware import RequestLoggingMiddleware, ErrorLoggingMiddleware
-from ..utils.logging_config import setup_videoannotator_logging, get_logger
-from .errors import register_error_handlers
+from version import __version__ as videoannotator_version
+from api.v1 import api_router
+from api.middleware import RequestLoggingMiddleware, ErrorLoggingMiddleware
+from utils.logging_config import setup_videoannotator_logging, get_logger
+from api.errors import register_error_handlers
 
 # Apply SciPy compatibility patch for OpenFace 3.0 before any pipeline imports
 def apply_scipy_compatibility_patch():
@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     })
     
     # Start background job processing
-    from .background_tasks import start_background_processing
+    from api.background_tasks import start_background_processing
     await start_background_processing()
     logger.info("Background job processing started", extra={"component": "background_tasks"})
     
@@ -67,7 +67,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("VideoAnnotator API server shutting down...", extra={"event": "shutdown"})
     
     # Stop background job processing
-    from .background_tasks import stop_background_processing
+    from api.background_tasks import stop_background_processing
     await stop_background_processing()
     logger.info("Background job processing stopped", extra={"component": "background_tasks"})
     
@@ -126,7 +126,7 @@ def create_app() -> FastAPI:
             memory_percent = None
         # Database quick status
         try:
-            from .database import check_database_health
+            from api.database import check_database_health
             db_ok, db_msg = check_database_health()
             db_status = {"status": "healthy" if db_ok else "unhealthy", "message": db_msg}
         except Exception:
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     import uvicorn
     
     uvicorn.run(
-        "src.api.main:app",
+        "api.main:app",
         host="0.0.0.0",
         port=8000,
         reload=True,

@@ -8,7 +8,7 @@ from pathlib import Path
 import logging
 # Note: After standards migration, base schemas are no longer used
 # Pipelines now return native format dictionaries (COCO, WebVTT, RTTM, etc.)
-from ..version import create_annotation_metadata, get_model_info
+from version import create_annotation_metadata, get_model_info
 
 
 class BasePipeline(ABC):

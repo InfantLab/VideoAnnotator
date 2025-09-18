@@ -11,8 +11,8 @@ from pathlib import Path
 import os
 import logging
 
-from ..storage.base import StorageBackend
-from ..storage.sqlite_backend import SQLiteStorageBackend
+from storage.base import StorageBackend
+from storage.sqlite_backend import SQLiteStorageBackend
 
 logger = logging.getLogger(__name__)
 

@@ -7,8 +7,8 @@ import uvicorn
 from typing import Optional, List
 from pathlib import Path
 
-from .version import __version__
-from .validation.emotion_validator import validate_emotion_file
+from version import __version__
+from validation.emotion_validator import validate_emotion_file
 
 app = typer.Typer(
     name="videoannotator",
@@ -30,7 +30,7 @@ def server(
     
     try:
         uvicorn.run(
-            "src.api.main:app",
+            "api.main:app",
             host=host,
             port=port,
             reload=reload,
@@ -69,8 +69,8 @@ def worker(
 ):
     """Start the background job processing worker."""
     import asyncio
-    from .worker import run_job_processor
-    from .utils.logging_config import setup_videoannotator_logging
+    from worker import run_job_processor
+    from utils.logging_config import setup_videoannotator_logging
     
     # Setup logging
     setup_videoannotator_logging()
@@ -427,8 +427,8 @@ def config(
 @app.command()
 def info():
     """Show VideoAnnotator system information including database status."""
-    from .version import __version__
-    from .api.database import get_database_info, check_database_health
+    from version import __version__
+    from api.database import get_database_info, check_database_health
     
     typer.echo(f"VideoAnnotator v{__version__}")
     typer.echo(f"API Version: {__version__}")
@@ -470,7 +470,7 @@ def backup(
     output_path: Path = typer.Argument(..., help="Path where to save backup file")
 ):
     """Backup database to specified location (SQLite only)."""
-    from .api.database import backup_database, get_current_database_path
+    from api.database import backup_database, get_current_database_path
     
     try:
         current_path = get_current_database_path()
@@ -490,7 +490,7 @@ def backup(
 @app.command()
 def version():
     """Show version information."""
-    from .version import __version__
+    from version import __version__
     typer.echo(f"VideoAnnotator v{__version__}")
     typer.echo(f"API Version: {__version__}")
     typer.echo("https://github.com/your-org/VideoAnnotator")

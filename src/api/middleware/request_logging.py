@@ -11,7 +11,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 import logging
 
-from ...utils.logging_config import get_logger, log_api_request
+from utils.logging_config import get_logger, log_api_request
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Middleware to log all API requests and responses."""

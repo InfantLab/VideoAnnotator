@@ -20,10 +20,10 @@ from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from huggingface_hub import hf_hub_download
 
 from .whisper_base_pipeline import WhisperBasePipeline
-from ...version import __version__
+from version import __version__
 
 # Import WebVTT exporter
-from ...exporters.native_formats import export_webvtt
+from exporters.native_formats import export_webvtt
 
 # Define the emotion taxonomy based on LAION models (same 43 categories as face)
 EMOTION_LABELS = {

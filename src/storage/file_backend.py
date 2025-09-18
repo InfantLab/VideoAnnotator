@@ -21,8 +21,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-from .base import StorageBackend
-from ..batch.types import BatchJob, JobStatus, BatchReport
+from storage.base import StorageBackend
+from batch.types import BatchJob, JobStatus, BatchReport
 
 
 class FileStorageBackend(StorageBackend):
