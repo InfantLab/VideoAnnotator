@@ -1,12 +1,18 @@
 {
   "name": "VideoAnnotator (GPU)",
-  "build": { "dockerfile": "../Dockerfile.gpu", "context": ".." },
-  "runArgs": ["--gpus","all"],
+  "build": {
+    "dockerfile": "../Dockerfile.gpu",
+    "context": ".."
+  },
+  "runArgs": [
+    "--gpus",
+    "all"
+  ],
   "features": {},
   "postCreateCommand": "uv sync && uv sync --extra dev && uv run pre-commit install",
   "customizations": {
-    "vscode": { 
-      "settings": { 
+    "vscode": {
+      "settings": {
         "python.defaultInterpreterPath": ".venv/bin/python",
         "python.linting.enabled": true,
         "python.linting.ruffEnabled": true,
@@ -22,7 +28,8 @@
       "extensions": [
         "charliermarsh.ruff",
         "ms-python.python",
-        "ms-python.vscode-pylance"
+        "ms-python.vscode-pylance",
+        "openai.chatgpt"
       ]
     }
   }

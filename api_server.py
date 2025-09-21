@@ -6,8 +6,8 @@ This is the standalone API server that can be run independently to serve
 the VideoAnnotator REST API with database persistence.
 
 Usage:
-    python api_server.py                    # Start server on port 8000
-    python api_server.py --port 8001        # Start on custom port
+    python api_server.py                    # Start server on port 18011
+    python api_server.py --port 18011       # Start on custom port
     uvicorn api_server:app --reload         # Development mode with auto-reload
     
     # Or use the CLI (recommended):
@@ -33,7 +33,7 @@ def main():
     """Main entry point for the API server."""
     parser = argparse.ArgumentParser(description="VideoAnnotator API Server v1.2.0")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to (default: 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=8000, help="Port to bind to (default: 8000)")
+    parser.add_argument("--port", type=int, default=18011, help="Port to bind to (default: 18011)")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload for development")
     parser.add_argument("--workers", type=int, default=1, help="Number of worker processes")
     parser.add_argument("--log-level", default="info", choices=["debug", "info", "warning", "error"], help="Log level")

@@ -5,7 +5,7 @@ Run: uv run python scripts/test_api_quick.py [base_url] [token]
 
 Example:
     uv run python scripts/test_api_quick.py
-    uv run python scripts/test_api_quick.py http://localhost:8001 my-api-token
+    uv run python scripts/test_api_quick.py http://localhost:18011 my-api-token
 """
 import requests
 import json
@@ -16,7 +16,7 @@ from datetime import datetime
 
 
 class APIQuickTester:
-    def __init__(self, base_url="http://localhost:8000", token="dev-token"):
+    def __init__(self, base_url="http://localhost:18011", token="dev-token"):
         self.base_url = base_url.rstrip('/')
         self.headers = {"Authorization": f"Bearer {token}"}
         self.session = requests.Session()
@@ -347,7 +347,7 @@ class APIQuickTester:
 def main():
     """Main function"""
     # Parse command line arguments
-    base_url = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8000"
+    base_url = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:18011"
     token = sys.argv[2] if len(sys.argv) > 2 else "dev-token"
     
     print("VideoAnnotator API Quick Tester")
@@ -358,7 +358,7 @@ def main():
         print(f"  Server URL: {base_url}")
         print(f"  API Token: {token}")
         print("\nUsage: python scripts/test_api_quick.py [base_url] [token]")
-        print("Example: python scripts/test_api_quick.py http://localhost:8001 my-token")
+        print("Example: python scripts/test_api_quick.py http://localhost:18011 my-token")
         print()
     
     # Create tester and run tests

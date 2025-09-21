@@ -24,7 +24,7 @@ except ImportError:
     logging.warning("whisper not available. Speech recognition will be disabled.")
 
 from .whisper_base_pipeline import WhisperBasePipeline
-from ...version import __version__
+from version import __version__
 
 
 class SpeechPipeline(WhisperBasePipeline):

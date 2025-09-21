@@ -41,7 +41,7 @@ All endpoints are **live and tested**:
 ### **Real-Time Debugging** ⚡
 ```bash
 # Instant API testing (30 seconds)
-uv run python scripts/test_api_quick.py http://your-server:8000 your-token
+uv run python scripts/test_api_quick.py http://your-server:18011 your-token
 
 # Results: Server status, auth validation, pipeline info, job testing
 # Output: 100% test success rate, detailed debugging info
@@ -75,7 +75,7 @@ git pull origin master
 uv run python api_server.py
 
 # Test all endpoints
-uv run python scripts/test_api_quick.py http://localhost:8000 dev-token
+uv run python scripts/test_api_quick.py http://localhost:18011 dev-token
 ```
 
 ### **Step 2: Integrate Browser Tools**
@@ -92,14 +92,14 @@ VideoAnnotatorDebug.submitTestJob()     # Submit test job
 ### **Step 3: Access Debug Information**
 ```bash
 # Server status and configuration
-curl http://localhost:8000/api/v1/debug/server-info
+curl http://localhost:18011/api/v1/debug/server-info
 
 # Pipeline configuration for UI
-curl http://localhost:8000/api/v1/debug/pipelines
+curl http://localhost:18011/api/v1/debug/pipelines
 
 # Token validation
 curl -H "Authorization: Bearer your-token" \
-  http://localhost:8000/api/v1/debug/token-info
+  http://localhost:18011/api/v1/debug/token-info
 ```
 
 ---

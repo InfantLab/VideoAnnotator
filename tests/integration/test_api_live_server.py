@@ -106,15 +106,15 @@ async def test_api_authentication_flow():
             pytest.skip("Could not extract API key from output")
         
         assert len(api_key) > 10, "API key should be substantial length"
-        
-        # Test authenticated endpoint (assumes server running on port 8000)
-        base_url = "http://localhost:8000"
+
+        # Test authenticated endpoint (assumes server running on port 18011)
+        base_url = "http://localhost:18011"
         headers = {"Authorization": f"Bearer {api_key}"}
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{base_url}/api/v1/jobs", headers=headers, timeout=5)
-                
+
                 if response.status_code == 200:
                     data = response.json()
                     assert "total" in data or "jobs" in data
@@ -122,7 +122,7 @@ async def test_api_authentication_flow():
                     pytest.skip("Authentication failed - server may not be configured for auth")
                 else:
                     pytest.fail(f"Unexpected response code: {response.status_code}")
-                    
+
         except httpx.RequestError:
             pytest.skip("Cannot connect to API server for auth testing")
             
@@ -137,7 +137,7 @@ async def test_api_authentication_flow():
 async def test_api_error_handling():
     """Test API error handling for invalid requests."""
     
-    base_url = "http://localhost:8000"
+    base_url = "http://localhost:18011"
     
     try:
         # Test invalid endpoint
@@ -155,7 +155,7 @@ async def test_api_error_handling():
         pytest.skip("Cannot connect to API server for error handling tests")
 
 
-async def wait_for_server(url: str = "http://localhost:8000", timeout: int = 30) -> bool:
+async def wait_for_server(url: str = "http://localhost:18011", timeout: int = 30) -> bool:
     """Wait for the API server to be ready."""
     
     start_time = time.time()

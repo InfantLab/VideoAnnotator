@@ -119,7 +119,7 @@ server:
 
 .PHONY: server-dev
 server-dev:
-	$(PY) uvicorn api_server:app --host 0.0.0.0 --port 8000 --reload
+	$(PY) uvicorn api_server:app --host 0.0.0.0 --port 18011 --reload
 
 # PyTorch CUDA installation helper
 .PHONY: install-torch-cuda
@@ -168,8 +168,8 @@ docs:
 	@echo "Documentation build completed!"
 
 serve-docs:
-	@echo "Serving documentation on http://localhost:8000"
-	@cd docs && python -m http.server 8000
+	@echo "Serving documentation on http://localhost:18011"
+	@cd docs && python -m http.server 18011
 
 # Analysis commands
 benchmark:

@@ -13,7 +13,7 @@ This guide establishes workflows and protocols for effective collaboration betwe
 1. **Test Server Connectivity**:
    ```bash
    # Quick API test
-   uv run python scripts/test_api_quick.py http://localhost:8000 your-token
+   uv run python scripts/test_api_quick.py http://localhost:18011 your-token
    ```
 
 2. **Browser Debug Console**:
@@ -39,13 +39,13 @@ This guide establishes workflows and protocols for effective collaboration betwe
 2. **Monitor Client Issues**:
    ```bash
    # Check debug endpoints are working
-   curl -H "Authorization: Bearer dev-token" http://localhost:8000/api/v1/debug/server-info
+   curl -H "Authorization: Bearer dev-token" http://localhost:18011/api/v1/debug/server-info
    ```
 
 3. **Test SSE Implementation**:
    ```bash
    # Test mock SSE endpoint
-   curl -H "Authorization: Bearer dev-token" http://localhost:8000/api/v1/debug/mock-events
+   curl -H "Authorization: Bearer dev-token" http://localhost:18011/api/v1/debug/mock-events
    ```
 
 ---
@@ -72,7 +72,7 @@ Use this template for all API issues:
 [Clear description of the problem]
 
 ### Environment
-- Server URL: [e.g., http://localhost:8000]
+- Server URL: [e.g., http://localhost:18011]
 - API Version: [from /health endpoint]
 - Server Version: [from /api/v1/debug/server-info]
 - Client Version: [if applicable]
@@ -193,7 +193,7 @@ jobs:
       - name: Wait for server
         run: sleep 10
       - name: Run API tests
-        run: uv run python scripts/test_api_quick.py http://localhost:8000 test-token
+   run: uv run python scripts/test_api_quick.py http://localhost:18011 test-token
 ```
 
 ### **Automated Issue Detection**
@@ -258,11 +258,11 @@ jobs:
 # (Already included in v1.2.0)
 
 # 2. Test debug endpoints
-curl http://localhost:8000/api/v1/debug/server-info
+curl http://localhost:18011/api/v1/debug/server-info
 
 # 3. Monitor request logs
 curl -H "Authorization: Bearer dev-token" \
-  http://localhost:8000/api/v1/debug/request-log
+   http://localhost:18011/api/v1/debug/request-log
 ```
 
 ### **Client Team Setup**

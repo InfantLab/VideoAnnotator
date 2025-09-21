@@ -20,7 +20,7 @@ app = typer.Typer(
 @app.command()
 def server(
     host: str = typer.Option("127.0.0.1", help="Host to bind the server to"),
-    port: int = typer.Option(8000, help="Port to bind the server to"),
+    port: int = typer.Option(18011, help="Port to bind the server to"),
     reload: bool = typer.Option(False, help="Enable auto-reload for development"),
     workers: int = typer.Option(1, help="Number of worker processes"),
 ):
@@ -59,7 +59,7 @@ def process(
     # TODO: Implement direct video processing using existing pipelines
     typer.echo("[WARNING] Direct processing not yet implemented in v1.2.0")
     typer.echo("[INFO] Use 'videoannotator server' and submit jobs via API")
-    typer.echo("[INFO] See API docs at http://localhost:8000/docs")
+    typer.echo("[INFO] See API docs at http://localhost:18011/docs")
 
 
 @app.command()
@@ -100,7 +100,7 @@ def submit_job(
     video: Path = typer.Argument(..., help="Path to video file to process"),
     pipelines: Optional[str] = typer.Option(None, help="Comma-separated list of pipelines to run"),
     config: Optional[Path] = typer.Option(None, help="Path to configuration file"),
-    server: str = typer.Option("http://localhost:8000", help="API server URL"),
+    server: str = typer.Option("http://localhost:18011", help="API server URL"),
 ):
     """Submit a video processing job to the API server."""
     import requests
@@ -156,7 +156,7 @@ def submit_job(
 @job_app.command("status")
 def job_status(
     job_id: str = typer.Argument(..., help="Job ID to check status for"),
-    server: str = typer.Option("http://localhost:8000", help="API server URL"),
+    server: str = typer.Option("http://localhost:18011", help="API server URL"),
 ):
     """Check the status of a processing job."""
     import requests
@@ -192,7 +192,7 @@ def job_status(
 @job_app.command("results")
 def job_results(
     job_id: str = typer.Argument(..., help="Job ID to get results for"),
-    server: str = typer.Option("http://localhost:8000", help="API server URL"),
+    server: str = typer.Option("http://localhost:18011", help="API server URL"),
     download: Optional[str] = typer.Option(None, help="Pipeline name to download results for"),
 ):
     """Get detailed results for a completed job."""
@@ -236,7 +236,7 @@ def job_results(
 
 @job_app.command("list") 
 def list_jobs(
-    server: str = typer.Option("http://localhost:8000", help="API server URL"),
+    server: str = typer.Option("http://localhost:18011", help="API server URL"),
     status_filter: Optional[str] = typer.Option(None, help="Filter by status (pending, running, completed, failed)"),
     page: int = typer.Option(1, help="Page number"),
     per_page: int = typer.Option(10, help="Jobs per page"),
@@ -285,7 +285,7 @@ def list_jobs(
 
 @app.command()
 def pipelines(
-    server: str = typer.Option("http://localhost:8000", help="API server URL"),
+    server: str = typer.Option("http://localhost:18011", help="API server URL"),
     detailed: bool = typer.Option(False, help="Show extended pipeline information"),
     json: bool = typer.Option(False, "--json", help="Output JSON for scripting"),
     format: Optional[str] = typer.Option(None, help="Alternate output format (markdown)"),
@@ -358,7 +358,7 @@ def pipelines(
                 typer.echo("")
     except requests.RequestException as e:
         typer.echo(f"[ERROR] Failed to connect to API server: {e}", err=True)
-        typer.echo("[INFO] Ensure server is running: videoannotator server")
+        typer.echo("[INFO] Ensure server is running: videoannotator server --port 18011")
         raise typer.Exit(code=1)
 
 

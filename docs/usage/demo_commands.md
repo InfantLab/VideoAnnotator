@@ -9,10 +9,10 @@ This guide demonstrates how to use VideoAnnotator v1.2.0 with its modern API ser
 ### Start API Server
 ```bash
 # Start the VideoAnnotator API server
-uv run videoannotator server --port 8000
+uv run videoannotator server --port 18011
 
-# Server will be available at http://localhost:8000
-# Interactive documentation at http://localhost:8000/docs
+# Server will be available at http://localhost:18011
+# Interactive documentation at http://localhost:18011/docs
 ```
 
 ### Process Single Video via CLI
@@ -30,12 +30,12 @@ uv run videoannotator job results <job_id>
 ### Process Video via HTTP API
 ```bash
 # Submit job via HTTP POST
-curl -X POST "http://localhost:8000/api/v1/jobs/" \
+curl -X POST "http://localhost:18011/api/v1/jobs/" \
   -F "video=@video.mp4" \
   -F "selected_pipelines=scene,person,face"
 
 # Check status
-curl "http://localhost:8000/api/v1/jobs/{job_id}"
+curl "http://localhost:18011/api/v1/jobs/{job_id}"
 ```
 
 ## 🛠️ CLI Management Commands
@@ -101,10 +101,10 @@ uv run videoannotator job submit video.mp4 --pipelines face
 uv run videoannotator job results <job_id>
 
 # API endpoint for results
-curl "http://localhost:8000/api/v1/jobs/{job_id}/results"
+curl "http://localhost:18011/api/v1/jobs/{job_id}/results"
 
 # Download specific pipeline result file
-curl "http://localhost:8000/api/v1/jobs/{job_id}/results/files/scene_detection" -O
+curl "http://localhost:18011/api/v1/jobs/{job_id}/results/files/scene_detection" -O
 ```
 
 ### Configuration Options
@@ -129,7 +129,7 @@ uv run videoannotator info
 uv run videoannotator backup backup_$(date +%Y%m%d).db
 
 # Server management
-uv run videoannotator server --host 0.0.0.0 --port 8000
+uv run videoannotator server --host 0.0.0.0 --port 18011
 ```
 
 ## 📊 Expected Output Format
@@ -185,9 +185,9 @@ uv run videoannotator server --host 0.0.0.0 --port 8000
 2. **Submit a job**: `uv run videoannotator job submit your_video.mp4`
 3. **Monitor progress**: `uv run videoannotator job status <job_id>`
 4. **Get results**: `uv run videoannotator job results <job_id>`
-5. **Explore API**: Visit `http://localhost:8000/docs` for interactive documentation
+5. **Explore API**: Visit `http://localhost:18011/docs` for interactive documentation
 
 For more advanced usage, see:
 - [Getting Started Guide](GETTING_STARTED.md) - Complete setup and workflow
 - [Pipeline Specifications](pipeline_specs.md) - Detailed pipeline documentation
-- [API Documentation](http://localhost:8000/docs) - Interactive API reference
+- [API Documentation](http://localhost:18011/docs) - Interactive API reference

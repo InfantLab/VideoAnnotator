@@ -1,6 +1,6 @@
 # VideoAnnotator
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-REST%20API-009688?logo=fastapi&logoColor=white)](http://localhost:8000/docs)
+[![FastAPI](https://img.shields.io/badge/FastAPI-REST%20API-009688?logo=fastapi&logoColor=white)](http://localhost:18011/docs)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/badge/uv-package%20manager-FF4B4B?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
@@ -61,11 +61,11 @@ uv sync  # Fast dependency installation (30 seconds)
 uv run python api_server.py
 
 # Process your first video (in another terminal)
-curl -X POST "http://localhost:8000/api/v1/jobs/" \
+curl -X POST "http://localhost:18011/api/v1/jobs/" \
   -F "video=@your_video.mp4" \
   -F "selected_pipelines=person,face,scene,audio"
 
-# Check results at http://localhost:8000/docs
+# Check results at http://localhost:18011/docs
 ```
 
 ### 3. Visualize Results
@@ -220,15 +220,15 @@ uv run python api_server.py
 ```bash
 # CPU version (lightweight)
 docker build -f Dockerfile.cpu -t videoannotator:cpu .
-docker run -p 8000:8000 videoannotator:cpu
+docker run -p 18011:8000 videoannotator:cpu
 
 # GPU version (faster processing)  
 docker build -f Dockerfile.gpu -t videoannotator:gpu .
-docker run -p 8000:8000 --gpus all videoannotator:gpu
+docker run -p 18011:8000 --gpus all videoannotator:gpu
 
 # Development version (pre-cached models)
 docker build -f Dockerfile.dev -t videoannotator:dev .
-docker run -p 8000:8000 --gpus all videoannotator:dev
+docker run -p 18011:8000 --gpus all videoannotator:dev
 ```
 
 ### **Method 3: Research Platform Integration**
@@ -250,7 +250,7 @@ print(f"Detected {df['person_id'].nunique()} unique people")
 | Resource | Description |
 |----------|-------------|
 | **[📖 Interactive Docs](https://deepwiki.com/InfantLab/VideoAnnotator)** | Complete documentation with examples |
-| **[🎮 Live API Testing](http://localhost:8000/docs)** | Interactive API when server is running |
+| **[🎮 Live API Testing](http://localhost:18011/docs)** | Interactive API when server is running |
 | **[🚀 Getting Started Guide](docs/usage/GETTING_STARTED.md)** | Step-by-step setup and first video |
 | **[🔧 Installation Guide](docs/installation/INSTALLATION.md)** | Detailed installation instructions |
 | **[⚙️ Pipeline Specifications](docs/usage/pipeline_specs.md)** | Technical pipeline documentation |

@@ -15,7 +15,7 @@ services:
       - CUDA_VISIBLE_DEVICES=0
     ports:
       - "8888:8888"  # Jupyter
-      - "8000:8000"  # FastAPI
+  - "18011:18011"  # FastAPI (host 18011 -> container 18011)
     command: ["uv", "run", "python", "-m", "src.cli", "--help"]
     profiles:
       - dev
@@ -82,7 +82,7 @@ services:
               count: 1
               capabilities: [gpu]
     ports:
-      - "8000:8000"  # FastAPI server
+  - "18011:18011"  # FastAPI server (host 18011)
     command: ["uv", "run", "python", "api_server.py", "--log-level", "info"]
     profiles:
       - dev-gpu

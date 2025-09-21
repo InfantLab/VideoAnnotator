@@ -120,7 +120,7 @@ async def test_background_processing_endpoints():
     # This test assumes an existing server is running
     # It's designed to work with the server started by test_background_job_processing
     try:
-        response = requests.get("http://localhost:8000/api/v1/debug/background-jobs", timeout=2)
+        response = requests.get("http://localhost:18011/api/v1/debug/background-jobs", timeout=2)
         if response.status_code != 200:
             pytest.skip("No running API server found for endpoint testing")
         

@@ -32,7 +32,7 @@ class APITestClient:
 
     def __init__(
         self,
-        base_url: str = "http://localhost:8000",
+    base_url: str = "http://localhost:18011",
         api_key: Optional[str] = None,
         use_inprocess: bool = True,
     ):

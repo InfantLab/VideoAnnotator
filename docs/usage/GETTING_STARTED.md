@@ -60,9 +60,9 @@ VideoAnnotator v1.2.0 runs everything through one integrated API server with bui
 
 ```bash
 # Start the API server (recommended)
-uv run videoannotator server --host 0.0.0.0 --port 8000
+uv run videoannotator server --host 0.0.0.0 --port 18011
 
-# View interactive API documentation at http://localhost:8000/docs
+# View interactive API documentation at http://localhost:18011/docs
 # Server includes integrated background job processing - no separate worker needed!
 ```
 
@@ -106,18 +106,18 @@ Direct API access for integration with other systems:
 
 ```bash
 # Submit a video processing job
-curl -X POST "http://localhost:8000/api/v1/jobs/" \
+curl -X POST "http://localhost:18011/api/v1/jobs/" \
   -F "video=@video.mp4" \
   -F "selected_pipelines=scene,person,face"
 
 # Check job status
-curl "http://localhost:8000/api/v1/jobs/{job_id}"
+curl "http://localhost:18011/api/v1/jobs/{job_id}"
 
 # Get detailed results with pipeline outputs
-curl "http://localhost:8000/api/v1/jobs/{job_id}/results"
+curl "http://localhost:18011/api/v1/jobs/{job_id}/results"
 
 # Download specific pipeline result files
-curl "http://localhost:8000/api/v1/jobs/{job_id}/results/files/scene_detection" -O
+curl "http://localhost:18011/api/v1/jobs/{job_id}/results/files/scene_detection" -O
 ```
 
 ### Using the Python API

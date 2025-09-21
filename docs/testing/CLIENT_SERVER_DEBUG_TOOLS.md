@@ -382,7 +382,7 @@ class VideoAnnotatorAPITester {
 }
 
 // Usage example:
-// const tester = new VideoAnnotatorAPITester('http://localhost:8000', 'dev-token');
+// const tester = new VideoAnnotatorAPITester('http://localhost:18011', 'dev-token');
 // tester.runAllTests();
 ```
 
@@ -403,7 +403,7 @@ import time
 from pathlib import Path
 
 class APIQuickTester:
-    def __init__(self, base_url="http://localhost:8000", token="dev-token"):
+  def __init__(self, base_url="http://localhost:18011", token="dev-token"):
         self.base_url = base_url
         self.headers = {"Authorization": f"Bearer {token}"}
         self.session = requests.Session()
@@ -553,7 +553,7 @@ class APIQuickTester:
 if __name__ == "__main__":
     import sys
     
-    base_url = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8000"
+  base_url = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:18011"
     token = sys.argv[2] if len(sys.argv) > 2 else "dev-token"
     
     tester = APIQuickTester(base_url, token)
@@ -698,7 +698,7 @@ const API_ERRORS = {
 - Server Version: [e.g., v1.2.0-dev]
 - Client Version: [e.g., v1.0.3]
 - Browser: [if applicable]
-- API Base URL: [e.g., http://localhost:8000]
+- API Base URL: [e.g., http://localhost:18011]
 
 ### Additional Context
 [Any other relevant information]
