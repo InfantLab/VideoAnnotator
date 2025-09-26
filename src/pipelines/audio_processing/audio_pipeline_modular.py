@@ -20,7 +20,7 @@ from .diarization_pipeline import DiarizationPipeline
 # from .f0_pipeline import F0Pipeline
 # from .timbre_pipeline import TimbrePipeline
 
-from ...exporters.native_formats import (
+from src.exporters.native_formats import (
     export_webvtt_captions,
     export_rttm_diarization,
 )

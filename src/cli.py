@@ -17,6 +17,22 @@ app = typer.Typer(
 )
 
 
+@app.callback(invoke_without_command=True)
+def _default(ctx: typer.Context):
+    """
+    Default entrypoint: if no subcommand is provided, start the server with the
+    recommended host and port. This makes `uv run videoannotator` behave like
+    `uv run videoannotator server --host 0.0.0.0 --port 18011`.
+    """
+    # If a subcommand was invoked, do nothing here and let Typer handle it.
+    if ctx.invoked_subcommand is not None:
+        return
+
+    # Launch server with recommended defaults
+    # NOTE: calling server() directly will run uvicorn and block the process.
+    server(host="0.0.0.0", port=18011, reload=False, workers=1)
+
+
 @app.command()
 def server(
     host: str = typer.Option("127.0.0.1", help="Host to bind the server to"),

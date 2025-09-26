@@ -120,7 +120,8 @@ async def detailed_health_check():
         return {
             "status": "healthy",
             "timestamp": datetime.now().isoformat(),
-            "api_version": "1.2.0",
+            # Use single source-of-truth for API/package version to avoid drift
+            "api_version": videoannotator_version,
             "videoannotator_version": videoannotator_version,
             "system": system_info,
             # Top-level database key for backward compatibility (older tests expect this)
@@ -139,11 +140,12 @@ async def detailed_health_check():
         }
         
     except Exception as e:
+        # If the health check fails, still report the current packaged version
         return {
             "status": "unhealthy",
             "timestamp": datetime.now().isoformat(),
             "error": str(e),
-            "api_version": "1.2.0",
+            "api_version": videoannotator_version,
             "videoannotator_version": videoannotator_version
         }
 

@@ -13,6 +13,16 @@ RUN apt-get update && apt-get install -y \
     libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
+# Ensure locale is generated so LANG=en_US.UTF-8 works inside the container
+RUN apt-get update && apt-get install -y locales \
+    && locale-gen en_US.UTF-8 \
+    && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Export UTF-8 locale for all processes
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
 # uv package manager
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:${PATH}"

@@ -19,9 +19,18 @@ from storage.base import StorageBackend
 from api.errors import APIError
 from api.database import get_storage_backend
 from api.dependencies import validate_optional_api_key
+import logging
 
 
 router = APIRouter()
+
+# Module-level logger for API job endpoints
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('[%(levelname)s] %(message)s'))
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
 
 def get_storage() -> StorageBackend:
     """Get storage backend for job management."""
@@ -222,7 +231,7 @@ async def list_jobs(
         end_idx = start_idx + per_page
         page_job_ids = all_job_ids[start_idx:end_idx]
         
-        # Load job details for this page
+        # Load job details for this page; be defensive so a single bad job doesn't break the whole list
         job_responses = []
         for job_id in page_job_ids:
             try:
@@ -240,6 +249,11 @@ async def list_jobs(
                 ))
             except FileNotFoundError:
                 # Skip jobs that can't be loaded (shouldn't happen but be defensive)
+                logger.warning(f"[WARNING] Job {job_id} listed but not found when loading details; skipping")
+                continue
+            except Exception as e:
+                # Log the problematic job and continue with others. Avoid returning 500 for a single bad entry.
+                logger.error(f"[ERROR] Failed to load job {job_id} while listing jobs: {e}")
                 continue
         
         return JobListResponse(
