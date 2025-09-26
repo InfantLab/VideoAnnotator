@@ -15,6 +15,12 @@ from api.v1 import api_router
 from api.middleware import RequestLoggingMiddleware, ErrorLoggingMiddleware
 from utils.logging_config import setup_videoannotator_logging, get_logger
 from api.errors import register_error_handlers
+try:
+    # Load environment variables from .env early (best-effort)
+    from dotenv import load_dotenv  # type: ignore
+    load_dotenv()
+except Exception:
+    pass
 
 # Apply SciPy compatibility patch for OpenFace 3.0 before any pipeline imports
 def apply_scipy_compatibility_patch():

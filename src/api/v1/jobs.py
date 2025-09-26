@@ -65,6 +65,7 @@ class PipelineResultResponse(BaseModel):
     processing_time: Optional[float] = None
     annotation_count: Optional[int] = None
     output_file: Optional[str] = None
+    download_url: Optional[str] = None
     error_message: Optional[str] = None
 
 
@@ -332,6 +333,16 @@ async def get_job_results(
                 error_message=result.error_message
             )
         
+        # Build full pipeline results with download URLs
+        for name, result in pipeline_results.items():
+            if result.output_file:
+                try:
+                    # Construct a download URL for convenience; client may use server base URL
+                    # Note: This is a relative path; frontend should prepend server origin
+                    result.download_url = f"/api/v1/jobs/{job.job_id}/results/files/{name}"
+                except Exception:
+                    pass
+
         return JobResultsResponse(
             job_id=job.job_id,
             status=job.status.value,

@@ -73,7 +73,11 @@ curl -X POST "http://localhost:18011/api/v1/jobs/" \
 # Install the companion web viewer
 git clone https://github.com/InfantLab/video-annotation-viewer.git
 cd video-annotation-viewer
-npm install && npm start
+npm install
+npm run dev
+
+Note: Ensure Node and NPM are installed. On macOS with Homebrew:
+brew install node
 
 # Open http://localhost:3000 and load your VideoAnnotator results
 ```

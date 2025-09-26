@@ -42,7 +42,7 @@ export VIDEOANNOTATOR_API_TOKEN="va_api_your_token_here"
 export VIDEOANNOTATOR_API_URL="http://your-server:8000"
 
 # Start your client application
-npm start
+npm run dev
 # or
 python your_client.py
 ```
@@ -82,6 +82,19 @@ fetch(`${apiUrl}/api/v1/jobs/`, {
     'Content-Type': 'application/json'
   }
 });
+```
+
+---
+
+## macOS Notes
+
+- Apple Silicon (M1/M2) may require OpenMP runtime for some audio models. If you see OpenMP or segfault errors, install:
+```bash
+brew install libomp
+```
+- Ensure Node.js is installed if using the web viewer:
+```bash
+brew install node
 ```
 
 ---
