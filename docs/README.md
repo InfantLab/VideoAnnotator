@@ -11,6 +11,7 @@ This documentation is organized into clear sections for different user types and
 
 ### Installation
 - [Installation Guide](installation/INSTALLATION.md) - **Modern uv-based setup** with CUDA support  
+- macOS specifics: see the macOS section inside the Installation Guide for libomp, Node, ffmpeg, and PATH fixes.
 - [Environment Setup](installation/ENVIRONMENT_SETUP.md) - HuggingFace and configuration  
 - [Python Development 2025](installation/PythonDev2025.md) - **Modern development practices** with uv, Ruff, and Docker
 

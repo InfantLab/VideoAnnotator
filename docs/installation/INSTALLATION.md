@@ -28,6 +28,34 @@ VideoAnnotator is a modern video analysis toolkit that uses AI models for compre
 - **GPU**: NVIDIA RTX 3060 12GB or better
 - **OS**: Windows 11, Ubuntu 22.04+, or macOS 12+
 
+## macOS specifics (concise)
+
+These tips address the most common macOS installation issues.
+
+- Architecture: Apple Silicon (M1/M2/M3) is supported in CPU mode. CUDA GPU acceleration is not available on macOS.
+- Prerequisites (Homebrew):
+   ```bash
+   # Install Homebrew if missing: https://brew.sh
+   brew install libomp ffmpeg node
+   ```
+   - libomp: fixes OpenMP errors and segfaults in some audio models.
+   - ffmpeg: required by whisper/librosa/audio pipelines.
+   - node: needed if you use the companion web viewer.
+- uv in PATH:
+   ```bash
+   # If 'uv' is not found after install
+   export PATH="$HOME/.local/bin:$PATH"
+   ```
+- Shell config permissions: If `~/.zshrc` or `~/.config` are owned by root (from earlier sudo usage), fix ownership before writing PATH updates:
+   ```bash
+   sudo chown -R "$USER" ~/.zshrc ~/.config
+   chmod u+w ~/.zshrc
+   # If .zshrc is missing, write PATH to ~/.zprofile instead for login shells
+   ```
+- Hugging Face token (for speaker diarization): set `HF_AUTH_TOKEN` in a `.env` file or your shell. See Environment Setup guide.
+- Viewer start command: inside the viewer repo, use `npm run dev` (not `npm start`).
+
+
 ## Quick Start (Recommended)
 
 ### 1. Install uv Package Manager
