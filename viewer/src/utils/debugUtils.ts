@@ -136,7 +136,7 @@ export async function loadDemoAnnotations(datasetName: keyof typeof DEMO_DATA_SE
       speaker_diarization: parseResult.data.speaker_diarization?.length || 0,
       scene_detection: parseResult.data.scene_detection?.length || 0
     })
-    
+
     return parseResult.data
 
   } catch (error) {
@@ -173,7 +173,7 @@ export async function loadDemoVideo(datasetName: keyof typeof DEMO_DATA_SETS): P
  */
 export async function loadDemoDataset(datasetKey: keyof typeof DEMO_DATA_SETS): Promise<void> {
   console.log(`🔄 Loading demo dataset: ${datasetKey}`)
-  
+
   try {
     const [videoFile, annotation] = await Promise.all([
       loadDemoVideo(datasetKey),
@@ -193,7 +193,7 @@ export async function loadDemoDataset(datasetKey: keyof typeof DEMO_DATA_SETS): 
 
       // Try to trigger the viewer (would need app integration)
       console.log('ℹ️ To view this dataset, use the "View Demo" button or FileUploader demo selection')
-      
+
       return Promise.resolve()
     } else {
       throw new Error('Failed to load demo files')
@@ -206,27 +206,27 @@ export async function loadDemoDataset(datasetKey: keyof typeof DEMO_DATA_SETS): 
 
 // API Testing utilities (from browser_debug_console.js)
 const createVideoAnnotatorDebug = () => {
-  const API_BASE = 'http://localhost:8000'  // VideoAnnotator API server
+  const API_BASE = 'http://localhost:18011'  // VideoAnnotator API server
   const DEFAULT_TOKEN = typeof window !== 'undefined' ? (localStorage.getItem('api_token') || 'video-annotator-dev-token-please-change') : 'dev-token'
-  
+
   return {
     apiBase: API_BASE,
     defaultToken: DEFAULT_TOKEN,
     logRequests: true,
-    
+
     async checkHealth() {
       console.log('🏥 Checking API health...')
       try {
         const response = await fetch(`${this.apiBase}/health`)
         const data = await response.json()
-        
+
         console.log('✅ Basic Health:', response.status === 200 ? 'OK' : 'FAIL')
         console.table({
           'Status': data.status,
           'API Version': data.api_version,
           'Server': data.videoannotator_version
         })
-        
+
         return data
       } catch (error) {
         console.error('❌ Health check failed:', error)
@@ -237,12 +237,12 @@ const createVideoAnnotatorDebug = () => {
     async checkAuth(token = null) {
       const authToken = token || this.defaultToken
       console.log(`🔐 Testing authentication with token: ${authToken.substring(0, 10)}...`)
-      
+
       try {
         const response = await fetch(`${this.apiBase}/api/v1/debug/token-info`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         })
-        
+
         if (response.ok) {
           const data = await response.json()
           console.log('✅ Authentication: Valid')
@@ -266,18 +266,18 @@ const createVideoAnnotatorDebug = () => {
     async runAllTests(token = null) {
       console.log('🧪 Running comprehensive API tests...')
       console.log('='.repeat(50))
-      
+
       const results = {
         health: await this.checkHealth(),
         auth: await this.checkAuth(token)
       }
-      
+
       console.log('='.repeat(50))
       console.log('📊 Test Results Summary:')
       Object.entries(results).forEach(([test, result]) => {
         console.log(`- ${test}: ${result ? '✅' : '❌'}`)
       })
-      
+
       return results
     }
   }
@@ -290,12 +290,12 @@ if (typeof window !== 'undefined') {
     loadDemoVideo,
     loadDemoDataset,
     DEMO_DATA_SETS,
-    
+
     // Helper for quick testing
     async testAllDatasets() {
       console.log('🧪 Testing all demo datasets...')
       const results = {}
-      
+
       for (const [key, paths] of Object.entries(DEMO_DATA_SETS)) {
         try {
           console.log(`\n📋 Testing ${key}:`)
@@ -306,7 +306,7 @@ if (typeof window !== 'undefined') {
           results[key] = '❌ FAILED'
         }
       }
-      
+
       console.log('\n📊 Test Results Summary:', results)
       return results
     },
@@ -323,7 +323,7 @@ if (typeof window !== 'undefined') {
           console.log('  📄 Testing complete_results.json...')
           const response = await fetch(paths.complete_results)
           const text = await response.text()
-          
+
           try {
             const data = JSON.parse(text)
             console.log('    ✅ JSON is valid')
@@ -377,7 +377,7 @@ if (typeof window !== 'undefined') {
         return { valid: false, issues: [error.message] }
       }
     },
-    
+
     // Quick dataset info
     listDatasets() {
       console.log('📋 Available demo datasets:')
@@ -392,8 +392,8 @@ if (typeof window !== 'undefined') {
     }
   }
 
-  // Add VideoAnnotatorDebug for API testing
-  ;(window as any).VideoAnnotatorDebug = createVideoAnnotatorDebug()
+    // Add VideoAnnotatorDebug for API testing
+    ; (window as any).VideoAnnotatorDebug = createVideoAnnotatorDebug()
 
   // Add help message
   console.log(`

@@ -23,13 +23,13 @@ interface TokenStatus {
 
 export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
   const [apiUrl, setApiUrl] = useState(
-    localStorage.getItem('videoannotator_api_url') || 
-    import.meta.env.VITE_API_BASE_URL || 
-    'http://localhost:8000'
+    localStorage.getItem('videoannotator_api_url') ||
+    import.meta.env.VITE_API_BASE_URL ||
+    'http://localhost:18011'
   );
   const [token, setToken] = useState(
-    localStorage.getItem('videoannotator_api_token') || 
-    import.meta.env.VITE_API_TOKEN || 
+    localStorage.getItem('videoannotator_api_token') ||
+    import.meta.env.VITE_API_TOKEN ||
     ''
   );
   const [showToken, setShowToken] = useState(false);
@@ -41,7 +41,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
   const validateToken = async (testUrl?: string, testToken?: string) => {
     const urlToTest = testUrl || apiUrl;
     const tokenToTest = testToken || token;
-    
+
     if (!tokenToTest.trim()) {
       setTokenStatus({ isValid: false, error: 'Token is required' });
       return;
@@ -52,16 +52,16 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
       // Create a temporary client for testing
       const { APIClient } = await import('@/api/client');
       const testClient = new APIClient(urlToTest, tokenToTest);
-      
+
       // Test basic connectivity
       await testClient.healthCheck();
-      
+
       // Try to get token info if debug endpoint is available
       try {
         const response = await fetch(`${urlToTest}/api/v1/debug/token-info`, {
           headers: { 'Authorization': `Bearer ${tokenToTest}` }
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           setTokenStatus({
@@ -79,7 +79,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
         const response = await fetch(`${urlToTest}/api/v1/jobs?per_page=1`, {
           headers: { 'Authorization': `Bearer ${tokenToTest}` }
         });
-        
+
         if (response.ok || response.status === 404) {
           setTokenStatus({ isValid: true });
         } else if (response.status === 401) {
@@ -89,8 +89,8 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
         }
       }
     } catch (error) {
-      setTokenStatus({ 
-        isValid: false, 
+      setTokenStatus({
+        isValid: false,
         error: handleAPIError(error)
       });
     } finally {
@@ -103,11 +103,11 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
     localStorage.setItem('videoannotator_api_url', apiUrl);
     localStorage.setItem('videoannotator_api_token', token);
     setHasUnsavedChanges(false);
-    
+
     // Update the global API client
     (apiClient as any).baseURL = apiUrl.replace(/\/$/, '');
     (apiClient as any).token = token;
-    
+
     onTokenConfigured?.();
   };
 
@@ -115,11 +115,11 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
   useEffect(() => {
     const savedUrl = localStorage.getItem('videoannotator_api_url');
     const savedToken = localStorage.getItem('videoannotator_api_token');
-    
+
     if (savedUrl || savedToken) {
       if (savedUrl) setApiUrl(savedUrl);
       if (savedToken) setToken(savedToken);
-      
+
       // Auto-validate if we have both URL and token
       if (savedUrl && savedToken) {
         validateToken(savedUrl, savedToken);
@@ -131,7 +131,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
   useEffect(() => {
     const savedUrl = localStorage.getItem('videoannotator_api_url') || '';
     const savedToken = localStorage.getItem('videoannotator_api_token') || '';
-    
+
     setHasUnsavedChanges(
       apiUrl !== savedUrl || token !== savedToken
     );
@@ -154,7 +154,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
             This is required to create and manage annotation jobs.
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           {/* Server URL Configuration */}
           <div className="space-y-2">
@@ -163,7 +163,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
               id="api-url"
               value={apiUrl}
               onChange={(e) => setApiUrl(e.target.value)}
-              placeholder="http://localhost:8000"
+              placeholder="http://localhost:18011"
             />
             <p className="text-sm text-muted-foreground">
               The base URL of your VideoAnnotator API server
@@ -217,7 +217,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                           <p>Authenticated as: <Badge variant="secondary">{tokenStatus.user}</Badge></p>
                         )}
                         {tokenStatus.permissions && tokenStatus.permissions.length > 0 && (
-                          <p>Permissions: {tokenStatus.permissions.map(p => 
+                          <p>Permissions: {tokenStatus.permissions.map(p =>
                             <Badge key={p} variant="outline" className="mr-1">{p}</Badge>
                           )}</p>
                         )}
@@ -245,7 +245,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
             >
               {isValidating ? 'Testing...' : 'Test Connection'}
             </Button>
-            
+
             <Button
               onClick={saveConfiguration}
               disabled={!hasUnsavedChanges || !token.trim()}
@@ -268,9 +268,9 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
               <p>2. Or check the server documentation for token generation</p>
               <p>3. For development, use the default token: <code className="bg-muted px-1 rounded">dev-token</code></p>
             </div>
-            
+
             <Button variant="link" size="sm" className="pl-0" asChild>
-              <a 
+              <a
                 href="https://github.com/InfantLab/VideoAnnotator/blob/master/docs/CLIENT_TOKEN_SETUP_GUIDE.md"
                 target="_blank"
                 rel="noopener noreferrer"

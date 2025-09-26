@@ -538,7 +538,7 @@ Token-based authentication with localStorage persistence:
 ```typescript
 // Token setup in CreateSettings.tsx
 const token = localStorage.getItem('videoannotator_api_token');
-const apiClient = new APIClient('http://localhost:8000', token);
+const apiClient = new APIClient('http://localhost:18011', token);
 ```
 
 For detailed API integration, see [CLIENT_SERVER_COLLABORATION_GUIDE.md](./CLIENT_SERVER_COLLABORATION_GUIDE.md).

@@ -38,14 +38,14 @@ VideoAnnotatorDebug.runAllTests()
 
 **Usage Examples**:
 ```bash
-# Default: localhost:8000 with dev-token
+# Default: localhost:18011 with dev-token
 python test_api_quick.py
 
 # Custom server and token  
 python test_api_quick.py https://api.example.com my-api-token
 
 # Docker container testing
-python test_api_quick.py http://videoannotator:8001 test-token
+python test_api_quick.py http://videoannotator:18011 test-token
 ```
 
 ### `browser_debug_console.js` - Interactive Browser Tools

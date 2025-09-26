@@ -9,7 +9,7 @@ Video Annotation Viewer is a React + TypeScript web app for visualizing multimod
 - Tech stack: React 18, TypeScript, Vite, Tailwind, shadcn/ui
 - Validation: Zod schemas
 - Testing: Vitest (+ @testing-library), Playwright, Lighthouse CI
-- Default API server: `http://localhost:8000` (configurable)
+- Default API server: `http://localhost:18011` (configurable)
 
 Key docs to review before changes:
 - `README.md` (feature overview, usage)
@@ -21,7 +21,7 @@ Key docs to review before changes:
 ## Local Environment
 
 Environment variables (create `.env` from `.env.example` when needed):
-- `VITE_API_BASE_URL` (default `http://localhost:8000`)
+- `VITE_API_BASE_URL` (default `http://localhost:18011`)
 - `VITE_API_TOKEN` (default `dev-token` for local/dev servers)
 
 API client uses localStorage fallbacks:
@@ -62,7 +62,7 @@ Commands (Bun preferred; npm works too):
 
 ## VideoAnnotator Integration
 
-Default server: `http://localhost:8000/` (local dev). Configure via env or localStorage.
+Default server: `http://localhost:18011/` (local dev). Configure via env or localStorage.
 
 API client: see `src/api/client.ts`.
 - Health: `/health`, `/api/v1/system/health`
@@ -82,7 +82,7 @@ v1.2.x pipeline introspection (roadmap):
 - E2E: Playwright in `e2e/`. Keep smoke tests fast and deterministic.
 - Accessibility/performance: Lighthouse via `bun run lhci` (when configured in CI).
 - When adding API features, add tests that mock network. For CI, avoid real network calls.
-- For local API verification, you may use `scripts/test_api_quick.py` against `http://localhost:8000`.
+- For local API verification, you may use `scripts/test_api_quick.py` against `http://localhost:18011`.
 
 ## Documentation
 

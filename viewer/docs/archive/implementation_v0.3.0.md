@@ -116,7 +116,7 @@ Based on QA Checklist testing (✅ 2025-08-06), v0.2.0 successfully delivered:
 
 #### **1.1 Core API Integration Infrastructure** 
 - [ ] **API Client & Type Generation**
-  - Generate TypeScript types from VideoAnnotator OpenAPI schema (`http://localhost:8000/openapi.json`)
+  - Generate TypeScript types from VideoAnnotator OpenAPI schema (`http://localhost:18011/openapi.json`)
   - Create API client wrapper with authentication and error handling
   - Implement Server-Sent Events (SSE) connection for real-time job updates
   - Set up React Query or Zustand for state management

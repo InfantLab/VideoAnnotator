@@ -86,8 +86,9 @@ describe('fileUtils', () => {
 
     it('should reject oversized video files', () => {
       const largeVideoFile = new File([new ArrayBuffer(600 * 1024 * 1024)], 'large.mp4', { type: 'video/mp4' }) // 600MB
+      Object.defineProperty(largeVideoFile, 'size', { value: 600 * 1024 * 1024 })
       const result = validateFileSize(largeVideoFile)
-      
+
       expect(result.valid).toBe(false)
       expect(result.error).toContain('Video file too large')
     })

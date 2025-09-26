@@ -56,6 +56,7 @@ describe('Integration Tests', () => {
         video_path: "/path/to/video.mp4",
         output_dir: "/path/to/output",
         start_time: "2025-08-06T10:00:00Z",
+        total_duration: 120,
         config: {
           scene_detection: { enabled: true },
           person_tracking: { enabled: true }

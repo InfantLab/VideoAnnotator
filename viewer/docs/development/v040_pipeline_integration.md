@@ -10,7 +10,7 @@ Scope: Frontend integration for dynamic pipeline discovery, parameter introspect
 - Support version negotiation with graceful fallback for older servers.
 
 ## Assumptions
-- A v1.2.x server runs at `http://localhost:8000` (configurable via `VITE_API_BASE_URL` or localStorage).
+- A v1.2.x server runs at `http://localhost:18011` (configurable via `VITE_API_BASE_URL` or localStorage).
 - The server exposes a fixed pipeline catalog and per‑pipeline parameter schemas in v1.2.x.
 - Some endpoints may vary by minor version, so we feature‑detect and cache capabilities.
 

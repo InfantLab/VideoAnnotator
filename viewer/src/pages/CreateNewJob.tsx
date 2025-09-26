@@ -1,12 +1,16 @@
-import { useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiClient, handleAPIError } from "@/api/client";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import vavIcon from "@/assets/v-a-v.icon.png";
+import { usePipelineCatalog, useRefreshPipelineCatalog } from "@/hooks/usePipelineCatalog";
+import { DynamicPipelineParameters } from "@/components/DynamicPipelineParameters";
+import type { PipelineDescriptor } from "@/types/pipelines";
 
 // Wizard steps
 const STEPS = [
@@ -16,64 +20,72 @@ const STEPS = [
   { id: 4, title: "Review & Submit", description: "Review and start jobs" },
 ];
 
-// Available pipelines
-const AVAILABLE_PIPELINES = [
-  {
-    name: "scene_detection",
-    displayName: "Scene Detection",
-    description: "Identifies scene changes and transitions in video using PySceneDetect + CLIP. Detects cuts, fades, and content-based scene boundaries.",
-    enabled: true
-  },
-  {
-    name: "person_tracking", 
-    displayName: "Person Tracking",
-    description: "Tracks people movement throughout the video using YOLO11 + ByteTrack. Provides bounding boxes, pose keypoints, and persistent person IDs.",
-    enabled: true
-  },
-  {
-    name: "face_analysis",
-    displayName: "Face Analysis", 
-    description: "Facial expression analysis, demographic estimation, and facial landmark detection using OpenFace 3.0. Includes age, gender, and emotion recognition.",
-    enabled: true
-  },
-  {
-    name: "audio_processing",
-    displayName: "Audio Processing",
-    description: "Speech recognition with Whisper and speaker diarization with pyannote. Transcribes speech and identifies different speakers with timestamps.",
-    enabled: true
+const buildPipelineDefaults = (pipeline: PipelineDescriptor) => {
+  if (!pipeline.parameters || pipeline.parameters.length === 0) {
+    return null;
   }
-];
 
-// Default configuration
-const DEFAULT_CONFIG = {
-  scene_detection: {
-    min_scene_len_sec: 8,
-    use_clip: true
-  },
-  person_tracking: {
-    yolo_conf_thresh: 0.5,
-    bytetrack_enabled: true
-  },
-  face_analysis: {
-    openface3_enabled: true
-  },
-  audio_processing: {
-    whisper_model: "small",
-    diarization: true
-  }
+  const pipelineConfig: Record<string, unknown> = {};
+
+  pipeline.parameters.forEach((param) => {
+    if (param.default !== undefined) {
+      pipelineConfig[param.name] = param.default;
+    }
+  });
+
+  return Object.keys(pipelineConfig).length > 0 ? pipelineConfig : null;
+};
+
+const buildDefaultConfig = (pipelines: PipelineDescriptor[]) => {
+  return pipelines.reduce<Record<string, unknown>>((acc, pipeline) => {
+    const defaults = buildPipelineDefaults(pipeline);
+    if (defaults) {
+      acc[pipeline.id] = defaults;
+    }
+    return acc;
+  }, {});
 };
 
 const CreateNewJob = () => {
   const navigate = useNavigate();
+  const { data: catalogData, isLoading: catalogLoading, error: catalogError } = usePipelineCatalog();
+  const refreshPipelineCatalog = useRefreshPipelineCatalog();
+  const pipelines = catalogData?.catalog.pipelines ?? [];
+
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [selectedPipelines, setSelectedPipelines] = useState<string[]>(
-    AVAILABLE_PIPELINES.filter(p => p.enabled).map(p => p.name)
-  );
-  const [config, setConfig] = useState(DEFAULT_CONFIG);
+  const [selectedPipelines, setSelectedPipelines] = useState<string[]>([]);
+  const [config, setConfig] = useState<Record<string, unknown>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string[]>([]);
+
+  const defaultSelectedPipelines = useMemo(
+    () => pipelines.filter((pipeline) => pipeline.defaultEnabled !== false).map((pipeline) => pipeline.id),
+    [pipelines]
+  );
+
+  useEffect(() => {
+    if (!pipelines.length) {
+      return;
+    }
+
+    setSelectedPipelines((prev) => (prev.length ? prev : defaultSelectedPipelines));
+    setConfig((prev) => {
+      const nextConfig: Record<string, unknown> = { ...prev };
+
+      pipelines.forEach((pipeline) => {
+        if (!nextConfig[pipeline.id]) {
+          const defaults = buildPipelineDefaults(pipeline);
+          if (defaults) {
+            nextConfig[pipeline.id] = defaults;
+          }
+        }
+      });
+
+      return Object.keys(nextConfig).length ? nextConfig : buildDefaultConfig(pipelines);
+    });
+  }, [pipelines, defaultSelectedPipelines]);
 
   const progress = (currentStep / STEPS.length) * 100;
 
@@ -94,7 +106,7 @@ const CreateNewJob = () => {
     console.log('Selected files:', selectedFiles.map(f => f.name));
     console.log('Selected pipelines:', selectedPipelines);
     console.log('Config:', config);
-    
+
     if (selectedFiles.length === 0) {
       setSubmitError("No videos selected");
       return;
@@ -111,10 +123,14 @@ const CreateNewJob = () => {
 
     const jobIds: string[] = [];
     const errors: string[] = [];
+    const effectiveConfigEntries = Object.entries(config).filter(([pipelineId]) =>
+      selectedPipelines.includes(pipelineId)
+    );
+    const effectiveConfig = effectiveConfigEntries.length > 0 ? Object.fromEntries(effectiveConfigEntries) : undefined;
 
     try {
       console.log(`📤 Submitting ${selectedFiles.length} job(s) to VideoAnnotator API...`);
-      
+
       // Submit each video as a separate job
       for (const file of selectedFiles) {
         try {
@@ -122,7 +138,7 @@ const CreateNewJob = () => {
           const response = await apiClient.submitJob(
             file,
             selectedPipelines,
-            config
+            effectiveConfig
           );
           console.log(`✅ Job created successfully: ${response.id}`);
           jobIds.push(response.id);
@@ -135,7 +151,7 @@ const CreateNewJob = () => {
 
       if (jobIds.length > 0) {
         setSubmitSuccess(jobIds);
-        
+
         // If all jobs succeeded, navigate to jobs list after a delay
         if (errors.length === 0) {
           setTimeout(() => {
@@ -148,12 +164,12 @@ const CreateNewJob = () => {
         console.warn(`⚠️ Some jobs failed: ${errors.length} out of ${selectedFiles.length}`);
         setSubmitError(`Failed to submit ${errors.length} job(s): \n${errors.join('\n')}`);
       }
-      
+
       if (jobIds.length === 0 && errors.length > 0) {
         console.error('❌ All job submissions failed');
         setSubmitError(
           `All job submissions failed. Common issues:\n\n` +
-          `• VideoAnnotator API server not running (check http://localhost:8000)\n` +
+          `• VideoAnnotator API server not running (check http://localhost:18011)\n` +
           `• Invalid API token or authentication\n` +
           `• Network connectivity issues\n\n` +
           `Errors:\n${errors.join('\n')}`
@@ -172,28 +188,34 @@ const CreateNewJob = () => {
     switch (currentStep) {
       case 1:
         return (
-          <VideoUploadStep 
-            selectedFiles={selectedFiles} 
-            setSelectedFiles={setSelectedFiles} 
+          <VideoUploadStep
+            selectedFiles={selectedFiles}
+            setSelectedFiles={setSelectedFiles}
           />
         );
       case 2:
         return (
-          <PipelineSelectionStep 
+          <PipelineSelectionStep
+            pipelines={pipelines}
             selectedPipelines={selectedPipelines}
             setSelectedPipelines={setSelectedPipelines}
+            isLoading={catalogLoading}
+            error={catalogError}
+            onRetry={() => refreshPipelineCatalog({ forceServerRefresh: true })}
           />
         );
       case 3:
         return (
-          <ConfigurationStep 
+          <ConfigurationStep
             config={config}
             setConfig={setConfig}
+            selectedPipelines={selectedPipelines}
+            pipelines={pipelines}
           />
         );
       case 4:
         return (
-          <ReviewStep 
+          <ReviewStep
             selectedFiles={selectedFiles}
             selectedPipelines={selectedPipelines}
             config={config}
@@ -201,6 +223,7 @@ const CreateNewJob = () => {
             isSubmitting={isSubmitting}
             submitError={submitError}
             submitSuccess={submitSuccess}
+            pipelines={pipelines}
           />
         );
       default:
@@ -213,7 +236,7 @@ const CreateNewJob = () => {
       case 1:
         return selectedFiles.length > 0;
       case 2:
-        return selectedPipelines.length > 0;
+        return selectedPipelines.length > 0 && pipelines.length > 0 && !catalogLoading;
       case 3:
       case 4:
         return true;
@@ -250,18 +273,17 @@ const CreateNewJob = () => {
               <span>{Math.round(progress)}% Complete</span>
             </div>
             <Progress value={progress} className="h-2" />
-            
+
             <div className="flex justify-between">
               {STEPS.map((step) => (
                 <div
                   key={step.id}
-                  className={`text-center ${
-                    step.id === currentStep
+                  className={`text-center ${step.id === currentStep
                       ? "text-blue-600"
                       : step.id < currentStep
-                      ? "text-green-600"
-                      : "text-muted-foreground"
-                  }`}
+                        ? "text-green-600"
+                        : "text-muted-foreground"
+                    }`}
                 >
                   <div className="text-sm font-medium">{step.title}</div>
                   <div className="text-xs">{step.description}</div>
@@ -294,7 +316,7 @@ const CreateNewJob = () => {
         </Button>
 
         {currentStep === STEPS.length ? (
-          <Button 
+          <Button
             onClick={handleSubmitJobs}
             disabled={isSubmitting || !canProceed()}
           >
@@ -316,10 +338,10 @@ const CreateNewJob = () => {
 };
 
 // Step Components
-const VideoUploadStep = ({ 
-  selectedFiles, 
-  setSelectedFiles 
-}: { 
+const VideoUploadStep = ({
+  selectedFiles,
+  setSelectedFiles
+}: {
   selectedFiles: File[];
   setSelectedFiles: (files: File[]) => void;
 }) => {
@@ -342,7 +364,7 @@ const VideoUploadStep = ({
         <p className="text-muted-foreground mb-4">
           Select video files to process. Supports batch processing. Formats: MP4, WebM, AVI, MOV
         </p>
-        
+
         <input
           type="file"
           accept="video/*"
@@ -389,46 +411,135 @@ const VideoUploadStep = ({
 };
 
 const PipelineSelectionStep = ({
+  pipelines,
   selectedPipelines,
-  setSelectedPipelines
+  setSelectedPipelines,
+  isLoading,
+  error,
+  onRetry
 }: {
+  pipelines: PipelineDescriptor[];
   selectedPipelines: string[];
   setSelectedPipelines: (pipelines: string[]) => void;
+  isLoading: boolean;
+  error: unknown;
+  onRetry: () => void;
 }) => {
-  const togglePipeline = (pipelineName: string) => {
-    if (selectedPipelines.includes(pipelineName)) {
-      setSelectedPipelines(selectedPipelines.filter(p => p !== pipelineName));
+  const groupedPipelines = useMemo(() => {
+    const groups = new Map<string, PipelineDescriptor[]>();
+    pipelines.forEach((pipeline) => {
+      const groupKey = pipeline.group || 'Other';
+      const current = groups.get(groupKey) ?? [];
+      current.push(pipeline);
+      groups.set(groupKey, current);
+    });
+
+    return Array.from(groups.entries())
+      .map(([groupName, list]) => ({
+        groupName,
+        list: list.slice().sort((a, b) => a.name.localeCompare(b.name))
+      }))
+      .sort((a, b) => a.groupName.localeCompare(b.groupName));
+  }, [pipelines]);
+
+  const togglePipeline = (pipelineId: string) => {
+    if (selectedPipelines.includes(pipelineId)) {
+      setSelectedPipelines(selectedPipelines.filter((p) => p !== pipelineId));
     } else {
-      setSelectedPipelines([...selectedPipelines, pipelineName]);
+      setSelectedPipelines([...selectedPipelines, pipelineId]);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Unable to load pipelines</AlertTitle>
+        <AlertDescription className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            {error instanceof Error ? error.message : 'Unknown error while fetching pipeline catalog.'}
+          </p>
+          <Button size="sm" onClick={onRetry} className="gap-2">
+            <RefreshCw className="h-4 w-4" /> Try Again
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (pipelines.length === 0) {
+    return (
+      <Alert>
+        <AlertTitle>No pipelines detected</AlertTitle>
+        <AlertDescription>
+          Connect to a VideoAnnotator v1.2.x server and refresh the catalog before creating jobs.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <p className="text-foreground">
-        Select the annotation pipelines you want to run on your videos.
+        Select the annotation pipelines reported by your VideoAnnotator server. Feature availability reflects
+        the live API catalog.
       </p>
-      
-      <div className="space-y-4">
-        {AVAILABLE_PIPELINES.map((pipeline) => (
-          <div key={pipeline.name} className="flex items-center space-x-3 p-3 border rounded-lg bg-card">
-            <input 
-              type="checkbox" 
-              className="rounded" 
-              checked={selectedPipelines.includes(pipeline.name)}
-              onChange={() => togglePipeline(pipeline.name)}
-              disabled={!pipeline.enabled}
-            />
-            <div className="flex-1">
-              <div className="font-medium text-foreground">{pipeline.displayName}</div>
-              <div className="text-sm text-muted-foreground">
-                {pipeline.description}
-              </div>
+
+      <div className="space-y-6">
+        {groupedPipelines.map(({ groupName, list }) => (
+          <div key={groupName} className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">{groupName}</h3>
+              <span className="text-xs text-muted-foreground">{list.length} pipelines</span>
+            </div>
+            <div className="space-y-3">
+              {list.map((pipeline) => {
+                const checked = selectedPipelines.includes(pipeline.id);
+                const description = pipeline.description ?? 'No description provided.';
+                return (
+                  <label
+                    key={pipeline.id}
+                    className={`flex cursor-pointer flex-col gap-1 rounded-lg border p-3 transition hover:border-primary/70 ${checked ? 'border-primary bg-primary/5' : 'border-border bg-card'
+                      }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          className="rounded"
+                          checked={checked}
+                          onChange={() => togglePipeline(pipeline.id)}
+                        />
+                        <span className="text-sm font-medium text-foreground">{pipeline.name}</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {pipeline.version && <span className="text-[11px] text-muted-foreground">v{pipeline.version}</span>}
+                        {pipeline.model && <span className="text-[11px] text-muted-foreground">{pipeline.model}</span>}
+                        {pipeline.capabilities?.length ? (
+                          <span className="text-[11px] text-muted-foreground">
+                            {pipeline.capabilities.length} capabilities
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{description}</p>
+                  </label>
+                );
+              })}
             </div>
           </div>
         ))}
       </div>
-      
+
       {selectedPipelines.length === 0 && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
@@ -443,19 +554,36 @@ const PipelineSelectionStep = ({
 
 const ConfigurationStep = ({
   config,
-  setConfig
+  setConfig,
+  selectedPipelines,
+  pipelines
 }: {
-  config: typeof DEFAULT_CONFIG;
-  setConfig: (config: typeof DEFAULT_CONFIG) => void;
+  config: Record<string, unknown>;
+  setConfig: Dispatch<SetStateAction<Record<string, unknown>>>;
+  selectedPipelines: string[];
+  pipelines: PipelineDescriptor[];
 }) => {
+  const activePipelines = useMemo(
+    () => pipelines.filter((pipeline) => selectedPipelines.includes(pipeline.id)),
+    [pipelines, selectedPipelines]
+  );
+
   return (
     <div className="space-y-6">
       <p className="text-muted-foreground">
-        Configure pipeline parameters. You can modify the configuration or use the default settings.
+        Configure pipeline parameters discovered from the VideoAnnotator server. Adjust values below or
+        edit the JSON override for advanced scenarios.
       </p>
-      
+
+      <DynamicPipelineParameters
+        pipelines={pipelines}
+        selectedPipelineIds={selectedPipelines}
+        config={config}
+        onConfigChange={setConfig}
+      />
+
       <div className="p-4 bg-blue-50 rounded-lg">
-        <h4 className="font-medium text-blue-800 mb-2">Pipeline Configuration</h4>
+        <h4 className="font-medium text-blue-800 mb-2">Advanced JSON Overrides</h4>
         <div className="bg-white p-3 rounded border">
           <textarea
             value={JSON.stringify(config, null, 2)}
@@ -464,13 +592,16 @@ const ConfigurationStep = ({
                 const newConfig = JSON.parse(e.target.value);
                 setConfig(newConfig);
               } catch {
-                // Invalid JSON, don't update
+                // Invalid JSON, ignore to prevent breaking form
               }
             }}
             className="w-full h-64 text-sm font-mono resize-none border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded px-3 py-2 text-foreground bg-background"
             placeholder="Pipeline configuration JSON..."
           />
         </div>
+        <p className="text-xs text-muted-foreground">
+          Active pipelines: {activePipelines.map((pipeline) => pipeline.name).join(', ') || 'None'}
+        </p>
         <p className="text-xs text-blue-600 mt-2">
           Edit the JSON configuration above. Invalid JSON will be ignored.
         </p>
@@ -479,34 +610,36 @@ const ConfigurationStep = ({
   );
 };
 
-const ReviewStep = ({ 
-  selectedFiles, 
-  selectedPipelines, 
+const ReviewStep = ({
+  selectedFiles,
+  selectedPipelines,
   config,
   onSubmit,
   isSubmitting,
   submitError,
-  submitSuccess
-}: { 
+  submitSuccess,
+  pipelines
+}: {
   selectedFiles: File[];
   selectedPipelines: string[];
-  config: typeof DEFAULT_CONFIG;
+  config: Record<string, unknown>;
   onSubmit: () => void;
   isSubmitting: boolean;
   submitError: string | null;
   submitSuccess: string[];
+  pipelines: PipelineDescriptor[];
 }) => {
   const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
-  const pipelineNames = selectedPipelines.map(name => 
-    AVAILABLE_PIPELINES.find(p => p.name === name)?.displayName || name
-  ).join(", ");
+  const pipelineNames = selectedPipelines
+    .map((pipelineId) => pipelines.find((pipeline) => pipeline.id === pipelineId)?.name || pipelineId)
+    .join(", ");
 
   return (
     <div className="space-y-6">
       <p className="text-muted-foreground">
         Review your job configuration before submission.
       </p>
-      
+
       {submitError && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -515,7 +648,7 @@ const ReviewStep = ({
           </AlertDescription>
         </Alert>
       )}
-      
+
       {submitSuccess.length > 0 && (
         <Alert>
           <AlertDescription>
@@ -524,7 +657,7 @@ const ReviewStep = ({
           </AlertDescription>
         </Alert>
       )}
-      
+
       <div className="space-y-4">
         <div className="p-4 border rounded-lg">
           <h4 className="font-medium mb-2">Video Files ({selectedFiles.length})</h4>
@@ -542,17 +675,17 @@ const ReviewStep = ({
             </p>
           </div>
         </div>
-        
+
         <div className="p-4 border rounded-lg">
           <h4 className="font-medium mb-2">Selected Pipelines</h4>
           <p>{pipelineNames || "None selected"}</p>
         </div>
-        
+
         <div className="p-4 border rounded-lg">
           <h4 className="font-medium mb-2">Estimated Processing Time</h4>
           <p>~{Math.ceil(selectedFiles.length * 7)} minutes (depending on video lengths and selected pipelines)</p>
         </div>
-        
+
         <div className="p-4 border rounded-lg">
           <h4 className="font-medium mb-2">Configuration Preview</h4>
           <pre className="text-xs text-muted-foreground bg-muted p-2 rounded overflow-x-auto">

@@ -14,7 +14,7 @@ This guide provides client-side developers with tools and protocols for effectiv
 ### **1. Test Server Connectivity**
 ```bash
 # Test any VideoAnnotator server instance
-python scripts/test_api_quick.py http://localhost:8000 dev-token
+python scripts/test_api_quick.py http://localhost:18011 dev-token
 python scripts/test_api_quick.py https://your-server.com your-api-token
 ```
 
@@ -55,7 +55,7 @@ python scripts/test_api_quick.py
 python scripts/test_api_quick.py https://staging-api.example.com staging-token
 
 # Test specific environment
-python scripts/test_api_quick.py http://docker-container:8001 dev-token
+python scripts/test_api_quick.py http://docker-container:18011 dev-token
 ```
 
 **Output**: Detailed test results saved to `test_results_api.json`
@@ -103,7 +103,7 @@ Use this template when reporting server integration issues:
 [Clear description of the integration problem]
 
 ### Environment
-- Server URL: [e.g., http://localhost:8000]
+- Server URL: [e.g., http://localhost:18011]
 - Client Version: [from package.json]
 - Browser: [Chrome/Firefox/Safari + version]
 - API Version: [from /health endpoint]
@@ -166,7 +166,7 @@ python scripts/test_api_quick.py [your-server] [your-token]
 ```typescript
 // Example API client configuration
 const apiClient = new VideoAnnotatorAPI({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:18011',
   token: localStorage.getItem('api_token') || 'dev-token',
   timeout: 30000
 });

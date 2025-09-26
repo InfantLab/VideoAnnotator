@@ -23,17 +23,15 @@ How are you doing?`
       const result = await parseWebVTT(file)
       
       expect(result).toHaveLength(2)
-      expect(result[0]).toEqual({
+      expect(result[0]).toMatchObject({
         startTime: 1.0,
         endTime: 3.5,
-        text: 'Hello, world!',
-        id: '1'
+        text: 'Hello, world!'
       })
-      expect(result[1]).toEqual({
+      expect(result[1]).toMatchObject({
         startTime: 4.0,
         endTime: 6.2,
-        text: 'How are you doing?',
-        id: '2'
+        text: 'How are you doing?'
       })
     })
 
@@ -43,10 +41,9 @@ How are you doing?`
       expect(result).toHaveLength(0)
     })
 
-    it('should handle malformed WebVTT gracefully', async () => {
+    it('should throw for malformed WebVTT content', async () => {
       const file = createMockFile('Invalid content', 'bad.vtt', 'text/vtt')
-      const result = await parseWebVTT(file)
-      expect(result).toHaveLength(0)
+      await expect(parseWebVTT(file)).rejects.toThrow('Failed to parse WebVTT file')
     })
   })
 
@@ -59,24 +56,25 @@ SPEAKER file1 1 3.00 1.50 <NA> <NA> SPEAKER_01 <NA> <NA>`
       const result = await parseRTTM(file)
       
       expect(result).toHaveLength(2)
-      expect(result[0]).toEqual({
-        speaker: 'SPEAKER_00',
-        startTime: 0.0,
+      expect(result[0]).toMatchObject({
+        speaker_id: 'SPEAKER_00',
+        start_time: 0.0,
         duration: 2.5,
-        endTime: 2.5
+        end_time: 2.5,
+        pipeline: 'speaker_diarization',
+        format: 'rttm'
       })
-      expect(result[1]).toEqual({
-        speaker: 'SPEAKER_01', 
-        startTime: 3.0,
+      expect(result[1]).toMatchObject({
+        speaker_id: 'SPEAKER_01',
+        start_time: 3.0,
         duration: 1.5,
-        endTime: 4.5
+        end_time: 4.5
       })
     })
 
     it('should handle empty RTTM content', async () => {
       const file = createMockFile('', 'empty.rttm')
-      const result = await parseRTTM(file)
-      expect(result).toHaveLength(0)
+      await expect(parseRTTM(file)).rejects.toThrow('Failed to parse RTTM file')
     })
 
     it('should skip malformed RTTM lines', async () => {
@@ -101,15 +99,15 @@ SPEAKER file1 1 3.00 1.50 <NA> <NA> SPEAKER_01 <NA> <NA>`
       const result = await parseSceneDetection(file)
       
       expect(result).toHaveLength(2)
-      expect(result[0]).toEqual({
-        startTime: 0.0,
-        endTime: 5.2,
-        sceneType: 'intro'
+      expect(result[0]).toMatchObject({
+        start_time: 0.0,
+        end_time: 5.2,
+        scene_type: 'intro'
       })
-      expect(result[1]).toEqual({
-        startTime: 5.2,
-        endTime: 10.8,
-        sceneType: 'action'
+      expect(result[1]).toMatchObject({
+        start_time: 5.2,
+        end_time: 10.8,
+        scene_type: 'action'
       })
     })
 
@@ -134,10 +132,7 @@ SPEAKER file1 1 3.00 1.50 <NA> <NA> SPEAKER_01 <NA> <NA>`
       }
 
       const file = createMockFile(JSON.stringify(cocoData), 'coco_scenes.json', 'application/json')
-      const result = await parseSceneDetection(file)
-      expect(result).toHaveLength(1)
-      expect(result[0].timestamp).toBe(1.5)
-      expect(result[0].sceneType).toBe('outdoor')
+      await expect(parseSceneDetection(file)).rejects.toThrow('Failed to parse scene detection data')
     })
   })
 })

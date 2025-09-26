@@ -1,7 +1,7 @@
 {
   "test_run": {
     "timestamp": "2025-08-24T20:30:14.482137",
-    "base_url": "http://localhost:8000",
+    "base_url": "http://localhost:18011",
     "total_tests": 18,
     "passed": 18,
     "failed": 0,

@@ -82,7 +82,7 @@ Leverage VideoAnnotator v1.2.1/1.2.2 pipeline‑querying APIs for dynamic pipeli
   - Fetch parameter schemas, defaults, constraints per pipeline
   - Map server parameter types → UI controls (with validation)
   - Fallback gracefully when server <1.2.1 (static schema)
-  - Environment: use `VITE_API_BASE_URL` (default `http://localhost:8000`)
+  - Environment: use `VITE_API_BASE_URL` (default `http://localhost:18011`)
 
 ### **Phase 2: Bulk Processing & Enterprise Features** (Weeks 5-8)
 
@@ -243,7 +243,7 @@ Leverage VideoAnnotator v1.2.1/1.2.2 pipeline‑querying APIs for dynamic pipeli
   - Error taxonomy: user-facing messages for auth/network/version issues
 
 - [ ] **Contract & E2E Tests (Local Server)**
-  - Add contract tests against `http://localhost:8000/` in dev
+  - Add contract tests against `http://localhost:18011/` in dev
   - Mock handlers for CI (no network) mirroring 1.2.1/1.2.2 responses
   - Playwright flows: discover pipelines → create job → open in viewer
   - Record test fixtures for pipeline schemas and capabilities
@@ -494,7 +494,7 @@ Implementation notes (for later enablement):
 **Roadmap Version**: v0.4.0  
 **Last Updated**: 2025-09-18 (Added VideoAnnotator v1.2.x integration plan)  
 **Status**: Planning Phase  
-**Dependencies**: Successful v0.3.0 release with server-side SSE implementation; VideoAnnotator server v1.2.1+ available at `http://localhost:8000/`
+**Dependencies**: Successful v0.3.0 release with server-side SSE implementation; VideoAnnotator server v1.2.1+ available at `http://localhost:18011/`
 
 ## 📋 **NOTE**: 
 Remember that roadmaps are stored in `docs/development/` subfolder, not directly in `docs/`.

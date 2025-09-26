@@ -21,7 +21,7 @@ This comprehensive QA checklist covers the new VideoAnnotator pipeline running f
 ## 📋 **SECTION 1: VideoAnnotator API Integration**
 
 ### **1.1 API Client & Connection**
-- [x] **API Health Check**: `http://localhost:8000/health` returns status  
+- [x] **API Health Check**: `http://localhost:18011/health` returns status  
 - [f] **Detailed Health**: `/api/v1/system/health` provides system information  
 - [x] **Authentication**: API token authentication works correctly  
 - [x] **Error Handling**: Network errors display appropriate messages  
@@ -408,7 +408,7 @@ Create jobs should not lose progress on refresh
 
 **Environment Setup:**
 ```
-VideoAnnotator API: http://localhost:8000
+VideoAnnotator API: http://localhost:18011
 Video Annotation Viewer: http://localhost:8080
 API Token: [configured in .env]
 Test Dataset: [specify datasets used]

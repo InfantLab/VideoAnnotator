@@ -6,7 +6,7 @@
 The backend is provided by the VideoAnnotator project https://github.com/InfantLab/VideoAnnotator 
 
 And if this is running locally API documentation will be available at
-http://localhost:8000/docs
+http://localhost:18011/docs
 
 ### VideoAnnotator API Specifications
 
@@ -31,7 +31,7 @@ http://localhost:8000/docs
 ```bash
 # Docker deployment with GPU support (recommended for production)
 docker build -f Dockerfile.gpu -t videoannotator:api .
-docker run -p 8000:8000 --gpus all videoannotator:api
+docker run -p 18011:18011 --gpus all videoannotator:api
 
 # Direct installation for development
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -128,7 +128,7 @@ uv sync
 **Generate types & hooks (example with `openapi-typescript`):**
 
 ```bash
-npx openapi-typescript http://localhost:8000/openapi.json -o src/api/schema.d.ts
+npx openapi-typescript http://localhost:18011/openapi.json -o src/api/schema.d.ts
 ```
 
 Create a thin `api.ts` wrapper with `fetch` and auth header injection.
