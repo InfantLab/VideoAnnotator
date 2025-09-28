@@ -138,12 +138,12 @@ run:
 
 **Default (pip via uv):**
 
-* Detect the host CUDA you want to target (e.g., 12.4).
+* Detect the host CUDA you want to target (e.g., 13.0).
 * Install PyTorch exactly as the official selector prints (pip or conda). Example:
 
 ```bash
-# Example: CUDA 12.4 wheels (confirm on pytorch.org first)
-uv add "torch==2.4.*+cu124" "torchvision==0.19.*+cu124" --index-url https://download.pytorch.org/whl/cu124
+# Example: CUDA 13.0 wheels (confirm on pytorch.org first)
+uv add "torch==2.8.*+cu130" "torchvision==0.21.*+cu130" --index-url https://download.pytorch.org/whl/cu130
 ```
 
 Always copy the exact command from the PyTorch site to match torch/torchvision/cuda triplets. ([PyTorch][3])
@@ -179,8 +179,8 @@ CMD ["uv", "run", "python", "-m", "your_project"]
 ### `Dockerfile.gpu`
 
 ```dockerfile
-# Choose a CUDA runtime matching your torch build (e.g., 12.4)
-FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+# Choose a CUDA runtime matching your torch build (e.g., 13.0)
+FROM nvidia/cuda:13.0.1-runtime-ubuntu24.04
 
 SHELL ["/bin/bash","-lc"]
 RUN apt-get update && apt-get install -y curl python3 python3-venv python3-pip && rm -rf /var/lib/apt/lists/*
@@ -193,7 +193,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-editable
 # Install torch for CUDA build selected (match to pytorch.org command)
-RUN uv add "torch==2.4.*+cu124" "torchvision==0.19.*+cu124" --index-url https://download.pytorch.org/whl/cu124
+RUN uv add "torch==2.8.*+cu130" "torchvision==0.21.*+cu130" --index-url https://download.pytorch.org/whl/cu130
 
 COPY . .
 CMD ["uv", "run", "python", "-m", "your_project"]
@@ -266,7 +266,7 @@ channels: [conda-forge]
 dependencies:
   - python=3.12
   - pytorch=*=cuda*  # or cpu if desired; pin to your CUDA
-  - cudatoolkit=12.4
+  - cudatoolkit=13.0
   - numpy
   - pandas
   - pip
@@ -279,7 +279,7 @@ dependencies:
 **`Dockerfile.mamba` (sketch)**
 
 ```dockerfile
-FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+FROM nvidia/cuda:13.0.1-runtime-ubuntu24.04
 SHELL ["/bin/bash","-lc"]
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 RUN curl -Ls https://micromamba.snakepit.net/api/micromamba/linux-64/latest | \

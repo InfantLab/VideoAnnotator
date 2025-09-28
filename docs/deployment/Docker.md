@@ -170,7 +170,7 @@ docker run -p 8000:8000 --gpus all --rm -v "${PWD}\data:/app/data" -v "${PWD}\ou
 
 - **uv package manager** for fast, reliable dependency management
 - **Python 3.12** runtime
-- **CUDA 12.4** support (GPU container)
+- **CUDA 13.0** support (GPU container)
 - **Models download automatically** on first use (production) or pre-cached (dev)
 - **FastAPI server** ready for deployment
 - **Automatic dependency resolution** via uv.lock

@@ -6,7 +6,7 @@
 #   docker build -f dockerfile.dev -t videoannotator:dev .
 #   docker run --gpus all --rm -p 8000:8000 -v ${PWD}/data:/app/data videoannotator:dev
 
-FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+FROM nvidia/cuda:13.0.1-runtime-ubuntu24.04
 
 SHELL ["/bin/bash","-lc"]
 RUN apt-get update && apt-get install -y \
@@ -45,7 +45,7 @@ COPY weights/ /app/weights/
 RUN uv sync --frozen --no-editable
 
 # Install CUDA PyTorch for GPU acceleration (override CPU version)
-RUN uv pip install "torch==2.4.0+cu124" "torchvision==0.19.0+cu124" "torchaudio==2.4.0+cu124" --index-url https://download.pytorch.org/whl/cu124
+RUN uv pip install "torch==2.8.0+cu130" "torchvision==0.21.0+cu130" "torchaudio==2.8.0+cu130" --index-url https://download.pytorch.org/whl/cu130
 
 # Verify GPU access and model cache (no model downloading needed!)
 RUN uv run python3 -c "\

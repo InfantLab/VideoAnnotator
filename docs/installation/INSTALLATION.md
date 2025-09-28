@@ -9,7 +9,7 @@ VideoAnnotator is a modern video analysis toolkit that uses AI models for compre
 - **Python 3.12+** (required)
 - **Git** for cloning repositories 
 - **uv** package manager (fast, modern Python dependency management)
-- **CUDA Toolkit 12.4** (recommended for GPU acceleration)
+- **CUDA Toolkit 13.0+** (recommended for GPU acceleration)
 - **NVIDIA GPU** with CUDA support (GTX 1060 6GB+ or better recommended)
 
 ## System Requirements
@@ -86,8 +86,8 @@ uv sync --extra dev
 ### 3. Install CUDA-enabled PyTorch (GPU acceleration)
 
 ```bash
-# Install PyTorch with CUDA 12.4 support (for GPU acceleration)
-uv add "torch==2.4.*+cu124" "torchvision==0.19.*+cu124" --index-url https://download.pytorch.org/whl/cu124
+# Install PyTorch with CUDA 13.0 support (for GPU acceleration)
+uv add "torch==2.8.*+cu130" "torchvision==0.21.*+cu130" --index-url https://download.pytorch.org/whl/cu130
 ```
 
 ### 4. Install Native Dependencies (if needed)

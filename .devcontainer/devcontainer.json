@@ -3,13 +3,14 @@
   "build": {
     "dockerfile": "../Dockerfile.gpu",
     "context": ".."
+    ,"args": { "SKIP_IMAGE_UV_SYNC": "true", "SKIP_TORCH_INSTALL": "true" }
   },
   "runArgs": [
     "--gpus",
     "all"
   ],
   "features": {},
-  "postCreateCommand": "uv sync && uv sync --extra dev && uv run pre-commit install",
+  "postCreateCommand": "uv sync && uv sync --extra dev && uv pip install \"torch==2.8.0+cu130\" \"torchvision==0.21.0+cu130\" \"torchaudio==2.8.0+cu130\" --index-url https://download.pytorch.org/whl/cu130 && uv run pre-commit install",
   "customizations": {
     "vscode": {
       "settings": {

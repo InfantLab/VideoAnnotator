@@ -43,8 +43,12 @@ class BackgroundJobManager:
         self.storage = storage_backend or get_storage_backend()
         self.poll_interval = poll_interval
         self.max_concurrent_jobs = max_concurrent_jobs
-        self.job_processor = JobProcessor()
-        
+        # Defer creating JobProcessor until the first job is actually processed.
+        # Constructing JobProcessor eagerly triggers imports of pipeline modules
+        # (which may load heavy ML libraries or perform IO) and can block
+        # FastAPI application startup. Create it lazily in _run_single_job_processing.
+        self.job_processor = None
+
         self.running = False
         self.processing_jobs: Set[str] = set()
         self.background_task: Optional[asyncio.Task] = None
@@ -201,7 +205,17 @@ class BackgroundJobManager:
         """
         try:
             logger.info(f"Starting pipeline processing for job {job.job_id}")
-            
+
+            # Lazily create JobProcessor to avoid heavy imports during server startup
+            if self.job_processor is None:
+                try:
+                    from api.job_processor import JobProcessor
+                    self.job_processor = JobProcessor()
+                except Exception as e:
+                    logger.error(f"Failed to initialize JobProcessor: {e}")
+                    job.error_message = f"JobProcessor initialization failed: {e}"
+                    return False
+
             # Use JobProcessor to process the single job
             success = self.job_processor.process_job(job)
             

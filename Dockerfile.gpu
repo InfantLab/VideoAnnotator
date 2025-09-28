@@ -5,7 +5,7 @@
 #   docker build -f Dockerfile.gpu -t videoannotator:gpu .
 #   docker run --gpus all --rm -p 8000:8000 -v ${PWD}/data:/app/data videoannotator:gpu
 
-FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+FROM nvidia/cuda:13.0.1-runtime-ubuntu24.04
 
 SHELL ["/bin/bash","-lc"]
 RUN apt-get update && apt-get install -y \
@@ -29,14 +29,24 @@ ENV PATH="/root/.local/bin:${PATH}"
 
 WORKDIR /app
 
+# Build args to allow dev builds to skip network-heavy steps (defaults: true)
+# For production image builds set these to "false" to perform installs in image.
+ARG SKIP_IMAGE_UV_SYNC=true
+ARG SKIP_TORCH_INSTALL=true
+
 # Copy source code (excluding models via .dockerignore)
+# Copy project files (excluded items controlled by .dockerignore)
 COPY . .
 
 # Install dependencies (excluding torch to avoid conflicts)
-RUN uv sync --frozen --no-editable
+# These steps can be skipped at build time for dev containers by setting
+# build args SKIP_IMAGE_UV_SYNC=true and SKIP_TORCH_INSTALL=true. Post-create
+# commands will run `uv sync` inside the running container where network is
+# usually available.
+RUN if [ "${SKIP_IMAGE_UV_SYNC}" != "true" ]; then uv sync --frozen --no-editable; else echo "[BUILD] Skipping uv sync at image build (SKIP_IMAGE_UV_SYNC=true)"; fi
 
 # Install CUDA PyTorch for GPU acceleration (override CPU version)
-RUN uv pip install "torch==2.4.0+cu124" "torchvision==0.19.0+cu124" "torchaudio==2.4.0+cu124" --index-url https://download.pytorch.org/whl/cu124
+RUN if [ "${SKIP_TORCH_INSTALL}" != "true" ]; then uv pip install "torch==2.8.0+cu130" "torchvision==0.21.0+cu130" "torchaudio==2.8.0+cu130" --index-url https://download.pytorch.org/whl/cu130; else echo "[BUILD] Skipping torch install at image build (SKIP_TORCH_INSTALL=true)"; fi
 
 # Verify GPU access (no model downloading needed!)
 RUN uv run python3 -c "\
