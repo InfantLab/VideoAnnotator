@@ -1,0 +1,81 @@
+# VideoAnnotator Docker Image - Legacy GPU (GTX 10xx / CUDA 11.x)
+#
+# Purpose:
+# - Designed for older GPUs (eg. GTX 1060) that are best matched with CUDA 11.x
+# - Keeps heavy steps optional (SKIP_IMAGE_UV_SYNC / SKIP_TORCH_INSTALL) so builders can
+#   choose to perform network operations at container runtime instead of at build time.
+#
+# Usage (build):
+#   docker build -f Dockerfile.oldgpu -t videoannotator:oldgpu .
+#
+# Usage (run):
+#   docker run --gpus all --rm -p 18011:18011 -v ${PWD}/data:/app/data videoannotator:oldgpu
+
+# Choose a CUDA 11.x runtime image compatible with older GPUs/drivers
+FROM nvidia/cuda:11.3.1-runtime-ubuntu20.04
+
+SHELL ["/bin/bash","-lc"]
+
+# Install core system packages and graphics libs commonly required by some pipelines
+RUN apt-get update && apt-get install -y \
+    curl python3 python3-venv python3-pip git git-lfs \
+    libgl1-mesa-dri libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ensure locale is generated so LANG=en_US.UTF-8 works inside the container
+RUN apt-get update && apt-get install -y locales \
+    && locale-gen en_US.UTF-8 \
+    && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Export UTF-8 locale for all processes
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
+# Initialize Git LFS
+RUN git lfs install
+
+# uv package manager (project standard)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
+
+WORKDIR /app
+
+# Build args to allow skipping heavy network steps during image build
+ARG SKIP_IMAGE_UV_SYNC=true
+ARG SKIP_TORCH_INSTALL=true
+
+# Copy project files (exclude large model artifacts via .dockerignore)
+COPY . .
+
+# Copy local models / weights if you want them baked into the image (optional)
+# COPY models/ /app/models/
+# COPY weights/ /app/weights/
+
+# Install Python dependencies via uv (can be skipped at build time)
+RUN if [ "${SKIP_IMAGE_UV_SYNC}" != "true" ]; then uv sync --frozen --no-editable; else echo "[BUILD] Skipping uv sync at image build (SKIP_IMAGE_UV_SYNC=true)"; fi
+
+# Torch installation: keep this optional because CUDA and appropriate wheel sets can vary
+# Provide build args to install a matching wheel at build time. Example values are
+# for CUDA 11.3: TORCH_WHEEL="torch==1.13.1+cu113 torchvision==0.14.1+cu113 torchaudio==0.13.1+cu113"
+ARG TORCH_WHEEL=""
+ARG TORCH_INDEX_URL="https://download.pytorch.org/whl/cu113"
+RUN if [ "${SKIP_TORCH_INSTALL}" != "true" ] && [ -n "${TORCH_WHEEL}" ]; then \
+            echo "[BUILD] Installing torch wheels: ${TORCH_WHEEL}"; \
+            uv pip install ${TORCH_WHEEL} --index-url ${TORCH_INDEX_URL}; \
+        else \
+            echo "[BUILD] Skipping torch install (SKIP_TORCH_INSTALL=${SKIP_TORCH_INSTALL}, TORCH_WHEEL set: ${TORCH_WHEEL:+yes})"; \
+        fi
+
+# Quick smoke-check (optional) - this will only run if uv and Python are available
+RUN uv run python3 -c "import sys; print('[OLDGPU BUILD] Python:', sys.version.splitlines()[0])"
+
+ENV PYTHONUNBUFFERED=1
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Create directories for mounted volumes
+RUN mkdir -p /app/data /app/output /app/logs
+
+EXPOSE 18011
+
+CMD ["uv", "run", "python3", "api_server.py", "--log-level", "info", "--port", "18011"]

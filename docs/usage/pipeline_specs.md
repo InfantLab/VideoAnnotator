@@ -186,16 +186,16 @@ scene_detection:
 
 ```bash
 # Process single video with all pipelines
-python -m videoannotator process video.mp4
+uv run python -m videoannotator process video.mp4
 
 # Process specific pipeline
-python -m videoannotator process video.mp4 --pipeline person_tracking
+uv run python -m videoannotator process video.mp4 --pipeline person_tracking
 
 # Custom config
-python -m videoannotator process video.mp4 --config configs/high_performance.yaml
+uv run python -m videoannotator process video.mp4 --config configs/high_performance.yaml
 
 # Batch processing
-python -m videoannotator batch videos/ --output results/
+uv run python -m videoannotator batch videos/ --output results/
 ```
 
 ### Python API

@@ -13,10 +13,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable, Union
 
-from .types import BatchJob, JobStatus, BatchReport, BatchStatus, VideoPath, ConfigDict, PipelineResult
-from .progress_tracker import ProgressTracker
-from .recovery import FailureRecovery, RetryStrategy
-from ..storage.base import StorageBackend
+from batch.types import BatchJob, JobStatus, BatchReport, BatchStatus, VideoPath, ConfigDict, PipelineResult
+from batch.progress_tracker import ProgressTracker
+from batch.recovery import FailureRecovery, RetryStrategy
+from storage.base import StorageBackend
 
 
 class BatchOrchestrator:
@@ -60,7 +60,7 @@ class BatchOrchestrator:
         """
         if storage_backend is None:
             # Lazy import to avoid circular import
-            from ..storage.file_backend import FileStorageBackend
+            from storage.file_backend import FileStorageBackend
             storage_backend = FileStorageBackend(Path("batch_results"))
         
         self.storage_backend = storage_backend
@@ -83,36 +83,57 @@ class BatchOrchestrator:
     
     def _import_pipelines(self):
         """Import pipeline classes for processing."""
-        try:
-            from ..pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
-            from ..pipelines.person_tracking.person_pipeline import PersonTrackingPipeline  
-            from ..pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
-            from ..pipelines.audio_processing import AudioPipeline
-            
-            # Import LAION pipelines
-            from ..pipelines.face_analysis.laion_face_pipeline import LAIONFacePipeline
-            from ..pipelines.audio_processing.laion_voice_pipeline import LAIONVoicePipeline
-            
-            self.pipeline_classes = {
-                'scene_detection': SceneDetectionPipeline,
-                'scene': SceneDetectionPipeline,  # Alias for convenience
-                'person_tracking': PersonTrackingPipeline,
-                'person': PersonTrackingPipeline,  # Alias for convenience  
-                'face_analysis': FaceAnalysisPipeline,
-                'face': FaceAnalysisPipeline,  # Alias for convenience
-                'audio_processing': AudioPipeline,
-                'audio': AudioPipeline,  # Alias for convenience
-                # LAION emotion analysis pipelines
-                'laion_face_analysis': LAIONFacePipeline,
-                'laion_face': LAIONFacePipeline,  # Alias for convenience
-                'laion_voice_analysis': LAIONVoicePipeline,
-                'laion_voice': LAIONVoicePipeline,  # Alias for convenience
-            }
-            self.logger.debug("Pipeline classes imported successfully")
-            
-        except ImportError as e:
-            self.logger.error(f"Failed to import pipeline classes: {e}")
-            self.pipeline_classes = {}
+        # Import each pipeline individually so a failure in one doesn't disable others
+        classes = {}
+
+        def _try_import(name: str, import_callable: Callable[[], type]):
+            try:
+                cls = import_callable()
+                classes[name] = cls
+                self.logger.debug(f"Loaded pipeline class for: {name}")
+            except Exception as e:
+                # Provide a helpful hint for common missing shared libs
+                hint = ""
+                msg = str(e)
+                if "libGL.so.1" in msg or "GLIBC" in msg:
+                    hint = " - system package missing, try installing 'libgl1' or 'libgl1-mesa-glx' (apt)"
+                self.logger.error(f"Failed to import pipeline '{name}': {e}{hint}", exc_info=True)
+
+        # Scene detection
+        _try_import('scene_detection', lambda: __import__('pipelines.scene_detection.scene_pipeline', globals(), locals(), ['SceneDetectionPipeline']).SceneDetectionPipeline)
+        # Person tracking
+        _try_import('person_tracking', lambda: __import__('pipelines.person_tracking.person_pipeline', globals(), locals(), ['PersonTrackingPipeline']).PersonTrackingPipeline)
+        # Face analysis
+        _try_import('face_analysis', lambda: __import__('pipelines.face_analysis.face_pipeline', globals(), locals(), ['FaceAnalysisPipeline']).FaceAnalysisPipeline)
+        # Audio processing (package)
+        _try_import('audio_processing', lambda: __import__('pipelines.audio_processing', globals(), locals(), ['AudioPipeline']).AudioPipeline)
+        # LAION pipelines
+        _try_import('laion_face', lambda: __import__('pipelines.face_analysis.laion_face_pipeline', globals(), locals(), ['LAIONFacePipeline']).LAIONFacePipeline)
+        _try_import('laion_voice', lambda: __import__('pipelines.audio_processing.laion_voice_pipeline', globals(), locals(), ['LAIONVoicePipeline']).LAIONVoicePipeline)
+
+        # Aliases and consolidated mapping
+        mapping = {}
+        if 'scene_detection' in classes:
+            mapping['scene_detection'] = classes['scene_detection']
+            mapping['scene'] = classes['scene_detection']
+        if 'person_tracking' in classes:
+            mapping['person_tracking'] = classes['person_tracking']
+            mapping['person'] = classes['person_tracking']
+        if 'face_analysis' in classes:
+            mapping['face_analysis'] = classes['face_analysis']
+            mapping['face'] = classes['face_analysis']
+        if 'audio_processing' in classes:
+            mapping['audio_processing'] = classes['audio_processing']
+            mapping['audio'] = classes['audio_processing']
+        if 'laion_face' in classes:
+            mapping['laion_face_analysis'] = classes['laion_face']
+            mapping['laion_face'] = classes['laion_face']
+        if 'laion_voice' in classes:
+            mapping['laion_voice_analysis'] = classes['laion_voice']
+            mapping['laion_voice'] = classes['laion_voice']
+
+        self.pipeline_classes = mapping
+        self.logger.debug(f"Pipeline classes available: {list(self.pipeline_classes.keys())}")
     
     def add_job(self, 
                 video_path: VideoPath, 
@@ -457,8 +478,26 @@ class BatchOrchestrator:
         self.storage_backend.save_job_metadata(job)
         
         # Determine pipelines to run
-        pipelines_to_run = job.selected_pipelines or list(self.pipeline_classes.keys())
+        if job.selected_pipelines:
+            # If the job explicitly requested pipelines, filter out unavailable ones
+            requested = job.selected_pipelines
+            available = list(self.pipeline_classes.keys())
+            missing = [p for p in requested if p not in available]
+            if missing:
+                self.logger.warning(
+                    f"Requested pipelines missing or unavailable: {missing}. Proceeding with available pipelines."
+                )
+            pipelines_to_run = [p for p in requested if p in available]
+            if not pipelines_to_run:
+                # No requested pipelines are available — fail fast with helpful message
+                raise ValueError(f"No requested pipelines are available: {requested}")
+        else:
+            pipelines_to_run = list(self.pipeline_classes.keys())
         
+        # Ensure pipeline_results dict exists
+        if job.pipeline_results is None:
+            job.pipeline_results = {}
+
         # Process each pipeline
         for pipeline_name in pipelines_to_run:
             if self.should_stop:

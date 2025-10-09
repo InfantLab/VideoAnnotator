@@ -5,6 +5,8 @@ VideoAnnotator Version Information and Metadata
 import platform
 import sys
 from datetime import datetime
+import logging
+from utils.logging_config import get_logger
 from typing import Dict, Any, Optional
 from pathlib import Path
 import json
@@ -281,66 +283,63 @@ def save_version_info(output_path: str) -> None:
 def print_version_info() -> None:
     """Print version information to console."""
     version_info = get_version_info()
-
-    print(f"VideoAnnotator v{__version__}")
-    print(f"Release Date: {__release_date__}")
-    print(f"Build Date: {__build_date__}")
-    print()
+    logger = get_logger("api")
+    logger.info(f"VideoAnnotator v{__version__}")
+    logger.info(f"Release Date: {__release_date__}")
+    logger.info(f"Build Date: {__build_date__}")
 
     if version_info["videoannotator"]["git"]:
         git = version_info["videoannotator"]["git"]
-        print("Git Information:")
+        logger.info("Git Information:")
         if git["commit_hash"]:
-            print(f"  Commit: {git['commit_hash'][:8]}")
+            logger.info(f"  Commit: {git['commit_hash'][:8]}")
         if git["branch"]:
-            print(f"  Branch: {git['branch']}")
+            logger.info(f"  Branch: {git['branch']}")
         if git["is_clean"] is not None:
-            print(f"  Clean: {git['is_clean']}")
-        print()
+            logger.info(f"  Clean: {git['is_clean']}")
 
-    print("System Information:")
+    logger.info("System Information:")
     system = version_info["system"]
-    print(f"  Platform: {system['platform']}")
-    print(f"  Python: {system['python_version'].split()[0]}")
-    print(f"  Architecture: {system['architecture']}")
+    logger.info(f"  Platform: {system['platform']}")
+    logger.info(f"  Python: {system['python_version'].split()[0]}")
+    logger.info(f"  Architecture: {system['architecture']}")
     
     # Show GPU information if available
     if "gpu" in system and system["gpu"]:
         gpu = system["gpu"]
         print("  GPU Information:")
         if "torch_cuda_available" in gpu:
-            # ASCII-safe status markers for Windows consoles
+            # ASCII-only status markers
             cuda_status = "[OK] Available" if gpu["torch_cuda_available"] else "[WARNING] Not Available"
-            print(f"    CUDA: {cuda_status}")
+            logger.info(f"    CUDA: {cuda_status}")
             if gpu.get("torch_cuda_available"):
                 if "torch_cuda_version" in gpu:
-                    print(f"    CUDA Version: {gpu['torch_cuda_version']}")
+                    logger.info(f"    CUDA Version: {gpu['torch_cuda_version']}")
                 if "device_name" in gpu:
-                    print(f"    Device: {gpu['device_name']}")
+                    logger.info(f"    Device: {gpu['device_name']}")
                 if "gpu_count" in gpu:
-                    print(f"    Device Count: {gpu['gpu_count']}")
+                    logger.info(f"    Device Count: {gpu['gpu_count']}")
         if gpu.get("nvidia_ml_available"):
             if "driver_version" in gpu:
-                print(f"    Driver Version: {gpu['driver_version']}")
+                logger.info(f"    Driver Version: {gpu['driver_version']}")
             if "total_memory" in gpu:
                 total_gb = gpu["total_memory"] / (1024**3)
-                print(f"    Total Memory: {total_gb:.1f} GB")
-    print()
+                logger.info(f"    Total Memory: {total_gb:.1f} GB")
+    logger.info("")
 
-    print("Key Dependencies:")
+    logger.info("Key Dependencies:")
     deps = version_info["dependencies"]
     key_deps = ["opencv-python", "ultralytics", "pydantic", "torch", "numpy"]
     for dep in key_deps:
         if dep in deps:
             status = deps[dep]
             if status == "not_installed":
-                status = "❌ Not installed"
+                status = "[NOT INSTALLED]"
             elif status.startswith("error"):
-                status = f"⚠️  {status}"
+                status = f"[ERROR] {status}"
             else:
-                # Replace decorative emoji with plain ASCII tag
                 status = f"[OK] v{status}"
-            print(f"  {dep}: {status}")
+            logger.info(f"  {dep}: {status}")
 
 
 if __name__ == "__main__":

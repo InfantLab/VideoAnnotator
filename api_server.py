@@ -27,7 +27,9 @@ from src.utils.logging_config import setup_videoannotator_logging, get_logger
 
 def setup_logging(level: str = "INFO", logs_dir: str = "logs"):
     """Set up enhanced logging configuration."""
-    setup_videoannotator_logging(logs_dir=logs_dir, log_level=level)
+    # Capture Python warnings by default so compatibility warnings surface in logs.
+    setup_videoannotator_logging(logs_dir=logs_dir, log_level=level, capture_warnings=True,
+                                 capture_stdstreams=(level.upper()=="DEBUG"))
 
 def main():
     """Main entry point for the API server."""

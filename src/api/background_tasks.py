@@ -139,7 +139,8 @@ class BackgroundJobManager:
                         jobs_to_process.append(job)
                         self.processing_jobs.add(job_id)
                     except Exception as e:
-                        logger.error(f"Failed to load job {job_id}: {e}")
+                        # Log full exception traceback to identify offending imports
+                        logger.error(f"Failed to load job {job_id}: {e}", exc_info=True)
             
             # Start processing selected jobs
             for job in jobs_to_process:

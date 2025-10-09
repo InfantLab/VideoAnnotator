@@ -22,8 +22,8 @@ def test_logging_system():
     print("\n[TEST 1] Testing basic logging setup...")
     
     try:
-        from src.utils.logging_config import setup_videoannotator_logging, get_logger
-        loggers = setup_videoannotator_logging(logs_dir="logs", log_level="INFO")
+    from src.utils.logging_config import setup_videoannotator_logging, get_logger
+    loggers = setup_videoannotator_logging(logs_dir="logs", log_level="INFO", capture_warnings=True)
         
         api_logger = get_logger("api")
         request_logger = get_logger("requests") 

@@ -6,13 +6,13 @@
 
 ```bash
 # Run all tests (67/71 passing)
-python -m pytest tests/ -v
+uv run python -m pytest tests/ -v
 
 # Run specific pipeline
-python -m pytest tests/test_face_pipeline_modern.py -v
+uv run python -m pytest tests/test_face_pipeline_modern.py -v
 
 # Run with coverage analysis
-python -m pytest tests/ --cov=src --cov-report=html
+uv run python -m pytest tests/ --cov=src --cov-report=html
 ```
 
 ## 🏆 **Test Suite Results**

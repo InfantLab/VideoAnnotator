@@ -73,15 +73,15 @@ The VideoAnnotator test suite uses a modular approach with dedicated test files 
 #### Running Modular Tests
 ```bash
 # Run tests for a specific pipeline
-python -m pytest tests/test_face_pipeline.py -v
+uv run python -m pytest tests/test_face_pipeline.py -v
 
 # Run specific test categories across all pipelines  
-python -m pytest tests/ -m unit -v
-python -m pytest tests/ -m integration -v
-python -m pytest tests/ -m performance -v
+uv run python -m pytest tests/ -m unit -v
+uv run python -m pytest tests/ -m integration -v
+uv run python -m pytest tests/ -m performance -v
 
 # Run all pipeline tests through the test runner
-python -m pytest tests/test_all_pipelines.py -v
+uv run python -m pytest tests/test_all_pipelines.py -v
 ```
 
 ## Test File Standards

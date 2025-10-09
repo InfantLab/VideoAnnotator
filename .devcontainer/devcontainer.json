@@ -10,7 +10,7 @@
     "all"
   ],
   "features": {},
-  "postCreateCommand": "uv sync && uv sync --extra dev && uv pip install \"torch==2.8.0+cu130\" \"torchvision==0.21.0+cu130\" \"torchaudio==2.8.0+cu130\" --index-url https://download.pytorch.org/whl/cu130 && uv run pre-commit install",
+  "postCreateCommand": "uv sync && uv sync --extra dev && uv pip install \"torch==2.8.0+cu124\" \"torchvision==0.21.0+cu124\" \"torchaudio==2.8.0+cu124\" --index-url https://download.pytorch.org/whl/cu124 && uv run pre-commit install",
   "customizations": {
     "vscode": {
       "settings": {

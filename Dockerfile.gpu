@@ -5,12 +5,12 @@
 #   docker build -f Dockerfile.gpu -t videoannotator:gpu .
 #   docker run --gpus all --rm -p 8000:8000 -v ${PWD}/data:/app/data videoannotator:gpu
 
-FROM nvidia/cuda:13.0.1-runtime-ubuntu24.04
+FROM nvidia/cuda:12.6.0-runtime-ubuntu24.04
 
 SHELL ["/bin/bash","-lc"]
 RUN apt-get update && apt-get install -y \
     curl python3 python3-venv python3-pip git \
-    libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1 \
+    libgl1-mesa-dri libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Ensure locale is generated so LANG=en_US.UTF-8 works inside the container
@@ -46,14 +46,10 @@ COPY . .
 RUN if [ "${SKIP_IMAGE_UV_SYNC}" != "true" ]; then uv sync --frozen --no-editable; else echo "[BUILD] Skipping uv sync at image build (SKIP_IMAGE_UV_SYNC=true)"; fi
 
 # Install CUDA PyTorch for GPU acceleration (override CPU version)
-RUN if [ "${SKIP_TORCH_INSTALL}" != "true" ]; then uv pip install "torch==2.8.0+cu130" "torchvision==0.21.0+cu130" "torchaudio==2.8.0+cu130" --index-url https://download.pytorch.org/whl/cu130; else echo "[BUILD] Skipping torch install at image build (SKIP_TORCH_INSTALL=true)"; fi
+RUN if [ "${SKIP_TORCH_INSTALL}" != "true" ]; then uv pip install "torch==2.8.0+cu126" "torchvision==0.23.0+cu126" "torchaudio==2.8.0+cu126" --index-url https://download.pytorch.org/whl/cu126; else echo "[BUILD] Skipping torch install at image build (SKIP_TORCH_INSTALL=true)"; fi
 
 # Verify GPU access (no model downloading needed!)
-RUN uv run python3 -c "\
-import torch; \
-print(f'[GPU BUILD] CUDA available: {torch.cuda.is_available()}'); \
-print(f'[GPU BUILD] PyTorch version: {torch.__version__}'); \
-print('[GPU BUILD] Production image ready - models will download on first use');"
+RUN uv run python3 -c "import torch; print(f'[GPU BUILD] CUDA available: {torch.cuda.is_available()}'); print(f'[GPU BUILD] PyTorch version: {torch.__version__}'); print('[GPU BUILD] Production image ready - models will download on first use')"
 
 # Set environment for production
 ENV PYTHONUNBUFFERED=1

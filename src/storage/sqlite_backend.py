@@ -29,7 +29,7 @@ from .models import (
 )
 
 if TYPE_CHECKING:
-    from ..batch.types import BatchJob, PipelineResult as BatchPipelineResult, BatchReport
+    from batch.types import BatchJob, PipelineResult as BatchPipelineResult, BatchReport
 
 
 class SQLiteStorageBackend(StorageBackend):
@@ -128,7 +128,7 @@ class SQLiteStorageBackend(StorageBackend):
     
     def _db_job_to_batch_job(self, db_job: Job) -> "BatchJob":
         """Convert database Job model to BatchJob."""
-        from ..batch.types import BatchJob, JobStatus, PipelineResult as BatchPipelineResult
+        from batch.types import BatchJob, JobStatus, PipelineResult as BatchPipelineResult
         
         batch_job = BatchJob(
             job_id=db_job.id,
@@ -235,7 +235,7 @@ class SQLiteStorageBackend(StorageBackend):
                 return self._db_job_to_batch_job(db_job)
         
         except SQLAlchemyError as e:
-            self.logger.error(f"[ERROR] Failed to load job metadata for {job_id}: {e}")
+            self.logger.error(f"[ERROR] Failed to load job metadata for {job_id}: {e}", exc_info=True)
             raise
     
     def save_annotations(self, job_id: str, pipeline: str, annotations: List[Dict[str, Any]]) -> str:
@@ -415,7 +415,7 @@ class SQLiteStorageBackend(StorageBackend):
                     raise FileNotFoundError(f"Batch report {batch_id} not found")
                 
                 # Reconstruct BatchReport from stored JSON data
-                from ..batch.types import BatchReport
+                from batch.types import BatchReport
                 return BatchReport.from_dict(db_report.report_data)
         
         except SQLAlchemyError as e:

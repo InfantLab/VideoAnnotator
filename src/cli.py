@@ -87,9 +87,10 @@ def worker(
     import asyncio
     from worker import run_job_processor
     from utils.logging_config import setup_videoannotator_logging
-    
-    # Setup logging
-    setup_videoannotator_logging()
+
+    # Setup logging: capture Python warnings so torch/CUDA compatibility warnings
+    # (which are often emitted via warnings.warn) are routed to our log files.
+    setup_videoannotator_logging(capture_warnings=True)
     
     typer.echo("[START] Starting VideoAnnotator background job processor")
     typer.echo(f"[CONFIG] Poll interval: {poll_interval}s, Max concurrent: {max_concurrent}")

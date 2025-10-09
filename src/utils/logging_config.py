@@ -8,6 +8,7 @@ and comprehensive debugging support.
 import logging
 import logging.handlers
 import sys
+import warnings
 from pathlib import Path
 from typing import Dict, Any, Optional
 import json
@@ -84,7 +85,7 @@ class VideoAnnotatorLoggingConfig:
         self.request_log_file = self.logs_dir / "api_requests.log"
         self.debug_log_file = self.logs_dir / "debug.log"
         
-    def setup_logging(self) -> Dict[str, logging.Logger]:
+    def setup_logging(self, capture_warnings: bool = True, capture_stdstreams: bool = False) -> Dict[str, logging.Logger]:
         """Set up comprehensive logging system."""
         
         # Clear any existing handlers
@@ -97,6 +98,11 @@ class VideoAnnotatorLoggingConfig:
         
         loggers = {}
         
+        # Optionally capture Python warnings and redirect them to the logging system
+        if capture_warnings:
+            # This routes warnings.warn(...) into the logging subsystem under 'py.warnings'
+            logging.captureWarnings(True)
+
         # 1. Console Logger (human-readable)
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(logging.INFO)
@@ -186,8 +192,55 @@ class VideoAnnotatorLoggingConfig:
             debug_logger.addHandler(console_handler)
             loggers["debug"] = debug_logger
         
-        # Configure third-party loggers
+        # Attach handlers to important third-party loggers so their messages
+        # (e.g., CUDA / PyTorch compatibility warnings) are captured.
+        third_party_names = ["torch", "ultralytics", "transformers", "whisper"]
+        for name in third_party_names:
+            try:
+                third_logger = logging.getLogger(name)
+                # clear to avoid duplicate handlers
+                third_logger.handlers.clear()
+                third_logger.addHandler(console_handler)
+                third_logger.addHandler(api_handler)
+                third_logger.addHandler(error_handler)
+                third_logger.setLevel(logging.WARNING)
+            except Exception:
+                # Non-fatal: continue
+                pass
+
+        # Configure other third-party logger level adjustments
         self._configure_third_party_loggers()
+
+        # Route Python warnings (via 'py.warnings') into our handlers so they appear in logs
+        if capture_warnings:
+            py_warn_logger = logging.getLogger('py.warnings')
+            py_warn_logger.handlers.clear()
+            # Warnings are generally WARNING-level, attach console and api handlers
+            py_warn_logger.addHandler(console_handler)
+            py_warn_logger.addHandler(api_handler)
+            py_warn_logger.addHandler(error_handler)
+            py_warn_logger.setLevel(logging.WARNING)
+
+        # Optionally redirect stdout/stderr into the logging system. Useful to capture
+        # stray print() calls (e.g., legacy code printing CUDA status) into structured logs.
+        if capture_stdstreams:
+            class StreamToLogger:
+                def __init__(self, logger, level=logging.INFO):
+                    self.logger = logger
+                    self.level = level
+                    self._buffer = ''
+
+                def write(self, message):
+                    if message and message.strip():
+                        # Preserve newlines in messages
+                        for line in message.rstrip().splitlines():
+                            self.logger.log(self.level, line)
+
+                def flush(self):
+                    pass
+
+            sys.stdout = StreamToLogger(api_logger if 'api' in locals() else logging.getLogger(), logging.INFO)
+            sys.stderr = StreamToLogger(error_handler if False else logging.getLogger(), logging.ERROR)
         
         return loggers
     
@@ -225,11 +278,19 @@ class VideoAnnotatorLoggingConfig:
 # Global logging configuration instance
 _logging_config: Optional[VideoAnnotatorLoggingConfig] = None
 
-def setup_videoannotator_logging(logs_dir: str = "logs", log_level: str = "INFO") -> Dict[str, logging.Logger]:
-    """Set up VideoAnnotator logging system."""
+def setup_videoannotator_logging(logs_dir: str = "logs", log_level: str = "INFO",
+                                 capture_warnings: bool = True,
+                                 capture_stdstreams: bool = False) -> Dict[str, logging.Logger]:
+    """Set up VideoAnnotator logging system.
+
+    New optional flags:
+    - capture_warnings: Route Python warnings into the logging system (default: True)
+    - capture_stdstreams: Redirect stdout/stderr into loggers (default: False)
+    """
     global _logging_config
     _logging_config = VideoAnnotatorLoggingConfig(logs_dir, log_level)
-    return _logging_config.setup_logging()
+    return _logging_config.setup_logging(capture_warnings=capture_warnings,
+                                         capture_stdstreams=capture_stdstreams)
 
 def get_logger(name: str) -> logging.Logger:
     """Get a logger by name."""
