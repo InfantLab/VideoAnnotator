@@ -31,7 +31,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
   const [token, setToken] = useState(
     localStorage.getItem('videoannotator_api_token') ||
     import.meta.env.VITE_API_TOKEN ||
-    ''
+    'dev-token'
   );
   const [showToken, setShowToken] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -57,7 +57,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
       // Test basic connectivity
       await testClient.healthCheck();
 
-      // Try to get token info if debug endpoint is available
+      // Try to get token info if debug endpoint is available (optional, may not be enabled)
       try {
         const response = await fetch(`${urlToTest}/api/v1/debug/token-info`, {
           headers: { 'Authorization': `Bearer ${tokenToTest}` }
@@ -71,6 +71,20 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
             permissions: data.token?.permissions || [],
             expiresAt: data.token?.expires_at
           });
+        } else if (response.status === 401 || response.status === 404) {
+          // Debug endpoint not available or requires special permissions - this is normal
+          // Fall through to basic validation
+          const jobsResponse = await fetch(`${urlToTest}/api/v1/jobs?per_page=1`, {
+            headers: { 'Authorization': `Bearer ${tokenToTest}` }
+          });
+
+          if (jobsResponse.ok || jobsResponse.status === 404) {
+            setTokenStatus({ isValid: true });
+          } else if (jobsResponse.status === 401) {
+            setTokenStatus({ isValid: false, error: 'Invalid or expired token' });
+          } else {
+            setTokenStatus({ isValid: false, error: `Unexpected response: ${jobsResponse.status}` });
+          }
         } else {
           // Token works but no debug info available
           setTokenStatus({ isValid: true });
@@ -139,20 +153,24 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
   }, [apiUrl, token]);
 
   const resetToDefaults = () => {
-    // Clear localStorage completely
-    localStorage.removeItem('videoannotator_api_url');
-    localStorage.removeItem('videoannotator_api_token');
-
     // Reset to environment variable defaults
     const defaultUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:18011';
     const defaultToken = import.meta.env.VITE_API_TOKEN || 'dev-token';
 
+    // Save defaults to localStorage immediately
+    localStorage.setItem('videoannotator_api_url', defaultUrl);
+    localStorage.setItem('videoannotator_api_token', defaultToken);
+
     setApiUrl(defaultUrl);
     setToken(defaultToken);
+    setHasUnsavedChanges(false); // Already saved
+
+    // Update the global API client
+    (apiClient as any).baseURL = defaultUrl.replace(/\/$/, '');
+    (apiClient as any).token = defaultToken;
 
     // Clear any previous token status
     setTokenStatus(null);
-    setHasUnsavedChanges(true);
 
     // Auto-test the defaults
     setTimeout(() => {

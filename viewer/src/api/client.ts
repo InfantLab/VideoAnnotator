@@ -64,6 +64,10 @@ class APIClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
+    // Always get fresh values from localStorage in case they were updated
+    this.baseURL = getApiBaseUrl().replace(/\/$/, '');
+    this.token = getApiToken();
+
     const url = `${this.baseURL}${endpoint}`;
 
     const defaultHeaders: Record<string, string> = {
@@ -452,7 +456,7 @@ class APIClient {
       // Try health check first
       await this.healthCheck();
 
-      // Try to get detailed token info if available
+      // Try to get detailed token info if available (optional debug endpoint)
       try {
         const response = await fetch(`${this.baseURL}/api/v1/debug/token-info`, {
           headers: { 'Authorization': `Bearer ${this.token}` }
@@ -467,8 +471,9 @@ class APIClient {
             expiresAt: data.token?.expires_at
           };
         }
+        // If 401/404, silently fall through to alternative validation
       } catch {
-        // Debug endpoint might not exist
+        // Debug endpoint might not exist or require special permissions - this is normal
       }
 
       // Fallback: try multiple authenticated endpoints

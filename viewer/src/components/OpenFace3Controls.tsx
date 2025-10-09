@@ -119,14 +119,22 @@ export const OpenFace3Controls = ({
       serverSupportsOpenFace3,
       jobRanFaceAnalysis,
       data: dataAvailability,
-      // Combined availability: server supports it AND job ran it AND data exists
+      // Combined availability: 
+      // If we have job info: server supports it AND job ran it AND data exists
+      // If no job info (demo data): just check if data exists
       combined: {
-        landmarks_2d: serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.landmarks_2d,
-        action_units: serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.action_units,
-        head_pose: serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.head_pose,
-        gaze: serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.gaze,
-        emotions: serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.emotions,
-        face_boxes: serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.face_boxes
+        landmarks_2d: (jobPipelines.length === 0 && dataAvailability.landmarks_2d) ||
+          (serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.landmarks_2d),
+        action_units: (jobPipelines.length === 0 && dataAvailability.action_units) ||
+          (serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.action_units),
+        head_pose: (jobPipelines.length === 0 && dataAvailability.head_pose) ||
+          (serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.head_pose),
+        gaze: (jobPipelines.length === 0 && dataAvailability.gaze) ||
+          (serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.gaze),
+        emotions: (jobPipelines.length === 0 && dataAvailability.emotions) ||
+          (serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.emotions),
+        face_boxes: (jobPipelines.length === 0 && dataAvailability.face_boxes) ||
+          (serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.face_boxes)
       }
     };
   };
@@ -174,18 +182,26 @@ export const OpenFace3Controls = ({
 
   // Toggle all features
   const handleToggleAll = () => {
-    const allEnabled = settings.landmarks_2d && settings.action_units && settings.head_pose &&
-      settings.gaze && settings.emotions && settings.face_boxes;
+    // Check if any available features are enabled
+    const anyEnabled = (settings.landmarks_2d && availability.combined.landmarks_2d) ||
+      (settings.action_units && availability.combined.action_units) ||
+      (settings.head_pose && availability.combined.head_pose) ||
+      (settings.gaze && availability.combined.gaze) ||
+      (settings.emotions && availability.combined.emotions) ||
+      (settings.face_boxes && availability.combined.face_boxes);
+
+    // If any are enabled, turn all off; otherwise turn all available ones on
+    const shouldEnable = !anyEnabled;
 
     onChange({
       ...settings,
-      enabled: !allEnabled,
-      landmarks_2d: !allEnabled && availability.combined.landmarks_2d,
-      action_units: !allEnabled && availability.combined.action_units,
-      head_pose: !allEnabled && availability.combined.head_pose,
-      gaze: !allEnabled && availability.combined.gaze,
-      emotions: !allEnabled && availability.combined.emotions,
-      face_boxes: !allEnabled && availability.combined.face_boxes
+      enabled: shouldEnable,
+      landmarks_2d: shouldEnable && availability.combined.landmarks_2d,
+      action_units: shouldEnable && availability.combined.action_units,
+      head_pose: shouldEnable && availability.combined.head_pose,
+      gaze: shouldEnable && availability.combined.gaze,
+      emotions: shouldEnable && availability.combined.emotions,
+      face_boxes: shouldEnable && availability.combined.face_boxes
     });
   };
 
