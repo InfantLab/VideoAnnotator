@@ -84,6 +84,16 @@ v1.2.x pipeline introspection (roadmap):
 - When adding API features, add tests that mock network. For CI, avoid real network calls.
 - For local API verification, you may use `scripts/test_api_quick.py` against `http://localhost:18011`.
 
+### QA Testing Guidelines
+
+**CRITICAL: Agents must follow these QA rules:**
+
+- **Don't mark your own homework**: NEVER mark QA checklist items as complete `[x]`. Only human testers can verify functionality works in practice.
+- **Just the facts**: QA checklists are for manual verification steps, not detailed technical explanations of what was fixed.
+- **Code fixes vs Testing**: Use comments like `**CODE FIXED**:` to note what was changed in code, but leave actual testing checkboxes `[ ]` unchecked for human verification.
+
+QA testers need clean, actionable checklists - not implementation details.
+
 ## Documentation
 
 - User-facing docs live in `docs/`. Developer roadmaps and plans in `docs/development/`.

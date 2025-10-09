@@ -5,6 +5,70 @@ All notable changes to Video Annotation Viewer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-09-26
+
+### 🎯 **Major Changes**
+- **Dynamic Pipeline Integration**: Complete VideoAnnotator v1.2.x pipeline discovery and introspection support
+- **Capability-Aware UI**: Smart overlay controls that adapt to server capabilities and job-specific data availability
+- **Dynamic Parameter Forms**: Auto-generated configuration forms based on server-provided parameter schemas
+- **Enhanced Server Diagnostics**: Comprehensive pipeline catalog inspection and server capability detection
+
+### ✨ **Added**
+- **Pipeline Discovery System**:
+  - Dynamic pipeline catalog fetching from VideoAnnotator server
+  - Server capability detection and feature flag support
+  - Automatic fallback to legacy mode for older servers
+  - Pipeline cache management with TTL and manual refresh
+- **Smart Job Creation Wizard**:
+  - Parameter forms generated from server schemas with validation
+  - Support for all parameter types (boolean, number, enum, multiselect, object, string)
+  - Real-time validation with min/max constraints and required field checking
+  - Pipeline selection based on server availability and defaults
+- **Capability-Aware Viewer**:
+  - OpenFace3 controls now check server capabilities and job pipelines
+  - Helpful tooltips explaining why features are unavailable
+  - Visual indicators for available vs unavailable overlay features
+  - Job-specific pipeline awareness for overlay controls
+- **Enhanced Settings & Diagnostics**:
+  - Server pipeline catalog browser with version and model information
+  - Feature flag display and server capability inspection
+  - Pipeline refresh and cache management controls
+  - Comprehensive server diagnostics and debugging tools
+
+### 🔧 **Changed**
+- **API Client Architecture**:
+  - Refactored error handling into separate module (`src/api/handleError.ts`)
+  - Enhanced pipeline catalog caching with intelligent invalidation
+  - Improved server version detection and feature negotiation
+- **React Architecture**:
+  - Added `PipelineProvider` context for app-wide pipeline state management
+  - New React hooks for pipeline data management (`usePipelineData`, `usePipelineContext`)
+  - Enhanced error boundaries and loading state management
+- **UI/UX Improvements**:
+  - Pipeline controls show clear availability status with color coding
+  - Improved parameter form UX with better validation feedback
+  - Enhanced settings page with comprehensive server information
+
+### 🐛 **Fixed**
+- **Type Safety**: Improved TypeScript definitions for pipeline types and API responses
+- **Error Handling**: Better error recovery for network failures and server incompatibilities
+- **Performance**: Optimized pipeline data loading and caching strategies
+
+### 🧪 **Testing**
+- **E2E Tests**: Playwright smoke tests passing across all browsers
+- **Unit Tests**: Pipeline integration test coverage added
+- **QA Framework**: Comprehensive v0.4.0 testing checklist created
+
+## [0.3.1] - 2025-09-26
+
+### 🔧 **Changed**
+- **UI Readability**: Improved text visibility in both light and dark themes, particularly for the JSON configuration editor in the job creation wizard.
+- **User Guidance**: Enhanced descriptions for pipelines and clearer instructions for API token setup to improve user experience.
+
+### 🐛 **Fixed**
+- **Stability**: Resolved a crash on the job detail page when encountering invalid or missing job data.
+- **Console Errors**: Significantly reduced console error spam by addressing React Router warnings and improving Server-Sent Events (SSE) connection handling.
+
 ## [0.3.0] - 2025-08-25
 
 ### 🎯 **Major Changes**

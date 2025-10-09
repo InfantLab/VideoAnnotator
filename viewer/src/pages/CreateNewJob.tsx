@@ -5,7 +5,8 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { apiClient, handleAPIError } from "@/api/client";
+import { apiClient } from "@/api/client";
+import { handleAPIError } from "@/api/handleError";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import vavIcon from "@/assets/v-a-v.icon.png";
 import { usePipelineCatalog, useRefreshPipelineCatalog } from "@/hooks/usePipelineCatalog";
@@ -279,10 +280,10 @@ const CreateNewJob = () => {
                 <div
                   key={step.id}
                   className={`text-center ${step.id === currentStep
-                      ? "text-blue-600"
-                      : step.id < currentStep
-                        ? "text-green-600"
-                        : "text-muted-foreground"
+                    ? "text-blue-600"
+                    : step.id < currentStep
+                      ? "text-green-600"
+                      : "text-muted-foreground"
                     }`}
                 >
                   <div className="text-sm font-medium">{step.title}</div>

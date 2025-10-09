@@ -7,7 +7,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { CheckCircle, AlertCircle, Settings, ExternalLink, Eye, EyeOff } from 'lucide-react';
-import { apiClient, handleAPIError } from '@/api/client';
+import { apiClient } from '@/api/client';
+import { handleAPIError } from '@/api/handleError';
 
 interface TokenSetupProps {
   onTokenConfigured?: () => void;
@@ -137,6 +138,28 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
     );
   }, [apiUrl, token]);
 
+  const resetToDefaults = () => {
+    // Clear localStorage completely
+    localStorage.removeItem('videoannotator_api_url');
+    localStorage.removeItem('videoannotator_api_token');
+
+    // Reset to environment variable defaults
+    const defaultUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:18011';
+    const defaultToken = import.meta.env.VITE_API_TOKEN || 'dev-token';
+
+    setApiUrl(defaultUrl);
+    setToken(defaultToken);
+
+    // Clear any previous token status
+    setTokenStatus(null);
+    setHasUnsavedChanges(true);
+
+    // Auto-test the defaults
+    setTimeout(() => {
+      validateToken(defaultUrl, defaultToken);
+    }, 100);
+  };
+
   const handleTestConnection = () => {
     validateToken();
   };
@@ -214,12 +237,12 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                       <div className="space-y-2">
                         <p className="font-medium text-green-700">✅ Token is valid and working!</p>
                         {tokenStatus.user && (
-                          <p>Authenticated as: <Badge variant="secondary">{tokenStatus.user}</Badge></p>
+                          <div>Authenticated as: <Badge variant="secondary">{tokenStatus.user}</Badge></div>
                         )}
                         {tokenStatus.permissions && tokenStatus.permissions.length > 0 && (
-                          <p>Permissions: {tokenStatus.permissions.map(p =>
+                          <div>Permissions: {tokenStatus.permissions.map(p =>
                             <Badge key={p} variant="outline" className="mr-1">{p}</Badge>
-                          )}</p>
+                          )}</div>
                         )}
                         {tokenStatus.expiresAt && (
                           <p className="text-sm text-muted-foreground">
@@ -244,6 +267,15 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
               variant="outline"
             >
               {isValidating ? 'Testing...' : 'Test Connection'}
+            </Button>
+
+            <Button
+              onClick={resetToDefaults}
+              variant="outline"
+              className="text-orange-600 hover:text-orange-700"
+              title={`Reset to: URL=${import.meta.env.VITE_API_BASE_URL || 'http://localhost:18011'}, Token=${import.meta.env.VITE_API_TOKEN || 'dev-token'}`}
+            >
+              Reset to Defaults
             </Button>
 
             <Button

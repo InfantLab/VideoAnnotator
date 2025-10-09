@@ -10,6 +10,7 @@ import type {
   VideoAnnotatorServerInfo,
   PipelineCapability
 } from '@/types/pipelines';
+import { APIError } from './handleError';
 
 // API configuration with localStorage fallback
 const getApiBaseUrl = () => {
@@ -30,23 +31,12 @@ export type JobListResponse = paths['/api/v1/jobs']['get']['responses']['200']['
 export type PipelineResponse = paths['/api/v1/pipelines']['get']['responses']['200']['content']['application/json'][0];
 export type SubmitJobRequest = paths['/api/v1/jobs']['post']['requestBody']['content']['multipart/form-data'];
 
-// API Error class
-export class APIError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-    public response?: Response
-  ) {
-    super(message);
-    this.name = 'APIError';
-  }
-}
-
 // HTTP client with authentication and error handling
 class APIClient {
   public baseURL: string;
   public token: string;
   private serverInfoCache: VideoAnnotatorServerInfo | null = null;
+  private serverInfoPromise: Promise<VideoAnnotatorServerInfo | null> | null = null;
   private featureFlags: VideoAnnotatorFeatureFlags = {};
   private pipelineCatalogCache: PipelineCatalogCacheEntry | null = null;
   private readonly pipelineCatalogTTL = 5 * 60 * 1000; // 5 minutes
@@ -134,10 +124,12 @@ class APIClient {
   }
 
   private async detectServerInfo(): Promise<VideoAnnotatorServerInfo | null> {
+    // Try endpoints in order from most likely to work to least likely
+    // Based on server's actual OpenAPI spec at /openapi.json
     const candidateEndpoints = [
-      '/api/v1/system/info',
-      '/api/v1/system/server-info',
-      '/api/v1/debug/server-info'
+      '/api/v1/debug/server-info',  // ✅ Exists in server v1.2.0 OpenAPI spec
+      '/api/v1/system/server-info', // ❌ Missing from server OpenAPI spec (404 expected)
+      '/api/v1/system/info'         // ❌ Missing from server OpenAPI spec (404 expected)
     ];
 
     for (const endpoint of candidateEndpoints) {
@@ -191,6 +183,19 @@ class APIClient {
       return this.serverInfoCache;
     }
 
+    // Prevent concurrent requests
+    if (!forceRefresh && this.serverInfoPromise) {
+      return this.serverInfoPromise;
+    }
+
+    this.serverInfoPromise = this.fetchServerInfo();
+    const result = await this.serverInfoPromise;
+    this.serverInfoPromise = null;
+
+    return result;
+  }
+
+  private async fetchServerInfo(): Promise<VideoAnnotatorServerInfo | null> {
     try {
       const info = await this.detectServerInfo();
       if (info) {
@@ -207,15 +212,24 @@ class APIClient {
   }
 
   private mapLegacyPipelineResponse(pipelines: PipelineResponse[]): PipelineCatalog {
-    const descriptors: PipelineDescriptor[] = pipelines.map((pipeline) => ({
+    // Validate that pipelines is an array
+    if (!Array.isArray(pipelines)) {
+      console.warn('Expected pipelines to be an array, got:', typeof pipelines, pipelines);
+      return {
+        pipelines: [],
+        source: 'legacy-list'
+      };
+    }
+
+    const descriptors: PipelineDescriptor[] = pipelines.map((pipeline: any) => ({
       id: pipeline.slug || pipeline.name,
-      name: pipeline.name,
+      name: pipeline.display_name || pipeline.name,
       description: pipeline.description,
-      group: pipeline.category,
-      version: pipeline.version,
-      model: pipeline.model_name,
-      outputFormats: pipeline.output_formats,
-      defaultEnabled: pipeline.default_enabled,
+      group: pipeline.pipeline_family || pipeline.category,
+      version: pipeline.version || pipeline.variant || 'unknown',
+      model: pipeline.model_name || pipeline.variant,
+      outputFormats: pipeline.output_formats || (pipeline.outputs ? pipeline.outputs.map((o: any) => o.format) : []),
+      defaultEnabled: pipeline.default_enabled ?? pipeline.enabled ?? true,
       capabilities: pipeline.capabilities as PipelineCapability[] | undefined,
       parameters: []
     }));
@@ -258,52 +272,42 @@ class APIClient {
 
     const serverInfo = await this.getServerInfo(forceRefresh);
 
-    // Attempt new catalog endpoint first
+    // Use the actual server endpoint: /api/v1/pipelines/ (not /catalog)
+    // This is the real endpoint that exists according to server OpenAPI spec
     try {
-      const data = await this.request<any>('/api/v1/pipelines/catalog');
-      if (data && Array.isArray(data.pipelines)) {
-        const catalog: PipelineCatalog = {
-          pipelines: data.pipelines,
-          version: data.version || data.catalog_version,
-          generatedAt: data.generated_at,
-          source: 'api-v1.2.x'
-        };
+      const pipelineData = await this.getPipelines();
+      const catalog = this.mapLegacyPipelineResponse(pipelineData);
 
-        this.pipelineCatalogCache = {
-          catalog,
-          server: serverInfo ?? this.serverInfoCache ?? {
-            version: 'unknown',
-            features: this.featureFlags
-          },
-          fetchedAt: now
-        };
+      this.pipelineCatalogCache = {
+        catalog,
+        server: serverInfo ?? this.serverInfoCache ?? {
+          version: 'unknown',
+          features: this.featureFlags
+        },
+        fetchedAt: now
+      };
 
-        this.featureFlags.pipelineCatalog = true;
-        return this.buildCatalogResponse(catalog, serverInfo);
-      }
+      return this.buildCatalogResponse(catalog, serverInfo);
     } catch (error) {
-      if (error instanceof APIError && (error.status === 404 || error.status === 405)) {
-        // Endpoint not available; fall back to legacy
-        this.featureFlags.pipelineCatalog = false;
-      } else {
-        throw error;
-      }
+      console.warn('Legacy pipeline endpoint also failed:', error);
+
+      // Return empty catalog as final fallback
+      const emptyCatalog: PipelineCatalog = {
+        pipelines: [],
+        source: 'fallback-empty'
+      };
+
+      this.pipelineCatalogCache = {
+        catalog: emptyCatalog,
+        server: serverInfo ?? this.serverInfoCache ?? {
+          version: 'unknown',
+          features: this.featureFlags
+        },
+        fetchedAt: now
+      };
+
+      return this.buildCatalogResponse(emptyCatalog, serverInfo);
     }
-
-    // Legacy fallback
-    const legacyPipelines = await this.getPipelines();
-    const catalog = this.mapLegacyPipelineResponse(legacyPipelines);
-
-    this.pipelineCatalogCache = {
-      catalog,
-      server: serverInfo ?? this.serverInfoCache ?? {
-        version: 'unknown',
-        features: this.featureFlags
-      },
-      fetchedAt: now
-    };
-
-    return this.buildCatalogResponse(catalog, serverInfo);
   }
 
   async getPipelineSchema(pipelineId: string): Promise<PipelineSchemaResponse> {
@@ -404,7 +408,17 @@ class APIClient {
 
   // Pipeline endpoints
   async getPipelines(): Promise<PipelineResponse[]> {
-    return this.request('/api/v1/pipelines');
+    const response = await this.request<{ pipelines: PipelineResponse[]; total?: number }>('/api/v1/pipelines');
+
+    // Handle both legacy format (direct array) and new format (object with pipelines key)
+    if (Array.isArray(response)) {
+      return response;
+    } else if (response && Array.isArray(response.pipelines)) {
+      return response.pipelines;
+    } else {
+      console.warn('Unexpected pipeline response format:', response);
+      return [];
+    }
   }
 
   // Server-Sent Events connection
@@ -457,18 +471,31 @@ class APIClient {
         // Debug endpoint might not exist
       }
 
-      // Fallback: try an authenticated endpoint
-      const response = await fetch(`${this.baseURL}/api/v1/jobs?per_page=1`, {
-        headers: { 'Authorization': `Bearer ${this.token}` }
-      });
+      // Fallback: try multiple authenticated endpoints
+      const candidateEndpoints = [
+        '/api/v1/pipelines',     // This endpoint works according to test results
+        '/api/v1/jobs?per_page=1' // Original fallback (might return 500)
+      ];
 
-      if (response.ok || response.status === 404) {
-        return { isValid: true };
-      } else if (response.status === 401) {
-        return { isValid: false, error: 'Invalid or expired token' };
-      } else {
-        return { isValid: false, error: `Unexpected response: ${response.status}` };
+      for (const endpoint of candidateEndpoints) {
+        try {
+          const response = await fetch(`${this.baseURL}${endpoint}`, {
+            headers: { 'Authorization': `Bearer ${this.token}` }
+          });
+
+          if (response.ok || response.status === 404) {
+            return { isValid: true };
+          } else if (response.status === 401) {
+            return { isValid: false, error: 'Invalid or expired token' };
+          }
+          // Continue to next endpoint if we get 500 or other errors
+        } catch {
+          // Continue to next endpoint on network errors
+        }
       }
+
+      // If all endpoints failed, assume invalid token
+      return { isValid: false, error: 'Could not verify token with any endpoint' };
     } catch (error) {
       return {
         isValid: false,
@@ -483,14 +510,3 @@ export const apiClient = new APIClient();
 
 // Export the class for custom instances
 export { APIClient };
-
-// Helper function to handle API errors in React components
-export const handleAPIError = (error: unknown): string => {
-  if (error instanceof APIError) {
-    return error.message;
-  }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return 'An unexpected error occurred';
-};

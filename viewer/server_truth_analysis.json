@@ -1,0 +1,157 @@
+{
+  "timestamp": "2025-09-26",
+  "analysis": "Server truth investigation",
+  "capabilities": {
+    "/health": {
+      "status": "healthy",
+      "api_version": "1.2.0",
+      "videoannotator_version": "1.2.2",
+      "message": "VideoAnnotator API is running",
+      "logging": "enhanced",
+      "memory_percent": 62.8,
+      "database": {
+        "status": "healthy",
+        "message": "Database healthy - 0 jobs in sqlite backend"
+      }
+    },
+    "/api/v1/system/health": {
+      "status": "healthy",
+      "timestamp": "2025-09-26T16:04:42.474649",
+      "api_version": "1.2.2",
+      "videoannotator_version": "1.2.2",
+      "system": {
+        "platform": "Linux-5.15.153.1-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+        "python_version": "3.12.11",
+        "cpu_count": 24,
+        "cpu_percent": 0.3,
+        "memory_percent": 62.9,
+        "memory": {
+          "total": 16642498560,
+          "available": 6180020224,
+          "percent": 62.9,
+          "used": 10116308992,
+          "free": 4736454656
+        },
+        "disk": {
+          "total": 1081101176832,
+          "used": 277818474496,
+          "free": 748290347008,
+          "percent": 25.6977312068149
+        }
+      },
+      "database": {
+        "status": "healthy",
+        "message": "Database healthy - 0 jobs in sqlite backend"
+      },
+      "gpu": {
+        "available": true,
+        "device_count": 1,
+        "current_device": 0,
+        "device_name": "NVIDIA GeForce GTX 1060 6GB",
+        "memory_allocated": 0,
+        "memory_reserved": 0
+      },
+      "pipelines": {
+        "total": 6,
+        "names": [
+          "audio_processing",
+          "face_laion_clip",
+          "face_openface3_embedding",
+          "person_tracking",
+          "scene_detection",
+          "voice_emotion_baseline"
+        ]
+      },
+      "services": {
+        "database": {
+          "status": "healthy",
+          "message": "Database healthy - 0 jobs in sqlite backend"
+        },
+        "job_queue": "embedded",
+        "pipelines": "ready"
+      },
+      "uptime_seconds": 1253
+    },
+    "/api/v1/debug/server-info": {
+      "server": {
+        "version": "1.2.0",
+        "videoannotator_version": "1.2.2",
+        "environment": "development",
+        "start_time": "2025-09-26T15:43:49.088936",
+        "uptime_seconds": 1255,
+        "debug_mode": true,
+        "api_base_path": "/api/v1"
+      },
+      "database": {
+        "backend": "sqlite",
+        "path": "/workspaces/VideoAnnotator/videoannotator.db",
+        "connection_status": "healthy",
+        "total_jobs": 0,
+        "active_connections": 1,
+        "size_mb": 0.08
+      },
+      "pipelines": {
+        "initialized": [
+          "person_tracking",
+          "face_analysis",
+          "scene_detection",
+          "audio_processing"
+        ],
+        "available": [
+          "person_tracking",
+          "face_analysis",
+          "scene_detection",
+          "audio_processing"
+        ],
+        "loading_errors": [],
+        "total_available": 4,
+        "initialization_time": "2.3 seconds"
+      },
+      "system": {
+        "platform": "Linux-5.15.153.1-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+        "python_version": "3.12.11",
+        "cpu_count": 24,
+        "cpu_usage_percent": 0.8,
+        "memory_total_gb": 15.5,
+        "memory_used_gb": 9.42,
+        "memory_usage_percent": 62.8,
+        "gpu": {
+          "available": true,
+          "device_count": 1,
+          "current_device": 0,
+          "device_name": "NVIDIA GeForce GTX 1060 6GB",
+          "memory_allocated_gb": 0.0,
+          "memory_reserved_gb": 0.0
+        }
+      },
+      "request_stats": {
+        "total_requests": 0,
+        "requests_last_hour": 0,
+        "average_response_time_ms": 0
+      }
+    }
+  },
+  "available_endpoints": [
+    "/api/v1/jobs/",
+    "/api/v1/jobs/{job_id}",
+    "/api/v1/jobs/{job_id}/results",
+    "/api/v1/jobs/{job_id}/results/files/{pipeline_name}",
+    "/api/v1/pipelines/",
+    "/api/v1/pipelines/{pipeline_name}",
+    "/api/v1/pipelines/{pipeline_name}/validate",
+    "/api/v1/system/health",
+    "/api/v1/system/metrics",
+    "/api/v1/system/config",
+    "/api/v1/system/database",
+    "/api/v1/debug/server-info",
+    "/api/v1/debug/token-info",
+    "/api/v1/debug/pipelines",
+    "/api/v1/debug/jobs/{job_id}",
+    "/api/v1/debug/request-log",
+    "/api/v1/debug/mock-events",
+    "/api/v1/debug/background-jobs",
+    "/api/v1/events/stream",
+    "/health"
+  ],
+  "recommendations": "Align client with server's actual API version"
+}

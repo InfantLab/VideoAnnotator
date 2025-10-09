@@ -14,7 +14,14 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StandardAnnotationData, OverlaySettings, TimelineSettings } from '@/types/annotations';
 
-export const VideoAnnotationViewer = () => {
+interface VideoAnnotationViewerProps {
+  /** Pipeline IDs that were used to generate the current annotation data */
+  jobPipelines?: string[];
+}
+
+export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
+  jobPipelines = []
+}) => {
   const [showWelcome, setShowWelcome] = useState(true);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [annotationData, setAnnotationData] = useState<StandardAnnotationData | null>(null);
@@ -155,7 +162,7 @@ export const VideoAnnotationViewer = () => {
       <>
         <WelcomeScreen onGetStarted={handleGetStarted} onViewDemo={handleViewDemo} />
         {/* Debug Panel - Available on all pages */}
-        <DebugPanel 
+        <DebugPanel
           isOpen={showDebugPanel}
           onClose={() => setShowDebugPanel(false)}
         />
@@ -189,11 +196,11 @@ export const VideoAnnotationViewer = () => {
               onVideoLoad={handleVideoLoad}
               onAnnotationLoad={handleAnnotationLoad}
             />
-            
+
             {/* Debug button for file uploader page */}
             <div className="fixed bottom-4 right-4">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 onClick={() => setShowDebugPanel(true)}
                 className="text-xs bg-background border"
@@ -204,9 +211,9 @@ export const VideoAnnotationViewer = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Debug Panel - Available on all pages */}
-        <DebugPanel 
+        <DebugPanel
           isOpen={showDebugPanel}
           onClose={() => setShowDebugPanel(false)}
         />
@@ -221,8 +228,8 @@ export const VideoAnnotationViewer = () => {
         <div className="flex-shrink-0 p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 onClick={handleBackToHome}
                 className="flex items-center gap-2"
@@ -237,7 +244,7 @@ export const VideoAnnotationViewer = () => {
                 {annotationData.video_info?.filename || videoFile.name}
               </div>
               <div className="flex gap-2">
-                <FileViewer 
+                <FileViewer
                   annotationData={annotationData}
                   trigger={
                     <Button variant="outline" size="sm" className="flex items-center gap-2">
@@ -245,8 +252,8 @@ export const VideoAnnotationViewer = () => {
                     </Button>
                   }
                 />
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => setShowDebugPanel(true)}
                   className="text-xs"
@@ -322,21 +329,22 @@ export const VideoAnnotationViewer = () => {
                   onTimelineChange={setTimelineSettings}
                   annotationData={annotationData}
                 />
-                
+
                 {/* OpenFace3 Controls */}
                 <OpenFace3Controls
                   settings={openface3Settings}
                   onChange={setOpenface3Settings}
                   faceData={annotationData?.openface3_faces}
+                  jobPipelines={jobPipelines}
                 />
               </div>
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Debug Panel */}
-      <DebugPanel 
+      <DebugPanel
         isOpen={showDebugPanel}
         onClose={() => setShowDebugPanel(false)}
       />

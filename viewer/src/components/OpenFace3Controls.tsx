@@ -12,12 +12,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { StandardFaceAnnotation } from '@/types/annotations';
+import { usePipelineContext } from '@/contexts/PipelineContext';
 
 // OpenFace3 Control Settings Interface
 export interface OpenFace3Settings {
   // Master toggle
   enabled: boolean;
-  
+
   // Individual feature toggles
   landmarks_2d: boolean;
   action_units: boolean;
@@ -25,7 +26,7 @@ export interface OpenFace3Settings {
   gaze: boolean;
   emotions: boolean;
   face_boxes: boolean;
-  
+
   // Display options
   confidence_threshold: number;
   show_confidence_scores: boolean;
@@ -51,39 +52,82 @@ interface OpenFace3ControlsProps {
   onChange: (settings: OpenFace3Settings) => void;
   faceData?: StandardFaceAnnotation[] | null;
   isCollapsed?: boolean;
+  jobPipelines?: string[]; // Pipelines that were run for this specific job
 }
 
-export const OpenFace3Controls = ({ 
-  settings, 
-  onChange, 
+export const OpenFace3Controls = ({
+  settings,
+  onChange,
   faceData,
-  isCollapsed = false 
+  isCollapsed = false,
+  jobPipelines = []
 }: OpenFace3ControlsProps) => {
-  
-  // Feature availability check
-  const getFeatureAvailability = () => {
-    if (!faceData || faceData.length === 0) {
+  const { isPipelineAvailable, getPipeline } = usePipelineContext();
+
+  // Check server pipeline availability and job-specific availability
+  const getServerCapabilities = () => {
+    const facePipeline = getPipeline('face_analysis') || getPipeline('openface3') || getPipeline('face');
+    if (!facePipeline) {
       return {
-        landmarks_2d: false,
-        action_units: false,
-        head_pose: false,
-        gaze: false,
-        emotions: false,
-        face_boxes: false
+        serverSupportsOpenFace3: false,
+        jobRanFaceAnalysis: false,
+        capabilities: {}
       };
     }
 
-    // Check if any face has each feature
-    const sampleFace = faceData[0];
-    const openface3Data = sampleFace.openface3;
-    
+    const jobRanFaceAnalysis = jobPipelines.includes(facePipeline.id);
+    const capabilities = facePipeline.capabilities?.reduce((acc, cap) => {
+      acc[cap.feature] = cap.enabled;
+      return acc;
+    }, {} as Record<string, boolean>) || {};
+
     return {
-      landmarks_2d: !!(openface3Data?.landmarks_2d && openface3Data.landmarks_2d.length > 0),
-      action_units: !!(openface3Data?.action_units),
-      head_pose: !!(openface3Data?.head_pose),
-      gaze: !!(openface3Data?.gaze),
-      emotions: !!(openface3Data?.emotion),
-      face_boxes: true // Always available if we have face data
+      serverSupportsOpenFace3: true,
+      jobRanFaceAnalysis,
+      capabilities
+    };
+  };
+
+  // Feature availability check combining server capabilities, job pipelines, and data
+  const getFeatureAvailability = () => {
+    const { serverSupportsOpenFace3, jobRanFaceAnalysis, capabilities } = getServerCapabilities();
+
+    // Base data availability check
+    const hasValidData = faceData && faceData.length > 0;
+    const dataAvailability = hasValidData ? (() => {
+      const sampleFace = faceData[0];
+      const openface3Data = sampleFace.openface3;
+
+      return {
+        landmarks_2d: !!(openface3Data?.landmarks_2d && openface3Data.landmarks_2d.length > 0),
+        action_units: !!(openface3Data?.action_units),
+        head_pose: !!(openface3Data?.head_pose),
+        gaze: !!(openface3Data?.gaze),
+        emotions: !!(openface3Data?.emotion),
+        face_boxes: true // Always available if we have face data
+      };
+    })() : {
+      landmarks_2d: false,
+      action_units: false,
+      head_pose: false,
+      gaze: false,
+      emotions: false,
+      face_boxes: false
+    };
+
+    return {
+      serverSupportsOpenFace3,
+      jobRanFaceAnalysis,
+      data: dataAvailability,
+      // Combined availability: server supports it AND job ran it AND data exists
+      combined: {
+        landmarks_2d: serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.landmarks_2d,
+        action_units: serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.action_units,
+        head_pose: serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.head_pose,
+        gaze: serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.gaze,
+        emotions: serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.emotions,
+        face_boxes: serverSupportsOpenFace3 && jobRanFaceAnalysis && dataAvailability.face_boxes
+      }
     };
   };
 
@@ -130,18 +174,18 @@ export const OpenFace3Controls = ({
 
   // Toggle all features
   const handleToggleAll = () => {
-    const allEnabled = settings.landmarks_2d && settings.action_units && settings.head_pose && 
-                      settings.gaze && settings.emotions && settings.face_boxes;
-    
+    const allEnabled = settings.landmarks_2d && settings.action_units && settings.head_pose &&
+      settings.gaze && settings.emotions && settings.face_boxes;
+
     onChange({
       ...settings,
       enabled: !allEnabled,
-      landmarks_2d: !allEnabled && availability.landmarks_2d,
-      action_units: !allEnabled && availability.action_units,
-      head_pose: !allEnabled && availability.head_pose,
-      gaze: !allEnabled && availability.gaze,
-      emotions: !allEnabled && availability.emotions,
-      face_boxes: !allEnabled && availability.face_boxes
+      landmarks_2d: !allEnabled && availability.combined.landmarks_2d,
+      action_units: !allEnabled && availability.combined.action_units,
+      head_pose: !allEnabled && availability.combined.head_pose,
+      gaze: !allEnabled && availability.combined.gaze,
+      emotions: !allEnabled && availability.combined.emotions,
+      face_boxes: !allEnabled && availability.combined.face_boxes
     });
   };
 
@@ -156,11 +200,11 @@ export const OpenFace3Controls = ({
   // Get statistics
   const getStats = () => {
     if (!faceData) return null;
-    
+
     const totalFaces = faceData.length;
-    const avgConfidence = faceData.reduce((sum, face) => 
+    const avgConfidence = faceData.reduce((sum, face) =>
       sum + (face.face_confidence || 0), 0) / totalFaces;
-    
+
     return {
       totalFaces,
       avgConfidence: Math.round(avgConfidence * 100) / 100
@@ -226,7 +270,7 @@ export const OpenFace3Controls = ({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-3">
         {/* Core Features */}
         <div className="space-y-2">
@@ -237,11 +281,14 @@ export const OpenFace3Controls = ({
                 id="landmarks-2d"
                 checked={settings.landmarks_2d && settings.enabled}
                 onCheckedChange={() => handleFeatureToggle('landmarks_2d')}
-                disabled={!availability.landmarks_2d || !hasData}
+                disabled={!availability.combined.landmarks_2d}
+                title={!availability.serverSupportsOpenFace3 ? "Server doesn't support OpenFace3" :
+                  !availability.jobRanFaceAnalysis ? "Face analysis not run for this job" :
+                    !availability.data.landmarks_2d ? "No landmark data available" : ""}
               />
-              <Label 
-                htmlFor="landmarks-2d" 
-                className={`text-xs ${availability.landmarks_2d ? 'text-green-600' : 'text-gray-400'}`}
+              <Label
+                htmlFor="landmarks-2d"
+                className={`text-xs ${availability.combined.landmarks_2d ? 'text-green-600' : 'text-gray-400'}`}
               >
                 Landmarks (98pts)
               </Label>
@@ -253,11 +300,14 @@ export const OpenFace3Controls = ({
                 id="face-boxes"
                 checked={settings.face_boxes && settings.enabled}
                 onCheckedChange={() => handleFeatureToggle('face_boxes')}
-                disabled={!availability.face_boxes || !hasData}
+                disabled={!availability.combined.face_boxes}
+                title={!availability.serverSupportsOpenFace3 ? "Server doesn't support OpenFace3" :
+                  !availability.jobRanFaceAnalysis ? "Face analysis not run for this job" :
+                    !availability.data.face_boxes ? "No face detection data available" : ""}
               />
-              <Label 
-                htmlFor="face-boxes" 
-                className={`text-xs ${availability.face_boxes ? 'text-green-600' : 'text-gray-400'}`}
+              <Label
+                htmlFor="face-boxes"
+                className={`text-xs ${availability.combined.face_boxes ? 'text-green-600' : 'text-gray-400'}`}
               >
                 Face Boxes
               </Label>
@@ -269,11 +319,14 @@ export const OpenFace3Controls = ({
                 id="emotions"
                 checked={settings.emotions && settings.enabled}
                 onCheckedChange={() => handleFeatureToggle('emotions')}
-                disabled={!availability.emotions || !hasData}
+                disabled={!availability.combined.emotions}
+                title={!availability.serverSupportsOpenFace3 ? "Server doesn't support OpenFace3" :
+                  !availability.jobRanFaceAnalysis ? "Face analysis not run for this job" :
+                    !availability.data.emotions ? "No emotion data available" : ""}
               />
-              <Label 
-                htmlFor="emotions" 
-                className={`text-xs ${availability.emotions ? 'text-orange-600' : 'text-gray-400'}`}
+              <Label
+                htmlFor="emotions"
+                className={`text-xs ${availability.combined.emotions ? 'text-orange-600' : 'text-gray-400'}`}
               >
                 Emotions (8 types)
               </Label>
@@ -285,11 +338,14 @@ export const OpenFace3Controls = ({
                 id="action-units"
                 checked={settings.action_units && settings.enabled}
                 onCheckedChange={() => handleFeatureToggle('action_units')}
-                disabled={!availability.action_units || !hasData}
+                disabled={!availability.combined.action_units}
+                title={!availability.serverSupportsOpenFace3 ? "Server doesn't support OpenFace3" :
+                  !availability.jobRanFaceAnalysis ? "Face analysis not run for this job" :
+                    !availability.data.action_units ? "No action unit data available" : ""}
               />
-              <Label 
-                htmlFor="action-units" 
-                className={`text-xs ${availability.action_units ? 'text-purple-600' : 'text-gray-400'}`}
+              <Label
+                htmlFor="action-units"
+                className={`text-xs ${availability.combined.action_units ? 'text-purple-600' : 'text-gray-400'}`}
               >
                 Action Units (8 AUs)
               </Label>
@@ -308,11 +364,14 @@ export const OpenFace3Controls = ({
                 id="head-pose"
                 checked={settings.head_pose && settings.enabled}
                 onCheckedChange={() => handleFeatureToggle('head_pose')}
-                disabled={!availability.head_pose || !hasData}
+                disabled={!availability.combined.head_pose}
+                title={!availability.serverSupportsOpenFace3 ? "Server doesn't support OpenFace3" :
+                  !availability.jobRanFaceAnalysis ? "Face analysis not run for this job" :
+                    !availability.data.head_pose ? "No head pose data available" : ""}
               />
-              <Label 
-                htmlFor="head-pose" 
-                className={`text-xs ${availability.head_pose ? 'text-blue-600' : 'text-gray-400'}`}
+              <Label
+                htmlFor="head-pose"
+                className={`text-xs ${availability.combined.head_pose ? 'text-blue-600' : 'text-gray-400'}`}
               >
                 Head Pose (3D)
               </Label>
@@ -324,11 +383,14 @@ export const OpenFace3Controls = ({
                 id="gaze"
                 checked={settings.gaze && settings.enabled}
                 onCheckedChange={() => handleFeatureToggle('gaze')}
-                disabled={!availability.gaze || !hasData}
+                disabled={!availability.combined.gaze}
+                title={!availability.serverSupportsOpenFace3 ? "Server doesn't support OpenFace3" :
+                  !availability.jobRanFaceAnalysis ? "Face analysis not run for this job" :
+                    !availability.data.gaze ? "No gaze data available" : ""}
               />
-              <Label 
-                htmlFor="gaze" 
-                className={`text-xs ${availability.gaze ? 'text-teal-600' : 'text-gray-400'}`}
+              <Label
+                htmlFor="gaze"
+                className={`text-xs ${availability.combined.gaze ? 'text-teal-600' : 'text-gray-400'}`}
               >
                 Gaze Direction
               </Label>

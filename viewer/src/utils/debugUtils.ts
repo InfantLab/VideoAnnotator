@@ -7,6 +7,7 @@ import { parseRTTM } from '../lib/parsers/rttm'
 import { parseCOCOPersonData } from '../lib/parsers/coco'
 import { parseSceneDetection } from '../lib/parsers/scene'
 import { detectFileType, mergeAnnotationData } from '../lib/parsers/merger'
+import { apiClient } from '../api/client'
 import type { StandardAnnotationData } from '../types/annotations'
 
 export interface DemoDataPaths {
@@ -206,12 +207,20 @@ export async function loadDemoDataset(datasetKey: keyof typeof DEMO_DATA_SETS): 
 
 // API Testing utilities (from browser_debug_console.js)
 const createVideoAnnotatorDebug = () => {
-  const API_BASE = 'http://localhost:18011'  // VideoAnnotator API server
-  const DEFAULT_TOKEN = typeof window !== 'undefined' ? (localStorage.getItem('api_token') || 'video-annotator-dev-token-please-change') : 'dev-token'
+  // Use the same configuration as the actual API client for consistency
+  const getApiConfig = () => {
+    if (typeof window !== 'undefined') {
+      return apiClient.getConfig()
+    }
+    return {
+      baseURL: 'http://localhost:18011',
+      token: 'dev-token'
+    }
+  }
 
   return {
-    apiBase: API_BASE,
-    defaultToken: DEFAULT_TOKEN,
+    get apiBase() { return getApiConfig().baseURL },
+    get defaultToken() { return getApiConfig().token },
     logRequests: true,
 
     async checkHealth() {

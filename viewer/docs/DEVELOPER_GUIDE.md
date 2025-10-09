@@ -102,7 +102,7 @@ bun run build
 
 ### Available Scripts
 ```bash
-bun run dev        # Start development server (http://localhost:8080)
+bun run dev        # Start development server (http://localhost:19011)
 bun run build      # Production build
 bun run build:dev  # Development build
 bun run lint       # ESLint checking

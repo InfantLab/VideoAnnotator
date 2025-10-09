@@ -1,120 +1,120 @@
 {
   "test_run": {
-    "timestamp": "2025-08-24T20:30:14.482137",
+    "timestamp": "2025-09-26T15:14:58.724767",
     "base_url": "http://localhost:18011",
     "total_tests": 18,
-    "passed": 18,
-    "failed": 0,
-    "pass_rate": 100.0
+    "passed": 14,
+    "failed": 4,
+    "pass_rate": 77.77777777777779
   },
   "results": [
     {
       "test": "Basic Health Check",
       "passed": true,
       "details": "Status: 200, Server status: healthy",
-      "timestamp": "2025-08-24T20:30:11.489261"
+      "timestamp": "2025-09-26T15:14:50.395654"
     },
     {
       "test": "Detailed Health Check",
       "passed": true,
       "details": "Status: 200, DB status: healthy",
-      "timestamp": "2025-08-24T20:30:14.406179"
+      "timestamp": "2025-09-26T15:14:51.446503"
     },
     {
       "test": "Authentication Test",
-      "passed": true,
-      "details": "Status: 200, Jobs accessible: 7 jobs",
-      "timestamp": "2025-08-24T20:30:14.426121"
+      "passed": false,
+      "details": "Status: 500",
+      "timestamp": "2025-09-26T15:14:51.458245"
     },
     {
       "test": "Token Debug Info",
       "passed": true,
       "details": "Token valid: True, Permissions: 5",
-      "timestamp": "2025-08-24T20:30:14.427127"
+      "timestamp": "2025-09-26T15:14:51.462710"
     },
     {
       "test": "Pipeline List",
       "passed": true,
-      "details": "Status: 200, Available: 4 pipelines (scene_detection, person_tracking, face_analysis)",
-      "timestamp": "2025-08-24T20:30:14.432798"
+      "details": "Status: 200, Available: 6 pipelines (audio_processing, face_laion_clip, face_openface3_embedding)",
+      "timestamp": "2025-09-26T15:14:51.469999"
     },
     {
       "test": "Pipeline Debug Info",
       "passed": true,
       "details": "Debug info available for 4 pipelines",
-      "timestamp": "2025-08-24T20:30:14.433850"
+      "timestamp": "2025-09-26T15:14:51.473593"
     },
     {
       "test": "Job List",
-      "passed": true,
-      "details": "Status: 200, Total jobs: 7",
-      "timestamp": "2025-08-24T20:30:14.444101"
+      "passed": false,
+      "details": "Status: 500",
+      "timestamp": "2025-09-26T15:14:51.482071"
     },
     {
       "test": "Job Submission",
       "passed": true,
-      "details": "Status: 201, Job ID: 11306573-ce7e-42a5-9f8d-f2cb9249a2f1",
-      "timestamp": "2025-08-24T20:30:14.458400"
+      "details": "Status: 201, Job ID: b15fb092-ec82-4195-920b-b2f0349b9037",
+      "timestamp": "2025-09-26T15:14:51.501781"
     },
     {
       "test": "Job Status Retrieval",
-      "passed": true,
-      "details": "Status: 200, Job status: pending",
-      "timestamp": "2025-08-24T20:30:14.460823"
+      "passed": false,
+      "details": "Status: 500",
+      "timestamp": "2025-09-26T15:14:51.506676"
     },
     {
       "test": "SSE Endpoint Endpoint",
-      "passed": true,
-      "details": "Status: 404 (Missing as expected)",
-      "timestamp": "2025-08-24T20:30:14.463745"
+      "passed": false,
+      "details": "Exception: HTTPConnectionPool(host='localhost', port=18011): Read timed out.",
+      "timestamp": "2025-09-26T15:14:56.514165"
     },
     {
       "test": "Job Results Download Endpoint",
       "passed": true,
       "details": "Status: 404 (Missing as expected)",
-      "timestamp": "2025-08-24T20:30:14.465491"
+      "timestamp": "2025-09-26T15:14:58.683830"
     },
     {
       "test": "Job Artifacts Endpoint",
       "passed": true,
       "details": "Status: 404 (Missing as expected)",
-      "timestamp": "2025-08-24T20:30:14.466765"
+      "timestamp": "2025-09-26T15:14:58.686898"
     },
     {
       "test": "Video Upload Endpoint",
       "passed": true,
       "details": "Status: 404 (Missing as expected)",
-      "timestamp": "2025-08-24T20:30:14.468066"
+      "timestamp": "2025-09-26T15:14:58.689403"
     },
     {
       "test": "Server Info Debug",
       "passed": true,
       "details": "Debug endpoint working",
-      "timestamp": "2025-08-24T20:30:14.473834"
+      "timestamp": "2025-09-26T15:14:58.710469"
     },
     {
       "test": "Token Info Debug",
       "passed": true,
       "details": "Debug endpoint working",
-      "timestamp": "2025-08-24T20:30:14.475977"
+      "timestamp": "2025-09-26T15:14:58.714087"
     },
     {
       "test": "Pipeline Debug Debug",
       "passed": true,
       "details": "Debug endpoint working",
-      "timestamp": "2025-08-24T20:30:14.478522"
+      "timestamp": "2025-09-26T15:14:58.717526"
     },
     {
       "test": "Request Log Debug",
       "passed": true,
       "details": "Debug endpoint working",
-      "timestamp": "2025-08-24T20:30:14.478522"
+      "timestamp": "2025-09-26T15:14:58.720603"
     },
     {
       "test": "SSE Connection",
       "passed": true,
-      "details": "SSE endpoint not implemented yet (expected)",
-      "timestamp": "2025-08-24T20:30:14.480378"
+      "details": "Received SSE event: {\"type\": \"connected\", \"timestamp\": \"68763.134\"}...",
+      "timestamp": "2025-09-26T15:14:58.724248"
     }
   ]
 }
