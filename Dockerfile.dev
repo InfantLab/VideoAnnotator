@@ -6,12 +6,12 @@
 #   docker build -f dockerfile.dev -t videoannotator:dev .
 #   docker run --gpus all --rm -p 8000:8000 -v ${PWD}/data:/app/data videoannotator:dev
 
-FROM nvidia/cuda:13.0.1-runtime-ubuntu24.04
+FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
 
 SHELL ["/bin/bash","-lc"]
 RUN apt-get update && apt-get install -y \
     curl python3 python3-venv python3-pip git git-lfs \
-    libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1 \
+    libgl1-mesa-dri libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Ensure locale is generated so LANG=en_US.UTF-8 works inside the container
@@ -45,18 +45,21 @@ COPY weights/ /app/weights/
 RUN uv sync --frozen --no-editable
 
 # Install CUDA PyTorch for GPU acceleration (override CPU version)
-RUN uv pip install "torch==2.8.0+cu130" "torchvision==0.21.0+cu130" "torchaudio==2.8.0+cu130" --index-url https://download.pytorch.org/whl/cu130
+RUN uv pip install "torch==2.3.1+cu121" "torchvision==0.18.1+cu121" "torchaudio==2.3.1+cu121" --index-url https://download.pytorch.org/whl/cu121
+
+# Install spec-kit tool for specification management
+RUN uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 
 # Verify GPU access and model cache (no model downloading needed!)
 RUN uv run python3 -c "\
-import torch; \
-from pathlib import Path; \
-print(f'[DEV BUILD] CUDA available: {torch.cuda.is_available()}'); \
-models_count = len(list(Path('/app/models').rglob('*'))) if Path('/app/models').exists() else 0; \
-weights_count = len(list(Path('/app/weights').rglob('*'))) if Path('/app/weights').exists() else 0; \
-print(f'[DEV BUILD] Models directory: {models_count} files'); \
-print(f'[DEV BUILD] Weights directory: {weights_count} files'); \
-print('[DEV BUILD] Development image ready with local model cache!');"
+    import torch; \
+    from pathlib import Path; \
+    print(f'[DEV BUILD] CUDA available: {torch.cuda.is_available()}'); \
+    models_count = len(list(Path('/app/models').rglob('*'))) if Path('/app/models').exists() else 0; \
+    weights_count = len(list(Path('/app/weights').rglob('*'))) if Path('/app/weights').exists() else 0; \
+    print(f'[DEV BUILD] Models directory: {models_count} files'); \
+    print(f'[DEV BUILD] Weights directory: {weights_count} files'); \
+    print('[DEV BUILD] Development image ready with local model cache!');"
 
 # Set environment for development
 ENV PYTHONUNBUFFERED=1
