@@ -38,9 +38,11 @@ This documentation is organized into clear sections for different user types and
 - [API Upgrade Guide](development/api_upgrade_v1.2.0.md) - Major API changes implemented in v1.2.0
 - [Database Implementation](development/database_implementation_plan_v1.2.0.md) - Database architecture
 
-### Next Development (v1.2.1 & v1.3.0)
-- [v1.2.1 Roadmap](development/roadmap_v1.2.1.md) - Polish and documentation updates
-- [v1.3.0 Roadmap](development/roadmap_v1.3.0.md) - Advanced features and scalability
+### Active Development & Roadmap
+- **[Roadmap Overview](development/roadmap_overview.md)** - Complete release strategy v1.3.0 → v2.0.0
+- [v1.3.0 Roadmap](development/roadmap_v1.3.0.md) - **CURRENT**: Production reliability & critical fixes (Q4 2025)
+- [v1.4.0 Roadmap](development/roadmap_v1.4.0.md) - **NEXT**: First public release + JOSS paper (Q2 2026)
+- [v1.2.1 Roadmap](development/roadmap_v1.2.1.md) - Polish and documentation updates (completed)
 - [Examples CLI Update Plan](development/EXAMPLES_CLI_UPDATE_CHECKLIST.md) - CLI modernization checklist
 
 ## 🧪 Testing & QA
