@@ -1,7 +1,8 @@
 """Example usage of the diarization pipeline.
 
-This script shows how to use the speaker diarization functionality
-from the VideoAnnotator project."""
+This script shows how to use the speaker diarization functionality from
+the VideoAnnotator project.
+"""
 
 import logging
 import os
@@ -19,7 +20,8 @@ def example_diarization(video_path: str, output_dir: str = None):
 
     Args:
         video_path: Path to the video file to process
-        output_dir: Optional output directory for audio files"""
+        output_dir: Optional output directory for audio files
+    """
 
     try:
         from src.pipelines.audio_processing import (
@@ -46,14 +48,14 @@ def example_diarization(video_path: str, output_dir: str = None):
             diarization = results[0]
 
             # Print results
-            print(f"\\n🎯 Diarization Results for {Path(video_path).name}")
+            print(f"\nDIARIZATION RESULTS for {Path(video_path).name}")
             print("=" * 60)
             print(f"Number of speakers detected: {len(diarization.speakers)}")
             print(f"Number of speaker segments: {len(diarization.segments)}")
             print(f"Total speech time: {diarization.total_speech_time:.2f} seconds")
 
             # Show speaker breakdown
-            print("\\n👥 Speaker Breakdown:")
+            print("\nSpeaker Breakdown:")
             speaker_times = {}
             for segment in diarization.segments:
                 speaker_id = segment["speaker_id"]
@@ -67,7 +69,7 @@ def example_diarization(video_path: str, output_dir: str = None):
                 print(f"  {speaker_id}: {total_time:.2f}s ({percentage:.1f}%)")
 
             # Show timeline
-            print("\\n⏱️  Speaker Timeline (first 10 segments):")
+            print("\nSpeaker Timeline (first 10 segments):")
             for i, segment in enumerate(diarization.segments[:10]):
                 start = segment["start_time"]
                 end = segment["end_time"]
@@ -93,10 +95,10 @@ def main():
 
     # Check for HuggingFace token
     if not os.getenv("HUGGINGFACE_TOKEN"):
-        print("❌ HUGGINGFACE_TOKEN environment variable not set")
+        print("HUGGINGFACE_TOKEN environment variable not set")
         print("Please set your HuggingFace token:")
         print("export HUGGINGFACE_TOKEN=your_token_here")
-        print("\\nGet a token from: https://huggingface.co/settings/tokens")
+        print("\nGet a token from: https://huggingface.co/settings/tokens")
         return
 
     # Find a test video
@@ -107,7 +109,7 @@ def main():
         video_paths.extend(list(Path(".").glob(pattern)))
 
     if not video_paths:
-        print("❌ No video files found")
+        print("No video files found")
         print("Please ensure video files are available in:")
         print("  - babyjokes videos/")
         print("  - data/demovideos/")
@@ -116,15 +118,15 @@ def main():
 
     # Use the first video found
     video_path = str(video_paths[0])
-    print(f"📹 Using video: {video_path}")
+    print(f"Using video: {video_path}")
 
     # Run the example
     result = example_diarization(video_path)
 
     if result:
-        print("\\n✅ Diarization example completed successfully!")
+        print("\nDiarization example completed successfully!")
     else:
-        print("\\n❌ Diarization example failed")
+        print("\nDiarization example failed")
 
 
 if __name__ == "__main__":

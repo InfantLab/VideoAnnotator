@@ -4,7 +4,8 @@ This example demonstrates how to process multiple videos in batch using
 the modernized VideoAnnotator pipeline system.
 
 Usage:
-    python examples/batch_processing.py --input_dir /path/to/videos --output_dir /path/to/outputs"""
+    python examples/batch_processing.py --input_dir /path/to/videos --output_dir /path/to/outputs
+"""
 
 import argparse
 import concurrent.futures
@@ -55,8 +56,7 @@ def find_video_files(input_dir: Path, extensions: list[str] = None) -> list[Path
 def process_single_video(
     video_path: Path, output_dir: Path, config: dict[str, Any]
 ) -> dict[str, Any]:
-    """
-    Process a single video file through the annotation pipeline.
+    """Process a single video file through the annotation pipeline.
 
     Args:
         video_path: Path to input video file
@@ -165,8 +165,7 @@ def process_videos_batch(
     config: dict[str, Any],
     max_workers: int = 4,
 ) -> list[dict[str, Any]]:
-    """
-    Process multiple videos in parallel.
+    """Process multiple videos in parallel.
 
     Args:
         video_files: List of video file paths

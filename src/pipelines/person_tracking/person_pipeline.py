@@ -1,7 +1,8 @@
 """Standards-only person tracking pipeline.
 
-This pipeline works directly with COCO person/keypoint format annotations,
-eliminating all custom schema dependencies."""
+This pipeline works directly with COCO person/keypoint format
+annotations, eliminating all custom schema dependencies.
+"""
 
 import logging
 from pathlib import Path
@@ -33,13 +34,18 @@ except ImportError:
 
 
 class PersonTrackingPipeline(BasePipeline):
-    """
-    Standards-only person tracking pipeline using COCO person/keypoint format.
+    """Person tracking pipeline using detection and pose estimation to produce track-based annotations.
 
-    Returns native COCO annotation dictionaries instead of custom schemas.
+    This pipeline performs person detection and linking across frames, and
+    exports COCO-style annotations for tracked persons.
     """
 
     def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the PersonTrackingPipeline with optional config.
+
+        Args:
+            config: Optional configuration dictionary.
+        """
         default_config = {
             "model": "models/yolo/yolo11n-pose.pt",  # YOLO11 pose model
             "conf_threshold": 0.4,
@@ -101,11 +107,17 @@ class PersonTrackingPipeline(BasePipeline):
         pps: float = 5,  # 5 predictions per second for person tracking
         output_dir: str | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Process video for person detection and tracking with identity management.
+        """Process video for person detection and tracking.
+
+        Args:
+            video_path: Path to video file.
+            start_time: Start time in seconds.
+            end_time: End time in seconds (None for full video).
+            pps: Processing frames per second.
+            output_dir: Optional output directory.
 
         Returns:
-            List of COCO format annotation dictionaries with person detection, pose results, and identity information.
+            List of COCO annotations for detected persons.
         """
 
         # Get video metadata
@@ -577,7 +589,9 @@ class PersonTrackingPipeline(BasePipeline):
         self.is_initialized = False
 
     def initialize(self) -> None:
-        """Initialize the person tracking pipeline by loading the YOLO model."""
+        """Initialize the person tracking pipeline by loading the YOLO
+        model.
+        """
         if self.is_initialized:
             return
 

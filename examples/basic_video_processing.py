@@ -4,7 +4,8 @@ This example demonstrates how to use the modernized VideoAnnotator pipeline
 to process a video file and extract comprehensive annotations.
 
 Usage:
-    python examples/basic_video_processing.py --video_path /path/to/video.mp4 --output_dir /path/to/output"""
+    python examples/basic_video_processing.py --video_path /path/to/video.mp4 --output_dir /path/to/output
+"""
 
 import argparse
 import json
@@ -43,7 +44,8 @@ def process_video(video_path: Path, output_dir: Path, config: dict[str, Any]):
     Args:
         video_path: Path to input video file
         output_dir: Directory to save output files
-        config: Configuration dictionary"""
+        config: Configuration dictionary
+    """
     logger = logging.getLogger(__name__)
 
     # Create output directory

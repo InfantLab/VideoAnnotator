@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Test script for VideoAnnotator enhanced logging system.
+"""Test script for VideoAnnotator enhanced logging system.
 
 Validates that all logging components are working correctly.
 """
@@ -144,8 +143,9 @@ if __name__ == "__main__":
     def test_logging_system() -> bool:
         """Run smoke checks for logging configuration and API server.
 
-        Returns True when the script completed (it does not guarantee the
-        API server started successfully)."""
+        Returns True when the script completed (it does not guarantee
+        the API server started successfully).
+        """
 
         print("[TEST] VideoAnnotator logging smoke test")
 

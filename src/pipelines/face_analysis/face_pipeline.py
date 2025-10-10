@@ -1,7 +1,9 @@
 """Standards-only face analysis pipeline.
 
-This pipeline works directly with COCO format annotations, eliminating all custom schema dependencies.
-Uses native FOSS libraries for all data representation and export."""
+This pipeline works directly with COCO format annotations, eliminating
+all custom schema dependencies. Uses native FOSS libraries for all data
+representation and export.
+"""
 
 import json
 import logging
@@ -31,13 +33,18 @@ except ImportError:
 
 
 class FaceAnalysisPipeline(BasePipeline):
-    """
-    Standards-only face analysis pipeline using COCO format.
+    """Standards-only face analysis pipeline using COCO format.
 
-    Returns native COCO annotation dictionaries instead of custom schemas.
+    Returns native COCO annotation dictionaries instead of custom
+    schemas.
     """
 
     def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the FaceAnalysisPipeline with optional configuration.
+
+        Args:
+            config: Optional configuration dictionary to override defaults.
+        """
         default_config = {
             "detection_backend": "deepface",  # opencv, deepface
             "emotion_backend": "deepface",  # deepface, disabled
@@ -166,8 +173,7 @@ class FaceAnalysisPipeline(BasePipeline):
         output_dir: str | None = None,
         person_tracks: list[dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Process video for face analysis with person identity linking.
+        """Process video for face analysis with person identity linking.
 
         Args:
             video_path: Path to video file
@@ -180,7 +186,6 @@ class FaceAnalysisPipeline(BasePipeline):
         Returns:
             List of COCO format annotation dictionaries with face detection results and person identity information.
         """
-
         # Get video metadata
         video_metadata = self._get_video_metadata(video_path)
 
@@ -342,7 +347,12 @@ class FaceAnalysisPipeline(BasePipeline):
     def _get_frame_person_annotations(
         self, timestamp: float, frame_num: int
     ) -> list[dict[str, Any]]:
-        """Get person annotations for a specific frame from the loaded identity manager."""
+        """Get person annotations for a specific frame from the loaded identity manager.
+
+        Returns an empty list when no identity manager is present. In a full
+        implementation this would search loaded person tracks by timestamp or
+        frame number.
+        """
         if not self.identity_manager:
             return []
 
@@ -354,7 +364,11 @@ class FaceAnalysisPipeline(BasePipeline):
     def _link_face_to_person(
         self, face_annotation: dict[str, Any], person_annotations: list[dict[str, Any]]
     ) -> str | None:
-        """Link a face detection to a person using IoU matching via PersonIdentityManager."""
+        """Link a face detection to a person using IoU matching via PersonIdentityManager.
+
+        Returns the linked person identifier or None if linking is not
+        possible.
+        """
         if not self.identity_manager or not person_annotations:
             return None
 
@@ -422,7 +436,6 @@ class FaceAnalysisPipeline(BasePipeline):
         height: int,
     ) -> list[dict[str, Any]]:
         """Detect faces in a single frame and return COCO annotations."""
-
         backend = self.config["detection_backend"]
 
         if backend == "deepface" and DEEPFACE_AVAILABLE:
@@ -444,7 +457,6 @@ class FaceAnalysisPipeline(BasePipeline):
         height: int,
     ) -> list[dict[str, Any]]:
         """Detect faces using OpenCV Haar cascades."""
-
         # Load cascade classifier
         face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
@@ -487,7 +499,6 @@ class FaceAnalysisPipeline(BasePipeline):
         height: int,
     ) -> list[dict[str, Any]]:
         """Detect faces using DeepFace with comprehensive analysis."""
-
         try:
             # DeepFace expects RGB format
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -666,7 +677,6 @@ class FaceAnalysisPipeline(BasePipeline):
         video_metadata: dict[str, Any],
     ):
         """Save annotations in COCO format."""
-
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
