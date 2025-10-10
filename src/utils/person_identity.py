@@ -2,7 +2,8 @@
 
 This module provides consistent person identification and labeling across all VideoAnnotator pipelines.
 It ensures the same person receives the same ID across all visual analysis pipelines and supports
-semantic labeling of person identities."""
+semantic labeling of person identities.
+"""
 
 import json
 import logging
@@ -23,8 +24,7 @@ class PersonLabel:
 
 
 class PersonIdentityManager:
-    """
-    Manages person identities across pipelines and videos using COCO standards.
+    """Manages person identities across pipelines and videos using COCO standards.
 
     This class provides:
     - Consistent person ID assignment across video frames
@@ -44,7 +44,8 @@ class PersonIdentityManager:
         Args:
             video_id: Unique identifier for the video (can be None if using config)
             id_format: Either "semantic" (person_video_001) or "integer" (1, 2, 3)
-            config: Optional configuration dictionary"""
+            config: Optional configuration dictionary
+        """
         # Handle config parameter for compatibility with pipeline integration
         if config is not None and video_id is None:
             video_id = config.get("video_id", "default_video")
@@ -58,8 +59,7 @@ class PersonIdentityManager:
         self._person_tracks_cache = {}  # Cache for person track summaries
 
     def register_track(self, track_id: int) -> str:
-        """
-        Register a new track and assign person_id.
+        """Register a new track and assign person_id.
 
         Args:
             track_id: ByteTrack tracking ID
@@ -82,7 +82,11 @@ class PersonIdentityManager:
         return self.track_to_person_map[track_id]
 
     def get_person_id(self, track_id: int) -> str | None:
-        """Get person_id for a track_id."""
+        """Get person_id for a track_id.
+
+        Returns:
+            person_id string or None if not registered
+        """
         return self.track_to_person_map.get(track_id)
 
     def set_person_label(
@@ -100,7 +104,8 @@ class PersonIdentityManager:
             label: Semantic label (e.g., "infant", "parent")
             confidence: Confidence score (0.0 to 1.0)
             method: How the label was assigned
-            timestamp: When label was assigned"""
+            timestamp: When label was assigned
+        """
         self.person_labels[person_id] = PersonLabel(
             label=label, confidence=confidence, method=method, timestamp=timestamp
         )
@@ -109,8 +114,7 @@ class PersonIdentityManager:
         )
 
     def get_person_label(self, person_id: str) -> dict[str, Any] | None:
-        """
-        Get person label information.
+        """Get person label information.
 
         Returns:
             Dict with label, confidence, method, timestamp or None if not labeled
@@ -131,8 +135,7 @@ class PersonIdentityManager:
         frame_annotations: list[dict],
         iou_threshold: float = 0.5,
     ) -> str | None:
-        """
-        Link face detection to person using IoU matching (COCO format).
+        """Link face detection to person using IoU matching (COCO format).
 
         Args:
             face_bbox: Face bounding box [x, y, w, h]
@@ -163,12 +166,15 @@ class PersonIdentityManager:
         return best_person_id
 
     def get_all_person_ids(self) -> list[str]:
-        """Get list of all registered person IDs."""
+        """Get list of all registered person IDs.
+
+        Returns:
+            List of person_id strings
+        """
         return list(self.track_to_person_map.values())
 
     def get_person_summary(self, person_id: str) -> dict[str, Any]:
-        """
-        Get summary information for a person.
+        """Get summary information for a person.
 
         Returns:
             Dict with person metadata, label info, track summary
@@ -194,8 +200,7 @@ class PersonIdentityManager:
         return summary
 
     def _calculate_iou(self, box1: list[float], box2: list[float]) -> float:
-        """
-        Calculate IoU between two bounding boxes [x, y, w, h].
+        """Calculate IoU between two bounding boxes [x, y, w, h].
 
         Args:
             box1: First bounding box [x, y, width, height]
@@ -227,8 +232,7 @@ class PersonIdentityManager:
     def from_person_tracks(
         cls, person_tracks: list[dict], video_id: str | None = None
     ) -> "PersonIdentityManager":
-        """
-        Create PersonIdentityManager from existing person tracking results.
+        """Create PersonIdentityManager from existing person tracking results.
 
         Args:
             person_tracks: List of person tracking annotations
@@ -301,9 +305,10 @@ class PersonIdentityManager:
     ):
         """Save person tracks and metadata to JSON file.
 
-        Args:
-            output_path: Output file path
-            detections_summary: Optional summary of detection statistics"""
+            Args:
+                output_path: Output file path
+                detections_summary: Optional summary of detection statistics
+"""
         person_tracks_data = []
 
         for track_id, person_id in self.track_to_person_map.items():
@@ -340,15 +345,14 @@ class PersonIdentityManager:
 
     @classmethod
     def load_person_tracks(cls, tracks_file: str) -> "PersonIdentityManager":
-        """
-        Load PersonIdentityManager from saved person tracks file.
+        """Load PersonIdentityManager from saved person tracks file.
 
-        Args:
-            tracks_file: Path to person tracks JSON file
+            Args:
+                tracks_file: Path to person tracks JSON file
 
-        Returns:
-            Loaded PersonIdentityManager
-        """
+            Returns:
+                Loaded PersonIdentityManager
+"""
         with open(tracks_file) as f:
             data = json.load(f)
 
@@ -403,15 +407,14 @@ PERSON_LABELS = {
 
 
 def normalize_person_label(label: str) -> str | None:
-    """
-    Normalize person label to canonical form.
+    """Normalize person label to canonical form.
 
-    Args:
-        label: Input label (possibly an alias)
+        Args:
+            label: Input label (possibly an alias)
 
-    Returns:
-        Canonical label or None if not recognized
-    """
+        Returns:
+            Canonical label or None if not recognized
+"""
     label_lower = label.lower().strip()
 
     # Check direct matches first

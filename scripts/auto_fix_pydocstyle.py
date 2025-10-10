@@ -53,9 +53,22 @@ def normalize_docstring_block(block: str) -> str:
     while rest and rest[0].strip() == "":
         rest.pop(0)
 
+    # normalize indentation of rest: remove common leading spaces
+    if rest:
+        # compute minimal indent (excluding empty lines)
+        indents = [len(ln) - len(ln.lstrip(" ")) for ln in rest if ln.strip()]
+        min_indent = min(indents) if indents else 0
+        if min_indent > 0:
+            rest = [ln[min_indent:] if ln.strip() else "" for ln in rest]
+
     # ensure there's exactly one blank line between summary and rest
     new_lines = [summary, ""] + rest
     inner2 = "\n".join(new_lines)
+
+    # ensure closing triple-quotes are on their own line for multi-line docstrings
+    # assemble with a trailing newline before closing quotes
+    if not inner2.endswith("\n"):
+        inner2 = inner2 + "\n"
     return quote + inner2 + quote
 
 
@@ -72,17 +85,35 @@ def process_file(path: Path) -> bool:
         if new_block != block:
             s = s[: m.start(2)] + new_block + s[m.end(4) :]
 
-    # Fix simple function/method docstrings: look for def ...:\n    \s+"""
+    # Fix simple function/method/class docstrings: look for def/class ...:\n    # capture the indentation so we can re-indent multi-line docstrings
     func_doc_re = re.compile(
-        r"(^\s*def\s+[\w_]+\s*\(.*?\):\n)(\s*)(['\"]{3})(.*?)(\3)",
+        r"(^\s*(?:def|class)\s+[\w_]+[\s\S]*?:\n)(\s*)(['\"]{3})(.*?)(\3)",
         re.DOTALL | re.MULTILINE,
     )
 
     def _repl(m):
         pre = m.group(1)
         indent = m.group(2)
-        block = m.group(3) + m.group(4) + m.group(5)
+        quote = m.group(3)
+        inner = m.group(4)
+        block = quote + inner + m.group(5)
         new_block = normalize_docstring_block(block)
+
+        # For multi-line docstrings, re-indent inner lines to match the code indent
+        if "\n" in inner and new_block.startswith(quote) is not False:
+            # strip surrounding triple quotes to operate on inner text
+            inner_new = new_block[3:-3]
+            lines = inner_new.splitlines()
+            # indent all but first line with the captured indent + 4 spaces (typical)
+            indented = [lines[0]] + [
+                ("" if ln == "" else (indent + "    " + ln)) for ln in lines[1:]
+            ]
+            inner_rebuilt = "\n".join(indented)
+            # ensure trailing newline before closing quotes
+            if not inner_rebuilt.endswith("\n"):
+                inner_rebuilt = inner_rebuilt + "\n"
+            new_block = quote + inner_rebuilt + quote
+
         return pre + indent + new_block
 
     s = func_doc_re.sub(_repl, s)

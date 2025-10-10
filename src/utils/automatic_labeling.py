@@ -1,7 +1,8 @@
 """Automatic Person Labeling Utilities.
 
 This module provides automatic labeling capabilities for person identification
-based on visual cues like size, position, and spatial relationships."""
+based on visual cues like size, position, and spatial relationships.
+"""
 
 import logging
 from typing import Any
@@ -12,8 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class AutomaticPersonLabeler:
-    """
-    Provides automatic person labeling based on visual and spatial cues.
+    """Provides automatic person labeling based on visual and spatial cues.
 
     Labeling methods:
     - Size-based: Infer adult vs child based on bounding box dimensions
@@ -25,11 +25,16 @@ class AutomaticPersonLabeler:
         """Initialize automatic labeler with configuration.
 
         Args:
-            config: Configuration dict with labeling parameters"""
+            config: Configuration dict with labeling parameters
+        """
         self.config = config or self._default_config()
 
     def _default_config(self) -> dict:
-        """Default configuration for automatic labeling."""
+        """Default configuration for automatic labeling.
+
+        Returns:
+            Default configuration dict
+        """
         return {
             "size_based": {
                 "enabled": True,
@@ -55,8 +60,7 @@ class AutomaticPersonLabeler:
     def label_persons_automatic(
         self, person_tracks: list[dict], frame_annotations: list[dict]
     ) -> dict[str, dict]:
-        """
-        Automatically label persons based on visual cues.
+        """Automatically label persons based on visual cues.
 
         Args:
             person_tracks: List of person track summaries
@@ -105,12 +109,11 @@ class AutomaticPersonLabeler:
     def _apply_size_based_labeling(
         self, person_detections: dict[str, list[dict]]
     ) -> dict[str, dict]:
-        """
-        Apply size-based automatic labeling.
+        """Apply size-based automatic labeling.
 
-        Logic: Smaller bounding boxes typically indicate children/infants,
-               larger bounding boxes indicate adults/parents.
-        """
+            Logic: Smaller bounding boxes typically indicate children/infants,
+                   larger bounding boxes indicate adults/parents.
+"""
         labels = {}
         config = self.config["size_based"]
 
@@ -161,12 +164,11 @@ class AutomaticPersonLabeler:
     def _apply_position_based_labeling(
         self, person_detections: dict[str, list[dict]]
     ) -> dict[str, dict]:
-        """
-        Apply position-based automatic labeling.
+        """Apply position-based automatic labeling.
 
-        Logic: Person consistently in center is often the primary subject (child),
-               persons at edges are often secondary participants (adults/caregivers).
-        """
+            Logic: Person consistently in center is often the primary subject (child),
+                   persons at edges are often secondary participants (adults/caregivers).
+"""
         labels = {}
         config = self.config["position_based"]
 
@@ -238,11 +240,10 @@ class AutomaticPersonLabeler:
     def _apply_temporal_consistency(
         self, labels: dict[str, dict], person_detections: dict[str, list[dict]]
     ) -> dict[str, dict]:
-        """
-        Apply temporal consistency filtering to automatic labels.
+        """Apply temporal consistency filtering to automatic labels.
 
-        Only keep labels for persons with sufficient detections.
-        """
+            Only keep labels for persons with sufficient detections.
+"""
         config = self.config["temporal_consistency"]
         filtered_labels = {}
 
@@ -285,12 +286,11 @@ class AutomaticPersonLabeler:
     def analyze_spatial_relationships(
         self, person_detections: dict[str, list[dict]]
     ) -> dict[str, Any]:
-        """
-        Analyze spatial relationships between persons for additional context.
+        """Analyze spatial relationships between persons for additional context.
 
-        Returns:
-            Dict with spatial relationship analysis
-        """
+            Returns:
+                Dict with spatial relationship analysis
+"""
         analysis = {
             "person_count": len(person_detections),
             "spatial_patterns": {},
@@ -355,17 +355,16 @@ class AutomaticPersonLabeler:
 def infer_person_labels_from_tracks(
     person_tracks: list[dict], frame_annotations: list[dict], config: dict | None = None
 ) -> dict[str, dict]:
-    """
-    Convenience function to infer person labels from tracking data.
+    """Convenience function to infer person labels from tracking data.
 
-    Args:
-        person_tracks: List of person track summaries
-        frame_annotations: All frame annotations for analysis
-        config: Optional configuration for labeling
+        Args:
+            person_tracks: List of person track summaries
+            frame_annotations: All frame annotations for analysis
+            config: Optional configuration for labeling
 
-    Returns:
-        Dict mapping person_id to label information
-    """
+        Returns:
+            Dict mapping person_id to label information
+"""
     labeler = AutomaticPersonLabeler(config)
     return labeler.label_persons_automatic(person_tracks, frame_annotations)
 
@@ -373,15 +372,14 @@ def infer_person_labels_from_tracks(
 def calculate_labeling_confidence(
     person_detections: dict[str, list[dict]],
 ) -> dict[str, float]:
-    """
-    Calculate overall confidence scores for automatic labeling.
+    """Calculate overall confidence scores for automatic labeling.
 
-    Args:
-        person_detections: Grouped detections by person_id
+        Args:
+            person_detections: Grouped detections by person_id
 
-    Returns:
-        Dict mapping person_id to confidence score
-    """
+        Returns:
+            Dict mapping person_id to confidence score
+"""
     confidence_scores = {}
 
     for person_id, detections in person_detections.items():

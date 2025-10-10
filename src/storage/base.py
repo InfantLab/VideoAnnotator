@@ -14,8 +14,7 @@ class StorageBackend(ABC):
     def save_annotations(
         self, job_id: str, pipeline: str, annotations: list[dict[str, Any]]
     ) -> str:
-        """
-        Save pipeline annotations for a job.
+        """Save pipeline annotations for a job.
 
         Args:
             job_id: Unique job identifier
@@ -29,8 +28,7 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def load_annotations(self, job_id: str, pipeline: str) -> list[dict[str, Any]]:
-        """
-        Load pipeline annotations for a job.
+        """Load pipeline annotations for a job.
 
         Args:
             job_id: Unique job identifier
@@ -46,8 +44,7 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def annotation_exists(self, job_id: str, pipeline: str) -> bool:
-        """
-        Check if annotations exist for a job and pipeline.
+        """Check if annotations exist for a job and pipeline.
 
         Args:
             job_id: Unique job identifier
@@ -60,8 +57,7 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def save_job_metadata(self, job: "BatchJob") -> None:
-        """
-        Save job metadata.
+        """Save job metadata.
 
         Args:
             job: BatchJob instance with metadata
@@ -70,8 +66,7 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def load_job_metadata(self, job_id: str) -> "BatchJob":
-        """
-        Load job metadata.
+        """Load job metadata.
 
         Args:
             job_id: Unique job identifier
@@ -86,8 +81,7 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def list_jobs(self, status_filter: str | None = None) -> list[str]:
-        """
-        List all job IDs, optionally filtered by status.
+        """List all job IDs, optionally filtered by status.
 
         Args:
             status_filter: Optional status to filter by
@@ -99,8 +93,7 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def delete_job(self, job_id: str) -> None:
-        """
-        Delete all data for a job.
+        """Delete all data for a job.
 
         Args:
             job_id: Unique job identifier
@@ -109,8 +102,7 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def get_stats(self) -> dict[str, Any]:
-        """
-        Get storage statistics.
+        """Get storage statistics.
 
         Returns:
             Dictionary with storage stats
@@ -119,8 +111,7 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def save_report(self, report: "BatchReport") -> None:
-        """
-        Save batch report.
+        """Save batch report.
 
         Args:
             report: BatchReport instance
@@ -129,8 +120,7 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def load_report(self, batch_id: str) -> "BatchReport":
-        """
-        Load batch report.
+        """Load batch report.
 
         Args:
             batch_id: Unique batch identifier
@@ -145,8 +135,7 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def list_reports(self) -> list[str]:
-        """
-        List all batch report IDs.
+        """List all batch report IDs.
 
         Returns:
             List of batch IDs
@@ -154,8 +143,7 @@ class StorageBackend(ABC):
         pass
 
     def cleanup_old_files(self, max_age_days: int) -> tuple[int, int]:
-        """
-        Clean up old files (optional implementation).
+        """Clean up old files (optional implementation).
 
         Args:
             max_age_days: Maximum age in days
