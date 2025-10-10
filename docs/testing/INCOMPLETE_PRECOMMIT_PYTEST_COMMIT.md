@@ -69,4 +69,45 @@ If you want me to proceed now I will:
 2. Re-run `uv run pytest -q` and capture failures.
 3. If green, stage & commit changes with a clear commit message referencing the quick-unblock and noting that some hooks were skipped.
 
+## Hadolint installation (local dev)
+
+To make the `hadolint` pre-commit hook usable in this development environment, run the helper script which downloads the hadolint binary into the project's virtualenv `bin` directory:
+
+```bash
+source .venv/bin/activate
+bash scripts/install_hadolint.sh
+hadolint --version
+```
+
+After installing, verify the hook by running:
+
+```bash
+uv run pre-commit run hadolint --all-files
+```
+
+If you prefer not to add a binary locally, CI can run hadolint using the official Docker image instead:
+
+```bash
+docker run --rm -i hadolint/hadolint < Dockerfile
+```
+
+Common hadolint findings seen in this repo
+
+- DL3015 (info): "Avoid additional packages by specifying `--no-install-recommends`" — For Debian/Ubuntu based images, add `--no-install-recommends` to `apt-get install` to avoid pulling in recommended packages. Example:
+
+  ```dockerfile
+  RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+      && rm -rf /var/lib/apt/lists/*
+  ```
+
+- DL4006 (warning): "Set the SHELL option -o pipefail before RUN with a pipe in it." — If a RUN command uses a pipe, ensure the shell is configured or add `SHELL ["/bin/bash", "-o", "pipefail", "-c"]` when appropriate for your base image.
+
+- DL3059 (info): "Multiple consecutive `RUN` instructions. Consider consolidation." — Consolidate consecutive RUN instructions to reduce image layers and improve caching. Combine package installs and cleanup into a single RUN where possible.
+
+Suggested next steps for hadolint issues
+
+1. Run `bash scripts/run_hadolint.sh` locally to generate the report and inspect `.hadolint_last_exit`.
+2. Address the low-effort fixes (DL3015 and simple RUN consolidations) in small PRs modifying the Dockerfiles.
+3. For DL4006, consider whether the base image uses `sh`/`dash` vs `bash` and only change SHELL when safe. Document any deliberate exceptions in a short comment above the Dockerfile sections.
+
 Please confirm you want me to proceed with the quick unblock now (I will skip: hadolint, python-safety-dependencies-check, pydocstyle). If you want shellcheck also skipped, say so. Otherwise I’ll proceed with the three listed skips.
