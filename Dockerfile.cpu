@@ -7,14 +7,14 @@
 
 FROM python:3.13-slim
 
-SHELL ["/bin/bash","-lc"]
-RUN apt-get update && apt-get install -y \
-    curl python3 python3-venv python3-pip git \
-    libgl1-mesa-dri libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
+# Use bash with pipefail so RUN commands that use a pipe fail when any stage does
+SHELL ["/bin/bash","-o","pipefail","-lc"]
 
-# Ensure locale is generated so LANG=en_US.UTF-8 works inside the container
-RUN apt-get update && apt-get install -y locales \
+# Install base packages and locales in a single RUN to reduce layers and avoid
+# pulling recommended packages unnecessarily (DL3015, DL3059)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl python3 python3-venv python3-pip git \
+    libgl1-mesa-dri libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 locales \
     && locale-gen en_US.UTF-8 \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && rm -rf /var/lib/apt/lists/*
@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y locales \
 ENV LANG=en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
 
-# uv package manager
+# Install uv, copy sources, and install dependencies and CPU PyTorch in grouped RUNs
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:${PATH}"
 
@@ -32,11 +32,9 @@ WORKDIR /app
 # Copy source code (excluding models via .dockerignore)
 COPY . .
 
-# Install dependencies (excluding torch to avoid conflicts)
-RUN uv sync --frozen --no-editable
-
-# Install CPU-only PyTorch (override any CUDA versions)
-RUN uv pip install "torch==2.8.0+cpu" "torchvision==0.21.0+cpu" "torchaudio==2.8.0+cpu" --index-url https://download.pytorch.org/whl/cpu
+# Install dependencies (excluding torch to avoid conflicts) and install CPU PyTorch
+RUN uv sync --frozen --no-editable \
+    && uv pip install "torch==2.8.0+cpu" "torchvision==0.21.0+cpu" "torchaudio==2.8.0+cpu" --index-url https://download.pytorch.org/whl/cpu
 
 # Verify CPU setup (no GPU packages installed)
 RUN uv run python3 -c "\
