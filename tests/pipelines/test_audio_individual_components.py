@@ -1,8 +1,6 @@
-"""
-Unit tests for Diarization and Speech Recognition Pipelines.
+"""Unit tests for Diarization and Speech Recognition Pipelines.
 
-Tests cover speaker diarization, speech recognition, and audio analysis functionality.
-"""
+Tests cover speaker diarization, speech recognition, and audio analysis functionality."""
 
 import os
 from unittest.mock import Mock, patch

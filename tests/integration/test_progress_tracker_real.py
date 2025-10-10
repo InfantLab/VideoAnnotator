@@ -1,8 +1,6 @@
-"""
-Unit tests for ProgressTracker - testing actual implementation.
+"""Unit tests for ProgressTracker - testing actual implementation.
 
-These tests focus on the real API - get_status(jobs) method that takes a jobs list.
-"""
+These tests focus on the real API - get_status(jobs) method that takes a jobs list."""
 
 from datetime import datetime, timedelta
 

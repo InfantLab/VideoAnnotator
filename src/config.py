@@ -1,7 +1,6 @@
-"""
-Central configuration file for the babyjokes project.
-Contains all configurable parameters used across the application.
-"""
+"""Central configuration file for the babyjokes project.
+
+Contains all configurable parameters used across the application."""
 
 import os
 

@@ -1,6 +1,4 @@
-"""
-Server-Sent Events endpoints for VideoAnnotator API
-"""
+"""Server-Sent Events endpoints for VideoAnnotator API."""
 
 import asyncio
 import json

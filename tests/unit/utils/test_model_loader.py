@@ -1,9 +1,7 @@
-"""
-Tests for model loading utilities with enhanced progress logging.
+"""Tests for model loading utilities with enhanced progress logging.
 
 Tests the enhanced model download logging functionality introduced in v1.2.0,
-including progress display, first-run information, and error handling.
-"""
+including progress display, first-run information, and error handling."""
 
 import logging
 import time

@@ -1,6 +1,4 @@
-"""
-CRUD operations for VideoAnnotator database models.
-"""
+"""CRUD operations for VideoAnnotator database models."""
 
 import hashlib
 import secrets

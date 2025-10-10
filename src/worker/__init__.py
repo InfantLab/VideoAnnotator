@@ -1,6 +1,4 @@
-"""
-Background job processing system for VideoAnnotator.
-"""
+"""Background job processing system for VideoAnnotator."""
 
 from .job_processor import JobProcessor, run_job_processor
 

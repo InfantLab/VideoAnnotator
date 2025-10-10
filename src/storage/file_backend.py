@@ -1,5 +1,4 @@
-"""
-File-based storage backend for VideoAnnotator batch processing.
+"""File-based storage backend for VideoAnnotator batch processing.
 
 This backend organizes data in a hierarchical directory structure:
 {base_dir}/
@@ -12,8 +11,7 @@ This backend organizes data in a hierarchical directory structure:
 │   │   ├── audio_processing.json
 │   │   └── batch_summary.json
 │   └── ...
-└── batch_queue.json  # Current batch state
-"""
+└── batch_queue.json  # Current batch state"""
 
 import json
 import logging
@@ -29,12 +27,10 @@ class FileStorageBackend(StorageBackend):
     """File-based storage backend using JSON files."""
 
     def __init__(self, base_dir: Path):
-        """
-        Initialize file storage backend.
+        """Initialize file storage backend.
 
         Args:
-            base_dir: Base directory for storing all batch data
-        """
+            base_dir: Base directory for storing all batch data"""
         self.base_dir = Path(base_dir)
         self.jobs_dir = self.base_dir / "jobs"
         self.reports_dir = self.base_dir / "reports"

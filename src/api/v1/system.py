@@ -1,6 +1,4 @@
-"""
-System management endpoints for VideoAnnotator API
-"""
+"""System management endpoints for VideoAnnotator API."""
 
 import platform
 import time
@@ -45,12 +43,10 @@ def _get_database_status() -> dict[str, Any]:
 
 @router.get("/health")
 async def detailed_health_check():
-    """
-    Detailed system health check.
+    """Detailed system health check.
 
     Returns:
-        Comprehensive system health information
-    """
+        Comprehensive system health information"""
     try:
         # Get system information
         cpu_percent = psutil.cpu_percent(interval=1)

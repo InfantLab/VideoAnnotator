@@ -1,5 +1,4 @@
-"""
-SQLite-based storage backend for VideoAnnotator.
+"""SQLite-based storage backend for VideoAnnotator.
 
 This backend provides persistent storage using SQLite, perfect for individual researchers
 who need zero-configuration local installations. The database file is created automatically
@@ -9,8 +8,7 @@ Key features:
 - Zero configuration: Database auto-created on first use
 - Single file: Easy backup, sharing, and archiving
 - Cross-platform: Works identically on Windows, Mac, Linux
-- Research-friendly: Database lives with video files in project directory
-"""
+- Research-friendly: Database lives with video files in project directory"""
 
 import logging
 from datetime import datetime
@@ -46,14 +44,12 @@ class SQLiteStorageBackend(StorageBackend):
     """
 
     def __init__(self, database_path: Path | None = None, echo: bool = False):
-        """
-        Initialize SQLite storage backend.
+        """Initialize SQLite storage backend.
 
         Args:
             database_path: Path to SQLite database file.
                           Defaults to ./videoannotator.db in current directory.
-            echo: Whether to log SQL queries (useful for debugging)
-        """
+            echo: Whether to log SQL queries (useful for debugging)"""
         if database_path is None:
             database_path = Path.cwd() / "videoannotator.db"
 

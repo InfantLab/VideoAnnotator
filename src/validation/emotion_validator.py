@@ -11,8 +11,7 @@ Public API:
 - validate_emotion_data(data: dict) -> List[str]
 - validate_emotion_file(path: Path | str) -> List[str]
 
-Return value: list of error strings. Empty list means valid.
-"""
+Return value: list of error strings. Empty list means valid."""
 
 from __future__ import annotations
 

@@ -1,5 +1,4 @@
-"""
-VideoAnnotator Industry Standards Schemas
+"""VideoAnnotator Industry Standards Schemas.
 
 This module has been migrated to use native formats via src.exporters.native_formats.
 Most functionality has been moved to direct integration with:
@@ -8,8 +7,7 @@ Most functionality has been moved to direct integration with:
 - pyannote.core (RTTM format)
 - praatio (TextGrid format)
 
-This file is preserved for compatibility but most imports have been disabled.
-"""
+This file is preserved for compatibility but most imports have been disabled."""
 
 
 # Placeholder for compatibility

@@ -1,9 +1,7 @@
-"""
-Modern Scene Detection Pipeline Tests.
+"""Modern Scene Detection Pipeline Tests.
 
 Tests current scene detection and video analysis capabilities.
-Living documentation for scene detection functionality.
-"""
+Living documentation for scene detection functionality."""
 
 import os
 from unittest.mock import Mock, patch

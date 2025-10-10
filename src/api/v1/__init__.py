@@ -1,6 +1,4 @@
-"""
-VideoAnnotator API v1 endpoints
-"""
+"""VideoAnnotator API v1 endpoints."""
 
 from fastapi import APIRouter
 

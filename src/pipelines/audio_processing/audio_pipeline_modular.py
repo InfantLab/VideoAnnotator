@@ -1,8 +1,6 @@
-"""
-Modular audio processing pipeline coordinator.
+"""Modular audio processing pipeline coordinator.
 
-This pipeline coordinates multiple audio processing pipelines and returns separate data streams.
-"""
+This pipeline coordinates multiple audio processing pipelines and returns separate data streams."""
 
 import logging
 import subprocess

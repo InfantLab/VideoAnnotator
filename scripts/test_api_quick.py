@@ -25,7 +25,7 @@ class APIQuickTester:
         self.results = {"passed": 0, "failed": 0, "details": []}
 
     def _log_result(self, test_name: str, passed: bool, details: str = ""):
-        """Log test result"""
+        """Log test result."""
         status = "[PASS]" if passed else "[FAIL]"
         print(f"  {test_name}: {status}")
         if details:
@@ -42,7 +42,7 @@ class APIQuickTester:
         )
 
     def test_health_endpoints(self):
-        """Test all health-related endpoints"""
+        """Test all health-related endpoints."""
         print("[HEALTH] Testing Health Endpoints...")
 
         # Basic health
@@ -75,7 +75,7 @@ class APIQuickTester:
             self._log_result("Detailed Health Check", False, f"Exception: {e}")
 
     def test_authentication(self):
-        """Test authentication and token validation"""
+        """Test authentication and token validation."""
         print("\n[AUTH] Testing Authentication...")
 
         # Test protected endpoint (jobs list)
@@ -118,7 +118,7 @@ class APIQuickTester:
             self._log_result("Token Debug Info", False, f"Exception: {e}")
 
     def test_pipelines(self):
-        """Test pipeline endpoints"""
+        """Test pipeline endpoints."""
         print("\n[PIPELINE] Testing Pipeline Endpoints...")
 
         # Basic pipeline list
@@ -161,7 +161,7 @@ class APIQuickTester:
             self._log_result("Pipeline Debug Info", False, f"Exception: {e}")
 
     def test_job_endpoints(self):
-        """Test job management endpoints"""
+        """Test job management endpoints."""
         print("\n[JOBS] Testing Job Endpoints...")
 
         # Job listing
@@ -224,7 +224,7 @@ class APIQuickTester:
         return job_id
 
     def test_missing_endpoints(self):
-        """Test for endpoints that should return 404 (not yet implemented)"""
+        """Test for endpoints that should return 404 (not yet implemented)."""
         print("\n[MISSING] Testing Missing Endpoints (Should be 404)...")
 
         missing_endpoints = [
@@ -250,7 +250,7 @@ class APIQuickTester:
                 self._log_result(f"{name} Endpoint", False, f"Exception: {e}")
 
     def test_debug_endpoints(self):
-        """Test debug endpoints"""
+        """Test debug endpoints."""
         print("\n[DEBUG] Testing Debug Endpoints...")
 
         debug_endpoints = [
@@ -279,7 +279,7 @@ class APIQuickTester:
                 self._log_result(f"{name} Debug", False, f"Exception: {e}")
 
     def test_sse_connection(self):
-        """Test SSE connection (mock or real)"""
+        """Test SSE connection (mock or real)."""
         print("\n[SSE] Testing SSE Connection...")
 
         try:
@@ -322,7 +322,7 @@ class APIQuickTester:
             self._log_result("SSE Connection", False, f"Exception: {e}")
 
     def run_all_tests(self):
-        """Run comprehensive API tests"""
+        """Run comprehensive API tests."""
         print("[TEST] VideoAnnotator API Quick Test Suite")
         print("=" * 60)
         print(f"Testing server: {self.base_url}")
@@ -388,7 +388,7 @@ class APIQuickTester:
 
 
 def main():
-    """Main function"""
+    """Main function."""
     # Parse command line arguments
     base_url = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:18011"
     token = sys.argv[2] if len(sys.argv) > 2 else "dev-token"

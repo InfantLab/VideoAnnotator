@@ -1,7 +1,6 @@
-"""
-Quick script to load a job from storage and print full traceback on failure.
-Run with: uv run python scripts/debug_load_job.py <job_id>
-"""
+"""Quick script to load a job from storage and print full traceback on failure.
+
+Run with: uv run python scripts/debug_load_job.py <job_id>"""
 
 import sys
 import traceback

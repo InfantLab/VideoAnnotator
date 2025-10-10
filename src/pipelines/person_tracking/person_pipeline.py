@@ -1,9 +1,7 @@
-"""
-Standards-only person tracking pipeline.
+"""Standards-only person tracking pipeline.
 
 This pipeline works directly with COCO person/keypoint format annotations,
-eliminating all custom schema dependencies.
-"""
+eliminating all custom schema dependencies."""
 
 import logging
 from pathlib import Path

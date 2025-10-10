@@ -1,9 +1,7 @@
-"""
-Unit tests for batch failure recovery functionality.
+"""Unit tests for batch failure recovery functionality.
 
 Tests the FailureRecovery class that handles retry logic,
-error classification, and recovery strategies.
-"""
+error classification, and recovery strategies."""
 
 from pathlib import Path
 

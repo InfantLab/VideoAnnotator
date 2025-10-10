@@ -1,8 +1,6 @@
-"""
-Progress tracking for VideoAnnotator batch processing.
+"""Progress tracking for VideoAnnotator batch processing.
 
-Provides real-time progress monitoring, ETA calculation, and performance metrics.
-"""
+Provides real-time progress monitoring, ETA calculation, and performance metrics."""
 
 import logging
 from collections import deque
@@ -16,12 +14,10 @@ class ProgressTracker:
     """Tracks progress and performance metrics for batch processing."""
 
     def __init__(self, max_history: int = 100):
-        """
-        Initialize progress tracker.
+        """Initialize progress tracker.
 
         Args:
-            max_history: Maximum number of completed jobs to keep for averaging
-        """
+            max_history: Maximum number of completed jobs to keep for averaging"""
         self.max_history = max_history
         self.start_time: datetime | None = None
         self.completion_history: deque = deque(maxlen=max_history)

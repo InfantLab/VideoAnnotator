@@ -1,12 +1,10 @@
-"""
-Example: Testing the LAION Voice Pipeline
+"""Example: Testing the LAION Voice Pipeline.
 
 This example demonstrates how to use the LAIONVoicePipeline
 to process a video and extract voice emotion annotations.
 
 Usage:
-    python examples/test_laion_voice_pipeline.py --video_path /path/to/video.mp4 --output_dir /path/to/output
-"""
+    python examples/test_laion_voice_pipeline.py --video_path /path/to/video.mp4 --output_dir /path/to/output"""
 
 import argparse
 import json

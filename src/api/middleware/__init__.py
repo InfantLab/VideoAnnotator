@@ -1,6 +1,4 @@
-"""
-API middleware modules for VideoAnnotator.
-"""
+"""API middleware modules for VideoAnnotator."""
 
 from .request_logging import ErrorLoggingMiddleware, RequestLoggingMiddleware
 

@@ -1,9 +1,7 @@
-"""
-Debug endpoints for VideoAnnotator API v1.2.0
+"""Debug endpoints for VideoAnnotator API v1.2.0.
 
 These endpoints provide debugging and diagnostic information for client-server
-collaboration and troubleshooting.
-"""
+collaboration and troubleshooting."""
 
 import json
 import platform
@@ -27,7 +25,7 @@ router = APIRouter()
 def log_request(
     method: str, path: str, status_code: int, response_time_ms: int, user_id: str = None
 ):
-    """Log API request for debugging purposes"""
+    """Log API request for debugging purposes."""
     global _request_log
 
     request_entry = {

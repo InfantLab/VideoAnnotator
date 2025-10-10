@@ -1,8 +1,6 @@
-"""
-Speaker diarization pipeline using PyAnnote.
+"""Speaker diarization pipeline using PyAnnote.
 
-Handles speaker segmentation and identification with timestamps.
-"""
+Handles speaker segmentation and identification with timestamps."""
 
 import os
 from typing import Any

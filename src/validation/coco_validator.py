@@ -1,9 +1,7 @@
-"""
-COCO format validation and utilities for VideoAnnotator.
+"""COCO format validation and utilities for VideoAnnotator.
 
 This module provides pycocotools integration for validating and working with
-COCO-format annotations from VideoAnnotator pipelines.
-"""
+COCO-format annotations from VideoAnnotator pipelines."""
 
 import json
 import logging

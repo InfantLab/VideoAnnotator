@@ -1,6 +1,4 @@
-"""
-Types and data classes for batch processing.
-"""
+"""Types and data classes for batch processing."""
 
 import uuid
 from dataclasses import dataclass, field

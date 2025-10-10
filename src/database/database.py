@@ -1,6 +1,4 @@
-"""
-Database configuration and session management for VideoAnnotator API.
-"""
+"""Database configuration and session management for VideoAnnotator API."""
 
 import os
 from collections.abc import Generator

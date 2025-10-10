@@ -1,10 +1,8 @@
-"""
-Simple Size-Based Person Analysis
+"""Simple Size-Based Person Analysis.
 
 A focused implementation of automated person analysis using size-based inference.
 This is a simplified version that demonstrates core size-based labeling
-for adult vs child detection.
-"""
+for adult vs child detection."""
 
 import logging
 
@@ -30,13 +28,11 @@ class SizeBasedPersonAnalyzer:
     """
 
     def __init__(self, height_threshold: float = 0.4, confidence: float = 0.7):
-        """
-        Initialize the size-based analyzer.
+        """Initialize the size-based analyzer.
 
         Args:
             height_threshold: Normalized height threshold for child/adult
-            confidence: Confidence score for automatic labels
-        """
+            confidence: Confidence score for automatic labels"""
         self.height_threshold = height_threshold
         self.confidence = confidence
 

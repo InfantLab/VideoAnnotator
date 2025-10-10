@@ -1,10 +1,8 @@
-"""
-OpenFace 3.0 compatibility layer for VideoAnnotator.
+"""OpenFace 3.0 compatibility layer for VideoAnnotator.
 
 This module provides compatibility interfaces for OpenFace 3.0 when the actual
 OpenFace library is not installed. Instead of generating fake data, it raises
-clear errors indicating that OpenFace needs to be installed.
-"""
+clear errors indicating that OpenFace needs to be installed."""
 
 import logging
 from typing import Any
@@ -154,12 +152,10 @@ class FaceTracker:
 
 
 def patch_scipy_compatibility():
-    """
-    Patch SciPy compatibility issues with OpenFace.
+    """Patch SciPy compatibility issues with OpenFace.
 
     OpenFace uses scipy.integrate.simps which was deprecated and removed
-    in SciPy 1.14.0+. This function provides a compatibility layer.
-    """
+    in SciPy 1.14.0+. This function provides a compatibility layer."""
     try:
         import scipy.integrate
 
@@ -179,12 +175,10 @@ def patch_scipy_compatibility():
 
 
 def get_default_model_paths():
-    """
-    Get default model paths for OpenFace.
+    """Get default model paths for OpenFace.
 
     Returns:
-        dict: Dictionary with model type as key and path as value
-    """
+        dict: Dictionary with model type as key and path as value"""
     return {
         "face_detector": "./weights/Alignment_RetinaFace.pth",
         "landmark_68": "./weights/Landmark_68.pkl",

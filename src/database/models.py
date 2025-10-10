@@ -1,6 +1,4 @@
-"""
-Database models for VideoAnnotator API server.
-"""
+"""Database models for VideoAnnotator API server."""
 
 import uuid
 from typing import Any

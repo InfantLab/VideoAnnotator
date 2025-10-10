@@ -1,8 +1,6 @@
-"""
-Scene Detection Pipeline
+"""Scene Detection Pipeline.
 
-This module provides scene detection and object classification capabilities.
-"""
+This module provides scene detection and object classification capabilities."""
 
 from .scene_pipeline import SceneDetectionPipeline
 

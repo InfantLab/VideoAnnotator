@@ -1,21 +1,17 @@
-"""
-Mathematical utility functions for calculations on keypoints and audio data.
-"""
+"""Mathematical utility functions for calculations on keypoints and audio data."""
 
 import numpy as np
 
 
 def avgxys(xyc, threshold=0.5):
-    """
-    Given a set of x,y,conf values (a n x 3 array) calculate the average x,y values
-    for all those with a confidence above the threshold.
+    """Calculate average x and y for keypoints with confidence above threshold.
 
     Args:
-        xyc - [nrows x 3] array of x,y,conf values
-        threshold - confidence threshold
+        xyc: [nrows x 3] array of x,y,conf values.
+        threshold: confidence threshold.
+
     Returns:
-        avgx, avgy
-    """
+        avgx, avgy"""
     # get the x,y values where conf > threshold
     x = xyc[:, 0]
     y = xyc[:, 1]
@@ -29,16 +25,14 @@ def avgxys(xyc, threshold=0.5):
 
 
 def stdevxys(xyc, threshold=0.5):
-    """
-    Given a set of x,y,conf values (a n x 3 array) calculate the stdev for x,y values
-    for all those with a confidence above the threshold.
+    """Calculate standard deviation of x and y for keypoints above threshold.
 
     Args:
-        xyc - [nrows x 3] array of x,y,conf values
-        threshold - confidence threshold
+        xyc: [nrows x 3] array of x,y,conf values.
+        threshold: confidence threshold.
+
     Returns:
-        stdx, stdy
-    """
+        stdx, stdy"""
     # get the x,y values where conf > threshold
     x = xyc[:, 0]
     y = xyc[:, 1]
@@ -52,49 +46,47 @@ def stdevxys(xyc, threshold=0.5):
 
 
 def rowcogs(keypoints1d, threshold=0.5):
-    """
-    Wrapper for avgxys to work with a 1d array of keypoints
+    """Return average x and y for a 1-D array of keypoints.
 
     Args:
-        keypoints1d - 1d array of keypoints
-        threshold - confidence threshold
+        keypoints1d: 1d array of keypoints.
+        threshold: confidence threshold.
+
     Returns:
-        avgx, avgy
-    """
+        avgx, avgy"""
     # get the x,y values where conf > threshold
     xyc3 = keypoints1d.to_numpy().reshape(-1, 3)
     return avgxys(xyc3, threshold)
 
 
 def rowstds(keypoints1d, threshold=0.5):
-    """
-    Wraps stdevxys to work with a 1d array of keypoints
+    """Return standard deviations for a 1-D array of keypoints.
 
     Args:
-        keypoints1d - 1d array of keypoints
-        threshold - confidence threshold
+        keypoints1d: 1d array of keypoints.
+        threshold: confidence threshold.
+
     Returns:
-        stdx, stdy
-    """
+        stdx, stdy"""
     xycs3 = keypoints1d.to_numpy().reshape(-1, 3)
     return stdevxys(xycs3, threshold)
 
 
 def centreOfGravity(df, frames=(), people="all", bodypart="whole"):
-    """
-    Find average position of a bodypart across frames and people,
-    and add these as new column in the dataframe.
-    Useful for plotting time series of movement.
+    """Compute center of gravity columns for keypoints in a DataFrame.
+
+    Compute average position of a bodypart across frames and people and add
+    `cog.x` and `cog.y` columns to the DataFrame. Useful for plotting time
+    series of movement.
 
     Args:
-        df (DataFrame): Dataframe of keypoints
-        frames (list): List of frames to include
-        people (list or str): List of people to include, or 'all'
-        bodypart (str): Which bodypart to use, default is "whole" for all keypoints
+        df (DataFrame): Dataframe of keypoints.
+        frames (list): List of frames to include.
+        people (list or str): List of people to include, or 'all'.
+        bodypart (str): Which bodypart to use, default is "whole" for all keypoints.
 
     Returns:
-        DataFrame: Dataframe with added center of gravity columns
-    """
+        DataFrame: Dataframe with added center of gravity columns."""
     if len(frames) == 0:
         frames = df.frame.unique()
 

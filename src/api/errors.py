@@ -9,8 +9,7 @@ Usage:
     raise APIError(status_code=404, code="PIPELINE_NOT_FOUND", message="Pipeline 'x' not found", hint="Run 'videoannotator pipelines --detailed'")
 
 Register the exception handler by calling register_error_handlers(app) in API startup.
-(If already imported in src/api/main.py, just add the call.)
-"""
+(If already imported in src/api/main.py, just add the call.)"""
 
 from __future__ import annotations
 

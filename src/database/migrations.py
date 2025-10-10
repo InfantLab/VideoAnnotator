@@ -1,6 +1,4 @@
-"""
-Database migration utilities for VideoAnnotator.
-"""
+"""Database migration utilities for VideoAnnotator."""
 
 import logging
 from pathlib import Path

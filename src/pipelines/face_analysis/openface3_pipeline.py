@@ -1,10 +1,8 @@
-"""
-OpenFace 3.0 face analysis pipeline.
+"""OpenFace 3.0 face analysis pipeline.
 
 This pipeline integrates CMU's OpenFace 3.0 for comprehensive facial behavior analysis,
 including facial landmarks, action units, head pose, and gaze estimation.
-Uses COCO format for compatibility with the VideoAnnotator standards.
-"""
+Uses COCO format for compatibility with the VideoAnnotator standards."""
 
 import json
 import logging
@@ -52,8 +50,7 @@ def _lazy_import_openface():
 
     Some OpenFace distributions parse command line arguments on import. Delaying
     import until pipeline.initialize() prevents pytest (test collection) from
-    encountering unexpected argparse exits.
-    """
+    encountering unexpected argparse exits."""
     global OPENFACE3_AVAILABLE, FaceDetector, LandmarkDetector, MultitaskPredictor
     # If already successfully imported return True immediately
     if OPENFACE3_AVAILABLE:

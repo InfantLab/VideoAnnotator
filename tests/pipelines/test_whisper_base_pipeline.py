@@ -1,9 +1,7 @@
-"""
-WhisperBasePipeline Tests - Complete Version
+"""WhisperBasePipeline Tests - Complete Version.
 
 Extended test suite for the WhisperBasePipeline component.
-This builds on the Stage 1 basic tests with more comprehensive coverage.
-"""
+This builds on the Stage 1 basic tests with more comprehensive coverage."""
 
 from unittest.mock import patch
 

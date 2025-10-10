@@ -1,9 +1,7 @@
-"""
-Tests for VideoAnnotator API Server v1.2.0 with Database Integration
+"""Tests for VideoAnnotator API Server v1.2.0 with Database Integration.
 
 Comprehensive test coverage for the FastAPI server including endpoints,
-database integration, job management, and system health checks.
-"""
+database integration, job management, and system health checks."""
 
 import io
 import json

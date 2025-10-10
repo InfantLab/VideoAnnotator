@@ -1,4 +1,4 @@
-"""Pipeline Registry - Minimal v1.2.1 Implementation
+"""Pipeline Registry - Minimal v1.2.1 Implementation.
 
 Single Source of Truth (SSOT) for pipeline metadata.
 
@@ -14,8 +14,7 @@ NOT in v1.2.1 scope:
 - Plugin sandbox / loading
 - Multi-modal correlation metadata
 
-Future fields (documented only): resources, capabilities, modalities, supports_streaming.
-"""
+Future fields (documented only): resources, capabilities, modalities, supports_streaming."""
 
 from __future__ import annotations
 

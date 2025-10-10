@@ -1,9 +1,7 @@
-"""
-SQLAlchemy database models for VideoAnnotator.
+"""SQLAlchemy database models for VideoAnnotator.
 
 These models map to the existing BatchJob, PipelineResult, and related data structures
-to provide database persistence while maintaining the same interfaces.
-"""
+to provide database persistence while maintaining the same interfaces."""
 
 import uuid
 from datetime import datetime
@@ -68,11 +66,9 @@ class Job(Base):
 
 
 class PipelineResult(Base):
-    """
-    Database model for individual pipeline execution results.
+    """Database model for individual pipeline execution results.
 
-    Each job can have multiple pipeline results (scene, person, face, audio, etc.)
-    """
+    Each job can have multiple pipeline results (scene, person, face, audio, etc.)"""
 
     __tablename__ = "pipeline_results"
 
@@ -99,11 +95,9 @@ class PipelineResult(Base):
 
 
 class Annotation(Base):
-    """
-    Database model for storing pipeline annotation data.
+    """Database model for storing pipeline annotation data.
 
-    Stores the actual annotation content as JSON for flexible schema support.
-    """
+    Stores the actual annotation content as JSON for flexible schema support."""
 
     __tablename__ = "annotations"
 
@@ -124,11 +118,9 @@ class Annotation(Base):
 
 # Optional tables for future multi-user support (v1.3.0+)
 class User(Base):
-    """
-    User model for multi-user installations.
+    """User model for multi-user installations.
 
-    Currently unused but defined for future enterprise features.
-    """
+    Currently unused but defined for future enterprise features."""
 
     __tablename__ = "users"
 
@@ -148,11 +140,9 @@ class User(Base):
 
 
 class ApiKey(Base):
-    """
-    API key model for authentication.
+    """API key model for authentication.
 
-    Currently unused but defined for future enterprise features.
-    """
+    Currently unused but defined for future enterprise features."""
 
     __tablename__ = "api_keys"
 
@@ -172,11 +162,9 @@ class ApiKey(Base):
 
 
 class BatchReport(Base):
-    """
-    Database model for batch processing reports.
+    """Database model for batch processing reports.
 
-    Stores summary information about batch processing operations.
-    """
+    Stores summary information about batch processing operations."""
 
     __tablename__ = "batch_reports"
 
@@ -200,16 +188,14 @@ class BatchReport(Base):
 
 # Database session management
 def create_database_engine(database_url: str, echo: bool = False):
-    """
-    Create SQLAlchemy engine with appropriate configuration.
+    """Create SQLAlchemy engine with appropriate configuration.
 
     Args:
         database_url: Database connection URL (sqlite:/// or postgresql://)
         echo: Whether to log SQL queries (useful for debugging)
 
     Returns:
-        SQLAlchemy engine instance
-    """
+        SQLAlchemy engine instance"""
     if database_url.startswith("sqlite"):
         import json as json_lib
 
@@ -243,25 +229,21 @@ def create_database_engine(database_url: str, echo: bool = False):
 
 
 def create_session_factory(engine):
-    """
-    Create SQLAlchemy session factory.
+    """Create SQLAlchemy session factory.
 
     Args:
         engine: SQLAlchemy engine
 
     Returns:
-        Session factory (sessionmaker instance)
-    """
+        Session factory (sessionmaker instance)"""
     return sessionmaker(bind=engine, autoflush=True, autocommit=False)
 
 
 def initialize_database(engine):
-    """
-    Initialize database by creating all tables.
+    """Initialize database by creating all tables.
 
     Args:
-        engine: SQLAlchemy engine
-    """
+        engine: SQLAlchemy engine"""
     Base.metadata.create_all(engine)
 
 

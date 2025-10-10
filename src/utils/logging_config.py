@@ -1,9 +1,7 @@
-"""
-Enhanced logging configuration for VideoAnnotator API Server.
+"""Enhanced logging configuration for VideoAnnotator API Server.
 
 Provides structured logging with file rotation, request tracking,
-and comprehensive debugging support.
-"""
+and comprehensive debugging support."""
 
 import json
 import logging

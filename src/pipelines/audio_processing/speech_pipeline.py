@@ -1,9 +1,7 @@
-"""
-Speech Recognition Pipeline for VideoAnnotator
+"""Speech Recognition Pipeline for VideoAnnotator.
 
 This pipeline focuses specifically on speech recognition using OpenAI Whisper.
-It's designed to be separable from other audio processing functionality.
-"""
+It's designed to be separable from other audio processing functionality."""
 
 import logging
 from pathlib import Path

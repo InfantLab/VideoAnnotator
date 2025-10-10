@@ -1,8 +1,6 @@
-"""
-Request logging middleware for VideoAnnotator API Server.
+"""Request logging middleware for VideoAnnotator API Server.
 
-Provides comprehensive request/response logging for debugging and monitoring.
-"""
+Provides comprehensive request/response logging for debugging and monitoring."""
 
 import time
 import uuid

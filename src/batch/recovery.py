@@ -1,8 +1,6 @@
-"""
-Failure recovery system for VideoAnnotator batch processing.
+"""Failure recovery system for VideoAnnotator batch processing.
 
-Provides robust error handling, retry mechanisms, and graceful degradation.
-"""
+Provides robust error handling, retry mechanisms, and graceful degradation."""
 
 import logging
 from datetime import datetime
@@ -31,15 +29,13 @@ class FailureRecovery:
         max_delay: float = 300.0,
         strategy: RetryStrategy = RetryStrategy.EXPONENTIAL_BACKOFF,
     ):
-        """
-        Initialize failure recovery system.
+        """Initialize failure recovery system.
 
         Args:
             max_retries: Maximum number of retry attempts per job
             base_delay: Base delay in seconds for retry strategies
             max_delay: Maximum delay in seconds between retries
-            strategy: Retry strategy to use
-        """
+            strategy: Retry strategy to use"""
         self.max_retries = max_retries
         self.base_delay = base_delay
         self.max_delay = max_delay

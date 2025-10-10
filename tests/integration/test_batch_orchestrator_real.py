@@ -1,8 +1,6 @@
-"""
-Unit tests for BatchOrchestrator - testing actual implementation.
+"""Unit tests for BatchOrchestrator - testing actual implementation.
 
-These tests focus on the real API and methods that exist in the BatchOrchestrator class.
-"""
+These tests focus on the real API and methods that exist in the BatchOrchestrator class."""
 
 import tempfile
 from pathlib import Path

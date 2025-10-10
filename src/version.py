@@ -1,6 +1,4 @@
-"""
-VideoAnnotator Version Information and Metadata
-"""
+"""VideoAnnotator Version Information and Metadata."""
 
 import json
 import platform

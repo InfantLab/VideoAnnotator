@@ -12,8 +12,7 @@ from src.utils.keypoint_utils import normalize_keypoints
 
 
 def process_video(model, video_path, data_out, metadata_row, force_process=False):
-    """
-    Process a single video file to extract keypoints and metadata.
+    """Process a single video file to extract keypoints and metadata.
 
     Parameters:
     -----------
@@ -31,8 +30,7 @@ def process_video(model, video_path, data_out, metadata_row, force_process=False
     Returns:
     --------
     dict
-        Updated metadata row
-    """
+        Updated metadata row"""
     videoname = os.path.basename(video_path)
     stemname = get_stem_name(video_path)
     print(f"Processing video: {videoname}")
@@ -124,8 +122,7 @@ def process_video(model, video_path, data_out, metadata_row, force_process=False
 
 
 def normalize_and_save_keypoints(video_row, data_out):
-    """
-    Normalize keypoints from raw keypoints and save to file.
+    """Normalize keypoints from raw keypoints and save to file.
 
     Parameters:
     -----------
@@ -137,8 +134,7 @@ def normalize_and_save_keypoints(video_row, data_out):
     Returns:
     --------
     str
-        Path to the normalized keypoints file
-    """
+        Path to the normalized keypoints file"""
     # Read the raw keypoints
     keypoints_df = pd.read_csv(video_row["Keypoints.file"])
 
@@ -175,8 +171,7 @@ def normalize_and_save_keypoints(video_row, data_out):
 def process_all_videos(
     videos_in, data_out, metadata_file=None, force_metadata=False, force_process=False
 ):
-    """
-    Process all videos in a directory.
+    """Process all videos in a directory.
 
     Parameters:
     -----------
@@ -189,8 +184,7 @@ def process_all_videos(
     force_metadata : bool
         Whether to force metadata extraction
     force_process : bool
-        Whether to force video processing
-    """
+        Whether to force video processing"""
     # Use default metadata file if none provided
     if metadata_file is None:
         metadata_file = PATH_CONFIG["default_metadata_file"]
@@ -214,16 +208,14 @@ def process_all_videos(
 
 
 def understand_videos(videos_in, data_out):
-    """
-    Extract understanding from videos using the Ask-Anything approach.
+    """Extract understanding from videos using the Ask-Anything approach.
 
     Parameters:
     -----------
     videos_in : str
         Directory containing input videos
     data_out : str
-        Directory to save processed data
-    """
+        Directory to save processed data"""
     processedvideos = getProcessedVideos(data_out)
 
     for index, row in processedvideos.iterrows():

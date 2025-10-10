@@ -197,6 +197,7 @@ asyncio_mode = "auto"
 dev = [
     "httpx>=0.28.1",
     "pre-commit>=4.3.0",
+    "pydocstyle>=6.3.0",
     "pytest-asyncio>=1.1.0",
 ]
 

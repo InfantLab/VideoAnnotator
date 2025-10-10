@@ -1,10 +1,8 @@
-"""
-Database configuration and dependency injection for VideoAnnotator API.
+"""Database configuration and dependency injection for VideoAnnotator API.
 
 This module handles database backend selection and provides dependency injection
 for FastAPI endpoints. It supports both SQLite (default) and PostgreSQL backends
-based on environment configuration.
-"""
+based on environment configuration."""
 
 import logging
 import os
@@ -95,12 +93,10 @@ def get_database_info() -> dict:
 
 
 def reset_storage_backend():
-    """
-    Clear the cached storage backend.
+    """Clear the cached storage backend.
 
     This forces get_storage_backend() to create a new instance on next call.
-    Useful for testing or when configuration changes.
-    """
+    Useful for testing or when configuration changes."""
     get_storage_backend.cache_clear()
 
 

@@ -1,6 +1,4 @@
-"""
-Model loading utilities with enhanced progress logging.
-"""
+"""Model loading utilities with enhanced progress logging."""
 
 import logging
 import sys

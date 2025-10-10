@@ -1,9 +1,7 @@
-"""
-Secure Token Management System for VideoAnnotator API v1.2.0
+"""Secure Token Management System for VideoAnnotator API v1.2.0.
 
 Provides user-friendly token generation, validation, and management
-with security best practices and multiple authentication flows.
-"""
+with security best practices and multiple authentication flows."""
 
 import json
 import secrets

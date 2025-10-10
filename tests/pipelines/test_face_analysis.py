@@ -1,9 +1,7 @@
-"""
-Modern Face Analysis Pipeline Tests.
+"""Modern Face Analysis Pipeline Tests.
 
 Tests current COCO-format face detection functionality using standards-only pipeline.
-Living documentation for face analysis capabilities.
-"""
+Living documentation for face analysis capabilities."""
 
 import os
 from unittest.mock import Mock, patch

@@ -1,9 +1,7 @@
-"""
-Unit tests for batch processing storage backend functionality.
+"""Unit tests for batch processing storage backend functionality.
 
 Tests the FileStorageBackend class that handles job persistence,
-state management, and data serialization for batch processing.
-"""
+state management, and data serialization for batch processing."""
 
 import json
 import tempfile

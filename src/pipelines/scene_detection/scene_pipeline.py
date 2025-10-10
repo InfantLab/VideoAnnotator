@@ -1,9 +1,7 @@
-"""
-Standards-only scene detection and classification pipeline.
+"""Standards-only scene detection and classification pipeline.
 
 This pipeline uses PySceneDetect for shot boundary detection and CLIP for scene classification,
-outputting native COCO format annotations with full standards compliance.
-"""
+outputting native COCO format annotations with full standards compliance."""
 
 import logging
 from pathlib import Path

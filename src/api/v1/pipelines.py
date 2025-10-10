@@ -1,6 +1,4 @@
-"""
-Pipeline information endpoints for VideoAnnotator API
-"""
+"""Pipeline information endpoints for VideoAnnotator API."""
 
 import logging
 from typing import Any

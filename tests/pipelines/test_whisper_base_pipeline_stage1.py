@@ -1,8 +1,6 @@
-"""
-Stage 1: Basic Whisper Pipeline Test - Simple Structure Test
+"""Stage 1: Basic Whisper Pipeline Test - Simple Structure Test.
 
-This tests the basic structure without complex dependencies.
-"""
+This tests the basic structure without complex dependencies."""
 
 import pytest
 

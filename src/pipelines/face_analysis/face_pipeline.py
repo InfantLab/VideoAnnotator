@@ -1,9 +1,7 @@
-"""
-Standards-only face analysis pipeline.
+"""Standards-only face analysis pipeline.
 
 This pipeline works directly with COCO format annotations, eliminating all custom schema dependencies.
-Uses native FOSS libraries for all data representation and export.
-"""
+Uses native FOSS libraries for all data representation and export."""
 
 import json
 import logging

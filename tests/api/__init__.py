@@ -1,3 +1,1 @@
-"""
-API tests for VideoAnnotator FastAPI server.
-"""
+"""API tests for VideoAnnotator FastAPI server."""

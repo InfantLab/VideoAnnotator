@@ -1,5 +1,4 @@
-"""
-Native format exporters using established FOSS libraries.
+"""Native format exporters using established FOSS libraries.
 
 This module provides direct integration with industry-standard libraries
 instead of custom schema implementations:
@@ -16,8 +15,7 @@ Usage:
         export_rttm_diarization,
         export_textgrid_speech,
         auto_export_annotations
-    )
-"""
+    )"""
 
 from .native_formats import (
     ValidationResult,

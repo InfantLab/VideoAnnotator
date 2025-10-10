@@ -1,10 +1,8 @@
-"""
-Person Identity Management System
+"""Person Identity Management System.
 
 This module provides consistent person identification and labeling across all VideoAnnotator pipelines.
 It ensures the same person receives the same ID across all visual analysis pipelines and supports
-semantic labeling of person identities.
-"""
+semantic labeling of person identities."""
 
 import json
 import logging
@@ -41,14 +39,12 @@ class PersonIdentityManager:
         id_format: str = "semantic",
         config: dict[str, Any] = None,
     ):
-        """
-        Initialize person identity manager for a video.
+        """Initialize person identity manager for a video.
 
         Args:
             video_id: Unique identifier for the video (can be None if using config)
             id_format: Either "semantic" (person_video_001) or "integer" (1, 2, 3)
-            config: Optional configuration dictionary
-        """
+            config: Optional configuration dictionary"""
         # Handle config parameter for compatibility with pipeline integration
         if config is not None and video_id is None:
             video_id = config.get("video_id", "default_video")
@@ -97,16 +93,14 @@ class PersonIdentityManager:
         method: str = "manual",
         timestamp: float | None = None,
     ):
-        """
-        Assign semantic label to person.
+        """Assign semantic label to person.
 
         Args:
             person_id: Person identifier
             label: Semantic label (e.g., "infant", "parent")
             confidence: Confidence score (0.0 to 1.0)
             method: How the label was assigned
-            timestamp: When label was assigned
-        """
+            timestamp: When label was assigned"""
         self.person_labels[person_id] = PersonLabel(
             label=label, confidence=confidence, method=method, timestamp=timestamp
         )
@@ -305,13 +299,11 @@ class PersonIdentityManager:
     def save_person_tracks(
         self, output_path: str, detections_summary: dict | None = None
     ):
-        """
-        Save person tracks and metadata to JSON file.
+        """Save person tracks and metadata to JSON file.
 
         Args:
             output_path: Output file path
-            detections_summary: Optional summary of detection statistics
-        """
+            detections_summary: Optional summary of detection statistics"""
         person_tracks_data = []
 
         for track_id, person_id in self.track_to_person_map.items():

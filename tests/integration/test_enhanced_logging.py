@@ -1,9 +1,7 @@
-"""
-Integration tests for enhanced logging functionality in v1.2.0
+"""Integration tests for enhanced logging functionality in v1.2.0.
 
 Tests the integration of enhanced model download logging with actual
-pipeline components, ensuring logging works correctly in realistic scenarios.
-"""
+pipeline components, ensuring logging works correctly in realistic scenarios."""
 
 import logging
 from pathlib import Path

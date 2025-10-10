@@ -1,9 +1,7 @@
-"""
-Single job processor for VideoAnnotator API.
+"""Single job processor for VideoAnnotator API.
 
 Extracts core pipeline processing logic from BatchOrchestrator
-for API-based individual job processing.
-"""
+for API-based individual job processing."""
 
 from datetime import datetime
 

@@ -1,9 +1,7 @@
-"""
-Unit tests for batch processing types and data structures.
+"""Unit tests for batch processing types and data structures.
 
 Tests the core data types used throughout the batch processing system,
-including JobStatus, BatchJob, PipelineResult, BatchStatus, and BatchReport.
-"""
+including JobStatus, BatchJob, PipelineResult, BatchStatus, and BatchReport."""
 
 import uuid
 from datetime import datetime, timedelta

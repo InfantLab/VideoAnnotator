@@ -1,9 +1,7 @@
-"""
-Automatic Person Labeling Utilities
+"""Automatic Person Labeling Utilities.
 
 This module provides automatic labeling capabilities for person identification
-based on visual cues like size, position, and spatial relationships.
-"""
+based on visual cues like size, position, and spatial relationships."""
 
 import logging
 from typing import Any
@@ -24,12 +22,10 @@ class AutomaticPersonLabeler:
     """
 
     def __init__(self, config: dict | None = None):
-        """
-        Initialize automatic labeler with configuration.
+        """Initialize automatic labeler with configuration.
 
         Args:
-            config: Configuration dict with labeling parameters
-        """
+            config: Configuration dict with labeling parameters"""
         self.config = config or self._default_config()
 
     def _default_config(self) -> dict:

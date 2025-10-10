@@ -1,6 +1,4 @@
-"""
-Database layer for VideoAnnotator API server.
-"""
+"""Database layer for VideoAnnotator API server."""
 
 from .crud import APIKeyCRUD, JobCRUD, UserCRUD
 from .database import SessionLocal, create_tables, drop_tables, engine, get_db

@@ -1,6 +1,4 @@
-"""
-VideoAnnotator CLI - Unified command-line interface
-"""
+"""VideoAnnotator CLI - Unified command-line interface."""
 
 from pathlib import Path
 
@@ -19,11 +17,10 @@ app = typer.Typer(
 
 @app.callback(invoke_without_command=True)
 def _default(ctx: typer.Context):
-    """
-    Default entrypoint: if no subcommand is provided, start the server with the
+    """Default entrypoint: if no subcommand is provided, start the server with the.
+
     recommended host and port. This makes `uv run videoannotator` behave like
-    `uv run videoannotator server --host 0.0.0.0 --port 18011`.
-    """
+    `uv run videoannotator server --host 0.0.0.0 --port 18011`."""
     # If a subcommand was invoked, do nothing here and let Typer handle it.
     if ctx.invoked_subcommand is not None:
         return

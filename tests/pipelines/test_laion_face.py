@@ -1,9 +1,7 @@
-"""
-Stage 2: LAION Face Pipeline Tests
+"""Stage 2: LAION Face Pipeline Tests.
 
 Test suite for the LAIONFacePipeline component.
-Focus on face emotion analysis using LAION models.
-"""
+Focus on face emotion analysis using LAION models."""
 
 from unittest.mock import Mock, patch
 

@@ -1,6 +1,4 @@
-"""
-Job management endpoints for VideoAnnotator API
-"""
+"""Job management endpoints for VideoAnnotator API."""
 
 import json
 import logging

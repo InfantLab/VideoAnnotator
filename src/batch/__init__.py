@@ -1,9 +1,7 @@
-"""
-VideoAnnotator Batch Processing
+"""VideoAnnotator Batch Processing.
 
 This module provides robust batch processing capabilities for VideoAnnotator,
-including job queue management, failure recovery, and progress tracking.
-"""
+including job queue management, failure recovery, and progress tracking."""
 
 # Import only types by default to prevent heavy import chain during testing
 from .types import BatchJob, BatchReport, BatchStatus, JobStatus

@@ -1,6 +1,4 @@
-"""
-Authentication and authorization system for VideoAnnotator API.
-"""
+"""Authentication and authorization system for VideoAnnotator API."""
 
 from .token_manager import (
     SecureTokenManager,

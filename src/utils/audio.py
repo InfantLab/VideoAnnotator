@@ -2,13 +2,12 @@ import librosa
 
 
 def find_f0(audio_file):
-    """
-    Extract the fundamental frequency (F0) from an audio file.
+    """Extract the fundamental frequency (F0) from an audio file.
+
     Args:
         audio_file (str): The path to the audio file.
     Returns:
-        np.array: The fundamental frequency values.
-    """
+        np.array: The fundamental frequency values."""
     # Load the audio file
     y, sr = librosa.load(audio_file)
     # Extract the fundamental frequency

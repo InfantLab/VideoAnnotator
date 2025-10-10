@@ -1,9 +1,7 @@
-"""
-Unit tests for the BatchOrchestrator class.
+"""Unit tests for the BatchOrchestrator class.
 
 Tests the core batch processing orchestrator that manages job queues,
-worker pools, and coordinates video processing pipelines.
-"""
+worker pools, and coordinates video processing pipelines."""
 
 import tempfile
 from pathlib import Path

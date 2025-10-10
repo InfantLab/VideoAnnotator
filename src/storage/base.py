@@ -1,6 +1,4 @@
-"""
-Base storage backend interface for VideoAnnotator batch processing.
-"""
+"""Base storage backend interface for VideoAnnotator batch processing."""
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any

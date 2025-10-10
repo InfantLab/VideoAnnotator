@@ -1,9 +1,7 @@
-"""
-Example usage of the diarization pipeline.
+"""Example usage of the diarization pipeline.
 
 This script shows how to use the speaker diarization functionality
-from the VideoAnnotator project.
-"""
+from the VideoAnnotator project."""
 
 import logging
 import os
@@ -17,13 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 def example_diarization(video_path: str, output_dir: str = None):
-    """
-    Example function showing how to use the diarization pipeline.
+    """Example function showing how to use the diarization pipeline.
 
     Args:
         video_path: Path to the video file to process
-        output_dir: Optional output directory for audio files
-    """
+        output_dir: Optional output directory for audio files"""
 
     try:
         from src.pipelines.audio_processing import (

@@ -1,8 +1,6 @@
-"""
-VideoAnnotator API Server
+"""VideoAnnotator API Server.
 
-FastAPI-based REST API for video annotation processing.
-"""
+FastAPI-based REST API for video annotation processing."""
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager

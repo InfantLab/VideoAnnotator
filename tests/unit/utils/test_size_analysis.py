@@ -1,6 +1,4 @@
-"""
-Test integration of size-based analysis with person tracking pipeline.
-"""
+"""Test integration of size-based analysis with person tracking pipeline."""
 
 # Mock cv2 and ultralytics before any imports to avoid dependency issues
 import sys

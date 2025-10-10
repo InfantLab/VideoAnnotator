@@ -1,9 +1,7 @@
-"""
-Background task management for VideoAnnotator API server.
+"""Background task management for VideoAnnotator API server.
 
 Integrates job processing directly into the API server using FastAPI's
-background tasks and asyncio for seamless operation.
-"""
+background tasks and asyncio for seamless operation."""
 
 import asyncio
 import time
@@ -32,14 +30,12 @@ class BackgroundJobManager:
         poll_interval: int = 5,
         max_concurrent_jobs: int = 2,
     ):
-        """
-        Initialize the background job manager.
+        """Initialize the background job manager.
 
         Args:
             storage_backend: Storage backend for job management
             poll_interval: Seconds between database polls
-            max_concurrent_jobs: Maximum jobs to process simultaneously
-        """
+            max_concurrent_jobs: Maximum jobs to process simultaneously"""
         self.storage = storage_backend or get_storage_backend()
         self.poll_interval = poll_interval
         self.max_concurrent_jobs = max_concurrent_jobs

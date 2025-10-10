@@ -1,6 +1,4 @@
-"""
-Functions for rendering annotated frames and other visualizations.
-"""
+"""Functions for rendering annotated frames and other visualizations."""
 
 import ultralytics.utils as ultrautils
 
@@ -13,8 +11,8 @@ def drawOneFrame(
     speechLabel=None,
     objectData=None,
 ):
-    """
-    Redraw one frame with all the annotations we provide.
+    """Redraw one frame with all the annotations we provide.
+
     Use ultralytics.utils.Annotator where we can.
 
     Args:
@@ -26,8 +24,7 @@ def drawOneFrame(
         objectData (list): Object detection data [objecttype,objectinfo,x,y,w,h]
 
     Returns:
-        np.ndarray: Annotated image
-    """
+        np.ndarray: Annotated image"""
     annotator = ultrautils.plotting.Annotator(baseImage)
 
     if bboxlabels is not None and bboxes is not None:
@@ -47,8 +44,8 @@ def drawOneFrame(
 
 
 def WhisperExtractCurrentCaption(speechjson, frame, fps):
-    """
-    Looks through 'segments' data in the json output from whisper
+    """Looks through 'segments' data in the json output from whisper.
+
     and returns the caption that is current for the given frame.
 
     Args:
@@ -57,8 +54,7 @@ def WhisperExtractCurrentCaption(speechjson, frame, fps):
         fps (float): Frames per second
 
     Returns:
-        str: Caption for the current frame
-    """
+        str: Caption for the current frame"""
     time = frame / fps
     for seg in speechjson["segments"]:
         if time >= seg["start"] and time <= seg["end"]:

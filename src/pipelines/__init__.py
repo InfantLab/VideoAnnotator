@@ -1,8 +1,6 @@
-"""
-VideoAnnotator Pipeline Modules
+"""VideoAnnotator Pipeline Modules.
 
-This package contains modular pipeline implementations for video annotation tasks.
-"""
+This package contains modular pipeline implementations for video annotation tasks."""
 
 from .audio_processing import AudioPipeline
 from .base_pipeline import BasePipeline

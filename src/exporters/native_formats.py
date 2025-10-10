@@ -1,5 +1,4 @@
-"""
-Native FOSS library integration for VideoAnnotator.
+"""Native FOSS library integration for VideoAnnotator.
 
 This module uses established FOSS libraries directly instead of custom schema wrappers:
 - pycocotools: Official COCO format support
@@ -14,8 +13,7 @@ Usage:
         export_webvtt_captions,
         export_rttm_diarization,
         export_textgrid_speech
-    )
-"""
+    )"""
 
 import json
 import logging

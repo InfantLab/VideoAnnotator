@@ -1,6 +1,4 @@
-"""
-FFmpeg-based audio extraction utilities for the audio processing pipeline.
-"""
+"""FFmpeg-based audio extraction utilities for the audio processing pipeline."""
 
 import logging
 import shutil

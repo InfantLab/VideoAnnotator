@@ -1,12 +1,10 @@
-"""
-Example: Batch Video Processing
+"""Example: Batch Video Processing.
 
 This example demonstrates how to process multiple videos in batch using
 the modernized VideoAnnotator pipeline system.
 
 Usage:
-    python examples/batch_processing.py --input_dir /path/to/videos --output_dir /path/to/outputs
-"""
+    python examples/batch_processing.py --input_dir /path/to/videos --output_dir /path/to/outputs"""
 
 import argparse
 import concurrent.futures

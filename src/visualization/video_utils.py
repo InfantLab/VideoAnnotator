@@ -1,6 +1,4 @@
-"""
-Functions for video creation and manipulation.
-"""
+"""Functions for video creation and manipulation."""
 
 import os
 import time
@@ -16,8 +14,8 @@ from src.visualization.render import WhisperExtractCurrentCaption, drawOneFrame
 def createAnnotatedVideo(
     videopath, kptsdf=None, facesdf=None, speechjson=None, videos_out=None, debug=False
 ):
-    """
-    Take a processed video and go through frame by frame, adding the bounding boxes,
+    """Take a processed video and go through frame by frame, adding the bounding boxes,.
+
     keypoints, face/emotion and speech info. Then export the resulting video to a file.
 
     Args:
@@ -29,8 +27,7 @@ def createAnnotatedVideo(
         debug (bool): Whether to display debug output
 
     Returns:
-        str: Path to the output video
-    """
+        str: Path to the output video"""
     # check if video exists
     if not os.path.exists(videopath):
         print(f"Video file {videopath} not found.")
@@ -116,8 +113,7 @@ def createAnnotatedVideo(
 
 
 def addSoundtoVideo(videopath, soundpath, out_dir=None):
-    """
-    Take a video and add a sound file to it using moviepy.
+    """Take a video and add a sound file to it using moviepy.
 
     Args:
         videopath (str): Path to the video file
@@ -125,8 +121,7 @@ def addSoundtoVideo(videopath, soundpath, out_dir=None):
         out_dir (str): Path to the output directory
 
     Returns:
-        str: Path to the output video
-    """
+        str: Path to the output video"""
     import os
 
     from moviepy.editor import AudioFileClip, VideoFileClip

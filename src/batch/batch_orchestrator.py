@@ -1,9 +1,7 @@
-"""
-BatchOrchestrator: Core batch processing engine for VideoAnnotator.
+"""BatchOrchestrator: Core batch processing engine for VideoAnnotator.
 
 Manages job queues, worker pools, progress tracking, and failure recovery
-for robust large-scale video processing.
-"""
+for robust large-scale video processing."""
 
 import logging
 import time
@@ -63,15 +61,13 @@ class BatchOrchestrator:
         retry_strategy: RetryStrategy = RetryStrategy.EXPONENTIAL_BACKOFF,
         checkpoint_interval: int = 10,
     ):
-        """
-        Initialize batch orchestrator.
+        """Initialize batch orchestrator.
 
         Args:
             storage_backend: Storage backend for annotations and metadata
             max_retries: Maximum retry attempts per failed job
             retry_strategy: Strategy for retry delays
-            checkpoint_interval: Save checkpoint every N completed jobs
-        """
+            checkpoint_interval: Save checkpoint every N completed jobs"""
         if storage_backend is None:
             # Lazy import to avoid circular import
             from storage.file_backend import FileStorageBackend

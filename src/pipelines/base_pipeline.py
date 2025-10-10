@@ -1,6 +1,4 @@
-"""
-Base pipeline interface for all video annotation processors.
-"""
+"""Base pipeline interface for all video annotation processors."""
 
 import logging
 from abc import ABC, abstractmethod

@@ -1,8 +1,6 @@
-"""
-Integration tests for VideoAnnotator API Server v1.2.0.
+"""Integration tests for VideoAnnotator API Server v1.2.0.
 
-Tests the complete workflow from authentication to job processing.
-"""
+Tests the complete workflow from authentication to job processing."""
 
 import asyncio
 import json

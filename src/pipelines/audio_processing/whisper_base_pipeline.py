@@ -1,9 +1,7 @@
-"""
-Whisper Base Pipeline for VideoAnnotator
+"""Whisper Base Pipeline for VideoAnnotator.
 
 This module provides a base pipeline for Whisper-based audio processing tasks.
-It serves as a foundation for both speech recognition and voice emotion analysis.
-"""
+It serves as a foundation for both speech recognition and voice emotion analysis."""
 
 import gc
 import logging
@@ -67,8 +65,7 @@ class WhisperBasePipeline(BasePipeline):
     """
 
     def __init__(self, config: dict[str, Any] | None = None):
-        """
-        Initialize the Whisper base pipeline with configuration settings.
+        """Initialize the Whisper base pipeline with configuration settings.
 
         Args:
             config: Configuration dictionary with the following options:
@@ -78,8 +75,7 @@ class WhisperBasePipeline(BasePipeline):
                 - use_fp16: Use half precision when possible (default: True)
                 - cache_dir: Model cache directory (default: "./models/whisper")
                 - use_auth_token: Use HF auth token for gated models (default: False)
-                - normalize_audio: Normalize audio during preprocessing (default: True)
-        """
+                - normalize_audio: Normalize audio during preprocessing (default: True)"""
         default_config = {
             "whisper_model": "base",  # Standard Whisper model or HF model ID
             "sample_rate": 16000,  # Whisper's preferred sample rate

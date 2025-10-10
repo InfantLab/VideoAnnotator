@@ -1,9 +1,7 @@
-"""
-Unit tests for batch progress tracking functionality.
+"""Unit tests for batch progress tracking functionality.
 
 Tests the ProgressTracker class that monitors batch job progress,
-calculates metrics, and provides real-time status updates.
-"""
+calculates metrics, and provides real-time status updates."""
 
 from pathlib import Path
 

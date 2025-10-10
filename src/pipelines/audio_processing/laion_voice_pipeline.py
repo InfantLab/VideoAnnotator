@@ -1,9 +1,7 @@
-"""
-LAION Empathic Insight Voice Pipeline
+"""LAION Empathic Insight Voice Pipeline.
 
 This pipeline implements voice emotion analysis using LAION's Empathic Insight Voice models.
-It utilizes a Whisper-based audio encoder and MLP classifiers for emotion prediction.
-"""
+It utilizes a Whisper-based audio encoder and MLP classifiers for emotion prediction."""
 
 import logging
 from pathlib import Path
@@ -100,16 +98,14 @@ class FullEmbeddingMLP(nn.Module):
         mlp_hidden_dims: list[int],
         mlp_dropout_rates: list[float],
     ):
-        """
-        Initialize the MLP model.
+        """Initialize the MLP model.
 
         Args:
             seq_len: Sequence length of the Whisper embedding
             embed_dim: Dimension of the Whisper embedding
             projection_dim: Dimension to project the flattened embedding to
             mlp_hidden_dims: List of hidden dimensions for MLP layers
-            mlp_dropout_rates: List of dropout rates for each layer (including input)
-        """
+            mlp_dropout_rates: List of dropout rates for each layer (including input)"""
         super().__init__()
         if len(mlp_dropout_rates) != len(mlp_hidden_dims) + 1:
             raise ValueError(
@@ -143,9 +139,7 @@ class FullEmbeddingMLP(nn.Module):
 
 
 class LAIONVoicePipeline(WhisperBasePipeline):
-    """
-    LAION Empathic Insight Voice Pipeline for audio emotion analysis.
-    """
+    """LAION Empathic Insight Voice Pipeline for audio emotion analysis."""
 
     def __init__(self, config: dict[str, Any] | None = None):
         """Initialize the pipeline with configuration settings."""

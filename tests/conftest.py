@@ -11,8 +11,7 @@ def patch_speech_pipeline_cuda(monkeypatch):
     without CUDA support leading to failures. We now:
       - Return the real torch.cuda.is_available() result
       - Allow an opt-in override by setting TEST_FORCE_CUDA=1 in env
-    This keeps tests deterministic while remaining safe on CPU-only machines.
-    """
+    This keeps tests deterministic while remaining safe on CPU-only machines."""
     import os
 
     try:

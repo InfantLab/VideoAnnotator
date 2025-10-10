@@ -1,9 +1,7 @@
-"""
-Integration tests for batch processing components.
+"""Integration tests for batch processing components.
 
 Tests the integration between BatchOrchestrator, ProgressTracker,
-FailureRecovery, and other batch processing components.
-"""
+FailureRecovery, and other batch processing components."""
 
 import asyncio
 import tempfile
