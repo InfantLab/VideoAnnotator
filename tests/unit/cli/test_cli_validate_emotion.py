@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
+
 from typer.testing import CliRunner
+
 from src.cli import app
 
 runner = CliRunner()
@@ -14,12 +16,12 @@ VALID = {
             "end": 0.4,
             "labels": [
                 {"label": "happy", "confidence": 0.9},
-                {"label": "neutral", "confidence": 0.05}
+                {"label": "neutral", "confidence": 0.05},
             ],
             "confidence": 0.9,
-            "source": {"modality": "video"}
+            "source": {"modality": "video"},
         }
-    ]
+    ],
 }
 
 INVALID = {
@@ -29,12 +31,11 @@ INVALID = {
         {
             "start": 0.4,
             "end": 0.1,  # invalid ordering
-            "labels": [
-                {"label": "happy", "confidence": 1.1}
-            ]
+            "labels": [{"label": "happy", "confidence": 1.1}],
         }
-    ]
+    ],
 }
+
 
 def test_validate_emotion_ok(tmp_path: Path):
     p = tmp_path / "valid.emotion.json"

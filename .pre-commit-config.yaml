@@ -1,6 +1,9 @@
 # Pre-commit hooks for VideoAnnotator
 # Install with: pre-commit install
 
+# Exclude tokens directory (contains encrypted blobs / non-JSON-safe data)
+exclude: ^tokens/
+
 repos:
   # Built-in hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -10,7 +13,7 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
-        args: ['--maxkb=10000']
+        args: ["--maxkb=10000"]
       - id: check-json
       - id: check-toml
       - id: check-xml
@@ -26,7 +29,8 @@ repos:
 
   # Python linting and formatting with Ruff (replaces Black, isort, flake8)
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.13
+    # Pinned to a known-good stable release for reproducibility.
+    rev: v0.14.0
     hooks:
       - id: ruff
         args: [--fix]
@@ -97,8 +101,8 @@ ci:
 
     for more information, see https://pre-commit.ci
   autofix_prs: true
-  autoupdate_branch: ''
-  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_branch: ""
+  autoupdate_commit_msg: "[pre-commit.ci] pre-commit autoupdate"
   autoupdate_schedule: weekly
   skip: []
   submodules: false

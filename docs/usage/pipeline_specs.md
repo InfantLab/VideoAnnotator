@@ -12,7 +12,7 @@ VideoAnnotator provides a **modular, JSON-centric annotation system** for extrac
 
 - **Modern Architecture**: Clean, maintainable pipeline modules using YOLO11, open-source models
 - **Simplified Outputs**: JSON arrays with specification-compliant schemas
-- **Research Flexibility**: Configurable processing parameters and extensible outputs  
+- **Research Flexibility**: Configurable processing parameters and extensible outputs
 - **Tool Integration**: Direct export to CVAT, LabelStudio, ELAN for manual annotation
 - **Production Ready**: Efficient processing with GPU acceleration and batch support
 
@@ -25,7 +25,7 @@ VideoAnnotator/
 ├── src/
 │   ├── pipelines/
 │   │   ├── audio_processing/      # Speech recognition & diarization
-│   │   ├── face_analysis/         # Face detection & emotion analysis  
+│   │   ├── face_analysis/         # Face detection & emotion analysis
 │   │   ├── person_tracking/       # Person detection & tracking
 │   │   └── scene_detection/       # Scene boundary detection
 │   ├── schemas/                   # Simplified JSON schemas
@@ -44,11 +44,11 @@ Each pipeline follows a standardized interface pattern optimized for research an
 ```python
 class ModernPipeline(BasePipeline):
     """Standard pipeline interface for all VideoAnnotator pipelines."""
-    
+
     def process(self, video_path: str, **kwargs) -> List[dict]:
         """Process video and return JSON-compatible annotations."""
         pass
-    
+
     def export_to_file(self, annotations: List[dict], output_path: str) -> None:
         """Save annotations to standardized JSON format."""
         pass
@@ -56,8 +56,8 @@ class ModernPipeline(BasePipeline):
 
 ### 1. Person Detection & Tracking
 
-**Technology**: YOLO11 with ByteTrack tracking  
-**Purpose**: Detect and track people across video frames  
+**Technology**: YOLO11 with ByteTrack tracking
+**Purpose**: Detect and track people across video frames
 **Output**: Normalized bounding boxes with persistent person IDs
 
 ```bash
@@ -71,6 +71,7 @@ uv run videoannotator job submit video.mp4 --pipelines person
 ```
 
 **Output Format**:
+
 ```json
 [
   {
@@ -86,12 +87,12 @@ uv run videoannotator job submit video.mp4 --pipelines person
 
 ### 2. Face Analysis
 
-**Technology**: YOLO11-face + OpenCV for emotion detection  
-**Purpose**: Detect faces and analyze emotions  
+**Technology**: YOLO11-face + OpenCV for emotion detection
+**Purpose**: Detect faces and analyze emotions
 **Output**: Face bounding boxes with emotion predictions
 
 ```python
-# Usage  
+# Usage
 from src.pipelines.face_analysis import FacePipeline
 
 pipeline = FacePipeline()
@@ -99,11 +100,12 @@ annotations = pipeline.process("video.mp4")
 ```
 
 **Output Format**:
+
 ```json
 [
   {
     "type": "facial_emotion",
-    "video_id": "vid123", 
+    "video_id": "vid123",
     "t": 12.34,
     "person_id": 1,
     "face_id": "face_001",
@@ -116,8 +118,8 @@ annotations = pipeline.process("video.mp4")
 
 ### 3. Scene Detection
 
-**Technology**: PySceneDetect with CLIP for scene classification  
-**Purpose**: Detect scene boundaries and classify environments  
+**Technology**: PySceneDetect with CLIP for scene classification
+**Purpose**: Detect scene boundaries and classify environments
 **Output**: Scene segments with transition information
 
 ```python
@@ -129,13 +131,14 @@ annotations = pipeline.process("video.mp4")
 ```
 
 **Output Format**:
+
 ```json
 [
   {
     "type": "scene_boundary",
     "video_id": "vid123",
     "t": 45.6,
-    "scene_id": "scene_003", 
+    "scene_id": "scene_003",
     "boundary_type": "cut",
     "confidence": 0.95
   }
@@ -144,15 +147,15 @@ annotations = pipeline.process("video.mp4")
 
 ### 4. Audio Processing
 
-**Technology**: Whisper (OpenAI) + pyannote.audio for diarization  
-**Purpose**: Speech recognition and speaker identification  
+**Technology**: Whisper (OpenAI) + pyannote.audio for diarization
+**Purpose**: Speech recognition and speaker identification
 **Output**: Transcripts with speaker diarization
 
-```python
+````python
 # Usage
 from src.pipelines.audio_processing import AudioPipeline
 
-pipeline = AudioPipeline() 
+pipeline = AudioPipeline()
 annotations = pipeline.process("video.mp4")
 ## 📋 Configuration & Usage
 
@@ -168,7 +171,7 @@ person_tracking:
   tracking_method: "bytetrack"
 
 face_analysis:
-  model: "yolo11n-face.pt" 
+  model: "yolo11n-face.pt"
   emotion_model: "opencv_dnn"
   min_face_size: 30
 
@@ -180,7 +183,7 @@ audio_processing:
 scene_detection:
   threshold: 30.0
   min_scene_length: 1.0
-```
+````
 
 ### Command Line Interface
 
@@ -261,12 +264,12 @@ temporal_density = df.groupby('t').size()
 
 ### Processing Performance
 
-| Pipeline | Video Duration | Processing Time | GPU Acceleration |
-|----------|----------------|-----------------|------------------|
-| Person Tracking | 1 minute | ~30 seconds | 3x speedup |
-| Face Analysis | 1 minute | ~45 seconds | 2x speedup |
-| Audio Processing | 1 minute | ~15 seconds | CPU-optimized |
-| Scene Detection | 1 minute | ~10 seconds | CPU-optimized |
+| Pipeline         | Video Duration | Processing Time | GPU Acceleration |
+| ---------------- | -------------- | --------------- | ---------------- |
+| Person Tracking  | 1 minute       | ~30 seconds     | 3x speedup       |
+| Face Analysis    | 1 minute       | ~45 seconds     | 2x speedup       |
+| Audio Processing | 1 minute       | ~15 seconds     | CPU-optimized    |
+| Scene Detection  | 1 minute       | ~10 seconds     | CPU-optimized    |
 
 ### Batch Processing
 
@@ -303,6 +306,7 @@ opencv-python
 ffmpeg, librosa, torchaudio
 
 ## 📌 Summary
+
 This video annotation framework is designed to be:
 
 Modular, maintainable and extensible
@@ -312,4 +316,5 @@ Fully JSON-based and compatible with downstream ML and human-in-the-loop tasks
 Based on modern open-source libraries and accelerates research on parent–child interaction at scale
 
 ## 📝 Conclusion
+
 This specification provides a high-level overview of the architecture and data formats for the Auto-PCI video annotation pipeline. Each module can be developed independently, allowing for easy updates and integration of new models or features as they become available.

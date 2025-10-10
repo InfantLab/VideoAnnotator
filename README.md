@@ -15,7 +15,7 @@
 VideoAnnotator automatically analyzes videos of human interactions and extracts rich behavioral data including:
 
 - **👥 Person tracking** - Multi-person detection and pose estimation with persistent IDs
-- **😊 Facial analysis** - Emotions, expressions, gaze direction, and action units  
+- **😊 Facial analysis** - Emotions, expressions, gaze direction, and action units
 - **🎬 Scene detection** - Environment classification and temporal segmentation
 - **🎤 Audio analysis** - Speech recognition, speaker identification, and emotion detection
 
@@ -26,14 +26,18 @@ VideoAnnotator automatically analyzes videos of human interactions and extracts 
 VideoAnnotator provides both **automated processing** and **interactive visualization**:
 
 ### 📹 **VideoAnnotator** (this repository)
+
 **AI-powered video processing pipeline**
+
 - Processes videos to extract behavioral annotations
 - REST API for integration with research workflows
 - Supports batch processing and custom configurations
 - Outputs standardized JSON data
 
 ### 🌐 **[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)**
+
 **Interactive web-based visualization tool**
+
 - Load and visualize VideoAnnotator results
 - Synchronized video playback with annotation overlays
 - Timeline scrubbing with pose, face, and audio data
@@ -44,6 +48,7 @@ VideoAnnotator provides both **automated processing** and **interactive visualiz
 ## 🚀 Get Started in 60 Seconds
 
 ### 1. Quick Setup
+
 ```bash
 # Install modern Python package manager
 curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/Mac
@@ -56,6 +61,7 @@ uv sync  # Fast dependency installation (30 seconds)
 ```
 
 ### 2. Start Processing Videos
+
 ```bash
 # Start the API server
 uv run python api_server.py
@@ -69,6 +75,7 @@ curl -X POST "http://localhost:18011/api/v1/jobs/" \
 ```
 
 ### 3. Visualize Results
+
 ```bash
 # Install the companion web viewer
 git clone https://github.com/InfantLab/video-annotation-viewer.git
@@ -92,52 +99,61 @@ Authoritative pipeline metadata (names, tasks, modalities, capabilities) is gene
 - Emotion output format spec: `docs/specs/emotion_output_format.md`
 
 Additional Specs:
+
 - Output Naming Conventions: `docs/specs/output_naming_conventions.md` (stable patterns for downstream tooling)
 - Emotion Validator Utility: `src/validation/emotion_validator.py` (programmatic validation of `.emotion.json` files)
- - CLI Validation: `videoannotator validate-emotion path/to/file.emotion.json` returns non-zero exit on failure
-Client tools (e.g. the Video Annotation Viewer) should rely on those sources or the `/api/v1/pipelines` endpoint rather than hard-coding pipeline assumptions.
+- CLI Validation: `videoannotator validate-emotion path/to/file.emotion.json` returns non-zero exit on failure
+  Client tools (e.g. the Video Annotation Viewer) should rely on those sources or the `/api/v1/pipelines` endpoint rather than hard-coding pipeline assumptions.
 
 ### **Person Tracking Pipeline**
+
 - **Technology**: YOLO11 + ByteTrack multi-object tracking
 - **Outputs**: Bounding boxes, pose keypoints, persistent person IDs
 - **Use cases**: Movement analysis, social interaction tracking, activity recognition
 
-### **Face Analysis Pipeline** 
+### **Face Analysis Pipeline**
+
 - **Technology**: OpenFace 3.0, LAION Face, OpenCV backends
 - **Outputs**: 68-point landmarks, emotions, action units, gaze direction, head pose
 - **Use cases**: Emotional analysis, attention tracking, facial expression studies
 
 ### **Scene Detection Pipeline**
+
 - **Technology**: PySceneDetect + CLIP environment classification
 - **Outputs**: Scene boundaries, environment labels, temporal segmentation
 - **Use cases**: Context analysis, setting classification, behavioral context
 
 ### **Audio Processing Pipeline**
-- **Technology**: OpenAI Whisper + pyannote speaker diarization  
+
+- **Technology**: OpenAI Whisper + pyannote speaker diarization
 - **Outputs**: Speech transcripts, speaker identification, voice emotions
 - **Use cases**: Conversation analysis, language development, vocal behavior
 
 ## 💡 Why VideoAnnotator?
 
 ### **🎯 Built for Researchers**
+
 - **No coding required** - Web interface and REST API
 - **Standardized outputs** - JSON formats compatible with analysis tools
 - **Reproducible results** - Version-controlled processing pipelines
 - **Batch processing** - Handle multiple videos efficiently
 
-### **🔬 Research-Grade Accuracy**  
+### **🔬 Research-Grade Accuracy**
+
 - **State-of-the-art models** - YOLO11, OpenFace 3.0, Whisper
 - **Validated pipelines** - Tested on developmental psychology datasets
 - **Comprehensive metrics** - Confidence scores, validation tools
 - **Flexible configuration** - Adjust parameters for your research needs
 
 ### **⚡ Production Ready**
+
 - **Fast processing** - GPU acceleration, optimized pipelines
 - **Scalable architecture** - Docker containers, API-first design
 - **Cross-platform** - Windows, macOS, Linux support
 - **Enterprise features** - Authentication, logging, monitoring
 
 ### **🔒 Privacy & Data Protection**
+
 - **100% Local Processing** - All analysis runs on your hardware, no cloud dependencies
 - **No Data Transmission** - Videos and results never leave your infrastructure
 - **GDPR Compliant** - Full control over sensitive research data
@@ -192,16 +208,19 @@ VideoAnnotator generates rich, structured data like this:
 ## 🔗 Integration & Export
 
 ### **Direct Integration**
+
 - **Python**: Import JSON data into pandas, matplotlib, seaborn
 - **R**: Load data with jsonlite, analyze with tidyverse
 - **MATLAB**: Process JSON with built-in functions
 
 ### **Annotation Tools**
+
 - **CVAT**: Computer Vision Annotation Tool integration
-- **LabelStudio**: Machine learning annotation platform  
+- **LabelStudio**: Machine learning annotation platform
 - **ELAN**: Linguistic annotation software compatibility
 
 ### **Analysis Platforms**
+
 - **Video Annotation Viewer**: Interactive web-based analysis (recommended)
 - **Custom dashboards**: Build with our REST API
 - **Jupyter notebooks**: Examples included in repository
@@ -209,6 +228,7 @@ VideoAnnotator generates rich, structured data like this:
 ## 🛠️ Installation & Usage
 
 ### **Method 1: Direct Installation (Recommended)**
+
 ```bash
 # Modern Python environment
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -221,12 +241,13 @@ uv run python api_server.py
 ```
 
 ### **Method 2: Docker (Production)**
+
 ```bash
 # CPU version (lightweight)
 docker build -f Dockerfile.cpu -t videoannotator:cpu .
 docker run -p 18011:8000 videoannotator:cpu
 
-# GPU version (faster processing)  
+# GPU version (faster processing)
 docker build -f Dockerfile.gpu -t videoannotator:gpu .
 docker run -p 18011:8000 --gpus all videoannotator:gpu
 
@@ -236,6 +257,7 @@ docker run -p 18011:8000 --gpus all videoannotator:dev
 ```
 
 ### **Method 3: Research Platform Integration**
+
 ```python
 # Python API for custom workflows
 from videoannotator import VideoAnnotator
@@ -251,49 +273,55 @@ print(f"Detected {df['person_id'].nunique()} unique people")
 
 ## 📚 Documentation & Resources
 
-| Resource | Description |
-|----------|-------------|
-| **[📖 Interactive Docs](https://deepwiki.com/InfantLab/VideoAnnotator)** | Complete documentation with examples |
-| **[🎮 Live API Testing](http://localhost:18011/docs)** | Interactive API when server is running |
-| **[🚀 Getting Started Guide](docs/usage/GETTING_STARTED.md)** | Step-by-step setup and first video |
-| **[🔧 Installation Guide](docs/installation/INSTALLATION.md)** | Detailed installation instructions |
-| **[⚙️ Pipeline Specifications](docs/usage/pipeline_specs.md)** | Technical pipeline documentation |
-| **[🎯 Demo Commands](docs/usage/demo_commands.md)** | Example commands and workflows |
+| Resource                                                                 | Description                            |
+| ------------------------------------------------------------------------ | -------------------------------------- |
+| **[📖 Interactive Docs](https://deepwiki.com/InfantLab/VideoAnnotator)** | Complete documentation with examples   |
+| **[🎮 Live API Testing](http://localhost:18011/docs)**                   | Interactive API when server is running |
+| **[🚀 Getting Started Guide](docs/usage/GETTING_STARTED.md)**            | Step-by-step setup and first video     |
+| **[🔧 Installation Guide](docs/installation/INSTALLATION.md)**           | Detailed installation instructions     |
+| **[⚙️ Pipeline Specifications](docs/usage/pipeline_specs.md)**           | Technical pipeline documentation       |
+| **[🎯 Demo Commands](docs/usage/demo_commands.md)**                      | Example commands and workflows         |
 
 ## 👥 Research Applications
 
 ### **Developmental Psychology**
+
 - **Parent-child interaction** studies with synchronized behavioral coding
 - **Social development** research with multi-person tracking
 - **Language acquisition** studies with audio-visual alignment
 
-### **Clinical Research**  
+### **Clinical Research**
+
 - **Autism spectrum** behavioral analysis with facial expression tracking
 - **Therapy session** analysis with emotion and engagement metrics
 - **Developmental assessment** with standardized behavioral measures
 
 ### **Human-Computer Interaction**
-- **User experience** research with attention and emotion tracking  
+
+- **User experience** research with attention and emotion tracking
 - **Interface evaluation** with gaze direction and facial feedback
 - **Accessibility** studies with comprehensive behavioral data
 
 ## 🏗️ Architecture & Performance
 
 ### **Modern Technology Stack**
+
 - **FastAPI** - High-performance REST API with automatic documentation
-- **YOLO11** - State-of-the-art object detection and pose estimation  
+- **YOLO11** - State-of-the-art object detection and pose estimation
 - **OpenFace 3.0** - Comprehensive facial behavior analysis
 - **Whisper** - Robust speech recognition and transcription
 - **PyTorch** - GPU-accelerated machine learning inference
 
 ### **Performance Characteristics**
+
 - **Processing speed**: ~2-4x real-time with GPU acceleration
 - **Memory usage**: 4-8GB RAM for typical videos
 - **Storage**: ~100MB output per hour of video
 - **Accuracy**: 90%+ for person detection, 85%+ for emotion recognition
 
 ### **Scalability**
-- **Batch processing**: Handle multiple videos simultaneously  
+
+- **Batch processing**: Handle multiple videos simultaneously
 - **Container deployment**: Docker support for cloud platforms
 - **Distributed processing**: API-first design for microservices
 - **Resource optimization**: CPU and GPU variants available
@@ -301,54 +329,66 @@ print(f"Detected {df['person_id'].nunique()} unique people")
 ## 🤝 Contributing & Community
 
 ### **Getting Involved**
+
 - **🐛 Report issues**: [GitHub Issues](https://github.com/InfantLab/VideoAnnotator/issues)
-- **💬 Discussions**: [GitHub Discussions](https://github.com/InfantLab/VideoAnnotator/discussions) 
-- **📧 Contact**: Caspar Addyman at infantologist@gmail.com 
+- **💬 Discussions**: [GitHub Discussions](https://github.com/InfantLab/VideoAnnotator/discussions)
+- **📧 Contact**: Caspar Addyman at infantologist@gmail.com
 - **🔬 Collaborations**: Open to research partnerships
 
 ### **Development**
+
 - **Code quality**: 83% test coverage, modern Python practices
-- **Documentation**: Comprehensive guides and API documentation  
+- **Documentation**: Comprehensive guides and API documentation
 - **CI/CD**: Automated testing and deployment pipelines
 - **Standards**: Following research software engineering best practices
 
 ## 📄 Citation & License
 
 ### **Citation**
+
 If you use VideoAnnotator in your research, please cite:
+
 ```
 Addyman, C. (2025). VideoAnnotator: Automated video analysis toolkit for human interaction research.
 Zenodo. https://Zenodo. doi.org/10.5281/zenodo.16961751
 ```
+
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.16961751.svg)](https://doi.org/10.5281/zenodo.16961751)
 
 ### **License**
+
 MIT License - Full terms in [LICENSE](LICENSE)
 
 ### **Funding & Support**
+
 - **The Global Parenting Initiative** (Funded by The LEGO Foundation)
 
 ## 🙏 Acknowledgments
 
 ### **Research Team**
+
 - **Caspar Addyman** (infantologist@gmail.com) - Lead Developer & Research Director
 
 ### **Open Source Dependencies**
+
 Built with and grateful to:
+
 - **[YOLO & Ultralytics](https://ultralytics.com/)** - Object detection and tracking
-- **[OpenFace 3.0](https://github.com/CMU-MultiComp-Lab/OpenFace-3.0)** - Facial behavior analysis  
+- **[OpenFace 3.0](https://github.com/CMU-MultiComp-Lab/OpenFace-3.0)** - Facial behavior analysis
 - **[OpenAI Whisper](https://github.com/openai/whisper)** - Speech recognition
 - **[FastAPI](https://github.com/tiangolo/fastapi)** - Modern web framework
 - **[PyTorch](https://pytorch.org/)** - Machine learning infrastructure
 
 ### **Development Tools & AI Assistance**
+
 Development was greatly helped by:
+
 - **[Visual Studio Code](https://code.visualstudio.com/)** - Primary development environment
 - **[GitHub Copilot](https://github.com/features/copilot)** - AI pair programming assistance
 - **[Claude Code](https://claude.ai/code)** - Architecture design and documentation
 - **GPT-4 & Claude Models** - Code generation and debugging help
 
-*This project demonstrates how AI-assisted development can accelerate research software creation while maintaining code quality and comprehensive testing.*
+_This project demonstrates how AI-assisted development can accelerate research software creation while maintaining code quality and comprehensive testing._
 
 ---
 

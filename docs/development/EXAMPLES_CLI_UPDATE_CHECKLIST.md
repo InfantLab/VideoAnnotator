@@ -1,34 +1,43 @@
 # Examples CLI Update Checklist for v1.2.1
 
 ## 🎯 **Overview**
+
 Post-v1.2.0 cleanup to modernize all examples and documentation to use the new `videoannotator` CLI interface instead of old direct Python script execution patterns.
 
 ## 📚 **Files Requiring Updates**
 
 ### **High Priority - Documentation**
+
 - [ ] **examples/README.md** - Complete rewrite of CLI usage patterns
-  - Replace: `python examples/basic_video_processing.py --video_path video.mp4`  
+
+  - Replace: `python examples/basic_video_processing.py --video_path video.mp4`
   - With: `uv run videoannotator job submit video.mp4 --pipelines scene,person,face`
 
 - [ ] **docs/usage/GETTING_STARTED.md** - Verify CLI examples are current ✅ DONE
 - [ ] **docs/usage/demo_commands.md** - Update all command examples (if exists)
 
 ### **Medium Priority - Example Scripts**
+
 #### **Current Direct Pipeline Examples:**
+
 1. **examples/basic_video_processing.py**
+
    - **Current**: Direct pipeline imports and argparse
    - **Update**: Add API integration alternative or convert to API example
-   
+
 2. **examples/batch_processing.py**
+
    - **Current**: Direct parallel processing with multiprocessing
    - **Update**: Show API-based batch job submission
-   
-3. **examples/test_individual_pipelines.py** 
+
+3. **examples/test_individual_pipelines.py**
+
    - **Current**: Direct pipeline testing with argparse
    - **Update**: Use `videoannotator pipelines` and API testing
-   
+
 4. **examples/custom_pipeline_config.py**
-   - **Current**: Direct pipeline configuration 
+
+   - **Current**: Direct pipeline configuration
    - **Update**: Use `videoannotator config --validate` patterns
 
 5. **examples/diarization_example.py**
@@ -36,7 +45,9 @@ Post-v1.2.0 cleanup to modernize all examples and documentation to use the new `
    - **Update**: API-based audio processing example
 
 #### **Research-Specific Examples:**
+
 6. **examples/size_based_analysis_demo.py**
+
    - **Current**: Custom analysis workflow
    - **Update**: Integrate with API results retrieval
 
@@ -47,23 +58,27 @@ Post-v1.2.0 cleanup to modernize all examples and documentation to use the new `
 ## 🔄 **Recommended Approach**
 
 ### **Strategy: Dual Documentation**
+
 Instead of replacing existing examples, provide both approaches:
 
 #### **Keep Legacy Examples** (for direct pipeline usage)
+
 - Rename with `_legacy` suffix
 - Add header explaining when to use direct vs. API approach
 - Maintain for users who need direct pipeline integration
 
 #### **Add New Modern Examples**
+
 - `examples/api_job_submission.py` - Complete API workflow
-- `examples/api_batch_processing.py` - Multi-video API processing  
+- `examples/api_batch_processing.py` - Multi-video API processing
 - `examples/cli_workflow_demo.py` - Modern CLI usage patterns
 - `examples/api_results_analysis.py` - Working with API results
 
 ## 📝 **Specific Updates Needed**
 
 ### **examples/README.md** - Major Rewrite
-```diff
+
+````diff
 ## Quick Start
 
 - ### Old Approach (Direct Pipeline)
@@ -71,21 +86,22 @@ Instead of replacing existing examples, provide both approaches:
 + ```bash
 + # Start server
 + uv run videoannotator server
-+ 
++
 + # Submit job
 + uv run videoannotator job submit video.mp4 --pipelines scene,person,face
-+ 
-+ # Check status  
++
++ # Check status
 + uv run videoannotator job status <job_id>
-+ 
++
 + # Get results
 + uv run videoannotator job results <job_id>
 + ```
-+ 
++
 + ### Legacy Approach (Direct Pipeline Usage)
-```
+````
 
 ### **Common Patterns to Replace:**
+
 ```diff
 # Command Line Usage:
 - python examples/basic_video_processing.py --video_path /path/to/video.mp4
@@ -110,18 +126,21 @@ Instead of replacing existing examples, provide both approaches:
 ## 🎯 **Success Criteria**
 
 ### **Documentation Quality**
+
 - ✅ New users can follow examples without confusion about CLI vs. direct usage
 - ✅ Clear distinction between legacy (direct) and modern (API) approaches
 - ✅ All CLI examples use proper `uv run videoannotator` syntax
 
-### **Backward Compatibility**  
+### **Backward Compatibility**
+
 - ✅ Existing direct pipeline usage still documented and working
 - ✅ Researchers can choose appropriate approach for their needs
 - ✅ Migration path clearly explained
 
 ### **Developer Experience**
+
 - ✅ Examples run without modification on fresh installs
-- ✅ API examples demonstrate complete workflows  
+- ✅ API examples demonstrate complete workflows
 - ✅ Error handling and troubleshooting covered
 
 ## ⚡ **Quick Wins (1-2 hours each)**
@@ -134,7 +153,7 @@ Instead of replacing existing examples, provide both approaches:
 ## 🗓️ **Timeline Estimate**
 
 - **examples/README.md rewrite**: 2-3 hours
-- **4 new API example scripts**: 6-8 hours  
+- **4 new API example scripts**: 6-8 hours
 - **Legacy script header updates**: 2-3 hours
 - **Testing and validation**: 2-3 hours
 

@@ -10,51 +10,51 @@ person_tracking:
   tracker: "bytetrack"
   pose_format: "coco_17"
   min_keypoint_confidence: 0.3
-  
+
   # Person identity configuration
   person_identity:
     enabled: true
-    id_format: "semantic"  # "semantic" (person_video_001) or "integer" (1, 2, 3)
-    
+    id_format: "semantic" # "semantic" (person_video_001) or "integer" (1, 2, 3)
+
     # Automatic labeling settings
     automatic_labeling:
       enabled: true
       confidence_threshold: 0.7
-      
+
       # Size-based labeling
       size_based:
         enabled: true
-        height_threshold: 0.4  # Normalized height threshold for child/adult
+        height_threshold: 0.4 # Normalized height threshold for child/adult
         confidence: 0.7
         adult_label: "parent"
         child_label: "infant"
-        
+
         # First version settings - simplified size-based inference
-        use_simple_analyzer: true  # Use simplified size-based analyzer instead of full automatic labeling
-        min_detections_for_analysis: 2  # Minimum detections needed for classification
-      
-      # Position-based labeling  
+        use_simple_analyzer: true # Use simplified size-based analyzer instead of full automatic labeling
+        min_detections_for_analysis: 2 # Minimum detections needed for classification
+
+      # Position-based labeling
       position_based:
         enabled: true
-        center_bias_threshold: 0.7  # Threshold for center positioning
+        center_bias_threshold: 0.7 # Threshold for center positioning
         confidence: 0.6
-        primary_label: "infant"    # Center subject is often the child
+        primary_label: "infant" # Center subject is often the child
         secondary_label: "parent"
-      
+
       # Temporal consistency filtering
       temporal_consistency:
         enabled: true
-        min_detections: 10  # Minimum detections for stable labeling
+        min_detections: 10 # Minimum detections for stable labeling
         consistency_threshold: 0.8
 
 # Face analysis pipelines - person linking configuration
 face_analysis:
   # Link face detections to persons
   link_to_persons: true
-  person_linking_method: "iou"  # "iou" or "embedding"
+  person_linking_method: "iou" # "iou" or "embedding"
   iou_threshold: 0.5
-  temporal_consistency_window: 5  # frames
-  require_person_id: false  # Graceful fallback if no person tracking
+  temporal_consistency_window: 5 # frames
+  require_person_id: false # Graceful fallback if no person tracking
 
 openface3_analysis:
   # Link OpenFace3 results to persons
@@ -64,7 +64,7 @@ openface3_analysis:
   require_person_id: false
 
 laion_face_analysis:
-  # Link LAION face results to persons  
+  # Link LAION face results to persons
   link_to_persons: true
   person_linking_method: "iou"
   iou_threshold: 0.5
@@ -76,33 +76,33 @@ person_labels:
   parent:
     aliases: ["mother", "father", "mom", "dad", "caregiver"]
     description: "Adult caregiver or parent"
-    
+
   infant:
     aliases: ["baby", "child", "toddler", "kid"]
     description: "Young child or infant"
-    
+
   sibling:
     aliases: ["brother", "sister"]
     description: "Sibling of primary subject"
-  
+
   # Educational context
   teacher:
     aliases: ["instructor", "educator", "professor"]
     description: "Educational instructor"
-    
+
   student:
     aliases: ["pupil", "learner"]
     description: "Student or learner"
-  
-  # Clinical context  
+
+  # Clinical context
   patient:
     aliases: ["client", "participant"]
     description: "Patient or research participant"
-    
+
   clinician:
     aliases: ["therapist", "doctor", "practitioner"]
     description: "Healthcare provider"
-  
+
   # Generic
   person:
     aliases: ["individual", "unknown", "adult"]
@@ -113,10 +113,10 @@ export:
   # Include person identity fields in all exports
   include_person_id: true
   include_person_labels: true
-  
+
   # Person tracks export
   export_person_tracks: true
   person_tracks_format: "json"
-  
+
   # Backward compatibility
   maintain_backward_compatibility: true

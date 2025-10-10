@@ -1,12 +1,13 @@
 import os
 import time
+
 import pandas as pd
 from ultralytics import YOLO
 
 from src.config import MODEL_CONFIG, PATH_CONFIG, VIDEO_CONFIG
-from src.utils.io_utils import getProcessedVideos, saveProcessedVideos, get_stem_name
-from src.processors.video_processor import videotokeypoints, get_video_metadata
+from src.processors.video_processor import get_video_metadata, videotokeypoints
 from src.processors.video_understanding import extract_video_understanding
+from src.utils.io_utils import get_stem_name, getProcessedVideos, saveProcessedVideos
 from src.utils.keypoint_utils import normalize_keypoints
 
 
@@ -83,7 +84,9 @@ def process_video(model, video_path, data_out, metadata_row, force_process=False
             and not pd.isnull(row["Keypoints.file"].values[0])
             and os.path.exists(row["Keypoints.file"].values[0])
         ):
-            print(f"Already processed {videoname} results in {row['Keypoints.file'].values[0]}")
+            print(
+                f"Already processed {videoname} results in {row['Keypoints.file'].values[0]}"
+            )
             return row.to_dict("records")[0]
 
         # Extract keypoints
@@ -108,10 +111,12 @@ def process_video(model, video_path, data_out, metadata_row, force_process=False
         # Save updated processedvideos
         saveProcessedVideos(processedvideos, data_out)
 
-        return processedvideos.loc[processedvideos["VideoID"] == videoname].to_dict("records")[0]
+        return processedvideos.loc[processedvideos["VideoID"] == videoname].to_dict(
+            "records"
+        )[0]
 
     except Exception as e:
-        print(f"Error processing video {videoname}: {str(e)}")
+        print(f"Error processing video {videoname}: {e!s}")
         import traceback
 
         traceback.print_exc()
@@ -138,7 +143,9 @@ def normalize_and_save_keypoints(video_row, data_out):
     keypoints_df = pd.read_csv(video_row["Keypoints.file"])
 
     # Normalize keypoints (only normalization, no other processing)
-    normalized_df = normalize_keypoints(keypoints_df, video_row["Height"], video_row["Width"])
+    normalized_df = normalize_keypoints(
+        keypoints_df, video_row["Height"], video_row["Width"]
+    )
 
     # Save normalized keypoints
     stemname = os.path.splitext(video_row["Keypoints.file"])[0]
@@ -152,9 +159,13 @@ def normalize_and_save_keypoints(video_row, data_out):
     if "Keypoints.normed" in processedvideos.columns and pd.api.types.is_float_dtype(
         processedvideos["Keypoints.normed"]
     ):
-        processedvideos["Keypoints.normed"] = processedvideos["Keypoints.normed"].astype("object")
+        processedvideos["Keypoints.normed"] = processedvideos[
+            "Keypoints.normed"
+        ].astype("object")
 
-    idx = processedvideos.loc[processedvideos["VideoID"] == video_row["VideoID"]].index[0]
+    idx = processedvideos.loc[processedvideos["VideoID"] == video_row["VideoID"]].index[
+        0
+    ]
     processedvideos.at[idx, "Keypoints.normed"] = normedkeypointspath
     saveProcessedVideos(processedvideos, data_out)
 

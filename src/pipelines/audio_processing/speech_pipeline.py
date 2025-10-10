@@ -6,11 +6,12 @@ It's designed to be separable from other audio processing functionality.
 """
 
 import logging
-from typing import Dict, List, Optional, Union, Any
 from pathlib import Path
+from typing import Any
+
+import librosa
 import numpy as np
 import torch
-import librosa
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -18,19 +19,21 @@ load_dotenv()
 
 try:
     import whisper
+
     WHISPER_AVAILABLE = True
 except ImportError:
     WHISPER_AVAILABLE = False
     logging.warning("whisper not available. Speech recognition will be disabled.")
 
-from .whisper_base_pipeline import WhisperBasePipeline
 from version import __version__
+
+from .whisper_base_pipeline import WhisperBasePipeline
 
 
 class SpeechPipeline(WhisperBasePipeline):
     """
     Speech recognition pipeline using OpenAI Whisper.
-    
+
     This implementation extends WhisperBasePipeline to leverage the shared
     Whisper functionality while focusing specifically on transcription.
     """
@@ -40,7 +43,7 @@ class SpeechPipeline(WhisperBasePipeline):
         """Return the output format for this pipeline."""
         return "webvtt"
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         # Speech-specific config defaults
         speech_config = {
             "whisper_model": "base",  # Will use this as model ID for WhisperBasePipeline
@@ -52,20 +55,20 @@ class SpeechPipeline(WhisperBasePipeline):
             "patience": 1.0,
             "length_penalty": 1.0,
             "word_timestamps": True,
-            "prepend_punctuations": "\"'\"¿([{-",
-            "append_punctuations": "\"'.。,，!！?？:：\")]}、",
+            "prepend_punctuations": '"\'"¿([{-',
+            "append_punctuations": '"\'.。,，!！?？:：")]}、',
             "suppress_tokens": None,
-            "min_segment_duration": 1.0
+            "min_segment_duration": 1.0,
         }
-        
+
         # Update with user-provided config
         if config:
             speech_config.update(config)
-        
+
         # Convert legacy "model" key to "whisper_model" if present
         if config and "model" in config and "whisper_model" not in config:
             speech_config["whisper_model"] = config["model"]
-        
+
         # Initialize base pipeline with merged config
         super().__init__(speech_config)
         self.logger = logging.getLogger(__name__)
@@ -74,10 +77,10 @@ class SpeechPipeline(WhisperBasePipeline):
         self,
         video_path: str,
         start_time: float = 0.0,
-        end_time: Optional[float] = None,
+        end_time: float | None = None,
         pps: float = 0.0,
-        output_dir: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        output_dir: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Process video and return speech recognition results.
 
@@ -97,10 +100,10 @@ class SpeechPipeline(WhisperBasePipeline):
         try:
             # Convert path to Path object
             video_path = Path(video_path)
-            
+
             # Extract audio using base pipeline functionality
             audio, sample_rate = self.extract_audio_from_video(video_path)
-            
+
             # Transcribe the audio
             result = self.transcribe_audio(audio)
             return [result] if result else []
@@ -109,7 +112,7 @@ class SpeechPipeline(WhisperBasePipeline):
             self.logger.error(f"Error processing speech recognition: {e}")
             return []
 
-    def transcribe_audio(self, audio: Union[str, Path, np.ndarray]) -> Optional[Dict[str, Any]]:
+    def transcribe_audio(self, audio: str | Path | np.ndarray) -> dict[str, Any] | None:
         """
         Perform speech recognition on audio.
 
@@ -128,14 +131,14 @@ class SpeechPipeline(WhisperBasePipeline):
 
         try:
             self.logger.info("Performing speech recognition")
-            
+
             # Handle different audio input types
             if isinstance(audio, (str, Path)):
                 audio_path = Path(audio)
                 if not audio_path.exists():
                     self.logger.error(f"Audio file not found: {audio_path}")
                     return None
-                
+
                 # For standard Whisper, use the built-in transcribe method
                 if self.model_type == "standard":
                     # Prepare Whisper options
@@ -148,9 +151,14 @@ class SpeechPipeline(WhisperBasePipeline):
                         "patience": self.config.get("patience", 1.0),
                         "length_penalty": self.config.get("length_penalty", 1.0),
                         "word_timestamps": self.config.get("word_timestamps", True),
-                        "prepend_punctuations": self.config.get("prepend_punctuations", "\"'\"¿([{-"),
-                        "append_punctuations": self.config.get("append_punctuations", "\"'.。,，!！?？:：\")]}、"),
-                        "fp16": self.config.get("use_fp16", True) and torch.cuda.is_available(),
+                        "prepend_punctuations": self.config.get(
+                            "prepend_punctuations", '"\'"¿([{-'
+                        ),
+                        "append_punctuations": self.config.get(
+                            "append_punctuations", '"\'.。,，!！?？:：")]}、'
+                        ),
+                        "fp16": self.config.get("use_fp16", True)
+                        and torch.cuda.is_available(),
                     }
 
                     if self.config.get("suppress_tokens"):
@@ -159,16 +167,14 @@ class SpeechPipeline(WhisperBasePipeline):
                     # Transcribe audio
                     result = self.whisper_model.transcribe(str(audio_path), **options)
                     return self._process_transcription_result(result, audio_path.stem)
-                
+
                 # For HuggingFace Whisper, load the audio and process
                 else:
                     # Use the base pipeline's audio loading
                     audio, sr = librosa.load(
-                        audio_path, 
-                        sr=self.config["sample_rate"],
-                        mono=True
+                        audio_path, sr=self.config["sample_rate"], mono=True
                     )
-            
+
             # Handle numpy array input (already loaded audio)
             if isinstance(audio, np.ndarray):
                 if self.model_type == "standard":
@@ -182,37 +188,46 @@ class SpeechPipeline(WhisperBasePipeline):
                         "patience": self.config.get("patience", 1.0),
                         "length_penalty": self.config.get("length_penalty", 1.0),
                         "word_timestamps": self.config.get("word_timestamps", True),
-                        "prepend_punctuations": self.config.get("prepend_punctuations", "\"'\"¿([{-"),
-                        "append_punctuations": self.config.get("append_punctuations", "\"'.。,，!！?？:：\")]}、"),
-                        "fp16": self.config.get("use_fp16", True) and torch.cuda.is_available(),
+                        "prepend_punctuations": self.config.get(
+                            "prepend_punctuations", '"\'"¿([{-'
+                        ),
+                        "append_punctuations": self.config.get(
+                            "append_punctuations", '"\'.。,，!！?？:：")]}、'
+                        ),
+                        "fp16": self.config.get("use_fp16", True)
+                        and torch.cuda.is_available(),
                     }
-                    
+
                     if self.config.get("suppress_tokens"):
                         options["suppress_tokens"] = self.config["suppress_tokens"]
-                    
+
                     # Transcribe audio waveform
                     result = self.whisper_model.transcribe(audio, **options)
                     return self._process_transcription_result(result, "audio_segment")
-                
+
                 # For HuggingFace Whisper, process directly
                 else:
                     # TODO: Implement HuggingFace Whisper transcription
                     # This requires using the tokenizer and generation utilities
-                    self.logger.error("HuggingFace Whisper transcription not yet implemented")
+                    self.logger.error(
+                        "HuggingFace Whisper transcription not yet implemented"
+                    )
                     return None
 
         except Exception as e:
             self.logger.error(f"Speech recognition failed: {e}")
             return None
 
-    def _process_transcription_result(self, result: Dict[str, Any], video_id: str) -> Dict[str, Any]:
+    def _process_transcription_result(
+        self, result: dict[str, Any], video_id: str
+    ) -> dict[str, Any]:
         """
         Process Whisper transcription result into standard format.
-        
+
         Args:
             result: Raw Whisper result
             video_id: Identifier for the video/audio
-            
+
         Returns:
             Processed transcription result
         """
@@ -244,7 +259,9 @@ class SpeechPipeline(WhisperBasePipeline):
                         "tokens": segment.get("tokens", []),
                         "temperature": float(segment.get("temperature", 0.0)),
                         "avg_logprob": float(segment.get("avg_logprob", 0.0)),
-                        "compression_ratio": float(segment.get("compression_ratio", 0.0)),
+                        "compression_ratio": float(
+                            segment.get("compression_ratio", 0.0)
+                        ),
                         "no_speech_prob": float(segment.get("no_speech_prob", 0.0)),
                     }
                 )
@@ -266,7 +283,7 @@ class SpeechPipeline(WhisperBasePipeline):
                 "end_time": segments[-1]["end"] if segments else 0.0,
                 "total_duration": segments[-1]["end"] if segments else 0.0,
                 "segments": segments,  # Store segment details in metadata
-            }
+            },
         }
 
         self.logger.info(
@@ -275,15 +292,24 @@ class SpeechPipeline(WhisperBasePipeline):
         )
         return speech_result
 
-    def get_schema(self) -> Dict[str, Any]:
+    def get_schema(self) -> dict[str, Any]:
         """Get the output schema for this pipeline."""
         return {
             "type": "speech_recognition",
             "description": "Speech recognition results with word and segment timestamps",
             "properties": {
-                "transcript": {"type": "string", "description": "Full transcribed text"},
-                "language": {"type": "string", "description": "Detected or specified language"},
-                "confidence": {"type": "number", "description": "Overall confidence score"},
+                "transcript": {
+                    "type": "string",
+                    "description": "Full transcribed text",
+                },
+                "language": {
+                    "type": "string",
+                    "description": "Detected or specified language",
+                },
+                "confidence": {
+                    "type": "number",
+                    "description": "Overall confidence score",
+                },
                 "words": {
                     "type": "array",
                     "items": {
@@ -300,7 +326,7 @@ class SpeechPipeline(WhisperBasePipeline):
             },
         }
 
-    def get_pipeline_info(self) -> Dict[str, Any]:
+    def get_pipeline_info(self) -> dict[str, Any]:
         """Get information about the speech recognition pipeline."""
         return {
             "name": "SpeechPipeline",
@@ -313,7 +339,9 @@ class SpeechPipeline(WhisperBasePipeline):
                 "translation": True,
             },
             "models": {
-                "whisper_model": self.config["whisper_model"] if WHISPER_AVAILABLE else None,
+                "whisper_model": self.config["whisper_model"]
+                if WHISPER_AVAILABLE
+                else None,
             },
             "config": {
                 "model_name": self.config["whisper_model"],

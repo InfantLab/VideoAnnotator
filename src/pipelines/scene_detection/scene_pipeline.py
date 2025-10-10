@@ -5,23 +5,24 @@ This pipeline uses PySceneDetect for shot boundary detection and CLIP for scene 
 outputting native COCO format annotations with full standards compliance.
 """
 
-from typing import Dict, Any, List, Optional
-import numpy as np
-from pathlib import Path
 import logging
+from pathlib import Path
+from typing import Any
 
-from pipelines.base_pipeline import BasePipeline
-from version import __version__
+import numpy as np
+
 from exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
     export_coco_json,
     validate_coco_json,
 )
+from pipelines.base_pipeline import BasePipeline
+from version import __version__
 
 # Optional imports
 try:
-    from scenedetect import detect, ContentDetector
+    from scenedetect import ContentDetector, detect
 
     SCENEDETECT_AVAILABLE = True
 except ImportError:
@@ -44,7 +45,7 @@ class SceneDetectionPipeline(BasePipeline):
     Returns native COCO format annotations.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         default_config = {
             "threshold": 30.0,  # Scene detection threshold
             "min_scene_length": 2.0,  # Minimum scene length in seconds
@@ -75,10 +76,10 @@ class SceneDetectionPipeline(BasePipeline):
         self,
         video_path: str,
         start_time: float = 0.0,
-        end_time: Optional[float] = None,
+        end_time: float | None = None,
         pps: float = 0.0,  # Not used for scene detection
-        output_dir: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        output_dir: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Process video for scene detection and classification."""
 
         # Get video metadata
@@ -107,7 +108,12 @@ class SceneDetectionPipeline(BasePipeline):
                 annotation_id=i + 1,
                 image_id=f"{video_metadata['video_id']}_frame_{frame_number:06d}",
                 category_id=1,  # Scene category
-                bbox=[0, 0, video_metadata["width"], video_metadata["height"]],  # Full frame
+                bbox=[
+                    0,
+                    0,
+                    video_metadata["width"],
+                    video_metadata["height"],
+                ],  # Full frame
                 score=segment.get("confidence", 1.0),
                 # VideoAnnotator extensions for scenes
                 video_id=video_metadata["video_id"],
@@ -126,10 +132,12 @@ class SceneDetectionPipeline(BasePipeline):
         if output_dir and annotations:
             self._save_coco_annotations(annotations, output_dir, video_metadata)
 
-        self.logger.info(f"Scene detection complete: {len(annotations)} scenes detected")
+        self.logger.info(
+            f"Scene detection complete: {len(annotations)} scenes detected"
+        )
         return annotations
 
-    def _get_video_metadata(self, video_path: str) -> Dict[str, Any]:
+    def _get_video_metadata(self, video_path: str) -> dict[str, Any]:
         """Extract video metadata."""
         import cv2
 
@@ -156,8 +164,8 @@ class SceneDetectionPipeline(BasePipeline):
         }
 
     def _detect_scene_boundaries(
-        self, video_path: str, start_time: float, end_time: Optional[float]
-    ) -> List[Dict[str, float]]:
+        self, video_path: str, start_time: float, end_time: float | None
+    ) -> list[dict[str, float]]:
         """Detect scene boundaries using PySceneDetect."""
 
         if not SCENEDETECT_AVAILABLE:
@@ -208,8 +216,8 @@ class SceneDetectionPipeline(BasePipeline):
             return [{"start": start_time, "end": end_time or 0.0}]
 
     def _classify_scenes(
-        self, video_path: str, segments: List[Dict[str, float]]
-    ) -> List[Dict[str, Any]]:
+        self, video_path: str, segments: list[dict[str, float]]
+    ) -> list[dict[str, Any]]:
         """Classify scenes using CLIP."""
 
         if not CLIP_AVAILABLE:
@@ -246,10 +254,14 @@ class SceneDetectionPipeline(BasePipeline):
                         image = Image.fromarray(frame_rgb)
 
                         # Process with CLIP
-                        image_input = self.clip_preprocess(image).unsqueeze(0).to(self.device)
+                        image_input = (
+                            self.clip_preprocess(image).unsqueeze(0).to(self.device)
+                        )
 
                         with torch.no_grad():
-                            logits_per_image, logits_per_text = self.clip_model(image_input, text)
+                            logits_per_image, logits_per_text = self.clip_model(
+                                image_input, text
+                            )
                             probs = logits_per_image.softmax(dim=-1).cpu().numpy()[0]
 
                         # Get best classification
@@ -261,7 +273,9 @@ class SceneDetectionPipeline(BasePipeline):
                         segment["confidence"] = float(best_prob)
                         segment["all_scores"] = {
                             prompt: float(prob)
-                            for prompt, prob in zip(self.config["scene_prompts"], probs)
+                            for prompt, prob in zip(
+                                self.config["scene_prompts"], probs, strict=False
+                            )
                         }
                     else:
                         # Default classification if frame extraction fails
@@ -288,14 +302,21 @@ class SceneDetectionPipeline(BasePipeline):
         if not CLIP_AVAILABLE:
             raise ImportError("CLIP not available for scene classification")
 
-        self.device = "cuda" if self.config["use_gpu"] and torch.cuda.is_available() else "cpu"
+        self.device = (
+            "cuda" if self.config["use_gpu"] and torch.cuda.is_available() else "cpu"
+        )
         self.clip_model, self.clip_preprocess = clip.load(
             self.config["clip_model"], device=self.device
         )
-        self.logger.info(f"CLIP model loaded: {self.config['clip_model']} on {self.device}")
+        self.logger.info(
+            f"CLIP model loaded: {self.config['clip_model']} on {self.device}"
+        )
 
     def _save_coco_annotations(
-        self, annotations: List[Dict[str, Any]], output_dir: str, video_metadata: Dict[str, Any]
+        self,
+        annotations: list[dict[str, Any]],
+        output_dir: str,
+        video_metadata: dict[str, Any],
     ):
         """Save annotations in COCO format."""
 
@@ -357,7 +378,9 @@ class SceneDetectionPipeline(BasePipeline):
 
             self.logger.info(f"PySceneDetect available: {scenedetect.__version__}")
         else:
-            self.logger.warning("PySceneDetect not available - scene detection will be limited")
+            self.logger.warning(
+                "PySceneDetect not available - scene detection will be limited"
+            )
 
         # Check CLIP availability
         if CLIP_AVAILABLE:
@@ -368,10 +391,13 @@ class SceneDetectionPipeline(BasePipeline):
         # Check OpenCV
         try:
             import cv2
+
             cv_version = getattr(cv2, "__version__", "unknown")
             self.logger.info(f"OpenCV available: {cv_version}")
         except ImportError:
-            self.logger.warning("OpenCV not available - video processing will be limited")
+            self.logger.warning(
+                "OpenCV not available - video processing will be limited"
+            )
 
         self.is_initialized = True
         self.logger.info("Scene Detection Pipeline initialized successfully")
@@ -389,7 +415,7 @@ class SceneDetectionPipeline(BasePipeline):
         self.is_initialized = False
         self.logger.info("Scene Detection Pipeline cleaned up")
 
-    def get_schema(self) -> Dict[str, Any]:
+    def get_schema(self) -> dict[str, Any]:
         """Return JSON schema for scene annotations."""
         return {
             "type": "scene_detection",
@@ -420,7 +446,7 @@ class SceneDetectionPipeline(BasePipeline):
             },
         }
 
-    def get_pipeline_info(self) -> Dict[str, Any]:
+    def get_pipeline_info(self) -> dict[str, Any]:
         """Get information about the scene detection pipeline."""
         return {
             "name": "SceneDetectionPipeline",
@@ -433,7 +459,9 @@ class SceneDetectionPipeline(BasePipeline):
                 "scene_detector": (
                     "PySceneDetect ContentDetector" if SCENEDETECT_AVAILABLE else None
                 ),
-                "scene_classifier": self.config["clip_model"] if CLIP_AVAILABLE else None,
+                "scene_classifier": self.config["clip_model"]
+                if CLIP_AVAILABLE
+                else None,
             },
             "config": {
                 "threshold": self.config["threshold"],
@@ -444,6 +472,8 @@ class SceneDetectionPipeline(BasePipeline):
             "requirements": {
                 "scenedetect_available": SCENEDETECT_AVAILABLE,
                 "clip_available": CLIP_AVAILABLE,
-                "cuda_available": torch.cuda.is_available() if CLIP_AVAILABLE else False,
+                "cuda_available": torch.cuda.is_available()
+                if CLIP_AVAILABLE
+                else False,
             },
         }

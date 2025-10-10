@@ -1,5 +1,6 @@
 from src.registry.pipeline_registry import get_registry
 
+
 def test_voice_emotion_pipeline_present():
     reg = get_registry()
     reg.load(force=True)
@@ -13,4 +14,5 @@ def test_voice_emotion_pipeline_present():
 def test_interaction_analysis_task_vocab_exists():
     # Ensure future planning task exists in vocab for forward compat
     from src.registry.constants import TASKS
+
     assert "interaction-analysis" in TASKS

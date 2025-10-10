@@ -2,12 +2,14 @@
 Pipeline information endpoints for VideoAnnotator API
 """
 
-from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any
-from pydantic import BaseModel
-from registry.pipeline_registry import get_registry, PipelineMetadata
-from api.errors import APIError
 import logging
+from typing import Any
+
+from fastapi import APIRouter
+from pydantic import BaseModel
+
+from api.errors import APIError
+from registry.pipeline_registry import get_registry
 
 logger = logging.getLogger("videoannotator.api")
 
@@ -20,25 +22,27 @@ router = APIRouter()
 
 class PipelineInfo(BaseModel):
     """Information about an available pipeline (extended taxonomy)."""
+
     name: str
     display_name: str | None = None
     description: str
     enabled: bool = True
     pipeline_family: str | None = None
     variant: str | None = None
-    tasks: List[str] = []
-    modalities: List[str] = []
-    capabilities: List[str] = []
-    backends: List[str] = []
+    tasks: list[str] = []
+    modalities: list[str] = []
+    capabilities: list[str] = []
+    backends: list[str] = []
     stability: str | None = None
-    outputs: List[Dict[str, Any]]
-    config_schema: Dict[str, Any]
-    examples: List[Dict[str, Any]] = []
+    outputs: list[dict[str, Any]]
+    config_schema: dict[str, Any]
+    examples: list[dict[str, Any]] = []
 
 
 class PipelineListResponse(BaseModel):
     """Response for pipeline listing."""
-    pipelines: List[PipelineInfo]
+
+    pipelines: list[PipelineInfo]
     total: int
 
 
@@ -46,7 +50,7 @@ class PipelineListResponse(BaseModel):
 async def list_pipelines():
     """
     List all available pipelines.
-    
+
     Returns:
         List of available pipelines with their configurations
     """
@@ -56,7 +60,7 @@ async def list_pipelines():
         metas = reg.list()
         if not metas:
             logger.warning("Registry returned no pipelines; falling back to empty list")
-        pipeline_models: List[PipelineInfo] = [
+        pipeline_models: list[PipelineInfo] = [
             PipelineInfo(
                 name=m.name,
                 display_name=m.display_name,
@@ -69,26 +73,41 @@ async def list_pipelines():
                 backends=m.backends,
                 stability=m.stability,
                 outputs=[{"format": o.format, "types": o.types} for o in m.outputs],
-                config_schema={k: {"type": v.type, "default": v.default, "description": v.description} for k, v in m.config_schema.items()},
+                config_schema={
+                    k: {
+                        "type": v.type,
+                        "default": v.default,
+                        "description": v.description,
+                    }
+                    for k, v in m.config_schema.items()
+                },
                 examples=m.examples,
-            ) for m in metas
+            )
+            for m in metas
         ]
-        return PipelineListResponse(pipelines=pipeline_models, total=len(pipeline_models))
+        return PipelineListResponse(
+            pipelines=pipeline_models, total=len(pipeline_models)
+        )
     except APIError:
         raise
     except Exception as e:  # fallback
         logger.error("Failed to list pipelines via registry: %s", e)
-        raise APIError(status_code=500, code="PIPELINES_LIST_FAILED", message="Failed to list pipelines", hint="Check server logs for details")
+        raise APIError(
+            status_code=500,
+            code="PIPELINES_LIST_FAILED",
+            message="Failed to list pipelines",
+            hint="Check server logs for details",
+        )
 
 
 @router.get("/{pipeline_name}", response_model=PipelineInfo)
 async def get_pipeline_info(pipeline_name: str):
     """
     Get detailed information about a specific pipeline.
-    
+
     Args:
         pipeline_name: Name of the pipeline
-        
+
     Returns:
         Detailed pipeline information
     """
@@ -96,7 +115,12 @@ async def get_pipeline_info(pipeline_name: str):
         reg = get_registry()
         meta = reg.get(pipeline_name)
         if not meta:
-            raise APIError(status_code=404, code="PIPELINE_NOT_FOUND", message=f"Pipeline '{pipeline_name}' not found", hint="Run 'videoannotator pipelines --detailed'")
+            raise APIError(
+                status_code=404,
+                code="PIPELINE_NOT_FOUND",
+                message=f"Pipeline '{pipeline_name}' not found",
+                hint="Run 'videoannotator pipelines --detailed'",
+            )
         return PipelineInfo(
             name=meta.name,
             display_name=meta.display_name,
@@ -109,25 +133,33 @@ async def get_pipeline_info(pipeline_name: str):
             backends=meta.backends,
             stability=meta.stability,
             outputs=[{"format": o.format, "types": o.types} for o in meta.outputs],
-            config_schema={k: {"type": v.type, "default": v.default, "description": v.description} for k, v in meta.config_schema.items()},
+            config_schema={
+                k: {"type": v.type, "default": v.default, "description": v.description}
+                for k, v in meta.config_schema.items()
+            },
             examples=meta.examples,
         )
     except APIError:
         raise
     except Exception as e:
         logger.error("Failed to get pipeline info '%s': %s", pipeline_name, e)
-        raise APIError(status_code=500, code="PIPELINE_INFO_FAILED", message="Failed to get pipeline info", hint="Check server logs")
+        raise APIError(
+            status_code=500,
+            code="PIPELINE_INFO_FAILED",
+            message="Failed to get pipeline info",
+            hint="Check server logs",
+        )
 
 
 @router.post("/{pipeline_name}/validate")
-async def validate_pipeline_config(pipeline_name: str, config: Dict[str, Any]):
+async def validate_pipeline_config(pipeline_name: str, config: dict[str, Any]):
     """
     Validate a pipeline configuration.
-    
+
     Args:
         pipeline_name: Name of the pipeline
         config: Configuration to validate
-        
+
     Returns:
         Validation result
     """
@@ -141,10 +173,15 @@ async def validate_pipeline_config(pipeline_name: str, config: Dict[str, Any]):
         return {
             "valid": True,
             "pipeline": pipeline_name,
-            "message": "Configuration is valid"
+            "message": "Configuration is valid",
         }
 
     except APIError:
         raise
-    except Exception as e:
-        raise APIError(status_code=500, code="PIPELINE_CONFIG_VALIDATE_FAILED", message="Failed to validate config", hint="Check schema / server logs")
+    except Exception:
+        raise APIError(
+            status_code=500,
+            code="PIPELINE_CONFIG_VALIDATE_FAILED",
+            message="Failed to validate config",
+            hint="Check schema / server logs",
+        )

@@ -5,25 +5,24 @@ This pipeline coordinates multiple audio processing pipelines and returns separa
 """
 
 import logging
-import os
-import tempfile
 import subprocess
+import tempfile
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union
+from typing import Any
+
 import librosa
 
-from ..base_pipeline import BasePipeline
-from .speech_pipeline import SpeechPipeline  
-from .diarization_pipeline import DiarizationPipeline
 # Future pipelines can be imported here:
 # from .emotion_pipeline import EmotionPipeline
 # from .f0_pipeline import F0Pipeline
 # from .timbre_pipeline import TimbrePipeline
-
 from src.exporters.native_formats import (
-    export_webvtt_captions,
     export_rttm_diarization,
 )
+
+from ..base_pipeline import BasePipeline
+from .diarization_pipeline import DiarizationPipeline
+from .speech_pipeline import SpeechPipeline
 
 
 class AudioPipelineModular(BasePipeline):
@@ -33,12 +32,11 @@ class AudioPipelineModular(BasePipeline):
     Manages multiple audio pipelines and returns separate timestamped data streams.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         default_config = {
             # Audio processing settings
             "sample_rate": 16000,
             "normalize_audio": True,
-            
             # Pipeline configurations
             "pipelines": {
                 "speech_recognition": {
@@ -59,7 +57,7 @@ class AudioPipelineModular(BasePipeline):
                 # "emotion_recognition": {"enabled": False},
                 # "f0_extraction": {"enabled": False},
                 # "timbre_analysis": {"enabled": False},
-            }
+            },
         }
         if config:
             # Deep merge the nested config
@@ -67,15 +65,17 @@ class AudioPipelineModular(BasePipeline):
                 if key == "pipelines" and isinstance(value, dict):
                     for pipeline_name, pipeline_config in value.items():
                         if pipeline_name in default_config["pipelines"]:
-                            default_config["pipelines"][pipeline_name].update(pipeline_config)
+                            default_config["pipelines"][pipeline_name].update(
+                                pipeline_config
+                            )
                         else:
                             default_config["pipelines"][pipeline_name] = pipeline_config
                 else:
                     default_config[key] = value
-        
+
         super().__init__(default_config)
         self.logger = logging.getLogger(__name__)
-        
+
         # Initialize pipeline instances
         self.audio_pipelines = {}
         self._setup_pipelines()
@@ -83,19 +83,21 @@ class AudioPipelineModular(BasePipeline):
     def _setup_pipelines(self) -> None:
         """Initialize individual audio pipelines based on configuration."""
         pipeline_configs = self.config.get("pipelines", {})
-        
+
         # Speech recognition pipeline
         if pipeline_configs.get("speech_recognition", {}).get("enabled", False):
             speech_config = pipeline_configs["speech_recognition"]
             self.audio_pipelines["speech_recognition"] = SpeechPipeline(speech_config)
             self.logger.info("SpeechPipeline configured")
-        
+
         # Speaker diarization pipeline
         if pipeline_configs.get("speaker_diarization", {}).get("enabled", False):
             diarization_config = pipeline_configs["speaker_diarization"]
-            self.audio_pipelines["speaker_diarization"] = DiarizationPipeline(diarization_config)
+            self.audio_pipelines["speaker_diarization"] = DiarizationPipeline(
+                diarization_config
+            )
             self.logger.info("DiarizationPipeline configured")
-        
+
         # Future pipelines can be added here:
         # if pipeline_configs.get("emotion_recognition", {}).get("enabled", False):
         #     emotion_config = pipeline_configs["emotion_recognition"]
@@ -107,7 +109,7 @@ class AudioPipelineModular(BasePipeline):
             return
 
         self.logger.info("Initializing AudioPipeline coordinator...")
-        
+
         # Initialize all configured pipelines
         failed_pipelines = []
         for pipeline_name, pipeline in self.audio_pipelines.items():
@@ -119,21 +121,23 @@ class AudioPipelineModular(BasePipeline):
                 self.logger.error(f"Failed to initialize {pipeline_name}: {e}")
                 # Mark for removal instead of deleting during iteration
                 failed_pipelines.append(pipeline_name)
-        
+
         # Remove failed pipelines after iteration
         for pipeline_name in failed_pipelines:
             del self.audio_pipelines[pipeline_name]
-                
+
         self.is_initialized = True
-        self.logger.info(f"AudioPipeline coordinator initialized with {len(self.audio_pipelines)} active pipelines")
+        self.logger.info(
+            f"AudioPipeline coordinator initialized with {len(self.audio_pipelines)} active pipelines"
+        )
 
     def process(
         self,
         video_path: str,
         start_time: float = 0.0,
-        end_time: Optional[float] = None,
-        output_dir: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        end_time: float | None = None,
+        output_dir: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Process video through all enabled audio pipelines.
 
@@ -149,7 +153,7 @@ class AudioPipelineModular(BasePipeline):
 
         try:
             results = []
-            
+
             # Process through each enabled pipeline
             for pipeline_name, pipeline in self.audio_pipelines.items():
                 try:
@@ -159,9 +163,9 @@ class AudioPipelineModular(BasePipeline):
                         video_path=audio_path,
                         start_time=start_time,
                         end_time=end_time,
-                        output_dir=output_dir
+                        output_dir=output_dir,
                     )
-                    
+
                     # Add pipeline results as separate stream
                     pipeline_data = {
                         "pipeline": pipeline_name,
@@ -170,13 +174,15 @@ class AudioPipelineModular(BasePipeline):
                         "metadata": {
                             "pipeline_name": pipeline_name,
                             "output_format": pipeline.output_format,
-                            "processed_segments": len(pipeline_results)
-                        }
+                            "processed_segments": len(pipeline_results),
+                        },
                     }
                     results.append(pipeline_data)
-                    
-                    self.logger.info(f"{pipeline_name} completed: {len(pipeline_results)} segments")
-                    
+
+                    self.logger.info(
+                        f"{pipeline_name} completed: {len(pipeline_results)} segments"
+                    )
+
                 except Exception as e:
                     self.logger.error(f"Error in {pipeline_name}: {e}")
                     # Continue with other pipelines even if one fails
@@ -195,7 +201,7 @@ class AudioPipelineModular(BasePipeline):
                 Path(audio_path).unlink(missing_ok=True)
 
     def _extract_audio(
-        self, video_path: str, start_time: float = 0.0, end_time: Optional[float] = None
+        self, video_path: str, start_time: float = 0.0, end_time: float | None = None
     ) -> str:
         """Extract audio from video file."""
         # Create temporary file for audio
@@ -208,13 +214,18 @@ class AudioPipelineModular(BasePipeline):
         if end_time is not None:
             cmd.extend(["-to", str(end_time)])
 
-        cmd.extend([
-            "-vn",  # No video
-            "-acodec", "pcm_s16le",
-            "-ar", str(self.config["sample_rate"]),
-            "-ac", "1",  # Mono
-            str(audio_path),
-        ])
+        cmd.extend(
+            [
+                "-vn",  # No video
+                "-acodec",
+                "pcm_s16le",
+                "-ar",
+                str(self.config["sample_rate"]),
+                "-ac",
+                "1",  # Mono
+                str(audio_path),
+            ]
+        )
 
         try:
             subprocess.run(cmd, check=True, capture_output=True)
@@ -224,7 +235,7 @@ class AudioPipelineModular(BasePipeline):
             self.logger.error(f"Failed to extract audio: {e}")
             return video_path
 
-    def _get_video_metadata(self, video_path: str) -> Dict[str, Any]:
+    def _get_video_metadata(self, video_path: str) -> dict[str, Any]:
         """Extract video metadata."""
         try:
             duration = librosa.get_duration(path=video_path)
@@ -244,7 +255,7 @@ class AudioPipelineModular(BasePipeline):
             }
 
     def _save_results(
-        self, results: List[Dict[str, Any]], output_dir: str, metadata: Dict[str, Any]
+        self, results: list[dict[str, Any]], output_dir: str, metadata: dict[str, Any]
     ) -> None:
         """Save results from all pipelines in their native formats."""
         output_path = Path(output_dir)
@@ -262,37 +273,53 @@ class AudioPipelineModular(BasePipeline):
                     webvtt_path = output_path / f"{video_id}_{pipeline_name}.vtt"
                     try:
                         # Extract segments list
-                        speech_result = data[0] if isinstance(data, list) and data else {}
-                        segments = speech_result.get('metadata', {}).get('segments', [])
+                        speech_result = (
+                            data[0] if isinstance(data, list) and data else {}
+                        )
+                        segments = speech_result.get("metadata", {}).get("segments", [])
+
                         # Helper to format time to WebVTT
                         def _fmt(t: float) -> str:
                             hours = int(t // 3600)
                             minutes = int((t % 3600) // 60)
                             secs = t % 60
                             return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
+
                         # Write WebVTT file
-                        with open(webvtt_path, 'w', encoding='utf-8') as f:
+                        with open(webvtt_path, "w", encoding="utf-8") as f:
                             f.write("WEBVTT\n\n")
                             for idx, seg in enumerate(segments, start=1):
-                                start = _fmt(seg['start'])
-                                end = _fmt(seg['end'])
+                                start = _fmt(seg["start"])
+                                end = _fmt(seg["end"])
                                 f.write(f"{idx}\n{start} --> {end}\n{seg['text']}\n\n")
                         self.logger.info(f"Saved {pipeline_name} to {webvtt_path}")
                     except Exception as e:
-                        self.logger.error(f"Failed to save {pipeline_name} results: {e}")
+                        self.logger.error(
+                            f"Failed to save {pipeline_name} results: {e}"
+                        )
 
                 elif output_format == "rttm" and data:
                     # Save diarization as RTTM; transform to segments with start, end, speaker_id
                     rttm_path = output_path / f"{video_id}_{pipeline_name}.rttm"
                     try:
                         diarization_data = [
-                            {'start': seg.get('start_time', 0.0), 'end': seg.get('end_time', seg.get('start_time', 0.0) + seg.get('duration', 0.0)), 'speaker_id': seg.get('speaker_id')}
+                            {
+                                "start": seg.get("start_time", 0.0),
+                                "end": seg.get(
+                                    "end_time",
+                                    seg.get("start_time", 0.0)
+                                    + seg.get("duration", 0.0),
+                                ),
+                                "speaker_id": seg.get("speaker_id"),
+                            }
                             for seg in data
                         ]
                         export_rttm_diarization(diarization_data, str(rttm_path))
                         self.logger.info(f"Saved {pipeline_name} to {rttm_path}")
                     except Exception as e:
-                        self.logger.error(f"Failed to save {pipeline_name} results: {e}")
+                        self.logger.error(
+                            f"Failed to save {pipeline_name} results: {e}"
+                        )
 
                 # Future: Add other format exports here
                 # elif output_format == "csv" and data:  # For emotion, F0, etc.
@@ -302,7 +329,7 @@ class AudioPipelineModular(BasePipeline):
             except Exception as e:
                 self.logger.error(f"Failed to save {pipeline_name} results: {e}")
 
-    def get_schema(self) -> Dict[str, Any]:
+    def get_schema(self) -> dict[str, Any]:
         """Return the schema for modular audio pipeline outputs."""
         return {
             "type": "array",
@@ -310,12 +337,18 @@ class AudioPipelineModular(BasePipeline):
             "items": {
                 "type": "object",
                 "properties": {
-                    "pipeline": {"type": "string", "description": "Name of the audio pipeline"},
-                    "format": {"type": "string", "description": "Output format (webvtt, rttm, etc.)"},
+                    "pipeline": {
+                        "type": "string",
+                        "description": "Name of the audio pipeline",
+                    },
+                    "format": {
+                        "type": "string",
+                        "description": "Output format (webvtt, rttm, etc.)",
+                    },
                     "data": {
                         "type": "array",
                         "description": "Timestamped data from the pipeline",
-                        "items": {"type": "object"}
+                        "items": {"type": "object"},
                     },
                     "metadata": {
                         "type": "object",
@@ -323,25 +356,25 @@ class AudioPipelineModular(BasePipeline):
                         "properties": {
                             "pipeline_name": {"type": "string"},
                             "output_format": {"type": "string"},
-                            "processed_segments": {"type": "integer"}
-                        }
-                    }
+                            "processed_segments": {"type": "integer"},
+                        },
+                    },
                 },
-                "required": ["pipeline", "format", "data", "metadata"]
-            }
+                "required": ["pipeline", "format", "data", "metadata"],
+            },
         }
 
     def cleanup(self) -> None:
         """Cleanup all audio pipeline resources."""
         self.logger.info("Cleaning up AudioPipeline coordinator...")
-        
+
         for pipeline_name, pipeline in self.audio_pipelines.items():
             try:
                 pipeline.cleanup()
                 self.logger.info(f"{pipeline_name} cleanup complete")
             except Exception as e:
                 self.logger.error(f"Error cleaning up {pipeline_name}: {e}")
-        
+
         self.audio_pipelines.clear()
         self.is_initialized = False
         self.logger.info("AudioPipeline coordinator cleanup complete")

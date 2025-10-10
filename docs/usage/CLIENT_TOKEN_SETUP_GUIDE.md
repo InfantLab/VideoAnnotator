@@ -4,7 +4,7 @@
 
 This guide provides secure, user-friendly methods for setting up authentication tokens between VideoAnnotator clients and servers. The system supports multiple authentication flows designed for different use cases.
 
-**Target Audience**: Client developers, system administrators, end users  
+**Target Audience**: Client developers, system administrators, end users
 **Server Version**: VideoAnnotator API v1.2.0+
 
 ---
@@ -12,18 +12,21 @@ This guide provides secure, user-friendly methods for setting up authentication 
 ## 🎯 Authentication Methods
 
 ### **1. API Keys (Recommended for Production)**
+
 - **Use Case**: Long-term programmatic access, production deployments
 - **Lifetime**: Configurable (30-365 days, or no expiration)
 - **Security**: High - encrypted storage, secure generation
 - **Management**: Full lifecycle management via CLI tools
 
 ### **2. Session Tokens (Web Applications)**
+
 - **Use Case**: Web-based clients, temporary access
 - **Lifetime**: Short-term (1-24 hours)
 - **Security**: JWT-based with automatic expiration
 - **Management**: Automatic cleanup, refresh token support
 
 ### **3. Development Tokens (Development Only)**
+
 - **Use Case**: Local development, testing, debugging
 - **Lifetime**: No expiration
 - **Security**: Basic - hardcoded values
@@ -36,6 +39,7 @@ This guide provides secure, user-friendly methods for setting up authentication 
 ### **For End Users (Client Applications)**
 
 #### **Option 1: Environment Variables (Recommended)**
+
 ```bash
 # Set your API token (most secure)
 export VIDEOANNOTATOR_API_TOKEN="va_api_your_token_here"
@@ -48,7 +52,9 @@ python your_client.py
 ```
 
 #### **Option 2: Configuration File**
+
 Create `~/.videoannotator/config.json`:
+
 ```json
 {
   "api_url": "http://your-server:8000",
@@ -61,7 +67,9 @@ Create `~/.videoannotator/config.json`:
 ```
 
 #### **Option 3: Interactive Login**
+
 Many clients support interactive token entry:
+
 ```bash
 # Client prompts for token on first run
 videoannotator-client
@@ -70,17 +78,18 @@ videoannotator-client
 ```
 
 ### **For Developers (Testing)**
+
 ```javascript
 // Use development tokens for testing
-const apiToken = "dev-token";  // Built-in development token
+const apiToken = "dev-token"; // Built-in development token
 const apiUrl = "http://localhost:8000";
 
 // Make authenticated requests
 fetch(`${apiUrl}/api/v1/jobs/`, {
   headers: {
-    'Authorization': `Bearer ${apiToken}`,
-    'Content-Type': 'application/json'
-  }
+    Authorization: `Bearer ${apiToken}`,
+    "Content-Type": "application/json",
+  },
 });
 ```
 
@@ -89,10 +98,13 @@ fetch(`${apiUrl}/api/v1/jobs/`, {
 ## macOS Notes
 
 - Apple Silicon (M1/M2) may require OpenMP runtime for some audio models. If you see OpenMP or segfault errors, install:
+
 ```bash
 brew install libomp
 ```
+
 - Ensure Node.js is installed if using the web viewer:
+
 ```bash
 brew install node
 ```
@@ -104,6 +116,7 @@ brew install node
 ### **Creating API Keys (Server Administrator)**
 
 #### **Interactive CLI Method (User-Friendly)**
+
 ```bash
 # Navigate to VideoAnnotator server directory
 cd /path/to/videoannotator
@@ -128,6 +141,7 @@ Expires:    2026-01-15 10:30:00
 ```
 
 #### **Command-Line Method (Automation-Friendly)**
+
 ```bash
 # Create API key with specific parameters
 uv run python scripts/manage_tokens.py create \
@@ -182,6 +196,7 @@ uv run python scripts/manage_tokens.py stats
 ### **For Server Administrators**
 
 1. **Token Storage Security**:
+
    ```bash
    # Tokens are automatically encrypted on disk
    ls -la tokens/
@@ -190,11 +205,12 @@ uv run python scripts/manage_tokens.py stats
    ```
 
 2. **Regular Token Rotation**:
+
    ```bash
    # Set up automated cleanup
    crontab -e
    # Add: 0 2 * * * cd /path/to/videoannotator && python scripts/manage_tokens.py cleanup
-   
+
    # Monitor token usage
    python scripts/manage_tokens.py stats
    ```
@@ -208,32 +224,34 @@ uv run python scripts/manage_tokens.py stats
 ### **For Client Developers**
 
 1. **Secure Token Storage**:
+
    ```javascript
    // ❌ DON'T: Store in code or plain text
    const apiToken = "va_api_hardcoded_token";
-   localStorage.setItem('token', 'va_api_plaintext');
-   
+   localStorage.setItem("token", "va_api_plaintext");
+
    // ✅ DO: Use secure storage
    // Environment variables
    const apiToken = process.env.VIDEOANNOTATOR_API_TOKEN;
-   
+
    // Encrypted storage (web)
-   import { EncryptedStorage } from 'secure-storage';
-   const storage = new EncryptedStorage('your-secret-key');
-   storage.setItem('api_token', token);
-   
+   import { EncryptedStorage } from "secure-storage";
+   const storage = new EncryptedStorage("your-secret-key");
+   storage.setItem("api_token", token);
+
    // OS keychain (desktop)
-   import keytar from 'keytar';
-   keytar.setPassword('videoannotator', 'api_token', token);
+   import keytar from "keytar";
+   keytar.setPassword("videoannotator", "api_token", token);
    ```
 
 2. **Token Validation**:
+
    ```javascript
    // Validate token before making requests
    async function validateToken(token) {
      try {
        const response = await fetch(`${API_URL}/api/v1/debug/token-info`, {
-         headers: { 'Authorization': `Bearer ${token}` }
+         headers: { Authorization: `Bearer ${token}` },
        });
        return response.ok;
      } catch {
@@ -245,20 +263,22 @@ uv run python scripts/manage_tokens.py stats
 3. **Error Handling**:
    ```javascript
    // Handle authentication errors gracefully
-   fetch(url, { headers: { 'Authorization': `Bearer ${token}` }})
-     .then(response => {
+   fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then(
+     (response) => {
        if (response.status === 401) {
          // Token expired or invalid
          promptForNewToken();
          return;
        }
        return response.json();
-     });
+     },
+   );
    ```
 
 ### **For End Users**
 
 1. **Token Security**:
+
    - Never share your API token
    - Don't paste tokens in chat/email
    - Use secure password managers
@@ -274,11 +294,14 @@ uv run python scripts/manage_tokens.py stats
 ## 🔄 Client Integration Examples
 
 ### **React/JavaScript Client**
+
 ```javascript
 // config.js
 export const API_CONFIG = {
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
-  token: process.env.REACT_APP_API_TOKEN || localStorage.getItem('videoannotator_token')
+  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000",
+  token:
+    process.env.REACT_APP_API_TOKEN ||
+    localStorage.getItem("videoannotator_token"),
 };
 
 // api-client.js
@@ -287,38 +310,38 @@ class VideoAnnotatorAPI {
     this.baseURL = config.baseURL;
     this.token = config.token;
   }
-  
+
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.token}`,
-      ...options.headers
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${this.token}`,
+      ...options.headers,
     };
-    
+
     const response = await fetch(url, { ...options, headers });
-    
+
     if (response.status === 401) {
-      throw new Error('Authentication failed - check your API token');
+      throw new Error("Authentication failed - check your API token");
     }
-    
+
     return response.json();
   }
-  
+
   // API methods
   async getJobs() {
-    return this.request('/api/v1/jobs/');
+    return this.request("/api/v1/jobs/");
   }
-  
+
   async submitJob(videoFile, pipelines) {
     const formData = new FormData();
-    formData.append('video', videoFile);
-    formData.append('selected_pipelines', pipelines.join(','));
-    
-    return this.request('/api/v1/jobs/', {
-      method: 'POST',
+    formData.append("video", videoFile);
+    formData.append("selected_pipelines", pipelines.join(","));
+
+    return this.request("/api/v1/jobs/", {
+      method: "POST",
       headers: {}, // Let browser set Content-Type for FormData
-      body: formData
+      body: formData,
     });
   }
 }
@@ -328,6 +351,7 @@ const client = new VideoAnnotatorAPI(API_CONFIG);
 ```
 
 ### **Python Client**
+
 ```python
 # videoannotator_client.py
 import os
@@ -339,41 +363,41 @@ class VideoAnnotatorClient:
     def __init__(self, api_url=None, api_token=None):
         self.api_url = api_url or os.getenv('VIDEOANNOTATOR_API_URL', 'http://localhost:8000')
         self.api_token = api_token or self._load_token()
-        
+
         if not self.api_token:
             raise ValueError("API token required. Set VIDEOANNOTATOR_API_TOKEN environment variable or ~/.videoannotator/config.json")
-    
+
     def _load_token(self):
         # Try environment variable first
         token = os.getenv('VIDEOANNOTATOR_API_TOKEN')
         if token:
             return token
-        
+
         # Try config file
         config_file = Path.home() / '.videoannotator' / 'config.json'
         if config_file.exists():
             with open(config_file) as f:
                 config = json.load(f)
                 return config.get('api_token')
-        
+
         return None
-    
+
     def _request(self, method, endpoint, **kwargs):
         url = f"{self.api_url}{endpoint}"
         headers = kwargs.pop('headers', {})
         headers['Authorization'] = f'Bearer {self.api_token}'
-        
+
         response = requests.request(method, url, headers=headers, **kwargs)
-        
+
         if response.status_code == 401:
             raise Exception('Authentication failed - check your API token')
-        
+
         response.raise_for_status()
         return response.json()
-    
+
     def get_jobs(self):
         return self._request('GET', '/api/v1/jobs/')
-    
+
     def submit_job(self, video_path, pipelines):
         with open(video_path, 'rb') as f:
             files = {'video': f}
@@ -386,6 +410,7 @@ jobs = client.get_jobs()
 ```
 
 ### **Configuration File Setup**
+
 ```bash
 # Create user config directory
 mkdir -p ~/.videoannotator
@@ -418,6 +443,7 @@ chmod 600 ~/.videoannotator/config.json
 ### **Common Issues**
 
 #### **"Authentication failed - check your API token"**
+
 ```bash
 # 1. Validate your token
 uv run python scripts/manage_tokens.py validate --token your_token_here
@@ -430,6 +456,7 @@ uv run python scripts/manage_tokens.py create --user your@email.com
 ```
 
 #### **"Connection refused" or "Server not found"**
+
 ```bash
 # Check server status
 curl http://your-server:8000/health
@@ -442,6 +469,7 @@ tail -f logs/api_server.log
 ```
 
 #### **"Permission denied" or "Insufficient scopes"**
+
 ```bash
 # Check your token scopes
 uv run python scripts/manage_tokens.py list --user your@email.com
@@ -503,42 +531,43 @@ curl -H "Authorization: Bearer dev-token" \
 ## 🎯 Advanced Features
 
 ### **Session Token with Refresh**
+
 ```javascript
 class TokenManager {
   constructor(apiUrl) {
     this.apiUrl = apiUrl;
-    this.accessToken = localStorage.getItem('access_token');
-    this.refreshToken = localStorage.getItem('refresh_token');
+    this.accessToken = localStorage.getItem("access_token");
+    this.refreshToken = localStorage.getItem("refresh_token");
   }
-  
+
   async refreshAccessToken() {
     const response = await fetch(`${this.apiUrl}/api/v1/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${this.refreshToken}` }
+      method: "POST",
+      headers: { Authorization: `Bearer ${this.refreshToken}` },
     });
-    
+
     if (response.ok) {
       const { access_token } = await response.json();
       this.accessToken = access_token;
-      localStorage.setItem('access_token', access_token);
+      localStorage.setItem("access_token", access_token);
       return access_token;
     }
-    
-    throw new Error('Token refresh failed');
+
+    throw new Error("Token refresh failed");
   }
-  
+
   async authenticatedRequest(url, options = {}) {
     let token = this.accessToken;
-    
+
     // Try request with current token
     let response = await fetch(url, {
       ...options,
       headers: {
-        'Authorization': `Bearer ${token}`,
-        ...options.headers
-      }
+        Authorization: `Bearer ${token}`,
+        ...options.headers,
+      },
     });
-    
+
     // If 401, try refreshing token
     if (response.status === 401 && this.refreshToken) {
       try {
@@ -546,22 +575,23 @@ class TokenManager {
         response = await fetch(url, {
           ...options,
           headers: {
-            'Authorization': `Bearer ${token}`,
-            ...options.headers
-          }
+            Authorization: `Bearer ${token}`,
+            ...options.headers,
+          },
         });
       } catch {
         // Refresh failed, redirect to login
         this.redirectToLogin();
       }
     }
-    
+
     return response;
   }
 }
 ```
 
 ### **Multi-Environment Configuration**
+
 ```bash
 # ~/.videoannotator/environments.json
 {
@@ -574,7 +604,7 @@ class TokenManager {
     "api_token": "va_api_staging_token_here"
   },
   "production": {
-    "api_url": "https://api.example.com", 
+    "api_url": "https://api.example.com",
     "api_token": "va_api_production_token_here"
   }
 }
@@ -586,7 +616,7 @@ videoannotator-client  # Automatically uses production config
 
 ---
 
-**Document Version**: v1.0  
-**Last Updated**: 24 August 2025  
-**Compatible With**: VideoAnnotator API v1.2.0+  
+**Document Version**: v1.0
+**Last Updated**: 24 August 2025
+**Compatible With**: VideoAnnotator API v1.2.0+
 **Status**: Production ready with comprehensive security features

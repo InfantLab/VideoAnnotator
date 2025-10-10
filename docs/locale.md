@@ -1,7 +1,7 @@
 Why we set locale in Docker images
 
 Some base images don't include compiled locales. When the environment sets
-LANG or LC_* to a UTF-8 locale that isn't present, programs (git, Python,
+LANG or LC\_\* to a UTF-8 locale that isn't present, programs (git, Python,
 gettext-enabled programs) print warnings like:
 
     locale: Cannot set LC_CTYPE to default locale: No such file or directory
@@ -15,6 +15,7 @@ valid alternative (if provided by your base image). In that case, set
 ENV LANG=C.UTF-8 and ENV LC_ALL=C.UTF-8 in the Dockerfile.
 
 Why this is safe
+
 - en_US.UTF-8 is the conventional UTF-8 locale used in many CI/dev
   environments.
 - Generating the locale only runs during image build and avoids noisy

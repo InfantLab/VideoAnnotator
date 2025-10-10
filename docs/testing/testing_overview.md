@@ -29,6 +29,7 @@ tests/
 ## Test Execution Workflows
 
 ### Development Workflow (Recommended)
+
 ```bash
 # Fast feedback during development
 python scripts/test_fast.py                # ~30 seconds, 125+ tests
@@ -41,6 +42,7 @@ python scripts/test_all.py                 # Complete suite with reporting
 ```
 
 ### Pipeline-Specific Testing
+
 ```bash
 # Test specific pipelines
 pytest tests/pipelines/test_person_tracking.py -v
@@ -51,6 +53,7 @@ TEST_INTEGRATION=1 pytest tests/pipelines/ -v
 ```
 
 ### Advanced Usage
+
 ```bash
 # Test by category
 pytest -m unit                             # Unit tests only
@@ -65,22 +68,22 @@ pytest -m performance --benchmark-only     # Benchmarking tests
 
 ### Pipeline Coverage Status
 
-| Pipeline | Tests | Status | Coverage |
-|----------|-------|--------|----------|
-| **Person Tracking** | 9/9 | ✅ 100% | YOLO11, ByteTrack, pose estimation |
-| **Face Analysis** | 14/15 | ✅ 93.3% | DeepFace, emotions, age, gender |
-| **Audio Processing** | 5 files | ✅ Available | Whisper, LAION, speech recognition |
-| **Scene Detection** | Available | ✅ Ready | PySceneDetect + CLIP |
-| **OpenFace3** | Comprehensive | ✅ Complete | Full facial behavior analysis |
-| **LAION Face/Voice** | Available | ✅ Ready | Advanced AI model testing |
+| Pipeline             | Tests         | Status       | Coverage                           |
+| -------------------- | ------------- | ------------ | ---------------------------------- |
+| **Person Tracking**  | 9/9           | ✅ 100%      | YOLO11, ByteTrack, pose estimation |
+| **Face Analysis**    | 14/15         | ✅ 93.3%     | DeepFace, emotions, age, gender    |
+| **Audio Processing** | 5 files       | ✅ Available | Whisper, LAION, speech recognition |
+| **Scene Detection**  | Available     | ✅ Ready     | PySceneDetect + CLIP               |
+| **OpenFace3**        | Comprehensive | ✅ Complete  | Full facial behavior analysis      |
+| **LAION Face/Voice** | Available     | ✅ Ready     | Advanced AI model testing          |
 
 ### Component Coverage
 
-| Component | Tests | Status | Notes |
-|-----------|-------|--------|-------|
-| **Batch Processing** | 5 files | ✅ 100% | Orchestrator, recovery, progress tracking |
-| **Storage Backend** | 1 file | ✅ Complete | File storage validation |
-| **Utils/Analysis** | 2 files | ⚠️ 90% | Size analysis needs attention |
+| Component            | Tests   | Status      | Notes                                     |
+| -------------------- | ------- | ----------- | ----------------------------------------- |
+| **Batch Processing** | 5 files | ✅ 100%     | Orchestrator, recovery, progress tracking |
+| **Storage Backend**  | 1 file  | ✅ Complete | File storage validation                   |
+| **Utils/Analysis**   | 2 files | ⚠️ 90%      | Size analysis needs attention             |
 
 ## Test Execution Statistics
 
@@ -92,6 +95,7 @@ pytest -m performance --benchmark-only     # Benchmarking tests
 ## Configuration & Environment
 
 ### Environment Variables
+
 ```bash
 # Enable integration tests with real models
 export TEST_INTEGRATION=1
@@ -101,7 +105,9 @@ export TEST_DEEPFACE=1
 ```
 
 ### Pytest Configuration
+
 The test suite uses pytest with custom markers defined in `pyproject.toml`:
+
 - `unit`: Fast, isolated tests
 - `integration`: Cross-component tests
 - `pipeline`: Full pipeline tests
@@ -112,10 +118,12 @@ The test suite uses pytest with custom markers defined in `pyproject.toml`:
 ## Current Issues & Limitations
 
 ### Known Issues
+
 1. **Size Analysis Integration Test**: One failing test (functionality may be incomplete)
 2. **Windows File Cleanup**: Occasional permission errors in test teardown (cosmetic)
 
 ### Pending Improvements
+
 - Audio pipeline test isolation refinement
 - Performance benchmarking test category
 - CI/CD integration workflows
@@ -123,7 +131,9 @@ The test suite uses pytest with custom markers defined in `pyproject.toml`:
 ## Development Guidelines
 
 ### Adding New Tests
+
 1. **Location**: Place tests in appropriate tier directory
+
    - Unit tests → `tests/unit/[component]/`
    - Integration tests → `tests/integration/`
    - Pipeline tests → `tests/pipelines/`
@@ -138,12 +148,14 @@ The test suite uses pytest with custom markers defined in `pyproject.toml`:
    ```
 
 ### Test Quality Standards
+
 - **Unit Tests**: Fast (<1s per test), isolated, mocked dependencies
 - **Integration Tests**: Real components, moderate speed (<5min total)
 - **Pipeline Tests**: Full workflows, real models, slower execution acceptable
 - **All Tests**: Clear docstrings, meaningful assertions, proper cleanup
 
 ### Running Specific Test Categories
+
 ```bash
 # By directory
 pytest tests/unit/                          # All unit tests
@@ -162,12 +174,14 @@ pytest -k "face and not slow"              # Face tests excluding slow ones
 ## Integration with Development Workflow
 
 ### Recommended Development Process
+
 1. **During Development**: `python scripts/test_fast.py` for immediate feedback
 2. **Before Commit**: `python scripts/test_integration.py` for validation
 3. **Before Release**: `python scripts/test_all.py` for comprehensive testing
 4. **CI/CD Pipeline**: Tiered execution based on change scope
 
 ### Model Requirements
+
 - **Person Tracking**: YOLO11 models (auto-download)
 - **Face Analysis**: DeepFace models (auto-download)
 - **Audio Processing**: Whisper models (auto-download)
@@ -176,12 +190,14 @@ pytest -k "face and not slow"              # Face tests excluding slow ones
 ## Maintenance & Updates
 
 ### Regular Maintenance
+
 - Monitor test success rates and execution times
 - Update integration tests when adding new models
 - Refresh test data fixtures periodically
 - Review and update performance benchmarks
 
 ### When Adding New Features
+
 1. Add unit tests for new functionality
 2. Add integration tests for cross-component features
 3. Add pipeline tests for complete workflows

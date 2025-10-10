@@ -3,6 +3,7 @@
 ## 🎯 What We've Implemented
 
 ### 1. **Separate Diarization Pipeline** (`src/pipelines/audio_processing/diarization_pipeline.py`)
+
 - **DiarizationPipelineConfig**: Configuration class with HuggingFace token support
 - **DiarizationPipeline**: Standalone pipeline for speaker diarization using PyAnnote
 - **Key Features**:
@@ -13,16 +14,19 @@
   - Separable from other audio processing functionality
 
 ### 2. **FFmpeg Integration** (`src/pipelines/audio_processing/ffmpeg_utils.py`)
+
 - Audio extraction utilities using FFmpeg (already in project)
 - No dependency on MoviePy
 - Consistent with existing project patterns
 
 ### 3. **Enhanced Audio Schema** (`src/schemas/audio_schema.py`)
+
 - Support for both modern Pydantic and legacy dataclass formats
 - Comprehensive speaker diarization data structures
 - Audio feature extraction schemas
 
 ### 4. **Comprehensive Test Suite** (`tests/test_pipelines.py`)
+
 - **Unit Tests**: Test configuration, initialization, error handling (no external dependencies)
 - **Integration Tests**: Test with real PyAnnote models (requires HuggingFace token)
 - **Mocked Tests**: Test processing logic without external dependencies
@@ -31,15 +35,17 @@
 ## 🧪 Testing Framework Integration
 
 ### Test Classes Added:
+
 - `TestDiarizationPipeline`: Unit tests with mocked dependencies
 - `TestDiarizationPipelineIntegration`: Integration tests requiring real models
 
 ### Test Coverage:
+
 ```bash
 # Run all diarization tests
 python -m pytest tests/test_pipelines.py::TestDiarizationPipeline -v
 
-# Run basic tests only (no external deps)  
+# Run basic tests only (no external deps)
 python -m pytest tests/test_pipelines.py::TestDiarizationPipeline -v -m 'not integration'
 
 # Run integration tests (requires HF token)
@@ -49,6 +55,7 @@ TEST_INTEGRATION=1 HUGGINGFACE_TOKEN=your_token python -m pytest tests/test_pipe
 ## 📋 Current Status
 
 ### ✅ Working:
+
 - Pipeline configuration and initialization
 - Basic unit tests with mocking
 - Error handling for missing dependencies
@@ -57,6 +64,7 @@ TEST_INTEGRATION=1 HUGGINGFACE_TOKEN=your_token python -m pytest tests/test_pipe
 - FFmpeg-based audio extraction
 
 ### 🔧 Future Enhancements:
+
 - Real-world integration tests (requires HuggingFace token setup)
 - Performance benchmarking
 - Custom model support
@@ -88,10 +96,11 @@ if results:
 ```
 
 ## 📁 File Structure
+
 ```
 src/pipelines/audio_processing/
 ├── __init__.py                 # Module exports
-├── audio_pipeline.py          # Comprehensive audio processing  
+├── audio_pipeline.py          # Comprehensive audio processing
 ├── diarization_pipeline.py    # Focused speaker diarization
 └── ffmpeg_utils.py            # FFmpeg audio utilities
 

@@ -2,11 +2,10 @@
 API dependencies for VideoAnnotator v1.2.0
 """
 
-from fastapi import HTTPException, Depends, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Dict, Any, Optional
-from contextlib import contextmanager
+from typing import Any
 
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from auth.token_manager import get_token_manager
@@ -18,24 +17,24 @@ security = HTTPBearer()
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-) -> Dict[str, Any]:
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> dict[str, Any]:
     """
     Get current user from API token using secure token manager.
     """
     token = credentials.credentials
-    
+
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authorization token is required",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Use token manager for validation
     token_manager = get_token_manager()
     token_info = token_manager.validate_token(token)
-    
+
     if not token_info:
         # Fallback for development tokens
         if token in ["dev-token", "test-token"]:
@@ -44,15 +43,15 @@ async def get_current_user(
                 "username": "test_user",
                 "email": "test@example.com",
                 "is_active": True,
-                "scopes": ["read", "write", "debug"]
+                "scopes": ["read", "write", "debug"],
             }
-        
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     return {
         "id": token_info.user_id,
         "username": token_info.username,
@@ -60,28 +59,30 @@ async def get_current_user(
         "is_active": token_info.is_active,
         "scopes": token_info.scopes,
         "token_type": token_info.token_type.value,
-        "token_id": token_info.token_id
+        "token_id": token_info.token_id,
     }
 
 
 async def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
-) -> Optional[Dict[str, Any]]:
+    credentials: HTTPAuthorizationCredentials | None = Depends(
+        HTTPBearer(auto_error=False)
+    ),
+) -> dict[str, Any] | None:
     """
     Get current user if token is provided, otherwise return None.
-    
+
     Used for endpoints that work with or without authentication.
     """
     if not credentials:
         return None
-    
+
     try:
         return await get_current_user(credentials)
     except HTTPException:
         return None
 
 
-def _validate_api_key_header(raw: str, db: Session) -> Optional[Dict[str, Any]]:
+def _validate_api_key_header(raw: str, db: Session) -> dict[str, Any] | None:
     """Helper to validate legacy API key header (va_ prefix keys).
 
     Returns user dict if valid else None.
@@ -98,13 +99,15 @@ def _validate_api_key_header(raw: str, db: Session) -> Optional[Dict[str, Any]]:
         "email": user.email,
         "is_active": True,
         "scopes": ["read", "write"],
-        "token_type": "api_key"
+        "token_type": "api_key",
     }
 
 
 async def validate_optional_api_key(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
-) -> Optional[Dict[str, Any]]:
+    credentials: HTTPAuthorizationCredentials | None = Depends(
+        HTTPBearer(auto_error=False)
+    ),
+) -> dict[str, Any] | None:
     """Validate API key if Authorization header present.
 
     Behavior:

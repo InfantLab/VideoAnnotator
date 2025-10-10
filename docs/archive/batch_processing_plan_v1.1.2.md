@@ -3,7 +3,8 @@
 ## Overview
 
 This plan implements a **resilient, scalable batch processing system** that:
-1. **Starts simple** with file-based storage 
+
+1. **Starts simple** with file-based storage
 2. **Graduates to SQLite** for better querying and metadata management
 3. **Scales to PostgreSQL** when concurrent access and advanced analytics are needed
 4. **Enables resumption** of interrupted processing
@@ -15,6 +16,7 @@ This plan implements a **resilient, scalable batch processing system** that:
 ### 1.1 Batch Orchestrator (`src/batch/batch_orchestrator.py`)
 
 **Core Features:**
+
 - **Job Queue Management**: Track pending, running, completed, failed jobs
 - **Resume Processing**: Skip already-processed files based on output detection
 - **Parallel Processing**: Run multiple videos simultaneously with worker pools
@@ -22,6 +24,7 @@ This plan implements a **resilient, scalable batch processing system** that:
 - **Failure Recovery**: Automatic retry with exponential backoff
 
 **Key Components:**
+
 ```python
 class BatchJob:
     job_id: str
@@ -53,23 +56,23 @@ class BatchOrchestrator:
 class StorageBackend(ABC):
     @abstractmethod
     def save_annotations(self, job_id: str, pipeline: str, annotations: List[Dict]) -> str
-    
+
     @abstractmethod
     def load_annotations(self, job_id: str, pipeline: str) -> List[Dict]
-    
+
     @abstractmethod
     def annotation_exists(self, job_id: str, pipeline: str) -> bool
-    
+
     @abstractmethod
     def save_job_metadata(self, job: BatchJob) -> None
-    
+
     @abstractmethod
     def load_job_metadata(self, job_id: str) -> BatchJob
 
 # File Implementation
 class FileStorageBackend(StorageBackend):
     def __init__(self, base_dir: Path)
-    # Organized structure: 
+    # Organized structure:
     # {base_dir}/{video_id}/
     #   ├── job_metadata.json
     #   ├── scene_detection.json
@@ -78,12 +81,12 @@ class FileStorageBackend(StorageBackend):
     #   ├── audio_processing.json
     #   └── batch_summary.json
 
-# Future Database Implementation  
+# Future Database Implementation
 class SQLiteStorageBackend(StorageBackend):
     def __init__(self, db_path: Path)
     # Single file database: {base_dir}/batch_processing.db
     # Tables: jobs, annotations, job_pipeline_status
-    
+
 class PostgreSQLStorageBackend(StorageBackend):
     def __init__(self, connection_string: str)
     # Production-scale: Multiple tables with advanced indexing
@@ -92,6 +95,7 @@ class PostgreSQLStorageBackend(StorageBackend):
 ### 1.3 Enhanced Progress Tracking (`src/batch/progress_tracker.py`)
 
 **Features:**
+
 - **Real-time Updates**: Live progress via file watchers or API
 - **ETA Calculation**: Estimated completion time based on processing rates
 - **Resource Monitoring**: CPU, memory, GPU utilization tracking
@@ -100,6 +104,7 @@ class PostgreSQLStorageBackend(StorageBackend):
 ### 1.4 Failure Recovery System (`src/batch/recovery.py`)
 
 **Capabilities:**
+
 - **Checkpointing**: Save intermediate state every N videos processed
 - **Partial Results**: Save successful pipeline outputs even if others fail
 - **Smart Retry**: Different retry strategies per failure type
@@ -153,7 +158,7 @@ CREATE TABLE annotations (
     timestamp_seconds REAL,
     data TEXT NOT NULL,  -- Full annotation as JSON
     created_at TEXT DEFAULT (datetime('now')),
-    
+
     -- Indexed columns for fast queries
     video_id TEXT NOT NULL,
     person_id TEXT,
@@ -161,10 +166,10 @@ CREATE TABLE annotations (
     speaker_id TEXT,
     scene_id TEXT,
     confidence REAL,
-    
+
     -- Bounding box for spatial queries
     bbox_x REAL,
-    bbox_y REAL, 
+    bbox_y REAL,
     bbox_width REAL,
     bbox_height REAL
 );
@@ -179,6 +184,7 @@ CREATE INDEX idx_jobs_created ON jobs(created_at);
 ### 2.2 SQLite Benefits
 
 **Perfect Middle Ground:**
+
 - ✅ **Zero Configuration**: Single file, no server setup
 - ✅ **SQL Power**: JOIN queries, aggregations, filtering
 - ✅ **ACID Transactions**: Data integrity guarantees
@@ -187,15 +193,16 @@ CREATE INDEX idx_jobs_created ON jobs(created_at);
 - ✅ **Familiar**: Same SQL as PostgreSQL for easy migration
 
 **Example Queries:**
+
 ```sql
 -- Find all failed jobs in the last 24 hours
-SELECT job_id, video_path, error_message 
-FROM jobs 
-WHERE status = 'failed' 
+SELECT job_id, video_path, error_message
+FROM jobs
+WHERE status = 'failed'
 AND created_at > datetime('now', '-1 day');
 
 -- Get processing statistics by pipeline
-SELECT p.name, 
+SELECT p.name,
        COUNT(*) as total_jobs,
        AVG(jps.processing_time_seconds) as avg_time,
        AVG(jps.annotation_count) as avg_annotations
@@ -206,8 +213,8 @@ GROUP BY p.name;
 
 -- Find videos with high-confidence face detections
 SELECT DISTINCT video_id, COUNT(*) as face_count
-FROM annotations 
-WHERE annotation_type = 'face_detection' 
+FROM annotations
+WHERE annotation_type = 'face_detection'
 AND confidence > 0.8
 GROUP BY video_id
 HAVING face_count > 10;
@@ -240,6 +247,7 @@ CREATE TABLE jobs (
 ### 3.2 Migration Strategy
 
 **Seamless Transition:**
+
 1. **Files → SQLite**: Export existing JSON files to SQLite database
 2. **SQLite → PostgreSQL**: Schema migration with data export/import
 3. **Validation**: Compare outputs across storage backends for consistency
@@ -248,17 +256,20 @@ CREATE TABLE jobs (
 ## Phase 4: Advanced Features (Future)
 
 ### 4.1 Distributed Processing
+
 - **Worker Nodes**: Multiple machines processing videos in parallel
 - **Load Balancing**: Distribute work based on GPU availability and video complexity
 - **Fault Tolerance**: Handle worker node failures gracefully
 
 ### 4.2 Real-time Analytics Dashboard
+
 - **Processing Metrics**: Videos/hour, average processing time per pipeline
 - **Quality Metrics**: Confidence distributions, annotation counts
 - **Resource Utilization**: GPU usage, memory consumption, storage growth
 - **Error Analysis**: Failure patterns and retry success rates
 
 ### 4.3 Advanced Query Capabilities
+
 - **Temporal Queries**: "Find all videos where Person A appears within 5 seconds of laughter"
 - **Spatial Queries**: "Find all face detections in the top-left quadrant"
 - **Cross-Pipeline Queries**: "Find scenes with >3 people and high audio activity"
@@ -269,12 +280,14 @@ CREATE TABLE jobs (
 ## Implementation Priority
 
 ### **Immediate (Next 2-4 weeks):**
+
 1. ✅ **BatchOrchestrator**: Core job queue and worker management ⭐ **COMPLETED**
 2. ✅ **FileStorageBackend**: Enhanced file organization with metadata ⭐ **COMPLETED**
 3. ✅ **Progress Tracking**: Real-time status and ETA calculation ⭐ **COMPLETED**
 4. ✅ **Resume Capability**: Skip already-processed videos intelligently ⭐ **COMPLETED**
 
 ### **Short-term (1-2 months):**
+
 1. **SQLite Backend**: Single-file database with SQL querying power
 2. **Storage Abstraction**: Clean interface for future PostgreSQL migration
 3. **Failure Recovery**: Robust retry mechanisms and partial results
@@ -282,12 +295,14 @@ CREATE TABLE jobs (
 5. **Monitoring & Logging**: Comprehensive progress tracking and debugging
 
 ### **Medium-term (3-6 months):**
+
 1. **PostgreSQL Backend**: Production-scale database implementation
 2. **Migration Tools**: Seamless transition from SQLite to PostgreSQL
 3. **Performance Optimization**: Advanced indexing and query optimization
 4. **Dashboard**: Web-based monitoring interface
 
 ### **Long-term (6+ months):**
+
 1. **Distributed Processing**: Multi-node batch processing
 2. **Advanced Analytics**: Complex querying and visualization
 3. **Auto-scaling**: Dynamic resource allocation based on workload
@@ -298,16 +313,19 @@ CREATE TABLE jobs (
 ## Benefits of This Approach
 
 ### ✅ **Immediate Value:**
+
 - **Get Started Fast**: No database setup required
 - **Proven Reliability**: File-based systems are simple and robust
 - **Easy Debugging**: Direct access to JSON files for inspection
 
 ### ✅ **Future-Proof:**
+
 - **Clean Migration Path**: Storage abstraction enables seamless upgrade
 - **PostgreSQL Ready**: Schema designed for complex queries and analytics
 - **Scalable Architecture**: Can grow from single machine to distributed system
 
 ### ✅ **Best of Both Worlds:**
+
 - **Researcher Friendly**: Always maintains JSON file compatibility
 - **Enterprise Ready**: Database backend for production-scale deployments
 - **Tool Integration**: Maintains compatibility with existing annotation tools
@@ -325,6 +343,7 @@ The VideoAnnotator batch processing system is now **fully implemented** and read
 #### **📦 What's Been Built:**
 
 1. **🎯 BatchOrchestrator** (`src/batch/batch_orchestrator.py`)
+
    - ✅ Parallel processing with configurable worker pools (1-32 workers)
    - ✅ Intelligent job queue management with UUID tracking
    - ✅ Resume capability for interrupted batches via checkpoints
@@ -332,18 +351,21 @@ The VideoAnnotator batch processing system is now **fully implemented** and read
    - ✅ Real-time progress tracking and ETA calculation
 
 2. **💾 FileStorageBackend** (`src/storage/file_backend.py`)
+
    - ✅ Organized directory structure: `{base_dir}/jobs/{job_id}/`
    - ✅ Metadata tracking with job status and pipeline results
    - ✅ Automatic annotation saving with COCO/JSON format preservation
    - ✅ Storage statistics and cleanup utilities
 
 3. **📊 ProgressTracker** (`src/batch/progress_tracker.py`)
+
    - ✅ Live progress monitoring with success/failure rates
    - ✅ ETA calculation based on historical performance
    - ✅ Throughput metrics (jobs/hour, avg processing time)
    - ✅ Export capabilities for performance analysis
 
 4. **🔄 FailureRecovery** (`src/batch/recovery.py`)
+
    - ✅ Smart retry strategies (fixed, exponential, linear backoff)
    - ✅ Permanent vs temporary error classification
    - ✅ Partial pipeline failure handling (graceful degradation)
@@ -377,7 +399,7 @@ python batch_demo.py --video path/to/video.mp4
 #### **🎯 Immediate Benefits:**
 
 - **⚡ 4-8x Faster**: Parallel processing vs sequential
-- **🛡️ Bulletproof**: Automatic retry and recovery from failures  
+- **🛡️ Bulletproof**: Automatic retry and recovery from failures
 - **📈 Transparent**: Real-time progress and detailed reporting
 - **🔄 Resumable**: Never lose work on interrupted batches
 - **📁 Organized**: Clean file structure with metadata tracking

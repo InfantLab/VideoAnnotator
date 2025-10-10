@@ -3,6 +3,7 @@
 This file summarizes recent changes made to the VideoAnnotator repository, the reasoning, impact on clients, how to validate them locally, and next steps.
 
 ## TL;DR
+
 - Health endpoint now reports the package version (single source of truth).
 - GET /api/v1/jobs no longer returns 500 when a single job record is corrupted; the server logs problematic job IDs and continues returning the rest.
 - Running the CLI with no subcommand now starts the API server bound to 0.0.0.0:18011 by default (`uv run videoannotator`).
@@ -11,15 +12,18 @@ This file summarizes recent changes made to the VideoAnnotator repository, the r
 ## What changed and why
 
 1. Version alignment
+
    - The health endpoint's `api_version` now comes from `src/version.py`. This avoids mismatches between the package version and the API response.
    - Reason: clients were seeing different version values and were confused which version the server reported.
 
 2. Resilient job listing
+
    - The `/api/v1/jobs` listing operation was made defensive: when loading stored job metadata, a single failing job no longer makes the entire request fail with HTTP 500.
    - Problematic jobs are logged (their job_id is included in warnings/errors) and skipped in the listing response.
    - Reason: prevents a single corrupted job record from breaking monitoring and listing operations.
 
 3. CLI default behavior
+
    - When the `videoannotator` CLI (Typer app) is invoked without a subcommand, it now starts the server on 0.0.0.0:18011 by default.
    - This aligns local developer workflows with the common expectation that running the CLI launches the service.
 
@@ -94,4 +98,5 @@ If you'd like, the engineering team can:
 Please reply with which of the three follow-ups you'd like us to prioritize and we'll prepare a PR with a short changelog and tests.
 
 ---
+
 Generated: 2025-09-26

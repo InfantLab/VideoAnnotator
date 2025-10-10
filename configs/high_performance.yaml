@@ -3,12 +3,12 @@
 
 # Scene Detection Pipeline
 scene_detection:
-  threshold: 25.0  # More sensitive detection
-  min_scene_length: 1.0  # Shorter minimum scenes
-  model: "ViT-L/14"  # Larger CLIP model for better accuracy
+  threshold: 25.0 # More sensitive detection
+  min_scene_length: 1.0 # Shorter minimum scenes
+  model: "ViT-L/14" # Larger CLIP model for better accuracy
   scene_labels:
     - "living room"
-    - "bedroom" 
+    - "bedroom"
     - "kitchen"
     - "bathroom"
     - "nursery"
@@ -26,40 +26,40 @@ scene_detection:
 
 # Person Tracking Pipeline
 person_tracking:
-  model_name: "yolo11l-pose.pt"  # Larger model for better accuracy
-  confidence_threshold: 0.4  # Lower threshold for more detections
+  model_name: "yolo11l-pose.pt" # Larger model for better accuracy
+  confidence_threshold: 0.4 # Lower threshold for more detections
   iou_threshold: 0.4
   track_mode: true
-  tracker_type: "botsort"  # More accurate tracker
+  tracker_type: "botsort" # More accurate tracker
   pose_format: "coco_17"
   min_keypoint_confidence: 0.2
   max_persons: 20
   min_track_length: 3
   trajectory_smoothing: true
-  
+
   # Person identity and automatic labeling (high-performance settings)
   person_identity:
     enabled: true
     id_format: "semantic"
-    
+
     # Enhanced automatic labeling for high-performance processing
     automatic_labeling:
       enabled: true
-      confidence_threshold: 0.6  # Lower threshold for more labels
-      
+      confidence_threshold: 0.6 # Lower threshold for more labels
+
       # Size-based labeling with enhanced settings
       size_based:
         enabled: true
         height_threshold: 0.4
-        confidence: 0.8  # Higher confidence in high-performance mode
+        confidence: 0.8 # Higher confidence in high-performance mode
         adult_label: "parent"
         child_label: "infant"
-        use_simple_analyzer: true  # Use simplified analyzer for better performance
-        min_detections_for_analysis: 1  # Lower minimum for faster processing
+        use_simple_analyzer: true # Use simplified analyzer for better performance
+        min_detections_for_analysis: 1 # Lower minimum for faster processing
 
 # Face Analysis Pipeline
 face_analysis:
-  backend: "deepface"  # Reliable option
+  backend: "deepface" # Reliable option
   face_confidence_threshold: 0.6
   max_faces: 15
   detect_emotions: true
@@ -67,70 +67,65 @@ face_analysis:
   detect_action_units: true
   detect_identity: false
   face_crop_padding: 30
-  emotion_batch_size: 16  # Larger batch for GPU
-  
-  deepface:
-    emotion_model: "VGG-Face"
-    detector_backend: "opencv"
-  
+  emotion_batch_size: 16 # Larger batch for GPU
   openface:
     model_path: "models/openface/"
     enable_3d_landmarks: true
     enable_head_pose: true
     enable_aus: true
-  
+
   deepface:
-    emotion_model: "Facenet512"  # More accurate model
+    emotion_model: "Facenet512" # More accurate model
     age_gender_model: "VGG-Face"
-    detector_backend: "retinaface"  # More accurate detector
+    detector_backend: "retinaface" # More accurate detector
 
 # Audio Processing Pipeline
 audio_processing:
   speech_recognition:
-    model: "openai/whisper-large-v2"  # Larger model
+    model: "openai/whisper-large-v2" # Larger model
     language: "auto"
-    
+
   speaker_diarization:
     model: "pyannote/speaker-diarization"
     min_speakers: 1
     max_speakers: 15
-    
+
   audio_classification:
     model: "yamnet"
-    confidence_threshold: 0.4  # Lower threshold
-    
+    confidence_threshold: 0.4 # Lower threshold
+
   features:
     sample_rate: 16000
-    hop_length: 256  # Higher resolution
-    n_mels: 256  # More mel bins
-    
-  segment_length: 15.0  # Shorter segments for precision
+    hop_length: 256 # Higher resolution
+    n_mels: 256 # More mel bins
+
+  segment_length: 15.0 # Shorter segments for precision
   overlap: 0.25
 
 # Global Settings
 global:
   device: "cuda"
-  batch_size: 16  # Larger batch for GPU
-  num_workers: 8  # More workers
+  batch_size: 16 # Larger batch for GPU
+  num_workers: 8 # More workers
   output_format: "json"
-  save_intermediate: true  # Save for analysis
-  log_level: "DEBUG"  # Detailed logging
-  
+  save_intermediate: true # Save for analysis
+  log_level: "DEBUG" # Detailed logging
+
   # Performance settings
   memory_limit: "16GB"
-  gpu_memory_fraction: 0.9  # Use most of GPU memory
-  
+  gpu_memory_fraction: 0.9 # Use most of GPU memory
+
   # Quality settings
-  min_face_size: 30  # Smaller minimum for distant faces
-  min_person_size: 50  # Smaller minimum for distant people
-  blur_threshold: 50  # More sensitive blur detection
-  
+  min_face_size: 30 # Smaller minimum for distant faces
+  min_person_size: 50 # Smaller minimum for distant people
+  blur_threshold: 50 # More sensitive blur detection
+
   # Processing settings
-  enable_tensorrt: true  # TensorRT acceleration if available
-  mixed_precision: true  # Mixed precision training
-  compile_models: true  # JIT compilation
-  
+  enable_tensorrt: true # TensorRT acceleration if available
+  mixed_precision: true # Mixed precision training
+  compile_models: true # JIT compilation
+
   # Output settings
-  save_visualizations: true  # Save annotated frames
-  visualization_fps: 5  # FPS for visualization videos
-  compress_output: true  # Compress JSON output
+  save_visualizations: true # Save annotated frames
+  visualization_fps: 5 # FPS for visualization videos
+  compress_output: true # Compress JSON output

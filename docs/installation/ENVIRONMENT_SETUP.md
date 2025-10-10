@@ -15,6 +15,7 @@ The VideoAnnotator project uses PyAnnote for speaker diarization, which requires
 #### Option A: Using .env file (Recommended)
 
 1. Copy the example environment file:
+
    ```bash
    cp .env.example .env
    ```
@@ -30,16 +31,19 @@ The VideoAnnotator project uses PyAnnote for speaker diarization, which requires
 Set the environment variable in your shell:
 
 **Windows (PowerShell):**
+
 ```powershell
 $env:HF_AUTH_TOKEN="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
 **Windows (Command Prompt):**
+
 ```cmd
 set HF_AUTH_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 **Linux/macOS:**
+
 ```bash
 export HF_AUTH_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
@@ -47,11 +51,13 @@ export HF_AUTH_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ### 3. Test Your Setup
 
 Run the diarization test script:
+
 ```bash
 python test_diarization.py
 ```
 
 If configured correctly, you should see:
+
 ```
 === Testing PyAnnote Diarization Pipeline ===
 
@@ -70,16 +76,19 @@ If configured correctly, you should see:
 ### 5. Troubleshooting
 
 **"HuggingFace token: ✗ Not found"**
+
 - Check that your `.env` file exists in the project root
 - Verify the token is set as `HF_AUTH_TOKEN=your_token_here`
 - Ensure no extra spaces around the equals sign
 
 **"Authentication failed"**
+
 - Verify your token is valid at [HuggingFace Settings](https://huggingface.co/settings/tokens)
 - Make sure you've accepted the terms for pyannote/speaker-diarization-3.1
 - Try regenerating your token if it's old
 
 **"Model access denied"**
+
 - Go to [pyannote/speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1)
 - Click "Agree and access repository"
 - Wait a few minutes for permissions to propagate

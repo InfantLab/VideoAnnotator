@@ -7,6 +7,7 @@ VideoAnnotator now includes a robust versioning and metadata system that ensures
 ## Key Features
 
 ### 1. Version Information
+
 - **Version String**: Semantic versioning (e.g., "1.0.0")
 - **Release Date**: Date when the version was released
 - **Build Date**: When the current build was created
@@ -14,17 +15,20 @@ VideoAnnotator now includes a robust versioning and metadata system that ensures
 - **Author and License**: Project metadata
 
 ### 2. System Information
+
 - **Platform**: Operating system and version
 - **Python Version**: Complete Python version information
 - **Architecture**: System architecture (32-bit/64-bit)
 - **Hostname**: Machine where processing occurred
 
 ### 3. Dependency Tracking
+
 - **Core Dependencies**: Versions of key libraries (OpenCV, PyTorch, Pydantic, etc.)
 - **Model Frameworks**: Ultralytics, OpenAI, etc.
 - **Status Tracking**: Whether dependencies are installed, missing, or have errors
 
 ### 4. Model Information
+
 - **Model Name**: Specific model used (e.g., "yolo11n-pose.pt")
 - **Model Type**: Category (YOLO, CLIP, Whisper, etc.)
 - **Framework**: Associated framework (Ultralytics, OpenAI, etc.)
@@ -32,6 +36,7 @@ VideoAnnotator now includes a robust versioning and metadata system that ensures
 - **File Information**: Size and modification date if available
 
 ### 5. Pipeline Metadata
+
 - **Pipeline Name**: Which pipeline processed the data
 - **Processing Timestamp**: When processing occurred
 - **Configuration**: All parameters used for processing
@@ -135,6 +140,7 @@ Comprehensive unit tests ensure the versioning system works correctly:
 ### Test Categories
 
 1. **Unit Tests** (`TestVersioning`)
+
    - Version info structure and format
    - Git information handling
    - Dependency version checking
@@ -142,6 +148,7 @@ Comprehensive unit tests ensure the versioning system works correctly:
    - Metadata creation functions
 
 2. **Pipeline Tests** (`TestPipelineMetadata`)
+
    - Pipeline metadata integration
    - Save operations with metadata
    - Base pipeline methods

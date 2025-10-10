@@ -20,7 +20,7 @@ Usage:
 import json
 import logging
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Union, NamedTuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 # Import version information
 from version import __version__
@@ -38,8 +38,8 @@ class ValidationResult(NamedTuple):
     """Result of COCO validation."""
 
     is_valid: bool
-    warnings: List[str]
-    errors: List[str]
+    warnings: list[str]
+    errors: list[str]
 
 
 # Import native FOSS libraries
@@ -67,7 +67,9 @@ try:
     PYANNOTE_CORE_AVAILABLE = True
 except ImportError:
     PYANNOTE_CORE_AVAILABLE = False
-    logger.warning("pyannote.core not available. Install with: pip install pyannote.core")
+    logger.warning(
+        "pyannote.core not available. Install with: pip install pyannote.core"
+    )
 
 try:
     import praatio
@@ -84,8 +86,8 @@ except ImportError:
 
 
 def create_coco_image_entry(
-    image_id: Union[int, str], width: int, height: int, file_name: str, **kwargs
-) -> Dict[str, Any]:
+    image_id: int | str, width: int, height: int, file_name: str, **kwargs
+) -> dict[str, Any]:
     """Create COCO image entry using native format."""
     image = {"id": image_id, "width": width, "height": height, "file_name": file_name}
 
@@ -96,12 +98,12 @@ def create_coco_image_entry(
 
 def create_coco_annotation(
     annotation_id: int,
-    image_id: Union[int, str],
+    image_id: int | str,
     category_id: int,
-    bbox: List[float],
-    area: Optional[float] = None,
+    bbox: list[float],
+    area: float | None = None,
     **kwargs,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create COCO annotation using native format (no custom classes)."""
     if area is None:
         area = bbox[2] * bbox[3]  # width * height
@@ -122,13 +124,13 @@ def create_coco_annotation(
 
 def create_coco_keypoints_annotation(
     annotation_id: int,
-    image_id: Union[int, str],
+    image_id: int | str,
     category_id: int,
-    keypoints: List[float],  # Flattened [x1,y1,v1,x2,y2,v2,...]
-    bbox: List[float],
+    keypoints: list[float],  # Flattened [x1,y1,v1,x2,y2,v2,...]
+    bbox: list[float],
     num_keypoints: int,
     **kwargs,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create COCO keypoints annotation using native format."""
     annotation = {
         "id": annotation_id,
@@ -146,11 +148,11 @@ def create_coco_keypoints_annotation(
 
 
 def export_coco_json(
-    annotations: List[Dict[str, Any]],
-    images: List[Dict[str, Any]],
+    annotations: list[dict[str, Any]],
+    images: list[dict[str, Any]],
     output_path: str,
-    categories: Optional[List[Dict[str, Any]]] = None,
-) -> Optional[Any]:
+    categories: list[dict[str, Any]] | None = None,
+) -> Any | None:
     """
     Export to COCO JSON format using native structure.
 
@@ -236,7 +238,7 @@ def validate_coco_json(coco_path: str, context: str = "") -> ValidationResult:
         return ValidationResult(True, warnings, errors)
 
     except Exception as e:
-        error_msg = f"COCO validation failed for {context}: {str(e)}"
+        error_msg = f"COCO validation failed for {context}: {e!s}"
         logger.error(error_msg)
         errors.append(error_msg)
         return ValidationResult(False, warnings, errors)
@@ -247,7 +249,9 @@ def validate_coco_json(coco_path: str, context: str = "") -> ValidationResult:
 # ============================================================================
 
 
-def export_webvtt_captions(speech_segments: List[Dict[str, Any]], output_path: str) -> None:
+def export_webvtt_captions(
+    speech_segments: list[dict[str, Any]], output_path: str
+) -> None:
     """
     Export speech transcription to WebVTT format using native library.
 
@@ -275,75 +279,73 @@ def export_webvtt_captions(speech_segments: List[Dict[str, Any]], output_path: s
 
 
 def export_webvtt(
-    segments: List[Dict[str, Any]],
-    output_path: Union[str, Path],
-    include_metadata: bool = True
+    segments: list[dict[str, Any]],
+    output_path: str | Path,
+    include_metadata: bool = True,
 ) -> bool:
     """
     Export results in WebVTT format.
-    
+
     Args:
         segments: List of segment dictionaries with start_time, end_time, and optional text/speaker data
         output_path: Path to save the WebVTT file
         include_metadata: Whether to include extra metadata in WebVTT comments
-        
+
     Returns:
         True if export was successful, False otherwise
     """
     if not WEBVTT_AVAILABLE:
         logger.error("WebVTT export failed: webvtt-py library not available")
         return False
-    
+
     try:
         output_path = Path(output_path)
         vtt = webvtt.WebVTT()
-        
+
         for segment in segments:
             # Required fields
             start_time = segment.get("start_time", 0)
             end_time = segment.get("end_time", 0)
-            
+
             # Format times as WebVTT timestamps (HH:MM:SS.mmm)
             start_str = _format_timestamp(start_time)
             end_str = _format_timestamp(end_time)
-            
+
             # Get content text
             text = segment.get("transcription", "")
             if not text and "text" in segment:
                 text = segment["text"]
-                
+
             # Add speaker information if available
             speaker_id = segment.get("speaker_id", segment.get("speaker", ""))
             if speaker_id:
                 text = f"<v {speaker_id}>{text}"
-            
+
             # Add emotions if available and metadata is enabled
             emotions = segment.get("emotions", {})
             if emotions and include_metadata:
-                emotion_text = ", ".join([
-                    f"{emotion}({data['score']:.2f})" 
-                    for emotion, data in emotions.items()
-                    if isinstance(data, dict) and "score" in data
-                ])
+                emotion_text = ", ".join(
+                    [
+                        f"{emotion}({data['score']:.2f})"
+                        for emotion, data in emotions.items()
+                        if isinstance(data, dict) and "score" in data
+                    ]
+                )
                 if emotion_text:
                     text += f"\nEMOTIONS: {emotion_text}"
-            
+
             # Create caption
-            caption = webvtt.Caption(
-                start=start_str,
-                end=end_str,
-                text=text
-            )
+            caption = webvtt.Caption(start=start_str, end=end_str, text=text)
             vtt.captions.append(caption)
-        
+
         # Add header information
         vtt.file = str(output_path)
-        
+
         # Save the WebVTT file
         vtt.save()
         logger.info(f"WebVTT file saved to: {output_path}")
         return True
-        
+
     except Exception as e:
         logger.error(f"Failed to export WebVTT: {e}")
         return False
@@ -371,7 +373,7 @@ def _format_timestamp(seconds: float) -> str:
 
 
 def export_rttm_diarization(
-    speaker_segments: List[Dict[str, Any]], output_path: str, uri: str = "video"
+    speaker_segments: list[dict[str, Any]], output_path: str, uri: str = "video"
 ) -> None:
     """
     Export speaker diarization to RTTM format using pyannote.core.
@@ -404,7 +406,7 @@ def export_rttm_diarization(
 
 
 def export_textgrid_speech(
-    speech_segments: List[Dict[str, Any]], output_path: str, tier_name: str = "speech"
+    speech_segments: list[dict[str, Any]], output_path: str, tier_name: str = "speech"
 ) -> None:
     """
     Export speech transcription to TextGrid format using praatio.
@@ -418,7 +420,9 @@ def export_textgrid_speech(
         raise ImportError("praatio required for TextGrid export")
 
     # Calculate total duration
-    max_time = max(segment["end"] for segment in speech_segments) if speech_segments else 0
+    max_time = (
+        max(segment["end"] for segment in speech_segments) if speech_segments else 0
+    )
 
     # Create TextGrid using native praatio
     tg = praatio.textgrid.Textgrid()
@@ -467,8 +471,8 @@ def validate_coco_format(coco_file_path: str) -> bool:
 
 
 def auto_export_annotations(
-    annotations: List[Dict[str, Any]], output_dir: str, base_name: str = "annotations"
-) -> Dict[str, str]:
+    annotations: list[dict[str, Any]], output_dir: str, base_name: str = "annotations"
+) -> dict[str, str]:
     """
     Auto-export annotations to multiple native formats.
 

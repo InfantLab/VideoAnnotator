@@ -4,39 +4,48 @@ VideoAnnotator API Server
 FastAPI-based REST API for video annotation processing.
 """
 
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-import logging
-from typing import AsyncGenerator
 
-from version import __version__ as videoannotator_version
-from api.v1 import api_router
-from api.middleware import RequestLoggingMiddleware, ErrorLoggingMiddleware
-from utils.logging_config import setup_videoannotator_logging, get_logger
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from api.errors import register_error_handlers
+from api.middleware import ErrorLoggingMiddleware, RequestLoggingMiddleware
+from api.v1 import api_router
+from utils.logging_config import get_logger
+from version import __version__ as videoannotator_version
+
 try:
     # Load environment variables from .env early (best-effort)
     from dotenv import load_dotenv  # type: ignore
+
     load_dotenv()
 except Exception:
     pass
+
 
 # Apply SciPy compatibility patch for OpenFace 3.0 before any pipeline imports
 def apply_scipy_compatibility_patch():
     """Apply SciPy compatibility patch for OpenFace 3.0 globally."""
     try:
         import scipy.integrate
-        if not hasattr(scipy.integrate, 'simps'):
+
+        if not hasattr(scipy.integrate, "simps"):
             import logging
-            logging.info("Applying scipy.integrate.simps compatibility patch for OpenFace 3.0")
+
+            logging.info(
+                "Applying scipy.integrate.simps compatibility patch for OpenFace 3.0"
+            )
             scipy.integrate.simps = scipy.integrate.simpson
             logging.info("Successfully patched scipy.integrate.simps")
     except ImportError:
         pass  # SciPy not available
     except Exception as e:
         import logging
+
         logging.warning(f"Failed to apply scipy compatibility patch: {e}")
+
 
 # Apply patch early
 apply_scipy_compatibility_patch()
@@ -50,39 +59,50 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
     # Startup
     logger.info("VideoAnnotator API server starting up...", extra={"event": "startup"})
-    
+
     # Log server configuration
-    logger.info("Server configuration initialized", extra={
-        "api_version": "1.2.0",
-        "videoannotator_version": videoannotator_version,
-        "logging": "enhanced",
-        "middleware": ["CORS", "RequestLogging", "ErrorLogging"],
-        "background_processing": "enabled"
-    })
-    
+    logger.info(
+        "Server configuration initialized",
+        extra={
+            "api_version": "1.2.0",
+            "videoannotator_version": videoannotator_version,
+            "logging": "enhanced",
+            "middleware": ["CORS", "RequestLogging", "ErrorLogging"],
+            "background_processing": "enabled",
+        },
+    )
+
     # Start background job processing
     from api.background_tasks import start_background_processing
+
     await start_background_processing()
-    logger.info("Background job processing started", extra={"component": "background_tasks"})
-    
+    logger.info(
+        "Background job processing started", extra={"component": "background_tasks"}
+    )
+
     # TODO: Initialize pipeline cache
-    
+
     yield
-    
+
     # Shutdown
-    logger.info("VideoAnnotator API server shutting down...", extra={"event": "shutdown"})
-    
+    logger.info(
+        "VideoAnnotator API server shutting down...", extra={"event": "shutdown"}
+    )
+
     # Stop background job processing
     from api.background_tasks import stop_background_processing
+
     await stop_background_processing()
-    logger.info("Background job processing stopped", extra={"component": "background_tasks"})
-    
+    logger.info(
+        "Background job processing stopped", extra={"component": "background_tasks"}
+    )
+
     # TODO: Cleanup pipeline resources
 
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
-    
+
     app = FastAPI(
         title="VideoAnnotator API",
         description="Production-ready REST API for video annotation processing",
@@ -90,19 +110,20 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
-        lifespan=lifespan
+        lifespan=lifespan,
     )
-    
+
     # Add middleware in correct order (last added = first executed)
-    
+
     # Error logging middleware (innermost)
     app.add_middleware(ErrorLoggingMiddleware)
-    
+
     # Request logging middleware
-    app.add_middleware(RequestLoggingMiddleware, exclude_paths={
-        "/health", "/docs", "/redoc", "/openapi.json", "/favicon.ico"
-    })
-    
+    app.add_middleware(
+        RequestLoggingMiddleware,
+        exclude_paths={"/health", "/docs", "/redoc", "/openapi.json", "/favicon.ico"},
+    )
+
     # CORS middleware (outermost)
     app.add_middleware(
         CORSMiddleware,
@@ -111,13 +132,13 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     # Include API routes
     app.include_router(api_router, prefix="/api/v1")
 
     # Register standard error handlers
     register_error_handlers(app)
-    
+
     # Health check endpoint
     @app.get("/health")
     async def health_check():
@@ -126,6 +147,7 @@ def create_app() -> FastAPI:
         # Lightweight system metrics (avoid heavy psutil calls here)
         try:
             import psutil  # local import to keep import cost low
+
             mem = psutil.virtual_memory()
             memory_percent = mem.percent
         except Exception:
@@ -133,8 +155,12 @@ def create_app() -> FastAPI:
         # Database quick status
         try:
             from api.database import check_database_health
+
             db_ok, db_msg = check_database_health()
-            db_status = {"status": "healthy" if db_ok else "unhealthy", "message": db_msg}
+            db_status = {
+                "status": "healthy" if db_ok else "unhealthy",
+                "message": db_msg,
+            }
         except Exception:
             db_status = {"status": "unknown", "message": "database check failed"}
         return {
@@ -144,9 +170,9 @@ def create_app() -> FastAPI:
             "message": "VideoAnnotator API is running",
             "logging": "enhanced",
             "memory_percent": memory_percent,  # backward-compatible alias expected by some tests
-            "database": db_status
+            "database": db_status,
         }
-    
+
     return app
 
 
@@ -156,11 +182,7 @@ app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
-        "api.main:app",
-        host="0.0.0.0",
-        port=18011,
-        reload=True,
-        log_level="info"
+        "api.main:app", host="0.0.0.0", port=18011, reload=True, log_level="info"
     )

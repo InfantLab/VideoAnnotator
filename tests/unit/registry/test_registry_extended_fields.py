@@ -1,6 +1,5 @@
-import pytest
-from src.registry.pipeline_registry import get_registry
 from src.registry import constants
+from src.registry.pipeline_registry import get_registry
 
 
 def test_registry_loads_with_extended_fields():

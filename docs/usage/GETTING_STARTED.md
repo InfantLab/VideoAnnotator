@@ -13,7 +13,7 @@ Welcome to VideoAnnotator v1.2.0! This guide will help you get up and running wi
 ## Prerequisites
 
 - **Python 3.12+** (required)
-- **uv** package manager (fast, modern dependency management)  
+- **uv** package manager (fast, modern dependency management)
 - **Git** (for version control)
 - Optional: **CUDA-compatible GPU** for faster processing
 
@@ -38,7 +38,7 @@ cd VideoAnnotator
 # Install all dependencies (fast!)
 uv sync
 
-# Install development dependencies  
+# Install development dependencies
 uv sync --extra dev
 ```
 
@@ -173,10 +173,10 @@ VideoAnnotator generates structured JSON files with comprehensive metadata:
   "metadata": {
     "videoannotator": {
       "version": "1.1.0",
-      "git": {"commit_hash": "359d693e..."}
+      "git": { "commit_hash": "359d693e..." }
     },
-    "pipeline": {"name": "SceneDetectionPipeline"},
-    "model": {"model_name": "PySceneDetect + CLIP"}
+    "pipeline": { "name": "SceneDetectionPipeline" },
+    "model": { "model_name": "PySceneDetect + CLIP" }
   },
   "annotations": [
     {
@@ -191,12 +191,12 @@ VideoAnnotator generates structured JSON files with comprehensive metadata:
 
 ## Available Pipelines (All Working Through API!)
 
-| Pipeline | Description | Output | Status |
-|----------|-------------|--------|--------|
-| **scene_detection** | Scene boundary detection + CLIP environment classification | `*_scene_detection.json` | ✅ Ready |
-| **person_tracking** | YOLO11 + ByteTrack multi-person pose tracking | `*_person_tracking.json` | ✅ Ready |
-| **face_analysis** | OpenFace 3.0 + LAION facial behavior analysis | `*_laion_face_annotations.json` | ✅ Ready |
-| **audio_processing** | Whisper speech recognition + pyannote diarization | `*_speech_recognition.vtt` | ✅ Ready |
+| Pipeline             | Description                                                | Output                          | Status   |
+| -------------------- | ---------------------------------------------------------- | ------------------------------- | -------- |
+| **scene_detection**  | Scene boundary detection + CLIP environment classification | `*_scene_detection.json`        | ✅ Ready |
+| **person_tracking**  | YOLO11 + ByteTrack multi-person pose tracking              | `*_person_tracking.json`        | ✅ Ready |
+| **face_analysis**    | OpenFace 3.0 + LAION facial behavior analysis              | `*_laion_face_annotations.json` | ✅ Ready |
+| **audio_processing** | Whisper speech recognition + pyannote diarization          | `*_speech_recognition.vtt`      | ✅ Ready |
 
 All pipelines are fully integrated with the API server and process through the background job system!
 
@@ -212,12 +212,14 @@ All pipelines are fully integrated with the API server and process through the b
 ## Common Issues
 
 ### GPU Not Detected
+
 ```bash
 # Check CUDA availability
 python -c "import torch; print(torch.cuda.is_available())"
 ```
 
 ### FFmpeg Not Found
+
 ```bash
 # Install FFmpeg
 # Ubuntu/Debian:
@@ -230,7 +232,9 @@ brew install ffmpeg
 ```
 
 ### Model Download Issues
+
 Models are downloaded automatically on first use. Ensure you have:
+
 - Stable internet connection
 - Sufficient disk space (~2GB for all models)
 - Proper permissions for the models directory

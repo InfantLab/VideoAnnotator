@@ -18,6 +18,7 @@ We take security vulnerabilities seriously. If you discover a security vulnerabi
 **DO NOT** create a public GitHub issue for security vulnerabilities.
 
 Instead, please email us directly:
+
 - **Email**: [infantologist@gmail.com](mailto:infantologist@gmail.com)
 - **Subject**: `[VideoAnnotator Security] Brief description of vulnerability`
 
@@ -55,6 +56,7 @@ We follow responsible disclosure practices:
 ### For Users
 
 #### 🔒 Environment Security
+
 ```bash
 # Use virtual environments
 conda create -n videoannotator python=3.12
@@ -65,18 +67,21 @@ pip install --upgrade -r requirements.txt
 ```
 
 #### 📁 File Handling
+
 - **Validate input files** before processing
 - **Sanitize file paths** to prevent directory traversal
 - **Limit file sizes** to prevent resource exhaustion
 - **Use temporary directories** for processing
 
 #### 🌐 Network Security
+
 - **Avoid processing untrusted videos** from unknown sources
 - **Use HTTPS** for model downloads
 - **Verify checksums** of downloaded models
 - **Isolate network access** in production environments
 
 #### 🔑 Access Control
+
 - **Run with minimal privileges** - don't use root/admin
 - **Restrict file system access** to necessary directories
 - **Use container isolation** in production deployments
@@ -85,6 +90,7 @@ pip install --upgrade -r requirements.txt
 ### For Developers
 
 #### 🛡️ Secure Coding
+
 ```python
 # Input validation
 def validate_video_path(path: str) -> Path:
@@ -103,12 +109,14 @@ with tempfile.NamedTemporaryFile(delete=True) as tmp:
 ```
 
 #### 🔍 Dependency Management
+
 - **Pin dependency versions** in requirements.txt
 - **Regular security scans** with `pip-audit`
 - **Monitor vulnerability databases** (GitHub Security Advisories)
 - **Use dependabot** for automated security updates
 
 #### 📊 Logging and Monitoring
+
 - **Sanitize logs** - don't log sensitive paths/data
 - **Monitor resource usage** - detect anomalous behavior
 - **Rate limiting** for API endpoints
@@ -117,16 +125,19 @@ with tempfile.NamedTemporaryFile(delete=True) as tmp:
 ## Known Security Considerations
 
 ### 🎥 Video Processing
+
 - **Large file handling**: Videos can consume significant memory/disk
 - **Format vulnerabilities**: Some video codecs have known exploits
 - **Metadata exposure**: Video files may contain sensitive metadata
 
 ### 🤖 ML Model Security
+
 - **Model poisoning**: Use trusted model sources only
 - **Adversarial inputs**: Malicious videos could exploit model vulnerabilities
 - **Data privacy**: Models may memorize training data
 
 ### 🔗 Dependencies
+
 - **Third-party libraries**: Regular updates required for security patches
 - **Native dependencies**: FFmpeg, OpenCV may have vulnerabilities
 - **GPU drivers**: CUDA/ROCm security considerations
@@ -160,6 +171,7 @@ VideoAnnotator aims to comply with:
 ## Security Tools and Resources
 
 ### 🔧 Recommended Tools
+
 ```bash
 # Security scanning
 pip install pip-audit
@@ -175,6 +187,7 @@ safety check
 ```
 
 ### 📚 Additional Resources
+
 - [OWASP Secure Coding Practices](https://owasp.org/www-project-secure-coding-practices-quick-reference-guide/)
 - [Python Security Best Practices](https://python.org/dev/security/)
 - [GitHub Security Features](https://github.com/features/security)

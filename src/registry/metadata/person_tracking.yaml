@@ -34,7 +34,7 @@ config_schema:
 examples:
   - cli: videoannotator job submit demo.mp4 --pipelines person_tracking
     description: Submit person tracking job
-  - api: POST /api/v1/jobs (selected_pipelines=["person_tracking"]) 
+  - api: POST /api/v1/jobs (selected_pipelines=["person_tracking"])
     description: API job submission including person tracking
 version: 1
 stability: beta

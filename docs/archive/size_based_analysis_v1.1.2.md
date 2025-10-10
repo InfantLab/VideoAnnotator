@@ -7,11 +7,12 @@ Size-based person analysis is now integrated by default into the VideoAnnotator 
 ## How It Works
 
 ### Core Logic
+
 1. **Detection Grouping**: Groups person detections by `person_id` across video frames
 2. **Height Calculation**: Calculates average bounding box height for each person
 3. **Normalization**: Normalizes heights relative to the tallest person (0.0 to 1.0 scale)
 4. **Classification**: Applies threshold-based classification:
-   - `< 0.4` (default) → "infant" 
+   - `< 0.4` (default) → "infant"
    - `>= 0.4` → "parent"
 5. **Integration**: Updates person annotations with automatic labels
 
@@ -27,7 +28,7 @@ person_tracking:
       enabled: true
       size_based:
         enabled: true
-        use_simple_analyzer: true  # Uses simplified analyzer by default
+        use_simple_analyzer: true # Uses simplified analyzer by default
         height_threshold: 0.4
         confidence: 0.7
         adult_label: "parent"
@@ -38,6 +39,7 @@ person_tracking:
 ## Pipeline Integration
 
 ### Automatic Execution
+
 When you run person tracking, size-based analysis automatically runs after detection:
 
 ```python
@@ -57,6 +59,7 @@ for ann in annotations:
 ```
 
 ### Output Format
+
 Annotations are enhanced with labeling information:
 
 ```json
@@ -65,7 +68,7 @@ Annotations are enhanced with labeling information:
   "person_id": "person_video_001",
   "bbox": [100, 150, 200, 300],
   "person_label": "infant",
-  "label_confidence": 0.70,
+  "label_confidence": 0.7,
   "labeling_method": "size_based_inference"
 }
 ```
@@ -73,30 +76,33 @@ Annotations are enhanced with labeling information:
 ## Configuration Options
 
 ### Basic Settings
+
 ```yaml
 person_tracking:
   person_identity:
     automatic_labeling:
       size_based:
-        enabled: true                        # Enable/disable size-based analysis
-        height_threshold: 0.4                # Classification threshold (0.0-1.0)
-        confidence: 0.7                      # Confidence score for labels
-        min_detections_for_analysis: 2       # Minimum detections needed
+        enabled: true # Enable/disable size-based analysis
+        height_threshold: 0.4 # Classification threshold (0.0-1.0)
+        confidence: 0.7 # Confidence score for labels
+        min_detections_for_analysis: 2 # Minimum detections needed
 ```
 
 ### Advanced Settings
+
 ```yaml
 person_tracking:
   person_identity:
     automatic_labeling:
-      confidence_threshold: 0.7             # Global confidence threshold
+      confidence_threshold: 0.7 # Global confidence threshold
       size_based:
-        adult_label: "parent"               # Label for adults
-        child_label: "infant"               # Label for children
-        use_simple_analyzer: true           # Use simplified analyzer (recommended)
+        adult_label: "parent" # Label for adults
+        child_label: "infant" # Label for children
+        use_simple_analyzer: true # Use simplified analyzer (recommended)
 ```
 
 ### Alternative Labels
+
 You can customize the labels for different contexts:
 
 ```yaml
@@ -105,7 +111,7 @@ size_based:
   adult_label: "clinician"
   child_label: "patient"
 
-# Educational context  
+# Educational context
 size_based:
   adult_label: "teacher"
   child_label: "student"
@@ -114,11 +120,13 @@ size_based:
 ## Performance Characteristics
 
 ### Speed
+
 - **Minimal Overhead**: Adds ~1-2% processing time to person tracking
 - **Efficient**: Operates on already-computed bounding boxes
 - **Scalable**: Handles multiple persons efficiently
 
 ### Accuracy
+
 - **Best For**: Clear adult-child size differences (parent-infant interactions)
 - **Limitations**: May struggle with teenagers, seated persons, or similar-sized adults
 - **Confidence**: Provides confidence scores to assess reliability
@@ -126,21 +134,25 @@ size_based:
 ## Filtering and Quality Control
 
 ### Minimum Detections
+
 Only persons with sufficient detections are analyzed:
 
 ```yaml
-min_detections_for_analysis: 2  # Require at least 2 detections
+min_detections_for_analysis: 2 # Require at least 2 detections
 ```
 
 ### Confidence Thresholding
+
 Labels below confidence threshold are filtered out:
 
 ```yaml
-confidence_threshold: 0.7  # Only apply labels with >= 70% confidence
+confidence_threshold: 0.7 # Only apply labels with >= 70% confidence
 ```
 
 ### Temporal Consistency
+
 Analysis uses multiple frames for robust classification:
+
 - Averages bounding box heights across all detections
 - Reduces impact of single-frame anomalies
 - More stable than single-frame classification
@@ -148,6 +160,7 @@ Analysis uses multiple frames for robust classification:
 ## Usage Examples
 
 ### Standard Video Processing
+
 ```bash
 # Process video with default settings (size analysis enabled)
 python main.py --input video.mp4 --output results/
@@ -156,12 +169,14 @@ python main.py --input video.mp4 --output results/
 ```
 
 ### Custom Configuration
+
 ```bash
 # Use custom configuration
 python main.py --input video.mp4 --config configs/default.yaml --output results/
 ```
 
 ### Programmatic Usage
+
 ```python
 from src.utils.size_based_person_analysis import run_size_based_analysis
 
@@ -178,17 +193,20 @@ print(results)
 ## Troubleshooting
 
 ### No Labels Generated
+
 - Check that `person_identity.enabled: true`
 - Verify `automatic_labeling.enabled: true`
 - Ensure persons have sufficient detections (`min_detections_for_analysis`)
 - Check confidence threshold settings
 
 ### Incorrect Classifications
+
 - Adjust `height_threshold` (lower = more children, higher = more adults)
 - Increase `min_detections_for_analysis` for more stable results
 - Check that persons have clear size differences
 
 ### Performance Issues
+
 - Size-based analysis should add minimal overhead
 - If slow, verify `use_simple_analyzer: true`
 - Consider reducing `min_detections_for_analysis`
@@ -196,6 +214,7 @@ print(results)
 ## Integration with Other Features
 
 ### Face Analysis Pipelines
+
 Person labels from size-based analysis are automatically propagated to face analysis:
 
 ```python
@@ -210,6 +229,7 @@ for face_ann in face_results:
 ```
 
 ### Person Tracks Export
+
 Size-based labels are included in person tracks files:
 
 ```json
@@ -249,9 +269,11 @@ The current size-based analysis is a foundation for more advanced features:
 ### Main Functions
 
 #### `run_size_based_analysis(annotations, height_threshold=0.4, confidence=0.7)`
+
 Convenience function for size-based person analysis.
 
 **Parameters:**
+
 - `annotations`: List of person detection annotations
 - `height_threshold`: Height threshold for adult/child classification
 - `confidence`: Confidence score for labels
@@ -259,9 +281,11 @@ Convenience function for size-based person analysis.
 **Returns:** Dict mapping person_id to label information
 
 #### `SizeBasedPersonAnalyzer(height_threshold=0.4, confidence=0.7)`
+
 Main analyzer class for size-based person classification.
 
 **Methods:**
+
 - `analyze_persons(annotations)`: Analyze and classify persons
 - Configuration through constructor parameters
 

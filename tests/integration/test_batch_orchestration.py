@@ -5,87 +5,83 @@ Tests the integration between BatchOrchestrator, ProgressTracker,
 FailureRecovery, and other batch processing components.
 """
 
-import pytest
 import asyncio
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
+
 from src.batch.batch_orchestrator import BatchOrchestrator
-from src.batch.progress_tracker import ProgressTracker
-from src.batch.recovery import FailureRecovery
-from src.batch.types import JobStatus, BatchJob, PipelineResult
+from src.batch.types import JobStatus, PipelineResult
 
 
 class TestBatchComponentsIntegration:
     """Test integration between batch processing components."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
         self.temp_dir = Path(tempfile.mkdtemp())
         self.orchestrator = BatchOrchestrator()
-    
+
     def teardown_method(self):
         """Clean up temporary directory."""
         import shutil
+
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
-    
+
     def test_job_lifecycle_integration(self):
         """Test complete job lifecycle through all components."""
         # Create a dummy video file for testing
         test_video = self.temp_dir / "test_video.mp4"
         test_video.write_text("dummy video content")
-        
+
         # Create job by adding to orchestrator
         job_id = self.orchestrator.add_job(
             video_path=test_video,
             output_dir=self.temp_dir / "output",
-            config={'pipelines': {'audio': {'enabled': True}}}
+            config={"pipelines": {"audio": {"enabled": True}}},
         )
-        
+
         # Verify job is tracked
         tracked_job = self.orchestrator.get_job(job_id)
         assert tracked_job is not None
         assert tracked_job.status == JobStatus.PENDING
-        
+
         # Simulate job processing stages
         # 1. Start job
-        self.orchestrator.update_job_status(
-            job_id, JobStatus.RUNNING
-        )
-        
+        self.orchestrator.update_job_status(job_id, JobStatus.RUNNING)
+
         tracked_job = self.orchestrator.get_job(job_id)
         assert tracked_job.status == JobStatus.RUNNING
         assert tracked_job.started_at is not None
-        
+
         # 2. Add pipeline results
         result = PipelineResult(
             pipeline_name="audio",
             status=JobStatus.COMPLETED,
             processing_time=5.0,
-            annotation_count=10
+            annotation_count=10,
         )
         self.orchestrator.add_pipeline_result(job_id, result)
-        
+
         # 3. Complete job
-        self.orchestrator.update_job_status(
-            job_id, JobStatus.COMPLETED
-        )
-        
+        self.orchestrator.update_job_status(job_id, JobStatus.COMPLETED)
+
         # Verify final state
         final_job = self.orchestrator.get_job(job_id)
         assert final_job.status == JobStatus.COMPLETED
         assert final_job.completed_at is not None
         assert "audio" in final_job.pipeline_results
-        
+
         # Verify status calculation
         status = self.orchestrator.get_status()
         assert status.total_jobs == 1
         assert status.completed_jobs == 1
         assert status.progress_percentage == 100.0
-    
+
     def test_failure_recovery_integration(self):
         """Test failure recovery integration with orchestrator."""
         # Create a dummy video file for testing
@@ -98,11 +94,13 @@ class TestBatchComponentsIntegration:
         job = self.orchestrator.get_job(job_id)
         max_retries = self.orchestrator.failure_recovery.max_retries
         for i in range(max_retries):
-            error_msg = f"Processing error {i+1}"
+            error_msg = f"Processing error {i + 1}"
             self.orchestrator.set_job_error(job_id, error_msg)
             self.orchestrator.increment_retry_count(job_id)
             job = self.orchestrator.get_job(job_id)
-            should_retry = self.orchestrator.failure_recovery.should_retry(job, Exception(error_msg))
+            should_retry = self.orchestrator.failure_recovery.should_retry(
+                job, Exception(error_msg)
+            )
             # Should retry for all but last attempt
             if i < max_retries - 1:
                 assert should_retry is True
@@ -124,7 +122,7 @@ class TestBatchComponentsIntegration:
         # Verify job state
         assert failed_job.status == JobStatus.FAILED
         assert failed_job.retry_count >= max_retries
-    
+
     def test_progress_tracking_with_multiple_jobs(self):
         """Test progress tracking with multiple jobs in different states."""
         # Create jobs in various states
@@ -158,12 +156,15 @@ class TestBatchComponentsIntegration:
 
             # Simulate time spent on job by monkeypatching start time
             # Set start time to 2 seconds ago for each completed job
-            self.orchestrator.progress_tracker.current_jobs[job_id] = self.orchestrator.progress_tracker.current_jobs[job_id] - timedelta(seconds=2)
+            self.orchestrator.progress_tracker.current_jobs[job_id] = (
+                self.orchestrator.progress_tracker.current_jobs[job_id]
+                - timedelta(seconds=2)
+            )
 
             result = PipelineResult(
                 pipeline_name="audio",
                 status=JobStatus.COMPLETED,
-                processing_time=float(i + 1)
+                processing_time=float(i + 1),
             )
             self.orchestrator.add_pipeline_result(job_id, result)
 
@@ -189,54 +190,50 @@ class TestBatchComponentsIntegration:
         assert status.success_rate == 80.0  # 4/5 * 100 (completed out of finished)
         assert status.total_processing_time > 0
         assert status.average_processing_time > 0
-    
+
     def test_job_queue_management(self):
         """Test job queue management and processing order."""
         jobs = []
-        
+
         # Add jobs to queue
         for i in range(5):
             video_file = self.temp_dir / f"video_{i}.mp4"
             video_file.write_text("dummy content")
             job_id = self.orchestrator.add_job(
                 video_path=video_file,
-                config={'priority': i}  # Different priorities
+                config={"priority": i},  # Different priorities
             )
             jobs.append(job_id)
-        
+
         # Verify all jobs are tracked
         assert len(self.orchestrator.jobs) == 5
-        
+
         # Process jobs one by one
         processed_jobs = []
         for job in self.orchestrator.jobs:
             processed_jobs.append(job)
-            
+
             # Simulate processing
-            self.orchestrator.update_job_status(
-                job.job_id, JobStatus.RUNNING
-            )
-            self.orchestrator.update_job_status(
-                job.job_id, JobStatus.COMPLETED
-            )
-        
+            self.orchestrator.update_job_status(job.job_id, JobStatus.RUNNING)
+            self.orchestrator.update_job_status(job.job_id, JobStatus.COMPLETED)
+
         # Verify all jobs were processed
         assert len(processed_jobs) == 5
-        
+
         # Verify final status
         final_status = self.orchestrator.get_status()
         assert final_status.total_jobs == 5
         assert final_status.completed_jobs == 5
         assert final_status.progress_percentage == 100.0
-    
+
     def test_checkpoint_and_recovery(self):
         """Test checkpoint saving and recovery functionality."""
-        checkpoint_file = self.temp_dir / "test_checkpoint.json"
-        
+        _checkpoint_file = self.temp_dir / "test_checkpoint.json"
+
         # Create orchestrator with checkpoint
         orchestrator = BatchOrchestrator()
         # Note: checkpoint functionality not fully implemented in current FileStorageBackend
-        
+
         # Add jobs and simulate some failures
         jobs = []
         for i in range(3):
@@ -244,18 +241,18 @@ class TestBatchComponentsIntegration:
             video_file.write_text("dummy content")
             job_id = orchestrator.add_job(video_path=video_file)
             jobs.append(job_id)
-        
+
         # Skip checkpoint tests as FileStorageBackend doesn't have these methods
         # assert checkpoint_file.exists()
-        
+
         # Verify basic orchestrator functionality
         assert len(orchestrator.jobs) == 3
-    
+
     def test_concurrent_operations(self):
         """Test concurrent operations on batch components."""
         import threading
         import time
-        
+
         # Add initial jobs
         jobs = []
         for i in range(10):
@@ -263,58 +260,49 @@ class TestBatchComponentsIntegration:
             video_file.write_text("dummy content")
             job_id = self.orchestrator.add_job(video_path=video_file)
             jobs.append(job_id)
-        
+
         results = []
         errors = []
-        
+
         def worker_thread(job_ids):
             """Worker thread that processes jobs."""
             try:
                 for job_id in job_ids:
                     # Simulate processing
-                    self.orchestrator.update_job_status(
-                        job_id, JobStatus.RUNNING
-                    )
+                    self.orchestrator.update_job_status(job_id, JobStatus.RUNNING)
                     time.sleep(0.01)  # Small delay
-                    
+
                     # Add result
                     result = PipelineResult(
                         pipeline_name="test_pipeline",
                         status=JobStatus.COMPLETED,
-                        processing_time=0.01
+                        processing_time=0.01,
                     )
-                    self.orchestrator.add_pipeline_result(
-                        job_id, result
-                    )
-                    
-                    self.orchestrator.update_job_status(
-                        job_id, JobStatus.COMPLETED
-                    )
-                    
+                    self.orchestrator.add_pipeline_result(job_id, result)
+
+                    self.orchestrator.update_job_status(job_id, JobStatus.COMPLETED)
+
                     results.append(job_id)
             except Exception as e:
                 errors.append(str(e))
-        
+
         # Create multiple worker threads
         threads = []
-        job_chunks = [
-            jobs[:5],
-            jobs[5:]
-        ]
-        
+        job_chunks = [jobs[:5], jobs[5:]]
+
         for chunk in job_chunks:
             thread = threading.Thread(target=worker_thread, args=(chunk,))
             threads.append(thread)
             thread.start()
-        
+
         # Wait for all threads to complete
         for thread in threads:
             thread.join()
-        
+
         # Verify results
         assert len(errors) == 0, f"Errors occurred: {errors}"
         assert len(results) == 10
-        
+
         # Verify final status
         final_status = self.orchestrator.get_status()
         assert final_status.total_jobs == 10
@@ -325,19 +313,46 @@ class TestBatchComponentsIntegration:
 @pytest.mark.asyncio
 class TestBatchAsyncIntegration:
     """Test asynchronous integration of batch components."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
         self.orchestrator = BatchOrchestrator()
-    
-    @patch('src.pipelines.audio_processing.audio_pipeline_modular.extract_audio', return_value='dummy.wav')
-    @patch('src.pipelines.audio_processing.audio_pipeline_modular.get_video_metadata', return_value={'duration': 1.0, 'sample_rate': 16000})
-    @patch('src.pipelines.audio_processing.speech_pipeline.whisper.load_model', return_value=Mock())
-    @patch('src.pipelines.audio_processing.laion_voice_pipeline.WhisperForConditionalGeneration.from_pretrained', return_value=Mock())
-    @patch('src.pipelines.face_analysis.laion_face_pipeline.AutoProcessor.from_pretrained', return_value=Mock())
-    @patch('src.pipelines.face_analysis.laion_face_pipeline.AutoModelForFaceAnalysis.from_pretrained', return_value=Mock())
-    @patch('logging.getLogger')
-    async def test_async_job_processing(self, mock_logger, mock_face_model, mock_face_proc, mock_voice_model, mock_whisper, mock_metadata, mock_extract):
+
+    @patch(
+        "src.pipelines.audio_processing.audio_pipeline_modular.extract_audio",
+        return_value="dummy.wav",
+    )
+    @patch(
+        "src.pipelines.audio_processing.audio_pipeline_modular.get_video_metadata",
+        return_value={"duration": 1.0, "sample_rate": 16000},
+    )
+    @patch(
+        "src.pipelines.audio_processing.speech_pipeline.whisper.load_model",
+        return_value=Mock(),
+    )
+    @patch(
+        "src.pipelines.audio_processing.laion_voice_pipeline.WhisperForConditionalGeneration.from_pretrained",
+        return_value=Mock(),
+    )
+    @patch(
+        "src.pipelines.face_analysis.laion_face_pipeline.AutoProcessor.from_pretrained",
+        return_value=Mock(),
+    )
+    @patch(
+        "src.pipelines.face_analysis.laion_face_pipeline.AutoModelForFaceAnalysis.from_pretrained",
+        return_value=Mock(),
+    )
+    @patch("logging.getLogger")
+    async def test_async_job_processing(
+        self,
+        mock_logger,
+        mock_face_model,
+        mock_face_proc,
+        mock_voice_model,
+        mock_whisper,
+        mock_metadata,
+        mock_extract,
+    ):
         """Test asynchronous job processing workflow (robust to dummy files and external dependencies)."""
         # Patch logger to avoid closed file errors
         mock_logger.return_value = Mock()
@@ -351,17 +366,19 @@ class TestBatchAsyncIntegration:
             jobs.append(job_id)
 
         # Mock the pipeline processing to avoid actual processing
-        with patch.object(self.orchestrator, '_process_job') as mock_process:
+        with patch.object(self.orchestrator, "_process_job") as mock_process:
+
             def mock_job_processing(job):
-                job.pipeline_results['audio'] = PipelineResult(
-                    pipeline_name='audio',
+                job.pipeline_results["audio"] = PipelineResult(
+                    pipeline_name="audio",
                     status=JobStatus.COMPLETED,
                     processing_time=1.0,
-                    annotation_count=5
+                    annotation_count=5,
                 )
                 job.status = JobStatus.COMPLETED
                 job.completed_at = datetime.now()
                 return job
+
             mock_process.side_effect = mock_job_processing
 
             # Start processing
@@ -393,37 +410,37 @@ class TestBatchAsyncIntegration:
                 await processing_task
             except asyncio.CancelledError:
                 pass
-    
+
     async def test_dynamic_job_addition(self):
         """Test adding jobs while processing is active."""
         temp_dir = Path(tempfile.mkdtemp())
-        
+
         initial_jobs = []
         for i in range(2):
             video_file = temp_dir / f"initial_{i}.mp4"
             video_file.write_text("dummy content")
             job_id = self.orchestrator.add_job(video_path=video_file)
             initial_jobs.append(job_id)
-        
-        with patch.object(self.orchestrator, '_process_job') as mock_process:
+
+        with patch.object(self.orchestrator, "_process_job") as mock_process:
             # Configure mock to simulate successful processing
             def mock_job_processing(job):
-                job.pipeline_results['audio'] = PipelineResult(
-                    pipeline_name='audio',
+                job.pipeline_results["audio"] = PipelineResult(
+                    pipeline_name="audio",
                     status=JobStatus.COMPLETED,
                     processing_time=0.5,
-                    annotation_count=3
+                    annotation_count=3,
                 )
                 job.status = JobStatus.COMPLETED
                 job.completed_at = datetime.now()
                 return job
-            
+
             mock_process.side_effect = mock_job_processing
-            
+
             # Start processing
             processing_task = asyncio.create_task(self.orchestrator.start())
             await asyncio.sleep(0.1)  # Let processing start
-            
+
             # Add more jobs while processing
             additional_jobs = []
             for i in range(3):
@@ -432,29 +449,29 @@ class TestBatchAsyncIntegration:
                 job_id = self.orchestrator.add_job(video_path=video_file)
                 additional_jobs.append(job_id)
                 await asyncio.sleep(0.05)
-            
+
             # Wait for all jobs to complete
             max_wait = 5.0
             start_time = asyncio.get_event_loop().time()
-            
+
             while True:
                 status = self.orchestrator.get_status()
                 if status.total_jobs == 5 and status.progress_percentage == 100.0:
                     break
-                
+
                 if asyncio.get_event_loop().time() - start_time > max_wait:
                     pytest.fail("Jobs did not complete within timeout")
-                
+
                 await asyncio.sleep(0.1)
-            
+
             # Stop processing
             await self.orchestrator.stop()
-            
+
             # Verify all jobs were processed
             final_status = self.orchestrator.get_status()
             assert final_status.total_jobs == 5
             assert final_status.completed_jobs == 5
-            
+
             # Cleanup
             processing_task.cancel()
             try:

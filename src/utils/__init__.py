@@ -5,7 +5,7 @@ from .person_identity import PersonIdentityManager
 
 # Export all these functions
 __all__ = [
-    "find_f0",
     "AutomaticPersonLabeler",
     "PersonIdentityManager",
+    "find_f0",
 ]

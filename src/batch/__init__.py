@@ -6,7 +6,7 @@ including job queue management, failure recovery, and progress tracking.
 """
 
 # Import only types by default to prevent heavy import chain during testing
-from .types import JobStatus, BatchJob, BatchReport, BatchStatus
+from .types import BatchJob, BatchReport, BatchStatus, JobStatus
 
 # Heavy imports commented out to prevent pytest collection hangs
 # Uncomment when needed for actual batch processing
@@ -15,11 +15,11 @@ from .types import JobStatus, BatchJob, BatchReport, BatchStatus
 # from .recovery import FailureRecovery
 
 __all__ = [
-    "JobStatus",
-    "BatchJob", 
+    "BatchJob",
     "BatchReport",
     "BatchStatus",
+    "JobStatus",
     # "BatchOrchestrator",
-    # "ProgressTracker", 
+    # "ProgressTracker",
     # "FailureRecovery",
 ]

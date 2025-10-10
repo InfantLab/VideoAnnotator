@@ -2,10 +2,11 @@
 Base pipeline interface for all video annotation processors.
 """
 
-from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
-from pathlib import Path
 import logging
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Any
+
 # Note: After standards migration, base schemas are no longer used
 # Pipelines now return native format dictionaries (COCO, WebVTT, RTTM, etc.)
 from version import create_annotation_metadata, get_model_info
@@ -14,7 +15,7 @@ from version import create_annotation_metadata, get_model_info
 class BasePipeline(ABC):
     """Base class for all annotation pipelines."""
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialize pipeline with configuration."""
         self.config = config or {}
         self.name = self.__class__.__name__.lower()
@@ -31,10 +32,10 @@ class BasePipeline(ABC):
         self,
         video_path: str,
         start_time: float = 0.0,
-        end_time: Optional[float] = None,
+        end_time: float | None = None,
         pps: float = 0.0,  # predictions per second, 0 = once per segment
-        output_dir: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        output_dir: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Process video segment and return annotations.
 
@@ -54,7 +55,7 @@ class BasePipeline(ABC):
         """Cleanup resources."""
 
     @abstractmethod
-    def get_schema(self) -> Dict[str, Any]:
+    def get_schema(self) -> dict[str, Any]:
         """Return the JSON schema for this pipeline's output."""
 
     def validate_video_path(self, video_path: str) -> Path:
@@ -66,7 +67,7 @@ class BasePipeline(ABC):
             raise ValueError(f"Path is not a file: {video_path}")
         return path
 
-    def get_video_info(self, video_path: str) -> Dict[str, Any]:
+    def get_video_info(self, video_path: str) -> dict[str, Any]:
         """Get basic video information."""
         import cv2
 
@@ -91,14 +92,14 @@ class BasePipeline(ABC):
         finally:
             cap.release()
 
-    def set_model_info(self, model_name: str, model_path: Optional[str] = None) -> None:
+    def set_model_info(self, model_name: str, model_path: str | None = None) -> None:
         """Set model information for this pipeline."""
         self._model_info = get_model_info(model_name, model_path)
         self.logger.info(f"Model info set: {model_name}")
 
     def create_output_metadata(
-        self, video_metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, video_metadata: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Create comprehensive metadata for pipeline outputs."""
         return create_annotation_metadata(
             pipeline_name=self.__class__.__name__,

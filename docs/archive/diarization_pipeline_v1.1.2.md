@@ -23,6 +23,7 @@ You need a HuggingFace token to use PyAnnote models:
 1. Go to https://huggingface.co/settings/tokens
 2. Create a new token or use an existing one
 3. Accept the terms for the PyAnnote models at:
+
    - https://huggingface.co/pyannote/speaker-diarization-3.1
    - https://huggingface.co/pyannote/segmentation-3.0
 
@@ -33,6 +34,7 @@ export HUGGINGFACE_TOKEN=your_token_here
 ```
 
 Or on Windows:
+
 ```cmd
 set HUGGINGFACE_TOKEN=your_token_here
 ```
@@ -61,7 +63,7 @@ if results:
     diarization = results[0]
     print(f"Found {len(diarization.speakers)} speakers")
     print(f"Total speech time: {diarization.total_speech_time:.2f} seconds")
-    
+
     # Print speaker segments
     for segment in diarization.segments:
         speaker = segment['speaker_id']
@@ -133,14 +135,17 @@ python examples/diarization_example.py
 ### Common Issues
 
 1. **Missing HuggingFace Token**
+
    - Make sure HUGGINGFACE_TOKEN is set
    - Verify you've accepted the terms for PyAnnote models
 
 2. **GPU Memory Issues**
+
    - Set `use_gpu=False` in config if you run out of GPU memory
    - Or use a smaller model if available
 
 3. **Audio Format Issues**
+
    - The pipeline works best with WAV files
    - Other formats are automatically converted using moviepy
 
@@ -162,7 +167,7 @@ The pipeline is designed to work alongside the existing audio processing code in
 # Legacy approach
 from src.processors.audio_processor import diarize_audio
 
-# New pipeline approach  
+# New pipeline approach
 from src.pipelines.audio_processing import DiarizationPipeline
 ```
 

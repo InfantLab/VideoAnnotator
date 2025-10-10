@@ -122,7 +122,11 @@ def centreOfGravity(df, frames=(), people="all", bodypart="whole"):
                     xyc = xyc.reshape(-1, 3)  # reshape to n x 3 array (x,y,conf)
                     avgx, avgy = avgxys(xyc, threshold)
 
-                df.loc[(df["frame"] == frame) & (df["person"] == person), "cog.x"] = avgx
-                df.loc[(df["frame"] == frame) & (df["person"] == person), "cog.y"] = avgy
+                df.loc[(df["frame"] == frame) & (df["person"] == person), "cog.x"] = (
+                    avgx
+                )
+                df.loc[(df["frame"] == frame) & (df["person"] == person), "cog.y"] = (
+                    avgy
+                )
 
     return df

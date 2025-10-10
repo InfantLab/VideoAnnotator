@@ -5,34 +5,36 @@ Comprehensive test coverage for the FastAPI server including endpoints,
 database integration, job management, and system health checks.
 """
 
-import pytest
-import tempfile
-import json
 import io
-import os
+import json
+import tempfile
 from pathlib import Path
+
+import pytest
 from fastapi.testclient import TestClient
+
+from src.api.database import reset_storage_backend, set_database_path
 
 # Import the API application
 from src.api.main import create_app
-from src.api.database import set_database_path, reset_storage_backend
 
 
 @pytest.fixture
 def temp_db():
     """Create a temporary database for testing."""
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as f:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as f:
         db_path = Path(f.name)
-    
+
     # Set environment variable for test database
     set_database_path(db_path)
-    
+
     yield db_path
-    
+
     # Cleanup - reset backend first to close connections
     reset_storage_backend()
     # Small delay to ensure connections are closed on Windows
     import time
+
     time.sleep(0.1)
     # Try to remove file, but don't fail test if it can't be removed
     try:
@@ -60,12 +62,12 @@ def sample_video_file():
 
 class TestHealthEndpoint:
     """Test health check endpoints."""
-    
+
     def test_health_check_basic(self, client):
         """Test basic health check endpoint."""
         response = client.get("/health")
         assert response.status_code == 200
-        
+
         data = response.json()
         assert data["status"] == "healthy"
         assert data["api_version"] == "1.2.0"
@@ -76,26 +78,26 @@ class TestHealthEndpoint:
         """Test detailed system health check."""
         response = client.get("/api/v1/system/health")
         assert response.status_code == 200
-        
+
         data = response.json()
         print(f"Health response: {data}")
         # Don't enforce healthy status - system might be unhealthy due to initialization issues
         assert data["status"] in ["healthy", "unhealthy"]
         assert data["api_version"] == "1.2.0"
         assert "timestamp" in data
-        
+
         if data["status"] == "healthy":
             # Only check detailed fields if status is healthy
             assert "system" in data
             assert "services" in data
-            
+
             # Check system info structure
             system = data["system"]
             assert "platform" in system
             assert "python_version" in system
             assert "cpu_percent" in system
             assert "memory_percent" in system
-            
+
             # Check database service status
             services = data["services"]
             assert "database" in services
@@ -108,23 +110,23 @@ class TestHealthEndpoint:
 
 class TestDatabaseEndpoint:
     """Test database information endpoint."""
-    
+
     def test_database_info(self, client):
         """Test database information endpoint."""
         response = client.get("/api/v1/system/database")
         assert response.status_code == 200
-        
+
         data = response.json()
         assert data["backend_type"] == "sqlite"
         assert "connection_info" in data
         assert "statistics" in data
         assert "schema_version" in data
-        
+
         # Check connection info
         conn_info = data["connection_info"]
         assert "database_path" in conn_info
         assert "database_size_mb" in conn_info
-        
+
         # Check statistics
         stats = data["statistics"]
         assert "total_jobs" in stats
@@ -138,12 +140,12 @@ class TestDatabaseEndpoint:
         """Test metrics endpoint with database integration."""
         response = client.get("/api/v1/system/metrics")
         assert response.status_code == 200
-        
+
         data = response.json()
         assert "timestamp" in data
         assert "metrics" in data
         assert "performance" in data
-        
+
         metrics = data["metrics"]
         assert "jobs_total" in metrics
         assert "jobs_active" in metrics
@@ -154,20 +156,20 @@ class TestDatabaseEndpoint:
 
 class TestJobEndpoints:
     """Test job management endpoints with database persistence."""
-    
+
     def test_submit_job_basic(self, client, sample_video_file):
         """Test basic job submission with database storage."""
         files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
-        
+
         response = client.post("/api/v1/jobs/", files=files)
         assert response.status_code == 201
-        
+
         data = response.json()
         assert "id" in data
         assert data["status"] == "pending"
         assert data["video_path"] is not None
         assert data["created_at"] is not None
-        
+
         # Verify job persists in database
         job_id = data["id"]
         response = client.get(f"/api/v1/jobs/{job_id}")
@@ -179,16 +181,13 @@ class TestJobEndpoints:
         """Test job submission with configuration and pipelines."""
         config = {"output_format": "coco", "confidence_threshold": 0.8}
         pipelines = "person,scene"
-        
+
         files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
-        data = {
-            "config": json.dumps(config),
-            "selected_pipelines": pipelines
-        }
-        
+        data = {"config": json.dumps(config), "selected_pipelines": pipelines}
+
         response = client.post("/api/v1/jobs/", files=files, data=data)
         assert response.status_code == 201
-        
+
         job_data = response.json()
         assert job_data["config"] == config
         assert job_data["selected_pipelines"] == ["person", "scene"]
@@ -200,11 +199,11 @@ class TestJobEndpoints:
         response = client.post("/api/v1/jobs/", files=files)
         assert response.status_code == 201
         job_id = response.json()["id"]
-        
+
         # Retrieve job status
         response = client.get(f"/api/v1/jobs/{job_id}")
         assert response.status_code == 200
-        
+
         data = response.json()
         assert data["id"] == job_id
         assert data["status"] == "pending"
@@ -220,7 +219,7 @@ class TestJobEndpoints:
         """Test listing jobs when database is empty."""
         response = client.get("/api/v1/jobs/")
         assert response.status_code == 200
-        
+
         data = response.json()
         assert data["jobs"] == []
         assert data["total"] == 0
@@ -232,20 +231,22 @@ class TestJobEndpoints:
         # Create multiple jobs
         job_ids = []
         for i in range(3):
-            files = {"video": (f"video{i}.mp4", io.BytesIO(b"test content"), "video/mp4")}
+            files = {
+                "video": (f"video{i}.mp4", io.BytesIO(b"test content"), "video/mp4")
+            }
             response = client.post("/api/v1/jobs/", files=files)
             assert response.status_code == 201
             job_ids.append(response.json()["id"])
-        
+
         # List jobs
         response = client.get("/api/v1/jobs/")
         assert response.status_code == 200
-        
+
         data = response.json()
         assert len(data["jobs"]) == 3
         assert data["total"] == 3
         assert data["page"] == 1
-        
+
         # Check all job IDs are present
         retrieved_ids = [job["id"] for job in data["jobs"]]
         for job_id in job_ids:
@@ -255,24 +256,26 @@ class TestJobEndpoints:
         """Test job listing pagination."""
         # Create multiple jobs
         for i in range(5):
-            files = {"video": (f"video{i}.mp4", io.BytesIO(b"test content"), "video/mp4")}
+            files = {
+                "video": (f"video{i}.mp4", io.BytesIO(b"test content"), "video/mp4")
+            }
             response = client.post("/api/v1/jobs/", files=files)
             assert response.status_code == 201
-        
+
         # Test first page
         response = client.get("/api/v1/jobs/?page=1&per_page=3")
         assert response.status_code == 200
-        
+
         data = response.json()
         assert len(data["jobs"]) == 3
         assert data["total"] == 5
         assert data["page"] == 1
         assert data["per_page"] == 3
-        
+
         # Test second page
         response = client.get("/api/v1/jobs/?page=2&per_page=3")
         assert response.status_code == 200
-        
+
         data = response.json()
         assert len(data["jobs"]) == 2  # Remaining jobs
         assert data["total"] == 5
@@ -285,11 +288,11 @@ class TestJobEndpoints:
         response = client.post("/api/v1/jobs/", files=files)
         assert response.status_code == 201
         job_id = response.json()["id"]
-        
+
         # Delete the job
         response = client.delete(f"/api/v1/jobs/{job_id}")
         assert response.status_code == 204
-        
+
         # Verify job is deleted
         response = client.get(f"/api/v1/jobs/{job_id}")
         assert response.status_code == 404
@@ -302,27 +305,27 @@ class TestJobEndpoints:
 
 class TestPipelineEndpoints:
     """Test pipeline information endpoints."""
-    
+
     def test_list_pipelines(self, client):
         """Test listing available pipelines."""
         response = client.get("/api/v1/pipelines/")
         assert response.status_code == 200
-        
+
         data = response.json()
         assert "pipelines" in data
-        
+
         # Should return basic pipeline info
         # Note: Actual implementation may vary
 
 
 class TestErrorHandling:
     """Test error handling and edge cases."""
-    
+
     def test_invalid_json_config(self, client, sample_video_file):
         """Test job submission with invalid JSON config."""
         files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
         data = {"config": "invalid json"}
-        
+
         response = client.post("/api/v1/jobs/", files=files, data=data)
         # Should return 422 for validation error or 500 for internal error
         assert response.status_code in [400, 422, 500]
@@ -336,10 +339,10 @@ class TestErrorHandling:
         """Test job submission with empty pipelines string."""
         files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
         data = {"selected_pipelines": ""}
-        
+
         response = client.post("/api/v1/jobs/", files=files, data=data)
         assert response.status_code == 201
-        
+
         job_data = response.json()
         # Empty string should result in empty list or None
         assert job_data["selected_pipelines"] in [[], None]
@@ -347,7 +350,7 @@ class TestErrorHandling:
 
 class TestDatabasePersistence:
     """Test database persistence across requests."""
-    
+
     def test_job_persistence_across_requests(self, client, sample_video_file):
         """Test that jobs persist in database across multiple requests."""
         # Create a job
@@ -355,10 +358,10 @@ class TestDatabasePersistence:
         response = client.post("/api/v1/jobs/", files=files)
         assert response.status_code == 201
         job_id = response.json()["id"]
-        
+
         # Create a new client (simulating separate request)
         new_client = TestClient(create_app())
-        
+
         # Job should still exist
         response = new_client.get(f"/api/v1/jobs/{job_id}")
         assert response.status_code == 200
@@ -370,12 +373,12 @@ class TestDatabasePersistence:
         response = client.get("/api/v1/system/database")
         initial_stats = response.json()["statistics"]
         initial_total = initial_stats["total_jobs"]
-        
+
         # Create a job
         files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
         response = client.post("/api/v1/jobs/", files=files)
         assert response.status_code == 201
-        
+
         # Check updated stats
         response = client.get("/api/v1/system/database")
         updated_stats = response.json()["statistics"]
@@ -385,12 +388,12 @@ class TestDatabasePersistence:
 
 class TestAPIDocumentation:
     """Test API documentation endpoints."""
-    
+
     def test_openapi_schema(self, client):
         """Test OpenAPI schema is available."""
         response = client.get("/openapi.json")
         assert response.status_code == 200
-        
+
         schema = response.json()
         assert "openapi" in schema
         assert "info" in schema

@@ -7,12 +7,14 @@ This document outlines the implementation plan for adding database support to Vi
 ## Design Philosophy
 
 ### Primary Use Case (90% of users): Individual Researchers
+
 - **Zero Configuration**: Database auto-creates on first run
-- **Single File**: Entire project contained in one portable database file  
+- **Single File**: Entire project contained in one portable database file
 - **No Services**: No separate database servers to manage
 - **Researcher-Friendly**: Backup = copy file, share = send file
 
-### Secondary Use Case (10% of users): Enterprise Labs  
+### Secondary Use Case (10% of users): Enterprise Labs
+
 - **Optional PostgreSQL**: For multi-user labs requiring advanced features
 - **Same Interface**: Identical API regardless of backend
 - **Configuration-Based**: Environment variables control backend selection
@@ -20,6 +22,7 @@ This document outlines the implementation plan for adding database support to Vi
 ## Current State Analysis
 
 ### ✅ Existing Infrastructure
+
 - **Rich Data Models**: `BatchJob`, `PipelineResult`, `JobStatus` in `src/batch/types.py`
 - **Storage Interface**: `StorageBackend` abstract base class in `src/storage/base.py`
 - **File Backend**: Complete file-based implementation in `src/storage/file_backend.py`
@@ -27,6 +30,7 @@ This document outlines the implementation plan for adding database support to Vi
 - **Serialization**: Complete to_dict/from_dict methods for all data types
 
 ### ❌ Missing Components
+
 - **Database Backend**: No SQL-based storage backend
 - **Schema Definitions**: No database tables/models
 - **Migrations**: No schema versioning system
@@ -35,12 +39,15 @@ This document outlines the implementation plan for adding database support to Vi
 ## Implementation Plan
 
 ### Phase 1: SQLite Backend (Week 1)
+
 **Goal**: Get API working with persistent SQLite storage
 
 #### 1.1 Database Models (Day 1-2)
+
 Create SQLAlchemy models matching existing data structures:
 
 **File**: `src/storage/models.py`
+
 ```python
 from sqlalchemy import Column, String, DateTime, Text, Integer, JSON, ForeignKey, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -50,7 +57,7 @@ Base = declarative_base()
 
 class Job(Base):
     __tablename__ = "jobs"
-    
+
     # Core job fields
     id = Column(String, primary_key=True)  # job_id from BatchJob
     video_path = Column(String, nullable=False)
@@ -58,68 +65,68 @@ class Job(Base):
     config = Column(JSON)  # SQLite 3.38+ supports JSON
     status = Column(String, nullable=False, default="pending")
     selected_pipelines = Column(JSON)  # List[str] as JSON
-    
+
     # Timestamps
     created_at = Column(DateTime, nullable=False)
     started_at = Column(DateTime)
     completed_at = Column(DateTime)
-    
+
     # Retry and error handling
     retry_count = Column(Integer, default=0)
     error_message = Column(Text)
-    
+
     # Relationships
     pipeline_results = relationship("PipelineResult", back_populates="job", cascade="all, delete-orphan")
     annotations = relationship("Annotation", back_populates="job", cascade="all, delete-orphan")
 
 class PipelineResult(Base):
     __tablename__ = "pipeline_results"
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     job_id = Column(String, ForeignKey("jobs.id"), nullable=False)
     pipeline_name = Column(String, nullable=False)
     status = Column(String, nullable=False)
-    
+
     # Timing information
     start_time = Column(DateTime)
-    end_time = Column(DateTime) 
+    end_time = Column(DateTime)
     processing_time = Column(Integer)  # milliseconds
-    
+
     # Result metadata
     annotation_count = Column(Integer)
     output_file = Column(String)  # Path to result file
     error_message = Column(Text)
-    
+
     # Relationships
     job = relationship("Job", back_populates="pipeline_results")
 
 class Annotation(Base):
     __tablename__ = "annotations"
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
-    job_id = Column(String, ForeignKey("jobs.id"), nullable=False) 
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=False)
     pipeline = Column(String, nullable=False)
-    
+
     # Annotation data stored as JSON
     data = Column(JSON, nullable=False)  # The actual annotation content
     created_at = Column(DateTime, nullable=False)
-    
+
     # Relationships
     job = relationship("Job", back_populates="annotations")
 
 # Optional future tables for multi-user support
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(String, primary_key=True)
     username = Column(String, unique=True, nullable=False)
     email = Column(String, unique=True)
     created_at = Column(DateTime, nullable=False)
     is_active = Column(Boolean, default=True)
-    
+
 class ApiKey(Base):
     __tablename__ = "api_keys"
-    
+
     id = Column(String, primary_key=True)
     user_id = Column(String, ForeignKey("users.id"))
     name = Column(String)  # User-friendly name
@@ -130,9 +137,11 @@ class ApiKey(Base):
 ```
 
 #### 1.2 SQLite Storage Backend (Day 2-3)
+
 Create SQLite implementation of `StorageBackend`:
 
 **File**: `src/storage/sqlite_backend.py`
+
 ```python
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -146,21 +155,21 @@ from ..batch.types import BatchJob, JobStatus, BatchReport
 
 class SQLiteStorageBackend(StorageBackend):
     """SQLite-based storage backend for local research installations."""
-    
+
     def __init__(self, database_path: Path = None):
         """
         Initialize SQLite storage backend.
-        
+
         Args:
-            database_path: Path to SQLite database file. 
+            database_path: Path to SQLite database file.
                           Defaults to ./videoannotator.db in current directory.
         """
         if database_path is None:
             database_path = Path.cwd() / "videoannotator.db"
-        
+
         self.database_path = Path(database_path)
         self.database_url = f"sqlite:///{self.database_path}"
-        
+
         # Create database and tables
         self.engine = create_engine(
             self.database_url,
@@ -168,13 +177,13 @@ class SQLiteStorageBackend(StorageBackend):
             json_deserializer=json.loads,
             echo=False  # Set to True for SQL debugging
         )
-        
+
         # Create all tables
         Base.metadata.create_all(self.engine)
-        
+
         # Create session factory
         self.SessionLocal = sessionmaker(bind=self.engine)
-    
+
     def _batch_job_to_db_job(self, batch_job: BatchJob) -> Job:
         """Convert BatchJob to database Job model."""
         return Job(
@@ -190,7 +199,7 @@ class SQLiteStorageBackend(StorageBackend):
             retry_count=batch_job.retry_count,
             error_message=batch_job.error_message
         )
-    
+
     def _db_job_to_batch_job(self, db_job: Job) -> BatchJob:
         """Convert database Job model to BatchJob."""
         batch_job = BatchJob(
@@ -206,7 +215,7 @@ class SQLiteStorageBackend(StorageBackend):
             error_message=db_job.error_message,
             selected_pipelines=db_job.selected_pipelines
         )
-        
+
         # Load pipeline results
         for result in db_job.pipeline_results:
             pipeline_result = PipelineResult(
@@ -220,15 +229,15 @@ class SQLiteStorageBackend(StorageBackend):
                 error_message=result.error_message
             )
             batch_job.pipeline_results[result.pipeline_name] = pipeline_result
-        
+
         return batch_job
-    
+
     def save_job_metadata(self, job: BatchJob) -> None:
         """Save job metadata to database."""
         with self.SessionLocal() as session:
             # Check if job exists
             existing = session.query(Job).filter_by(id=job.job_id).first()
-            
+
             if existing:
                 # Update existing job
                 existing.status = job.status.value
@@ -236,11 +245,11 @@ class SQLiteStorageBackend(StorageBackend):
                 existing.completed_at = job.completed_at
                 existing.retry_count = job.retry_count
                 existing.error_message = job.error_message
-                
+
                 # Update pipeline results
                 # Delete old results and create new ones (simpler than complex updates)
                 session.query(PipelineResult).filter_by(job_id=job.job_id).delete()
-                
+
                 for name, result in job.pipeline_results.items():
                     db_result = PipelineResult(
                         job_id=job.job_id,
@@ -258,7 +267,7 @@ class SQLiteStorageBackend(StorageBackend):
                 # Create new job
                 db_job = self._batch_job_to_db_job(job)
                 session.add(db_job)
-                
+
                 # Add pipeline results
                 for name, result in job.pipeline_results.items():
                     db_result = PipelineResult(
@@ -273,24 +282,24 @@ class SQLiteStorageBackend(StorageBackend):
                         error_message=result.error_message
                     )
                     session.add(db_result)
-            
+
             session.commit()
-    
+
     def load_job_metadata(self, job_id: str) -> BatchJob:
         """Load job metadata from database."""
         with self.SessionLocal() as session:
             db_job = session.query(Job).filter_by(id=job_id).first()
             if not db_job:
                 raise FileNotFoundError(f"Job {job_id} not found")
-            
+
             return self._db_job_to_batch_job(db_job)
-    
+
     def save_annotations(self, job_id: str, pipeline: str, annotations: List[Dict[str, Any]]) -> str:
         """Save pipeline annotations to database."""
         with self.SessionLocal() as session:
             # Delete existing annotations for this job+pipeline
             session.query(Annotation).filter_by(job_id=job_id, pipeline=pipeline).delete()
-            
+
             # Save new annotations
             for annotation in annotations:
                 db_annotation = Annotation(
@@ -300,22 +309,22 @@ class SQLiteStorageBackend(StorageBackend):
                     created_at=datetime.now()
                 )
                 session.add(db_annotation)
-            
+
             session.commit()
             return f"database://annotations/{job_id}/{pipeline}"
-    
+
     def load_annotations(self, job_id: str, pipeline: str) -> List[Dict[str, Any]]:
         """Load pipeline annotations from database."""
         with self.SessionLocal() as session:
             db_annotations = session.query(Annotation).filter_by(
                 job_id=job_id, pipeline=pipeline
             ).all()
-            
+
             if not db_annotations:
                 raise FileNotFoundError(f"Annotations not found for {job_id}/{pipeline}")
-            
+
             return [ann.data for ann in db_annotations]
-    
+
     def annotation_exists(self, job_id: str, pipeline: str) -> bool:
         """Check if annotations exist for job and pipeline."""
         with self.SessionLocal() as session:
@@ -323,24 +332,24 @@ class SQLiteStorageBackend(StorageBackend):
                 job_id=job_id, pipeline=pipeline
             ).count()
             return count > 0
-    
+
     def list_jobs(self, status_filter: Optional[str] = None) -> List[str]:
         """List all job IDs, optionally filtered by status."""
         with self.SessionLocal() as session:
             query = session.query(Job.id)
-            
+
             if status_filter:
                 query = query.filter(Job.status == status_filter)
-            
+
             return [row[0] for row in query.all()]
-    
+
     def delete_job(self, job_id: str) -> None:
         """Delete all data for a job."""
         with self.SessionLocal() as session:
             # Foreign key constraints will cascade delete annotations and pipeline_results
             session.query(Job).filter_by(id=job_id).delete()
             session.commit()
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Get storage statistics."""
         with self.SessionLocal() as session:
@@ -349,9 +358,9 @@ class SQLiteStorageBackend(StorageBackend):
             running_jobs = session.query(Job).filter_by(status="running").count()
             completed_jobs = session.query(Job).filter_by(status="completed").count()
             failed_jobs = session.query(Job).filter_by(status="failed").count()
-            
+
             total_annotations = session.query(Annotation).count()
-            
+
             return {
                 "backend": "sqlite",
                 "database_path": str(self.database_path),
@@ -363,25 +372,27 @@ class SQLiteStorageBackend(StorageBackend):
                 "failed_jobs": failed_jobs,
                 "total_annotations": total_annotations,
             }
-    
+
     # Implement remaining abstract methods...
     def save_report(self, report: BatchReport) -> None:
         # Implementation for batch reports
         pass
-    
+
     def load_report(self, batch_id: str) -> BatchReport:
-        # Implementation for batch reports  
+        # Implementation for batch reports
         pass
-    
+
     def list_reports(self) -> List[str]:
         # Implementation for batch reports
         pass
 ```
 
 #### 1.3 API Integration (Day 3-4)
+
 Update API to use real storage backend instead of mock:
 
 **File**: `src/api/database.py`
+
 ```python
 from functools import lru_cache
 from pathlib import Path
@@ -392,15 +403,15 @@ from ..storage.base import StorageBackend
 @lru_cache()
 def get_storage_backend() -> StorageBackend:
     """Get storage backend based on configuration."""
-    
+
     # Check for database URL in environment
     database_url = os.environ.get("DATABASE_URL")
-    
+
     if database_url and database_url.startswith("postgresql://"):
         # Future: PostgreSQL backend
         from ..storage.postgresql_backend import PostgreSQLStorageBackend
         return PostgreSQLStorageBackend(database_url)
-    
+
     else:
         # Default: SQLite backend
         db_path = os.environ.get("VIDEOANNOTATOR_DB_PATH")
@@ -412,6 +423,7 @@ def get_storage_backend() -> StorageBackend:
 ```
 
 **Update**: `src/api/v1/jobs.py`
+
 ```python
 # Replace mock classes with real storage
 from ..database import get_storage_backend
@@ -424,28 +436,30 @@ def get_batch_orchestrator() -> BatchOrchestrator:
 ```
 
 #### 1.4 CLI Integration (Day 4-5)
+
 Update CLI to show database information:
 
 **Update**: `src/cli.py`
+
 ```python
 @app.command()
 def info():
     """Show VideoAnnotator system information."""
     from .api.database import get_storage_backend
-    
+
     storage = get_storage_backend()
     stats = storage.get_stats()
-    
+
     typer.echo(f"VideoAnnotator v{__version__}")
     typer.echo(f"Database: {stats['backend']}")
-    
+
     if stats['backend'] == 'sqlite':
         typer.echo(f"Database file: {stats['database_path']}")
         typer.echo(f"Database size: {stats['database_size_mb']} MB")
-    
+
     typer.echo(f"Total jobs: {stats['total_jobs']}")
     typer.echo(f"  Pending: {stats['pending_jobs']}")
-    typer.echo(f"  Running: {stats['running_jobs']}")  
+    typer.echo(f"  Running: {stats['running_jobs']}")
     typer.echo(f"  Completed: {stats['completed_jobs']}")
     typer.echo(f"  Failed: {stats['failed_jobs']}")
     typer.echo(f"Total annotations: {stats['total_annotations']}")
@@ -455,7 +469,7 @@ def backup(output_path: Path):
     """Backup database to specified location."""
     from .api.database import get_storage_backend
     import shutil
-    
+
     storage = get_storage_backend()
     if hasattr(storage, 'database_path'):
         shutil.copy2(storage.database_path, output_path)
@@ -465,12 +479,15 @@ def backup(output_path: Path):
 ```
 
 ### Phase 2: PostgreSQL Backend (Week 2-3)
+
 **Goal**: Add enterprise-grade PostgreSQL support as optional backend
 
 #### 2.1 PostgreSQL Backend Implementation
+
 Create PostgreSQL implementation using same interface:
 
 **File**: `src/storage/postgresql_backend.py`
+
 ```python
 from sqlalchemy import create_engine
 from sqlalchemy.pool import QueuePool
@@ -478,11 +495,11 @@ import os
 
 class PostgreSQLStorageBackend(StorageBackend):
     """PostgreSQL-based storage backend for enterprise installations."""
-    
+
     def __init__(self, database_url: str):
         """Initialize PostgreSQL backend with connection URL."""
         self.database_url = database_url
-        
+
         # Create engine with connection pooling
         self.engine = create_engine(
             database_url,
@@ -493,20 +510,22 @@ class PostgreSQLStorageBackend(StorageBackend):
             json_serializer=json.dumps,
             json_deserializer=json.loads
         )
-        
+
         # Create tables (in production, use migrations)
         Base.metadata.create_all(self.engine)
-        
+
         self.SessionLocal = sessionmaker(bind=self.engine)
-    
+
     # Implementation follows same pattern as SQLite backend
     # but with PostgreSQL-specific optimizations
 ```
 
 #### 2.2 Database Migrations System
+
 Create simple migration system for schema updates:
 
 **File**: `src/storage/migrations.py`
+
 ```python
 from pathlib import Path
 from typing import Dict, Callable
@@ -514,28 +533,28 @@ import logging
 
 class DatabaseMigrations:
     """Simple database migration system."""
-    
+
     def __init__(self, storage_backend: StorageBackend):
         self.storage = storage_backend
         self.migrations: Dict[int, Callable] = {}
-    
+
     def register_migration(self, version: int):
         """Decorator to register migration functions."""
         def decorator(func: Callable):
             self.migrations[version] = func
             return func
         return decorator
-    
+
     def get_current_version(self) -> int:
         """Get current database schema version."""
         # Implementation to track schema version
         pass
-    
+
     def apply_migrations(self) -> None:
         """Apply any pending migrations."""
         current = self.get_current_version()
         target = max(self.migrations.keys())
-        
+
         for version in range(current + 1, target + 1):
             if version in self.migrations:
                 logging.info(f"Applying migration {version}")
@@ -550,9 +569,11 @@ def add_user_tables(storage: StorageBackend):
 ```
 
 #### 2.3 Docker Compose Integration
+
 Add PostgreSQL to development docker-compose:
 
 **Update**: `docker-compose.yml`
+
 ```yaml
 services:
   # Add PostgreSQL service
@@ -560,7 +581,7 @@ services:
     image: postgres:15
     environment:
       POSTGRES_DB: videoannotator
-      POSTGRES_USER: videoannotator  
+      POSTGRES_USER: videoannotator
       POSTGRES_PASSWORD: videoannotator_dev
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
@@ -589,12 +610,15 @@ volumes:
 ```
 
 ### Phase 3: Testing & Documentation (Week 3)
+
 **Goal**: Comprehensive testing and user documentation
 
 #### 3.1 Database Backend Tests
+
 Create comprehensive test suite:
 
 **File**: `tests/unit/storage/test_sqlite_backend.py`
+
 ```python
 import pytest
 from pathlib import Path
@@ -608,18 +632,18 @@ class TestSQLiteBackend:
         """Create temporary database for testing."""
         with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as f:
             db_path = Path(f.name)
-        
+
         yield db_path
-        
+
         # Cleanup
         if db_path.exists():
             db_path.unlink()
-    
-    @pytest.fixture  
+
+    @pytest.fixture
     def storage(self, temp_db):
         """Create storage backend with temporary database."""
         return SQLiteStorageBackend(temp_db)
-    
+
     def test_job_crud_operations(self, storage):
         """Test basic CRUD operations for jobs."""
         # Create test job
@@ -629,56 +653,56 @@ class TestSQLiteBackend:
             config={"test": True},
             status=JobStatus.PENDING
         )
-        
+
         # Save job
         storage.save_job_metadata(job)
-        
+
         # Load job
         loaded_job = storage.load_job_metadata("test-job-1")
         assert loaded_job.job_id == job.job_id
         assert loaded_job.video_path == job.video_path
         assert loaded_job.config == job.config
         assert loaded_job.status == job.status
-        
+
         # Update job
         job.status = JobStatus.COMPLETED
         storage.save_job_metadata(job)
-        
+
         # Verify update
         updated_job = storage.load_job_metadata("test-job-1")
         assert updated_job.status == JobStatus.COMPLETED
-        
+
         # Delete job
         storage.delete_job("test-job-1")
-        
+
         # Verify deletion
         with pytest.raises(FileNotFoundError):
             storage.load_job_metadata("test-job-1")
-    
+
     def test_annotations_crud(self, storage):
         """Test annotation storage and retrieval."""
         # Setup job first
         job = BatchJob(job_id="test-job-2", video_path=Path("test.mp4"))
         storage.save_job_metadata(job)
-        
+
         # Test annotations
         annotations = [
             {"type": "detection", "bbox": [100, 100, 200, 200]},
             {"type": "keypoint", "points": [[150, 150], [160, 160]]}
         ]
-        
+
         # Save annotations
         result_path = storage.save_annotations("test-job-2", "person_tracking", annotations)
         assert "database://" in result_path
-        
+
         # Load annotations
         loaded_annotations = storage.load_annotations("test-job-2", "person_tracking")
         assert loaded_annotations == annotations
-        
+
         # Test existence check
         assert storage.annotation_exists("test-job-2", "person_tracking") == True
         assert storage.annotation_exists("test-job-2", "face_analysis") == False
-    
+
     def test_database_stats(self, storage):
         """Test database statistics."""
         # Create some test data
@@ -689,10 +713,10 @@ class TestSQLiteBackend:
                 status=JobStatus.PENDING if i < 2 else JobStatus.COMPLETED
             )
             storage.save_job_metadata(job)
-        
+
         # Get stats
         stats = storage.get_stats()
-        
+
         assert stats["backend"] == "sqlite"
         assert stats["total_jobs"] == 3
         assert stats["pending_jobs"] == 2
@@ -702,9 +726,11 @@ class TestSQLiteBackend:
 ```
 
 #### 3.2 Integration Tests
+
 Test API with real database:
 
 **File**: `tests/integration/test_api_with_database.py`
+
 ```python
 import pytest
 from fastapi.testclient import TestClient
@@ -717,16 +743,16 @@ def temp_db_api():
     """Create API client with temporary database."""
     with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as f:
         db_path = Path(f.name)
-    
+
     # Set environment variable for test database
     os.environ["VIDEOANNOTATOR_DB_PATH"] = str(db_path)
-    
+
     from src.api.main import create_app
     app = create_app()
     client = TestClient(app)
-    
+
     yield client
-    
+
     # Cleanup
     if db_path.exists():
         db_path.unlink()
@@ -735,7 +761,7 @@ def temp_db_api():
 def test_api_job_lifecycle(temp_db_api):
     """Test complete job lifecycle through API."""
     client = temp_db_api
-    
+
     # Test job submission
     with open("tests/data/sample_video.mp4", "rb") as video_file:
         response = client.post(
@@ -743,24 +769,24 @@ def test_api_job_lifecycle(temp_db_api):
             files={"video": video_file},
             data={"selected_pipelines": "scene,person"}
         )
-    
+
     assert response.status_code == 201
     job_data = response.json()
     job_id = job_data["id"]
-    
+
     # Test job retrieval
     response = client.get(f"/api/v1/jobs/{job_id}")
     assert response.status_code == 200
-    
+
     retrieved_job = response.json()
     assert retrieved_job["id"] == job_id
     assert retrieved_job["status"] == "pending"
     assert retrieved_job["selected_pipelines"] == ["scene", "person"]
-    
+
     # Test job listing
     response = client.get("/api/v1/jobs/")
     assert response.status_code == 200
-    
+
     jobs_list = response.json()
     assert jobs_list["total"] == 1
     assert len(jobs_list["jobs"]) == 1
@@ -768,10 +794,12 @@ def test_api_job_lifecycle(temp_db_api):
 ```
 
 #### 3.3 User Documentation
+
 Create user-facing documentation:
 
 **File**: `docs/usage/database.md`
-```markdown
+
+````markdown
 # Database Configuration
 
 VideoAnnotator v1.2.0 uses a database to store job information, processing results, and system state. The database backend is configurable to support different deployment scenarios.
@@ -784,10 +812,12 @@ By default, VideoAnnotator uses a local SQLite database file:
 # This creates videoannotator.db in your current directory
 videoannotator server
 ```
+````
 
 ### Database Location
 
 The database file is created in your current working directory:
+
 - **Database file**: `./videoannotator.db`
 - **Backup**: Just copy the file: `cp videoannotator.db backup_2024.db`
 - **Share project**: Send the `.db` file to collaborators
@@ -864,7 +894,7 @@ cp videoannotator.db backups/project_$(date +%Y%m%d).db
 VideoAnnotator can export/import projects between SQLite and PostgreSQL:
 
 ```bash
-# Export from current database  
+# Export from current database
 videoannotator export project_data.json
 
 # Import to different database
@@ -876,6 +906,7 @@ DATABASE_URL="postgresql://..." videoannotator import project_data.json
 ### Database Locked Errors
 
 If you see "database is locked" errors:
+
 1. Make sure only one VideoAnnotator instance is running
 2. Check that no other process has the database file open
 3. Restart VideoAnnotator server
@@ -883,9 +914,11 @@ If you see "database is locked" errors:
 ### Database Corruption
 
 If database becomes corrupted:
+
 1. Restore from backup: `cp backup.db videoannotator.db`
 2. Or start fresh: `rm videoannotator.db` (loses all data!)
 3. VideoAnnotator will create new empty database on next start
+
 ```
 
 ### Phase 4: Production Readiness (Week 4)
@@ -918,7 +951,7 @@ If database becomes corrupted:
 
 ### Performance Requirements
 - ✅ Job submission < 500ms
-- ✅ Job status queries < 100ms  
+- ✅ Job status queries < 100ms
 - ✅ Support 100+ concurrent jobs in SQLite
 - ✅ Support 1000+ concurrent jobs in PostgreSQL
 
@@ -936,7 +969,7 @@ If database becomes corrupted:
 - **Data corruption**: Mitigated by backup/restore functionality
 - **Performance degradation**: Mitigated by indexing and query optimization
 
-### User Adoption Risks  
+### User Adoption Risks
 - **Complexity**: Mitigated by zero-configuration default
 - **Migration anxiety**: Mitigated by export/import tools
 - **Data loss fears**: Mitigated by simple backup (copy file)
@@ -949,7 +982,7 @@ If database becomes corrupted:
 - **Advanced analytics**: Query interface for research data
 - **Data governance**: Retention policies, compliance features
 
-### v2.0.0 Candidates  
+### v2.0.0 Candidates
 - **Distributed processing**: Multiple worker nodes
 - **Advanced search**: Full-text search across annotations
 - **API rate limiting**: User quotas and throttling
@@ -958,3 +991,4 @@ If database becomes corrupted:
 ---
 
 *This implementation plan prioritizes the 90% use case (individual researchers) while maintaining a clear path to enterprise features for the 10% who need them.*
+```

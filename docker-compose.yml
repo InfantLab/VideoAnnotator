@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # Development service
@@ -14,8 +14,8 @@ services:
       - PYTHONPATH=/app
       - CUDA_VISIBLE_DEVICES=0
     ports:
-      - "8888:8888"  # Jupyter
-  - "18011:18011"  # FastAPI (host 18011 -> container 18011)
+      - "8888:8888" # Jupyter
+      - "18011:18011" # FastAPI (host 18011 -> container 18011)
     command: ["uv", "run", "python", "-m", "src.cli", "--help"]
     profiles:
       - dev
@@ -68,7 +68,7 @@ services:
       - ./data:/app/data
       - ./output:/app/output
       - ./logs:/app/logs
-      - ./database:/app/database  # Persistent database for development
+      - ./database:/app/database # Persistent database for development
     environment:
       - PYTHONPATH=/app
       - CUDA_VISIBLE_DEVICES=0
@@ -82,7 +82,7 @@ services:
               count: 1
               capabilities: [gpu]
     ports:
-  - "18011:18011"  # FastAPI server (host 18011)
+      - "18011:18011" # FastAPI server (host 18011)
     command: ["uv", "run", "python", "api_server.py", "--log-level", "info"]
     profiles:
       - dev-gpu
@@ -100,7 +100,15 @@ services:
       - "8888:8888"
     environment:
       - PYTHONPATH=/app
-    command: ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
+    command:
+      [
+        "jupyter",
+        "lab",
+        "--ip=0.0.0.0",
+        "--port=8888",
+        "--no-browser",
+        "--allow-root",
+      ]
     profiles:
       - dev
 

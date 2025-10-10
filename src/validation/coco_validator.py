@@ -8,7 +8,7 @@ COCO-format annotations from VideoAnnotator pipelines.
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
 
 try:
     from pycocotools.coco import COCO
@@ -32,8 +32,8 @@ class COCOValidationResult(BaseModel):
     num_images: int = 0
     num_annotations: int = 0
     num_categories: int = 0
-    validation_errors: List[str] = []
-    validation_warnings: List[str] = []
+    validation_errors: list[str] = []
+    validation_warnings: list[str] = []
 
 
 class COCOEvaluationResult(BaseModel):
@@ -47,7 +47,7 @@ class COCOEvaluationResult(BaseModel):
     ar_1: float = 0.0  # Average Recall with 1 detection per image
     ar_10: float = 0.0  # Average Recall with 10 detections per image
     ar_100: float = 0.0  # Average Recall with 100 detections per image
-    stats: List[float] = []
+    stats: list[float] = []
 
 
 class COCOValidator:
@@ -56,7 +56,9 @@ class COCOValidator:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         if not PYCOCOTOOLS_AVAILABLE:
-            raise ImportError("pycocotools is required. Install with: pip install pycocotools")
+            raise ImportError(
+                "pycocotools is required. Install with: pip install pycocotools"
+            )
 
     def validate_coco_file(
         self, coco_json_path: str, pipeline_name: str = "unknown"
@@ -77,7 +79,7 @@ class COCOValidator:
 
         try:
             # Load JSON file
-            with open(coco_json_path, "r") as f:
+            with open(coco_json_path) as f:
                 coco_data = json.load(f)
 
             # Basic structure validation
@@ -109,13 +111,13 @@ class COCOValidator:
             )
 
         except Exception as e:
-            error_msg = f"COCO validation failed: {str(e)}"
+            error_msg = f"COCO validation failed: {e!s}"
             result.validation_errors.append(error_msg)
             self.logger.error(error_msg)
 
         return result
 
-    def _validate_coco_structure(self, coco_data: Dict[str, Any]) -> List[str]:
+    def _validate_coco_structure(self, coco_data: dict[str, Any]) -> list[str]:
         """Validate basic COCO JSON structure."""
         errors = []
 
@@ -159,7 +161,9 @@ class COCOValidator:
                 if "bbox" in ann:
                     bbox = ann["bbox"]
                     if not isinstance(bbox, list) or len(bbox) != 4:
-                        errors.append(f"Annotation {i} bbox must be [x, y, width, height]")
+                        errors.append(
+                            f"Annotation {i} bbox must be [x, y, width, height]"
+                        )
 
         # Categories validation
         if "categories" in coco_data:
@@ -175,7 +179,7 @@ class COCOValidator:
 
         return errors
 
-    def _validate_video_extensions(self, coco_data: Dict[str, Any]) -> List[str]:
+    def _validate_video_extensions(self, coco_data: dict[str, Any]) -> list[str]:
         """Validate VideoAnnotator-specific COCO extensions."""
         warnings = []
 
@@ -242,10 +246,12 @@ class COCOValidator:
             result.ar_100 = float(stats[8])  # AR @ IoU=0.50:0.95, max 100 det
             result.stats = [float(s) for s in stats]
 
-            self.logger.info(f"Detection evaluation complete - AP@0.5:0.95: {result.ap_50_95:.3f}")
+            self.logger.info(
+                f"Detection evaluation complete - AP@0.5:0.95: {result.ap_50_95:.3f}"
+            )
 
         except Exception as e:
-            self.logger.error(f"Detection evaluation failed: {str(e)}")
+            self.logger.error(f"Detection evaluation failed: {e!s}")
             raise
 
         return result
@@ -267,7 +273,9 @@ class COCOValidator:
         if not PYCOCOTOOLS_AVAILABLE:
             raise ImportError("pycocotools is required for evaluation")
 
-        result = COCOEvaluationResult(pipeline_name=pipeline_name, metric_type="keypoints")
+        result = COCOEvaluationResult(
+            pipeline_name=pipeline_name, metric_type="keypoints"
+        )
 
         try:
             # Load ground truth and predictions
@@ -318,15 +326,19 @@ class COCOValidator:
             result.ar_100 = float(stats[8])
             result.stats = [float(s) for s in stats]
 
-            self.logger.info(f"Keypoint evaluation complete - AP@0.5:0.95: {result.ap_50_95:.3f}")
+            self.logger.info(
+                f"Keypoint evaluation complete - AP@0.5:0.95: {result.ap_50_95:.3f}"
+            )
 
         except Exception as e:
-            self.logger.error(f"Keypoint evaluation failed: {str(e)}")
+            self.logger.error(f"Keypoint evaluation failed: {e!s}")
             raise
 
         return result
 
-    def validate_all_pipelines(self, annotations_dir: str) -> Dict[str, COCOValidationResult]:
+    def validate_all_pipelines(
+        self, annotations_dir: str
+    ) -> dict[str, COCOValidationResult]:
         """
         Validate COCO files from all VideoAnnotator pipelines.
 
@@ -357,17 +369,21 @@ class COCOValidator:
                     is_valid=False,
                     pipeline_name=pipeline_name,
                     file_path="not_found",
-                    validation_errors=[f"No files found matching pattern: {file_pattern}"],
+                    validation_errors=[
+                        f"No files found matching pattern: {file_pattern}"
+                    ],
                 )
                 continue
 
             # Validate the first file found (could be extended to validate all)
             coco_file = coco_files[0]
-            results[pipeline_name] = self.validate_coco_file(str(coco_file), pipeline_name)
+            results[pipeline_name] = self.validate_coco_file(
+                str(coco_file), pipeline_name
+            )
 
         return results
 
-    def create_validation_report(self, results: Dict[str, COCOValidationResult]) -> str:
+    def create_validation_report(self, results: dict[str, COCOValidationResult]) -> str:
         """
         Create a human-readable validation report.
 
@@ -431,19 +447,23 @@ class COCOValidator:
 
 
 # Convenience functions for common operations
-def validate_coco_json(coco_json_path: str, pipeline_name: str = "unknown") -> COCOValidationResult:
+def validate_coco_json(
+    coco_json_path: str, pipeline_name: str = "unknown"
+) -> COCOValidationResult:
     """Convenience function to validate a single COCO JSON file."""
     validator = COCOValidator()
     return validator.validate_coco_file(coco_json_path, pipeline_name)
 
 
-def validate_pipeline_outputs(annotations_dir: str) -> Dict[str, COCOValidationResult]:
+def validate_pipeline_outputs(annotations_dir: str) -> dict[str, COCOValidationResult]:
     """Convenience function to validate all pipeline COCO outputs."""
     validator = COCOValidator()
     return validator.validate_all_pipelines(annotations_dir)
 
 
-def create_coco_evaluation_summary(gt_dir: str, pred_dir: str) -> Dict[str, COCOEvaluationResult]:
+def create_coco_evaluation_summary(
+    gt_dir: str, pred_dir: str
+) -> dict[str, COCOEvaluationResult]:
     """
     Create evaluation summary for all pipelines.
 

@@ -3,16 +3,14 @@ Database configuration and session management for VideoAnnotator API.
 """
 
 import os
+from collections.abc import Generator
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import StaticPool
-from typing import Generator
 
 # Database URL - defaults to SQLite for development
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "sqlite:///./videoannotator.db"
-)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./videoannotator.db")
 
 # Create engine with appropriate settings
 if DATABASE_URL.startswith("sqlite"):
@@ -21,13 +19,13 @@ if DATABASE_URL.startswith("sqlite"):
         DATABASE_URL,
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
-        echo=False  # Set to True for SQL debugging
+        echo=False,  # Set to True for SQL debugging
     )
 else:
     # PostgreSQL/MySQL settings
     engine = create_engine(
         DATABASE_URL,
-        echo=False  # Set to True for SQL debugging
+        echo=False,  # Set to True for SQL debugging
     )
 
 # Create SessionLocal class
@@ -40,7 +38,7 @@ Base = declarative_base()
 def get_db() -> Generator:
     """
     Dependency to get database session.
-    
+
     Yields:
         Database session that will be closed after use
     """

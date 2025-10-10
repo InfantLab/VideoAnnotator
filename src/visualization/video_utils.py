@@ -4,12 +4,13 @@ Functions for video creation and manipulation.
 
 import os
 import time
+
 import cv2
 from IPython.display import clear_output
 from IPython.display import display as ipydisplay
 from PIL import Image as PILImage
 
-from src.visualization.render import drawOneFrame, WhisperExtractCurrentCaption
+from src.visualization.render import WhisperExtractCurrentCaption, drawOneFrame
 
 
 def createAnnotatedVideo(
@@ -127,6 +128,7 @@ def addSoundtoVideo(videopath, soundpath, out_dir=None):
         str: Path to the output video
     """
     import os
+
     from moviepy.editor import AudioFileClip, VideoFileClip
 
     try:

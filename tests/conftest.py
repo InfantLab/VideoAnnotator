@@ -1,5 +1,6 @@
-
 import pytest
+
+
 # --- Speech Pipeline Robustness Fixture ---
 @pytest.fixture(autouse=True)
 def patch_speech_pipeline_cuda(monkeypatch):
@@ -13,22 +14,27 @@ def patch_speech_pipeline_cuda(monkeypatch):
     This keeps tests deterministic while remaining safe on CPU-only machines.
     """
     import os
+
     try:
-        import torch  # noqa: F401
+        import torch
+
         if os.environ.get("TEST_FORCE_CUDA") == "1":
             monkeypatch.setattr("torch.cuda.is_available", lambda: True, raising=False)
         else:
             # Wrap original to avoid accidental mutation; always boolean
             orig = torch.cuda.is_available
-            monkeypatch.setattr("torch.cuda.is_available", lambda: bool(orig()), raising=False)
+            monkeypatch.setattr(
+                "torch.cuda.is_available", lambda: bool(orig()), raising=False
+            )
     except Exception:
         # If torch not present or any issue, leave unpatched (defaults to no CUDA)
         pass
     yield
 
+
 # --- Test Environment Robustness Fixtures ---
 import os
-from unittest.mock import patch
+
 
 @pytest.fixture(autouse=True)
 def patch_hf_token(monkeypatch):
@@ -39,20 +45,31 @@ def patch_hf_token(monkeypatch):
     monkeypatch.setenv("HUGGINGFACE_TOKEN", token)
     yield
 
+
 @pytest.fixture(autouse=True)
 def patch_pipeline_availability(monkeypatch):
     """Patch pipeline availability flags to True for all tests unless explicitly testing absence."""
     # Patch for speech pipeline (whisper)
     try:
-        monkeypatch.setattr("src.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE", True, raising=False)
+        monkeypatch.setattr(
+            "src.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE",
+            True,
+            raising=False,
+        )
     except Exception:
         pass
     # Patch for diarization pipeline (pyannote)
     try:
-        monkeypatch.setattr("src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE", True, raising=False)
+        monkeypatch.setattr(
+            "src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE",
+            True,
+            raising=False,
+        )
     except Exception:
         pass
     yield
+
+
 """
 Test configuration for VideoAnnotator pipeline system.
 
@@ -60,20 +77,21 @@ This module contains pytest configuration and fixtures for testing
 the VideoAnnotator system.
 """
 
-import pytest
 import tempfile
-import numpy as np
 from pathlib import Path
 from unittest.mock import Mock
+
 import cv2
+import numpy as np
+import pytest
 
 
 @pytest.fixture
 def temp_video_file():
     """Create a temporary video file for testing."""
-    with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
         # Create a simple test video using OpenCV
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         out = cv2.VideoWriter(f.name, fourcc, 30.0, (640, 480))
 
         # Write a few frames
@@ -94,7 +112,7 @@ def temp_video_file():
 @pytest.fixture
 def temp_audio_file():
     """Create a temporary audio file for testing."""
-    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
         # Create a simple test audio file
         import scipy.io.wavfile as wavfile
 
@@ -130,9 +148,11 @@ def mock_yolo_model():
     model = Mock()
     model.predict.return_value = [Mock()]
     model.predict.return_value[0].boxes = Mock()
-    model.predict.return_value[0].boxes.data = np.array([
-        [100, 100, 200, 200, 0.9, 0]  # x1, y1, x2, y2, confidence, class
-    ])
+    model.predict.return_value[0].boxes.data = np.array(
+        [
+            [100, 100, 200, 200, 0.9, 0]  # x1, y1, x2, y2, confidence, class
+        ]
+    )
     return model
 
 
@@ -141,20 +161,12 @@ def mock_whisper_model():
     """Mock Whisper model for testing."""
     model = Mock()
     model.transcribe.return_value = {
-        'text': 'Hello world this is a test',
-        'language': 'en',
-        'segments': [
-            {
-                'start': 0.0,
-                'end': 2.0,
-                'text': 'Hello world'
-            },
-            {
-                'start': 2.0,
-                'end': 4.0,
-                'text': 'this is a test'
-            }
-        ]
+        "text": "Hello world this is a test",
+        "language": "en",
+        "segments": [
+            {"start": 0.0, "end": 2.0, "text": "Hello world"},
+            {"start": 2.0, "end": 4.0, "text": "this is a test"},
+        ],
     }
     return model
 
@@ -163,26 +175,26 @@ def mock_whisper_model():
 def sample_config():
     """Sample configuration for testing."""
     return {
-        'scene_detection': {
-            'threshold': 0.3,
-            'min_scene_length': 1.0,
-            'use_adaptive_threshold': True
+        "scene_detection": {
+            "threshold": 0.3,
+            "min_scene_length": 1.0,
+            "use_adaptive_threshold": True,
         },
-        'person_tracking': {
-            'model_name': 'yolo11s',
-            'confidence_threshold': 0.5,
-            'iou_threshold': 0.7
+        "person_tracking": {
+            "model_name": "yolo11s",
+            "confidence_threshold": 0.5,
+            "iou_threshold": 0.7,
         },
-        'face_analysis': {
-            'backends': ['deepface'],
-            'detection_confidence': 0.7,
-            'enable_landmarks': True
+        "face_analysis": {
+            "backends": ["deepface"],
+            "detection_confidence": 0.7,
+            "enable_landmarks": True,
         },
-        'audio_processing': {
-            'whisper_model': 'base',
-            'sample_rate': 16000,
-            'chunk_duration': 30.0
-        }
+        "audio_processing": {
+            "whisper_model": "base",
+            "sample_rate": 16000,
+            "chunk_duration": 30.0,
+        },
     }
 
 
@@ -190,24 +202,24 @@ def sample_config():
 def sample_scene_results():
     """Sample scene detection results for testing."""
     return {
-        'scenes': [
+        "scenes": [
             {
-                'scene_id': 'scene_001',
-                'start_time': 0.0,
-                'end_time': 5.0,
-                'scene_type': 'indoor',
-                'confidence': 0.85
+                "scene_id": "scene_001",
+                "start_time": 0.0,
+                "end_time": 5.0,
+                "scene_type": "indoor",
+                "confidence": 0.85,
             },
             {
-                'scene_id': 'scene_002',
-                'start_time': 5.0,
-                'end_time': 10.0,
-                'scene_type': 'outdoor',
-                'confidence': 0.92
-            }
+                "scene_id": "scene_002",
+                "start_time": 5.0,
+                "end_time": 10.0,
+                "scene_type": "outdoor",
+                "confidence": 0.92,
+            },
         ],
-        'total_duration': 10.0,
-        'total_scenes': 2
+        "total_duration": 10.0,
+        "total_scenes": 2,
     }
 
 
@@ -215,21 +227,21 @@ def sample_scene_results():
 def sample_person_results():
     """Sample person tracking results for testing."""
     return {
-        'tracks': [
+        "tracks": [
             {
-                'track_id': 'person_001',
-                'duration': 8.0,
-                'detections': [
+                "track_id": "person_001",
+                "duration": 8.0,
+                "detections": [
                     {
-                        'timestamp': 1.0,
-                        'bounding_box': [100, 100, 200, 200],
-                        'confidence': 0.9
+                        "timestamp": 1.0,
+                        "bounding_box": [100, 100, 200, 200],
+                        "confidence": 0.9,
                     }
-                ]
+                ],
             }
         ],
-        'total_tracks': 1,
-        'total_detections': 240
+        "total_tracks": 1,
+        "total_detections": 240,
     }
 
 
@@ -237,22 +249,18 @@ def sample_person_results():
 def sample_face_results():
     """Sample face analysis results for testing."""
     return {
-        'faces': [
+        "faces": [
             {
-                'face_id': 'face_001',
-                'timestamp': 1.0,
-                'bounding_box': [50, 50, 100, 100],
-                'confidence': 0.8
+                "face_id": "face_001",
+                "timestamp": 1.0,
+                "bounding_box": [50, 50, 100, 100],
+                "confidence": 0.8,
             }
         ],
-        'face_tracks': [
-            {
-                'track_id': 'face_track_001',
-                'duration': 5.0,
-                'faces': ['face_001']
-            }
+        "face_tracks": [
+            {"track_id": "face_track_001", "duration": 5.0, "faces": ["face_001"]}
         ],
-        'total_faces': 1
+        "total_faces": 1,
     }
 
 
@@ -260,28 +268,20 @@ def sample_face_results():
 def sample_audio_results():
     """Sample audio processing results for testing."""
     return {
-        'duration': 10.0,
-        'sample_rate': 16000,
-        'speech_transcription': {
-            'text': 'Hello world this is a test',
-            'language': 'en',
-            'confidence': 0.9
+        "duration": 10.0,
+        "sample_rate": 16000,
+        "speech_transcription": {
+            "text": "Hello world this is a test",
+            "language": "en",
+            "confidence": 0.9,
         },
-        'speaker_diarization': {
-            'num_speakers': 2,
-            'segments': [
-                {
-                    'start_time': 0.0,
-                    'end_time': 5.0,
-                    'speaker_id': 'speaker_001'
-                },
-                {
-                    'start_time': 5.0,
-                    'end_time': 10.0,
-                    'speaker_id': 'speaker_002'
-                }
-            ]
-        }
+        "speaker_diarization": {
+            "num_speakers": 2,
+            "segments": [
+                {"start_time": 0.0, "end_time": 5.0, "speaker_id": "speaker_001"},
+                {"start_time": 5.0, "end_time": 10.0, "speaker_id": "speaker_002"},
+            ],
+        },
     }
 
 
@@ -294,18 +294,10 @@ pytest.mark.slow = pytest.mark.slow
 
 def pytest_configure(config):
     """Configure pytest with custom markers."""
-    config.addinivalue_line(
-        "markers", "unit: mark test as a unit test"
-    )
-    config.addinivalue_line(
-        "markers", "integration: mark test as an integration test"
-    )
-    config.addinivalue_line(
-        "markers", "performance: mark test as a performance test"
-    )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow running"
-    )
+    config.addinivalue_line("markers", "unit: mark test as a unit test")
+    config.addinivalue_line("markers", "integration: mark test as an integration test")
+    config.addinivalue_line("markers", "performance: mark test as a performance test")
+    config.addinivalue_line("markers", "slow: mark test as slow running")
 
 
 def pytest_collection_modifyitems(config, items):
@@ -314,17 +306,18 @@ def pytest_collection_modifyitems(config, items):
         # Add unit marker to unit tests
         if "unit" in item.nodeid or "Unit" in item.name:
             item.add_marker(pytest.mark.unit)
-        
+
         # Add integration marker to integration tests
         if "integration" in item.nodeid or "Integration" in item.name:
             item.add_marker(pytest.mark.integration)
-        
+
         # Add performance marker to performance tests
         if "performance" in item.nodeid or "Performance" in item.name:
             item.add_marker(pytest.mark.performance)
             item.add_marker(pytest.mark.slow)
-        
+
         # Add slow marker to slow tests
-        if "slow" in item.nodeid or any(keyword in item.name.lower() 
-                                       for keyword in ["batch", "large", "stress"]):
+        if "slow" in item.nodeid or any(
+            keyword in item.name.lower() for keyword in ["batch", "large", "stress"]
+        ):
             item.add_marker(pytest.mark.slow)

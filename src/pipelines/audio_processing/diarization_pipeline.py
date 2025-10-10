@@ -4,13 +4,14 @@ Speaker diarization pipeline using PyAnnote.
 Handles speaker segmentation and identification with timestamps.
 """
 
-import logging
 import os
-from typing import Dict, List, Any, Optional
+from typing import Any
+
 from ..base_pipeline import BasePipeline
 
 try:
     from pyannote.audio import Pipeline as PyAnnotePipeline
+
     PYANNOTE_AVAILABLE = True
 except ImportError:
     PYANNOTE_AVAILABLE = False
@@ -19,16 +20,16 @@ except ImportError:
 class DiarizationPipeline(BasePipeline):
     """
     Speaker diarization pipeline using PyAnnote.
-    
+
     Outputs RTTM-compatible timestamped speaker turns.
     """
 
-    @property  
+    @property
     def output_format(self) -> str:
         """Return the output format for this pipeline."""
         return "rttm"
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         default_config = {
             "model": "pyannote/speaker-diarization-3.1",
             "min_speakers": 1,
@@ -50,7 +51,9 @@ class DiarizationPipeline(BasePipeline):
             return
 
         if not PYANNOTE_AVAILABLE:
-            raise ImportError("PyAnnote not available. Install with: pip install pyannote.audio")
+            raise ImportError(
+                "PyAnnote not available. Install with: pip install pyannote.audio"
+            )
 
         # Check for HuggingFace token
         hf_token = os.getenv("HF_AUTH_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
@@ -61,15 +64,16 @@ class DiarizationPipeline(BasePipeline):
             )
 
         self.logger.info(f"Loading diarization model: {self.config['model']}")
-        
+
         if hf_token:
             self.diarization_model = PyAnnotePipeline.from_pretrained(
-                self.config["model"], 
-                use_auth_token=hf_token
+                self.config["model"], use_auth_token=hf_token
             )
         else:
-            self.diarization_model = PyAnnotePipeline.from_pretrained(self.config["model"])
-            
+            self.diarization_model = PyAnnotePipeline.from_pretrained(
+                self.config["model"]
+            )
+
         self.is_initialized = True
         self.logger.info("DiarizationPipeline initialized")
 
@@ -77,13 +81,13 @@ class DiarizationPipeline(BasePipeline):
         self,
         video_path: str,
         start_time: float = 0.0,
-        end_time: Optional[float] = None,
+        end_time: float | None = None,
         pps: float = 0.0,
-        output_dir: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        output_dir: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Process video for speaker diarization.
-        
+
         Returns:
             List of speaker turns with timestamps
         """
@@ -93,13 +97,11 @@ class DiarizationPipeline(BasePipeline):
         # For diarization, we process the full audio file
         # Extract audio from video if needed (simplified - in production would use ffmpeg)
         audio_path = video_path  # Assume video path can be used directly
-        
+
         # Create metadata
         from pathlib import Path
-        metadata = {
-            "video_id": Path(video_path).stem,
-            "filepath": video_path
-        }
+
+        metadata = {"video_id": Path(video_path).stem, "filepath": video_path}
 
         # Apply diarization
         diarization = self.diarization_model(
@@ -119,14 +121,14 @@ class DiarizationPipeline(BasePipeline):
                 "speaker_id": speaker,
                 "confidence": 1.0,  # PyAnnote doesn't provide confidence by default
                 "pipeline": self.pipeline_name,
-                "format": self.output_format
+                "format": self.output_format,
             }
             turns.append(turn_data)
 
         self.logger.info(f"Diarization complete: {len(turns)} speaker turns")
         return turns
 
-    def get_schema(self) -> Dict[str, Any]:
+    def get_schema(self) -> dict[str, Any]:
         """Return schema for diarization output."""
         return {
             "type": "array",
@@ -135,16 +137,38 @@ class DiarizationPipeline(BasePipeline):
                 "type": "object",
                 "properties": {
                     "file_id": {"type": "string", "description": "File identifier"},
-                    "start_time": {"type": "number", "description": "Start time in seconds"},
-                    "duration": {"type": "number", "description": "Duration in seconds"},
-                    "end_time": {"type": "number", "description": "End time in seconds"},
-                    "speaker_id": {"type": "string", "description": "Speaker identifier"},
+                    "start_time": {
+                        "type": "number",
+                        "description": "Start time in seconds",
+                    },
+                    "duration": {
+                        "type": "number",
+                        "description": "Duration in seconds",
+                    },
+                    "end_time": {
+                        "type": "number",
+                        "description": "End time in seconds",
+                    },
+                    "speaker_id": {
+                        "type": "string",
+                        "description": "Speaker identifier",
+                    },
                     "confidence": {"type": "number", "description": "Confidence score"},
-                    "pipeline": {"type": "string", "description": "Source pipeline name"},
-                    "format": {"type": "string", "description": "Output format"}
+                    "pipeline": {
+                        "type": "string",
+                        "description": "Source pipeline name",
+                    },
+                    "format": {"type": "string", "description": "Output format"},
                 },
-                "required": ["file_id", "start_time", "duration", "speaker_id", "pipeline", "format"]
-            }
+                "required": [
+                    "file_id",
+                    "start_time",
+                    "duration",
+                    "speaker_id",
+                    "pipeline",
+                    "format",
+                ],
+            },
         }
 
     def cleanup(self) -> None:

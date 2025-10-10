@@ -14,7 +14,7 @@ authors = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research", 
+    "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Multimedia :: Video",
@@ -111,6 +111,7 @@ dependencies = [
     "cryptography>=45.0.6",
     "openface-test>=0.1.13",
     "scikit-image>=0.25.2",
+    "ruff==0.14.0",
 ]
 
 [project.optional-dependencies]
@@ -180,7 +181,7 @@ addopts = [
 ]
 markers = [
     "unit: Unit tests (fast, isolated)",
-    "integration: Integration tests (cross-component)", 
+    "integration: Integration tests (cross-component)",
     "pipeline: Full pipeline tests (slow)",
     "performance: Performance and benchmark tests",
     "experimental: Experimental and research tests",
@@ -195,13 +196,14 @@ asyncio_mode = "auto"
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
+    "pre-commit>=4.3.0",
     "pytest-asyncio>=1.1.0",
 ]
 
 [[tool.mypy.overrides]]
 module = [
     "cv2",
-    "whisper", 
+    "whisper",
     "pyannote.*",
     "ultralytics",
     "sentence_transformers",
@@ -210,7 +212,7 @@ module = [
     "scenedetect.*",
     "transformers",
     "torch",
-    "torchvision", 
+    "torchvision",
     "torchaudio",
     "supervision",
     "timm",

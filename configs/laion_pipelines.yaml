@@ -2,10 +2,10 @@
 
 # Default LAION pipeline configurations
 laion_face_analysis:
-  model_size: "small"           # "small" or "large" - large is faster with GPU
-  confidence_threshold: 0.6     # Face detection confidence threshold
-  top_k_emotions: 5             # Number of top emotions to return
-  device: "auto"                # "cpu", "cuda", or "auto"
+  model_size: "small" # "small" or "large" - large is faster with GPU
+  confidence_threshold: 0.6 # Face detection confidence threshold
+  top_k_emotions: 5 # Number of top emotions to return
+  device: "auto" # "cpu", "cuda", or "auto"
   face_detection_backend: "opencv"
   min_face_size: 30
   max_faces: 10
@@ -13,26 +13,26 @@ laion_face_analysis:
   model_cache_dir: "./models/laion_face"
 
 laion_voice_analysis:
-  model_size: "small"           # "small" or "large" - large is faster with GPU
+  model_size: "small" # "small" or "large" - large is faster with GPU
   whisper_model: "mkrausio/EmoWhisper-AnS-Small-v0.1"
   cache_dir: "./models/laion_voice"
-  
+
   # Audio processing
-  min_segment_duration: 1.0     # Minimum segment length in seconds
-  max_segment_duration: 15.0    # Maximum segment length in seconds
-  
+  min_segment_duration: 1.0 # Minimum segment length in seconds
+  max_segment_duration: 15.0 # Maximum segment length in seconds
+
   # Segmentation strategy
-  segmentation_mode: "fixed_interval"  # "fixed_interval", "diarization", "scene_based", "vad"
-  segment_overlap: 0.0          # Overlap between segments in seconds
-  
+  segmentation_mode: "fixed_interval" # "fixed_interval", "diarization", "scene_based", "vad"
+  segment_overlap: 0.0 # Overlap between segments in seconds
+
   # Integration options
-  enable_diarization: false     # Use speaker diarization for segmentation
+  enable_diarization: false # Use speaker diarization for segmentation
   enable_scene_alignment: false # Align with scene boundaries
-  
+
   # Output configuration
   include_raw_scores: false
-  include_transcription: true   # Include speech transcription
-  top_k_emotions: 5             # Number of top emotions to return
+  include_transcription: true # Include speech transcription
+  top_k_emotions: 5 # Number of top emotions to return
 
 # Quality presets for different use cases
 fast_preset:
@@ -73,4 +73,4 @@ high_quality_preset:
     max_segment_duration: 10.0
     include_transcription: true
     top_k_emotions: 5
-    segmentation_mode: "diarization"  # Use advanced segmentation if available
+    segmentation_mode: "diarization" # Use advanced segmentation if available

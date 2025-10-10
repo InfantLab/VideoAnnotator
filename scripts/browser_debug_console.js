@@ -1,9 +1,9 @@
 /**
  * VideoAnnotator Browser Debug Console
- * 
+ *
  * Copy and paste this script into your browser console to enable
  * debugging tools for the VideoAnnotator API client.
- * 
+ *
  * Usage:
  * 1. Open browser developer tools (F12)
  * 2. Go to Console tab
@@ -13,35 +13,35 @@
 
 (function() {
     'use strict';
-    
+
     // Configuration
     const API_BASE = window.location.origin; // Use current origin
     const DEFAULT_TOKEN = localStorage.getItem('api_token') || 'dev-token';
-    
+
     console.log('🔧 VideoAnnotator Debug Console Loaded');
     console.log(`📡 API Base URL: ${API_BASE}`);
-    
+
     // Create debug namespace
     window.VideoAnnotatorDebug = {
         // Configuration
         apiBase: API_BASE,
         defaultToken: DEFAULT_TOKEN,
         logRequests: true,
-        
+
         // Quick API health check
         async checkHealth() {
             console.log('🏥 Checking API health...');
             try {
                 const response = await fetch(`${this.apiBase}/health`);
                 const data = await response.json();
-                
+
                 console.log('✅ Basic Health:', response.status === 200 ? 'OK' : 'FAIL');
                 console.table({
                     'Status': data.status,
                     'API Version': data.api_version,
                     'Server': data.videoannotator_version
                 });
-                
+
                 // Detailed health check
                 const detailedResponse = await fetch(`${this.apiBase}/api/v1/system/health`);
                 if (detailedResponse.ok) {
@@ -51,7 +51,7 @@
                 } else {
                     console.warn('⚠️ Detailed health check failed:', detailedResponse.status);
                 }
-                
+
                 return data;
             } catch (error) {
                 console.error('❌ Health check failed:', error);
@@ -59,16 +59,16 @@
             }
         },
 
-        // Test authentication 
+        // Test authentication
         async checkAuth(token = null) {
             const authToken = token || this.defaultToken;
             console.log(`🔐 Testing authentication with token: ${authToken.substring(0, 10)}...`);
-            
+
             try {
                 const response = await fetch(`${this.apiBase}/api/v1/debug/token-info`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     console.log('✅ Authentication: Valid');
@@ -100,14 +100,14 @@
                 if (response.ok) {
                     const data = await response.json();
                     console.log('✅ Server Info Retrieved');
-                    
+
                     // Display key info in tables
                     console.group('📊 Server Status');
                     console.table(data.server);
                     console.table(data.system);
                     console.table(data.database);
                     console.groupEnd();
-                    
+
                     return data;
                 } else if (response.status === 404) {
                     console.warn('⚠️ Server info endpoint not available yet');
@@ -136,13 +136,13 @@
                         Description: p.description
                     })) || []);
                 }
-                
+
                 // Debug pipelines
                 const debugResponse = await fetch(`${this.apiBase}/api/v1/debug/pipelines`);
                 if (debugResponse.ok) {
                     const debugData = await debugResponse.json();
                     console.log('✅ Debug Pipeline Info: OK');
-                    
+
                     debugData.pipelines?.forEach(pipeline => {
                         console.group(`🔧 ${pipeline.display_name || pipeline.name}`);
                         console.log('Status:', pipeline.status);
@@ -155,7 +155,7 @@
                 } else if (debugResponse.status === 404) {
                     console.warn('⚠️ Debug pipeline endpoint not available yet');
                 }
-                
+
                 return { basic: basicData, debug: debugData };
             } catch (error) {
                 console.error('❌ Pipeline check failed:', error);
@@ -167,13 +167,13 @@
         async monitorJob(jobId, token = null) {
             const authToken = token || this.defaultToken;
             console.log(`📋 Monitoring job: ${jobId}`);
-            
+
             const checkStatus = async () => {
                 try {
                     const response = await fetch(`${this.apiBase}/api/v1/jobs/${jobId}`, {
                         headers: { 'Authorization': `Bearer ${authToken}` }
                     });
-                    
+
                     if (response.ok) {
                         const job = await response.json();
                         console.log(`📊 Job ${jobId} status: ${job.status}`, {
@@ -181,12 +181,12 @@
                             started: job.started_at,
                             completed: job.completed_at
                         });
-                        
+
                         if (job.status === 'completed' || job.status === 'failed') {
                             console.log('🏁 Job finished:', job);
                             return job;
                         }
-                        
+
                         // Continue monitoring
                         setTimeout(checkStatus, 3000); // Check every 3 seconds
                     } else {
@@ -196,7 +196,7 @@
                     console.error('❌ Job monitoring error:', error);
                 }
             };
-            
+
             checkStatus();
         },
 
@@ -204,25 +204,25 @@
         async testSSE(jobId = null, token = null) {
             const authToken = token || this.defaultToken;
             const testJobId = jobId || 'test-job-123';
-            
+
             console.log('📡 Testing SSE connection...');
-            
+
             try {
                 const url = `${this.apiBase}/api/v1/events/stream?token=${authToken}&job_id=${testJobId}`;
                 const eventSource = new EventSource(url);
-                
+
                 let eventCount = 0;
-                
+
                 eventSource.onopen = () => {
                     console.log('✅ SSE Connection opened');
                 };
-                
+
                 eventSource.onmessage = (event) => {
                     eventCount++;
                     try {
                         const data = JSON.parse(event.data);
                         console.log(`📡 SSE Event ${eventCount}:`, data);
-                        
+
                         // Auto-close after 5 events for testing
                         if (eventCount >= 5) {
                             eventSource.close();
@@ -232,14 +232,14 @@
                         console.log(`📡 SSE Event ${eventCount} (raw):`, event.data);
                     }
                 };
-                
+
                 eventSource.onerror = (error) => {
                     console.error('❌ SSE Connection error:', error);
                     if (eventSource.readyState === EventSource.CLOSED) {
                         console.log('🔌 SSE connection closed due to error');
                     }
                 };
-                
+
                 // Auto-close after 15 seconds
                 setTimeout(() => {
                     if (eventSource.readyState !== EventSource.CLOSED) {
@@ -250,7 +250,7 @@
                         }
                     }
                 }, 15000);
-                
+
                 return eventSource;
             } catch (error) {
                 console.error('❌ SSE test failed:', error);
@@ -262,19 +262,19 @@
         async submitTestJob(token = null) {
             const authToken = token || this.defaultToken;
             console.log('📤 Submitting test job...');
-            
+
             try {
                 const formData = new FormData();
                 const mockVideo = new Blob(['fake video content for testing'], { type: 'video/mp4' });
                 formData.append('video', mockVideo, 'test-video.mp4');
                 formData.append('selected_pipelines', 'person_tracking,scene_detection');
-                
+
                 const response = await fetch(`${this.apiBase}/api/v1/jobs/`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${authToken}` },
                     body: formData
                 });
-                
+
                 if (response.ok) {
                     const job = await response.json();
                     console.log('✅ Test job submitted:', job.id);
@@ -300,26 +300,26 @@
         async runAllTests(token = null) {
             console.log('🧪 Running comprehensive API tests...');
             console.log('=' * 50);
-            
+
             const results = {
                 health: await this.checkHealth(),
                 auth: await this.checkAuth(token),
-                serverInfo: await this.getServerInfo(), 
+                serverInfo: await this.getServerInfo(),
                 pipelines: await this.checkPipelines(),
                 testJob: await this.submitTestJob(token)
             };
-            
+
             console.log('=' * 50);
             console.log('📊 Test Results Summary:');
             Object.entries(results).forEach(([test, result]) => {
                 console.log(`- ${test}: ${result ? '✅' : '❌'}`);
             });
-            
+
             if (results.testJob) {
                 console.log('\n💡 You can monitor the test job with:');
                 console.log(`VideoAnnotatorDebug.monitorJob('${results.testJob.id}')`);
             }
-            
+
             return results;
         },
 
@@ -329,10 +329,10 @@
                 console.log('⚠️ Request logging is already enabled');
                 return;
             }
-            
+
             console.log('🔍 Enabling API request logging...');
             this._originalFetch = window.fetch;
-            
+
             window.fetch = (...args) => {
                 const [url, options = {}] = args;
                 if (this.logRequests && url.includes('/api/')) {
@@ -342,7 +342,7 @@
                     if (options.headers) console.log('Headers:', options.headers);
                     console.groupEnd();
                 }
-                
+
                 return this._originalFetch.apply(window, args)
                     .then(response => {
                         if (this.logRequests && url.includes('/api/')) {
@@ -397,11 +397,11 @@
 
     // Auto-enable request logging
     window.VideoAnnotatorDebug.enableRequestLogging();
-    
+
     // Show help on load
     console.log('');
     console.log('💡 Type VideoAnnotatorDebug.help() for available commands');
     console.log('🚀 Quick start: VideoAnnotatorDebug.runAllTests()');
     console.log('');
-    
+
 })();

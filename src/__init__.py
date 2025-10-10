@@ -6,13 +6,13 @@ person tracking, face analysis, and audio processing.
 """
 
 from .version import (
-    __version__,
-    __version_info__,
     __author__,
     __license__,
+    __version__,
+    __version_info__,
+    create_annotation_metadata,
     get_version_info,
     print_version_info,
-    create_annotation_metadata,
 )
 
 # Heavy pipeline imports commented out to prevent pytest collection hangs
@@ -54,7 +54,7 @@ __all__ = [
     "AudioPipeline",
     # Note: Schemas no longer exported after standards migration
     # "AnnotationBase",
-    # "VideoMetadata", 
+    # "VideoMetadata",
     # "SceneSegment",
     # "SceneAnnotation",
     # "PersonDetection",

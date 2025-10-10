@@ -10,9 +10,9 @@
 
 **Agent, do this:**
 
-* Ensure a clean tree: `src/` layout, tests in `tests/`, no code at top level.
-* Add `.gitignore`, `.editorconfig`, `README.md` with *How to run*.
-* Keep secrets in `.env` (never commit); ship `.env.example`.
+- Ensure a clean tree: `src/` layout, tests in `tests/`, no code at top level.
+- Add `.gitignore`, `.editorconfig`, `README.md` with _How to run_.
+- Keep secrets in `.env` (never commit); ship `.env.example`.
 
 ```
 repo/
@@ -138,8 +138,8 @@ run:
 
 **Default (pip via uv):**
 
-* Detect the host CUDA you want to target (e.g., 13.0).
-* Install PyTorch exactly as the official selector prints (pip or conda). Example:
+- Detect the host CUDA you want to target (e.g., 13.0).
+- Install PyTorch exactly as the official selector prints (pip or conda). Example:
 
 ```bash
 # Example: CUDA 13.0 wheels (confirm on pytorch.org first)
@@ -217,11 +217,13 @@ Toolkit docs: install on your distro and Docker integrates GPU runtime. ([NVIDIA
 {
   "name": "your-project (GPU)",
   "build": { "dockerfile": "../Dockerfile.gpu", "context": ".." },
-  "runArgs": ["--gpus","all"],
+  "runArgs": ["--gpus", "all"],
   "features": {},
   "postCreateCommand": "uv sync && pre-commit install",
   "customizations": {
-    "vscode": { "settings": { "python.defaultInterpreterPath": ".venv/bin/python" } }
+    "vscode": {
+      "settings": { "python.defaultInterpreterPath": ".venv/bin/python" }
+    }
   }
 }
 ```
@@ -265,7 +267,7 @@ name: proj
 channels: [conda-forge]
 dependencies:
   - python=3.12
-  - pytorch=*=cuda*  # or cpu if desired; pin to your CUDA
+  - pytorch=*=cuda* # or cpu if desired; pin to your CUDA
   - cudatoolkit=13.0
   - numpy
   - pandas
@@ -299,19 +301,17 @@ Micromamba is tiny, base-less, and excellent for CI/containers. ([mamba.readthed
 
 ## 9) Notes for agents working inside IDEs
 
-* Always run via `uv run …` so the venv is consistent.
-* Never mix pip/conda in one env. If the project chooses micromamba, keep all deps in `environment.yml`.
-* For PyTorch, always copy the official install line for the target CUDA (dev & container must match). ([PyTorch][3])
-* Commit `pyproject.toml`, `uv.lock`, `.pre-commit-config.yaml`, CI workflow, and Dockerfiles.
+- Always run via `uv run …` so the venv is consistent.
+- Never mix pip/conda in one env. If the project chooses micromamba, keep all deps in `environment.yml`.
+- For PyTorch, always copy the official install line for the target CUDA (dev & container must match). ([PyTorch][3])
+- Commit `pyproject.toml`, `uv.lock`, `.pre-commit-config.yaml`, CI workflow, and Dockerfiles.
 
 ---
 
 ## 10) Applying to `InfantLab/VideoAnnotator`
 
-* Keep the defaults above (`uv` + CPU/GPU Dockerfiles).
-* If the project adds heavy multimedia (ffmpeg/OpenCV) and wheels aren’t enough, use the **micromamba** fallback container.
-* Export a short **RUNBOOK.md** with: *Local (uv)*, *Docker CPU*, *Docker GPU*, and *devcontainer* quickstart.
+- Keep the defaults above (`uv` + CPU/GPU Dockerfiles).
+- If the project adds heavy multimedia (ffmpeg/OpenCV) and wheels aren’t enough, use the **micromamba** fallback container.
+- Export a short **RUNBOOK.md** with: _Local (uv)_, _Docker CPU_, _Docker GPU_, and _devcontainer_ quickstart.
 
 ---
- 
- 

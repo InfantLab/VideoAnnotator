@@ -21,6 +21,7 @@ except ImportError:
     # Fallback if industry_standards is not available
     IndustryStandardsPlaceholder = None
 
+
 # Legacy compatibility message
 def get_migration_info():
     """Return information about the standards migration."""
@@ -28,5 +29,5 @@ def get_migration_info():
         "message": "Schemas have been migrated to native formats",
         "location": "src.exporters.native_formats",
         "formats": ["COCO", "WebVTT", "RTTM", "TextGrid"],
-        "libraries": ["pycocotools", "webvtt-py", "pyannote.core", "praatio"]
+        "libraries": ["pycocotools", "webvtt-py", "pyannote.core", "praatio"],
     }

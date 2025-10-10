@@ -64,7 +64,10 @@ def test_invalid_duplicate_labels():
 
 
 def test_missing_required_top_level():
-    data = {"source_pipeline": "x", "emotions": []}  # missing schema_version & empty emotions
+    data = {
+        "source_pipeline": "x",
+        "emotions": [],
+    }  # missing schema_version & empty emotions
     errors = validate_emotion_data(data)
     assert any("Missing top-level field" in e for e in errors)
     assert any("emotions must be a non-empty list" in e for e in errors)

@@ -2,6 +2,6 @@
 API middleware modules for VideoAnnotator.
 """
 
-from .request_logging import RequestLoggingMiddleware, ErrorLoggingMiddleware
+from .request_logging import ErrorLoggingMiddleware, RequestLoggingMiddleware
 
-__all__ = ["RequestLoggingMiddleware", "ErrorLoggingMiddleware"]
+__all__ = ["ErrorLoggingMiddleware", "RequestLoggingMiddleware"]

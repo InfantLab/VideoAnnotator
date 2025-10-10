@@ -9,7 +9,7 @@ scene_detection:
 
 person_tracking:
   enabled: true
-  model: 'yolo11n-pose.pt'
+  model: "yolo11n-pose.pt"
   conf_threshold: 0.4
   iou_threshold: 0.7
   track_mode: true
@@ -17,57 +17,57 @@ person_tracking:
 
 face_analysis:
   enabled: true
-  backend: 'openface3'  # Use OpenFace 3.0 for comprehensive facial behavior analysis
-  
+  backend: "openface3" # Use OpenFace 3.0 for comprehensive facial behavior analysis
+
   # Model paths (working configuration)
   face_detector_model: "./weights/Alignment_RetinaFace.pth"
-  landmark_model: "./weights/Landmark_98.pkl"  # 98-point landmarks
-  
+  landmark_model: "./weights/Landmark_98.pkl" # 98-point landmarks
+
   # Detection settings
   detection_confidence: 0.7
   max_faces: 5
   track_faces: true
-  landmark_points: 98  # Use 98-point landmarks for full OpenFace 3.0 capabilities
-  
+  landmark_points: 98 # Use 98-point landmarks for full OpenFace 3.0 capabilities
+
   # COMPREHENSIVE OPENFACE 3.0 FEATURE EXTRACTION
-  enable_3d_landmarks: true   # 3D facial landmark coordinates
-  enable_action_units: true   # Facial Action Units (AU) intensity and presence
-  enable_head_pose: true      # 3D head pose estimation (rotation & translation)
-  enable_gaze: true          # Eye gaze direction estimation
-  enable_emotions: true      # Emotion recognition from facial expressions
-  
+  enable_3d_landmarks: true # 3D facial landmark coordinates
+  enable_action_units: true # Facial Action Units (AU) intensity and presence
+  enable_head_pose: true # 3D head pose estimation (rotation & translation)
+  enable_gaze: true # Eye gaze direction estimation
+  enable_emotions: true # Emotion recognition from facial expressions
+
   # Advanced feature configuration
   action_units:
-    intensity_threshold: 0.5     # Minimum intensity to register AU presence
-    presence_threshold: 0.3      # Threshold for AU presence detection
-    normalize_range: [0, 5]      # Intensity scale normalization
-    
+    intensity_threshold: 0.5 # Minimum intensity to register AU presence
+    presence_threshold: 0.3 # Threshold for AU presence detection
+    normalize_range: [0, 5] # Intensity scale normalization
+
   head_pose:
-    angle_units: "degrees"       # Output angles in degrees
-    coordinate_system: "opencv"  # Use OpenCV coordinate system
-    
+    angle_units: "degrees" # Output angles in degrees
+    coordinate_system: "opencv" # Use OpenCV coordinate system
+
   gaze:
-    use_head_pose_proxy: true    # Use head pose as gaze direction proxy when eye tracking unavailable
-    confidence_threshold: 0.6    # Minimum confidence for gaze detection
-    
+    use_head_pose_proxy: true # Use head pose as gaze direction proxy when eye tracking unavailable
+    confidence_threshold: 0.6 # Minimum confidence for gaze detection
+
   emotions:
-    probability_threshold: 0.1   # Minimum probability to include emotion
-    normalize_probabilities: true  # Apply softmax normalization
-    include_valence_arousal: true  # Calculate valence/arousal dimensions
-  
+    probability_threshold: 0.1 # Minimum probability to include emotion
+    normalize_probabilities: true # Apply softmax normalization
+    include_valence_arousal: true # Calculate valence/arousal dimensions
+
   # Performance and output settings
   batch_size: 1
-  device: 'auto'  # auto-detect best device (cpu/cuda)
+  device: "auto" # auto-detect best device (cpu/cuda)
   save_landmarks: true
   save_face_crops: false
   save_visualizations: true
 
 audio_processing:
   enabled: true
-  whisper_model: 'base'
+  whisper_model: "base"
   sample_rate: 16000
 
 # Processing settings optimized for OpenFace 3.0
 processing:
-  max_workers: 1  # OpenFace 3.0 can be memory intensive, use single worker
-  chunk_size: 1000  # Process videos in chunks to manage memory usage
+  max_workers: 1 # OpenFace 3.0 can be memory intensive, use single worker
+  chunk_size: 1000 # Process videos in chunks to manage memory usage

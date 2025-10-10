@@ -145,7 +145,7 @@ dask-worker-space
 # Other models
 
 code/pretrained_models/
-code/audio_cache/ 
+code/audio_cache/
 code/__temp__.mp3
 code/__temp__.mp4
 
@@ -231,10 +231,8 @@ benchmark_results/
 # Coverage reports
 htmlcov/
 
-# Database files  
+# Database files
 videoannotator.db
 test_*.db
 *.sqlite
 *.sqlite3
-
-

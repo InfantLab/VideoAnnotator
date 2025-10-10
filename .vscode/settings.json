@@ -1,14 +1,33 @@
 {
-  "python.analysis.extraPaths": [
-    "./code"
-  ],
-  "cSpell.language": "en,en-GB",
-  "makefile.configureOnOpen": false,
-  "python.testing.pytestArgs": [
-    "tests"
-  ],
-  "python.testing.unittestEnabled": false,
-  "python.testing.pytestEnabled": true,
-  "testExplorer.useNativeTesting": false,
-  "peacock.color": "#d8ae5d",
+    "chat.promptFilesRecommendations": {
+        "speckit.constitution": true,
+        "speckit.specify": true,
+        "speckit.plan": true,
+        "speckit.tasks": true,
+        "speckit.implement": true
+    },
+    "chat.tools.terminal.autoApprove": {
+        ".specify/scripts/bash/": true,
+        ".specify/scripts/ps/": true
+    },
+    "workbench.colorCustomizations": {
+        "activityBar.activeBackground": "#bed061",
+        "activityBar.background": "#bed061",
+        "activityBar.foreground": "#15202b",
+        "activityBar.inactiveForeground": "#15202b99",
+        "activityBarBadge.background": "#2c8393",
+        "activityBarBadge.foreground": "#e7e7e7",
+        "commandCenter.border": "#15202b99",
+        "sash.hoverBorder": "#bed061",
+        "statusBar.background": "#aec43a",
+        "statusBar.foreground": "#15202b",
+        "statusBarItem.hoverBackground": "#8b9d2e",
+        "statusBarItem.remoteBackground": "#aec43a",
+        "statusBarItem.remoteForeground": "#15202b",
+        "titleBar.activeBackground": "#aec43a",
+        "titleBar.activeForeground": "#15202b",
+        "titleBar.inactiveBackground": "#aec43a99",
+        "titleBar.inactiveForeground": "#15202b99"
+    },
+    "peacock.remoteColor": "#aec43a"
 }

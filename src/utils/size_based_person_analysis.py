@@ -6,9 +6,9 @@ This is a simplified version that demonstrates core size-based labeling
 for adult vs child detection.
 """
 
-from typing import Dict, List
-import numpy as np
 import logging
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class SizeBasedPersonAnalyzer:
         self.height_threshold = height_threshold
         self.confidence = confidence
 
-    def analyze_persons(self, person_annotations: List[Dict]) -> Dict[str, Dict]:
+    def analyze_persons(self, person_annotations: list[dict]) -> dict[str, dict]:
         """
         Analyze persons and assign labels based on size.
 
@@ -63,12 +63,12 @@ class SizeBasedPersonAnalyzer:
         logger.info("Size-based analysis: classified %d persons", len(labels))
         return labels
 
-    def _group_by_person_id(self, annotations: List[Dict]) -> Dict[str, List[Dict]]:
+    def _group_by_person_id(self, annotations: list[dict]) -> dict[str, list[dict]]:
         """Group annotations by person_id."""
         grouped = {}
 
         for annotation in annotations:
-            person_id = annotation.get('person_id')
+            person_id = annotation.get("person_id")
             if person_id:
                 if person_id not in grouped:
                     grouped[person_id] = []
@@ -76,8 +76,9 @@ class SizeBasedPersonAnalyzer:
 
         return grouped
 
-    def _calculate_average_heights(self, person_detections: Dict[str, List[Dict]]
-                                   ) -> Dict[str, float]:
+    def _calculate_average_heights(
+        self, person_detections: dict[str, list[dict]]
+    ) -> dict[str, float]:
         """Calculate average bounding box height for each person."""
         person_heights = {}
 
@@ -85,7 +86,7 @@ class SizeBasedPersonAnalyzer:
             heights = []
 
             for detection in detections:
-                bbox = detection.get('bbox', [])
+                bbox = detection.get("bbox", [])
                 if len(bbox) >= 4:
                     height = bbox[3]  # Height is 4th element [x, y, w, h]
                     heights.append(height)
@@ -93,12 +94,11 @@ class SizeBasedPersonAnalyzer:
             if heights:
                 avg_height = np.mean(heights)
                 person_heights[person_id] = avg_height
-                logger.debug("Person %s: average height = %.1f",
-                             person_id, avg_height)
+                logger.debug("Person %s: average height = %.1f", person_id, avg_height)
 
         return person_heights
 
-    def _classify_by_size(self, person_heights: Dict[str, float]) -> Dict[str, Dict]:
+    def _classify_by_size(self, person_heights: dict[str, float]) -> dict[str, dict]:
         """Classify persons as adult/child based on relative heights.
 
         Adaptive rule:
@@ -120,21 +120,29 @@ class SizeBasedPersonAnalyzer:
 
                 # Apply size-based classification
                 # Adaptive ambiguity handling
-                ambiguous_band = (self.height_threshold < 0.5 and 0.45 <= normalized_height < 0.55)
+                ambiguous_band = (
+                    self.height_threshold < 0.5 and 0.45 <= normalized_height < 0.55
+                )
                 if ambiguous_band:
                     label = "infant"
-                    reasoning = ("Ambiguous mid-range treated as infant (" 
-                                 f"{normalized_height:.2f} within adaptive band)")
+                    reasoning = (
+                        "Ambiguous mid-range treated as infant ("
+                        f"{normalized_height:.2f} within adaptive band)"
+                    )
                 elif normalized_height < self.height_threshold:
                     label = "infant"
-                    reasoning = (f"Small relative height "
-                                 f"({normalized_height:.2f} < "
-                                 f"{self.height_threshold})")
+                    reasoning = (
+                        f"Small relative height "
+                        f"({normalized_height:.2f} < "
+                        f"{self.height_threshold})"
+                    )
                 else:
                     label = "parent"
-                    reasoning = (f"Large relative height "
-                                 f"({normalized_height:.2f} >= "
-                                 f"{self.height_threshold})")
+                    reasoning = (
+                        f"Large relative height "
+                        f"({normalized_height:.2f} >= "
+                        f"{self.height_threshold})"
+                    )
 
                 labels[person_id] = {
                     "label": label,
@@ -145,17 +153,19 @@ class SizeBasedPersonAnalyzer:
                         "normalized_height": normalized_height,
                         "raw_height": height,
                         "max_height": max_height,
-                        "threshold_used": self.height_threshold
-                    }
+                        "threshold_used": self.height_threshold,
+                    },
                 }
                 logger.info("Classified %s as '%s' - %s", person_id, label, reasoning)
 
         return labels
 
 
-def run_size_based_analysis(person_annotations: List[Dict],
-                            height_threshold: float = 0.4,
-                            confidence: float = 0.7) -> Dict[str, Dict]:
+def run_size_based_analysis(
+    person_annotations: list[dict],
+    height_threshold: float = 0.4,
+    confidence: float = 0.7,
+) -> dict[str, dict]:
     """
     Convenience function to run size-based person analysis.
 
@@ -171,7 +181,7 @@ def run_size_based_analysis(person_annotations: List[Dict],
     return analyzer.analyze_persons(person_annotations)
 
 
-def print_analysis_results(labels: Dict[str, Dict]) -> None:
+def print_analysis_results(labels: dict[str, dict]) -> None:
     """
     Print analysis results in a readable format.
 
@@ -182,9 +192,9 @@ def print_analysis_results(labels: Dict[str, Dict]) -> None:
     print(f"Total persons analyzed: {len(labels)}")
 
     for person_id, label_info in labels.items():
-        label = label_info['label']
-        confidence = label_info['confidence']
-        reasoning = label_info['reasoning']
+        label = label_info["label"]
+        confidence = label_info["confidence"]
+        reasoning = label_info["reasoning"]
 
         print(f"\n{person_id}:")
         print(f"  Label: {label}")
@@ -199,18 +209,13 @@ def demo_size_based_analysis():
     # Sample person annotations with different heights
     sample_annotations = [
         # Adult height
-        {"person_id": "person_001", "bbox": [100, 100, 80, 160],
-         "frame_number": 1},
-        {"person_id": "person_001", "bbox": [105, 105, 75, 155],
-         "frame_number": 2},
+        {"person_id": "person_001", "bbox": [100, 100, 80, 160], "frame_number": 1},
+        {"person_id": "person_001", "bbox": [105, 105, 75, 155], "frame_number": 2},
         # Child height
-        {"person_id": "person_002", "bbox": [200, 150, 50, 80],
-         "frame_number": 1},
-        {"person_id": "person_002", "bbox": [205, 145, 48, 85],
-         "frame_number": 2},
+        {"person_id": "person_002", "bbox": [200, 150, 50, 80], "frame_number": 1},
+        {"person_id": "person_002", "bbox": [205, 145, 48, 85], "frame_number": 2},
         # Another adult
-        {"person_id": "person_003", "bbox": [300, 120, 85, 170],
-         "frame_number": 1},
+        {"person_id": "person_003", "bbox": [300, 120, 85, 170], "frame_number": 1},
     ]
 
     print("Running size-based person analysis demo...")

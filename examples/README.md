@@ -9,11 +9,13 @@ This directory contains example scripts that demonstrate how to use the moderniz
 Demonstrates the complete video annotation pipeline processing a single video file through all available pipelines.
 
 **Usage:**
+
 ```bash
 python examples/basic_video_processing.py --video_path /path/to/video.mp4 --output_dir /path/to/output
 ```
 
 **Features:**
+
 - Processes video through all pipelines (scene, person, face, audio)
 - Saves individual pipeline results as JSON files
 - Comprehensive logging and error handling
@@ -24,11 +26,13 @@ python examples/basic_video_processing.py --video_path /path/to/video.mp4 --outp
 Processes multiple videos in parallel using the complete pipeline system.
 
 **Usage:**
+
 ```bash
 python examples/batch_processing.py --input_dir /path/to/videos --output_dir /path/to/outputs --max_workers 4
 ```
 
 **Features:**
+
 - Parallel processing of multiple videos
 - Configurable number of worker threads
 - Batch processing reports and statistics
@@ -40,6 +44,7 @@ python examples/batch_processing.py --input_dir /path/to/videos --output_dir /pa
 Tests individual pipelines in isolation, useful for debugging and development.
 
 **Usage:**
+
 ```bash
 # Test scene detection pipeline
 python examples/test_individual_pipelines.py --pipeline scene --video_path /path/to/video.mp4
@@ -49,6 +54,7 @@ python examples/test_individual_pipelines.py --pipeline audio --audio_path /path
 ```
 
 **Features:**
+
 - Test individual pipelines independently
 - Detailed pipeline information and capabilities
 - Results summary and statistics
@@ -59,11 +65,13 @@ python examples/test_individual_pipelines.py --pipeline audio --audio_path /path
 Demonstrates how to create and use custom pipeline configurations for different use cases.
 
 **Usage:**
+
 ```bash
 python examples/custom_pipeline_config.py --video_path /path/to/video.mp4 --config_type research
 ```
 
 **Configuration Types:**
+
 - `high_performance`: Maximum accuracy, resource-intensive
 - `lightweight`: Fast processing, minimal resources
 - `research`: All features enabled, experimental settings
@@ -91,6 +99,7 @@ Most examples support these common arguments:
 All examples generate structured JSON output with consistent schemas:
 
 ### Scene Detection Results
+
 ```json
 {
   "scenes": [
@@ -108,6 +117,7 @@ All examples generate structured JSON output with consistent schemas:
 ```
 
 ### Person Tracking Results
+
 ```json
 {
   "tracks": [
@@ -124,6 +134,7 @@ All examples generate structured JSON output with consistent schemas:
 ```
 
 ### Face Analysis Results
+
 ```json
 {
   "faces": [
@@ -140,6 +151,7 @@ All examples generate structured JSON output with consistent schemas:
 ```
 
 ### Audio Processing Results
+
 ```json
 {
   "duration": 120.5,
@@ -160,6 +172,7 @@ All examples generate structured JSON output with consistent schemas:
 Before running the examples, ensure you have:
 
 1. **Installed dependencies:**
+
    ```bash
    pip install -r requirements.txt
    # or
@@ -184,16 +197,19 @@ All examples include comprehensive error handling:
 ## Performance Considerations
 
 ### Memory Usage
+
 - Large videos may require chunked processing
 - Batch processing limits concurrent videos
 - Pipeline-specific memory optimizations
 
 ### Processing Speed
+
 - Use `--max_workers` for parallel processing
 - Choose appropriate model sizes in configurations
 - Consider frame skipping for faster processing
 
 ### Storage Requirements
+
 - Results are saved as JSON (human-readable but larger)
 - Consider compression for large batch processing
 - Individual pipeline results can be disabled if not needed
@@ -203,11 +219,13 @@ All examples include comprehensive error handling:
 To create your own custom example:
 
 1. **Import the required pipelines:**
+
    ```python
    from src.pipelines.scene_detection import ScenePipeline, ScenePipelineConfig
    ```
 
 2. **Create configuration:**
+
    ```python
    config = ScenePipelineConfig(
        threshold=0.3,
@@ -216,6 +234,7 @@ To create your own custom example:
    ```
 
 3. **Initialize and run pipeline:**
+
    ```python
    pipeline = ScenePipeline(config)
    results = pipeline.process_video(video_path)
@@ -239,6 +258,7 @@ To create your own custom example:
 ### Debug Mode
 
 Enable debug logging for detailed information:
+
 ```bash
 python examples/basic_video_processing.py --log_level DEBUG --video_path video.mp4
 ```
@@ -246,6 +266,7 @@ python examples/basic_video_processing.py --log_level DEBUG --video_path video.m
 ### Performance Profiling
 
 For performance analysis, consider adding timing information:
+
 ```python
 import time
 start_time = time.time()

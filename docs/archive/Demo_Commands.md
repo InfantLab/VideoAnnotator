@@ -5,24 +5,28 @@ The demo script has been enhanced to match main.py's interface while providing s
 ## 🎯 Quick Start Commands
 
 ### Auto-Detect and Run with Size-Based Analysis (Default)
+
 ```bash
 # Automatically finds demo video and runs with size-based person analysis enabled
 python demo.py
 ```
 
 ### Single Video with Person Tracking
+
 ```bash
 # Process specific video with person tracking (includes size-based analysis)
 python demo.py --video_path "demovideos/babyjokes/2UWdXP.joke1.rep2.take1.Peekaboo_h265.mp4" --pipeline person
 ```
 
 ### Batch Process All Baby Joke Videos
+
 ```bash
 # Process all videos in babyjokes folder with person tracking
 python demo.py --batch_dir demovideos/babyjokes/ --pipeline person
 ```
 
 ### Recursive Batch Processing
+
 ```bash
 # Process all videos in demovideos/ recursively with custom output
 python demo.py --batch_dir demovideos/ --output_dir my_results/ --recursive --pipeline person
@@ -31,6 +35,7 @@ python demo.py --batch_dir demovideos/ --output_dir my_results/ --recursive --pi
 ## 🚀 Key Improvements
 
 ### 1. Same Parameters as main.py
+
 - `--video_path` (instead of `--video`)
 - `--batch_dir` for batch processing
 - `--output_dir` (instead of `--output`)
@@ -39,12 +44,14 @@ python demo.py --batch_dir demovideos/ --output_dir my_results/ --recursive --pi
 - `--max_workers` for parallel processing
 
 ### 2. Sensible Defaults
+
 - **Auto-detect demo videos** if no input specified
 - **Auto-generate output directories** with timestamps if not specified
 - **Size-based analysis enabled by default** through default.yaml configuration
 - **Smart path handling** for both files and directories
 
 ### 3. Batch Processing Support
+
 ```bash
 # Process with parallel workers
 python demo.py --batch_dir demovideos/babyjokes/ --max_workers 4 --pipeline person
@@ -54,17 +61,19 @@ python demo.py --batch_dir demovideos/ --recursive --pipeline person
 ```
 
 ### 4. Quality Presets
+
 ```bash
 # Fast processing (lightweight.yaml)
 python demo.py --fast --pipeline person
 
-# High quality processing (high_performance.yaml) 
+# High quality processing (high_performance.yaml)
 python demo.py --high_quality --pipeline person
 ```
 
 ## 📋 Complete Command Reference
 
 ### Basic Usage
+
 ```bash
 # Default: auto-detect video, auto-generate output, all pipelines
 python demo.py
@@ -80,6 +89,7 @@ python demo.py --output_dir results/my_demo/
 ```
 
 ### Batch Processing
+
 ```bash
 # Batch process directory
 python demo.py --batch_dir demovideos/babyjokes/
@@ -95,6 +105,7 @@ python demo.py --batch_dir demovideos/babyjokes/ --output_dir batch_results/ --p
 ```
 
 ### Configuration Options
+
 ```bash
 # Use custom config file
 python demo.py --config configs/person_identity.yaml
@@ -110,6 +121,7 @@ python demo.py --log_level DEBUG
 ```
 
 ### Information Commands
+
 ```bash
 # Show version
 python demo.py --version
@@ -126,6 +138,7 @@ python demo.py --help
 When running person tracking, you'll see:
 
 ### Log Messages
+
 ```
 INFO - Using simplified size-based person analysis...
 INFO - Size-based analysis completed: 2 persons labeled
@@ -134,6 +147,7 @@ INFO - Auto-labeled person_babyvideo_002: infant (confidence=0.70, method=size_b
 ```
 
 ### Demo Summary
+
 ```
 [SUCCESS] Person
     Detections: 45
@@ -143,6 +157,7 @@ INFO - Auto-labeled person_babyvideo_002: infant (confidence=0.70, method=size_b
 ```
 
 ### Output Files
+
 - `{video_name}_person_tracking.json` - COCO format with person labels
 - `{video_name}_person_tracks.json` - Person identity summary
 - `complete_results.json` - Full processing results
@@ -150,16 +165,19 @@ INFO - Auto-labeled person_babyvideo_002: infant (confidence=0.70, method=size_b
 ## 🎯 Recommended Commands for Testing Size-Based Analysis
 
 ### Single Video Test
+
 ```bash
 python demo.py --video_path "demovideos/babyjokes/2UWdXP.joke1.rep2.take1.Peekaboo_h265.mp4" --pipeline person
 ```
 
 ### Batch Test (All Baby Jokes)
+
 ```bash
 python demo.py --batch_dir demovideos/babyjokes/ --pipeline person --max_workers 2
 ```
 
 ### Fast Test
+
 ```bash
 python demo.py --fast --pipeline person
 ```

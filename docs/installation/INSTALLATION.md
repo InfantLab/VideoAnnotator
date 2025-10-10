@@ -7,7 +7,7 @@ VideoAnnotator is a modern video analysis toolkit that uses AI models for compre
 ## Prerequisites
 
 - **Python 3.12+** (required)
-- **Git** for cloning repositories 
+- **Git** for cloning repositories
 - **uv** package manager (fast, modern Python dependency management)
 - **CUDA Toolkit 13.0+** (recommended for GPU acceleration)
 - **NVIDIA GPU** with CUDA support (GTX 1060 6GB+ or better recommended)
@@ -15,6 +15,7 @@ VideoAnnotator is a modern video analysis toolkit that uses AI models for compre
 ## System Requirements
 
 ### Minimum Requirements
+
 - **CPU**: Intel Core i5 (8th gen) or AMD Ryzen 5 (2000 series) or better
 - **RAM**: 16GB
 - **Storage**: 20GB free space
@@ -22,6 +23,7 @@ VideoAnnotator is a modern video analysis toolkit that uses AI models for compre
 - **OS**: Windows 10/11, Ubuntu 20.04+, or macOS 11+
 
 ### Recommended Requirements
+
 - **CPU**: Intel Core i7/i9 (11th gen+) or AMD Ryzen 7/9 (5000 series+)
 - **RAM**: 32GB or more
 - **Storage**: 50GB+ SSD
@@ -34,27 +36,26 @@ These tips address the most common macOS installation issues.
 
 - Architecture: Apple Silicon (M1/M2/M3) is supported in CPU mode. CUDA GPU acceleration is not available on macOS.
 - Prerequisites (Homebrew):
-   ```bash
-   # Install Homebrew if missing: https://brew.sh
-   brew install libomp ffmpeg node
-   ```
-   - libomp: fixes OpenMP errors and segfaults in some audio models.
-   - ffmpeg: required by whisper/librosa/audio pipelines.
-   - node: needed if you use the companion web viewer.
+  ```bash
+  # Install Homebrew if missing: https://brew.sh
+  brew install libomp ffmpeg node
+  ```
+  - libomp: fixes OpenMP errors and segfaults in some audio models.
+  - ffmpeg: required by whisper/librosa/audio pipelines.
+  - node: needed if you use the companion web viewer.
 - uv in PATH:
-   ```bash
-   # If 'uv' is not found after install
-   export PATH="$HOME/.local/bin:$PATH"
-   ```
+  ```bash
+  # If 'uv' is not found after install
+  export PATH="$HOME/.local/bin:$PATH"
+  ```
 - Shell config permissions: If `~/.zshrc` or `~/.config` are owned by root (from earlier sudo usage), fix ownership before writing PATH updates:
-   ```bash
-   sudo chown -R "$USER" ~/.zshrc ~/.config
-   chmod u+w ~/.zshrc
-   # If .zshrc is missing, write PATH to ~/.zprofile instead for login shells
-   ```
+  ```bash
+  sudo chown -R "$USER" ~/.zshrc ~/.config
+  chmod u+w ~/.zshrc
+  # If .zshrc is missing, write PATH to ~/.zprofile instead for login shells
+  ```
 - Hugging Face token (for speaker diarization): set `HF_AUTH_TOKEN` in a `.env` file or your shell. See Environment Setup guide.
 - Viewer start command: inside the viewer repo, use `npm run dev` (not `npm start`).
-
 
 ## Quick Start (Recommended)
 
@@ -187,7 +188,7 @@ uv run python api_server.py
 uv run ruff check .
 uv run ruff format .
 
-# Run type checking  
+# Run type checking
 uv run mypy src
 
 # Run tests
@@ -201,6 +202,7 @@ uv run python api_server.py
 ## Docker Installation (Alternative)
 
 ### CPU Container
+
 ```bash
 # Build and run CPU version
 docker build -f Dockerfile.cpu -t videoannotator:cpu .
@@ -208,6 +210,7 @@ docker run --rm -v $(pwd)/data:/app/data videoannotator:cpu
 ```
 
 ### GPU Container (Requires NVIDIA Container Toolkit)
+
 ```bash
 # Build and run GPU version
 docker build -f Dockerfile.gpu -t videoannotator:gpu .
@@ -215,19 +218,22 @@ docker run --gpus all --rm -v $(pwd)/data:/app/data videoannotator:gpu
 ```
 
 ### Dev Container (VS Code)
+
 Open the project in VS Code and use "Reopen in Container" for a complete GPU-enabled development environment.
 
 ## Troubleshooting
 
 ### uv Installation Issues
 
-1. **uv command not found**: 
+1. **uv command not found**:
+
    ```bash
    # Restart your terminal or run:
    export PATH="$HOME/.local/bin:$PATH"
    ```
 
-2. **Permission errors**: 
+2. **Permission errors**:
+
    ```bash
    # On Windows, run PowerShell as Administrator
    # On Linux/Mac, ensure you have write permissions to ~/.local/
@@ -239,7 +245,8 @@ Open the project in VS Code and use "Reopen in Container" for a complete GPU-ena
 
 1. **CUDA not found**: Run `nvidia-smi` to check GPU detection. Update drivers if needed.
 
-2. **PyTorch doesn't detect CUDA**: 
+2. **PyTorch doesn't detect CUDA**:
+
    ```bash
    # Verify CUDA-enabled PyTorch installation
    uv run python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
@@ -268,20 +275,21 @@ VideoAnnotator v1.2.0 uses:
 
 ## Dependencies Overview
 
-| Category | Tools | Purpose | CUDA Support |
-|----------|-------|---------|-------------|
-| **Detection** | YOLO11 | Person/object detection | ✅ |
-| **Tracking** | ByteTrack | Multi-object tracking | ✅ |
-| **Scene** | PySceneDetect, OpenCLIP | Scene segmentation & classification | ✅ |
-| **Face** | OpenFace 3.0, LAION Face | Face analysis & emotion | ✅ |
-| **Audio** | Whisper, pyannote.audio | Speech & audio processing | ✅ |
-| **API** | FastAPI, uvicorn | REST API server | N/A |
+| Category      | Tools                    | Purpose                             | CUDA Support |
+| ------------- | ------------------------ | ----------------------------------- | ------------ |
+| **Detection** | YOLO11                   | Person/object detection             | ✅           |
+| **Tracking**  | ByteTrack                | Multi-object tracking               | ✅           |
+| **Scene**     | PySceneDetect, OpenCLIP  | Scene segmentation & classification | ✅           |
+| **Face**      | OpenFace 3.0, LAION Face | Face analysis & emotion             | ✅           |
+| **Audio**     | Whisper, pyannote.audio  | Speech & audio processing           | ✅           |
+| **API**       | FastAPI, uvicorn         | REST API server                     | N/A          |
 
 ## Next Steps
 
 After installation:
+
 - See `docs/usage/GETTING_STARTED.md` for usage examples
-- Check `docs/development/` for development workflows  
+- Check `docs/development/` for development workflows
 - Review `configs/` for configuration options
 - Use `uv run python -m src.cli --help` to test the CLI
 - Use `uv run python api_server.py` to start the server

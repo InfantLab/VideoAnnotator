@@ -5,7 +5,8 @@ VideoAnnotator v1.2.0 includes modern Docker containers using uv for fast, relia
 ## 🐳 Available Docker Images
 
 ### 1. **videoannotator:cpu** - Production CPU-only
-- **Size**: ~15-20GB (optimized)  
+
+- **Size**: ~15-20GB (optimized)
 - **Use case**: Production deployment without GPU
 - **Features**: CPU-only PyTorch, models download on first use
 - **Build time**: ~10-15 minutes
@@ -19,8 +20,9 @@ docker run -p 8000:8000 --rm -v "${PWD}/data:/app/data" -v "${PWD}/output:/app/o
 ```
 
 ### 2. **videoannotator:gpu** - Production GPU
+
 - **Size**: ~25-30GB (optimized)
-- **Use case**: Production deployment with GPU acceleration  
+- **Use case**: Production deployment with GPU acceleration
 - **Features**: CUDA PyTorch, models download on first use
 - **Build time**: ~15-20 minutes
 
@@ -32,7 +34,8 @@ docker build -f Dockerfile.gpu -t videoannotator:gpu .
 docker run -p 8000:8000 --gpus all --rm -v "${PWD}/data:/app/data" -v "${PWD}/output:/app/output" videoannotator:gpu
 ```
 
-### 3. **videoannotator:dev** - Development with Local Model Cache  
+### 3. **videoannotator:dev** - Development with Local Model Cache
+
 - **Size**: ~50GB (includes your local models/weights)
 - **Use case**: Development and testing - instant model access
 - **Features**: GPU support + your exact local model cache copied
@@ -53,15 +56,16 @@ docker run -p 8000:8000 --gpus all --rm \
 
 ## 📊 Image Comparison
 
-| Image | Size | Build Time | Model Access | GPU Support | Use Case |
-|-------|------|------------|-------------|-------------|----------|
-| **cpu** | ~15GB | 10-15 min | Downloads at runtime | ❌ | Production CPU |
-| **gpu** | ~25GB | 15-20 min | Downloads at runtime | ✅ | Production GPU |
-| **dev** | ~50GB | 15-20 min | Local cache copied | ✅ | Development/Testing |
+| Image   | Size  | Build Time | Model Access         | GPU Support | Use Case            |
+| ------- | ----- | ---------- | -------------------- | ----------- | ------------------- |
+| **cpu** | ~15GB | 10-15 min  | Downloads at runtime | ❌          | Production CPU      |
+| **gpu** | ~25GB | 15-20 min  | Downloads at runtime | ✅          | Production GPU      |
+| **dev** | ~50GB | 15-20 min  | Local cache copied   | ✅          | Development/Testing |
 
 ## 🚀 Docker Compose Usage
 
 ### Development with GPU (Recommended for Testing)
+
 ```bash
 # Start development service with pre-cached models
 docker compose --profile dev-gpu up videoannotator-dev-gpu
@@ -71,20 +75,23 @@ docker compose --profile dev-gpu up videoannotator-dev-gpu
 ```
 
 ### Production GPU
+
 ```bash
 # Start production GPU service
 docker compose --profile gpu up videoannotator-gpu
 ```
 
 ### CPU-only Production
+
 ```bash
-# Start CPU service  
+# Start CPU service
 docker compose --profile prod up videoannotator-prod
 ```
 
 ## Prerequisites
 
 ### NVIDIA Container Toolkit (for GPU)
+
 Install NVIDIA Container Toolkit for GPU support:
 
 ```bash
@@ -100,12 +107,14 @@ sudo systemctl restart docker
 ## 🗂️ Volume Mounts
 
 ### Essential Mounts
+
 - **`./data:/app/data`** - Input videos and test data
 - **`./output:/app/output`** - Processing results and annotations
 - **`./logs:/app/logs`** - Application logs (dev only)
 - **`./database:/app/database`** - Persistent SQLite database (dev only)
 
 ### Example with All Mounts
+
 ```bash
 docker run -p 8000:8000 --gpus all --rm \
   -v "${PWD}/data:/app/data" \
@@ -119,12 +128,14 @@ docker run -p 8000:8000 --gpus all --rm \
 ## 🔧 Development Workflow
 
 ### For Fast Testing (Use dev image)
+
 1. **Build once**: `docker build -f dockerfile.dev -t videoannotator:dev .`
 2. **Run anytime**: `docker run -p 8000:8000 --gpus all videoannotator:dev`
 3. **No wait**: Your local models copied, immediate testing
 
 ### For Production (Use optimized images)
-1. **Build**: `docker build -f Dockerfile.gpu -t videoannotator:gpu .`  
+
+1. **Build**: `docker build -f Dockerfile.gpu -t videoannotator:gpu .`
 2. **Deploy**: Models download on first use, smaller image size
 3. **Scale**: Suitable for container orchestration
 
@@ -133,7 +144,7 @@ docker run -p 8000:8000 --gpus all --rm \
 ```bash
 # Build all images
 docker build -f Dockerfile.cpu -t videoannotator:cpu .
-docker build -f Dockerfile.gpu -t videoannotator:gpu .  
+docker build -f Dockerfile.gpu -t videoannotator:gpu .
 docker build -f dockerfile.dev -t videoannotator:dev .
 
 # Run development server (fastest for testing)
@@ -149,18 +160,21 @@ docker run --gpus all --rm videoannotator:dev python -c "import torch; print(f'C
 ## 🐛 Troubleshooting
 
 ### Build Issues
+
 - **"NVIDIA files in CPU build"**: Fixed in latest Dockerfile.cpu with CPU-only PyTorch
-- **"Models folder too large"**: Use .dockerignore to exclude models/ for prod builds  
+- **"Models folder too large"**: Use .dockerignore to exclude models/ for prod builds
 - **"Build takes too long"**: Use dev image only when you need pre-cached models
 - **"Package libgl1-mesa-glx not available"**: Fixed with correct Debian package names
 - **"No solution found when resolving dependencies"**: Fixed with --frozen flag and Python <3.13 constraint
 
 ### Runtime Issues
+
 - **"No GPU detected"**: Ensure `--gpus all` flag and NVIDIA Docker runtime installed
 - **"Models downloading slowly"**: Use dev image for testing, or cache models on host
 - **"Permission denied"**: Check volume mount permissions and paths
 
 ### Windows PowerShell
+
 ```powershell
 # Windows-specific command format
 docker run -p 8000:8000 --gpus all --rm -v "${PWD}\data:/app/data" -v "${PWD}\output:/app/output" videoannotator:dev

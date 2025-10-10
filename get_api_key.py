@@ -4,7 +4,8 @@ Simple script to retrieve the admin API key for testing purposes.
 """
 
 from src.database.database import SessionLocal
-from src.database.models import User, APIKey
+from src.database.models import APIKey, User
+
 
 def get_admin_api_key():
     """Get the admin user's API key."""
@@ -15,17 +16,18 @@ def get_admin_api_key():
         if not admin_user:
             print("❌ No admin user found")
             return None
-        
+
         # Get first active API key for admin
-        api_key = db.query(APIKey).filter(
-            APIKey.user_id == admin_user.id,
-            APIKey.is_active == True
-        ).first()
-        
+        api_key = (
+            db.query(APIKey)
+            .filter(APIKey.user_id == admin_user.id, APIKey.is_active)
+            .first()
+        )
+
         if not api_key:
             print("❌ No active API key found for admin")
             return None
-        
+
         print(f"Admin User: {admin_user.username} ({admin_user.email})")
         print(f"API Key Prefix: va_{api_key.key_prefix}")
         print(f"Created: {api_key.created_at}")
@@ -34,11 +36,12 @@ def get_admin_api_key():
         print("   Authorization: Bearer va_<FULL_KEY>")
         print("\n⚠️  The full API key is not stored in database (only hash)")
         print("   Use the key from migration output or create a new one")
-        
+
         return api_key
-        
+
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     get_admin_api_key()

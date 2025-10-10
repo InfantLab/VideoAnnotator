@@ -29,20 +29,20 @@ bibliography: paper.bib
 
 # Summary
 
-**VideoAnnotator** is an open-source Python toolkit for *automated and manual annotation of video*, designed for behavioral, social, and health research at scale. It provides:
+**VideoAnnotator** is an open-source Python toolkit for _automated and manual annotation of video_, designed for behavioral, social, and health research at scale. It provides:
 
 - a pluggable pipeline that wraps commonly used detectors (e.g., **OpenFace 3**, **DeepFace**) for face, action‐unit, affect, gaze, speech and motion features;
 - a **FastAPI** service for local or server deployment;
 - **Docker** images for fully reproducible execution with GPU support where available;
 - a clear data contract for inputs/outputs (JSON/CSV/Parquet), timestamped tracks, and provenance metadata suitable for downstream modeling and review.
 
-The toolkit targets researchers who need *auditable, explainable feature timelines* (e.g., smiles, gaze‐on/off, vocal activity, proximity), while remaining domain‐agnostic for use in psychology, HCI, education research, clinical observation, sports science, or any scenario where video behaviors must be measured consistently.
+The toolkit targets researchers who need _auditable, explainable feature timelines_ (e.g., smiles, gaze‐on/off, vocal activity, proximity), while remaining domain‐agnostic for use in psychology, HCI, education research, clinical observation, sports science, or any scenario where video behaviors must be measured consistently.
 
 # Statement of need
 
-Across behavioral sciences, observational methods remain the gold standard for assessing rich interpersonal phenomena, but manual coding is costly, subjective, and difficult to scale. Prior overviews of parenting–child interaction assessment, for example, highlight both the value of holistic constructs and the practical limits of human macro-coding (training burden, reliability drift, cultural variance) when datasets grow beyond small lab cohorts. :contentReference[oaicite:0]{index=0} These concerns generalize to many video-based fields (therapy sessions, classroom interactions, telehealth triage), where the *measurement gap*—lack of scalable, standardized, and transparent coding—constrains progress. :contentReference[oaicite:1]{index=1}
+Across behavioral sciences, observational methods remain the gold standard for assessing rich interpersonal phenomena, but manual coding is costly, subjective, and difficult to scale. Prior overviews of parenting–child interaction assessment, for example, highlight both the value of holistic constructs and the practical limits of human macro-coding (training burden, reliability drift, cultural variance) when datasets grow beyond small lab cohorts. :contentReference[oaicite:0]{index=0} These concerns generalize to many video-based fields (therapy sessions, classroom interactions, telehealth triage), where the _measurement gap_—lack of scalable, standardized, and transparent coding—constrains progress. :contentReference[oaicite:1]{index=1}
 
-**VideoAnnotator** addresses this need by (i) standardizing access to modern open models for faces, pose, and voice; (ii) emitting **timestamped micro-events** that are inspectable and auditable; and (iii) packaging the whole stack for reproducible, resource-constrained deployment (laptops, on-prem servers, or cloud GPUs). The library does *not* prescribe a single theory of behavior; rather, it provides the *feature scaffolding* upon which diverse constructs or downstream models can be built (e.g., sensitivity, synchrony, rapport), with outputs suitable for both qualitative review and quantitative ML.
+**VideoAnnotator** addresses this need by (i) standardizing access to modern open models for faces, pose, and voice; (ii) emitting **timestamped micro-events** that are inspectable and auditable; and (iii) packaging the whole stack for reproducible, resource-constrained deployment (laptops, on-prem servers, or cloud GPUs). The library does _not_ prescribe a single theory of behavior; rather, it provides the _feature scaffolding_ upon which diverse constructs or downstream models can be built (e.g., sensitivity, synchrony, rapport), with outputs suitable for both qualitative review and quantitative ML.
 
 # Functionality
 
@@ -51,18 +51,19 @@ Across behavioral sciences, observational methods remain the gold standard for a
 - **Batch & service modes.** Run from CLI for batch processing, or as a **FastAPI** service to integrate into lab workflows, notebooks, or web apps.
 - **Reproducible runs.** Dockerfiles/compose recipes and pinned environments for CPU/GPU, designed to minimize “works on my machine” bugs.
 - **Privacy-aware processing.** Intended to run locally/on-prem; supports redaction steps (e.g., face blurring tracks) as optional pipeline stages.
-- **Interoperability.** Outputs align with common tabular formats and can be visualized in the companion *Video Annotation Viewer* (separate submission).
+- **Interoperability.** Outputs align with common tabular formats and can be visualized in the companion _Video Annotation Viewer_ (separate submission).
 
 # Illustrative use cases
 
 - **Education/HCI:** quantifying joint attention and participation in classroom videos.
 - **Clinical & therapy:** triaging sessions by indicators such as engagement or agitation.
 - **Team interaction / sports:** timing of gaze, gestures, or proximity changes in drills.
-- **Developmental science:** producing objective micro-codes that later map to global constructs in a transparent, two-stage analysis. 
+- **Developmental science:** producing objective micro-codes that later map to global constructs in a transparent, two-stage analysis.
 
 # Design & architecture
 
 VideoAnnotator exposes:
+
 1. **`annotate()` API & CLI** to run configured pipelines over folders or manifests.
 2. **Detectors layer** (e.g., wrappers for OpenFace 3, DeepFace, pose/landmarks, ASR/diarization) with consistent batching and GPU utilization.
 3. **Event store** building timestamped tracks with confidences and per-stage provenance.

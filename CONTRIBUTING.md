@@ -32,6 +32,7 @@ This project adheres to a code of conduct. By participating, you are expected to
 
 1. Fork the repository on GitHub
 2. Clone your fork locally:
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/VideoAnnotator.git
    cd VideoAnnotator
@@ -53,6 +54,7 @@ make dev-setup
 ```
 
 This will:
+
 - Install the package in development mode
 - Set up pre-commit hooks
 - Install all development dependencies
@@ -60,17 +62,20 @@ This will:
 ### Manual Setup
 
 1. Create a virtual environment:
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 2. Install dependencies:
+
    ```bash
    pip install -e .[dev]
    ```
 
 3. Set up pre-commit hooks:
+
    ```bash
    pre-commit install
    ```
@@ -164,39 +169,39 @@ logger = logging.getLogger(__name__)
 
 class ExampleClass:
     """Example class demonstrating style guidelines.
-    
+
     Args:
         param1: Description of parameter 1
         param2: Description of parameter 2
     """
-    
+
     def __init__(self, param1: str, param2: Optional[int] = None) -> None:
         """Initialize the example class."""
         self.param1 = param1
         self.param2 = param2
-        
+
     def process_data(self, data: List[Dict[str, str]]) -> List[str]:
         """Process input data and return processed results.
-        
+
         Args:
             data: List of dictionaries containing input data
-            
+
         Returns:
             List of processed string results
-            
+
         Raises:
             ValueError: If data is empty or invalid
         """
         if not data:
             raise ValueError("Data cannot be empty")
-            
+
         results = []
         for item in data:
             processed = self._process_item(item)
             results.append(processed)
-            
+
         return results
-    
+
     def _process_item(self, item: Dict[str, str]) -> str:
         """Private method to process individual items."""
         # Implementation details
@@ -208,6 +213,7 @@ class ExampleClass:
 ### Before Creating a PR
 
 1. Ensure your fork is up to date:
+
    ```bash
    git fetch upstream
    git checkout main
@@ -215,6 +221,7 @@ class ExampleClass:
    ```
 
 2. Create a feature branch:
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -238,21 +245,25 @@ class ExampleClass:
 
 ```markdown
 ## Description
+
 Brief description of the changes made.
 
 ## Type of Change
+
 - [ ] Bug fix (non-breaking change that fixes an issue)
 - [ ] New feature (non-breaking change that adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Unit tests added/updated
 - [ ] Integration tests added/updated
 - [ ] All tests pass locally
 - [ ] Code coverage maintained/improved
 
 ## Checklist
+
 - [ ] Code follows project style guidelines
 - [ ] Self-review of code completed
 - [ ] Documentation updated
@@ -264,6 +275,7 @@ Brief description of the changes made.
 ### Bug Reports
 
 Use the bug report template with:
+
 - Clear, descriptive title
 - Steps to reproduce
 - Expected vs actual behavior
@@ -273,6 +285,7 @@ Use the bug report template with:
 ### Feature Requests
 
 Use the feature request template with:
+
 - Clear description of the feature
 - Use case and motivation
 - Proposed implementation (if any)
@@ -281,6 +294,7 @@ Use the feature request template with:
 ### Performance Issues
 
 Include:
+
 - Detailed performance metrics
 - System specifications
 - Profiling results (if available)
@@ -309,6 +323,7 @@ Follow conventional commits:
 ```
 
 Types:
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -318,6 +333,7 @@ Types:
 - `chore`: Maintenance tasks
 
 Examples:
+
 ```
 feat(face_analysis): add emotion detection with DeepFace
 fix(audio_pipeline): resolve memory leak in batch processing
@@ -360,6 +376,7 @@ make serve-docs
 ### Version Numbering
 
 We follow semantic versioning (SemVer):
+
 - `MAJOR.MINOR.PATCH`
 - Major: Breaking changes
 - Minor: New features (backward compatible)
@@ -385,6 +402,7 @@ We follow semantic versioning (SemVer):
 ## Recognition
 
 Contributors are recognized in:
+
 - `CONTRIBUTORS.md` file
 - GitHub contributors page
 - Release notes for significant contributions
@@ -394,6 +412,7 @@ Contributors are recognized in:
 ### Recommended IDE Setup
 
 **VS Code Extensions:**
+
 - Python
 - Black Formatter
 - isort
@@ -402,6 +421,7 @@ Contributors are recognized in:
 - Docker
 
 **PyCharm:**
+
 - Configure Black as external tool
 - Enable type checking
 - Set up run configurations

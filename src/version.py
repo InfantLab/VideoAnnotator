@@ -2,14 +2,14 @@
 VideoAnnotator Version Information and Metadata
 """
 
+import json
 import platform
 import sys
 from datetime import datetime
-import logging
-from utils.logging_config import get_logger
-from typing import Dict, Any, Optional
 from pathlib import Path
-import json
+from typing import Any
+
+from utils.logging_config import get_logger
 
 # VideoAnnotator Version
 __version__ = "1.2.2"
@@ -24,7 +24,7 @@ __build_date__ = datetime.now().isoformat()
 __git_commit__ = None  # Will be populated by CI/CD if available
 
 
-def get_version_info() -> Dict[str, Any]:
+def get_version_info() -> dict[str, Any]:
     """Get comprehensive version information."""
 
     # Try to get git information if available
@@ -39,7 +39,7 @@ def get_version_info() -> Dict[str, Any]:
         "processor": platform.processor(),
         "hostname": platform.node(),
     }
-    
+
     # Add GPU/CUDA information
     gpu_info = get_gpu_info()
     if gpu_info:
@@ -67,7 +67,7 @@ def get_version_info() -> Dict[str, Any]:
     }
 
 
-def get_git_info() -> Optional[Dict[str, str]]:
+def get_git_info() -> dict[str, str] | None:
     """Get git repository information if available."""
     try:
         import subprocess
@@ -83,7 +83,9 @@ def get_git_info() -> Optional[Dict[str, str]]:
         # Try to get git branch
         try:
             branch = subprocess.check_output(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.DEVNULL, text=True
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                stderr=subprocess.DEVNULL,
+                text=True,
             ).strip()
         except (subprocess.CalledProcessError, FileNotFoundError, OSError):
             branch = None
@@ -120,22 +122,29 @@ def get_git_info() -> Optional[Dict[str, str]]:
     return None
 
 
-def get_gpu_info() -> Optional[Dict[str, Any]]:
+def get_gpu_info() -> dict[str, Any] | None:
     """Get GPU and CUDA information if available."""
     gpu_info = {}
-    
+
     # Check PyTorch CUDA availability
     try:
         import torch
+
         gpu_info["torch_cuda_available"] = torch.cuda.is_available()
         if torch.cuda.is_available():
             gpu_info["torch_cuda_version"] = torch.version.cuda
             gpu_info["torch_cudnn_version"] = torch.backends.cudnn.version()
             gpu_info["gpu_count"] = torch.cuda.device_count()
             gpu_info["current_device"] = torch.cuda.current_device()
-            gpu_info["device_name"] = torch.cuda.get_device_name(0) if torch.cuda.device_count() > 0 else None
-            gpu_info["device_capability"] = torch.cuda.get_device_capability(0) if torch.cuda.device_count() > 0 else None
-            
+            gpu_info["device_name"] = (
+                torch.cuda.get_device_name(0) if torch.cuda.device_count() > 0 else None
+            )
+            gpu_info["device_capability"] = (
+                torch.cuda.get_device_capability(0)
+                if torch.cuda.device_count() > 0
+                else None
+            )
+
             # Memory information
             if torch.cuda.device_count() > 0:
                 gpu_info["memory_allocated"] = torch.cuda.memory_allocated(0)
@@ -145,36 +154,37 @@ def get_gpu_info() -> Optional[Dict[str, Any]]:
         gpu_info["torch_cuda_available"] = "torch_not_installed"
     except Exception as e:
         gpu_info["torch_cuda_error"] = str(e)
-    
+
     # Check NVIDIA-ML for additional GPU info
     try:
         import pynvml
+
         pynvml.nvmlInit()
         gpu_info["nvidia_ml_available"] = True
         gpu_info["driver_version"] = pynvml.nvmlSystemGetDriverVersion()
-        
+
         device_count = pynvml.nvmlDeviceGetCount()
         gpu_info["nvidia_device_count"] = device_count
-        
+
         if device_count > 0:
             handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-            gpu_info["gpu_name"] = pynvml.nvmlDeviceGetName(handle).decode('utf-8')
-            
+            gpu_info["gpu_name"] = pynvml.nvmlDeviceGetName(handle).decode("utf-8")
+
             # Memory info from nvidia-ml
             mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
             gpu_info["total_memory"] = mem_info.total
             gpu_info["free_memory"] = mem_info.free
             gpu_info["used_memory"] = mem_info.used
-            
+
     except ImportError:
         gpu_info["nvidia_ml_available"] = False
     except Exception as e:
         gpu_info["nvidia_ml_error"] = str(e)
-    
+
     return gpu_info if gpu_info else None
 
 
-def get_dependency_versions() -> Dict[str, str]:
+def get_dependency_versions() -> dict[str, str]:
     """Get versions of key dependencies."""
     dependencies = {}
 
@@ -205,12 +215,12 @@ def get_dependency_versions() -> Dict[str, str]:
         except ImportError:
             dependencies[package_name] = "not_installed"
         except Exception as e:
-            dependencies[package_name] = f"error: {str(e)}"
+            dependencies[package_name] = f"error: {e!s}"
 
     return dependencies
 
 
-def get_model_info(model_name: str, model_path: Optional[str] = None) -> Dict[str, Any]:
+def get_model_info(model_name: str, model_path: str | None = None) -> dict[str, Any]:
     """Get information about a specific model."""
     model_info = {
         "model_name": model_name,
@@ -247,10 +257,10 @@ def get_model_info(model_name: str, model_path: Optional[str] = None) -> Dict[st
 
 def create_annotation_metadata(
     pipeline_name: str,
-    model_info: Optional[Dict[str, Any]] = None,
-    processing_params: Optional[Dict[str, Any]] = None,
-    video_metadata: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    model_info: dict[str, Any] | None = None,
+    processing_params: dict[str, Any] | None = None,
+    video_metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Create comprehensive metadata for annotations."""
 
     # Get the version info and use it directly as the base
@@ -303,14 +313,18 @@ def print_version_info() -> None:
     logger.info(f"  Platform: {system['platform']}")
     logger.info(f"  Python: {system['python_version'].split()[0]}")
     logger.info(f"  Architecture: {system['architecture']}")
-    
+
     # Show GPU information if available
-    if "gpu" in system and system["gpu"]:
+    if system.get("gpu"):
         gpu = system["gpu"]
         print("  GPU Information:")
         if "torch_cuda_available" in gpu:
             # ASCII-only status markers
-            cuda_status = "[OK] Available" if gpu["torch_cuda_available"] else "[WARNING] Not Available"
+            cuda_status = (
+                "[OK] Available"
+                if gpu["torch_cuda_available"]
+                else "[WARNING] Not Available"
+            )
             logger.info(f"    CUDA: {cuda_status}")
             if gpu.get("torch_cuda_available"):
                 if "torch_cuda_version" in gpu:

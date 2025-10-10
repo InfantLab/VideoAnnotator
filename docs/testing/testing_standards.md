@@ -20,7 +20,7 @@ tests/
 ├── test_person_pipeline.py            # Person Tracking Pipeline tests
 ├── test_audio_speech_pipeline.py      # Diarization and Speech Recognition tests
 ├── test_pipelines.py                  # Legacy compatibility wrapper (deprecated)
-├── test_schemas.py                     # Schema validation tests  
+├── test_schemas.py                     # Schema validation tests
 ├── test_integration.py                # Integration tests
 ├── test_performance.py               # Performance benchmarks
 ```
@@ -30,6 +30,7 @@ tests/
 Tests are organized using pytest marks for easy categorization:
 
 1. **Unit Tests** (`@pytest.mark.unit`)
+
    - Test individual pipeline components in isolation
    - Test configuration validation
    - Test error handling
@@ -37,12 +38,14 @@ Tests are organized using pytest marks for easy categorization:
    - Fast execution (< 1 second per test)
 
 2. **Integration Tests** (`@pytest.mark.integration`)
+
    - Test component integration with real dependencies
    - Test end-to-end pipeline workflows
    - Test file I/O operations
    - May require external models/services
 
 3. **Performance Tests** (`@pytest.mark.performance`)
+
    - Benchmark pipeline performance
    - Memory usage testing
    - Scalability testing
@@ -58,6 +61,7 @@ Tests are organized using pytest marks for easy categorization:
 The VideoAnnotator test suite uses a modular approach with dedicated test files for each pipeline:
 
 #### Individual Pipeline Tests
+
 - **Face Analysis** (`test_face_pipeline.py`): Tests face detection, emotion analysis, JSON serialization fixes
 - **Audio Processing** (`test_audio_pipeline.py`): Tests audio feature extraction, schema validation fixes
 - **Scene Detection** (`test_scene_pipeline.py`): Tests scene detection and classification
@@ -65,17 +69,19 @@ The VideoAnnotator test suite uses a modular approach with dedicated test files 
 - **Audio Speech** (`test_audio_speech_pipeline.py`): Tests diarization and speech recognition
 
 #### Test Organization Benefits
+
 - **Focused Testing**: Each file contains tests for a single pipeline
 - **Easier Maintenance**: Smaller, focused test files are easier to maintain
 - **Parallel Execution**: Pipeline tests can be run independently
 - **Clear Responsibilities**: Each test file has a clear scope and purpose
 
 #### Running Modular Tests
+
 ```bash
 # Run tests for a specific pipeline
 uv run python -m pytest tests/test_face_pipeline.py -v
 
-# Run specific test categories across all pipelines  
+# Run specific test categories across all pipelines
 uv run python -m pytest tests/ -m unit -v
 uv run python -m pytest tests/ -m integration -v
 uv run python -m pytest tests/ -m performance -v
@@ -97,23 +103,23 @@ uv run python -m pytest tests/test_all_pipelines.py -v
 ```python
 class TestPipelineComponent:
     """Test cases for pipeline component."""
-    
+
     def test_initialization(self):
         """Test component initialization."""
         # Arrange
         config = ComponentConfig(param=value)
-        
+
         # Act
         component = Component(config)
-        
+
         # Assert
         assert component.config.param == value
-    
+
     def test_process_valid_input(self):
         """Test processing with valid input."""
         # Test implementation
         pass
-    
+
     def test_process_invalid_input(self):
         """Test error handling with invalid input."""
         # Test implementation
@@ -203,7 +209,7 @@ def test_pipeline_performance(benchmark, sample_video):
     """Benchmark pipeline performance."""
     def run_pipeline():
         return pipeline.process_video(sample_video)
-    
+
     result = benchmark(run_pipeline)
     assert result is not None
 ```
@@ -213,6 +219,7 @@ def test_pipeline_performance(benchmark, sample_video):
 ### Test Execution
 
 Tests should pass in the following environments:
+
 - Python 3.8, 3.9, 3.10, 3.11
 - Windows, Linux, macOS
 - CPU and GPU environments
@@ -249,6 +256,7 @@ jobs:
 ### Docstring Standards
 
 Every test should have a clear docstring explaining:
+
 - What is being tested
 - Expected behavior
 - Any special setup requirements
@@ -257,7 +265,7 @@ Every test should have a clear docstring explaining:
 def test_scene_detection_threshold(self):
     """
     Test scene detection with different threshold values.
-    
+
     Verifies that:
     - Higher thresholds result in fewer scene changes
     - Lower thresholds result in more scene changes
@@ -291,6 +299,7 @@ def test_invalid_configuration(self):
 ### Edge Cases
 
 Always test:
+
 - Empty inputs
 - Null/None values
 - Extremely large inputs
@@ -313,11 +322,11 @@ Always test:
 # In tests/test_pipelines.py
 class TestNewPipeline:
     """Test cases for new pipeline component."""
-    
+
     def test_new_pipeline_initialization(self):
         """Test new pipeline initialization."""
         # Test implementation
-    
+
     def test_new_pipeline_processing(self, sample_video):
         """Test new pipeline video processing."""
         # Test implementation

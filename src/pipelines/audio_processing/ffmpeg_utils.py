@@ -2,12 +2,10 @@
 FFmpeg-based audio extraction utilities for the audio processing pipeline.
 """
 
-import subprocess
-import shutil
 import logging
+import shutil
+import subprocess
 from pathlib import Path
-from typing import Optional, Union
-
 
 logger = logging.getLogger(__name__)
 
@@ -18,13 +16,13 @@ def check_ffmpeg_available() -> bool:
 
 
 def extract_audio_from_video(
-    video_path: Union[str, Path],
-    output_path: Optional[Union[str, Path]] = None,
+    video_path: str | Path,
+    output_path: str | Path | None = None,
     sample_rate: int = 16000,
     channels: int = 1,
     format: str = "wav",
     overwrite: bool = True,
-) -> Optional[Path]:
+) -> Path | None:
     """
     Extract audio from video file using FFmpeg.
 
@@ -98,12 +96,12 @@ def extract_audio_from_video(
 
 
 def convert_audio_format(
-    input_path: Union[str, Path],
-    output_path: Union[str, Path],
-    sample_rate: Optional[int] = None,
-    channels: Optional[int] = None,
+    input_path: str | Path,
+    output_path: str | Path,
+    sample_rate: int | None = None,
+    channels: int | None = None,
     overwrite: bool = True,
-) -> Optional[Path]:
+) -> Path | None:
     """
     Convert audio file to different format using FFmpeg.
 
@@ -161,7 +159,7 @@ def convert_audio_format(
         return None
 
 
-def get_audio_info(audio_path: Union[str, Path]) -> Optional[dict]:
+def get_audio_info(audio_path: str | Path) -> dict | None:
     """
     Get audio file information using FFprobe (part of FFmpeg).
 
@@ -234,7 +232,7 @@ def get_audio_info(audio_path: Union[str, Path]) -> Optional[dict]:
         return None
 
 
-def has_audio_stream(video_path: Union[str, Path]) -> bool:
+def has_audio_stream(video_path: str | Path) -> bool:
     """
     Check if video file contains audio streams.
 

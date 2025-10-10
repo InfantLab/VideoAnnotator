@@ -22,8 +22,10 @@ Notes:
     - Regeneration is idempotent aside from the timestamp line.
     - Keep the column list (COLUMNS) minimal in v1.2.x; richer descriptors belong to v1.3.x+.
 """
-from pathlib import Path
+
 from datetime import datetime
+from pathlib import Path
+
 from src.registry.pipeline_registry import get_registry
 
 OUTPUT_PATH = Path("docs/pipelines_spec.md")
@@ -38,8 +40,12 @@ COLUMNS = [
     ("Capabilities", lambda m: ",".join(m.capabilities) if m.capabilities else "-"),
     ("Backends", lambda m: ",".join(m.backends) if m.backends else "-"),
     ("Stability", lambda m: m.stability or "-"),
-    ("Outputs", lambda m: ";".join(f"{o.format}:{'/'.join(o.types)}" for o in m.outputs)),
+    (
+        "Outputs",
+        lambda m: ";".join(f"{o.format}:{'/'.join(o.types)}" for o in m.outputs),
+    ),
 ]
+
 
 def generate():
     reg = get_registry()
@@ -64,6 +70,7 @@ def generate():
     ]
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text("\n".join(content), encoding="utf-8")
+
 
 if __name__ == "__main__":
     generate()

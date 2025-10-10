@@ -5,26 +5,28 @@ This pipeline works directly with COCO format annotations, eliminating all custo
 Uses native FOSS libraries for all data representation and export.
 """
 
+import json
+import logging
+from pathlib import Path
+from typing import Any
+
 import cv2
 import numpy as np
-import logging
-import json
-from typing import Dict, List, Any, Optional
-from pathlib import Path
 
-from pipelines.base_pipeline import BasePipeline
-from version import __version__
 from exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
     export_coco_json,
     validate_coco_json,
 )
+from pipelines.base_pipeline import BasePipeline
 from utils.person_identity import PersonIdentityManager
+from version import __version__
 
 # Optional import for enhanced face analysis
 try:
     from deepface import DeepFace
+
     DEEPFACE_AVAILABLE = True
 except ImportError:
     DEEPFACE_AVAILABLE = False
@@ -37,7 +39,7 @@ class FaceAnalysisPipeline(BasePipeline):
     Returns native COCO annotation dictionaries instead of custom schemas.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         default_config = {
             "detection_backend": "deepface",  # opencv, deepface
             "emotion_backend": "deepface",  # deepface, disabled
@@ -53,17 +55,17 @@ class FaceAnalysisPipeline(BasePipeline):
             # DeepFace settings
             "deepface": {
                 "emotion_model": "VGG-Face",
-                "age_gender_model": "VGG-Face", 
+                "age_gender_model": "VGG-Face",
                 "detector_backend": "opencv",
-                "enforce_detection": False
+                "enforce_detection": False,
             },
             # Person identity configuration
             "person_identity": {
                 "enabled": True,
                 "link_to_persons": True,
                 "iou_threshold": 0.5,
-                "require_person_id": False  # Graceful fallback
-            }
+                "require_person_id": False,  # Graceful fallback
+            },
         }
         # Merge with default config
         merged_config = default_config.copy()
@@ -76,25 +78,21 @@ class FaceAnalysisPipeline(BasePipeline):
 
     def initialize(self) -> None:
         """Initialize the face analysis backend."""
-        self.logger.info(f"Initializing FaceAnalysisPipeline with backend: {self.config['detection_backend']}")
+        self.logger.info(
+            f"Initializing FaceAnalysisPipeline with backend: {self.config['detection_backend']}"
+        )
         self._initialize_backend()
         self.is_initialized = True
 
-    def get_schema(self) -> Dict[str, Any]:
+    def get_schema(self) -> dict[str, Any]:
         """Get the output schema for face analysis annotations."""
         return {
             "type": "coco_annotation",
             "format_version": __version__,
-            "categories": [
-                {
-                    "id": 1,
-                    "name": "face",
-                    "supercategory": "person"
-                }
-            ],
+            "categories": [{"id": 1, "name": "face", "supercategory": "person"}],
             "annotation_schema": {
                 "id": "integer",
-                "image_id": "integer", 
+                "image_id": "integer",
                 "category_id": "integer",
                 "bbox": "array[4]",  # [x, y, width, height]
                 "area": "float",
@@ -103,34 +101,73 @@ class FaceAnalysisPipeline(BasePipeline):
                 "num_keypoints": "integer",
                 "confidence": "float",
                 # Person identity fields
-                "person_id": {"type": ["string", "null"], "description": "Linked person identifier"},
-                "person_label": {"type": ["string", "null"], "description": "Person semantic label"},
-                "person_label_confidence": {"type": ["number", "null"], "description": "Person label confidence"},
-                "person_labeling_method": {"type": ["string", "null"], "description": "How person was labeled"},
+                "person_id": {
+                    "type": ["string", "null"],
+                    "description": "Linked person identifier",
+                },
+                "person_label": {
+                    "type": ["string", "null"],
+                    "description": "Person semantic label",
+                },
+                "person_label_confidence": {
+                    "type": ["number", "null"],
+                    "description": "Person label confidence",
+                },
+                "person_labeling_method": {
+                    "type": ["string", "null"],
+                    "description": "How person was labeled",
+                },
                 # VideoAnnotator extensions
-                "timestamp": {"type": ["number", "null"], "description": "Frame timestamp"},
-                "frame_number": {"type": ["integer", "null"], "description": "Frame number"},
+                "timestamp": {
+                    "type": ["number", "null"],
+                    "description": "Frame timestamp",
+                },
+                "frame_number": {
+                    "type": ["integer", "null"],
+                    "description": "Frame number",
+                },
                 # DeepFace analysis results
-                "emotion": {"type": ["string", "null"], "description": "Dominant emotion detected"},
-                "emotion_confidence": {"type": ["number", "null"], "description": "Confidence of emotion prediction"},
-                "emotion_scores": {"type": ["object", "null"], "description": "All emotion scores"},
+                "emotion": {
+                    "type": ["string", "null"],
+                    "description": "Dominant emotion detected",
+                },
+                "emotion_confidence": {
+                    "type": ["number", "null"],
+                    "description": "Confidence of emotion prediction",
+                },
+                "emotion_scores": {
+                    "type": ["object", "null"],
+                    "description": "All emotion scores",
+                },
                 "age": {"type": ["number", "null"], "description": "Predicted age"},
-                "gender": {"type": ["string", "null"], "description": "Predicted gender"},
-                "gender_confidence": {"type": ["number", "null"], "description": "Confidence of gender prediction"},
-                "gender_scores": {"type": ["object", "null"], "description": "All gender scores"},
-                "backend": {"type": "string", "description": "Face detection backend used"}
-            }
+                "gender": {
+                    "type": ["string", "null"],
+                    "description": "Predicted gender",
+                },
+                "gender_confidence": {
+                    "type": ["number", "null"],
+                    "description": "Confidence of gender prediction",
+                },
+                "gender_scores": {
+                    "type": ["object", "null"],
+                    "description": "All gender scores",
+                },
+                "backend": {
+                    "type": "string",
+                    "description": "Face detection backend used",
+                },
+            },
         }
 
     def process(
         self,
         video_path: str,
         start_time: float = 0.0,
-        end_time: Optional[float] = None,
+        end_time: float | None = None,
         pps: float = 5.0,  # 5 FPS for face analysis
-        output_dir: Optional[str] = None,
-        person_tracks: Optional[List[Dict[str, Any]]] = None,
-    ) -> List[Dict[str, Any]]:
+        output_dir: str | None = None,
+        person_tracks: list[dict[str, Any]] | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Process video for face analysis with person identity linking.
 
@@ -151,20 +188,34 @@ class FaceAnalysisPipeline(BasePipeline):
 
         # Initialize PersonIdentityManager if person linking is enabled
         person_config = self.config.get("person_identity", {})
-        if person_config.get("enabled", True) and person_config.get("link_to_persons", True):
+        if person_config.get("enabled", True) and person_config.get(
+            "link_to_persons", True
+        ):
             if person_tracks:
                 # Create identity manager from existing person tracks
-                self.identity_manager = PersonIdentityManager.from_person_tracks(person_tracks, video_metadata["video_id"])
-                self.logger.info(f"Loaded PersonIdentityManager with {len(person_tracks)} person tracks")
+                self.identity_manager = PersonIdentityManager.from_person_tracks(
+                    person_tracks, video_metadata["video_id"]
+                )
+                self.logger.info(
+                    f"Loaded PersonIdentityManager with {len(person_tracks)} person tracks"
+                )
             else:
                 # Try to load person tracks from default location
-                person_tracks = self._load_person_tracks(video_metadata["video_id"], output_dir)
+                person_tracks = self._load_person_tracks(
+                    video_metadata["video_id"], output_dir
+                )
                 if person_tracks:
-                    self.identity_manager = PersonIdentityManager.from_person_tracks(person_tracks, video_metadata["video_id"])
-                    self.logger.info(f"Loaded PersonIdentityManager from file with {len(person_tracks)} person tracks")
+                    self.identity_manager = PersonIdentityManager.from_person_tracks(
+                        person_tracks, video_metadata["video_id"]
+                    )
+                    self.logger.info(
+                        f"Loaded PersonIdentityManager from file with {len(person_tracks)} person tracks"
+                    )
                 elif not person_config.get("require_person_id", False):
                     self.identity_manager = None
-                    self.logger.info("No person tracks available, proceeding without person linking")
+                    self.logger.info(
+                        "No person tracks available, proceeding without person linking"
+                    )
                 else:
                     raise ValueError("Person tracks required but not available")
         else:
@@ -194,7 +245,9 @@ class FaceAnalysisPipeline(BasePipeline):
         annotation_id = 1
 
         try:
-            for frame_num in range(start_frame, min(end_frame, total_frames), frame_step):
+            for frame_num in range(
+                start_frame, min(end_frame, total_frames), frame_step
+            ):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
                 ret, frame = cap.read()
 
@@ -206,26 +259,41 @@ class FaceAnalysisPipeline(BasePipeline):
 
                 # Detect faces in frame
                 face_annotations = self._detect_faces_in_frame(
-                    frame, timestamp, video_metadata["video_id"], frame_num, width, height
+                    frame,
+                    timestamp,
+                    video_metadata["video_id"],
+                    frame_num,
+                    width,
+                    height,
                 )
 
                 # Link faces to persons if identity manager is available
                 if self.identity_manager is not None and face_annotations:
                     # Get person annotations for this frame from person tracks
-                    frame_person_annotations = self._get_frame_person_annotations(timestamp, frame_num)
-                    
+                    frame_person_annotations = self._get_frame_person_annotations(
+                        timestamp, frame_num
+                    )
+
                     # Link each face to a person using IoU matching
                     for face_ann in face_annotations:
-                        person_id = self._link_face_to_person(face_ann, frame_person_annotations)
+                        person_id = self._link_face_to_person(
+                            face_ann, frame_person_annotations
+                        )
                         if person_id:
-                            face_ann['person_id'] = person_id
-                            
+                            face_ann["person_id"] = person_id
+
                             # Add person label information if available
-                            label_info = self.identity_manager.get_person_label(person_id)
+                            label_info = self.identity_manager.get_person_label(
+                                person_id
+                            )
                             if label_info:
-                                face_ann['person_label'] = label_info['label']
-                                face_ann['person_label_confidence'] = label_info['confidence']
-                                face_ann['person_labeling_method'] = label_info['method']
+                                face_ann["person_label"] = label_info["label"]
+                                face_ann["person_label_confidence"] = label_info[
+                                    "confidence"
+                                ]
+                                face_ann["person_labeling_method"] = label_info[
+                                    "method"
+                                ]
 
                 # Assign unique annotation IDs
                 for face_ann in face_annotations:
@@ -244,57 +312,66 @@ class FaceAnalysisPipeline(BasePipeline):
         self.logger.info(f"Face analysis complete: {len(annotations)} detections")
         return annotations
 
-    def _load_person_tracks(self, video_id: str, output_dir: Optional[str] = None) -> Optional[List[Dict[str, Any]]]:
+    def _load_person_tracks(
+        self, video_id: str, output_dir: str | None = None
+    ) -> list[dict[str, Any]] | None:
         """Load person tracking data from file."""
         person_data_paths = [
             Path(output_dir or ".") / f"person_tracking_{video_id}.json",
             Path("data") / f"person_tracking_{video_id}.json",
-            Path("demo_results") / f"person_tracking_{video_id}.json"
+            Path("demo_results") / f"person_tracking_{video_id}.json",
         ]
-        
+
         for person_data_path in person_data_paths:
             if person_data_path.exists():
                 try:
-                    with open(person_data_path, 'r') as f:
+                    with open(person_data_path) as f:
                         person_data = json.load(f)
-                    
+
                     # Extract annotations with person tracks
-                    if 'annotations' in person_data:
-                        self.logger.info(f"Loaded person tracks from {person_data_path}")
-                        return person_data['annotations']
+                    if "annotations" in person_data:
+                        self.logger.info(
+                            f"Loaded person tracks from {person_data_path}"
+                        )
+                        return person_data["annotations"]
                 except Exception as e:
-                    self.logger.warning(f"Failed to load person data from {person_data_path}: {e}")
-        
+                    self.logger.warning(
+                        f"Failed to load person data from {person_data_path}: {e}"
+                    )
+
         return None
 
-    def _get_frame_person_annotations(self, timestamp: float, frame_num: int) -> List[Dict[str, Any]]:
+    def _get_frame_person_annotations(
+        self, timestamp: float, frame_num: int
+    ) -> list[dict[str, Any]]:
         """Get person annotations for a specific frame from the loaded identity manager."""
         if not self.identity_manager:
             return []
-        
+
         # This would typically load from cached person tracks data
         # For now, return empty list as the identity manager doesn't store frame-specific data
         # In a full implementation, this would search loaded person tracks by timestamp/frame
         return []
 
-    def _link_face_to_person(self, face_annotation: Dict[str, Any], 
-                           person_annotations: List[Dict[str, Any]]) -> Optional[str]:
+    def _link_face_to_person(
+        self, face_annotation: dict[str, Any], person_annotations: list[dict[str, Any]]
+    ) -> str | None:
         """Link a face detection to a person using IoU matching via PersonIdentityManager."""
         if not self.identity_manager or not person_annotations:
             return None
-        
-        face_bbox = face_annotation.get('bbox', [])
+
+        face_bbox = face_annotation.get("bbox", [])
         if len(face_bbox) != 4:
             return None
-        
+
         # Use PersonIdentityManager's linking method
         return self.identity_manager.link_face_to_person(
-            face_bbox, 
+            face_bbox,
             person_annotations,
-            iou_threshold=self.config["person_identity"]["iou_threshold"]
+            iou_threshold=self.config["person_identity"]["iou_threshold"],
         )
 
-    def _get_video_metadata(self, video_path: str) -> Dict[str, Any]:
+    def _get_video_metadata(self, video_path: str) -> dict[str, Any]:
         """Extract video metadata."""
         cap = cv2.VideoCapture(video_path)
 
@@ -332,7 +409,9 @@ class FaceAnalysisPipeline(BasePipeline):
             self.logger.info("Using DeepFace detection")
 
         else:
-            self.logger.warning(f"Backend {backend} not available, falling back to OpenCV")
+            self.logger.warning(
+                f"Backend {backend} not available, falling back to OpenCV"
+            )
             self.config["detection_backend"] = "opencv"
 
     def _detect_faces_in_frame(
@@ -343,7 +422,7 @@ class FaceAnalysisPipeline(BasePipeline):
         frame_number: int,
         width: int,
         height: int,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Detect faces in a single frame and return COCO annotations."""
 
         backend = self.config["detection_backend"]
@@ -365,7 +444,7 @@ class FaceAnalysisPipeline(BasePipeline):
         frame_number: int,
         width: int,
         height: int,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Detect faces using OpenCV Haar cascades."""
 
         # Load cascade classifier
@@ -400,8 +479,6 @@ class FaceAnalysisPipeline(BasePipeline):
 
         return annotations
 
-
-
     def _detect_faces_deepface(
         self,
         frame: np.ndarray,
@@ -410,20 +487,20 @@ class FaceAnalysisPipeline(BasePipeline):
         frame_number: int,
         width: int,
         height: int,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Detect faces using DeepFace with comprehensive analysis."""
 
         try:
             # DeepFace expects RGB format
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            
+
             # Get DeepFace configuration
             deepface_config = self.config.get("deepface", {})
             detector_backend = deepface_config.get("detector_backend", "opencv")
             enforce_detection = deepface_config.get("enforce_detection", False)
-            
+
             annotations = []
-            
+
             # First, detect faces and get their regions
             try:
                 face_objs = DeepFace.extract_faces(
@@ -431,72 +508,97 @@ class FaceAnalysisPipeline(BasePipeline):
                     detector_backend=detector_backend,
                     enforce_detection=enforce_detection,
                     align=True,
-                    grayscale=False
+                    grayscale=False,
                 )
-                
+
                 if not face_objs:
                     return []
-                
+
                 # Get face regions with coordinates using DeepFace.analyze
                 analyze_results = DeepFace.analyze(
                     rgb_frame,
-                    actions=['emotion', 'age', 'gender'] if (
-                        self.config.get('detect_emotions', True) or 
-                        self.config.get('detect_age', True) or 
-                        self.config.get('detect_gender', True)
-                    ) else ['emotion'],  # At least one action is required
+                    actions=["emotion", "age", "gender"]
+                    if (
+                        self.config.get("detect_emotions", True)
+                        or self.config.get("detect_age", True)
+                        or self.config.get("detect_gender", True)
+                    )
+                    else ["emotion"],  # At least one action is required
                     detector_backend=detector_backend,
-                    enforce_detection=enforce_detection
+                    enforce_detection=enforce_detection,
                 )
-                
+
                 # Handle single face vs multiple faces
                 if not isinstance(analyze_results, list):
                     analyze_results = [analyze_results]
-                
+
                 for i, analysis in enumerate(analyze_results):
                     # Extract face region coordinates
-                    region = analysis.get('region', {})
-                    x = region.get('x', 0)
-                    y = region.get('y', 0)
-                    w = region.get('w', 100)
-                    h = region.get('h', 100)
-                    
+                    region = analysis.get("region", {})
+                    x = region.get("x", 0)
+                    y = region.get("y", 0)
+                    w = region.get("w", 100)
+                    h = region.get("h", 100)
+
                     # Skip faces that are too small
-                    if w < self.config['min_face_size'] or h < self.config['min_face_size']:
+                    if (
+                        w < self.config["min_face_size"]
+                        or h < self.config["min_face_size"]
+                    ):
                         continue
-                    
+
                     # Prepare analysis data
                     analysis_data = {}
-                    
+
                     # Emotion analysis
-                    if self.config.get('detect_emotions', True) and 'emotion' in analysis:
-                        emotions = analysis['emotion']
+                    if (
+                        self.config.get("detect_emotions", True)
+                        and "emotion" in analysis
+                    ):
+                        emotions = analysis["emotion"]
                         # Get dominant emotion
-                        dominant_emotion = analysis.get('dominant_emotion', 'unknown')
-                        emotion_confidence = emotions.get(dominant_emotion, 0.0) / 100.0 if dominant_emotion != 'unknown' else 0.0
-                        
-                        analysis_data.update({
-                            'emotion': dominant_emotion,
-                            'emotion_confidence': float(emotion_confidence),
-                            'emotion_scores': {k: float(v/100.0) for k, v in emotions.items()}
-                        })
-                    
-                    # Age analysis  
-                    if self.config.get('detect_age', True) and 'age' in analysis:
-                        analysis_data['age'] = float(analysis['age'])
-                    
+                        dominant_emotion = analysis.get("dominant_emotion", "unknown")
+                        emotion_confidence = (
+                            emotions.get(dominant_emotion, 0.0) / 100.0
+                            if dominant_emotion != "unknown"
+                            else 0.0
+                        )
+
+                        analysis_data.update(
+                            {
+                                "emotion": dominant_emotion,
+                                "emotion_confidence": float(emotion_confidence),
+                                "emotion_scores": {
+                                    k: float(v / 100.0) for k, v in emotions.items()
+                                },
+                            }
+                        )
+
+                    # Age analysis
+                    if self.config.get("detect_age", True) and "age" in analysis:
+                        analysis_data["age"] = float(analysis["age"])
+
                     # Gender analysis
-                    if self.config.get('detect_gender', True) and 'gender' in analysis:
-                        gender_scores = analysis.get('gender', {})
-                        dominant_gender = analysis.get('dominant_gender', 'unknown')
-                        gender_confidence = gender_scores.get(dominant_gender, 0.0) / 100.0 if dominant_gender != 'unknown' else 0.0
-                        
-                        analysis_data.update({
-                            'gender': dominant_gender,
-                            'gender_confidence': float(gender_confidence),
-                            'gender_scores': {k: float(v/100.0) for k, v in gender_scores.items()}
-                        })
-                    
+                    if self.config.get("detect_gender", True) and "gender" in analysis:
+                        gender_scores = analysis.get("gender", {})
+                        dominant_gender = analysis.get("dominant_gender", "unknown")
+                        gender_confidence = (
+                            gender_scores.get(dominant_gender, 0.0) / 100.0
+                            if dominant_gender != "unknown"
+                            else 0.0
+                        )
+
+                        analysis_data.update(
+                            {
+                                "gender": dominant_gender,
+                                "gender_confidence": float(gender_confidence),
+                                "gender_scores": {
+                                    k: float(v / 100.0)
+                                    for k, v in gender_scores.items()
+                                },
+                            }
+                        )
+
                     # Create COCO annotation with DeepFace analysis
                     annotation = create_coco_annotation(
                         annotation_id=0,  # Will be set later
@@ -509,12 +611,12 @@ class FaceAnalysisPipeline(BasePipeline):
                         timestamp=timestamp,
                         frame_number=frame_number,
                         backend="deepface",
-                        **analysis_data  # Add all analysis results
+                        **analysis_data,  # Add all analysis results
                     )
                     annotations.append(annotation)
-                    
+
                     # Limit number of faces
-                    if len(annotations) >= self.config['max_faces']:
+                    if len(annotations) >= self.config["max_faces"]:
                         break
 
             except Exception as analysis_error:
@@ -525,9 +627,9 @@ class FaceAnalysisPipeline(BasePipeline):
                         rgb_frame,
                         detector_backend=detector_backend,
                         enforce_detection=False,
-                        align=False
+                        align=False,
                     )
-                    
+
                     for i, face_obj in enumerate(face_objs):
                         if face_obj is not None:
                             # Create basic annotation without analysis
@@ -544,12 +646,14 @@ class FaceAnalysisPipeline(BasePipeline):
                                 backend="deepface",
                             )
                             annotations.append(annotation)
-                            
-                            if len(annotations) >= self.config['max_faces']:
+
+                            if len(annotations) >= self.config["max_faces"]:
                                 break
-                                
+
                 except Exception as fallback_error:
-                    self.logger.warning(f"DeepFace fallback detection also failed: {fallback_error}")
+                    self.logger.warning(
+                        f"DeepFace fallback detection also failed: {fallback_error}"
+                    )
 
             return annotations
 
@@ -558,7 +662,10 @@ class FaceAnalysisPipeline(BasePipeline):
             return []
 
     def _save_coco_annotations(
-        self, annotations: List[Dict[str, Any]], output_dir: str, video_metadata: Dict[str, Any]
+        self,
+        annotations: list[dict[str, Any]],
+        output_dir: str,
+        video_metadata: dict[str, Any],
     ):
         """Save annotations in COCO format."""
 

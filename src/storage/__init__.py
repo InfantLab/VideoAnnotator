@@ -9,6 +9,6 @@ from .base import StorageBackend
 from .file_backend import FileStorageBackend
 
 __all__ = [
-    "StorageBackend",
     "FileStorageBackend",
+    "StorageBackend",
 ]
