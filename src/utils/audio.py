@@ -12,7 +12,7 @@ def find_f0(audio_file):
         np.array: The fundamental frequency values.
     """
     # Load the audio file
-    y, sr = librosa.load(audio_file)
+    y, _sr = librosa.load(audio_file)
     # Extract the fundamental frequency
     f0, voiced_flag, voiced_probs = librosa.pyin(
         y, fmin=librosa.note_to_hz("C2"), fmax=librosa.note_to_hz("C7")

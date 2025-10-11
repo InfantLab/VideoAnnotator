@@ -201,7 +201,7 @@ def process_all_videos(
     model = YOLO(MODEL_CONFIG["pose_model"])
 
     # Process each video
-    for index, mrow in metadata.iterrows():
+    for _index, mrow in metadata.iterrows():
         videoname = mrow["VideoID"]
         video_path = os.path.join(videos_in, videoname)
 
@@ -224,7 +224,7 @@ def understand_videos(videos_in, data_out):
     """
     processedvideos = getProcessedVideos(data_out)
 
-    for index, row in processedvideos.iterrows():
+    for _index, row in processedvideos.iterrows():
         videoname = row["VideoID"]
         video_path = os.path.join(videos_in, videoname)
 
@@ -232,8 +232,8 @@ def understand_videos(videos_in, data_out):
         understanding_file = extract_video_understanding(video_path, data_out)
 
         # Update processed videos
-        processedvideos.at[index, "Understanding.file"] = understanding_file
-        processedvideos.at[index, "Understanding.when"] = time.strftime(
+        processedvideos.at[_index, "Understanding.file"] = understanding_file
+        processedvideos.at[_index, "Understanding.when"] = time.strftime(
             "%Y-%m-%d %H:%M:%S", time.gmtime()
         )
 

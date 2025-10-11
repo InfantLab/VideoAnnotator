@@ -170,7 +170,7 @@ class SpeechPipeline(WhisperBasePipeline):
                 # For HuggingFace Whisper, load the audio and process
                 else:
                     # Use the base pipeline's audio loading
-                    audio, sr = librosa.load(
+                    audio, _sr = librosa.load(
                         audio_path, sr=self.config["sample_rate"], mono=True
                     )
 
