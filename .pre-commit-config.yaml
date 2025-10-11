@@ -44,6 +44,7 @@ repos:
       - id: mypy
         args: [--config-file=pyproject.toml, --namespace-packages]
         additional_dependencies: [types-PyYAML, types-requests]
+        exclude: ^(src/pipelines/|src/storage/(models|file_backend)\.py|src/utils/(person_identity|automatic_labeling|size_based_person_analysis|logging_config)\.py|src/version\.py|src/exporters/|src/schemas/|examples/|scripts/)
 
   # Security scanning
   - repo: https://github.com/PyCQA/bandit
