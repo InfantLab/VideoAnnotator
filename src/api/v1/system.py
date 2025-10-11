@@ -46,7 +46,8 @@ async def detailed_health_check():
     """Detailed system health check.
 
     Returns:
-        Comprehensive system health information"""
+        Comprehensive system health information
+    """
     try:
         # Get system information
         cpu_percent = psutil.cpu_percent(interval=1)
@@ -155,8 +156,7 @@ async def detailed_health_check():
 
 @router.get("/metrics")
 async def get_system_metrics():
-    """
-    Get system performance metrics.
+    """Get system performance metrics.
 
     Returns:
         System performance and usage metrics
@@ -195,8 +195,7 @@ async def get_system_metrics():
 
 @router.get("/config")
 async def get_system_config():
-    """
-    Get current system configuration.
+    """Get current system configuration.
 
     Returns:
         System configuration information (non-sensitive)
@@ -233,8 +232,7 @@ async def get_system_config():
 
 @router.get("/database")
 async def get_database_info_endpoint():
-    """
-    Get database information and statistics.
+    """Get database information and statistics.
 
     Returns:
         Database configuration and statistics

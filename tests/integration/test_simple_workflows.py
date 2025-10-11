@@ -1,6 +1,7 @@
 """Simple integration tests for batch processing components.
 
-These tests verify that the components work together correctly."""
+These tests verify that the components work together correctly.
+"""
 
 import tempfile
 from datetime import datetime

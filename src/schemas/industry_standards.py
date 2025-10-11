@@ -7,7 +7,8 @@ Most functionality has been moved to direct integration with:
 - pyannote.core (RTTM format)
 - praatio (TextGrid format)
 
-This file is preserved for compatibility but most imports have been disabled."""
+This file is preserved for compatibility but most imports have been disabled.
+"""
 
 
 # Placeholder for compatibility

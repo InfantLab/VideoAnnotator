@@ -1,7 +1,9 @@
 """LAION Empathic Insight Voice Pipeline.
 
-This pipeline implements voice emotion analysis using LAION's Empathic Insight Voice models.
-It utilizes a Whisper-based audio encoder and MLP classifiers for emotion prediction."""
+This pipeline implements voice emotion analysis using LAION's Empathic
+Insight Voice models. It utilizes a Whisper-based audio encoder and MLP
+classifiers for emotion prediction.
+"""
 
 import logging
 from pathlib import Path
@@ -83,11 +85,11 @@ MLP_DROPOUTS = [0.0, 0.1, 0.1, 0.1]
 
 # Define the MLP model for emotion classification
 class FullEmbeddingMLP(nn.Module):
-    """
-    MLP model for emotion classification from full Whisper embeddings.
+    """MLP model for emotion classification from full Whisper embeddings.
 
-    This model takes a flattened Whisper embedding, projects it to a lower dimension,
-    and then passes it through a series of MLP layers to predict emotion scores.
+    This model takes a flattened Whisper embedding, projects it to a
+    lower dimension, and then passes it through a series of MLP layers
+    to predict emotion scores.
     """
 
     def __init__(
@@ -105,7 +107,8 @@ class FullEmbeddingMLP(nn.Module):
             embed_dim: Dimension of the Whisper embedding
             projection_dim: Dimension to project the flattened embedding to
             mlp_hidden_dims: List of hidden dimensions for MLP layers
-            mlp_dropout_rates: List of dropout rates for each layer (including input)"""
+            mlp_dropout_rates: List of dropout rates for each layer (including input)
+        """
         super().__init__()
         if len(mlp_dropout_rates) != len(mlp_hidden_dims) + 1:
             raise ValueError(
@@ -232,8 +235,7 @@ class LAIONVoicePipeline(WhisperBasePipeline):
         scene_detection_results: list[dict[str, Any]] | None = None,
         include_transcription: bool = False,
     ) -> list[dict[str, Any]]:
-        """
-        Process video to extract audio, segment it, and predict emotions.
+        """Process video to extract audio, segment it, and predict emotions.
 
         Args:
             video_path: Path to the video file
@@ -590,8 +592,7 @@ class LAIONVoicePipeline(WhisperBasePipeline):
         diarization_results: dict[str, Any] | None = None,
         scene_detection_results: list[dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Segment audio based on the selected segmentation strategy.
+        """Segment audio based on the selected segmentation strategy.
 
         Args:
             audio: Audio waveform as numpy array
@@ -900,8 +901,7 @@ class LAIONVoicePipeline(WhisperBasePipeline):
 
     @torch.no_grad()
     def _get_whisper_embedding(self, audio_segment: np.ndarray) -> torch.Tensor | None:
-        """
-        Get Whisper embeddings for an audio segment using parent pipeline.
+        """Get Whisper embeddings for an audio segment using parent pipeline.
 
         Args:
             audio_segment: Audio waveform as numpy array
@@ -921,8 +921,7 @@ class LAIONVoicePipeline(WhisperBasePipeline):
             return None
 
     def _predict_emotions(self, embedding: torch.Tensor) -> dict[str, Any]:
-        """
-        Predict emotions from audio embedding using MLP classifiers.
+        """Predict emotions from audio embedding using MLP classifiers.
 
         Args:
             embedding: Whisper embedding tensor

@@ -1,7 +1,8 @@
 """Test that generated docs/pipelines_spec.md covers all registry pipelines.
 
-This is a lightweight guard ensuring contributors regenerate the spec after
-changing registry metadata."""
+This is a lightweight guard ensuring contributors regenerate the spec
+after changing registry metadata.
+"""
 
 from pathlib import Path
 

@@ -1,8 +1,10 @@
 """Controlled vocabularies for registry metadata.
 
-These are intentionally small for v1.2.1 and can expand in later versions.
-Validation is currently soft (tests may reference these); the loader does not yet
-reject unknown values to preserve flexibility while iterating."""
+These are intentionally small for v1.2.1 and can expand in later
+versions. Validation is currently soft (tests may reference these); the
+loader does not yet reject unknown values to preserve flexibility while
+iterating.
+"""
 
 from __future__ import annotations
 

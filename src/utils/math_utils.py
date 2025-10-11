@@ -1,4 +1,7 @@
-"""Mathematical utility functions for calculations on keypoints and audio data."""
+"""Mathematical utility functions for calculations on keypoints and audio.
+
+data.
+"""
 
 import numpy as np
 
@@ -11,7 +14,8 @@ def avgxys(xyc, threshold=0.5):
         threshold: confidence threshold.
 
     Returns:
-        avgx, avgy"""
+        avgx, avgy
+    """
     # get the x,y values where conf > threshold
     x = xyc[:, 0]
     y = xyc[:, 1]
@@ -32,7 +36,8 @@ def stdevxys(xyc, threshold=0.5):
         threshold: confidence threshold.
 
     Returns:
-        stdx, stdy"""
+        stdx, stdy
+    """
     # get the x,y values where conf > threshold
     x = xyc[:, 0]
     y = xyc[:, 1]
@@ -53,7 +58,8 @@ def rowcogs(keypoints1d, threshold=0.5):
         threshold: confidence threshold.
 
     Returns:
-        avgx, avgy"""
+        avgx, avgy
+    """
     # get the x,y values where conf > threshold
     xyc3 = keypoints1d.to_numpy().reshape(-1, 3)
     return avgxys(xyc3, threshold)
@@ -67,7 +73,8 @@ def rowstds(keypoints1d, threshold=0.5):
         threshold: confidence threshold.
 
     Returns:
-        stdx, stdy"""
+        stdx, stdy
+    """
     xycs3 = keypoints1d.to_numpy().reshape(-1, 3)
     return stdevxys(xycs3, threshold)
 
@@ -75,9 +82,9 @@ def rowstds(keypoints1d, threshold=0.5):
 def centreOfGravity(df, frames=(), people="all", bodypart="whole"):
     """Compute center of gravity columns for keypoints in a DataFrame.
 
-    Compute average position of a bodypart across frames and people and add
-    `cog.x` and `cog.y` columns to the DataFrame. Useful for plotting time
-    series of movement.
+        Compute average position of a bodypart across frames and people and add
+        `cog.x` and `cog.y` columns to the DataFrame. Useful for plotting time
+        series of movement.
 
     Args:
         df (DataFrame): Dataframe of keypoints.
@@ -86,7 +93,8 @@ def centreOfGravity(df, frames=(), people="all", bodypart="whole"):
         bodypart (str): Which bodypart to use, default is "whole" for all keypoints.
 
     Returns:
-        DataFrame: Dataframe with added center of gravity columns."""
+        DataFrame: Dataframe with added center of gravity columns.
+    """
     if len(frames) == 0:
         frames = df.frame.unique()
 

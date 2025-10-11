@@ -14,7 +14,8 @@ NOT in v1.2.1 scope:
 - Plugin sandbox / loading
 - Multi-modal correlation metadata
 
-Future fields (documented only): resources, capabilities, modalities, supports_streaming."""
+Future fields (documented only): resources, capabilities, modalities, supports_streaming.
+"""
 
 from __future__ import annotations
 
@@ -57,6 +58,8 @@ class PipelineConfigField:
 
 @dataclass
 class PipelineMetadata:
+    """Structured metadata describing a single pipeline."""
+
     name: str
     display_name: str
     description: str
@@ -78,11 +81,13 @@ class PipelineRegistry:
     """Minimal registry to load & provide pipeline metadata."""
 
     def __init__(self, metadata_dir: Path | None = None):
+        """Initialize the registry and set the metadata directory."""
         self.metadata_dir = metadata_dir or DEFAULT_METADATA_DIR
         self._pipelines: dict[str, PipelineMetadata] = {}
         self._loaded = False
 
     def load(self, force: bool = False) -> None:
+        """Load metadata files from disk, optionally forcing a reload."""
         if self._loaded and not force:
             return
         self._pipelines.clear()
@@ -186,11 +191,13 @@ class PipelineRegistry:
         )
 
     def list(self) -> builtins.list[PipelineMetadata]:
+        """Return all loaded pipeline metadata entries."""
         if not self._loaded:
             self.load()
         return list(self._pipelines.values())
 
     def get(self, name: str) -> PipelineMetadata | None:
+        """Return the metadata for a pipeline by name if available."""
         if not self._loaded:
             self.load()
         return self._pipelines.get(name)
@@ -201,6 +208,7 @@ _registry_instance: PipelineRegistry | None = None
 
 
 def get_registry() -> PipelineRegistry:
+    """Return the shared PipelineRegistry singleton instance."""
     global _registry_instance
     if _registry_instance is None:
         _registry_instance = PipelineRegistry()

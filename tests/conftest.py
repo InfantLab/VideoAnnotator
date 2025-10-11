@@ -1,3 +1,5 @@
+"""Shared pytest fixtures and environment patches for VideoAnnotator tests."""
+
 import pytest
 
 
@@ -11,7 +13,8 @@ def patch_speech_pipeline_cuda(monkeypatch):
     without CUDA support leading to failures. We now:
       - Return the real torch.cuda.is_available() result
       - Allow an opt-in override by setting TEST_FORCE_CUDA=1 in env
-    This keeps tests deterministic while remaining safe on CPU-only machines."""
+    This keeps tests deterministic while remaining safe on CPU-only machines.
+    """
     import os
 
     try:
@@ -47,7 +50,10 @@ def patch_hf_token(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def patch_pipeline_availability(monkeypatch):
-    """Patch pipeline availability flags to True for all tests unless explicitly testing absence."""
+    """Patch pipeline availability flags to True for all tests unless.
+
+    explicitly testing absence.
+    """
     # Patch for speech pipeline (whisper)
     try:
         monkeypatch.setattr(
@@ -68,13 +74,6 @@ def patch_pipeline_availability(monkeypatch):
         pass
     yield
 
-
-"""
-Test configuration for VideoAnnotator pipeline system.
-
-This module contains pytest configuration and fixtures for testing
-the VideoAnnotator system.
-"""
 
 import tempfile
 from pathlib import Path

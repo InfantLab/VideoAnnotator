@@ -11,7 +11,8 @@ Public API:
 - validate_emotion_data(data: dict) -> List[str]
 - validate_emotion_file(path: Path | str) -> List[str]
 
-Return value: list of error strings. Empty list means valid."""
+Return value: list of error strings. Empty list means valid.
+"""
 
 from __future__ import annotations
 
@@ -27,6 +28,7 @@ def _err(errors: list[str], msg: str) -> None:
 
 
 def validate_emotion_data(data: dict[str, Any]) -> list[str]:
+    """Validate in-memory emotion payloads and return a list of errors."""
     errors: list[str] = []
     # Basic presence
     for key in REQUIRED_TOP_LEVEL:
@@ -132,6 +134,7 @@ def validate_emotion_data(data: dict[str, Any]) -> list[str]:
 
 
 def validate_emotion_file(path: str | Path) -> list[str]:
+    """Validate an emotion JSON file located at the given path."""
     p = Path(path)
     if not p.exists():
         return [f"File not found: {p}"]

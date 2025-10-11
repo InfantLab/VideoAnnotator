@@ -1,3 +1,5 @@
+"""Legacy batch processing entry point for standalone workflows."""
+
 import os
 import time
 
@@ -14,23 +16,24 @@ from src.utils.keypoint_utils import normalize_keypoints
 def process_video(model, video_path, data_out, metadata_row, force_process=False):
     """Process a single video file to extract keypoints and metadata.
 
-    Parameters:
-    -----------
-    model : YOLO
-        YOLOv8 model for keypoint detection
-    video_path : str
-        Path to the video file
-    data_out : str
-        Directory to save processed data
-    metadata_row : dict or None
-        Metadata for the video if available
-    force_process : bool
-        Whether to force reprocessing if already done
+        Parameters:
+        -----------
+        model : YOLO
+            YOLOv8 model for keypoint detection
+        video_path : str
+            Path to the video file
+        data_out : str
+            Directory to save processed data
+        metadata_row : dict or None
+            Metadata for the video if available
+        force_process : bool
+            Whether to force reprocessing if already done
 
     Returns:
-    --------
-    dict
-        Updated metadata row"""
+        --------
+        dict
+        Updated metadata row
+    """
     videoname = os.path.basename(video_path)
     stemname = get_stem_name(video_path)
     print(f"Processing video: {videoname}")
@@ -124,17 +127,18 @@ def process_video(model, video_path, data_out, metadata_row, force_process=False
 def normalize_and_save_keypoints(video_row, data_out):
     """Normalize keypoints from raw keypoints and save to file.
 
-    Parameters:
-    -----------
-    video_row : dict
-        Row from processedvideos containing video metadata
-    data_out : str
-        Directory to save processed data
+        Parameters:
+        -----------
+        video_row : dict
+            Row from processedvideos containing video metadata
+        data_out : str
+            Directory to save processed data
 
     Returns:
-    --------
-    str
-        Path to the normalized keypoints file"""
+        --------
+        str
+        Path to the normalized keypoints file
+    """
     # Read the raw keypoints
     keypoints_df = pd.read_csv(video_row["Keypoints.file"])
 
@@ -184,7 +188,8 @@ def process_all_videos(
     force_metadata : bool
         Whether to force metadata extraction
     force_process : bool
-        Whether to force video processing"""
+        Whether to force video processing
+    """
     # Use default metadata file if none provided
     if metadata_file is None:
         metadata_file = PATH_CONFIG["default_metadata_file"]
@@ -215,7 +220,8 @@ def understand_videos(videos_in, data_out):
     videos_in : str
         Directory containing input videos
     data_out : str
-        Directory to save processed data"""
+        Directory to save processed data
+    """
     processedvideos = getProcessedVideos(data_out)
 
     for index, row in processedvideos.iterrows():

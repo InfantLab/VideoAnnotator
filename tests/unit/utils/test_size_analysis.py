@@ -73,7 +73,10 @@ class TestPersonTrackingSizeAnalysisIntegration:
 
     @pytest.fixture
     def pipeline_config(self):
-        """Configuration for person tracking pipeline with size-based analysis."""
+        """Configuration for person tracking pipeline with size-based.
+
+        analysis.
+        """
         return {
             "model": "models/yolo/yolo11n-pose.pt",
             "conf_threshold": 0.4,

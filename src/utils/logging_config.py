@@ -1,7 +1,8 @@
 """Enhanced logging configuration for VideoAnnotator API Server.
 
-Provides structured logging with file rotation, request tracking,
-and comprehensive debugging support."""
+Provides structured logging with file rotation, request tracking, and
+comprehensive debugging support.
+"""
 
 import json
 import logging
@@ -93,6 +94,7 @@ class VideoAnnotatorLoggingConfig:
     """Configuration class for VideoAnnotator logging system."""
 
     def __init__(self, logs_dir: str = "logs", log_level: str = "INFO"):
+        """Initialize logging paths and default log level."""
         self.logs_dir = Path(logs_dir)
         self.log_level = log_level.upper()
         self.logs_dir.mkdir(exist_ok=True)
@@ -107,7 +109,6 @@ class VideoAnnotatorLoggingConfig:
         self, capture_warnings: bool = True, capture_stdstreams: bool = False
     ) -> dict[str, logging.Logger]:
         """Set up comprehensive logging system."""
-
         # Clear any existing handlers
         root_logger = logging.getLogger()
         for handler in root_logger.handlers[:]:

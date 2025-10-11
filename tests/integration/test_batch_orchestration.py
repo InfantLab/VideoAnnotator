@@ -1,7 +1,8 @@
 """Integration tests for batch processing components.
 
 Tests the integration between BatchOrchestrator, ProgressTracker,
-FailureRecovery, and other batch processing components."""
+FailureRecovery, and other batch processing components.
+"""
 
 import asyncio
 import tempfile
@@ -351,7 +352,11 @@ class TestBatchAsyncIntegration:
         mock_metadata,
         mock_extract,
     ):
-        """Test asynchronous job processing workflow (robust to dummy files and external dependencies)."""
+        """Test asynchronous job processing workflow (robust to dummy files
+        and.
+
+        external dependencies).
+        """
         # Patch logger to avoid closed file errors
         mock_logger.return_value = Mock()
 

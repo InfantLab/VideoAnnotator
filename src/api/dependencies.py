@@ -17,9 +17,7 @@ security = HTTPBearer()
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict[str, Any]:
-    """
-    Get current user from API token using secure token manager.
-    """
+    """Get current user from API token using secure token manager."""
     token = credentials.credentials
 
     if not token:
@@ -66,8 +64,7 @@ async def get_optional_user(
         HTTPBearer(auto_error=False)
     ),
 ) -> dict[str, Any] | None:
-    """
-    Get current user if token is provided, otherwise return None.
+    """Get current user if token is provided, otherwise return None.
 
     Used for endpoints that work with or without authentication.
     """
@@ -81,7 +78,7 @@ async def get_optional_user(
 
 
 def _validate_api_key_header(raw: str, db: Session) -> dict[str, Any] | None:
-    """Helper to validate legacy API key header (va_ prefix keys).
+    """Validate legacy API key headers that use the va_ prefix.
 
     Returns user dict if valid else None.
     """

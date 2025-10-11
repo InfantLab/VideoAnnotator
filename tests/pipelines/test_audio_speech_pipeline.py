@@ -1,4 +1,7 @@
-from unittest.mock import patch
+"""Unit tests for diarization and speech recognition pipelines."""
+
+import os
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
@@ -6,24 +9,13 @@ import pytest
 
 @pytest.fixture(scope="class", autouse=True)
 def mock_librosa_load_class(request):
-    """Mock librosa.load for all tests in TestSpeechPipeline to prevent numba/llvmlite crash."""
+    """Mock librosa.load for all tests in TestSpeechPipeline to avoid numba crashes."""
     patcher = patch("librosa.load", autospec=True)
     mock_load = patcher.start()
-    dummy_audio = np.zeros(16000 * 3, dtype=np.float32)  # 3 seconds of silence
+    dummy_audio = np.zeros(16000 * 3, dtype=np.float32)
     mock_load.return_value = (dummy_audio, 16000)
     request.addfinalizer(patcher.stop)
 
-
-"""
-Unit tests for Diarization and Speech Recognition Pipelines.
-
-Tests cover speaker diarization, speech recognition, and audio analysis functionality.
-"""
-
-import os
-from unittest.mock import Mock
-
-import pytest
 
 from src.pipelines.audio_processing.diarization_pipeline import DiarizationPipeline
 from src.pipelines.audio_processing.speech_pipeline import SpeechPipeline
@@ -256,7 +248,10 @@ class TestSpeechPipeline:
     def test_speech_audio_processing(
         self, mock_whisper_load_model, mock_cuda, mock_whisper, temp_audio_file
     ):
-        """Test speech recognition processing (librosa.load is globally mocked by fixture)."""
+        """Test speech recognition processing (librosa.load is globally mocked.
+
+        by fixture).
+        """
         # Mock whisper transcription result
         mock_result = {
             "text": "Hello world, this is a test.",

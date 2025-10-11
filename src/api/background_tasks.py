@@ -1,7 +1,8 @@
 """Background task management for VideoAnnotator API server.
 
 Integrates job processing directly into the API server using FastAPI's
-background tasks and asyncio for seamless operation."""
+background tasks and asyncio for seamless operation.
+"""
 
 import asyncio
 import time
@@ -17,8 +18,7 @@ logger = get_logger("api")
 
 
 class BackgroundJobManager:
-    """
-    Manages background job processing within the API server.
+    """Manages background job processing within the API server.
 
     Runs as a background task that continuously polls for pending jobs
     and processes them using the existing pipeline infrastructure.
@@ -35,7 +35,8 @@ class BackgroundJobManager:
         Args:
             storage_backend: Storage backend for job management
             poll_interval: Seconds between database polls
-            max_concurrent_jobs: Maximum jobs to process simultaneously"""
+            max_concurrent_jobs: Maximum jobs to process simultaneously
+        """
         self.storage = storage_backend or get_storage_backend()
         self.poll_interval = poll_interval
         self.max_concurrent_jobs = max_concurrent_jobs
@@ -94,7 +95,7 @@ class BackgroundJobManager:
         logger.info("[STOP] Background job processing stopped")
 
     async def _job_processing_loop(self):
-        """Main background processing loop."""
+        """Run the main background processing loop."""
         try:
             while self.running:
                 await self._process_cycle()
@@ -110,7 +111,7 @@ class BackgroundJobManager:
                 self.background_task = asyncio.create_task(self._job_processing_loop())
 
     async def _process_cycle(self):
-        """Single processing cycle - check for jobs and process them."""
+        """Run a single processing cycle to check for and process jobs."""
         try:
             # Get pending jobs from database
             pending_job_ids = self.storage.list_jobs(status_filter="pending")
@@ -205,8 +206,7 @@ class BackgroundJobManager:
             self.processing_jobs.discard(job_id)
 
     def _run_single_job_processing(self, job) -> bool:
-        """
-        Run the actual job processing using JobProcessor.
+        """Run the actual job processing using JobProcessor.
 
         This is a synchronous method that runs in a thread executor.
         """

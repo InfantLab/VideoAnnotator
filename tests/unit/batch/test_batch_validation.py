@@ -1,6 +1,7 @@
 """Test file to validate the actual batch processing APIs.
 
-Run manually with: python -m pytest tests/test_batch_validation.py -v"""
+Run manually with: python -m pytest tests/test_batch_validation.py -v
+"""
 
 import tempfile
 from datetime import datetime

@@ -1,12 +1,7 @@
-from pathlib import Path
-
-"""
-Unit tests for FailureRecovery - testing actual implementation.
-
-These tests focus on the real API including should_retry(job, error) and calculate_retry_delay(job).
-"""
+"""Unit tests for FailureRecovery covering real implementation paths."""
 
 from datetime import datetime
+from pathlib import Path
 
 from src.batch.recovery import FailureRecovery, RetryStrategy
 from src.batch.types import BatchJob, JobStatus, PipelineResult

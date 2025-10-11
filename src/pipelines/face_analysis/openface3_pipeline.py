@@ -1,8 +1,10 @@
 """OpenFace 3.0 face analysis pipeline.
 
-This pipeline integrates CMU's OpenFace 3.0 for comprehensive facial behavior analysis,
-including facial landmarks, action units, head pose, and gaze estimation.
-Uses COCO format for compatibility with the VideoAnnotator standards."""
+This pipeline integrates CMU's OpenFace 3.0 for comprehensive facial
+behavior analysis, including facial landmarks, action units, head pose,
+and gaze estimation. Uses COCO format for compatibility with the
+VideoAnnotator standards.
+"""
 
 import json
 import logging
@@ -46,11 +48,12 @@ OPENFACE3_AVAILABLE = False  # Will be updated to True after successful lazy imp
 
 
 def _lazy_import_openface():
-    """Import OpenFace modules lazily to avoid argparse side-effects at import time.
+    """Import OpenFace modules lazily to avoid argparse side-effects at import.
 
-    Some OpenFace distributions parse command line arguments on import. Delaying
-    import until pipeline.initialize() prevents pytest (test collection) from
-    encountering unexpected argparse exits."""
+    Some OpenFace distributions parse command line arguments on import.
+    Delaying import until pipeline.initialize() prevents pytest (test
+    collection) from encountering unexpected argparse exits.
+    """
     global OPENFACE3_AVAILABLE, FaceDetector, LandmarkDetector, MultitaskPredictor
     # If already successfully imported return True immediately
     if OPENFACE3_AVAILABLE:
@@ -77,8 +80,7 @@ def _lazy_import_openface():
 
 
 class OpenFace3Pipeline(BasePipeline):
-    """
-    OpenFace 3.0 face analysis pipeline using COCO format.
+    """OpenFace 3.0 face analysis pipeline using COCO format.
 
     Provides comprehensive facial behavior analysis including:
     - 2D and 3D facial landmarks (68-point model)
@@ -89,6 +91,7 @@ class OpenFace3Pipeline(BasePipeline):
     """
 
     def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize OpenFace3Pipeline with merged default config."""
         default_config = {
             "detection_confidence": 0.7,
             "landmark_model": "98_point",  # Use 98_point - we have the correct model
@@ -456,8 +459,7 @@ class OpenFace3Pipeline(BasePipeline):
         pps: float = 1.0,
         output_dir: str | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Process video with OpenFace 3.0 face analysis.
+        """Process video with OpenFace 3.0 face analysis.
 
         Args:
             video_path: Path to video file
@@ -1010,7 +1012,7 @@ class OpenFace3Pipeline(BasePipeline):
         }
 
     def _parse_gaze(self, pose_output):
-        """Parse gaze from MultitaskPredictor output (using head pose as proxy)."""
+        """Parse gaze from MultitaskPredictor output using head pose as proxy."""
         # For now, use head pose as gaze direction proxy
         # In future versions, this could use a dedicated gaze model
         pose_values = pose_output.detach().cpu().numpy().flatten()

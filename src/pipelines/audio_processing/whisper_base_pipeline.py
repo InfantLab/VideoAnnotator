@@ -1,7 +1,9 @@
 """Whisper Base Pipeline for VideoAnnotator.
 
-This module provides a base pipeline for Whisper-based audio processing tasks.
-It serves as a foundation for both speech recognition and voice emotion analysis."""
+This module provides a base pipeline for Whisper-based audio processing
+tasks. It serves as a foundation for both speech recognition and voice
+emotion analysis.
+"""
 
 import gc
 import logging
@@ -56,8 +58,7 @@ except ImportError:
 
 
 class WhisperBasePipeline(BasePipeline):
-    """
-    Base pipeline for Whisper-based audio processing tasks.
+    """Base pipeline for Whisper-based audio processing tasks.
 
     This class provides common functionality for loading Whisper models,
     processing audio, and extracting embeddings. It supports both the
@@ -75,7 +76,8 @@ class WhisperBasePipeline(BasePipeline):
                 - use_fp16: Use half precision when possible (default: True)
                 - cache_dir: Model cache directory (default: "./models/whisper")
                 - use_auth_token: Use HF auth token for gated models (default: False)
-                - normalize_audio: Normalize audio during preprocessing (default: True)"""
+                - normalize_audio: Normalize audio during preprocessing (default: True)
+        """
         default_config = {
             "whisper_model": "base",  # Standard Whisper model or HF model ID
             "sample_rate": 16000,  # Whisper's preferred sample rate
@@ -170,10 +172,10 @@ class WhisperBasePipeline(BasePipeline):
         self.logger.info("WhisperBasePipeline initialized successfully")
 
     def _load_whisper_model(self) -> None:
-        """
-        Load the appropriate Whisper model based on configuration.
+        """Load the appropriate Whisper model based on configuration.
 
-        This method supports both standard Whisper and Hugging Face variants.
+        This method supports both standard Whisper and Hugging Face
+        variants.
         """
         model_id = self.config["whisper_model"]
         cache_dir = self.config.get("cache_dir")
@@ -199,8 +201,7 @@ class WhisperBasePipeline(BasePipeline):
     def _load_hf_whisper_model(
         self, model_id: str, cache_dir: str | None = None
     ) -> None:
-        """
-        Load a Whisper model from Hugging Face.
+        """Load a Whisper model from Hugging Face.
 
         Args:
             model_id: Hugging Face model ID
@@ -266,8 +267,7 @@ class WhisperBasePipeline(BasePipeline):
             raise RuntimeError(f"Failed to load HF Whisper model: {e}")
 
     def _load_standard_whisper_model(self, model_size: str) -> None:
-        """
-        Load a standard Whisper model.
+        """Load a standard Whisper model.
 
         Args:
             model_size: Model size ("tiny", "base", "small", "medium", "large")
@@ -303,8 +303,8 @@ class WhisperBasePipeline(BasePipeline):
     def extract_audio_from_video(
         self, video_path: str | Path
     ) -> tuple[np.ndarray, int]:
-        """
-        Extract audio from video file and preprocess it.
+        """Extract audio from video file and preprocess it.
+
         Uses FFmpeg for safer extraction, then librosa for processing.
 
         Args:
@@ -393,8 +393,7 @@ class WhisperBasePipeline(BasePipeline):
     def get_whisper_embedding(
         self, audio: np.ndarray, pad_or_trim: bool = True, target_seq_len: int = 1500
     ) -> torch.Tensor | None:
-        """
-        Extract Whisper embeddings from audio.
+        """Extract Whisper embeddings from audio.
 
         Args:
             audio: Audio waveform as numpy array
@@ -447,8 +446,7 @@ class WhisperBasePipeline(BasePipeline):
     def _pad_or_trim_embedding(
         self, embedding: torch.Tensor, target_seq_len: int = 1500
     ) -> torch.Tensor:
-        """
-        Pad or trim embedding to the target sequence length.
+        """Pad or trim embedding to the target sequence length.
 
         Args:
             embedding: Whisper embedding tensor
@@ -485,8 +483,7 @@ class WhisperBasePipeline(BasePipeline):
         max_segment_duration: float = 30.0,
         segment_overlap: float = 0.0,
     ) -> list[dict[str, Any]]:
-        """
-        Segment audio based on a fixed interval strategy.
+        """Segment audio based on a fixed interval strategy.
 
         Args:
             audio: Audio waveform as numpy array
@@ -582,8 +579,7 @@ class WhisperBasePipeline(BasePipeline):
             self.logger.error(f"Error cleaning up resources: {e}")
 
     def get_schema(self) -> dict[str, Any]:
-        """
-        Return the output schema for this pipeline.
+        """Return the output schema for this pipeline.
 
         Returns:
             Dictionary describing the output format
@@ -606,8 +602,7 @@ class WhisperBasePipeline(BasePipeline):
         pps: float = 1.0,
         output_dir: str | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Process video/audio file to extract embeddings and segments.
+        """Process video/audio file to extract embeddings and segments.
 
         Args:
             video_path: Path to the video/audio file

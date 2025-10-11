@@ -1,7 +1,8 @@
 """Automatic Person Labeling Utilities.
 
-This module provides automatic labeling capabilities for person identification
-based on visual cues like size, position, and spatial relationships.
+This module provides automatic labeling capabilities for person
+identification based on visual cues like size, position, and spatial
+relationships.
 """
 
 import logging
@@ -30,11 +31,7 @@ class AutomaticPersonLabeler:
         self.config = config or self._default_config()
 
     def _default_config(self) -> dict:
-        """Default configuration for automatic labeling.
-
-        Returns:
-            Default configuration dict
-        """
+        """Return the default configuration for automatic labeling."""
         return {
             "size_based": {
                 "enabled": True,
@@ -111,9 +108,9 @@ class AutomaticPersonLabeler:
     ) -> dict[str, dict]:
         """Apply size-based automatic labeling.
 
-            Logic: Smaller bounding boxes typically indicate children/infants,
-                   larger bounding boxes indicate adults/parents.
-"""
+        Logic: Smaller bounding boxes typically indicate children/infants,
+               larger bounding boxes indicate adults/parents.
+        """
         labels = {}
         config = self.config["size_based"]
 
@@ -166,9 +163,9 @@ class AutomaticPersonLabeler:
     ) -> dict[str, dict]:
         """Apply position-based automatic labeling.
 
-            Logic: Person consistently in center is often the primary subject (child),
-                   persons at edges are often secondary participants (adults/caregivers).
-"""
+        Logic: Person consistently in center is often the primary subject (child),
+               persons at edges are often secondary participants (adults/caregivers).
+        """
         labels = {}
         config = self.config["position_based"]
 
@@ -242,8 +239,8 @@ class AutomaticPersonLabeler:
     ) -> dict[str, dict]:
         """Apply temporal consistency filtering to automatic labels.
 
-            Only keep labels for persons with sufficient detections.
-"""
+        Only keep labels for persons with sufficient detections.
+        """
         config = self.config["temporal_consistency"]
         filtered_labels = {}
 
@@ -288,9 +285,9 @@ class AutomaticPersonLabeler:
     ) -> dict[str, Any]:
         """Analyze spatial relationships between persons for additional context.
 
-            Returns:
-                Dict with spatial relationship analysis
-"""
+        Returns:
+            Dict with spatial relationship analysis
+        """
         analysis = {
             "person_count": len(person_detections),
             "spatial_patterns": {},
@@ -355,16 +352,16 @@ class AutomaticPersonLabeler:
 def infer_person_labels_from_tracks(
     person_tracks: list[dict], frame_annotations: list[dict], config: dict | None = None
 ) -> dict[str, dict]:
-    """Convenience function to infer person labels from tracking data.
+    """Infer person labels from tracking data using the automatic labeler.
 
-        Args:
-            person_tracks: List of person track summaries
-            frame_annotations: All frame annotations for analysis
-            config: Optional configuration for labeling
+    Args:
+        person_tracks: List of person track summaries
+        frame_annotations: All frame annotations for analysis
+        config: Optional configuration for labeling
 
-        Returns:
-            Dict mapping person_id to label information
-"""
+    Returns:
+        Dict mapping person_id to label information
+    """
     labeler = AutomaticPersonLabeler(config)
     return labeler.label_persons_automatic(person_tracks, frame_annotations)
 
@@ -374,12 +371,12 @@ def calculate_labeling_confidence(
 ) -> dict[str, float]:
     """Calculate overall confidence scores for automatic labeling.
 
-        Args:
-            person_detections: Grouped detections by person_id
+    Args:
+        person_detections: Grouped detections by person_id
 
-        Returns:
-            Dict mapping person_id to confidence score
-"""
+    Returns:
+        Dict mapping person_id to confidence score
+    """
     confidence_scores = {}
 
     for person_id, detections in person_detections.items():

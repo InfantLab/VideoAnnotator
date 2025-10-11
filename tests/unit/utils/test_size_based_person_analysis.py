@@ -1,6 +1,7 @@
 """Tests for Size-Based Person Analysis.
 
-Test suite for the simplified size-based person analysis functionality."""
+Test suite for the simplified size-based person analysis functionality.
+"""
 
 import pytest
 

@@ -1,6 +1,8 @@
 """Request logging middleware for VideoAnnotator API Server.
 
-Provides comprehensive request/response logging for debugging and monitoring."""
+Provides comprehensive request/response logging for debugging and
+monitoring.
+"""
 
 import time
 import uuid
@@ -16,6 +18,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Middleware to log all API requests and responses."""
 
     def __init__(self, app, exclude_paths: set | None = None):
+        """Initialize middleware and configure paths to skip logging."""
         super().__init__(app)
         self.exclude_paths = exclude_paths or {
             "/health",
@@ -28,7 +31,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request and log details."""
-
         # Skip logging for excluded paths
         if request.url.path in self.exclude_paths:
             return await call_next(request)
@@ -135,6 +137,7 @@ class ErrorLoggingMiddleware(BaseHTTPMiddleware):
     """Middleware to capture and log unhandled errors."""
 
     def __init__(self, app):
+        """Initialize middleware with API logger reference."""
         super().__init__(app)
         self.error_logger = get_logger("api")
 

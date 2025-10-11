@@ -1,6 +1,8 @@
 """Unit tests for Diarization and Speech Recognition Pipelines.
 
-Tests cover speaker diarization, speech recognition, and audio analysis functionality."""
+Tests cover speaker diarization, speech recognition, and audio analysis
+functionality.
+"""
 
 import os
 from unittest.mock import Mock, patch
@@ -255,7 +257,10 @@ class TestSpeechPipeline:
 
     @patch("src.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE", False)
     def test_speech_pipeline_initialize_no_whisper(self):
-        """Test initialization fails or is a no-op when Whisper not available."""
+        """Test initialization fails or is a no-op when Whisper not.
+
+        available.
+        """
         config = {}
         pipeline = SpeechPipeline(config)
 

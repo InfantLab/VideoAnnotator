@@ -34,8 +34,7 @@ Base = declarative_base()
 
 
 def get_db() -> Generator:
-    """
-    Dependency to get database session.
+    """Dependency to get database session.
 
     Yields:
         Database session that will be closed after use

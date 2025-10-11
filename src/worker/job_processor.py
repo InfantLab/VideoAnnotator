@@ -1,7 +1,8 @@
 """Background job processor for VideoAnnotator API server.
 
 Continuously polls the database for pending jobs and processes them
-using the BatchOrchestrator system."""
+using the BatchOrchestrator system.
+"""
 
 import asyncio
 import signal
@@ -30,7 +31,8 @@ class JobProcessor:
         Args:
             storage_backend: Storage backend for job management
             poll_interval: Seconds between database polls
-            max_concurrent_jobs: Maximum jobs to process simultaneously"""
+            max_concurrent_jobs: Maximum jobs to process simultaneously
+        """
         self.storage = storage_backend or get_storage_backend()
         self.poll_interval = poll_interval
         self.max_concurrent_jobs = max_concurrent_jobs
@@ -164,8 +166,7 @@ class JobProcessor:
             self.processing_jobs.discard(job_id)
 
     def _run_single_job_processing(self, job) -> bool:
-        """
-        Run the actual job processing using existing pipeline infrastructure.
+        """Run the actual job processing using existing pipeline infrastructure.
 
         This is a synchronous method that runs in a thread executor.
         """
@@ -206,8 +207,7 @@ async def run_job_processor(
     max_concurrent_jobs: int = 2,
     storage_backend: StorageBackend | None = None,
 ):
-    """
-    Entry point for running the job processor.
+    """Entry point for running the job processor.
 
     Args:
         poll_interval: Seconds between database polls

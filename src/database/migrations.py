@@ -11,8 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def init_database(force: bool = False) -> bool:
-    """
-    Initialize the database with tables and default data.
+    """Initialize the database with tables and default data.
 
     Args:
         force: If True, drop existing tables first
@@ -94,8 +93,7 @@ def create_admin_user(
     email: str = "admin@videoannotator.com",
     full_name: str = "Administrator",
 ) -> tuple[User, str] | None:
-    """
-    Create an admin user with API key.
+    """Create an admin user with API key.
 
     Returns:
         Tuple of (User, api_key) if successful, None otherwise
@@ -142,8 +140,7 @@ def create_admin_user(
 
 
 def migrate_from_memory_jobs(memory_jobs: dict) -> int:
-    """
-    Migrate jobs from in-memory storage to database.
+    """Migrate jobs from in-memory storage to database.
 
     Args:
         memory_jobs: Dictionary of jobs from the old in-memory system
@@ -192,8 +189,7 @@ def migrate_from_memory_jobs(memory_jobs: dict) -> int:
 
 
 def backup_database(backup_path: Path | None = None) -> bool:
-    """
-    Create a backup of the database.
+    """Create a backup of the database.
 
     Args:
         backup_path: Path for backup file. If None, auto-generate
@@ -228,8 +224,7 @@ def backup_database(backup_path: Path | None = None) -> bool:
 
 
 def get_database_info() -> dict:
-    """
-    Get information about the current database.
+    """Get information about the current database.
 
     Returns:
         Dictionary with database information

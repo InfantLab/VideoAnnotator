@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-"""
-Test Phase 2: PersonID Integration with Face Analysis Pipelines
+"""Test Phase 2: PersonID Integration with Face Analysis Pipelines.
 Tests face-to-person linking across all face analysis pipelines.
 """
 

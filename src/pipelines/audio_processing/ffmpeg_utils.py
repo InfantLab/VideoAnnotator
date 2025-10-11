@@ -1,4 +1,7 @@
-"""FFmpeg-based audio extraction utilities for the audio processing pipeline."""
+"""FFmpeg-based audio extraction utilities for the audio processing.
+
+pipeline.
+"""
 
 import logging
 import shutil
@@ -21,8 +24,7 @@ def extract_audio_from_video(
     format: str = "wav",
     overwrite: bool = True,
 ) -> Path | None:
-    """
-    Extract audio from video file using FFmpeg.
+    """Extract audio from video file using FFmpeg.
 
     Args:
         video_path: Path to input video file
@@ -100,8 +102,7 @@ def convert_audio_format(
     channels: int | None = None,
     overwrite: bool = True,
 ) -> Path | None:
-    """
-    Convert audio file to different format using FFmpeg.
+    """Convert audio file to different format using FFmpeg.
 
     Args:
         input_path: Path to input audio file
@@ -158,8 +159,7 @@ def convert_audio_format(
 
 
 def get_audio_info(audio_path: str | Path) -> dict | None:
-    """
-    Get audio file information using FFprobe (part of FFmpeg).
+    """Get audio file information using FFprobe (part of FFmpeg).
 
     Args:
         audio_path: Path to audio file
@@ -231,8 +231,7 @@ def get_audio_info(audio_path: str | Path) -> dict | None:
 
 
 def has_audio_stream(video_path: str | Path) -> bool:
-    """
-    Check if video file contains audio streams.
+    """Check if video file contains audio streams.
 
     Args:
         video_path: Path to video file

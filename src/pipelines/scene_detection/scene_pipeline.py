@@ -1,7 +1,9 @@
 """Standards-only scene detection and classification pipeline.
 
-This pipeline uses PySceneDetect for shot boundary detection and CLIP for scene classification,
-outputting native COCO format annotations with full standards compliance."""
+This pipeline uses PySceneDetect for shot boundary detection and CLIP
+for scene classification, outputting native COCO format annotations with
+full standards compliance.
+"""
 
 import logging
 from pathlib import Path
@@ -36,14 +38,14 @@ except ImportError:
 
 
 class SceneDetectionPipeline(BasePipeline):
-    """
-    Standards-only scene detection and classification pipeline.
+    """Standards-only scene detection and classification pipeline.
 
-    Uses PySceneDetect for shot boundary detection and CLIP for scene classification.
-    Returns native COCO format annotations.
+    Uses PySceneDetect for shot boundary detection and CLIP for scene
+    classification. Returns native COCO format annotations.
     """
 
     def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the scene detection pipeline with default config."""
         default_config = {
             "threshold": 30.0,  # Scene detection threshold
             "min_scene_length": 2.0,  # Minimum scene length in seconds
@@ -79,7 +81,6 @@ class SceneDetectionPipeline(BasePipeline):
         output_dir: str | None = None,
     ) -> list[dict[str, Any]]:
         """Process video for scene detection and classification."""
-
         # Get video metadata
         video_metadata = self._get_video_metadata(video_path)
 
@@ -165,7 +166,6 @@ class SceneDetectionPipeline(BasePipeline):
         self, video_path: str, start_time: float, end_time: float | None
     ) -> list[dict[str, float]]:
         """Detect scene boundaries using PySceneDetect."""
-
         if not SCENEDETECT_AVAILABLE:
             self.logger.warning(
                 "PySceneDetect not available, creating single scene for entire video"
@@ -217,7 +217,6 @@ class SceneDetectionPipeline(BasePipeline):
         self, video_path: str, segments: list[dict[str, float]]
     ) -> list[dict[str, Any]]:
         """Classify scenes using CLIP."""
-
         if not CLIP_AVAILABLE:
             return segments
 
@@ -317,7 +316,6 @@ class SceneDetectionPipeline(BasePipeline):
         video_metadata: dict[str, Any],
     ):
         """Save annotations in COCO format."""
-
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 

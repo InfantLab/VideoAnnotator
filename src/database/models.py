@@ -22,18 +22,23 @@ from .database import Base
 
 
 class GUID(TypeDecorator):
-    """Platform-independent GUID type that uses PostgreSQL UUID or String for other databases."""
+    """Platform-independent GUID type that uses PostgreSQL UUID or String for.
+
+    other databases.
+    """
 
     impl = CHAR
     cache_ok = True
 
     def load_dialect_impl(self, dialect):
+        """Select the appropriate database type implementation for GUID."""
         if dialect.name == "postgresql":
             return dialect.type_descriptor(PG_UUID())
         else:
             return dialect.type_descriptor(CHAR(36))
 
     def process_bind_param(self, value, dialect):
+        """Normalize values before binding them to SQL statements."""
         if value is None:
             return value
         elif dialect.name == "postgresql":
@@ -45,6 +50,7 @@ class GUID(TypeDecorator):
                 return str(value)
 
     def process_result_value(self, value, dialect):
+        """Convert database values back into UUID instances."""
         if value is None:
             return value
         else:
@@ -76,6 +82,7 @@ class User(Base):
     jobs = relationship("Job", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
+        """Return a concise representation of the User."""
         return f"<User(id={self.id}, username={self.username}, email={self.email})>"
 
 
@@ -102,6 +109,7 @@ class APIKey(Base):
     user = relationship("User", back_populates="api_keys")
 
     def __repr__(self):
+        """Return a concise representation of the APIKey."""
         return f"<APIKey(id={self.id}, name={self.key_name}, prefix={self.key_prefix})>"
 
 
@@ -187,6 +195,7 @@ class Job(Base):
         }
 
     def __repr__(self):
+        """Return a concise representation of the Job."""
         return f"<Job(id={self.id}, status={self.status}, video={self.video_filename})>"
 
 

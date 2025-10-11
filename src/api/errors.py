@@ -9,7 +9,8 @@ Usage:
     raise APIError(status_code=404, code="PIPELINE_NOT_FOUND", message="Pipeline 'x' not found", hint="Run 'videoannotator pipelines --detailed'")
 
 Register the exception handler by calling register_error_handlers(app) in API startup.
-(If already imported in src/api/main.py, just add the call.)"""
+(If already imported in src/api/main.py, just add the call.)
+"""
 
 from __future__ import annotations
 
@@ -21,9 +22,12 @@ from pydantic import BaseModel
 
 
 class APIError(Exception):
+    """Standardized API error with status code and machine readable fields."""
+
     def __init__(
         self, status_code: int, code: str, message: str, hint: str | None = None
     ):
+        """Initialize the API error with envelope metadata."""
         self.status_code = status_code
         self.code = code
         self.message = message
@@ -63,6 +67,7 @@ async def generic_http_exception_handler(
 
 
 def register_error_handlers(app):
+    """Register API error handlers on the provided FastAPI app."""
     from fastapi import HTTPException
 
     app.add_exception_handler(APIError, api_error_handler)

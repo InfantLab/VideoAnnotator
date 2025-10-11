@@ -1,7 +1,8 @@
 """Debug endpoints for VideoAnnotator API v1.2.0.
 
-These endpoints provide debugging and diagnostic information for client-server
-collaboration and troubleshooting."""
+These endpoints provide debugging and diagnostic information for client-
+server collaboration and troubleshooting.
+"""
 
 import json
 import platform
@@ -47,8 +48,7 @@ def log_request(
 
 @router.get("/server-info")
 async def get_server_debug_info():
-    """
-    Get comprehensive server information for debugging.
+    """Get comprehensive server information for debugging.
 
     Returns server configuration, status, and system information.
     """
@@ -95,7 +95,7 @@ async def get_server_debug_info():
 
         return {
             "server": {
-                "version": "1.2.0",
+                "version": videoannotator_version,
                 "videoannotator_version": videoannotator_version,
                 "environment": "development",  # TODO: Get from config
                 "start_time": _server_start_time.isoformat(),
@@ -151,10 +151,10 @@ async def get_server_debug_info():
 
 @router.get("/token-info")
 async def get_token_debug_info(current_user: dict = Depends(get_current_user)):
-    """
-    Get detailed information about the current API token.
+    """Get detailed information about the current API token.
 
-    Returns token validation status, permissions, and rate limiting info.
+    Returns token validation status, permissions, and rate limiting
+    info.
     """
     try:
         # Mock response - replace with actual token validation logic
@@ -200,8 +200,7 @@ async def get_token_debug_info(current_user: dict = Depends(get_current_user)):
 
 @router.get("/pipelines")
 async def get_pipeline_debug_info():
-    """
-    Get detailed pipeline configuration and status information.
+    """Get detailed pipeline configuration and status information.
 
     Returns comprehensive pipeline information including components,
     parameters, and current status.
@@ -495,10 +494,10 @@ async def get_pipeline_debug_info():
 async def get_job_debug_info(
     job_id: str, current_user: dict = Depends(get_current_user)
 ):
-    """
-    Get detailed debugging information for a specific job.
+    """Get detailed debugging information for a specific job.
 
-    Returns comprehensive job status, logs, resource usage, and file information.
+    Returns comprehensive job status, logs, resource usage, and file
+    information.
     """
     try:
         storage = get_storage_backend()
@@ -577,8 +576,7 @@ async def get_request_log(
     ),
     current_user: dict = Depends(get_current_user),
 ):
-    """
-    Get recent API request log for debugging.
+    """Get recent API request log for debugging.
 
     Returns recent API requests with timing and status information.
     """
@@ -603,8 +601,7 @@ async def mock_sse_events(
     token: str | None = Query(None, description="API token for authentication"),
     job_id: str | None = Query(None, description="Job ID to monitor"),
 ):
-    """
-    Mock SSE endpoint for client testing until real SSE is implemented.
+    """Mock SSE endpoint for client testing until real SSE is implemented.
 
     Returns Server-Sent Events format for job monitoring testing.
     """
@@ -613,7 +610,7 @@ async def mock_sse_events(
     from fastapi.responses import StreamingResponse
 
     async def event_generator():
-        """Generate mock SSE events for testing"""
+        """Generate mock SSE events for testing."""
         event_count = 0
 
         while event_count < 10:  # Send 10 mock events then stop
@@ -683,11 +680,10 @@ async def mock_sse_events(
 
 @router.get("/background-jobs")
 async def get_background_jobs_status():
-    """
-    Get status of background job processing system.
+    """Get status of background job processing system.
 
-    Returns information about the background job manager
-    including currently processing jobs and system status.
+    Returns information about the background job manager including
+    currently processing jobs and system status.
     """
     try:
         from ..background_tasks import get_background_manager
@@ -721,7 +717,7 @@ async def get_background_jobs_status():
 
 
 def _get_pipeline_status() -> dict[str, Any]:
-    """Get current pipeline initialization status"""
+    """Get current pipeline initialization status."""
     # TODO: Replace with actual pipeline status checking
     return {
         "initialized": [

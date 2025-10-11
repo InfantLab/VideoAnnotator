@@ -22,7 +22,7 @@ GET /api/v1/debug/server-info
 ```json
 {
   "server": {
-    "version": "1.2.0",
+    "version": "1.2.2",
     "environment": "development",
     "start_time": "2025-01-23T10:30:00Z",
     "uptime_seconds": 3600,

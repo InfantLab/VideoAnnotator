@@ -11,7 +11,8 @@ This backend organizes data in a hierarchical directory structure:
 │   │   ├── audio_processing.json
 │   │   └── batch_summary.json
 │   └── ...
-└── batch_queue.json  # Current batch state"""
+└── batch_queue.json  # Current batch state
+"""
 
 import json
 import logging
@@ -30,7 +31,8 @@ class FileStorageBackend(StorageBackend):
         """Initialize file storage backend.
 
         Args:
-            base_dir: Base directory for storing all batch data"""
+            base_dir: Base directory for storing all batch data
+        """
         self.base_dir = Path(base_dir)
         self.jobs_dir = self.base_dir / "jobs"
         self.reports_dir = self.base_dir / "reports"
@@ -156,7 +158,10 @@ class FileStorageBackend(StorageBackend):
         return sorted(job_ids)
 
     def get_all_jobs(self, status_filter: str | None = None) -> list[BatchJob]:
-        """Get all job objects with full metadata, optionally filtered by status."""
+        """Get all job objects with full metadata, optionally filtered by.
+
+        status.
+        """
         jobs = []
 
         if not self.jobs_dir.exists():

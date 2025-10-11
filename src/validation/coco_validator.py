@@ -1,7 +1,8 @@
 """COCO format validation and utilities for VideoAnnotator.
 
-This module provides pycocotools integration for validating and working with
-COCO-format annotations from VideoAnnotator pipelines."""
+This module provides pycocotools integration for validating and working
+with COCO-format annotations from VideoAnnotator pipelines.
+"""
 
 import json
 import logging
@@ -52,6 +53,7 @@ class COCOValidator:
     """COCO format validator using pycocotools."""
 
     def __init__(self):
+        """Initialize the validator and verify pycocotools availability."""
         self.logger = logging.getLogger(__name__)
         if not PYCOCOTOOLS_AVAILABLE:
             raise ImportError(
@@ -61,8 +63,7 @@ class COCOValidator:
     def validate_coco_file(
         self, coco_json_path: str, pipeline_name: str = "unknown"
     ) -> COCOValidationResult:
-        """
-        Validate a COCO JSON file for format compliance.
+        """Validate a COCO JSON file for format compliance.
 
         Args:
             coco_json_path: Path to COCO JSON file
@@ -205,8 +206,7 @@ class COCOValidator:
     def evaluate_detection(
         self, gt_coco_path: str, pred_coco_path: str, pipeline_name: str = "detection"
     ) -> COCOEvaluationResult:
-        """
-        Evaluate object detection using COCO metrics.
+        """Evaluate object detection using COCO metrics.
 
         Args:
             gt_coco_path: Path to ground truth COCO JSON
@@ -257,8 +257,7 @@ class COCOValidator:
     def evaluate_keypoints(
         self, gt_coco_path: str, pred_coco_path: str, pipeline_name: str = "pose"
     ) -> COCOEvaluationResult:
-        """
-        Evaluate pose estimation using COCO keypoint metrics.
+        """Evaluate pose estimation using COCO keypoint metrics.
 
         Args:
             gt_coco_path: Path to ground truth COCO JSON
@@ -337,8 +336,7 @@ class COCOValidator:
     def validate_all_pipelines(
         self, annotations_dir: str
     ) -> dict[str, COCOValidationResult]:
-        """
-        Validate COCO files from all VideoAnnotator pipelines.
+        """Validate COCO files from all VideoAnnotator pipelines.
 
         Args:
             annotations_dir: Directory containing COCO JSON files
@@ -382,8 +380,7 @@ class COCOValidator:
         return results
 
     def create_validation_report(self, results: dict[str, COCOValidationResult]) -> str:
-        """
-        Create a human-readable validation report.
+        """Create a human-readable validation report.
 
         Args:
             results: Dictionary of validation results
@@ -448,13 +445,13 @@ class COCOValidator:
 def validate_coco_json(
     coco_json_path: str, pipeline_name: str = "unknown"
 ) -> COCOValidationResult:
-    """Convenience function to validate a single COCO JSON file."""
+    """Validate a single COCO JSON file and return the result."""
     validator = COCOValidator()
     return validator.validate_coco_file(coco_json_path, pipeline_name)
 
 
 def validate_pipeline_outputs(annotations_dir: str) -> dict[str, COCOValidationResult]:
-    """Convenience function to validate all pipeline COCO outputs."""
+    """Validate all pipeline COCO outputs found in a directory."""
     validator = COCOValidator()
     return validator.validate_all_pipelines(annotations_dir)
 
@@ -462,8 +459,7 @@ def validate_pipeline_outputs(annotations_dir: str) -> dict[str, COCOValidationR
 def create_coco_evaluation_summary(
     gt_dir: str, pred_dir: str
 ) -> dict[str, COCOEvaluationResult]:
-    """
-    Create evaluation summary for all pipelines.
+    """Create evaluation summary for all pipelines.
 
     Args:
         gt_dir: Directory containing ground truth COCO files

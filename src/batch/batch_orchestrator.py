@@ -1,7 +1,8 @@
 """BatchOrchestrator: Core batch processing engine for VideoAnnotator.
 
 Manages job queues, worker pools, progress tracking, and failure recovery
-for robust large-scale video processing."""
+for robust large-scale video processing.
+"""
 
 import logging
 import time
@@ -26,9 +27,11 @@ from storage.base import StorageBackend
 
 
 class BatchOrchestrator:
+    """Orchestrate batch processing jobs across configured pipelines."""
+
     async def start(self, max_workers: int = 4, save_checkpoints: bool = True):
-        """
-        Async entry point for batch processing (for test compatibility).
+        """Async entry point for batch processing (for test compatibility).
+
         Runs run_batch in a thread executor.
         """
         import asyncio
@@ -41,18 +44,6 @@ class BatchOrchestrator:
     # Alias for testing compatibility (so patch.object works in tests)
     def _process_job(self, job):
         return self._process_job_with_retry(job)
-
-    """
-    Orchestrates batch processing of videos through VideoAnnotator pipelines.
-
-    Features:
-    - Parallel processing with configurable worker pools
-    - Intelligent job queue management
-    - Resume capability for interrupted batches
-    - Robust failure recovery with retry mechanisms
-    - Real-time progress tracking and ETA calculation
-    - Flexible storage backends (files, SQLite, PostgreSQL)
-    """
 
     def __init__(
         self,
@@ -67,7 +58,8 @@ class BatchOrchestrator:
             storage_backend: Storage backend for annotations and metadata
             max_retries: Maximum retry attempts per failed job
             retry_strategy: Strategy for retry delays
-            checkpoint_interval: Save checkpoint every N completed jobs"""
+            checkpoint_interval: Save checkpoint every N completed jobs
+        """
         if storage_backend is None:
             # Lazy import to avoid circular import
             from storage.file_backend import FileStorageBackend
@@ -201,8 +193,7 @@ class BatchOrchestrator:
         config: ConfigDict | None = None,
         selected_pipelines: list[str] | None = None,
     ) -> str:
-        """
-        Add a video processing job to the batch queue.
+        """Add a video processing job to the batch queue.
 
         Args:
             video_path: Path to video file
@@ -244,8 +235,7 @@ class BatchOrchestrator:
         selected_pipelines: list[str] | None = None,
         extensions: list[str] = None,
     ) -> list[str]:
-        """
-        Add multiple jobs from a directory of videos.
+        """Add multiple jobs from a directory of videos.
 
         Args:
             input_dir: Directory containing video files
@@ -295,8 +285,7 @@ class BatchOrchestrator:
     def run_batch(
         self, max_workers: int = 4, save_checkpoints: bool = True
     ) -> BatchReport:
-        """
-        Execute all jobs in the batch queue.
+        """Execute all jobs in the batch queue.
 
         Args:
             max_workers: Maximum number of parallel workers
@@ -408,8 +397,7 @@ class BatchOrchestrator:
         return report
 
     def resume_batch(self, checkpoint_file: str) -> BatchReport:
-        """
-        Resume batch processing from a checkpoint.
+        """Resume batch processing from a checkpoint.
 
         Args:
             checkpoint_file: Path to checkpoint file
@@ -496,7 +484,10 @@ class BatchOrchestrator:
         return False
 
     def _should_retry_job(self, job_id: str) -> bool:
-        """Check if a job should be retried based on failure recovery settings."""
+        """Check if a job should be retried based on failure recovery.
+
+        settings.
+        """
         job = self.get_job(job_id)
         if not job:
             return False
@@ -506,8 +497,7 @@ class BatchOrchestrator:
         return job.retry_count < max_retries
 
     def _process_job_with_retry(self, job: BatchJob) -> BatchJob:
-        """
-        Process a single job with retry logic.
+        """Process a single job with retry logic.
 
         Args:
             job: Job to process
@@ -545,8 +535,7 @@ class BatchOrchestrator:
         return job
 
     def _process_single_job(self, job: BatchJob) -> BatchJob:
-        """
-        Process a single job through selected pipelines.
+        """Process a single job through selected pipelines.
 
         Args:
             job: Job to process

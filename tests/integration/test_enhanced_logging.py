@@ -1,7 +1,9 @@
 """Integration tests for enhanced logging functionality in v1.2.0.
 
 Tests the integration of enhanced model download logging with actual
-pipeline components, ensuring logging works correctly in realistic scenarios."""
+pipeline components, ensuring logging works correctly in realistic
+scenarios.
+"""
 
 import logging
 from pathlib import Path
@@ -44,7 +46,10 @@ class TestEnhancedLoggingIntegration:
                 log_first_run_info()
 
     def test_person_pipeline_logging_integration(self, caplog):
-        """Test enhanced logging integration with person pipeline loading pattern."""
+        """Test enhanced logging integration with person pipeline loading.
+
+        pattern.
+        """
 
         def mock_yolo_constructor(model_path):
             """Mock YOLO constructor that simulates model loading behavior."""
@@ -76,12 +81,17 @@ class TestEnhancedLoggingIntegration:
         assert any("✅" in msg for msg in log_messages)  # Success indicator
 
     def test_whisper_pipeline_logging_integration(self, caplog):
-        """Test enhanced logging integration with Whisper pipeline loading pattern."""
+        """Test enhanced logging integration with Whisper pipeline loading.
+
+        pattern.
+        """
 
         def mock_whisper_load_model(
             model_size, device="cpu", download_root=None, in_memory=True
         ):
-            """Mock whisper.load_model that simulates Whisper loading behavior."""
+            """Mock whisper.load_model that simulates Whisper loading
+            behavior.
+            """
             if model_size not in ["tiny", "base", "small", "medium", "large"]:
                 raise ValueError(f"Invalid model size: {model_size}")
 
@@ -161,7 +171,10 @@ class TestEnhancedLoggingIntegration:
         assert len(success_messages) >= 3
 
     def test_error_handling_in_pipeline_context(self, caplog):
-        """Test error handling and logging in realistic pipeline failure scenarios."""
+        """Test error handling and logging in realistic pipeline failure.
+
+        scenarios.
+        """
 
         def failing_model_loader(*args, **kwargs):
             raise RuntimeError("CUDA out of memory")
@@ -207,7 +220,10 @@ class TestEnhancedLoggingIntegration:
         assert any("found locally" in msg for msg in log_messages)
 
     def test_logging_performance_impact(self, caplog):
-        """Test that enhanced logging doesn't significantly impact performance."""
+        """Test that enhanced logging doesn't significantly impact.
+
+        performance.
+        """
         import time
 
         def fast_loader(*args, **kwargs):

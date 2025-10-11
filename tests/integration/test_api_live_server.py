@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-"""
-Live API server integration tests.
+"""Live API server integration tests.
 
-Tests API server functionality with full server startup and endpoint validation.
-Converted from test_api_live.py debugging script.
+Tests API server functionality with full server startup and endpoint
+validation. Converted from test_api_live.py debugging script.
 """
 
 import asyncio

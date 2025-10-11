@@ -1,7 +1,8 @@
 """Unit tests for Modular Audio Processing Pipeline.
 
 Tests cover the modular audio pipeline coordinator that manages separate
-speech recognition and speaker diarization pipelines."""
+speech recognition and speaker diarization pipelines.
+"""
 
 import os
 from unittest.mock import Mock, patch

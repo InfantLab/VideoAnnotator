@@ -24,7 +24,6 @@ __git_commit__ = None  # Will be populated by CI/CD if available
 
 def get_version_info() -> dict[str, Any]:
     """Get comprehensive version information."""
-
     # Try to get git information if available
     git_info = get_git_info()
 
@@ -260,7 +259,6 @@ def create_annotation_metadata(
     video_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Create comprehensive metadata for annotations."""
-
     # Get the version info and use it directly as the base
     metadata = get_version_info()
 

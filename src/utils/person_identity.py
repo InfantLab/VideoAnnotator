@@ -1,8 +1,9 @@
 """Person Identity Management System.
 
-This module provides consistent person identification and labeling across all VideoAnnotator pipelines.
-It ensures the same person receives the same ID across all visual analysis pipelines and supports
-semantic labeling of person identities.
+This module provides consistent person identification and labeling
+across all VideoAnnotator pipelines. It ensures the same person receives
+the same ID across all visual analysis pipelines and supports semantic
+labeling of person identities.
 """
 
 import json
@@ -24,7 +25,7 @@ class PersonLabel:
 
 
 class PersonIdentityManager:
-    """Manages person identities across pipelines and videos using COCO standards.
+    """Manage person identities across pipelines and videos.
 
     This class provides:
     - Consistent person ID assignment across video frames
@@ -305,10 +306,10 @@ class PersonIdentityManager:
     ):
         """Save person tracks and metadata to JSON file.
 
-            Args:
-                output_path: Output file path
-                detections_summary: Optional summary of detection statistics
-"""
+        Args:
+            output_path: Output file path
+            detections_summary: Optional summary of detection statistics
+        """
         person_tracks_data = []
 
         for track_id, person_id in self.track_to_person_map.items():
@@ -347,12 +348,12 @@ class PersonIdentityManager:
     def load_person_tracks(cls, tracks_file: str) -> "PersonIdentityManager":
         """Load PersonIdentityManager from saved person tracks file.
 
-            Args:
-                tracks_file: Path to person tracks JSON file
+        Args:
+            tracks_file: Path to person tracks JSON file
 
-            Returns:
-                Loaded PersonIdentityManager
-"""
+        Returns:
+            Loaded PersonIdentityManager
+        """
         with open(tracks_file) as f:
             data = json.load(f)
 
@@ -409,12 +410,12 @@ PERSON_LABELS = {
 def normalize_person_label(label: str) -> str | None:
     """Normalize person label to canonical form.
 
-        Args:
-            label: Input label (possibly an alias)
+    Args:
+        label: Input label (possibly an alias)
 
-        Returns:
-            Canonical label or None if not recognized
-"""
+    Returns:
+        Canonical label or None if not recognized
+    """
     label_lower = label.lower().strip()
 
     # Check direct matches first

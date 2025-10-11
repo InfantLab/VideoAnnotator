@@ -1,7 +1,8 @@
 """Single job processor for VideoAnnotator API.
 
-Extracts core pipeline processing logic from BatchOrchestrator
-for API-based individual job processing."""
+Extracts core pipeline processing logic from BatchOrchestrator for API-
+based individual job processing.
+"""
 
 from datetime import datetime
 
@@ -12,11 +13,10 @@ logger = get_logger("api")
 
 
 class JobProcessor:
-    """
-    Processes individual jobs through VideoAnnotator pipelines.
+    """Processes individual jobs through VideoAnnotator pipelines.
 
-    This is a simplified version of BatchOrchestrator focused on
-    single job processing for API use cases.
+    This is a simplified version of BatchOrchestrator focused on single
+    job processing for API use cases.
     """
 
     def __init__(self):
@@ -60,8 +60,7 @@ class JobProcessor:
             self.pipeline_classes = {}
 
     def process_job(self, job: BatchJob) -> bool:
-        """
-        Process a single job through selected pipelines.
+        """Process a single job through selected pipelines.
 
         Args:
             job: Job to process
@@ -107,8 +106,7 @@ class JobProcessor:
             return False
 
     def _process_pipeline(self, job: BatchJob, pipeline_name: str) -> bool:
-        """
-        Process a single pipeline for a job.
+        """Process a single pipeline for a job.
 
         Args:
             job: Job to process

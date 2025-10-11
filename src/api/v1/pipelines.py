@@ -46,8 +46,7 @@ class PipelineListResponse(BaseModel):
 
 @router.get("/", response_model=PipelineListResponse)
 async def list_pipelines():
-    """
-    List all available pipelines.
+    """List all available pipelines.
 
     Returns:
         List of available pipelines with their configurations
@@ -100,8 +99,7 @@ async def list_pipelines():
 
 @router.get("/{pipeline_name}", response_model=PipelineInfo)
 async def get_pipeline_info(pipeline_name: str):
-    """
-    Get detailed information about a specific pipeline.
+    """Get detailed information about a specific pipeline.
 
     Args:
         pipeline_name: Name of the pipeline
@@ -151,8 +149,7 @@ async def get_pipeline_info(pipeline_name: str):
 
 @router.post("/{pipeline_name}/validate")
 async def validate_pipeline_config(pipeline_name: str, config: dict[str, Any]):
-    """
-    Validate a pipeline configuration.
+    """Validate a pipeline configuration.
 
     Args:
         pipeline_name: Name of the pipeline

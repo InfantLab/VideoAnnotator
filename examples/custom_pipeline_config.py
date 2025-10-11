@@ -4,7 +4,8 @@ This example shows how to create and use custom pipeline configurations
 for specific use cases or experiments.
 
 Usage:
-    python examples/custom_pipeline_config.py --video_path /path/to/video.mp4"""
+    python examples/custom_pipeline_config.py --video_path /path/to/video.mp4
+"""
 
 import argparse
 import json

@@ -7,7 +7,8 @@ This module provides modular audio pipelines:
 - LAIONVoicePipeline: Voice emotion analysis using LAION Empathic Insight models (inherits from BasePipeline)
 - WhisperBasePipeline: Base pipeline for Whisper-based audio processing tasks (inherits from BasePipeline)
 
-For backwards compatibility, AudioPipelineModular is also available as AudioPipeline."""
+For backwards compatibility, AudioPipelineModular is also available as AudioPipeline.
+"""
 
 from .audio_pipeline_modular import AudioPipelineModular
 from .diarization_pipeline import DiarizationPipeline

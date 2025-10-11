@@ -13,8 +13,7 @@ logger = logging.getLogger(__name__)
 def log_model_download(
     model_name: str, model_path: str, loader_func: Callable, *args, **kwargs
 ) -> Any:
-    """
-    Load a model with enhanced download progress logging.
+    """Load a model with enhanced download progress logging.
 
     Args:
         model_name: Human-readable name of the model (e.g., "YOLO11 Pose Detection")
@@ -124,16 +123,19 @@ class ModelDownloadProgress:
     """Context manager for showing model download progress."""
 
     def __init__(self, model_name: str):
+        """Initialize progress tracker for the provided model name."""
         self.model_name = model_name
         self.start_time = None
 
     def __enter__(self):
+        """Start timing the download and emit initial log messages."""
         self.start_time = time.time()
         logger.info(f"[START] Starting download: {self.model_name}")
         logger.info("   [WAIT] Please wait... (this may take several minutes)")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Log the outcome of the download when the context exits."""
         if self.start_time:
             elapsed = time.time() - self.start_time
             if exc_type is None:

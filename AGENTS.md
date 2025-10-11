@@ -76,6 +76,7 @@ When adding new CLI commands:
 - Single version source in `src/version.py` (no duplicated literals).
 - Registry metadata includes its own `version` (schema evolution).
 - Generated docs (pipeline specs) MUST be reproducible – diffs trigger CI failure.
+- For v1.2.x the public API reports the package version; plan to introduce a dedicated API semantic version constant in v1.3.0.
 
 ## 7. Testing Expectations
 

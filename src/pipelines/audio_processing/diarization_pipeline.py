@@ -1,6 +1,7 @@
 """Speaker diarization pipeline using PyAnnote.
 
-Handles speaker segmentation and identification with timestamps."""
+Handles speaker segmentation and identification with timestamps.
+"""
 
 import os
 from typing import Any
@@ -16,8 +17,7 @@ except ImportError:
 
 
 class DiarizationPipeline(BasePipeline):
-    """
-    Speaker diarization pipeline using PyAnnote.
+    """Speaker diarization pipeline using PyAnnote.
 
     Outputs RTTM-compatible timestamped speaker turns.
     """
@@ -28,6 +28,7 @@ class DiarizationPipeline(BasePipeline):
         return "rttm"
 
     def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the diarization pipeline with optional configuration."""
         default_config = {
             "model": "pyannote/speaker-diarization-3.1",
             "min_speakers": 1,
@@ -41,6 +42,7 @@ class DiarizationPipeline(BasePipeline):
 
     @property
     def pipeline_name(self) -> str:
+        """Return the registry name for this pipeline."""
         return "speaker_diarization"
 
     def initialize(self) -> None:
@@ -83,8 +85,7 @@ class DiarizationPipeline(BasePipeline):
         pps: float = 0.0,
         output_dir: str | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Process video for speaker diarization.
+        """Process video for speaker diarization.
 
         Returns:
             List of speaker turns with timestamps

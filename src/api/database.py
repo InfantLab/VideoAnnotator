@@ -1,8 +1,9 @@
 """Database configuration and dependency injection for VideoAnnotator API.
 
-This module handles database backend selection and provides dependency injection
-for FastAPI endpoints. It supports both SQLite (default) and PostgreSQL backends
-based on environment configuration."""
+This module handles database backend selection and provides dependency
+injection for FastAPI endpoints. It supports both SQLite (default) and
+PostgreSQL backends based on environment configuration.
+"""
 
 import logging
 import os
@@ -17,16 +18,15 @@ logger = logging.getLogger(__name__)
 
 @lru_cache
 def get_storage_backend() -> StorageBackend:
-    """
-    Get storage backend based on configuration.
+    """Return the storage backend configured for the current environment.
 
-    This function uses environment variables to determine which backend to use:
+    Environment variables determine the backend selection:
     - DATABASE_URL: If set and starts with "postgresql://", use PostgreSQL
     - VIDEOANNOTATOR_DB_PATH: Custom SQLite database path
     - Default: SQLite database in current directory (./videoannotator.db)
 
     Returns:
-        Configured storage backend instance
+        Configured storage backend instance.
     """
     database_url = os.environ.get("DATABASE_URL")
 
@@ -64,11 +64,10 @@ def get_storage_backend() -> StorageBackend:
 
 
 def get_database_info() -> dict:
-    """
-    Get information about the current database configuration.
+    """Return information about the current database configuration.
 
     Returns:
-        Dictionary with database configuration details
+        Dictionary with database configuration details.
     """
     storage = get_storage_backend()
     stats = storage.get_stats()
@@ -95,18 +94,18 @@ def get_database_info() -> dict:
 def reset_storage_backend():
     """Clear the cached storage backend.
 
-    This forces get_storage_backend() to create a new instance on next call.
-    Useful for testing or when configuration changes."""
+    This forces get_storage_backend() to create a new instance on the next
+    call. Useful for testing or when configuration changes.
+    """
     get_storage_backend.cache_clear()
 
 
 # Database health check
 def check_database_health() -> tuple[bool, str]:
-    """
-    Check if the database is healthy and accessible.
+    """Determine whether the database is healthy and accessible.
 
     Returns:
-        Tuple of (is_healthy, status_message)
+        Tuple of (is_healthy, status_message).
     """
     try:
         storage = get_storage_backend()
@@ -129,18 +128,19 @@ def check_database_health() -> tuple[bool, str]:
 
 # Context manager for manual database operations
 class DatabaseSession:
-    """
-    Context manager for direct database operations.
+    """Context manager for direct database operations.
 
-    Provides access to the underlying database session for complex queries
-    that aren't covered by the StorageBackend interface.
+    Provides access to the underlying database session for complex
+    queries that aren't covered by the StorageBackend interface.
     """
 
     def __init__(self):
+        """Initialize a database session wrapper using the active backend."""
         self.storage = get_storage_backend()
         self.session = None
 
     def __enter__(self):
+        """Open a session and return it for the context block."""
         if hasattr(self.storage, "SessionLocal"):
             self.session = self.storage.SessionLocal()
             return self.session
@@ -150,6 +150,7 @@ class DatabaseSession:
             )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Close the session, committing on success or rolling back on error."""
         if self.session:
             if exc_type:
                 self.session.rollback()
@@ -172,8 +173,7 @@ def set_database_url(url: str):
 
 
 def get_current_database_path() -> Path:
-    """
-    Get the current database file path (SQLite only).
+    """Get the current database file path (SQLite only).
 
     Returns:
         Path to current database file
@@ -190,8 +190,7 @@ def get_current_database_path() -> Path:
 
 # Development and testing utilities
 def create_test_database() -> SQLiteStorageBackend:
-    """
-    Create a temporary in-memory SQLite database for testing.
+    """Create a temporary in-memory SQLite database for testing.
 
     Returns:
         SQLite storage backend using in-memory database
@@ -206,8 +205,7 @@ def create_test_database() -> SQLiteStorageBackend:
 
 
 def backup_database(backup_path: Path) -> bool:
-    """
-    Backup the current database to specified location.
+    """Backup the current database to specified location.
 
     Args:
         backup_path: Where to save the backup

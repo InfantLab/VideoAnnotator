@@ -1,6 +1,8 @@
 """Face Analysis Pipeline.
 
-This module provides face detection, recognition, and emotion analysis capabilities."""
+This module provides face detection, recognition, and emotion analysis
+capabilities.
+"""
 
 from .face_pipeline import FaceAnalysisPipeline
 from .laion_face_pipeline import LAIONFacePipeline

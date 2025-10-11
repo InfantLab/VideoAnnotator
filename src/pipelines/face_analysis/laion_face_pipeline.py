@@ -1,3 +1,8 @@
+"""LAION face-analysis pipeline helpers.
+
+This module implements the LAION-face pipeline and related utilities.
+"""
+
 import json
 import logging
 from pathlib import Path
@@ -70,11 +75,13 @@ EMOTION_LABELS = {
 
 
 class LAIONFacePipeline(BasePipeline):
-    """
-    LAION Empathic Insight Face Pipeline integrating SigLIP encoder and emotion classifiers.
+    """LAION Empathic Insight Face Pipeline integrating SigLIP encoder and.
+
+    emotion classifiers.
     """
 
     def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize LAIONFacePipeline with the provided configuration."""
         default_config = {
             # Model configuration
             "model_size": "small",  # "small" or "large"
@@ -296,9 +303,7 @@ class LAIONFacePipeline(BasePipeline):
         detection_results: dict[str, Any] | None = None,
         person_tracks: list[dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Process video to detect faces, extract embeddings, run emotion classifiers, and return annotations.
-        """
+        """Process video to detect faces, extract embeddings, run emotion classifiers, and return annotations."""
         # Ensure initialization
         if not self.is_initialized:
             self.initialize()

@@ -14,9 +14,10 @@ from src.visualization.render import WhisperExtractCurrentCaption, drawOneFrame
 def createAnnotatedVideo(
     videopath, kptsdf=None, facesdf=None, speechjson=None, videos_out=None, debug=False
 ):
-    """Take a processed video and go through frame by frame, adding the bounding boxes,.
+    """Create an annotated video with bounding boxes, keypoints, and captions.
 
-    keypoints, face/emotion and speech info. Then export the resulting video to a file.
+    The function iterates through each frame, overlays detections and optional
+    speech captions, and writes the result to a new video file.
 
     Args:
         videopath (str): Path to the video file
@@ -27,7 +28,8 @@ def createAnnotatedVideo(
         debug (bool): Whether to display debug output
 
     Returns:
-        str: Path to the output video"""
+        str: Path to the output video
+    """
     # check if video exists
     if not os.path.exists(videopath):
         print(f"Video file {videopath} not found.")
@@ -121,7 +123,8 @@ def addSoundtoVideo(videopath, soundpath, out_dir=None):
         out_dir (str): Path to the output directory
 
     Returns:
-        str: Path to the output video"""
+        str: Path to the output video
+    """
     import os
 
     from moviepy.editor import AudioFileClip, VideoFileClip

@@ -13,7 +13,8 @@ Usage:
         export_webvtt_captions,
         export_rttm_diarization,
         export_textgrid_speech
-    )"""
+    )
+"""
 
 import json
 import logging
@@ -151,8 +152,7 @@ def export_coco_json(
     output_path: str,
     categories: list[dict[str, Any]] | None = None,
 ) -> Any | None:
-    """
-    Export to COCO JSON format using native structure.
+    """Export to COCO JSON format using native structure.
 
     Args:
         annotations: List of COCO annotation dictionaries
@@ -200,8 +200,7 @@ def export_coco_json(
 
 
 def validate_coco_json(coco_path: str, context: str = "") -> ValidationResult:
-    """
-    Validate COCO JSON file using native pycocotools.
+    """Validate COCO JSON file using native pycocotools.
 
     Args:
         coco_path: Path to COCO JSON file
@@ -250,8 +249,7 @@ def validate_coco_json(coco_path: str, context: str = "") -> ValidationResult:
 def export_webvtt_captions(
     speech_segments: list[dict[str, Any]], output_path: str
 ) -> None:
-    """
-    Export speech transcription to WebVTT format using native library.
+    """Export speech transcription to WebVTT format using native library.
 
     Args:
         speech_segments: List of dicts with 'start', 'end', 'text' keys
@@ -281,8 +279,7 @@ def export_webvtt(
     output_path: str | Path,
     include_metadata: bool = True,
 ) -> bool:
-    """
-    Export results in WebVTT format.
+    """Export results in WebVTT format.
 
     Args:
         segments: List of segment dictionaries with start_time, end_time, and optional text/speaker data
@@ -373,8 +370,7 @@ def _format_timestamp(seconds: float) -> str:
 def export_rttm_diarization(
     speaker_segments: list[dict[str, Any]], output_path: str, uri: str = "video"
 ) -> None:
-    """
-    Export speaker diarization to RTTM format using pyannote.core.
+    """Export speaker diarization to RTTM format using pyannote.core.
 
     Args:
         speaker_segments: List of dicts with 'start', 'end', 'speaker_id' keys
@@ -406,8 +402,7 @@ def export_rttm_diarization(
 def export_textgrid_speech(
     speech_segments: list[dict[str, Any]], output_path: str, tier_name: str = "speech"
 ) -> None:
-    """
-    Export speech transcription to TextGrid format using praatio.
+    """Export speech transcription to TextGrid format using praatio.
 
     Args:
         speech_segments: List of dicts with 'start', 'end', 'text' keys
@@ -471,8 +466,7 @@ def validate_coco_format(coco_file_path: str) -> bool:
 def auto_export_annotations(
     annotations: list[dict[str, Any]], output_dir: str, base_name: str = "annotations"
 ) -> dict[str, str]:
-    """
-    Auto-export annotations to multiple native formats.
+    """Auto-export annotations to multiple native formats.
 
     Returns:
         Dictionary mapping format names to output file paths

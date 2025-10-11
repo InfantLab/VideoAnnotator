@@ -8,7 +8,8 @@ Key features:
 - Zero configuration: Database auto-created on first use
 - Single file: Easy backup, sharing, and archiving
 - Cross-platform: Works identically on Windows, Mac, Linux
-- Research-friendly: Database lives with video files in project directory"""
+- Research-friendly: Database lives with video files in project directory
+"""
 
 import logging
 from datetime import datetime
@@ -35,12 +36,11 @@ if TYPE_CHECKING:
 
 
 class SQLiteStorageBackend(StorageBackend):
-    """
-    SQLite-based storage backend for local research installations.
+    """SQLite-based storage backend for local research installations.
 
-    This backend creates and manages a local SQLite database file that contains
-    all job data, processing results, and annotations. Perfect for individual
-    researchers who want zero-configuration operation.
+    This backend creates and manages a local SQLite database file that
+    contains all job data, processing results, and annotations. Perfect
+    for individual researchers who want zero-configuration operation.
     """
 
     def __init__(self, database_path: Path | None = None, echo: bool = False):
@@ -49,7 +49,8 @@ class SQLiteStorageBackend(StorageBackend):
         Args:
             database_path: Path to SQLite database file.
                           Defaults to ./videoannotator.db in current directory.
-            echo: Whether to log SQL queries (useful for debugging)"""
+            echo: Whether to log SQL queries (useful for debugging)
+        """
         if database_path is None:
             database_path = Path.cwd() / "videoannotator.db"
 
@@ -492,8 +493,7 @@ class SQLiteStorageBackend(StorageBackend):
             return []
 
     def cleanup_old_files(self, max_age_days: int) -> tuple[int, int]:
-        """
-        Clean up old jobs and reports.
+        """Clean up old jobs and reports.
 
         Args:
             max_age_days: Maximum age in days for jobs/reports to keep

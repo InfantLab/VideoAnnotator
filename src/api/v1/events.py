@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 async def event_stream() -> AsyncGenerator[str, None]:
-    """
-    Generate server-sent events stream.
+    """Generate server-sent events stream.
 
     This is a basic implementation that sends periodic heartbeat events.
     In v1.3.0, this will be enhanced with real-time job status updates.
@@ -45,11 +44,10 @@ async def event_stream() -> AsyncGenerator[str, None]:
 
 @router.get("/stream")
 async def events_stream():
-    """
-    Server-Sent Events endpoint for real-time updates.
+    """Server-Sent Events endpoint for real-time updates.
 
-    This endpoint provides a basic SSE implementation for client compatibility.
-    Enhanced real-time job status updates will be added in v1.3.0.
+        This endpoint provides a basic SSE implementation for client compatibility.
+        Enhanced real-time job status updates will be added in v1.3.0.
 
     Returns:
         StreamingResponse: SSE stream with periodic heartbeat events

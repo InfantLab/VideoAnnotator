@@ -1,8 +1,10 @@
 """OpenFace 3.0 compatibility layer for VideoAnnotator.
 
-This module provides compatibility interfaces for OpenFace 3.0 when the actual
-OpenFace library is not installed. Instead of generating fake data, it raises
-clear errors indicating that OpenFace needs to be installed."""
+This module provides compatibility interfaces for OpenFace 3.0 when the
+actual OpenFace library is not installed. Instead of generating fake
+data, it raises clear errors indicating that OpenFace needs to be
+installed.
+"""
 
 import logging
 from typing import Any
@@ -30,6 +32,7 @@ class FaceDetector:
         confidence_threshold: float = 0.5,
         device: str = "cpu",
     ):
+        """Initialize the FaceDetector compatibility interface."""
         self.model_path = model_path
         self.confidence_threshold = confidence_threshold
         self.device = device
@@ -53,6 +56,7 @@ class LandmarkDetector:
         enable_3d: bool = False,
         device: str = "cpu",
     ):
+        """Initialize the LandmarkDetector compatibility interface."""
         self.model_path = model_path
         self.model_type = model_type
         self.enable_3d = enable_3d
@@ -72,6 +76,7 @@ class ActionUnitAnalyzer:
     """OpenFace 3.0 ActionUnitAnalyzer compatibility interface."""
 
     def __init__(self, device: str = "cpu"):
+        """Initialize the ActionUnitAnalyzer compatibility interface."""
         self.device = device
         logger.warning("Using OpenFace ActionUnitAnalyzer compatibility layer")
 
@@ -89,6 +94,7 @@ class HeadPoseEstimator:
     """OpenFace 3.0 HeadPoseEstimator compatibility interface."""
 
     def __init__(self, device: str = "cpu"):
+        """Initialize the HeadPoseEstimator compatibility interface."""
         self.device = device
         logger.warning("Using OpenFace HeadPoseEstimator compatibility layer")
 
@@ -106,6 +112,7 @@ class GazeEstimator:
     """OpenFace 3.0 GazeEstimator compatibility interface."""
 
     def __init__(self, device: str = "cpu"):
+        """Initialize the GazeEstimator compatibility interface."""
         self.device = device
         logger.warning("Using OpenFace GazeEstimator compatibility layer")
 
@@ -123,6 +130,7 @@ class EmotionRecognizer:
     """OpenFace 3.0 EmotionRecognizer compatibility interface."""
 
     def __init__(self, device: str = "cpu"):
+        """Initialize the EmotionRecognizer compatibility interface."""
         self.device = device
         logger.warning("Using OpenFace EmotionRecognizer compatibility layer")
 
@@ -140,6 +148,7 @@ class FaceTracker:
     """OpenFace 3.0 FaceTracker compatibility interface."""
 
     def __init__(self, max_faces: int = 5):
+        """Initialize the FaceTracker compatibility interface."""
         self.max_faces = max_faces
         logger.warning("Using OpenFace FaceTracker compatibility layer")
 
@@ -155,7 +164,8 @@ def patch_scipy_compatibility():
     """Patch SciPy compatibility issues with OpenFace.
 
     OpenFace uses scipy.integrate.simps which was deprecated and removed
-    in SciPy 1.14.0+. This function provides a compatibility layer."""
+    in SciPy 1.14.0+. This function provides a compatibility layer.
+    """
     try:
         import scipy.integrate
 
@@ -178,7 +188,8 @@ def get_default_model_paths():
     """Get default model paths for OpenFace.
 
     Returns:
-        dict: Dictionary with model type as key and path as value"""
+        dict: Dictionary with model type as key and path as value
+    """
     return {
         "face_detector": "./weights/Alignment_RetinaFace.pth",
         "landmark_68": "./weights/Landmark_68.pkl",

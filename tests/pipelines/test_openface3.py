@@ -1,10 +1,12 @@
 """OpenFace 3.0 Pipeline Tests.
 
-Comprehensive test suite for OpenFace 3.0 facial behavior analysis pipeline.
-Tests all major functionality including face detection, landmark extraction,
-action units, head pose, gaze estimation, and emotion recognition.
+Comprehensive test suite for OpenFace 3.0 facial behavior analysis
+pipeline. Tests all major functionality including face detection,
+landmark extraction, action units, head pose, gaze estimation, and
+emotion recognition.
 
-Based on demo_openface.py functionality and pipeline testing standards."""
+Based on demo_openface.py functionality and pipeline testing standards.
+"""
 
 import json
 import os

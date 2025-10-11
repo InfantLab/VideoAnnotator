@@ -66,8 +66,7 @@ class APIKeyCRUD:
 
     @staticmethod
     def generate_api_key() -> tuple[str, str, str]:
-        """
-        Generate a new API key.
+        """Generate a new API key.
 
         Returns:
             Tuple of (raw_key, key_hash, key_prefix)
@@ -106,8 +105,7 @@ class APIKeyCRUD:
     def create(
         db: Session, user_id: str, key_name: str, expires_days: int = None
     ) -> tuple[APIKey, str]:
-        """
-        Create a new API key for a user.
+        """Create a new API key for a user.
 
         Returns:
             Tuple of (APIKey object, raw_key)
@@ -134,8 +132,7 @@ class APIKeyCRUD:
 
     @staticmethod
     def authenticate(db: Session, api_key: str) -> User | None:
-        """
-        Authenticate user by API key.
+        """Authenticate user by API key.
 
         Returns:
             User object if authentication successful, None otherwise
@@ -305,8 +302,7 @@ class JobCRUD:
 
     @staticmethod
     def cleanup_old_jobs(db: Session, days_old: int = 30) -> int:
-        """
-        Clean up jobs older than specified days.
+        """Clean up jobs older than specified days.
 
         Returns:
             Number of jobs deleted

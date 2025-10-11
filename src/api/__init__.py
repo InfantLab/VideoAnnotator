@@ -1,5 +1,7 @@
-"""VideoAnnotator API v1.2.0.
+"""VideoAnnotator API package."""
 
-REST API server for video annotation processing."""
+from version import __version__ as _videoannotator_version
 
-__version__ = "1.2.0"
+__version__ = _videoannotator_version
+
+__all__ = ["__version__"]

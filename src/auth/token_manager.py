@@ -1,7 +1,8 @@
 """Secure Token Management System for VideoAnnotator API v1.2.0.
 
-Provides user-friendly token generation, validation, and management
-with security best practices and multiple authentication flows."""
+Provides user-friendly token generation, validation, and management with
+security best practices and multiple authentication flows.
+"""
 
 import json
 import secrets
@@ -47,8 +48,7 @@ class TokenInfo:
 
 
 class SecureTokenManager:
-    """
-    Secure token management with multiple authentication flows.
+    """Secure token management with multiple authentication flows.
 
     Features:
     - Multiple token types (API keys, sessions, refresh tokens)
@@ -64,6 +64,7 @@ class SecureTokenManager:
         tokens_file: str = "tokens/tokens.json",
         encryption_key: bytes | None = None,
     ):
+        """Initialize token storage and encryption configuration."""
         self.secret_key = secret_key or self._generate_secret_key()
         self.tokens_file = Path(tokens_file)
         self.tokens_file.parent.mkdir(exist_ok=True)
@@ -183,8 +184,7 @@ class SecureTokenManager:
         expires_in_days: int | None = None,
         metadata: dict[str, Any] = None,
     ) -> tuple[str, TokenInfo]:
-        """
-        Generate a long-lived API key for programmatic access.
+        """Generate a long-lived API key for programmatic access.
 
         Returns:
             Tuple of (token_string, token_info)
@@ -233,8 +233,7 @@ class SecureTokenManager:
         scopes: list[str] = None,
         expires_in_hours: int = 24,
     ) -> tuple[str, TokenInfo]:
-        """
-        Generate a short-lived session token with JWT.
+        """Generate a short-lived session token with JWT.
 
         Returns:
             Tuple of (jwt_token, token_info)
@@ -283,8 +282,7 @@ class SecureTokenManager:
         return jwt_token, token_info
 
     def validate_token(self, token: str) -> TokenInfo | None:
-        """
-        Validate any type of token and return user information.
+        """Validate any type of token and return user information.
 
         Args:
             token: Token string (API key, JWT, etc.)

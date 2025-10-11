@@ -119,7 +119,6 @@ class PersonTrackingPipeline(BasePipeline):
         Returns:
             List of COCO annotations for detected persons.
         """
-
         # Get video metadata
         video_metadata = self._get_video_metadata(video_path)
 
@@ -334,8 +333,7 @@ class PersonTrackingPipeline(BasePipeline):
         self, frame: np.ndarray, timestamp: float, video_id: str, frame_number: int
     ) -> list[dict[str, Any]]:
         """Process a single frame for person detection and pose estimation."""
-
-        height, width = frame.shape[:2]
+        _height, _width = frame.shape[:2]
 
         # Run YOLO inference with error recovery
         try:
@@ -493,7 +491,6 @@ class PersonTrackingPipeline(BasePipeline):
         video_metadata: dict[str, Any],
     ):
         """Save annotations in COCO format."""
-
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
@@ -589,8 +586,9 @@ class PersonTrackingPipeline(BasePipeline):
         self.is_initialized = False
 
     def initialize(self) -> None:
-        """Initialize the person tracking pipeline by loading the YOLO
-        model.
+        """Initialize the person tracking pipeline by loading the YOLO model.
+
+        Loads the YOLO model and performs necessary runtime checks.
         """
         if self.is_initialized:
             return

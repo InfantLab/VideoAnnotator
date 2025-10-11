@@ -1,7 +1,9 @@
 """Modern Person Tracking Pipeline Tests.
 
-Tests current COCO-format person detection and tracking using YOLO11-based pipeline.
-Living documentation for person tracking capabilities."""
+Tests current COCO-format person detection and tracking using
+YOLO11-based pipeline. Living documentation for person tracking
+capabilities.
+"""
 
 import os
 from unittest.mock import Mock, patch

@@ -1,7 +1,8 @@
 """VideoAnnotator - Modern Video Annotation Pipeline.
 
 A comprehensive toolkit for video analysis including scene detection,
-person tracking, face analysis, and audio processing."""
+person tracking, face analysis, and audio processing.
+"""
 
 from .version import (
     __author__,

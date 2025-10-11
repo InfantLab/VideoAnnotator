@@ -1,8 +1,9 @@
 """Simple Size-Based Person Analysis.
 
-A focused implementation of automated person analysis using size-based inference.
-This is a simplified version that demonstrates core size-based labeling
-for adult vs child detection."""
+A focused implementation of automated person analysis using size-based
+inference. This is a simplified version that demonstrates core size-
+based labeling for adult vs child detection.
+"""
 
 import logging
 
@@ -32,13 +33,13 @@ class SizeBasedPersonAnalyzer:
 
         Args:
             height_threshold: Normalized height threshold for child/adult
-            confidence: Confidence score for automatic labels"""
+            confidence: Confidence score for automatic labels
+        """
         self.height_threshold = height_threshold
         self.confidence = confidence
 
     def analyze_persons(self, person_annotations: list[dict]) -> dict[str, dict]:
-        """
-        Analyze persons and assign labels based on size.
+        """Analyze persons and assign labels based on size.
 
         Args:
             person_annotations: List of person detection annotations
@@ -162,8 +163,7 @@ def run_size_based_analysis(
     height_threshold: float = 0.4,
     confidence: float = 0.7,
 ) -> dict[str, dict]:
-    """
-    Convenience function to run size-based person analysis.
+    """Run size-based person analysis with default threshold settings.
 
     Args:
         person_annotations: List of person detection annotations
@@ -178,8 +178,7 @@ def run_size_based_analysis(
 
 
 def print_analysis_results(labels: dict[str, dict]) -> None:
-    """
-    Print analysis results in a readable format.
+    """Print analysis results in a readable format.
 
     Args:
         labels: Result from size-based analysis
@@ -201,7 +200,6 @@ def print_analysis_results(labels: dict[str, dict]) -> None:
 # Example usage function
 def demo_size_based_analysis():
     """Demonstrate size-based analysis with sample data."""
-
     # Sample person annotations with different heights
     sample_annotations = [
         # Adult height

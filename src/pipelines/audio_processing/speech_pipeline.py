@@ -1,7 +1,9 @@
 """Speech Recognition Pipeline for VideoAnnotator.
 
-This pipeline focuses specifically on speech recognition using OpenAI Whisper.
-It's designed to be separable from other audio processing functionality."""
+This pipeline focuses specifically on speech recognition using OpenAI
+Whisper. It's designed to be separable from other audio processing
+functionality.
+"""
 
 import logging
 from pathlib import Path
@@ -29,11 +31,11 @@ from .whisper_base_pipeline import WhisperBasePipeline
 
 
 class SpeechPipeline(WhisperBasePipeline):
-    """
-    Speech recognition pipeline using OpenAI Whisper.
+    """Speech recognition pipeline using OpenAI Whisper.
 
-    This implementation extends WhisperBasePipeline to leverage the shared
-    Whisper functionality while focusing specifically on transcription.
+    This implementation extends WhisperBasePipeline to leverage the
+    shared Whisper functionality while focusing specifically on
+    transcription.
     """
 
     @property
@@ -42,6 +44,7 @@ class SpeechPipeline(WhisperBasePipeline):
         return "webvtt"
 
     def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the speech pipeline with Whisper configuration defaults."""
         # Speech-specific config defaults
         speech_config = {
             "whisper_model": "base",  # Will use this as model ID for WhisperBasePipeline
@@ -79,8 +82,7 @@ class SpeechPipeline(WhisperBasePipeline):
         pps: float = 0.0,
         output_dir: str | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Process video and return speech recognition results.
+        """Process video and return speech recognition results.
 
         Args:
             video_path: Path to video file
@@ -111,8 +113,7 @@ class SpeechPipeline(WhisperBasePipeline):
             return []
 
     def transcribe_audio(self, audio: str | Path | np.ndarray) -> dict[str, Any] | None:
-        """
-        Perform speech recognition on audio.
+        """Perform speech recognition on audio.
 
         Args:
             audio: Path to audio file or audio waveform
@@ -219,8 +220,7 @@ class SpeechPipeline(WhisperBasePipeline):
     def _process_transcription_result(
         self, result: dict[str, Any], video_id: str
     ) -> dict[str, Any]:
-        """
-        Process Whisper transcription result into standard format.
+        """Process Whisper transcription result into standard format.
 
         Args:
             result: Raw Whisper result

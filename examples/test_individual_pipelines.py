@@ -4,7 +4,8 @@ This example demonstrates how to test individual pipelines in isolation,
 useful for debugging and development.
 
 Usage:
-    python examples/test_individual_pipelines.py --pipeline scene --video_path /path/to/video.mp4"""
+    python examples/test_individual_pipelines.py --pipeline scene --video_path /path/to/video.mp4
+"""
 
 import argparse
 import json

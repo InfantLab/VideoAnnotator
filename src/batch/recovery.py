@@ -1,6 +1,8 @@
 """Failure recovery system for VideoAnnotator batch processing.
 
-Provides robust error handling, retry mechanisms, and graceful degradation."""
+Provides robust error handling, retry mechanisms, and graceful
+degradation.
+"""
 
 import logging
 from datetime import datetime
@@ -35,7 +37,8 @@ class FailureRecovery:
             max_retries: Maximum number of retry attempts per job
             base_delay: Base delay in seconds for retry strategies
             max_delay: Maximum delay in seconds between retries
-            strategy: Retry strategy to use"""
+            strategy: Retry strategy to use
+        """
         self.max_retries = max_retries
         self.base_delay = base_delay
         self.max_delay = max_delay
@@ -47,8 +50,7 @@ class FailureRecovery:
         self.error_patterns: dict[str, int] = {}
 
     def should_retry(self, job: BatchJob, error: Exception) -> bool:
-        """
-        Determine if a job should be retried.
+        """Determine if a job should be retried.
 
         Args:
             job: The failed job
@@ -78,8 +80,7 @@ class FailureRecovery:
         return True
 
     def calculate_retry_delay(self, job: BatchJob) -> float:
-        """
-        Calculate delay before retry based on strategy.
+        """Calculate delay before retry based on strategy.
 
         Args:
             job: The job being retried
@@ -104,8 +105,7 @@ class FailureRecovery:
         return self.base_delay
 
     def prepare_retry(self, job: BatchJob, error: Exception) -> BatchJob:
-        """
-        Prepare a job for retry.
+        """Prepare a job for retry.
 
         Args:
             job: The failed job
@@ -135,8 +135,7 @@ class FailureRecovery:
     def handle_partial_failure(
         self, job: BatchJob, failed_pipeline: str, error: Exception
     ) -> bool:
-        """
-        Handle partial failure of a single pipeline within a job.
+        """Handle partial failure of a single pipeline within a job.
 
         Args:
             job: The job with partial failure
@@ -169,8 +168,7 @@ class FailureRecovery:
         return True
 
     def create_checkpoint(self, jobs: list[BatchJob], checkpoint_file: str) -> None:
-        """
-        Create a checkpoint of current job states.
+        """Create a checkpoint of current job states.
 
         Args:
             jobs: List of current jobs
@@ -194,8 +192,7 @@ class FailureRecovery:
             self.logger.error(f"Failed to create checkpoint: {e}")
 
     def load_checkpoint(self, checkpoint_file: str) -> list[BatchJob] | None:
-        """
-        Load jobs from a checkpoint file.
+        """Load jobs from a checkpoint file.
 
         Args:
             checkpoint_file: Path to checkpoint file

@@ -4,7 +4,8 @@ After the standards migration, most functionality has been moved to:
 - src.exporters.native_formats for direct FOSS library integration
 - Direct use of pycocotools, webvtt-py, pyannote.core, praatio
 
-This __init__.py is preserved for backward compatibility."""
+This __init__.py is preserved for backward compatibility.
+"""
 
 # Minimal compatibility exports
 __all__ = [

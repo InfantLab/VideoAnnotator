@@ -15,7 +15,8 @@ Usage:
         export_rttm_diarization,
         export_textgrid_speech,
         auto_export_annotations
-    )"""
+    )
+"""
 
 from .native_formats import (
     ValidationResult,

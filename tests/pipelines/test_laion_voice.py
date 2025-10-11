@@ -1,7 +1,8 @@
 """Stage 3: LAION Voice Pipeline Tests.
 
 Test suite for the LAIONVoicePipeline component.
-Focus on voice emotion analysis using LAION models with Whisper base."""
+Focus on voice emotion analysis using LAION models with Whisper base.
+"""
 
 import pytest
 

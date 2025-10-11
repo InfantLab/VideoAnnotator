@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-"""
-Integration tests for background job processing system.
+"""Integration tests for background job processing system.
 
-Tests the integrated background job processing functionality with the API server.
-Converted from test_integrated_worker.py debugging script.
+Tests the integrated background job processing functionality with the
+API server. Converted from test_integrated_worker.py debugging script.
 """
 
 import asyncio
@@ -129,7 +127,10 @@ async def test_background_job_processing():
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_background_processing_endpoints():
-    """Test background processing debug endpoints without starting new server."""
+    """Test background processing debug endpoints without starting new.
+
+    server.
+    """
 
     # This test assumes an existing server is running
     # It's designed to work with the server started by test_background_job_processing

@@ -1,7 +1,8 @@
 """SQLAlchemy database models for VideoAnnotator.
 
-These models map to the existing BatchJob, PipelineResult, and related data structures
-to provide database persistence while maintaining the same interfaces.
+These models map to the existing BatchJob, PipelineResult, and related
+data structures to provide database persistence while maintaining the
+same interfaces.
 """
 
 import uuid
@@ -27,7 +28,8 @@ Base = declarative_base()
 class Job(Base):
     """Database model for BatchJob.
 
-    Represents a video processing job with its metadata, status, and configuration.
+    Represents a video processing job with its metadata, status, and
+    configuration.
     """
 
     __tablename__ = "jobs"
@@ -60,6 +62,7 @@ class Job(Base):
     )
 
     def __repr__(self):
+        """Return a compact string representation of the Job."""
         return (
             f"<Job(id='{self.id}', status='{self.status}', video='{self.video_path}')>"
         )
@@ -68,7 +71,8 @@ class Job(Base):
 class PipelineResult(Base):
     """Database model for individual pipeline execution results.
 
-    Each job can have multiple pipeline results (scene, person, face, audio, etc.)
+    Each job can have multiple pipeline results (scene, person, face,
+    audio, etc.)
     """
 
     __tablename__ = "pipeline_results"
@@ -92,13 +96,15 @@ class PipelineResult(Base):
     job = relationship("Job", back_populates="pipeline_results")
 
     def __repr__(self):
+        """Return a compact string representation of the PipelineResult."""
         return f"<PipelineResult(job='{self.job_id}', pipeline='{self.pipeline_name}', status='{self.status}')>"
 
 
 class Annotation(Base):
     """Database model for storing pipeline annotation data.
 
-    Stores the actual annotation content as JSON for flexible schema support.
+    Stores the actual annotation content as JSON for flexible schema
+    support.
     """
 
     __tablename__ = "annotations"
@@ -115,6 +121,7 @@ class Annotation(Base):
     job = relationship("Job", back_populates="annotations")
 
     def __repr__(self):
+        """Return a compact string representation of the Annotation."""
         return f"<Annotation(job='{self.job_id}', pipeline='{self.pipeline}')>"
 
 
@@ -139,6 +146,7 @@ class User(Base):
     )
 
     def __repr__(self):
+        """Return a compact string representation of the User."""
         return f"<User(username='{self.username}', email='{self.email}')>"
 
 
@@ -162,6 +170,7 @@ class ApiKey(Base):
     user = relationship("User", back_populates="api_keys")
 
     def __repr__(self):
+        """Return a compact string representation of the ApiKey."""
         return f"<ApiKey(name='{self.name}', user='{self.user_id}')>"
 
 
@@ -188,6 +197,7 @@ class BatchReport(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     def __repr__(self):
+        """Return a compact string representation of the BatchReport."""
         return f"<BatchReport(id='{self.id}', total_jobs={self.total_jobs}, completed={self.completed_jobs})>"
 
 
@@ -269,6 +279,7 @@ class SchemaVersion(Base):
     description = Column(String)
 
     def __repr__(self):
+        """Return a compact string representation of the SchemaVersion."""
         return (
             f"<SchemaVersion(version={self.version}, description='{self.description}')>"
         )

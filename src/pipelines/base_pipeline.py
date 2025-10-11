@@ -34,8 +34,7 @@ class BasePipeline(ABC):
         pps: float = 0.0,  # predictions per second, 0 = once per segment
         output_dir: str | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Process video segment and return annotations.
+        """Process video segment and return annotations.
 
         Args:
             video_path: Path to video file

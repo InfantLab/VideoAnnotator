@@ -34,7 +34,7 @@
 3. **Server:** Add `/api/v1/system/version` endpoint that returns all version metadata:
    ```json
    {
-     "api_version": "1.2.0",
+     "api_version": "1.2.2",
      "server_version": "1.2.2",
      "git_commit": "abc123",
      "build_date": "2025-10-09",
@@ -144,7 +144,7 @@
    ```json
    {
      "status": "healthy",
-     "api_version": "1.2.0",
+     "api_version": "1.2.2",
      "server_version": "1.2.2",
      "pipelines_loaded": 6,
      "pipelines_ready": 6,

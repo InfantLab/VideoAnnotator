@@ -1,6 +1,8 @@
 """Modular audio processing pipeline coordinator.
 
-This pipeline coordinates multiple audio processing pipelines and returns separate data streams."""
+This pipeline coordinates multiple audio processing pipelines and
+returns separate data streams.
+"""
 
 import logging
 import subprocess
@@ -24,13 +26,14 @@ from .speech_pipeline import SpeechPipeline
 
 
 class AudioPipelineModular(BasePipeline):
-    """
-    Modular audio processing pipeline coordinator.
+    """Modular audio processing pipeline coordinator.
 
-    Manages multiple audio pipelines and returns separate timestamped data streams.
+    Manages multiple audio pipelines and returns separate timestamped
+    data streams.
     """
 
     def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize the modular audio pipeline coordinator configuration."""
         default_config = {
             # Audio processing settings
             "sample_rate": 16000,
@@ -136,8 +139,7 @@ class AudioPipelineModular(BasePipeline):
         end_time: float | None = None,
         output_dir: str | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Process video through all enabled audio pipelines.
+        """Process video through all enabled audio pipelines.
 
         Returns:
             List of results from all pipelines, each with separate timestamped data

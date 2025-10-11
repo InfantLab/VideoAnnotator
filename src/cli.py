@@ -17,10 +17,11 @@ app = typer.Typer(
 
 @app.callback(invoke_without_command=True)
 def _default(ctx: typer.Context):
-    """Default entrypoint: if no subcommand is provided, start the server with the.
+    """Start the API server when no subcommand is provided.
 
-    recommended host and port. This makes `uv run videoannotator` behave like
-    `uv run videoannotator server --host 0.0.0.0 --port 18011`."""
+    This makes `uv run videoannotator` behave like `uv run videoannotator server`
+    with the recommended host and port.
+    """
     # If a subcommand was invoked, do nothing here and let Typer handle it.
     if ctx.invoked_subcommand is not None:
         return
@@ -324,7 +325,7 @@ def pipelines(
     json: bool = typer.Option(False, "--json", help="Output JSON for scripting"),
     format: str | None = typer.Option(None, help="Alternate output format (markdown)"),
 ):
-    """List available processing pipelines (registry-backed)."""
+    """List available processing pipelines retrieved from the registry."""
     import json as jsonlib
 
     import requests

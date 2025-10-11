@@ -1,7 +1,8 @@
 """Modern Face Analysis Pipeline Tests.
 
-Tests current COCO-format face detection functionality using standards-only pipeline.
-Living documentation for face analysis capabilities."""
+Tests current COCO-format face detection functionality using standards-
+only pipeline. Living documentation for face analysis capabilities.
+"""
 
 import os
 from unittest.mock import Mock, patch
@@ -133,7 +134,10 @@ class TestFaceAnalysisPerformance:
 
 @pytest.mark.unit
 class TestDeepFaceAnalysis:
-    """Tests for DeepFace backend analysis including gender, age, and emotion."""
+    """Tests for DeepFace backend analysis including gender, age, and.
+
+    emotion.
+    """
 
     def test_deepface_configuration(self):
         """Test DeepFace pipeline configuration."""
@@ -154,7 +158,9 @@ class TestDeepFaceAnalysis:
         assert pipeline.config["deepface"]["detector_backend"] == "opencv"
 
     def test_deepface_schema_includes_analysis_fields(self):
-        """Test that DeepFace schema includes age, gender, and emotion fields."""
+        """Test that DeepFace schema includes age, gender, and emotion
+        fields.
+        """
         config = {
             "detection_backend": "deepface",
             "detect_emotions": True,

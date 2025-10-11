@@ -1,7 +1,8 @@
 """Tests for VideoAnnotator API Server v1.2.0 with Database Integration.
 
 Comprehensive test coverage for the FastAPI server including endpoints,
-database integration, job management, and system health checks."""
+database integration, job management, and system health checks.
+"""
 
 import io
 import json
@@ -15,6 +16,7 @@ from src.api.database import reset_storage_backend, set_database_path
 
 # Import the API application
 from src.api.main import create_app
+from version import __version__ as videoannotator_version
 
 
 @pytest.fixture
@@ -68,7 +70,7 @@ class TestHealthEndpoint:
 
         data = response.json()
         assert data["status"] == "healthy"
-        assert data["api_version"] == "1.2.0"
+        assert data["api_version"] == videoannotator_version
         assert "videoannotator_version" in data
         assert "message" in data
 
@@ -81,7 +83,7 @@ class TestHealthEndpoint:
         print(f"Health response: {data}")
         # Don't enforce healthy status - system might be unhealthy due to initialization issues
         assert data["status"] in ["healthy", "unhealthy"]
-        assert data["api_version"] == "1.2.0"
+        assert data["api_version"] == videoannotator_version
         assert "timestamp" in data
 
         if data["status"] == "healthy":
@@ -396,7 +398,7 @@ class TestAPIDocumentation:
         assert "openapi" in schema
         assert "info" in schema
         assert schema["info"]["title"] == "VideoAnnotator API"
-        assert schema["info"]["version"] == "1.2.0"
+        assert schema["info"]["version"] == videoannotator_version
 
     def test_docs_endpoint(self, client):
         """Test Swagger UI docs endpoint."""

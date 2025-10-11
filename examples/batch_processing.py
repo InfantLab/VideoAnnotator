@@ -40,7 +40,9 @@ def setup_logging(log_level: str = "INFO", log_file: str = "batch_processing.log
     )
 
 
-def find_video_files(input_dir: Path, extensions: list[str] = None) -> list[Path]:
+def find_video_files(
+    input_dir: Path, extensions: list[str] | None = None
+) -> list[Path]:
     """Find all video files in the input directory."""
     if extensions is None:
         extensions = [".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm"]

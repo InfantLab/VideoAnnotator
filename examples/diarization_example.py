@@ -15,7 +15,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def example_diarization(video_path: str, output_dir: str = None):
+def example_diarization(video_path: str, output_dir: str | None = None):
     """Example function showing how to use the diarization pipeline.
 
     Args:
@@ -70,7 +70,7 @@ def example_diarization(video_path: str, output_dir: str = None):
 
             # Show timeline
             print("\nSpeaker Timeline (first 10 segments):")
-            for i, segment in enumerate(diarization.segments[:10]):
+            for _i, segment in enumerate(diarization.segments[:10]):
                 start = segment["start_time"]
                 end = segment["end_time"]
                 speaker = segment["speaker_id"]
