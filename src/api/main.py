@@ -1,6 +1,7 @@
 """VideoAnnotator API Server.
 
-FastAPI-based REST API for video annotation processing."""
+FastAPI-based REST API for video annotation processing.
+"""
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -14,9 +15,11 @@ from api.v1 import api_router
 from utils.logging_config import get_logger
 from version import __version__ as videoannotator_version
 
+API_VERSION = videoannotator_version
+
 try:
     # Load environment variables from .env early (best-effort)
-    from dotenv import load_dotenv  # type: ignore
+    from dotenv import load_dotenv
 
     load_dotenv()
 except Exception:
@@ -62,7 +65,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(
         "Server configuration initialized",
         extra={
-            "api_version": "1.2.0",
+            "api_version": API_VERSION,
             "videoannotator_version": videoannotator_version,
             "logging": "enhanced",
             "middleware": ["CORS", "RequestLogging", "ErrorLogging"],
@@ -100,11 +103,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
-
     app = FastAPI(
         title="VideoAnnotator API",
         description="Production-ready REST API for video annotation processing",
-        version="1.2.0",
+        version=API_VERSION,
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
@@ -140,7 +142,7 @@ def create_app() -> FastAPI:
     # Health check endpoint
     @app.get("/health")
     async def health_check():
-        """Basic health check endpoint."""
+        """Return basic health status information."""
         logger.debug("Health check requested")
         # Lightweight system metrics (avoid heavy psutil calls here)
         try:
@@ -163,7 +165,7 @@ def create_app() -> FastAPI:
             db_status = {"status": "unknown", "message": "database check failed"}
         return {
             "status": "healthy",
-            "api_version": "1.2.0",
+            "api_version": API_VERSION,
             "videoannotator_version": videoannotator_version,
             "message": "VideoAnnotator API is running",
             "logging": "enhanced",

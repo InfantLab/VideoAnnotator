@@ -1,11 +1,13 @@
 """Integration tests for VideoAnnotator API Server v1.2.0.
 
-Tests the complete workflow from authentication to job processing."""
+Tests the complete workflow from authentication to job processing.
+"""
 
 import asyncio
 import json
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -13,16 +15,17 @@ import pytest
 from src.database.crud import APIKeyCRUD, UserCRUD
 from src.database.database import SessionLocal
 from src.database.migrations import create_admin_user, init_database
+from version import __version__ as videoannotator_version
 
 
 class APITestClient:
     """Test client wrapper for API testing.
 
-    By default uses an in-process ASGI transport so we don't need an external
-    uvicorn server listening on localhost. This makes tests faster and avoids
-    connection refused errors when a server isn't started separately.
-    Set use_inprocess=False to fall back to real HTTP requests against a
-    running server at base_url.
+    By default uses an in-process ASGI transport so we don't need an
+    external uvicorn server listening on localhost. This makes tests
+    faster and avoids connection refused errors when a server isn't
+    started separately. Set use_inprocess=False to fall back to real
+    HTTP requests against a running server at base_url.
     """
 
     def __init__(
@@ -39,7 +42,7 @@ class APITestClient:
             self.headers["Authorization"] = f"Bearer {api_key}"
         self._client: httpx.AsyncClient | None = None
 
-    def _ensure_client(self):
+    def _ensure_client(self) -> None:
         if self._client is not None:
             return
         if self.use_inprocess:
@@ -58,29 +61,29 @@ class APITestClient:
                 base_url=self.base_url, follow_redirects=True
             )
 
-    async def get(self, path: str, **kwargs):
+    async def get(self, path: str, **kwargs: Any) -> httpx.Response:
         self._ensure_client()
         assert self._client is not None
         return await self._client.get(path, headers=self.headers, **kwargs)
 
-    async def post(self, path: str, **kwargs):
+    async def post(self, path: str, **kwargs: Any) -> httpx.Response:
         self._ensure_client()
         assert self._client is not None
         return await self._client.post(path, headers=self.headers, **kwargs)
 
-    async def delete(self, path: str, **kwargs):
+    async def delete(self, path: str, **kwargs: Any) -> httpx.Response:
         self._ensure_client()
         assert self._client is not None
         return await self._client.delete(path, headers=self.headers, **kwargs)
 
-    async def aclose(self):
+    async def aclose(self) -> None:
         if self._client is not None:
             await self._client.aclose()
             self._client = None
 
 
 @pytest.fixture(scope="session")
-def test_api_key():
+def test_api_key() -> str | None:
     """Create a test API key for authentication."""
     # Initialize database
     init_database(force=True)
@@ -98,7 +101,7 @@ def test_api_key():
                     db=db,
                     user_id=str(admin_user.id),
                     key_name="integration_test",
-                    expires_days=None,
+                    expires_days=30,
                 )
                 return raw_key
         finally:
@@ -117,23 +120,24 @@ def test_api_key():
                 db=db,
                 user_id=str(admin_user.id),
                 key_name="integration_test_fallback",
-                expires_days=None,
+                expires_days=30,
             )
             return raw_key
     finally:
         db.close()
 
     pytest.skip("Could not create test API key")
+    return None
 
 
 @pytest.fixture
-def test_client(test_api_key):
+def test_client(test_api_key: str) -> APITestClient:
     """Create authenticated test client."""
     return APITestClient(api_key=test_api_key)
 
 
 @pytest.fixture
-def anonymous_client():
+def anonymous_client() -> APITestClient:
     """Create anonymous test client."""
     return APITestClient()
 
@@ -142,36 +146,40 @@ class TestAPIAuthentication:
     """Test API authentication system."""
 
     @pytest.mark.asyncio
-    async def test_health_endpoint_anonymous(self, anonymous_client):
+    async def test_health_endpoint_anonymous(
+        self, anonymous_client: APITestClient
+    ) -> None:
         """Test that health endpoint works without authentication."""
         response = await anonymous_client.get("/health")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert data["api_version"] == "1.2.0"
+        assert data["api_version"] == videoannotator_version
 
     @pytest.mark.asyncio
-    async def test_health_endpoint_authenticated(self, test_client):
+    async def test_health_endpoint_authenticated(
+        self, test_client: APITestClient
+    ) -> None:
         """Test that health endpoint works with authentication."""
         response = await test_client.get("/health")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert data["api_version"] == "1.2.0"
+        assert data["api_version"] == videoannotator_version
 
     @pytest.mark.asyncio
-    async def test_system_health_endpoint(self, test_client):
+    async def test_system_health_endpoint(self, test_client: APITestClient) -> None:
         """Test detailed system health endpoint."""
         response = await test_client.get("/api/v1/system/health")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert data["api_version"] == "1.2.0"
+        assert data["api_version"] == videoannotator_version
         assert "database" in data
         assert "system" in data
 
     @pytest.mark.asyncio
-    async def test_pipelines_endpoint(self, anonymous_client):
+    async def test_pipelines_endpoint(self, anonymous_client: APITestClient) -> None:
         """Test pipelines endpoint works without authentication."""
         response = await anonymous_client.get("/api/v1/pipelines")
         assert response.status_code == 200
@@ -188,7 +196,7 @@ class TestAPIAuthentication:
         assert "config_schema" in pipeline
 
     @pytest.mark.asyncio
-    async def test_invalid_api_key(self):
+    async def test_invalid_api_key(self) -> None:
         """Test that invalid API key is rejected."""
         invalid_client = APITestClient(api_key="va_invalid_key_12345")
         response = await invalid_client.get("/api/v1/jobs")
@@ -197,7 +205,9 @@ class TestAPIAuthentication:
         assert "Invalid API key" in data["detail"]
 
     @pytest.mark.asyncio
-    async def test_missing_api_key_for_protected_endpoint(self, anonymous_client):
+    async def test_missing_api_key_for_protected_endpoint(
+        self, anonymous_client: APITestClient
+    ) -> None:
         """Test that protected endpoints require authentication."""
         response = await anonymous_client.post("/api/v1/jobs", files={}, data={})
         assert response.status_code == 422  # Validation error for missing file
@@ -226,7 +236,7 @@ class TestJobManagement:
     """Test job management endpoints."""
 
     @pytest.mark.asyncio
-    async def test_list_jobs_empty(self, test_client):
+    async def test_list_jobs_empty(self, test_client: APITestClient) -> None:
         """Test listing jobs when none exist."""
         response = await test_client.get("/api/v1/jobs")
         assert response.status_code == 200
@@ -237,7 +247,7 @@ class TestJobManagement:
         assert len(data["jobs"]) == 0
 
     @pytest.mark.asyncio
-    async def test_get_nonexistent_job(self, test_client):
+    async def test_get_nonexistent_job(self, test_client: APITestClient) -> None:
         """Test getting a job that doesn't exist."""
         response = await test_client.get("/api/v1/jobs/nonexistent-id")
         assert response.status_code == 404
@@ -245,7 +255,7 @@ class TestJobManagement:
         assert "Job not found" in data["detail"]
 
     @pytest.mark.asyncio
-    async def test_job_submission_validation(self, test_client):
+    async def test_job_submission_validation(self, test_client: APITestClient) -> None:
         """Test job submission with various validation scenarios."""
         # Test without video file
         response = await test_client.post("/api/v1/jobs")
@@ -258,7 +268,9 @@ class TestJobManagement:
         assert response.status_code in [200, 201, 500]  # May fail during processing
 
     @pytest.mark.asyncio
-    async def test_job_submission_with_config(self, test_client):
+    async def test_job_submission_with_config(
+        self, test_client: APITestClient
+    ) -> str | None:
         """Test job submission with configuration."""
         # Create a temporary file
         with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
@@ -299,7 +311,7 @@ class TestJobProcessingIntegration:
     """Test job processing integration with batch system."""
 
     @pytest.mark.asyncio
-    async def test_job_processing_lifecycle(self, test_client):
+    async def test_job_processing_lifecycle(self, test_client: APITestClient) -> None:
         """Test complete job processing lifecycle."""
         # Create a minimal test video file
         with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
