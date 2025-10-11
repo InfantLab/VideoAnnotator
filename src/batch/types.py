@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 
 class JobStatus(Enum):
@@ -45,8 +45,8 @@ class BatchJob:
     """Represents a single video processing job in a batch."""
 
     job_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    video_path: Path = None
-    output_dir: Path = None
+    video_path: Path | None = None
+    output_dir: Path | None = None
     config: dict[str, Any] = field(default_factory=dict)
     status: JobStatus = JobStatus.PENDING
     pipeline_results: dict[str, PipelineResult] = field(default_factory=dict)
@@ -203,7 +203,7 @@ class BatchReport:
     """Final report from a batch processing operation."""
 
     batch_id: str
-    start_time: datetime
+    start_time: datetime | None
     end_time: datetime | None = None
     total_jobs: int = 0
     completed_jobs: int = 0
@@ -277,5 +277,5 @@ class BatchReport:
 
 
 # Type aliases for convenience
-VideoPath = Union[str, Path]
+VideoPath = str | Path
 ConfigDict = dict[str, Any]

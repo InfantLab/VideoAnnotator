@@ -639,8 +639,8 @@ class BatchOrchestrator:
 
         # Update job status
         failed_pipelines = [
-            name
-            for name, result in job.pipeline_results.items()
+            result.pipeline_name
+            for _name, result in job.pipeline_results.items()
             if result.status == JobStatus.FAILED
         ]
 

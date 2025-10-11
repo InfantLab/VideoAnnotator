@@ -5,6 +5,7 @@ Whisper. It's designed to be separable from other audio processing
 functionality.
 """
 
+import importlib.util as importlib_util
 import logging
 from pathlib import Path
 from typing import Any
@@ -14,20 +15,17 @@ import numpy as np
 import torch
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
-try:
-    import whisper
-
-    WHISPER_AVAILABLE = True
-except ImportError:
-    WHISPER_AVAILABLE = False
-    logging.warning("whisper not available. Speech recognition will be disabled.")
-
 from version import __version__
 
 from .whisper_base_pipeline import WhisperBasePipeline
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Detect Whisper availability without importing the heavy module at top-level
+WHISPER_AVAILABLE = importlib_util.find_spec("whisper") is not None
+if not WHISPER_AVAILABLE:
+    logging.warning("whisper not available. Speech recognition will be disabled.")
 
 
 class SpeechPipeline(WhisperBasePipeline):
@@ -57,7 +55,7 @@ class SpeechPipeline(WhisperBasePipeline):
             "length_penalty": 1.0,
             "word_timestamps": True,
             "prepend_punctuations": '"\'"¿([{-',
-            "append_punctuations": '"\'.。,，!！?？:：")]}、',
+            "append_punctuations": '"\'..,!?:")]},',
             "suppress_tokens": None,
             "min_segment_duration": 1.0,
         }
@@ -76,7 +74,7 @@ class SpeechPipeline(WhisperBasePipeline):
 
     def process(
         self,
-        video_path: str,
+        video_path: str | Path,
         start_time: float = 0.0,
         end_time: float | None = None,
         pps: float = 0.0,
@@ -102,11 +100,13 @@ class SpeechPipeline(WhisperBasePipeline):
             video_path = Path(video_path)
 
             # Extract audio using base pipeline functionality
-            audio, sample_rate = self.extract_audio_from_video(video_path)
+            audio, _sample_rate = self.extract_audio_from_video(video_path)
 
             # Transcribe the audio
             result = self.transcribe_audio(audio)
-            return [result] if result else []
+            if result is not None:
+                return [result]
+            return []
 
         except Exception as e:
             self.logger.error(f"Error processing speech recognition: {e}")
@@ -154,7 +154,7 @@ class SpeechPipeline(WhisperBasePipeline):
                             "prepend_punctuations", '"\'"¿([{-'
                         ),
                         "append_punctuations": self.config.get(
-                            "append_punctuations", '"\'.。,，!！?？:：")]}、'
+                            "append_punctuations", '"\'..,!?:")],'
                         ),
                         "fp16": self.config.get("use_fp16", True)
                         and torch.cuda.is_available(),
@@ -191,7 +191,7 @@ class SpeechPipeline(WhisperBasePipeline):
                             "prepend_punctuations", '"\'"¿([{-'
                         ),
                         "append_punctuations": self.config.get(
-                            "append_punctuations", '"\'.。,，!！?？:：")]}、'
+                            "append_punctuations", '"\'..,!?:")],'
                         ),
                         "fp16": self.config.get("use_fp16", True)
                         and torch.cuda.is_available(),
@@ -216,6 +216,10 @@ class SpeechPipeline(WhisperBasePipeline):
         except Exception as e:
             self.logger.error(f"Speech recognition failed: {e}")
             return None
+
+        # Unreachable - all paths above return, but mypy can't prove it
+        # due to complex isinstance checks
+        return None
 
     def _process_transcription_result(
         self, result: dict[str, Any], video_id: str

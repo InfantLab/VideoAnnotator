@@ -1,7 +1,7 @@
 """Database models for VideoAnnotator API server."""
 
 import uuid
-from typing import Any
+from typing import Any, ClassVar
 
 from sqlalchemy import (
     JSON,
@@ -209,6 +209,13 @@ class JobStatus:
     FAILED = "failed"
     CANCELLED = "cancelled"
 
-    ALL_STATUSES = [PENDING, QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED]
-    ACTIVE_STATUSES = [PENDING, QUEUED, RUNNING]
-    FINAL_STATUSES = [COMPLETED, FAILED, CANCELLED]
+    ALL_STATUSES: ClassVar[list[str]] = [
+        PENDING,
+        QUEUED,
+        RUNNING,
+        COMPLETED,
+        FAILED,
+        CANCELLED,
+    ]
+    ACTIVE_STATUSES: ClassVar[list[str]] = [PENDING, QUEUED, RUNNING]
+    FINAL_STATUSES: ClassVar[list[str]] = [COMPLETED, FAILED, CANCELLED]
