@@ -18,12 +18,12 @@ import pytest
 
 # Optional OpenCV import; allow tests to run in environments without cv2
 try:  # pragma: no cover - availability shim
-    import cv2  # type: ignore
+    import cv2
 
     CV2_AVAILABLE = True
 except Exception:
     CV2_AVAILABLE = False
-    cv2 = None  # type: ignore
+    cv2 = None
 from pathlib import Path
 from unittest.mock import Mock, patch
 

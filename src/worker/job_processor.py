@@ -39,7 +39,7 @@ class JobProcessor:
         self.orchestrator = BatchOrchestrator(storage_backend=self.storage)
 
         self.running = False
-        self.processing_jobs = set()
+        self.processing_jobs: set[str] = set()
 
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -50,7 +50,7 @@ class JobProcessor:
         logger.info(f"Received signal {signum}, initiating graceful shutdown...")
         self.running = False
 
-    async def start(self):
+    async def start(self) -> None:
         """Start the background job processor."""
         self.running = True
         logger.info("[START] VideoAnnotator job processor started")
@@ -75,7 +75,7 @@ class JobProcessor:
                 # In a real implementation, we'd wait for them gracefully
                 await asyncio.sleep(2)
 
-    async def _process_cycle(self):
+    async def _process_cycle(self) -> None:
         """Single processing cycle - check for jobs and process them."""
         try:
             # Get pending jobs from database
@@ -172,11 +172,10 @@ class JobProcessor:
         """
         try:
             # Create a minimal batch with just this job
-            jobs = [job]
+            self.orchestrator.add_job(job)
 
             # Use BatchOrchestrator to process
             results = self.orchestrator.run_batch(
-                jobs=jobs,
                 max_workers=1,  # Single job processing
                 save_checkpoints=False,
             )

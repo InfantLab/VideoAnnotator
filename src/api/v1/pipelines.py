@@ -98,7 +98,7 @@ async def list_pipelines():
 
 
 @router.get("/{pipeline_name}", response_model=PipelineInfo)
-async def get_pipeline_info(pipeline_name: str):
+async def get_pipeline_info(pipeline_name: str) -> PipelineInfo:
     """Get detailed information about a specific pipeline.
 
     Args:
@@ -148,7 +148,9 @@ async def get_pipeline_info(pipeline_name: str):
 
 
 @router.post("/{pipeline_name}/validate")
-async def validate_pipeline_config(pipeline_name: str, config: dict[str, Any]):
+async def validate_pipeline_config(
+    pipeline_name: str, config: dict[str, Any]
+) -> dict[str, Any]:
     """Validate a pipeline configuration.
 
     Args:

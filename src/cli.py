@@ -282,7 +282,7 @@ def list_jobs(
     typer.echo("[LIST] Getting job list...")
 
     try:
-        params = {"page": page, "per_page": per_page}
+        params: dict[str, int | str] = {"page": page, "per_page": per_page}
         if status_filter:
             params["status_filter"] = status_filter
 
@@ -291,7 +291,7 @@ def list_jobs(
         if response.status_code == 200:
             data = response.json()
             jobs = data["jobs"]
-            total = data["total"]
+            total: int = data["total"]
 
             typer.echo(f"[OK] Found {total} total jobs (showing page {page})")
             typer.echo("")

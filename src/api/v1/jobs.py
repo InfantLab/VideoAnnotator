@@ -103,7 +103,7 @@ async def submit_job(
     ),
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_optional_api_key),
-):
+) -> JobResponse:
     """Submit a video processing job.
 
     Args:
@@ -181,7 +181,7 @@ async def get_job_status(
     job_id: str,
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_optional_api_key),
-):
+) -> JobResponse:
     """Get job status and details.
 
     Args:
@@ -232,7 +232,7 @@ async def list_jobs(
     status_filter: str | None = None,
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_optional_api_key),
-):
+) -> JobListResponse:
     """List jobs with pagination and filtering.
 
     Args:
@@ -300,7 +300,7 @@ async def cancel_job(
     job_id: str,
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_optional_api_key),
-):
+) -> None:
     """Cancel/delete a job.
 
     Args:
@@ -336,7 +336,7 @@ async def get_job_results(
     job_id: str,
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_optional_api_key),
-):
+) -> JobResultsResponse:
     """Get detailed results for a completed job.
 
     Args:
@@ -409,7 +409,7 @@ async def download_result_file(
     pipeline_name: str,
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_optional_api_key),
-):
+) -> Any:
     """Download a specific result file from a job.
 
     Args:

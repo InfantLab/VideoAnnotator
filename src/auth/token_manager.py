@@ -101,7 +101,7 @@ class SecureTokenManager:
 
         return Fernet(key)
 
-    def _load_tokens(self):
+    def _load_tokens(self) -> None:
         """Load tokens from persistent storage."""
         if not self.tokens_file.exists():
             return
@@ -139,7 +139,7 @@ class SecureTokenManager:
         except Exception as e:
             logger.error(f"Failed to load tokens: {e}")
 
-    def _save_tokens(self):
+    def _save_tokens(self) -> None:
         """Save tokens to persistent storage."""
         try:
             # Convert to serializable format
@@ -180,9 +180,9 @@ class SecureTokenManager:
         user_id: str,
         username: str,
         email: str,
-        scopes: list[str] = None,
+        scopes: list[str] | None = None,
         expires_in_days: int | None = None,
-        metadata: dict[str, Any] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> tuple[str, TokenInfo]:
         """Generate a long-lived API key for programmatic access.
 
@@ -230,7 +230,7 @@ class SecureTokenManager:
         user_id: str,
         username: str,
         email: str,
-        scopes: list[str] = None,
+        scopes: list[str] | None = None,
         expires_in_hours: int = 24,
     ) -> tuple[str, TokenInfo]:
         """Generate a short-lived session token with JWT.
@@ -440,15 +440,15 @@ class SecureTokenManager:
         for token_info in self._token_cache.values():
             # Count by type
             token_type = token_info.token_type.value
-            stats["by_type"][token_type] = stats["by_type"].get(token_type, 0) + 1
+            stats["by_type"][token_type] = stats["by_type"].get(token_type, 0) + 1  # type: ignore[index,attr-defined]
 
             # Count expired
             if token_info.expires_at and now > token_info.expires_at:
-                stats["expired_tokens"] += 1
+                stats["expired_tokens"] += 1  # type: ignore[operator]
 
             # Count recently used
             if token_info.last_used_at and (now - token_info.last_used_at).days < 1:
-                stats["recently_used"] += 1
+                stats["recently_used"] += 1  # type: ignore[operator]
 
         return stats
 

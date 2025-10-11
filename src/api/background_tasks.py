@@ -8,6 +8,7 @@ import asyncio
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Any
 
 from api.database import get_storage_backend
 from batch.types import JobStatus
@@ -50,7 +51,7 @@ class BackgroundJobManager:
         self.processing_jobs: set[str] = set()
         self.background_task: asyncio.Task | None = None
 
-    async def start(self):
+    async def start(self) -> None:
         """Start the background job processing."""
         if self.running:
             logger.warning("Background job manager is already running")
@@ -62,7 +63,7 @@ class BackgroundJobManager:
             f"[START] Background job processing started (poll: {self.poll_interval}s, max concurrent: {self.max_concurrent_jobs})"
         )
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Stop the background job processing gracefully."""
         if not self.running:
             return
@@ -205,7 +206,7 @@ class BackgroundJobManager:
             # Remove from processing set
             self.processing_jobs.discard(job_id)
 
-    def _run_single_job_processing(self, job) -> bool:
+    def _run_single_job_processing(self, job: Any) -> bool:
         """Run the actual job processing using JobProcessor.
 
         This is a synchronous method that runs in a thread executor.
@@ -225,7 +226,7 @@ class BackgroundJobManager:
                     return False
 
             # Use JobProcessor to process the single job
-            success = self.job_processor.process_job(job)
+            success = self.job_processor.process_job(job)  # type: ignore[attr-defined]
 
             if success:
                 logger.info(f"Job {job.job_id} processed successfully")

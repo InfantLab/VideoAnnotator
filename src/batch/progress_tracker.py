@@ -181,10 +181,10 @@ class ProgressTracker:
                     remaining_seconds = recent_avg * status.pending_jobs
 
                     report["estimated_remaining_seconds"] = remaining_seconds
-                    report["estimated_completion_time"] = (
+                    report["estimated_completion_time"] = (  # type: ignore[assignment]
                         datetime.now() + timedelta(seconds=remaining_seconds)
                     ).isoformat()
-                    report["current_processing_rate"] = f"{recent_avg:.1f}s per job"
+                    report["current_processing_rate"] = f"{recent_avg:.1f}s per job"  # type: ignore[assignment]
 
         return report
 

@@ -7,6 +7,7 @@ monitoring.
 import time
 import uuid
 from collections.abc import Callable
+from typing import Any
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -17,7 +18,7 @@ from utils.logging_config import get_logger, log_api_request
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Middleware to log all API requests and responses."""
 
-    def __init__(self, app, exclude_paths: set | None = None):
+    def __init__(self, app: Any, exclude_paths: set | None = None):
         """Initialize middleware and configure paths to skip logging."""
         super().__init__(app)
         self.exclude_paths = exclude_paths or {

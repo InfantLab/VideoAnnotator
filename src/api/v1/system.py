@@ -207,7 +207,7 @@ async def get_system_config():
         # TODO: Load actual config when dependencies are fixed
         # from ...config import load_config
         # config = load_config()
-        config = {}
+        config: dict[str, Any] = {}
 
         # Filter out sensitive information
         safe_config = {}

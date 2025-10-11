@@ -24,8 +24,12 @@ router = APIRouter()
 
 
 def log_request(
-    method: str, path: str, status_code: int, response_time_ms: int, user_id: str = None
-):
+    method: str,
+    path: str,
+    status_code: int,
+    response_time_ms: int,
+    user_id: str | None = None,
+) -> None:
     """Log API request for debugging purposes."""
     global _request_log
 
@@ -150,7 +154,9 @@ async def get_server_debug_info():
 
 
 @router.get("/token-info")
-async def get_token_debug_info(current_user: dict = Depends(get_current_user)):
+async def get_token_debug_info(
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, Any]:
     """Get detailed information about the current API token.
 
     Returns token validation status, permissions, and rate limiting
@@ -493,7 +499,7 @@ async def get_pipeline_debug_info():
 @router.get("/jobs/{job_id}")
 async def get_job_debug_info(
     job_id: str, current_user: dict = Depends(get_current_user)
-):
+) -> dict[str, Any]:
     """Get detailed debugging information for a specific job.
 
     Returns comprehensive job status, logs, resource usage, and file
@@ -575,7 +581,7 @@ async def get_request_log(
         50, description="Maximum number of requests to return", ge=1, le=100
     ),
     current_user: dict = Depends(get_current_user),
-):
+) -> dict[str, Any]:
     """Get recent API request log for debugging.
 
     Returns recent API requests with timing and status information.
@@ -600,7 +606,7 @@ async def get_request_log(
 async def mock_sse_events(
     token: str | None = Query(None, description="API token for authentication"),
     job_id: str | None = Query(None, description="Job ID to monitor"),
-):
+) -> Any:
     """Mock SSE endpoint for client testing until real SSE is implemented.
 
     Returns Server-Sent Events format for job monitoring testing.
@@ -679,7 +685,7 @@ async def mock_sse_events(
 
 
 @router.get("/background-jobs")
-async def get_background_jobs_status():
+async def get_background_jobs_status() -> dict[str, Any]:
     """Get status of background job processing system.
 
     Returns information about the background job manager including

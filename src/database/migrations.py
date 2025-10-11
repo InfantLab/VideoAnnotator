@@ -106,7 +106,7 @@ def create_admin_user(
         existing_user = UserCRUD.get_by_username(db, username)
         if existing_user:
             logger.info(f"Admin user '{username}' already exists")
-            return existing_user, None
+            return existing_user, None  # type: ignore[return-value]
 
         # Create admin user
         user = UserCRUD.create(

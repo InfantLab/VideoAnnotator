@@ -394,7 +394,7 @@ class SQLiteStorageBackend(StorageBackend):
                 pipeline_results_count = session.query(PipelineResult).count()
 
                 # Database file statistics
-                database_size_mb = 0
+                database_size_mb: int | float = 0
                 if self.database_path.exists():
                     database_size_mb = round(
                         self.database_path.stat().st_size / (1024 * 1024), 2

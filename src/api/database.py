@@ -160,13 +160,13 @@ class DatabaseSession:
 
 
 # Environment configuration helpers
-def set_database_path(path: Path):
+def set_database_path(path: Path) -> None:
     """Set database path via environment variable."""
     os.environ["VIDEOANNOTATOR_DB_PATH"] = str(path)
     reset_storage_backend()
 
 
-def set_database_url(url: str):
+def set_database_url(url: str) -> None:
     """Set database URL via environment variable."""
     os.environ["DATABASE_URL"] = url
     reset_storage_backend()
