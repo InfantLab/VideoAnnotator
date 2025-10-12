@@ -133,6 +133,9 @@ class SQLiteStorageBackend(StorageBackend):
             completed_at=batch_job.completed_at,
             retry_count=batch_job.retry_count,
             error_message=batch_job.error_message,
+            storage_path=str(batch_job.storage_path)
+            if batch_job.storage_path
+            else None,  # v1.3.0: Persistent job storage
         )
 
     def _db_job_to_batch_job(self, db_job: Job) -> "BatchJob":
@@ -152,6 +155,9 @@ class SQLiteStorageBackend(StorageBackend):
             retry_count=db_job.retry_count,
             error_message=db_job.error_message,
             selected_pipelines=db_job.selected_pipelines,
+            storage_path=Path(db_job.storage_path)
+            if db_job.storage_path
+            else None,  # v1.3.0: Persistent job storage
         )
 
         # Load pipeline results
@@ -188,6 +194,9 @@ class SQLiteStorageBackend(StorageBackend):
                     existing.error_message = job.error_message
                     existing.selected_pipelines = job.selected_pipelines
                     existing.config = job.config
+                    # v1.3.0: Update storage_path if present
+                    if job.storage_path:
+                        existing.storage_path = str(job.storage_path)
 
                     # Update pipeline results
                     # Delete old results and create new ones (simpler than complex updates)
