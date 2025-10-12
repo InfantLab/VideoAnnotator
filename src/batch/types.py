@@ -56,6 +56,7 @@ class BatchJob:
     retry_count: int = 0
     error_message: str | None = None
     selected_pipelines: list[str] | None = None
+    storage_path: Path | None = None  # v1.3.0: Persistent job storage directory
 
     @property
     def video_id(self) -> str:
@@ -113,6 +114,7 @@ class BatchJob:
             "retry_count": self.retry_count,
             "error_message": self.error_message,
             "selected_pipelines": self.selected_pipelines,
+            "storage_path": str(self.storage_path) if self.storage_path else None,
         }
 
     @classmethod
@@ -155,6 +157,9 @@ class BatchJob:
             retry_count=data.get("retry_count", 0),
             error_message=data.get("error_message"),
             selected_pipelines=data.get("selected_pipelines"),
+            storage_path=Path(data["storage_path"])
+            if data.get("storage_path")
+            else None,
         )
 
 

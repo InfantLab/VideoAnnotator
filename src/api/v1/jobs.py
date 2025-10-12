@@ -17,6 +17,7 @@ from api.dependencies import validate_optional_api_key
 from api.errors import APIError
 from batch.types import BatchJob, JobStatus
 from storage.base import StorageBackend
+from storage.config import get_job_storage_path
 
 router = APIRouter()
 
@@ -58,6 +59,7 @@ class JobResponse(BaseModel):
     completed_at: datetime | None = None
     error_message: str | None = None
     result_path: str | None = None
+    storage_path: str | None = None  # v1.3.0: Persistent job storage directory
 
 
 class JobListResponse(BaseModel):
@@ -142,7 +144,7 @@ async def submit_job(
             content = await video.read()
             f.write(content)
 
-        # Create BatchJob instance
+        # Create BatchJob instance with storage path
         batch_job = BatchJob(
             video_path=Path(video_path),
             output_dir=None,  # Will be set by processing system
@@ -150,6 +152,9 @@ async def submit_job(
             status=JobStatus.PENDING,
             selected_pipelines=parsed_pipelines,
         )
+
+        # Set storage path for persistent job artifacts
+        batch_job.storage_path = get_job_storage_path(batch_job.job_id)
 
         # Save job to database
         storage.save_job_metadata(batch_job)
@@ -163,6 +168,9 @@ async def submit_job(
             created_at=batch_job.created_at,
             completed_at=batch_job.completed_at,
             result_path=None,
+            storage_path=str(batch_job.storage_path)
+            if batch_job.storage_path
+            else None,
         )
 
     except APIError:
@@ -204,6 +212,7 @@ async def get_job_status(
             completed_at=job.completed_at,
             error_message=job.error_message,
             result_path=getattr(job, "result_path", None),
+            storage_path=str(job.storage_path) if job.storage_path else None,
         )
 
     except FileNotFoundError:
@@ -269,6 +278,9 @@ async def list_jobs(
                         completed_at=job.completed_at,
                         error_message=job.error_message,
                         result_path=getattr(job, "result_path", None),
+                        storage_path=str(job.storage_path)
+                        if job.storage_path
+                        else None,
                     )
                 )
             except FileNotFoundError:
@@ -387,7 +399,7 @@ async def get_job_results(
             pipeline_results=pipeline_results,
             created_at=job.created_at,
             completed_at=job.completed_at,
-            output_dir=str(job.output_dir) if job.output_dir else None,
+            result_path=getattr(job, "result_path", None),
         )
 
     except HTTPException:
