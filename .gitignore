@@ -162,6 +162,7 @@ test_output/
 data/*
 models/
 outputs/
+storage/
 
 # Jupyter Notebook checkpoints
 *.ipynb_checkpoints
