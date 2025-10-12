@@ -174,6 +174,35 @@ class Job(Base):
         """Check if job is in a completed state."""
         return self.status in ["completed", "failed", "cancelled"]
 
+    def cancel(self, error_message: str | None = None) -> bool:
+        """Cancel the job if it's not already in a terminal state.
+
+        Args:
+            error_message: Optional cancellation message
+
+        Returns:
+            True if job was cancelled, False if already in terminal state
+
+        Raises:
+            ValueError: If job is already in COMPLETED or FAILED state
+        """
+        if self.status in [JobStatus.COMPLETED, JobStatus.FAILED]:
+            raise ValueError(
+                f"Cannot cancel job in {self.status} state. Job is already complete."
+            )
+
+        if self.status == JobStatus.CANCELLED:
+            # Idempotent - already cancelled
+            return False
+
+        # Update status and timestamp
+        self.status = JobStatus.CANCELLED
+        self.cancelled_at = func.now()
+        if error_message:
+            self.error_message = error_message
+
+        return True
+
     def to_dict(self) -> dict[str, Any]:
         """Convert job to dictionary representation."""
         return {
@@ -190,6 +219,9 @@ class Job(Base):
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "completed_at": self.completed_at.isoformat()
             if self.completed_at
+            else None,
+            "cancelled_at": self.cancelled_at.isoformat()
+            if self.cancelled_at
             else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "result_path": self.result_path,

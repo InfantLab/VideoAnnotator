@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -337,6 +338,108 @@ async def cancel_job(
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to cancel job: {e!s}",
+        )
+
+
+@router.post("/{job_id}/cancel", response_model=JobResponse)
+async def cancel_job_endpoint(
+    job_id: str,
+    storage: StorageBackend = Depends(get_storage),
+    user: dict[str, Any] | None = Depends(validate_optional_api_key),
+) -> JobResponse:
+    """Cancel a running or pending job.
+
+    Cancels a job that is currently running or queued. Jobs that are already
+    completed, failed, or cancelled return their current status (idempotent).
+
+    Args:
+        job_id: Job ID to cancel
+        storage: Storage backend
+        user: Authenticated user (optional)
+
+    Returns:
+        Updated job information with CANCELLED status
+
+    Raises:
+        404: Job not found
+        409: Job cannot be cancelled (already completed/failed)
+    """
+    try:
+        # Load job from database
+        try:
+            job_data = storage.load_job_metadata(job_id)
+        except FileNotFoundError:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found"
+            )
+
+        # Check current status
+        current_status = job_data.status
+
+        # If already cancelled, return current state (idempotent)
+        if current_status == JobStatus.CANCELLED:
+            logger.info(f"[CANCEL] Job {job_id} already cancelled (idempotent)")
+            return JobResponse(
+                id=str(job_id),
+                status=JobStatus.CANCELLED.value,
+                video_path=str(job_data.video_path) if job_data.video_path else None,
+                config=job_data.config,
+                selected_pipelines=job_data.selected_pipelines,
+                created_at=job_data.created_at if job_data.created_at else None,
+                completed_at=job_data.completed_at if job_data.completed_at else None,
+                error_message=job_data.error_message,
+                result_path=None,  # BatchJob doesn't have result_path
+                storage_path=str(job_data.storage_path)
+                if job_data.storage_path
+                else None,
+            )
+
+        # If already in a final state (completed/failed), return error
+        if current_status in [JobStatus.COMPLETED, JobStatus.FAILED]:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Cannot cancel job in {current_status} state. Job is already complete.",
+            )
+
+        # Cancel the job
+        logger.info(
+            f"[CANCEL] Cancelling job {job_id} (current status: {current_status})"
+        )
+
+        # Update job status to CANCELLED
+        job_data.status = JobStatus.CANCELLED
+        job_data.error_message = "Job cancelled by user request"
+
+        # Set completed_at if not already set
+        if job_data.completed_at is None:
+            job_data.completed_at = datetime.now()
+
+        # Save updated job
+        storage.save_job_metadata(job_data)
+
+        logger.info(f"[OK] Job {job_id} cancelled successfully")
+
+        # Return updated job response
+        return JobResponse(
+            id=str(job_id),
+            status=JobStatus.CANCELLED.value,
+            video_path=str(job_data.video_path) if job_data.video_path else None,
+            config=job_data.config,
+            selected_pipelines=job_data.selected_pipelines,
+            created_at=job_data.created_at if job_data.created_at else None,
+            completed_at=job_data.completed_at if job_data.completed_at else None,
+            error_message=job_data.error_message,
+            result_path=None,  # BatchJob doesn't have result_path
+            storage_path=str(job_data.storage_path) if job_data.storage_path else None,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[ERROR] Failed to cancel job {job_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to cancel job: {e!s}",
