@@ -1,0 +1,281 @@
+openapi: 3.1.0
+info:
+  title: VideoAnnotator Health Check API
+  version: 1.3.0
+  description: |
+    Contract for enhanced health check endpoint.
+    Provides basic liveness check plus optional detailed system diagnostics.
+
+paths:
+  /api/v1/health:
+    get:
+      summary: Health check
+      description: |
+        Check API server liveness and optionally retrieve detailed system status.
+
+        **Basic mode** (no query params): Returns simple 200 OK (for load balancers).
+        **Detailed mode** (?detailed=true): Returns system diagnostics (DB, GPU, storage, registry).
+      operationId: healthCheck
+      tags:
+        - system
+      parameters:
+        - name: detailed
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Include detailed diagnostics (slower response)
+
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/BasicHealthResponse'
+                  - $ref: '#/components/schemas/DetailedHealthResponse'
+              examples:
+                basic:
+                  summary: Basic health check (fast)
+                  value:
+                    status: "ok"
+                    version: "1.3.0"
+                    timestamp: "2025-10-11T10:30:45.123Z"
+                detailed:
+                  summary: Detailed health check (diagnostic mode)
+                  value:
+                    status: "ok"
+                    version: "1.3.0"
+                    timestamp: "2025-10-11T10:30:45.123Z"
+                    details:
+                      database:
+                        status: "ok"
+                        schema_version: "1.3.0"
+                        jobs_count: 42
+                      storage:
+                        status: "ok"
+                        free_gb: 128.5
+                        used_gb: 15.2
+                        total_gb: 143.7
+                      gpu:
+                        available: true
+                        device_count: 1
+                        devices:
+                          - name: "NVIDIA GeForce RTX 3080"
+                            memory_total_gb: 10.0
+                            memory_free_gb: 8.5
+                      registry:
+                        status: "ok"
+                        pipelines_loaded: 4
+                        pipeline_names: ["face", "person", "audio", "scene"]
+
+        '503':
+          description: Service unhealthy (detailed mode only)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedHealthResponse'
+              example:
+                status: "unhealthy"
+                version: "1.3.0"
+                timestamp: "2025-10-11T10:30:45.123Z"
+                details:
+                  database:
+                    status: "error"
+                    error: "Connection timeout after 5s"
+                  storage:
+                    status: "warning"
+                    free_gb: 2.1
+                    used_gb: 141.6
+                    total_gb: 143.7
+                    warning: "Less than 5% free space remaining"
+                  gpu:
+                    available: true
+                    device_count: 1
+                  registry:
+                    status: "ok"
+                    pipelines_loaded: 4
+
+components:
+  schemas:
+    BasicHealthResponse:
+      type: object
+      required:
+        - status
+        - version
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [ok]
+          description: Always 'ok' for 200 response (basic mode never returns 503)
+        version:
+          type: string
+          description: VideoAnnotator version (e.g., "1.3.0")
+          example: "1.3.0"
+        timestamp:
+          type: string
+          format: date-time
+          description: Current server time (ISO 8601 UTC)
+
+    DetailedHealthResponse:
+      type: object
+      required:
+        - status
+        - version
+        - timestamp
+        - details
+      properties:
+        status:
+          type: string
+          enum: [ok, unhealthy]
+          description: Overall health status (unhealthy triggers 503)
+        version:
+          type: string
+          description: VideoAnnotator version
+        timestamp:
+          type: string
+          format: date-time
+          description: Current server time (ISO 8601 UTC)
+        details:
+          type: object
+          required:
+            - database
+            - storage
+            - gpu
+            - registry
+          properties:
+            database:
+              $ref: '#/components/schemas/DatabaseHealth'
+            storage:
+              $ref: '#/components/schemas/StorageHealth'
+            gpu:
+              $ref: '#/components/schemas/GPUHealth'
+            registry:
+              $ref: '#/components/schemas/RegistryHealth'
+
+    DatabaseHealth:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+          description: Database connectivity status
+        schema_version:
+          type: string
+          nullable: true
+          description: Current schema version (null if error)
+        jobs_count:
+          type: integer
+          nullable: true
+          description: Total jobs in database (null if error)
+        error:
+          type: string
+          nullable: true
+          description: Error message if status=error
+
+    StorageHealth:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ok, warning, error]
+          description: |
+            - ok: >5GB free
+            - warning: 1-5GB free (may affect new jobs)
+            - error: <1GB free (new jobs will fail)
+        free_gb:
+          type: number
+          format: float
+          nullable: true
+          description: Free disk space in GB
+        used_gb:
+          type: number
+          format: float
+          nullable: true
+          description: Used disk space in GB
+        total_gb:
+          type: number
+          format: float
+          nullable: true
+          description: Total disk space in GB
+        warning:
+          type: string
+          nullable: true
+          description: Warning message if status=warning
+        error:
+          type: string
+          nullable: true
+          description: Error message if status=error
+
+    GPUHealth:
+      type: object
+      required:
+        - available
+      properties:
+        available:
+          type: boolean
+          description: Whether GPU(s) detected
+        device_count:
+          type: integer
+          nullable: true
+          description: Number of CUDA devices (null if not available)
+        devices:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/GPUDevice'
+          description: Per-device details (null if not available)
+
+    GPUDevice:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: GPU device name (e.g., "NVIDIA GeForce RTX 3080")
+        memory_total_gb:
+          type: number
+          format: float
+          nullable: true
+          description: Total VRAM in GB
+        memory_free_gb:
+          type: number
+          format: float
+          nullable: true
+          description: Free VRAM in GB
+
+    RegistryHealth:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+          description: Registry loading status
+        pipelines_loaded:
+          type: integer
+          nullable: true
+          description: Number of pipelines successfully loaded
+        pipeline_names:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: List of available pipeline names
+        error:
+          type: string
+          nullable: true
+          description: Error message if status=error
+
+tags:
+  - name: system
+    description: System health and diagnostics operations

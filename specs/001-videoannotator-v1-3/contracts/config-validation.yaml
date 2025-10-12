@@ -1,0 +1,276 @@
+openapi: 3.1.0
+info:
+  title: VideoAnnotator Config Validation API
+  version: 1.3.0
+  description: |
+    Contract for configuration validation endpoint.
+    Validates pipeline configurations against registry-driven schemas before job submission.
+
+paths:
+  /api/v1/pipelines/validate:
+    post:
+      summary: Validate pipeline configuration
+      description: |
+        Validate a pipeline configuration without submitting a job.
+        Uses registry-driven Pydantic schemas to check field types, ranges, and dependencies.
+
+        **Performance**: Target <200ms validation time (cached schemas).
+        **Use case**: Pre-flight validation in UI/CLI before job submission.
+      operationId: validateConfig
+      tags:
+        - pipelines
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidationRequest'
+            examples:
+              valid_config:
+                summary: Valid face detection configuration
+                value:
+                  pipeline: "face"
+                  config:
+                    detection:
+                      confidence_threshold: 0.7
+                      batch_size: 16
+              invalid_threshold:
+                summary: Invalid confidence threshold (out of range)
+                value:
+                  pipeline: "face"
+                  config:
+                    detection:
+                      confidence_threshold: 1.5
+                      batch_size: 16
+              unknown_pipeline:
+                summary: Pipeline not found in registry
+                value:
+                  pipeline: "invalid_pipeline"
+                  config: {}
+
+      responses:
+        '200':
+          description: Validation completed (check 'valid' field for pass/fail)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResult'
+              examples:
+                valid:
+                  summary: Configuration is valid
+                  value:
+                    valid: true
+                    errors: []
+                    warnings:
+                      - field: "config.batch_size"
+                        message: "Batch size 64 may exceed GPU memory on some devices"
+                        suggestion: "Consider batch_size=32 for 8GB GPUs"
+                invalid_threshold:
+                  summary: Validation failed (threshold out of range)
+                  value:
+                    valid: false
+                    errors:
+                      - field: "config.detection.confidence_threshold"
+                        message: "Value must be between 0.0 and 1.0"
+                        code: "VALUE_OUT_OF_RANGE"
+                        hint: "Use a value like 0.5 or 0.7"
+                    warnings: []
+                pipeline_not_found:
+                  summary: Pipeline not in registry
+                  value:
+                    valid: false
+                    errors:
+                      - field: "pipeline"
+                        message: "Pipeline 'invalid_pipeline' not found in registry"
+                        code: "PIPELINE_NOT_FOUND"
+                        hint: "Available pipelines: face, person, audio, scene"
+                    warnings: []
+
+        '400':
+          description: Malformed request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                error:
+                  code: "INVALID_REQUEST"
+                  message: "Request body must be valid JSON"
+                  hint: "Check for syntax errors in JSON payload"
+                  timestamp: "2025-10-11T10:30:45.123Z"
+
+        '401':
+          description: Unauthorized (missing or invalid authentication)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "Missing or invalid API key"
+                  hint: "Provide X-API-Key header or JWT bearer token"
+                  timestamp: "2025-10-11T10:30:45.123Z"
+
+        '500':
+          description: Internal server error during validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                error:
+                  code: "VALIDATION_ERROR"
+                  message: "Failed to load validation schema for pipeline 'face'"
+                  detail:
+                    registry_path: "/app/registry/metadata/face.yaml"
+                  hint: "Check registry metadata integrity. Contact support."
+                  timestamp: "2025-10-11T10:30:45.123Z"
+
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+
+components:
+  schemas:
+    ValidationRequest:
+      type: object
+      required:
+        - pipeline
+        - config
+      properties:
+        pipeline:
+          type: string
+          description: Pipeline name (must exist in registry)
+          examples:
+            - "face"
+            - "person"
+            - "audio"
+        config:
+          type: object
+          description: Pipeline-specific configuration (structure varies by pipeline)
+          additionalProperties: true
+
+    ValidationResult:
+      type: object
+      required:
+        - valid
+        - errors
+        - warnings
+      properties:
+        valid:
+          type: boolean
+          description: Whether configuration is valid (true = no errors)
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+          description: List of validation errors (empty if valid=true)
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldWarning'
+          description: Non-blocking warnings (config still usable)
+
+    FieldError:
+      type: object
+      required:
+        - field
+        - message
+        - code
+      properties:
+        field:
+          type: string
+          description: Dot-notation path to invalid field (e.g., "config.detection.threshold")
+          examples:
+            - "pipeline"
+            - "config.detection.confidence_threshold"
+            - "config.batch_size"
+        message:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Machine-readable error code (uppercase snake_case)
+          examples:
+            - "PIPELINE_NOT_FOUND"
+            - "VALUE_OUT_OF_RANGE"
+            - "MISSING_REQUIRED_FIELD"
+            - "INVALID_TYPE"
+        hint:
+          type: string
+          nullable: true
+          description: Suggested fix or valid values
+
+    FieldWarning:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+          description: Dot-notation path to field with warning
+        message:
+          type: string
+          description: Human-readable warning message
+        suggestion:
+          type: string
+          nullable: true
+          description: Suggested alternative value or action
+
+    ErrorEnvelope:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
+
+    ErrorDetail:
+      type: object
+      required:
+        - code
+        - message
+        - timestamp
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code (uppercase snake_case)
+        message:
+          type: string
+          description: Human-readable error message
+        detail:
+          type: object
+          nullable: true
+          description: Additional error context (optional)
+          additionalProperties: true
+        hint:
+          type: string
+          nullable: true
+          description: Suggested action to fix the error
+        field:
+          type: string
+          nullable: true
+          description: Field name for validation errors
+        timestamp:
+          type: string
+          format: date-time
+          description: When error occurred (ISO 8601 UTC)
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication (default in v1.3.0)
+
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT bearer token (alternative to API key)
+
+tags:
+  - name: pipelines
+    description: Pipeline configuration and validation operations

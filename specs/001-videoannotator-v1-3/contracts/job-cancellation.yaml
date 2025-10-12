@@ -1,0 +1,191 @@
+openapi: 3.1.0
+info:
+  title: VideoAnnotator Job Cancellation API
+  version: 1.3.0
+  description: |
+    Contract for job cancellation endpoint.
+    Allows users to cancel running or pending jobs with proper GPU cleanup.
+
+paths:
+  /api/v1/jobs/{job_id}/cancel:
+    post:
+      summary: Cancel a job
+      description: |
+        Cancel a pending or running job. If the job is currently executing,
+        sends SIGTERM to worker process, waits up to 5 seconds for graceful shutdown,
+        then forces termination if needed. GPU memory is explicitly released.
+
+        **Idempotency**: Safe to call multiple times (returns 200 if already cancelled/completed).
+      operationId: cancelJob
+      tags:
+        - jobs
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+          description: UUID of the job to cancel
+
+      responses:
+        '200':
+          description: Job cancelled successfully or already in terminal state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancellationResponse'
+              examples:
+                cancelled:
+                  summary: Job was running and got cancelled
+                  value:
+                    job_id: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "CANCELLED"
+                    cancelled_at: "2025-10-11T10:30:45.123Z"
+                    message: "Job cancelled successfully"
+                already_completed:
+                  summary: Job already completed before cancellation
+                  value:
+                    job_id: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "COMPLETED"
+                    cancelled_at: null
+                    message: "Job already completed (cannot cancel)"
+
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                error:
+                  code: "JOB_NOT_FOUND"
+                  message: "Job 550e8400-e29b-41d4-a716-446655440000 not found"
+                  hint: "Check job ID or use GET /api/v1/jobs to list all jobs"
+                  timestamp: "2025-10-11T10:30:45.123Z"
+
+        '401':
+          description: Unauthorized (missing or invalid authentication)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "Missing or invalid API key"
+                  hint: "Provide X-API-Key header or JWT bearer token"
+                  timestamp: "2025-10-11T10:30:45.123Z"
+
+        '500':
+          description: Internal server error during cancellation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                error:
+                  code: "CANCELLATION_FAILED"
+                  message: "Failed to terminate worker process"
+                  detail:
+                    pid: 12345
+                    signal: "SIGKILL"
+                  hint: "Worker process may require manual cleanup. Contact support."
+                  timestamp: "2025-10-11T10:30:45.123Z"
+
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+
+components:
+  schemas:
+    CancellationResponse:
+      type: object
+      required:
+        - job_id
+        - status
+        - message
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          description: UUID of the job
+        status:
+          type: string
+          enum: [CANCELLED, COMPLETED, FAILED]
+          description: Final status of the job
+        cancelled_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            Timestamp when job was cancelled (ISO 8601 UTC).
+            Null if job was already completed/failed before cancellation attempt.
+        message:
+          type: string
+          description: Human-readable status message
+          examples:
+            - "Job cancelled successfully"
+            - "Job already completed (cannot cancel)"
+            - "Job already failed (cannot cancel)"
+
+    ErrorEnvelope:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
+
+    ErrorDetail:
+      type: object
+      required:
+        - code
+        - message
+        - timestamp
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code (uppercase snake_case)
+          examples:
+            - "JOB_NOT_FOUND"
+            - "CANCELLATION_FAILED"
+            - "UNAUTHORIZED"
+        message:
+          type: string
+          description: Human-readable error message
+        detail:
+          type: object
+          nullable: true
+          description: Additional error context (optional)
+          additionalProperties: true
+        hint:
+          type: string
+          nullable: true
+          description: Suggested action to fix the error
+        field:
+          type: string
+          nullable: true
+          description: Field name for validation errors (not used in cancellation)
+        timestamp:
+          type: string
+          format: date-time
+          description: When error occurred (ISO 8601 UTC)
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication (default in v1.3.0)
+
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT bearer token (alternative to API key)
+
+tags:
+  - name: jobs
+    description: Job lifecycle management operations
