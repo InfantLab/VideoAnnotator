@@ -48,6 +48,10 @@ class Job(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     started_at = Column(DateTime)
     completed_at = Column(DateTime)
+    cancelled_at = Column(DateTime)  # v1.3.0: Track cancellation timestamp
+
+    # Storage paths (v1.3.0: Persistent job storage)
+    storage_path = Column(String)  # Path to persistent job storage directory
 
     # Retry and error handling
     retry_count = Column(Integer, default=0)

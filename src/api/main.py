@@ -61,6 +61,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("VideoAnnotator API server starting up...", extra={"event": "startup"})
 
+    # Run database migrations (v1.3.0)
+    try:
+        from database.migrations import migrate_to_v1_3_0
+
+        logger.info("Running database migrations...")
+        migration_success = migrate_to_v1_3_0()
+        if migration_success:
+            logger.info("Database migrations completed successfully")
+        else:
+            logger.warning("Database migrations completed with warnings")
+    except Exception as e:
+        logger.error(f"Database migration failed: {e}")
+        # Don't fail startup if migration fails, but log prominently
+
     # Log server configuration
     logger.info(
         "Server configuration initialized",

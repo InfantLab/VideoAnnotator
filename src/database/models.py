@@ -142,10 +142,16 @@ class Job(Base):
     )
     started_at = Column(DateTime(timezone=True), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
+    cancelled_at = Column(
+        DateTime(timezone=True), nullable=True
+    )  # v1.3.0: Track cancellation timestamp
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Results and errors
     result_path = Column(String(500), nullable=True)  # Path to result files
+    storage_path = Column(
+        String(500), nullable=True
+    )  # v1.3.0: Persistent job storage directory
     error_message = Column(Text, nullable=True)
     progress_percentage = Column(Integer, default=0, nullable=False)
 

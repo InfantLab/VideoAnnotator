@@ -118,7 +118,7 @@ def create_admin_user(
         db.commit()
 
         # Create API key for admin
-        api_key_obj, raw_key = APIKeyCRUD.create(
+        _api_key_obj, raw_key = APIKeyCRUD.create(
             db=db,
             user_id=str(user.id),
             key_name="admin_default",
@@ -137,6 +137,67 @@ def create_admin_user(
         return None
     finally:
         db.close()
+
+
+def migrate_to_v1_3_0() -> bool:
+    """Migrate database schema from v1.2.x to v1.3.0.
+
+    Adds:
+    - jobs.cancelled_at (DateTime): Timestamp when job was cancelled
+    - jobs.storage_path (String): Path to persistent job storage directory
+
+    Returns:
+        True if successful, False otherwise
+    """
+    from sqlalchemy import inspect, text
+
+    try:
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+
+        if "jobs" not in tables:
+            logger.warning(
+                "[MIGRATION] Jobs table does not exist, skipping v1.3.0 migration"
+            )
+            return False
+
+        with engine.connect() as conn:
+            # Get existing columns
+            result = conn.execute(text("PRAGMA table_info('jobs')"))
+            existing_cols = {row[1] for row in result}  # row[1] is column name
+
+            migrations_applied = []
+
+            # Add cancelled_at column if missing
+            if "cancelled_at" not in existing_cols:
+                logger.info("[MIGRATION] Adding jobs.cancelled_at column")
+                conn.execute(text("ALTER TABLE jobs ADD COLUMN cancelled_at DATETIME"))
+                migrations_applied.append("cancelled_at")
+                logger.info("[MIGRATION] ✓ Added jobs.cancelled_at column")
+
+            # Add storage_path column if missing
+            if "storage_path" not in existing_cols:
+                logger.info("[MIGRATION] Adding jobs.storage_path column")
+                conn.execute(
+                    text("ALTER TABLE jobs ADD COLUMN storage_path VARCHAR(500)")
+                )
+                migrations_applied.append("storage_path")
+                logger.info("[MIGRATION] ✓ Added jobs.storage_path column")
+
+            conn.commit()
+
+            if migrations_applied:
+                logger.info(
+                    f"[MIGRATION] v1.3.0 migration complete. Applied: {', '.join(migrations_applied)}"
+                )
+            else:
+                logger.info("[MIGRATION] v1.3.0 schema already up to date")
+
+            return True
+
+    except Exception as e:
+        logger.error(f"[MIGRATION] Failed to migrate to v1.3.0: {e}")
+        return False
 
 
 def migrate_from_memory_jobs(memory_jobs: dict) -> int:
