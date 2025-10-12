@@ -66,6 +66,7 @@ class JobNotFoundException(VideoAnnotatorException):
             message=f"Job {job_id} not found",
             code="JOB_NOT_FOUND",
             hint=hint or "Check job ID or use GET /api/v1/jobs to list all jobs",
+            detail={"job_id": job_id},
         )
         self.status_code = 404
 
@@ -83,13 +84,16 @@ class PipelineNotFoundException(VideoAnnotatorException):
             available_pipelines: Optional list of available pipeline names
         """
         hint = None
+        detail: dict[str, str | list[str]] = {"pipeline_name": pipeline_name}
         if available_pipelines:
             hint = f"Available pipelines: {', '.join(available_pipelines)}"
+            detail["available_pipelines"] = available_pipelines
 
         super().__init__(
             message=f"Pipeline '{pipeline_name}' not found in registry",
             code="PIPELINE_NOT_FOUND",
             hint=hint,
+            detail=detail,
         )
         self.status_code = 404
 
@@ -195,6 +199,7 @@ class JobAlreadyCompletedException(VideoAnnotatorException):
             message=f"Cannot cancel job {job_id} in {status} state",
             code="JOB_ALREADY_COMPLETED",
             hint=f"Job already in terminal state: {status}",
+            detail={"job_id": job_id, "status": status},
         )
         self.status_code = 409
 
@@ -242,7 +247,7 @@ class GPUOutOfMemoryException(VideoAnnotatorException):
         else:
             message = "GPU out of memory"
 
-        detail = {}
+        detail: dict[str, int | str] = {}
         if requested_mb:
             detail["requested_mb"] = requested_mb
         if available_mb:
@@ -273,7 +278,7 @@ class CancellationFailedException(VideoAnnotatorException):
             reason: Why cancellation failed
             pid: Optional process ID
         """
-        detail = {"reason": reason}
+        detail: dict[str, str | int] = {"job_id": job_id, "reason": reason}
         if pid:
             detail["pid"] = pid
 
@@ -298,10 +303,11 @@ class ValidationSystemException(VideoAnnotatorException):
         """
         super().__init__(
             message=f"Failed to load validation schema for pipeline '{pipeline}'",
-            code="VALIDATION_ERROR",
+            code="VALIDATION_SYSTEM_ERROR",
             hint="Check registry metadata integrity. Contact support.",
             detail={
                 "pipeline": pipeline,
+                "reason": reason,
                 "registry_path": f"/app/registry/metadata/{pipeline}.yaml",
             },
         )

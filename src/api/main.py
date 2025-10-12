@@ -139,6 +139,11 @@ def create_app() -> FastAPI:
     # Register standard error handlers
     register_error_handlers(app)
 
+    # Register v1.3.0 exception handlers (VideoAnnotatorException -> ErrorEnvelope)
+    from api.v1.handlers import register_v1_exception_handlers
+
+    register_v1_exception_handlers(app)
+
     # Health check endpoint
     @app.get("/health")
     async def health_check():
