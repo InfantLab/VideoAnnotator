@@ -283,3 +283,73 @@ uv run videoannotator --help
 ```
 
 If any discrepancy between an active shell environment and `uv run` behavior is suspected, treat the `uv run` result as canonical.
+
+## 22. Pre-Commit & Type Checking Best Practices
+
+The project uses pre-commit hooks (ruff, ruff-format, mypy, trailing-whitespace) that run automatically on `git commit`. Understanding their behavior reduces iteration cycles.
+
+### Type Checking Strictness Levels
+
+The project has DIFFERENT mypy strictness for different modules (see `pyproject.toml`):
+
+**Strict modules** (`src/api/*`, `tests/api/*`, `tests/integration/test_api_integration`):
+- `check_untyped_defs = true`
+- `disallow_incomplete_defs = true`
+- `no_implicit_optional = true`
+
+**Relaxed modules** (pipelines, storage, utils, exporters, schemas):
+- Excluded from strict checking (reduces noise from ML/storage deps)
+
+### Common Type Issues & Solutions
+
+1. **Pydantic Model Config Classes (RUF012)**
+   - Use `json_schema_extra: ClassVar[dict[str, Any]] = {...}`
+   - Import: `from typing import ClassVar, Any`
+
+2. **Exception Subclass Attributes**
+   - Use inline annotations in `__init__`: `self.code: str = code`
+   - Avoid class-level annotations on Exception subclasses
+
+3. **Mixed-Type Dictionaries**
+   - Declare explicit type upfront: `detail: dict[str, str | int] = {}`
+   - Mypy infers dict value type from first assignment
+
+4. **Mypy Cache Staleness**
+   - Clear cache when errors persist: `rm -rf .mypy_cache ~/.cache/pre-commit/mypy*`
+
+### Pre-Commit Workflow
+
+**Before committing:**
+```bash
+uv run ruff format src/api/v1/    # Format first
+uv run mypy src/api/              # Check types
+uv run ruff check src/api/        # Lint
+```
+
+**If pre-commit fails:**
+- Auto-formatted files → re-stage: `git add <files>`
+- Mypy cache stale → clear: `rm -rf .mypy_cache`
+- After verifying fixes → last resort: `git commit --no-verify`
+
+**Hook order:** trailing-whitespace → end-of-file-fixer → ruff → ruff-format → mypy
+
+Files modified by first 4 hooks require re-staging.
+
+### API Module Requirements
+
+For new `src/api/` modules:
+- All parameters and returns typed
+- Pydantic Config: use `ClassVar` for class attributes
+- Exceptions: inline type annotations in `__init__`
+- Mixed dicts: explicit `dict[str, str | int]` hints
+- Import `ClassVar`, `Any` from `typing`
+
+### Quick Fixes
+
+| Error | Fix |
+|-------|-----|
+| RUF012 mutable class attribute | `ClassVar[dict[str, Any]]` |
+| dict type mismatch | Declare `dict[str, str \| int]` upfront |
+| Exception init type error | Inline: `self.attr: type = value` |
+| Stale mypy errors | Clear `.mypy_cache` |
+| Pre-commit formatting | Re-stage files |
