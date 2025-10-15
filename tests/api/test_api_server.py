@@ -180,7 +180,7 @@ class TestJobEndpoints:
     def test_submit_job_with_config(self, client, sample_video_file):
         """Test job submission with configuration and pipelines."""
         config = {"output_format": "coco", "confidence_threshold": 0.8}
-        pipelines = "person,scene"
+        pipelines = "person_tracking,scene_detection"
 
         files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
         data = {"config": json.dumps(config), "selected_pipelines": pipelines}
@@ -190,7 +190,7 @@ class TestJobEndpoints:
 
         job_data = response.json()
         assert job_data["config"] == config
-        assert job_data["selected_pipelines"] == ["person", "scene"]
+        assert job_data["selected_pipelines"] == ["person_tracking", "scene_detection"]
 
     def test_get_job_status(self, client, sample_video_file):
         """Test retrieving job status from database."""

@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import tempfile
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -19,6 +18,7 @@ from api.errors import APIError
 from batch.types import BatchJob, JobStatus
 from storage.base import StorageBackend
 from storage.config import get_job_storage_path
+from validation.validator import ConfigValidator
 
 router = APIRouter()
 
@@ -136,10 +136,40 @@ async def submit_job(
                 p.strip() for p in selected_pipelines.split(",") if p.strip()
             ]
 
+        # Validate configuration if pipelines are specified (v1.3.0)
+        if parsed_pipelines and parsed_config:
+            validator = ConfigValidator()
+            validation_results = validator.validate_batch(
+                {pipeline: parsed_config for pipeline in parsed_pipelines}
+            )
+
+            # Check if any pipeline validation failed
+            failed = {
+                pipeline: result
+                for pipeline, result in validation_results.items()
+                if not result.valid
+            }
+
+            if failed:
+                # Build comprehensive error response
+                error_messages = []
+                for pipeline, result in failed.items():
+                    for error in result.errors:
+                        msg = f"{pipeline}: {error.message}"
+                        if error.hint:
+                            msg += f" ({error.hint})"
+                        error_messages.append(msg)
+
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Configuration validation failed: {'; '.join(error_messages)}",
+                )
+
         # Save uploaded video to temporary file
         # TODO: Implement proper file storage (local/S3)
         temp_dir = tempfile.mkdtemp()
-        video_path = os.path.join(temp_dir, video.filename)
+        filename = video.filename or "video"
+        video_path = os.path.join(temp_dir, filename)
 
         with open(video_path, "wb") as f:
             content = await video.read()
@@ -174,6 +204,9 @@ async def submit_job(
             else None,
         )
 
+    except HTTPException:
+        # Let validation errors and other HTTP exceptions propagate
+        raise
     except APIError:
         raise
     except Exception:

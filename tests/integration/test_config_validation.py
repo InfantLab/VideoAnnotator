@@ -3,7 +3,6 @@
 Tests the POST /api/v1/config/validate and /api/v1/pipelines/{name}/validate endpoints.
 """
 
-import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
