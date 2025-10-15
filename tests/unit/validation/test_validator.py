@@ -78,7 +78,7 @@ class TestConfigValidator:
 
     def test_missing_required_field(self):
         """Test that configs without explicitly required fields are valid (use defaults)."""
-        # v1.2.1: No strictly required fields - pipelines have sensible defaults
+        # v1.3.0: No strictly required fields - pipelines have sensible defaults
         config = {
             "confidence_threshold": 0.5,
             # model_name not provided - will use default
@@ -157,7 +157,7 @@ class TestConfigValidator:
 
     def test_scene_detection_missing_required(self):
         """Test scene_detection without threshold uses defaults."""
-        # v1.2.1: No strictly required fields - pipelines have sensible defaults
+        # v1.3.0: No strictly required fields - pipelines have sensible defaults
         config = {
             "min_scene_length": 2.0,
             # threshold not provided - will use default

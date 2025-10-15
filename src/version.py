@@ -10,10 +10,10 @@ from typing import Any
 from utils.logging_config import get_logger
 
 # VideoAnnotator Version
-__version__ = "1.2.2"
-__version_info__ = (1, 2, 2)
-# Release date updated for 1.2.2 patch release capturing import normalization & roadmap corrections
-__release_date__ = "2025-09-18"
+__version__ = "1.3.0-dev"
+__version_info__ = (1, 3, 0, "dev")
+# Development version for v1.3.0 feature branch (job cancellation, config validation, etc.)
+__release_date__ = "2025-10-15"
 __author__ = "VideoAnnotator Team"
 __license__ = "MIT"
 

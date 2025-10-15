@@ -8,11 +8,11 @@ from validation.models import FieldError, FieldWarning, ValidationResult
 class ConfigValidator:
     """Validates pipeline configurations against known schemas.
 
-    For v1.2.1, provides basic type and range validation with helpful error
+    For v1.3.0, provides basic type and range validation with helpful error
     messages. Schema definitions are loaded from pipeline metadata in future versions.
     """
 
-    # Common configuration schema rules (v1.2.1: basic validation)
+    # Common configuration schema rules (v1.3.0: basic validation)
     COMMON_RULES: ClassVar[dict[str, dict[str, Any]]] = {
         "confidence_threshold": {
             "type": (int, float),
@@ -44,7 +44,7 @@ class ConfigValidator:
     }
 
     # Pipeline-specific field definitions
-    # For v1.2.1: No strictly required fields - pipelines have sensible defaults
+    # For v1.3.0: No strictly required fields - pipelines have sensible defaults
     PIPELINE_REQUIREMENTS: ClassVar[dict[str, dict[str, list[str]]]] = {
         "person_tracking": {
             "required": [],  # model_name has defaults
@@ -99,9 +99,7 @@ class ConfigValidator:
         """Initialize the config validator."""
         self._cached_schemas: dict[str, Any] = {}
 
-    def validate(
-        self, pipeline_name: str, config: dict[str, Any]
-    ) -> ValidationResult:
+    def validate(self, pipeline_name: str, config: dict[str, Any]) -> ValidationResult:
         """Validate a pipeline configuration.
 
         Args:
@@ -144,7 +142,7 @@ class ConfigValidator:
         for field, value in config.items():
             field_path = f"{pipeline_name}.{field}"
 
-            # Skip nested objects for now (v1.2.1 simplification)
+            # Skip nested objects for now (v1.3.0 simplification)
             if isinstance(value, dict):
                 # Recursively validate nested configs
                 nested_errors, nested_warnings = self._validate_nested(
@@ -195,7 +193,7 @@ class ConfigValidator:
 
         # Check for unknown fields (warnings, not errors)
         all_known_fields = requirements["required"] + requirements["optional"]
-        for field in config.keys():
+        for field in config:
             if field not in all_known_fields and field not in self.COMMON_RULES:
                 warnings.append(
                     FieldWarning(
@@ -227,7 +225,7 @@ class ConfigValidator:
         for field, value in config.items():
             field_path = f"{parent_path}.{field}"
 
-            # Skip nested objects (one level deep for v1.2.1)
+            # Skip nested objects (one level deep for v1.3.0)
             if isinstance(value, dict):
                 continue
 

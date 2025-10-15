@@ -99,7 +99,9 @@ async def validate_config(request: ConfigValidationRequest) -> ConfigValidationR
         # Build message
         overall_valid = len(invalid_pipelines) == 0
         if overall_valid:
-            message = f"Configuration is valid for all {len(valid_pipelines)} pipeline(s)"
+            message = (
+                f"Configuration is valid for all {len(valid_pipelines)} pipeline(s)"
+            )
             if all_warnings:
                 message += f" ({len(all_warnings)} warning(s) total)"
         else:
@@ -120,4 +122,4 @@ async def validate_config(request: ConfigValidationRequest) -> ConfigValidationR
             code="CONFIG_VALIDATE_FAILED",
             message="Failed to validate configuration",
             hint="Check server logs for details",
-        )
+        ) from e
