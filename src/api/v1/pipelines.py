@@ -147,35 +147,64 @@ async def get_pipeline_info(pipeline_name: str) -> PipelineInfo:
         )
 
 
-@router.post("/{pipeline_name}/validate")
+class ConfigValidationRequest(BaseModel):
+    """Request for config validation."""
+
+    config: dict[str, Any]
+    selected_pipelines: list[str] | None = None
+
+
+class ConfigValidationResponse(BaseModel):
+    """Response for config validation."""
+
+    valid: bool
+    errors: list[dict[str, Any]]
+    warnings: list[dict[str, Any]]
+    message: str
+
+
+@router.post("/{pipeline_name}/validate", response_model=ConfigValidationResponse)
 async def validate_pipeline_config(
-    pipeline_name: str, config: dict[str, Any]
-) -> dict[str, Any]:
+    pipeline_name: str, request: ConfigValidationRequest
+) -> ConfigValidationResponse:
     """Validate a pipeline configuration.
 
     Args:
         pipeline_name: Name of the pipeline
-        config: Configuration to validate
+        request: Configuration validation request
 
     Returns:
-        Validation result
+        Validation result with errors and warnings
     """
     try:
+        from validation.validator import ConfigValidator
+
         # Confirm pipeline exists
         _ = await get_pipeline_info(pipeline_name)
 
-        # TODO: Implement proper config validation against schema
-        # For now, just check if the pipeline exists and return success
+        # Validate the config
+        validator = ConfigValidator()
+        result = validator.validate(pipeline_name, request.config)
 
-        return {
-            "valid": True,
-            "pipeline": pipeline_name,
-            "message": "Configuration is valid",
-        }
+        # Build message
+        if result.valid:
+            message = "Configuration is valid"
+            if result.warnings:
+                message += f" ({len(result.warnings)} warning(s))"
+        else:
+            message = f"Configuration has {len(result.errors)} error(s)"
+
+        return ConfigValidationResponse(
+            valid=result.valid,
+            errors=[e.model_dump() for e in result.errors],
+            warnings=[w.model_dump() for w in result.warnings],
+            message=message,
+        )
 
     except APIError:
         raise
-    except Exception:
+    except Exception as e:
+        logger.error("Failed to validate config for '%s': %s", pipeline_name, e)
         raise APIError(
             status_code=500,
             code="PIPELINE_CONFIG_VALIDATE_FAILED",

@@ -92,6 +92,26 @@ Assistant-created code MUST include at least minimal tests for:
 - API pipeline endpoint parity with registry.
 - Markdown generation (smoke: file contains each pipeline name).
 
+## 7a. Development Environment & Terminal Commands
+
+**Workspace Configuration:**
+- All terminals open in `/workspaces/VideoAnnotator` by default (dev container).
+- No need to prefix commands with `cd /workspaces/VideoAnnotator &&`.
+- Use `uv` for all Python operations (see section 21 for details).
+
+**Command Patterns:**
+```bash
+# Correct (terminal is already in workspace)
+uv run pytest tests/unit/
+
+# Incorrect (unnecessary)
+cd /workspaces/VideoAnnotator && uv run pytest tests/unit/
+```
+
+**File Paths:**
+- Use absolute paths when required by tools: `/workspaces/VideoAnnotator/src/...`
+- Relative paths work naturally since terminal CWD is the workspace root.
+
 ## 8. Deferred (Do NOT Implement in v1.2.1 Without Explicit Approval)
 
 - Plugin execution sandbox
