@@ -61,6 +61,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("VideoAnnotator API server starting up...", extra={"event": "startup"})
 
+    # Initialize security (API keys, CORS, authentication)
+    try:
+        from api.startup import initialize_security
+
+        logger.info("Initializing security configuration...")
+        initialize_security()
+        logger.info("Security configuration initialized")
+    except Exception as e:
+        logger.error(f"Security initialization failed: {e}")
+        # Continue startup but log error
+
     # Run database migrations (v1.3.0)
     try:
         from database.migrations import migrate_to_v1_3_0
@@ -138,10 +149,15 @@ def create_app() -> FastAPI:
         exclude_paths={"/health", "/docs", "/redoc", "/openapi.json", "/favicon.ico"},
     )
 
-    # CORS middleware (outermost)
+    # CORS middleware (outermost) - secure by default
+    import os
+
+    cors_origins_str = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
+    cors_origins = [origin.strip() for origin in cors_origins_str.split(",")]
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Configure appropriately for production
+        allow_origins=cors_origins,  # Restricted by default, configure via CORS_ORIGINS
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

@@ -6,13 +6,14 @@ from datetime import datetime
 from typing import Any
 
 import psutil
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
+from api.database import check_database_health, get_database_info
+from api.errors import APIError
 from registry.pipeline_registry import get_registry
 from version import __version__ as videoannotator_version
 
 PROCESS_START_TIME = time.time()
-from api.database import check_database_health, get_database_info
 
 router = APIRouter()
 
@@ -190,7 +191,12 @@ async def get_system_metrics():
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get metrics: {e!s}")
+        raise APIError(
+            status_code=500,
+            code="METRICS_FAILED",
+            message=f"Failed to get metrics: {e!s}",
+            hint="Check server logs for details",
+        ) from e
 
 
 @router.get("/config")
@@ -227,7 +233,12 @@ async def get_system_config():
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get config: {e!s}")
+        raise APIError(
+            status_code=500,
+            code="CONFIG_FAILED",
+            message=f"Failed to get config: {e!s}",
+            hint="Check server logs for details",
+        ) from e
 
 
 @router.get("/database")
@@ -241,6 +252,9 @@ async def get_database_info_endpoint():
         return get_database_info()
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get database info: {e!s}"
-        )
+        raise APIError(
+            status_code=500,
+            code="DATABASE_INFO_FAILED",
+            message=f"Failed to get database info: {e!s}",
+            hint="Check database connection and server logs",
+        ) from e

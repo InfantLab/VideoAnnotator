@@ -94,7 +94,7 @@ async def list_pipelines():
             code="PIPELINES_LIST_FAILED",
             message="Failed to list pipelines",
             hint="Check server logs for details",
-        )
+        ) from e
 
 
 @router.get("/{pipeline_name}", response_model=PipelineInfo)
@@ -144,7 +144,7 @@ async def get_pipeline_info(pipeline_name: str) -> PipelineInfo:
             code="PIPELINE_INFO_FAILED",
             message="Failed to get pipeline info",
             hint="Check server logs",
-        )
+        ) from e
 
 
 class ConfigValidationRequest(BaseModel):
@@ -210,4 +210,4 @@ async def validate_pipeline_config(
             code="PIPELINE_CONFIG_VALIDATE_FAILED",
             message="Failed to validate config",
             hint="Check schema / server logs",
-        )
+        ) from e

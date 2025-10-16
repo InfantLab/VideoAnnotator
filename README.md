@@ -65,9 +65,11 @@ uv sync  # Fast dependency installation (30 seconds)
 ```bash
 # Start the API server
 uv run python api_server.py
+# Note the API key printed on first startup - you'll need it below
 
 # Process your first video (in another terminal)
 curl -X POST "http://localhost:18011/api/v1/jobs/" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -F "video=@your_video.mp4" \
   -F "selected_pipelines=person,face,scene,audio"
 

@@ -257,6 +257,7 @@ Success Criteria:
 ```bash
 uv run pytest tests/unit/validation/ -v
 curl -X POST http://localhost:8000/api/v1/pipelines/validate \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"pipeline": "face", "config": {"detection": {"confidence_threshold": 1.5}}}'
 ```
@@ -396,7 +397,7 @@ curl http://localhost:8000/openapi.json | jq '.paths | keys'
 # Regenerate docs
 uv run python scripts/generate_api_docs.py
 
-# Verify examples work
+# Verify examples work (health endpoint is public, no auth required)
 curl http://localhost:8000/api/v1/health?detailed=true
 ```
 
@@ -490,11 +491,17 @@ Success Criteria:
 
 **Validation**:
 ```bash
-# Test with auth (should succeed)
-API_KEY=$(uv run python get_api_key.py)
-curl -H "X-API-Key: $API_KEY" http://localhost:8000/api/v1/health
+# Get API key from server startup or token manager
+export API_KEY="va_api_your_key_here"
 
-# Test without auth (should fail 401)
+# Test with auth (should succeed for protected endpoints)
+curl -H "Authorization: Bearer $API_KEY" \
+  http://localhost:8000/api/v1/jobs
+
+# Test without auth (should fail 401 for protected endpoints)
+curl http://localhost:8000/api/v1/jobs
+
+# Health endpoint is public (no auth required)
 curl http://localhost:8000/api/v1/health
 ```
 

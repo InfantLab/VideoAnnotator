@@ -1,5 +1,6 @@
 """Job management endpoints for VideoAnnotator API."""
 
+import contextlib
 import json
 import logging
 import os
@@ -8,13 +9,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from api.database import get_storage_backend
-from api.dependencies import validate_optional_api_key
 from api.errors import APIError
+from api.middleware.auth import validate_api_key
+from api.v1.exceptions import (
+    InvalidConfigException,
+    InvalidRequestException,
+    JobAlreadyCompletedException,
+    JobNotFoundException,
+)
 from batch.types import BatchJob, JobStatus
 from storage.base import StorageBackend
 from storage.config import get_job_storage_path
@@ -105,7 +112,7 @@ async def submit_job(
         None, description="Comma-separated pipeline names"
     ),
     storage: StorageBackend = Depends(get_storage),
-    user: dict[str, Any] | None = Depends(validate_optional_api_key),
+    user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobResponse:
     """Submit a video processing job.
 
@@ -123,11 +130,11 @@ async def submit_job(
         if config:
             try:
                 parsed_config = json.loads(config)
-            except json.JSONDecodeError:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid JSON configuration",
-                )
+            except json.JSONDecodeError as e:
+                raise InvalidRequestException(
+                    message="Invalid JSON configuration",
+                    hint="Check JSON syntax for missing brackets, quotes, or commas",
+                ) from e
 
         # Parse selected pipelines if provided
         parsed_pipelines = None
@@ -160,9 +167,9 @@ async def submit_job(
                             msg += f" ({error.hint})"
                         error_messages.append(msg)
 
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Configuration validation failed: {'; '.join(error_messages)}",
+                raise InvalidConfigException(
+                    message=f"Configuration validation failed: {'; '.join(error_messages)}",
+                    hint="Fix the validation errors and resubmit",
                 )
 
         # Save uploaded video to temporary file
@@ -204,25 +211,23 @@ async def submit_job(
             else None,
         )
 
-    except HTTPException:
-        # Let validation errors and other HTTP exceptions propagate
+    except (InvalidRequestException, InvalidConfigException, APIError):
+        # Let validation errors and other custom exceptions propagate
         raise
-    except APIError:
-        raise
-    except Exception:
+    except Exception as e:
         raise APIError(
             status_code=500,
             code="JOB_SUBMIT_FAILED",
             message="Failed to submit job",
             hint="Check server logs",
-        )
+        ) from e
 
 
 @router.get("/{job_id}", response_model=JobResponse)
 async def get_job_status(
     job_id: str,
     storage: StorageBackend = Depends(get_storage),
-    user: dict[str, Any] | None = Depends(validate_optional_api_key),
+    user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobResponse:
     """Get job status and details.
 
@@ -249,23 +254,27 @@ async def get_job_status(
             storage_path=str(job.storage_path) if job.storage_path else None,
         )
 
-    except FileNotFoundError:
+    except FileNotFoundError as e:
         # Message must include exact substring expected by tests: "Job not found"
-        raise APIError(
-            status_code=404,
-            code="JOB_NOT_FOUND",
-            message="Job not found",
-            hint="List jobs with 'videoannotator job list'",
-        )
-    except APIError:
+        raise JobNotFoundException(
+            job_id=job_id,
+            hint="Check job ID or use GET /api/v1/jobs to list all jobs",
+        ) from e
+    except (
+        JobNotFoundException,
+        InvalidRequestException,
+        InvalidConfigException,
+        JobAlreadyCompletedException,
+        APIError,
+    ):
         raise
-    except Exception:
+    except Exception as e:
         raise APIError(
             status_code=500,
             code="JOB_STATUS_FAILED",
             message="Failed to get job status",
             hint="Check server logs",
-        )
+        ) from e
 
 
 @router.get("/", response_model=JobListResponse)
@@ -274,7 +283,7 @@ async def list_jobs(
     per_page: int = 10,
     status_filter: str | None = None,
     storage: StorageBackend = Depends(get_storage),
-    user: dict[str, Any] | None = Depends(validate_optional_api_key),
+    user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobListResponse:
     """List jobs with pagination and filtering.
 
@@ -335,17 +344,19 @@ async def list_jobs(
         )
 
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list jobs: {e!s}",
-        )
+        raise APIError(
+            status_code=500,
+            code="JOB_LIST_FAILED",
+            message=f"Failed to list jobs: {e!s}",
+            hint="Check server logs for details",
+        ) from e
 
 
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def cancel_job(
     job_id: str,
     storage: StorageBackend = Depends(get_storage),
-    user: dict[str, Any] | None = Depends(validate_optional_api_key),
+    user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> None:
     """Cancel/delete a job.
 
@@ -357,10 +368,11 @@ async def cancel_job(
         try:
             # Ensure job exists (we don't need the object here)
             storage.load_job_metadata(job_id)
-        except FileNotFoundError:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found"
-            )
+        except FileNotFoundError as e:
+            raise JobNotFoundException(
+                job_id=job_id,
+                hint="Check job ID or use GET /api/v1/jobs to list all jobs",
+            ) from e
 
         # TODO: Implement proper job cancellation logic
         # For now, allow deletion of any job
@@ -368,20 +380,22 @@ async def cancel_job(
 
         return
 
-    except HTTPException:
+    except (JobNotFoundException, APIError):
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to cancel job: {e!s}",
-        )
+        raise APIError(
+            status_code=500,
+            code="JOB_DELETE_FAILED",
+            message=f"Failed to cancel job: {e!s}",
+            hint="Check server logs for details",
+        ) from e
 
 
 @router.post("/{job_id}/cancel", response_model=JobResponse)
 async def cancel_job_endpoint(
     job_id: str,
     storage: StorageBackend = Depends(get_storage),
-    user: dict[str, Any] | None = Depends(validate_optional_api_key),
+    user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobResponse:
     """Cancel a running or pending job.
 
@@ -404,10 +418,11 @@ async def cancel_job_endpoint(
         # Load job from database
         try:
             job_data = storage.load_job_metadata(job_id)
-        except FileNotFoundError:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found"
-            )
+        except FileNotFoundError as e:
+            raise JobNotFoundException(
+                job_id=job_id,
+                hint="Check job ID or use GET /api/v1/jobs to list all jobs",
+            ) from e
 
         # Check current status
         current_status = job_data.status
@@ -432,9 +447,9 @@ async def cancel_job_endpoint(
 
         # If already in a final state (completed/failed), return error
         if current_status in [JobStatus.COMPLETED, JobStatus.FAILED]:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Cannot cancel job in {current_status} state. Job is already complete.",
+            raise JobAlreadyCompletedException(
+                job_id=job_id,
+                status=current_status.value,
             )
 
         # Cancel the job
@@ -469,21 +484,23 @@ async def cancel_job_endpoint(
             storage_path=str(job_data.storage_path) if job_data.storage_path else None,
         )
 
-    except HTTPException:
+    except (JobNotFoundException, JobAlreadyCompletedException, APIError):
         raise
     except Exception as e:
         logger.error(f"[ERROR] Failed to cancel job {job_id}: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to cancel job: {e!s}",
-        )
+        raise APIError(
+            status_code=500,
+            code="JOB_CANCEL_FAILED",
+            message=f"Failed to cancel job: {e!s}",
+            hint="Check server logs for details",
+        ) from e
 
 
 @router.get("/{job_id}/results", response_model=JobResultsResponse)
 async def get_job_results(
     job_id: str,
     storage: StorageBackend = Depends(get_storage),
-    user: dict[str, Any] | None = Depends(validate_optional_api_key),
+    user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobResultsResponse:
     """Get detailed results for a completed job.
 
@@ -499,8 +516,9 @@ async def get_job_results(
 
         # Check if job exists
         if not job:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found"
+            raise JobNotFoundException(
+                job_id=job_id,
+                hint="Check job ID or use GET /api/v1/jobs to list all jobs",
             )
 
         # Convert pipeline results to response format
@@ -520,14 +538,12 @@ async def get_job_results(
         # Build full pipeline results with download URLs
         for name, result in pipeline_results.items():
             if result.output_file:
-                try:
+                with contextlib.suppress(Exception):
                     # Construct a download URL for convenience; client may use server base URL
                     # Note: This is a relative path; frontend should prepend server origin
                     result.download_url = (
                         f"/api/v1/jobs/{job.job_id}/results/files/{name}"
                     )
-                except Exception:
-                    pass
 
         return JobResultsResponse(
             job_id=job.job_id,
@@ -538,17 +554,20 @@ async def get_job_results(
             result_path=getattr(job, "result_path", None),
         )
 
-    except HTTPException:
+    except (JobNotFoundException, APIError):
         raise
-    except FileNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found"
-        )
+    except FileNotFoundError as e:
+        raise JobNotFoundException(
+            job_id=job_id,
+            hint="Check job ID or use GET /api/v1/jobs to list all jobs",
+        ) from e
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get job results: {e!s}",
-        )
+        raise APIError(
+            status_code=500,
+            code="JOB_RESULTS_FAILED",
+            message=f"Failed to get job results: {e!s}",
+            hint="Check server logs for details",
+        ) from e
 
 
 @router.get("/{job_id}/results/files/{pipeline_name}")
@@ -556,7 +575,7 @@ async def download_result_file(
     job_id: str,
     pipeline_name: str,
     storage: StorageBackend = Depends(get_storage),
-    user: dict[str, Any] | None = Depends(validate_optional_api_key),
+    user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> Any:
     """Download a specific result file from a job.
 
@@ -572,33 +591,36 @@ async def download_result_file(
         job = storage.load_job_metadata(job_id)
 
         if not job:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found"
+            raise JobNotFoundException(
+                job_id=job_id,
+                hint="Check job ID or use GET /api/v1/jobs to list all jobs",
             )
 
         # Check if pipeline result exists
         if pipeline_name not in job.pipeline_results:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Pipeline '{pipeline_name}' results not found for job {job_id}",
+            raise InvalidRequestException(
+                message=f"Pipeline '{pipeline_name}' results not found for job {job_id}",
+                hint=f"Check pipeline name or use GET /api/v1/jobs/{job_id}/results to see available results",
             )
 
         result = job.pipeline_results[pipeline_name]
 
         # Check if output file exists
         if not result.output_file:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"No output file for pipeline '{pipeline_name}' in job {job_id}",
+            raise InvalidRequestException(
+                message=f"No output file for pipeline '{pipeline_name}' in job {job_id}",
+                hint="This pipeline may not generate an output file",
             )
 
         output_file_path = Path(result.output_file)
 
         # Verify file exists on disk
         if not output_file_path.exists():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Output file not found: {output_file_path}",
+            raise APIError(
+                status_code=500,
+                code="OUTPUT_FILE_MISSING",
+                message=f"Output file not found: {output_file_path}",
+                hint="File may have been deleted or storage may be corrupt",
             )
 
         # Return file
@@ -608,14 +630,17 @@ async def download_result_file(
             media_type="application/octet-stream",
         )
 
-    except HTTPException:
+    except (JobNotFoundException, InvalidRequestException, APIError):
         raise
-    except FileNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found"
-        )
+    except FileNotFoundError as e:
+        raise JobNotFoundException(
+            job_id=job_id,
+            hint="Check job ID or use GET /api/v1/jobs to list all jobs",
+        ) from e
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to download result file: {e!s}",
-        )
+        raise APIError(
+            status_code=500,
+            code="DOWNLOAD_FAILED",
+            message=f"Failed to download result file: {e!s}",
+            hint="Check server logs for details",
+        ) from e

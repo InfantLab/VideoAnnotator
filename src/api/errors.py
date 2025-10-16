@@ -43,9 +43,16 @@ class APIErrorModel(BaseModel):
 
 
 async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
+    from datetime import UTC, datetime
+
     # Backward compatibility: include legacy 'detail' key mirroring message for older clients/tests
     payload = {
-        "error": {"code": exc.code, "message": exc.message, "detail": exc.message},
+        "error": {
+            "code": exc.code,
+            "message": exc.message,
+            "detail": exc.message,
+            "timestamp": datetime.now(UTC).isoformat(),
+        },
         "detail": exc.message,
     }
     if exc.hint:
@@ -56,11 +63,18 @@ async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
 async def generic_http_exception_handler(
     request: Request, exc: Any
 ) -> JSONResponse:  # fallback for non-APIError HTTPException
+    from datetime import UTC, datetime
+
     # Preserve FastAPI's status code but wrap structure
     status_code = getattr(exc, "status_code", 500)
     detail = getattr(exc, "detail", "Internal Server Error")
     payload = {
-        "error": {"code": "HTTP_ERROR", "message": str(detail), "detail": str(detail)},
+        "error": {
+            "code": "HTTP_ERROR",
+            "message": str(detail),
+            "detail": str(detail),
+            "timestamp": datetime.now(UTC).isoformat(),
+        },
         "detail": str(detail),
     }
     return JSONResponse(status_code=status_code, content=payload)

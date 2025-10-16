@@ -75,9 +75,12 @@ async def videoannotator_exception_handler(
     error_envelope = ErrorEnvelope(error=error_detail)
 
     # Return JSON response with appropriate status code
+    # Include top-level "detail" key for backward compatibility
+    content = error_envelope.model_dump(mode="json", exclude_none=True)
+    content["detail"] = exc.message  # Legacy field for older clients
     return JSONResponse(
         status_code=exc.status_code,
-        content=error_envelope.model_dump(mode="json", exclude_none=True),
+        content=content,
     )
 
 

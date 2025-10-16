@@ -32,13 +32,18 @@ uv run videoannotator job results <job_id>
 ### Process Video via HTTP API
 
 ```bash
+# Set your API key (from server startup output)
+export API_KEY="va_api_your_key_here"
+
 # Submit job via HTTP POST
 curl -X POST "http://localhost:18011/api/v1/jobs/" \
+  -H "Authorization: Bearer $API_KEY" \
   -F "video=@video.mp4" \
   -F "selected_pipelines=scene,person,face"
 
 # Check status
-curl "http://localhost:18011/api/v1/jobs/{job_id}"
+curl -H "Authorization: Bearer $API_KEY" \
+  "http://localhost:18011/api/v1/jobs/{job_id}"
 ```
 
 ## 🛠️ CLI Management Commands
@@ -110,10 +115,12 @@ uv run videoannotator job submit video.mp4 --pipelines face
 uv run videoannotator job results <job_id>
 
 # API endpoint for results
-curl "http://localhost:18011/api/v1/jobs/{job_id}/results"
+curl -H "Authorization: Bearer $API_KEY" \
+  "http://localhost:18011/api/v1/jobs/{job_id}/results"
 
 # Download specific pipeline result file
-curl "http://localhost:18011/api/v1/jobs/{job_id}/results/files/scene_detection" -O
+curl -H "Authorization: Bearer $API_KEY" \
+  "http://localhost:18011/api/v1/jobs/{job_id}/results/files/scene_detection" -O
 ```
 
 ### Configuration Options

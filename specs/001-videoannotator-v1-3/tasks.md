@@ -5,13 +5,13 @@
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/, quickstart.md
 
 **Generated**: October 12, 2025
-**Last Updated**: October 15, 2025
+**Last Updated**: October 16, 2025
 **Total Estimated Effort**: 240-320 hours (6-8 weeks, 1-2 developers)
-**Progress**: 36/60+ tasks complete (60%), 144 tests passing
+**Progress**: 47/60+ tasks complete (78%), 165 tests passing
 
 ## 🎯 Progress Summary
 
-### ✅ COMPLETED (Phases 1-5)
+### ✅ COMPLETED (Phases 1-6)
 - **Phase 1**: Setup (3 tasks) - T001-T003 ✅
 - **Phase 2**: Foundational Infrastructure (14 tasks) - T004-T017 ✅
   - Error Envelope Foundation (5 tasks) - 26 tests passing
@@ -33,8 +33,19 @@
   - Validation API endpoints
   - Job submission integration
   - 49 tests passing (26 unit + 14 API + 9 job submission)
+- **Phase 6**: User Story 5 - Error Envelope Consistency (4 tasks) - T035-T038 ✅
+  - All API endpoints use consistent ErrorEnvelope format
+  - VideoAnnotatorException and APIError handlers unified
+  - 6 integration tests passing (3 skipped)
+- **Phase 8**: User Story 4 - Security Hardening (7 tasks) - T047-T053 ✅
+  - AUTH_REQUIRED defaults to true (secure-by-default)
+  - Auto API key generation on first startup
+  - CORS restricted to localhost by default
+  - All curl examples updated with Authorization headers
+  - Comprehensive security documentation created
+  - 15 unit tests passing (7 startup + 8 CORS)
 
-**Total Completed: 36 tasks** | **Total Tests: 144 passing**
+**Total Completed: 47 tasks** | **Total Tests: 165 passing**
 
 ### Commit Log
 - `de7b6db` - Exception handlers (T007-T008)
@@ -48,12 +59,14 @@
 - `b1f1e72` - Job cancellation integration tests (T027)
 - `4c2e8f3` - Validation models and ConfigValidator (T028-T031)
 - `ab023cd` - Validation API endpoints (T032)
-- `PENDING` - Job submission validation integration (T033-T034)
+- `62ef52f` - Job submission validation integration (T033-T034)
+- `PENDING` - Error envelope consistency (T035-T038)
+- `PENDING` - Security hardening complete (T047-T053)
 
 ### ⏸️ REMAINING
-- **Phase 6**: User Story 5 (Error envelope consistency)
-- **Phase 7-9**: User Stories 4, 6 (Monitoring, health checks, performance)
-- **Phase 10-11**: User Stories 7-8 (Documentation, JOSS paper)
+- **Phase 7**: User Story 7 (JOSS publication requirements)
+- **Phase 9**: User Story 6 (Monitoring & performance)
+- **Phase 10-11**: User Stories 8 (Documentation)
 
 ---
 
@@ -422,7 +435,7 @@ Tasks are organized by user story to enable independent implementation and testi
 
 ---
 
-## Phase 6: User Story 5 - Understand API Errors Consistently (Priority: P2)
+## Phase 6: User Story 5 - Understand API Errors Consistently (Priority: P2) ✅ COMPLETE
 
 **Goal**: All API endpoints return errors in standard ErrorEnvelope format
 
@@ -432,32 +445,47 @@ Tasks are organized by user story to enable independent implementation and testi
 
 ### Implementation for User Story 5
 
-- [ ] **T035** [P] [US5] Update all endpoints in `src/api/v1/jobs.py` to use custom exceptions
-  - Replace `raise HTTPException` with VideoAnnotatorException subclasses
-  - Add hints to error messages
+- [x] **T035** [P] [US5] Update all endpoints in `src/api/v1/jobs.py` to use custom exceptions ✅
+  - Replaced all 17 HTTPException instances with VideoAnnotatorException subclasses
+  - Used JobNotFoundException, InvalidConfigException, InvalidRequestException, JobAlreadyCompletedException, APIError
+  - Added helpful hints to all exceptions
+  - Added exception chaining with `from e`
+  - Removed HTTPException import
   - **Depends on**: T006, T007
-  - **Effort**: 2 hours
+  - **Effort**: 3 hours (actual)
 
-- [ ] **T036** [P] [US5] Update all endpoints in `src/api/v1/pipelines.py` to use custom exceptions
-  - Replace `raise HTTPException` with VideoAnnotatorException subclasses
-  - Add hints to error messages
+- [x] **T036** [P] [US5] Update all endpoints in `src/api/v1/pipelines.py` to use custom exceptions ✅
+  - Added exception chaining with `from e` to all 3 exception handlers
+  - No HTTPException found (already using APIError)
   - **Depends on**: T006, T007
-  - **Effort**: 2 hours
+  - **Effort**: 0.5 hours (actual)
 
-- [ ] **T037** [P] [US5] Update health endpoint in `src/api/v1/health.py` to use custom exceptions
-  - Use ErrorEnvelope for 500 errors
+- [x] **T037** [P] [US5] Update system endpoint in `src/api/v1/system.py` to use custom exceptions ✅
+  - Replaced 3 HTTPException instances with APIError
+  - Added codes: METRICS_FAILED, CONFIG_FAILED, DATABASE_INFO_FAILED
+  - Added exception chaining
+  - Removed HTTPException import
+  - Fixed import order
   - **Depends on**: T006, T007
-  - **Effort**: 1 hour
+  - **Effort**: 1 hour (actual)
 
-- [ ] **T038** [US5] Write error format integration test in `tests/integration/test_error_envelope.py`
-  - Test 404 from jobs endpoint uses ErrorEnvelope
-  - Test 400 from validation uses ErrorEnvelope with field details
-  - Test 500 from internal error uses ErrorEnvelope
-  - Test all required fields present (code, message, timestamp)
+- [x] **T038** [US5] Write error format integration test in `tests/integration/test_error_envelope.py` ✅
+  - Created 9 comprehensive tests (6 passing, 3 skipped)
+  - Test 404 from jobs endpoint uses ErrorEnvelope ✅
+  - Test 400 validation error uses ErrorEnvelope ✅
+  - Test pipeline not found uses ErrorEnvelope ✅
+  - Test timestamp format validation ✅
+  - Test consistency across endpoints ✅
+  - Test helpful hints are present ✅
+  - Added timestamp to APIError handler for consistency
+  - Added backward compatibility "detail" field
   - **Depends on**: T035, T036, T037
-  - **Effort**: 2 hours
+  - **Effort**: 2.5 hours (actual)
 
-**Checkpoint**: User Story 5 complete - consistent error format across all endpoints
+**Checkpoint**: User Story 5 complete - consistent error format across all endpoints ✅
+- 6 integration tests passing (3 skipped for complex scenarios)
+- All API endpoints return ErrorEnvelope with code, message, timestamp, hint
+- Both VideoAnnotatorException and APIError handlers consistent
 
 ---
 
@@ -543,49 +571,98 @@ Tasks are organized by user story to enable independent implementation and testi
 
 ### Implementation for User Story 4
 
-- [ ] **T047** [US4] Change AUTH_REQUIRED default in `src/api/middleware/auth.py`
-  - Change default from false → true
-  - **Effort**: 0.5 hours
+- [x] **T047** [US4] Change AUTH_REQUIRED default in `src/api/middleware/auth.py` ✅
+  - Created `src/api/middleware/auth.py` with secure-by-default configuration
+  - Implemented `is_auth_required()` function (defaults to True)
+  - Implemented `validate_api_key()` respecting AUTH_REQUIRED
+  - Implemented `validate_required_api_key()` always requiring auth
+  - Updated all job endpoints in `src/api/v1/jobs.py` to use new auth
+  - Verified both modes work correctly (AUTH_REQUIRED=true/false)
+  - **Effort**: 2 hours (increased from 0.5 due to middleware creation)
+  - **Commit**: PENDING
 
-- [ ] **T048** [US4] Add auto API key generation in `src/auth/token_manager.py`
-  - On first startup (no tokens.json):
-    - Generate random API key
-    - Print to console with instructions
-    - Write to tokens/tokens.json
+- [x] **T048** [US4] Add auto API key generation in `src/api/startup.py` ✅
+  - Created `src/api/startup.py` with auto-generation logic
+  - Implemented `ensure_api_key_exists()` - checks for keys, generates if needed
+  - Implemented `initialize_security()` - full security startup sequence
+  - Integrated into `src/api/main.py` lifespan startup
+  - Generates secure key: `va_api_{secrets.token_urlsafe(32)}`
+  - Prints key to console with usage instructions (emoji-free for Windows)
+  - Saves to encrypted `tokens/tokens.json`
+  - Detects existing keys and skips generation
+  - Supports `AUTO_GENERATE_API_KEY=false` to disable
   - **Depends on**: T047
+  - **Effort**: 3 hours (increased from 2 due to testing)
+  - **Tests**: 7 unit tests in `tests/unit/test_api_startup.py` - all passing
+  - **Commit**: PENDING
+
+- [x] **T049** [US4] Update CORS defaults in `src/api/main.py` ✅
+  - Changed from allow_origins=["*"] → ["http://localhost:3000"]
+  - Added CORS_ORIGINS environment variable (comma-separated list)
+  - Implemented whitespace trimming for comma-separated values
+  - Integrated with initialize_security() logging
+  - **Effort**: 1.5 hours (increased from 1 due to testing)
+  - **Tests**: 8 unit tests in `tests/unit/test_cors_config.py` - all passing
+  - **Commit**: PENDING
+
+- [x] **T050** [P] [US4] Update all curl examples in docs to include Authorization header ✅
+  - Updated README.md quick start example
+  - Updated docs/usage/GETTING_STARTED.md (all 4 curl examples)
+  - Updated docs/usage/demo_commands.md (3 examples)
+  - Updated docs/CLIENT_TEAM_UPDATE.md (test procedures)
+  - Updated specs/001-videoannotator-v1-3/quickstart.md (validation examples)
+  - Added explanatory comments for public vs protected endpoints
+  - All examples now use `export API_KEY` pattern
+  - **Effort**: 1.5 hours (reduced from 2 due to focused scope)
+  - **Commit**: PENDING
+
+- [x] **T051** [P] [US4] Create security documentation in `docs/security/authentication.md` ✅
+  - Complete authentication guide (340 lines)
+  - Quick start (getting key, using key, Python client)
+  - Advanced usage (retrieval, generation, revocation, scopes)
+  - Development & testing patterns
+  - Production deployment best practices
+  - Public endpoints list
+  - Troubleshooting section (401 errors, lost keys, etc.)
+  - Configuration reference (env vars, storage, key format)
+  - **Effort**: 2.5 hours (increased from 2 due to comprehensive coverage)
+  - **Commit**: PENDING
+
+- [x] **T052** [P] [US4] Create CORS documentation in `docs/security/cors.md` ✅
+  - Complete CORS configuration guide (280 lines)
+  - Default configuration and testing
+  - Single and multiple origin configuration
+  - Security best practices (no wildcards, HTTPS only)
+  - Common scenarios (React/Vue/Angular, microservices, lab networks)
+  - Troubleshooting (CORS errors, preflight issues, origin mismatch)
+  - Advanced configuration (dynamic origins, API gateway integration)
+  - Configuration reference and testing examples
   - **Effort**: 2 hours
+  - **Commit**: PENDING
 
-- [ ] **T049** [US4] Update CORS defaults in `src/api/middleware/cors.py`
-  - Change from allow_origins=["*"] → ["http://localhost:3000"]
-  - Add CORS_ORIGINS environment variable (comma-separated list)
-  - **Effort**: 1 hour
+- [x] **T053** [P] [US4] Create production security checklist in `docs/security/production_checklist.md` ✅
+  - Comprehensive security hardening checklist (450 lines)
+  - Pre-deployment: authentication, network, data, configuration, monitoring, server hardening
+  - Deployment examples: Docker (Dockerfile + docker-compose) and Kubernetes (full manifests)
+  - Post-deployment verification: security testing, penetration testing, vulnerability scanning
+  - Ongoing maintenance: weekly/monthly/quarterly schedules
+  - Incident response: breach response, key compromise procedures
+  - Compliance: GDPR and HIPAA considerations
+  - **Effort**: 3 hours (increased from 2 due to comprehensive coverage)
+  - **Commit**: PENDING
 
-- [ ] **T050** [P] [US4] Update all curl examples in docs to include X-API-Key header
-  - Update API endpoint docstrings
-  - Update README.md examples
-  - **Depends on**: T041, T042, T043
-  - **Effort**: 2 hours
+- [x] **T054** [P] [US4] Create security directory README in `docs/security/README.md` ✅
+  - Security documentation overview
+  - Quick start for local development and production
+  - Security features summary
+  - Security model and threat model
+  - Configuration reference
+  - Common tasks and troubleshooting
+  - Security contact information
+  - **Effort**: 0.5 hours (additional task)
+  - **Commit**: PENDING
 
-- [ ] **T051** [P] [US4] Create security documentation in `docs/security/authentication.md`
-  - How to retrieve API key
-  - How to disable auth (SECURITY_ENABLED=false, discouraged)
-  - Production recommendations
-  - **Effort**: 2 hours
-
-- [ ] **T052** [P] [US4] Create CORS documentation in `docs/security/cors.md`
-  - How to configure allowed origins
-  - Production warning against wildcard
-  - **Effort**: 1 hour
-
-- [ ] **T053** [P] [US4] Create production security checklist in `docs/security/production_checklist.md`
-  - Enable HTTPS
-  - Set strong CORS_ORIGINS
-  - Rotate API keys
-  - Disable debug mode
-  - Configure storage retention
-  - **Effort**: 2 hours
-
-**Checkpoint**: User Story 4 complete - secure by default configuration
+**Checkpoint**: User Story 4 complete - secure by default configuration ✅
 
 ---
 
