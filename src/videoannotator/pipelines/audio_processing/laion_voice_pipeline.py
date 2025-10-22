@@ -17,7 +17,6 @@ from huggingface_hub import hf_hub_download
 
 # Import WebVTT exporter
 from .version import __version__
-
 from .whisper_base_pipeline import WhisperBasePipeline
 
 # Define the emotion taxonomy based on LAION models (same 43 categories as face)

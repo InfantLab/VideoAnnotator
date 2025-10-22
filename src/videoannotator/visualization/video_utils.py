@@ -7,7 +7,6 @@ import cv2
 from IPython.display import clear_output
 from IPython.display import display as ipydisplay
 from PIL import Image as PILImage
-
 from src.visualization.render import WhisperExtractCurrentCaption, drawOneFrame
 
 

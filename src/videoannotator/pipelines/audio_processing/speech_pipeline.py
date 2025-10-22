@@ -16,7 +16,6 @@ import torch
 from dotenv import load_dotenv
 
 from .version import __version__
-
 from .whisper_base_pipeline import WhisperBasePipeline
 
 # Load environment variables from .env file

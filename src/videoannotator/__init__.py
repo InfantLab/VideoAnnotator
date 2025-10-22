@@ -95,6 +95,7 @@ def __getattr__(name: str) -> Any:
         try:
             # Use importlib for cleaner relative imports
             import importlib
+
             module = importlib.import_module(f".{submodule_name}", package=__name__)
 
             # Cache the module in this namespace for subsequent access

@@ -4,13 +4,12 @@ import os
 import time
 
 import pandas as pd
-from ultralytics import YOLO
-
 from src.config import MODEL_CONFIG, PATH_CONFIG, VIDEO_CONFIG
 from src.processors.video_processor import get_video_metadata, videotokeypoints
 from src.processors.video_understanding import extract_video_understanding
 from src.utils.io_utils import get_stem_name, getProcessedVideos, saveProcessedVideos
 from src.utils.keypoint_utils import normalize_keypoints
+from ultralytics import YOLO
 
 
 def process_video(model, video_path, data_out, metadata_row, force_process=False):

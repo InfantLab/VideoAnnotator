@@ -7,7 +7,6 @@ v1.3.0: Initial implementation for US2 (Stop Runaway Jobs).
 """
 
 import asyncio
-from typing import Dict, Optional
 
 from .utils.logging_config import get_logger
 
@@ -26,7 +25,7 @@ class CancellationManager:
 
     def __init__(self):
         """Initialize cancellation manager."""
-        self.running_tasks: Dict[str, asyncio.Task] = {}
+        self.running_tasks: dict[str, asyncio.Task] = {}
         self.cancellation_requests: set[str] = set()
         logger.debug("[CANCELLATION] CancellationManager initialized")
 
@@ -78,7 +77,7 @@ class CancellationManager:
                     f"[CANCELLATION] Task for job {job_id} cancelled successfully"
                 )
                 return True
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(
                     f"[CANCELLATION] Task for job {job_id} did not cancel within {timeout}s"
                 )
