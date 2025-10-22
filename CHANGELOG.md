@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Installation verification script (`scripts/verify_installation.py`) providing progressive environment validation for JOSS reviewers and users
+  - Python version check (>= 3.10)
+  - FFmpeg availability validation
+  - VideoAnnotator package import verification
+  - Database write access testing
+  - GPU availability detection (optional)
+  - Sample video processing test (optional)
+  - Platform detection (Linux, macOS, Windows, WSL2)
+  - ASCII-safe output for Windows compatibility
+  - Exit codes: 0=pass, 1=critical failure, 2=warnings
+  - CLI flags: `--verbose`, `--skip-video-test`
+- Comprehensive test suite for installation verification (30 tests, 100% coverage)
+  - Mock-based testing for all check scenarios
+  - Platform detection tests for all OS types
+  - Exit code verification tests
+- Made `scripts/` a proper Python package (added `__init__.py`) for cleaner test imports
+
 ### Planned
 
 - Enhanced pipeline configuration system

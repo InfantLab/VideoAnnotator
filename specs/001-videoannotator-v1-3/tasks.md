@@ -7,11 +7,11 @@
 **Generated**: October 12, 2025
 **Last Updated**: October 16, 2025
 **Total Estimated Effort**: 240-320 hours (6-8 weeks, 1-2 developers)
-**Progress**: 47/60+ tasks complete (78%), 165 tests passing
+**Progress**: 49/60+ tasks complete (82%), 195 tests passing
 
 ## 🎯 Progress Summary
 
-### ✅ COMPLETED (Phases 1-6)
+### ✅ COMPLETED (Phases 1-6, 7-partial, 8)
 - **Phase 1**: Setup (3 tasks) - T001-T003 ✅
 - **Phase 2**: Foundational Infrastructure (14 tasks) - T004-T017 ✅
   - Error Envelope Foundation (5 tasks) - 26 tests passing
@@ -37,6 +37,12 @@
   - All API endpoints use consistent ErrorEnvelope format
   - VideoAnnotatorException and APIError handlers unified
   - 6 integration tests passing (3 skipped)
+- **Phase 7**: User Story 7 - JOSS Publication Requirements (2/8 tasks) 🔄
+  - Installation verification script with progressive checks ✅
+  - Comprehensive test suite (30 tests) ✅
+  - Made scripts/ a proper Python package ✅
+  - 30 tests passing
+  - REMAINING: API docstrings enhancement (T041-T043), coverage validation (T044-T046)
 - **Phase 8**: User Story 4 - Security Hardening (7 tasks) - T047-T053 ✅
   - AUTH_REQUIRED defaults to true (secure-by-default)
   - Auto API key generation on first startup
@@ -45,7 +51,7 @@
   - Comprehensive security documentation created
   - 15 unit tests passing (7 startup + 8 CORS)
 
-**Total Completed: 47 tasks** | **Total Tests: 165 passing**
+**Total Completed: 49 tasks** | **Total Tests: 195 passing**
 
 ### Commit Log
 - `de7b6db` - Exception handlers (T007-T008)
@@ -61,10 +67,11 @@
 - `ab023cd` - Validation API endpoints (T032)
 - `62ef52f` - Job submission validation integration (T033-T034)
 - `PENDING` - Error envelope consistency (T035-T038)
+- `PENDING` - Installation verification script + tests (T039-T040)
 - `PENDING` - Security hardening complete (T047-T053)
 
 ### ⏸️ REMAINING
-- **Phase 7**: User Story 7 (JOSS publication requirements)
+- **Phase 7**: User Story 7 (JOSS publication requirements) - 6 tasks remaining
 - **Phase 9**: User Story 6 (Monitoring & performance)
 - **Phase 10-11**: User Stories 8 (Documentation)
 
@@ -499,7 +506,7 @@ Tasks are organized by user story to enable independent implementation and testi
 
 ### Implementation for User Story 7
 
-- [ ] **T039** [P] [US7] Create progressive checks in `scripts/verify_installation.py`
+- [x] **T039** [P] [US7] Create progressive checks in `scripts/verify_installation.py` ✅
   - Check Python >= 3.10
   - Check FFmpeg installed (`ffmpeg -version`)
   - Check VideoAnnotator importable
@@ -510,13 +517,18 @@ Tasks are organized by user story to enable independent implementation and testi
   - Exit codes: 0=pass, 1=critical fail, 2=warnings
   - ASCII-safe output, actionable suggestions
   - **Effort**: 6 hours
+  - **Tests**: Manual verification successful
+  - **Commit**: PENDING
 
-- [ ] **T040** [P] [US7] Write tests for installation verification in `tests/unit/scripts/test_verify_installation.py`
+- [x] **T040** [P] [US7] Write tests for installation verification in `tests/unit/scripts/test_verify_installation.py` ✅
   - Mock failed checks, verify error messages
   - Verify exit codes
   - Test platform-specific logic
   - **Depends on**: T039
   - **Effort**: 2 hours
+  - **Tests**: 30 tests passing
+  - **Commit**: PENDING
+  - **Note**: Made scripts/ a proper package (added __init__.py) for clean test imports
 
 - [ ] **T041** [US7] Enhance API docstrings in `src/api/v1/jobs.py`
   - Add detailed descriptions to all endpoints
