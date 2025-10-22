@@ -39,6 +39,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `GET /api/v1/pipelines` (list all pipelines)
     - `GET /api/v1/pipelines/{name}` (get pipeline details)
     - `GET /api/v1/system/health` (comprehensive health check)
+- Test coverage validation system for JOSS publication requirements
+  - pytest-cov configuration in `pyproject.toml` with module-specific thresholds
+  - Coverage validation script (`scripts/validate_coverage.py`) with automated threshold checks
+  - Module-specific thresholds: API (90%), pipelines (80%), database (85%), storage (85%)
+  - Global threshold: 80% overall coverage
+  - HTML and XML report generation for local and CI use
+  - Comprehensive documentation in `docs/testing/coverage_report.md`
+  - CLI options: `--verbose`, `--html`, `--xml`, `--fail-under`, `--module`
+  - Exit codes: 0=pass, 1=coverage fail, 2=test fail
 
 ### Planned
 

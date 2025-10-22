@@ -229,6 +229,46 @@ markers = [
 ]
 asyncio_mode = "auto"
 
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*_test.py",
+    "*/examples/*",
+    "*/scripts/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+branch = true
+parallel = false
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if 0:",
+    "if False:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.paths]
+source = [
+    "src/",
+    "*/site-packages/",
+]
+
 [dependency-groups]
 dev = [
     "docformatter>=1.7.7",
