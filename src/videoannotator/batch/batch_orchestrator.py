@@ -12,9 +12,10 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
-from .batch.progress_tracker import ProgressTracker
-from .batch.recovery import FailureRecovery, RetryStrategy
-from .batch.types import (
+from ..storage.base import StorageBackend
+from .progress_tracker import ProgressTracker
+from .recovery import FailureRecovery, RetryStrategy
+from .types import (
     BatchJob,
     BatchReport,
     BatchStatus,
@@ -23,7 +24,6 @@ from .batch.types import (
     PipelineResult,
     VideoPath,
 )
-from .storage.base import StorageBackend
 
 
 class BatchOrchestrator:

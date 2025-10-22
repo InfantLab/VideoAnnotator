@@ -10,10 +10,11 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
 
-from .api.database import get_storage_backend
-from .batch.types import JobStatus
-from .storage.base import StorageBackend
-from .utils.logging_config import get_logger
+from ..batch.types import JobStatus
+from ..config_env import MAX_CONCURRENT_JOBS, WORKER_POLL_INTERVAL
+from ..storage.base import StorageBackend
+from ..utils.logging_config import get_logger
+from .database import get_storage_backend
 
 logger = get_logger("api")
 
@@ -28,19 +29,25 @@ class BackgroundJobManager:
     def __init__(
         self,
         storage_backend: StorageBackend | None = None,
-        poll_interval: int = 5,
-        max_concurrent_jobs: int = 2,
+        poll_interval: int | None = None,
+        max_concurrent_jobs: int | None = None,
     ):
         """Initialize the background job manager.
 
         Args:
             storage_backend: Storage backend for job management
-            poll_interval: Seconds between database polls
-            max_concurrent_jobs: Maximum jobs to process simultaneously
+            poll_interval: Seconds between database polls (default: env WORKER_POLL_INTERVAL or 5)
+            max_concurrent_jobs: Maximum jobs to process simultaneously (default: env MAX_CONCURRENT_JOBS or 2)
         """
         self.storage = storage_backend or get_storage_backend()
-        self.poll_interval = poll_interval
-        self.max_concurrent_jobs = max_concurrent_jobs
+        self.poll_interval = (
+            poll_interval if poll_interval is not None else WORKER_POLL_INTERVAL
+        )
+        self.max_concurrent_jobs = (
+            max_concurrent_jobs
+            if max_concurrent_jobs is not None
+            else MAX_CONCURRENT_JOBS
+        )
         # Defer creating JobProcessor until the first job is actually processed.
         # Constructing JobProcessor eagerly triggers imports of pipeline modules
         # (which may load heavy ML libraries or perform IO) and can block

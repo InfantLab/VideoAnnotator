@@ -13,6 +13,12 @@ from datetime import datetime
 from ..api.database import get_storage_backend
 from ..batch.batch_orchestrator import BatchOrchestrator
 from ..batch.types import JobStatus
+from ..config_env import (
+    MAX_CONCURRENT_JOBS,
+    MAX_JOB_RETRIES,
+    RETRY_DELAY_BASE,
+    WORKER_POLL_INTERVAL,
+)
 from ..storage.base import StorageBackend
 from ..storage.config import ensure_job_storage_path
 from ..utils.logging_config import get_logger
@@ -29,25 +35,33 @@ class JobProcessor:
     def __init__(
         self,
         storage_backend: StorageBackend | None = None,
-        poll_interval: int = 5,
-        max_concurrent_jobs: int = 2,
-        max_retries: int = 3,
-        retry_delay_base: float = 2.0,
+        poll_interval: int | None = None,
+        max_concurrent_jobs: int | None = None,
+        max_retries: int | None = None,
+        retry_delay_base: float | None = None,
     ):
         """Initialize job processor.
 
         Args:
             storage_backend: Storage backend for job management
-            poll_interval: Seconds between database polls
-            max_concurrent_jobs: Maximum jobs to process simultaneously
-            max_retries: Maximum retry attempts for failed jobs (v1.3.0)
-            retry_delay_base: Base delay for exponential backoff (v1.3.0)
+            poll_interval: Seconds between database polls (default: env WORKER_POLL_INTERVAL or 5)
+            max_concurrent_jobs: Maximum jobs to process simultaneously (default: env MAX_CONCURRENT_JOBS or 2)
+            max_retries: Maximum retry attempts for failed jobs (default: env MAX_JOB_RETRIES or 3)
+            retry_delay_base: Base delay for exponential backoff (default: env RETRY_DELAY_BASE or 2.0)
         """
         self.storage = storage_backend or get_storage_backend()
-        self.poll_interval = poll_interval
-        self.max_concurrent_jobs = max_concurrent_jobs
-        self.max_retries = max_retries
-        self.retry_delay_base = retry_delay_base
+        self.poll_interval = (
+            poll_interval if poll_interval is not None else WORKER_POLL_INTERVAL
+        )
+        self.max_concurrent_jobs = (
+            max_concurrent_jobs
+            if max_concurrent_jobs is not None
+            else MAX_CONCURRENT_JOBS
+        )
+        self.max_retries = max_retries if max_retries is not None else MAX_JOB_RETRIES
+        self.retry_delay_base = (
+            retry_delay_base if retry_delay_base is not None else RETRY_DELAY_BASE
+        )
         self.orchestrator = BatchOrchestrator(storage_backend=self.storage)
 
         self.running = False

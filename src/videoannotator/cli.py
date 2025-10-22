@@ -5,6 +5,7 @@ from pathlib import Path
 import typer
 import uvicorn
 
+from .config_env import MAX_CONCURRENT_JOBS, WORKER_POLL_INTERVAL
 from .validation.emotion_validator import validate_emotion_file
 from .version import __version__
 
@@ -82,10 +83,23 @@ def process(
 
 @app.command()
 def worker(
-    poll_interval: int = typer.Option(5, help="Seconds between database polls"),
-    max_concurrent: int = typer.Option(2, help="Maximum concurrent jobs"),
+    poll_interval: int = typer.Option(
+        WORKER_POLL_INTERVAL,
+        help="Seconds between database polls (default: env WORKER_POLL_INTERVAL or 5)",
+    ),
+    max_concurrent: int = typer.Option(
+        MAX_CONCURRENT_JOBS,
+        help="Maximum concurrent jobs (default: env MAX_CONCURRENT_JOBS or 2)",
+    ),
 ):
-    """Start the background job processing worker."""
+    """Start the background job processing worker.
+
+    Environment variables:
+        MAX_CONCURRENT_JOBS: Maximum number of jobs to process simultaneously (default: 2)
+        WORKER_POLL_INTERVAL: Seconds between database polls (default: 5)
+        MAX_JOB_RETRIES: Maximum retry attempts for failed jobs (default: 3)
+        RETRY_DELAY_BASE: Base delay for exponential backoff (default: 2.0)
+    """
     import asyncio
 
     from utils.logging_config import setup_videoannotator_logging
