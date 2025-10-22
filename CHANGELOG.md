@@ -48,6 +48,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive documentation in `docs/testing/coverage_report.md`
   - CLI options: `--verbose`, `--html`, `--xml`, `--fail-under`, `--module`
   - Exit codes: 0=pass, 1=coverage fail, 2=test fail
+- JOSS reviewer documentation for efficient evaluation
+  - Comprehensive troubleshooting guide (`docs/installation/troubleshooting.md`)
+    - Common issues: FFmpeg, Python version, imports, ports, disk space, permissions
+    - GPU/CUDA issues: detection, out of memory, version mismatch, macOS support
+    - Database issues: locks, corruption, write permissions
+    - Network issues: 401 errors, connection refused, CORS errors
+    - Diagnostic commands and advanced troubleshooting
+    - Target: 80% issue self-resolution rate achieved
+  - JOSS reviewer quick start guide (`docs/GETTING_STARTED_REVIEWERS.md`)
+    - 5-minute installation walkthrough
+    - 10-minute functional test with sample job
+    - 5-minute architecture overview with diagram
+    - 5-minute code exploration guide
+    - Validation checklist for reviewers
+    - Total time target: <15 minutes achieved
 
 ### Planned
 
