@@ -9,11 +9,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api.errors import register_error_handlers
-from .api.middleware import ErrorLoggingMiddleware, RequestLoggingMiddleware
-from .api.v1 import api_router
-from .utils.logging_config import get_logger
-from .version import __version__ as videoannotator_version
+from ..utils.logging_config import get_logger
+from ..version import __version__ as videoannotator_version
+from .errors import register_error_handlers
+from .middleware import ErrorLoggingMiddleware, RequestLoggingMiddleware
+from .v1 import api_router
 
 API_VERSION = videoannotator_version
 
@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Initialize security (API keys, CORS, authentication)
     try:
-        from api.startup import initialize_security
+        from .startup import initialize_security
 
         logger.info("Initializing security configuration...")
         initialize_security()
@@ -74,7 +74,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Run database migrations (v1.3.0)
     try:
-        from database.migrations import migrate_to_v1_3_0
+        from ..database.migrations import migrate_to_v1_3_0
 
         logger.info("Running database migrations...")
         migration_success = migrate_to_v1_3_0()
@@ -99,7 +99,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
 
     # Start background job processing
-    from api.background_tasks import start_background_processing
+    from .background_tasks import start_background_processing
 
     await start_background_processing()
     logger.info(
@@ -116,7 +116,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
 
     # Stop background job processing
-    from api.background_tasks import stop_background_processing
+    from .background_tasks import stop_background_processing
 
     await stop_background_processing()
     logger.info(
@@ -170,7 +170,7 @@ def create_app() -> FastAPI:
     register_error_handlers(app)
 
     # Register v1.3.0 exception handlers (VideoAnnotatorException -> ErrorEnvelope)
-    from api.v1.handlers import register_v1_exception_handlers
+    from .v1.handlers import register_v1_exception_handlers
 
     register_v1_exception_handlers(app)
 
@@ -189,7 +189,7 @@ def create_app() -> FastAPI:
             memory_percent = None
         # Database quick status
         try:
-            from api.database import check_database_health
+            from .database import check_database_health
 
             db_ok, db_msg = check_database_health()
             db_status = {

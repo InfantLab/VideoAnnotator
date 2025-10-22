@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .utils.logging_config import get_logger
+from videoannotator.utils.logging_config import get_logger
 
 # VideoAnnotator Version
 __version__ = "1.3.0-dev"

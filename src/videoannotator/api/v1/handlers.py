@@ -14,9 +14,10 @@ from datetime import UTC, datetime
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from .api.v1.errors import ErrorDetail, ErrorEnvelope
-from .api.v1.exceptions import VideoAnnotatorException
-from .utils.logging_config import get_logger
+from videoannotator.utils.logging_config import get_logger
+
+from .errors import ErrorDetail, ErrorEnvelope
+from .exceptions import VideoAnnotatorException
 
 logger = get_logger("api")
 

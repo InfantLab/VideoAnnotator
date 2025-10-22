@@ -15,7 +15,7 @@ from typing import Any
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from .api.dependencies import validate_optional_api_key
+from ..dependencies import validate_optional_api_key
 
 
 def is_auth_required() -> bool:

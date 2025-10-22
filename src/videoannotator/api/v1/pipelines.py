@@ -6,8 +6,8 @@ from typing import Any
 from fastapi import APIRouter, Path
 from pydantic import BaseModel
 
-from .api.errors import APIError
-from .registry.pipeline_registry import get_registry
+from ...registry.pipeline_registry import get_registry
+from ..errors import APIError
 
 logger = logging.getLogger("videoannotator.api")
 

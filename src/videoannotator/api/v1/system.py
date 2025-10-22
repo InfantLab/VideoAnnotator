@@ -8,10 +8,10 @@ from typing import Any
 import psutil
 from fastapi import APIRouter
 
-from .api.database import check_database_health, get_database_info
-from .api.errors import APIError
-from .registry.pipeline_registry import get_registry
-from .version import __version__ as videoannotator_version
+from ...registry.pipeline_registry import get_registry
+from ...version import __version__ as videoannotator_version
+from ..database import check_database_health, get_database_info
+from ..errors import APIError
 
 PROCESS_START_TIME = time.time()
 

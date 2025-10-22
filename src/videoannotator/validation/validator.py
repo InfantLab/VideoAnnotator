@@ -2,7 +2,7 @@
 
 from typing import Any, ClassVar
 
-from .validation.models import FieldError, FieldWarning, ValidationResult
+from .models import FieldError, FieldWarning, ValidationResult
 
 
 class ConfigValidator:

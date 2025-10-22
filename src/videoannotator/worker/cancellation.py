@@ -8,7 +8,7 @@ v1.3.0: Initial implementation for US2 (Stop Runaway Jobs).
 
 import asyncio
 
-from .utils.logging_config import get_logger
+from videoannotator.utils.logging_config import get_logger
 
 logger = get_logger("api")
 

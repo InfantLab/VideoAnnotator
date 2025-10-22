@@ -12,9 +12,9 @@ from typing import Any
 import psutil
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from .api.database import get_database_info, get_storage_backend
-from .api.dependencies import get_current_user
-from .version import __version__ as videoannotator_version
+from ...version import __version__ as videoannotator_version
+from ..database import get_database_info, get_storage_backend
+from ..dependencies import get_current_user
 
 # Store for request logging (in production, use Redis or database)
 _request_log: list[dict[str, Any]] = []

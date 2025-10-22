@@ -6,8 +6,9 @@ Handles first-run initialization including automatic API key generation.
 import os
 from pathlib import Path
 
-from .auth.token_manager import get_token_manager
-from .utils.logging_config import get_logger
+from videoannotator.utils.logging_config import get_logger
+
+from ..auth.token_manager import get_token_manager
 
 logger = get_logger("api")
 
@@ -116,7 +117,7 @@ def initialize_security() -> None:
     """
     # Ensure API key exists
     _api_key, is_new = ensure_api_key_exists()  # Check authentication status
-    from api.middleware.auth import is_auth_required
+    from .middleware.auth import is_auth_required
 
     auth_required = is_auth_required()
     if auth_required:

@@ -6,8 +6,9 @@ based individual job processing.
 
 from datetime import datetime
 
-from .batch.types import BatchJob, JobStatus, PipelineResult
-from .utils.logging_config import get_logger
+from videoannotator.utils.logging_config import get_logger
+
+from ..batch.types import BatchJob, JobStatus, PipelineResult
 
 logger = get_logger("api")
 
