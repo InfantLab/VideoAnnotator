@@ -569,6 +569,162 @@ def version():
     typer.echo("https://github.com/your-org/VideoAnnotator")
 
 
+# ============================================================================
+# Diagnostic Commands (v1.3.0 - Phase 11 T070-T074)
+# ============================================================================
+
+
+@app.command()
+def diagnose(
+    component: str = typer.Argument(
+        "all",
+        help="Component to diagnose: system, gpu, storage, database, or all",
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Output results as JSON for scripting"
+    ),
+):
+    """Run system diagnostics for VideoAnnotator components.
+
+    Exit codes:
+    - 0: All checks passed
+    - 1: Critical errors found
+    - 2: Warnings found (non-critical issues)
+    """
+    import json
+
+    from videoannotator.diagnostics import (
+        diagnose_database,
+        diagnose_gpu,
+        diagnose_storage,
+        diagnose_system,
+    )
+
+    # Map component names to diagnostic functions
+    components_map = {
+        "system": ("System", diagnose_system),
+        "gpu": ("GPU", diagnose_gpu),
+        "storage": ("Storage", diagnose_storage),
+        "database": ("Database", diagnose_database),
+    }
+
+    # Determine which components to check
+    if component.lower() == "all":
+        components_to_check = list(components_map.items())
+    elif component.lower() in components_map:
+        component_item = components_map[component.lower()]
+        components_to_check = [(component.lower(), component_item)]
+    else:
+        typer.echo(
+            f"[ERROR] Unknown component: {component}",
+            err=True,
+        )
+        typer.echo(
+            f"Valid components: {', '.join(components_map.keys())}, all",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    # Run diagnostics
+    all_results = {}
+    overall_status = "ok"
+    has_errors = False
+    has_warnings = False
+
+    for comp_name, (display_name, diag_func) in components_to_check:
+        result = diag_func()
+        all_results[comp_name] = result
+
+        if result["status"] == "error":
+            has_errors = True
+            overall_status = "error"
+        elif result["status"] == "warning" and overall_status == "ok":
+            has_warnings = True
+            overall_status = "warning"
+
+    # Output results
+    if json_output:
+        # JSON output for scripting
+        output = {
+            "overall_status": overall_status,
+            "components": all_results,
+        }
+        typer.echo(json.dumps(output, indent=2))
+    else:
+        # Human-readable output (ASCII-safe)
+        typer.echo("\n=== VideoAnnotator Diagnostics ===\n")
+
+        for comp_name, (display_name, _) in components_to_check:
+            result = all_results[comp_name]
+            status = result["status"].upper()
+
+            # Status indicator (ASCII-safe, no emoji)
+            if result["status"] == "ok":
+                indicator = "[OK]"
+            elif result["status"] == "warning":
+                indicator = "[WARNING]"
+            else:
+                indicator = "[ERROR]"
+
+            typer.echo(f"{display_name}: {indicator}")
+
+            # Show errors
+            if result["errors"]:
+                for error in result["errors"]:
+                    typer.echo(f"  [ERROR] {error}")
+
+            # Show warnings
+            if result["warnings"]:
+                for warning in result["warnings"]:
+                    typer.echo(f"  [WARN] {warning}")
+
+            # Show key information
+            if comp_name == "system" and result["status"] != "error":
+                python_ver = result.get("python", {}).get("version", "unknown")
+                ffmpeg_ver = result.get("ffmpeg", {}).get("version", "not installed")
+                typer.echo(f"  Python: {python_ver}")
+                typer.echo(f"  FFmpeg: {ffmpeg_ver}")
+
+            elif comp_name == "gpu" and result["status"] != "error":
+                cuda_avail = result.get("cuda_available", False)
+                device_count = result.get("device_count", 0)
+                if cuda_avail:
+                    typer.echo(f"  CUDA: Available ({device_count} device(s))")
+                else:
+                    typer.echo("  CUDA: Not available")
+
+            elif comp_name == "storage" and result["status"] != "error":
+                disk = result.get("disk_usage", {})
+                free_gb = disk.get("free_gb", 0)
+                percent = disk.get("percent_used", 0)
+                typer.echo(f"  Disk: {free_gb:.1f} GB free ({percent:.1f}% used)")
+
+            elif comp_name == "database" and result["status"] != "error":
+                connected = result.get("connected", False)
+                job_count = result.get("job_count")
+                if connected:
+                    jobs_str = f", {job_count} jobs" if job_count is not None else ""
+                    typer.echo(f"  Status: Connected{jobs_str}")
+
+            typer.echo("")  # Blank line between components
+
+        # Overall summary
+        if overall_status == "ok":
+            typer.echo("[OK] All diagnostics passed")
+        elif overall_status == "warning":
+            typer.echo("[WARNING] Some checks have warnings")
+        else:
+            typer.echo("[ERROR] Critical issues detected")
+
+    # Set exit code based on status
+    if has_errors:
+        raise typer.Exit(1)
+    elif has_warnings:
+        raise typer.Exit(2)
+    else:
+        raise typer.Exit(0)
+
+
 if __name__ == "__main__":
     app()
 

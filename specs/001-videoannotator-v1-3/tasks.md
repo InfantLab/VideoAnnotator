@@ -64,7 +64,7 @@
   - Created comprehensive namespace tests (20 tests)
   - Upgrade guide with migration script
   - 11 namespace tests passing (core functionality works)
-- **Phase 11**: Polish & Cross-Cutting Concerns (3/14 tasks) 🔄
+- **Phase 11**: Polish & Cross-Cutting Concerns (5/14 tasks) 🔄
   - MAX_CONCURRENT_JOBS environment variable configuration ✅
   - Worker queue logic respects concurrent limit ✅
   - 28 tests passing (19 config + 9 concurrency)
@@ -883,20 +883,23 @@ Tasks are organized by user story to enable independent implementation and testi
 
 ### Enhanced Health Endpoint (FR-006, FR-013)
 
-- [ ] **T068** [P] Enhance health endpoint in `src/api/v1/health.py`
+- [x] **T068** [P] Enhance health endpoint in `src/api/v1/health.py` ✅
   - Add ?detailed=true query parameter
-  - Basic mode: fast liveness check (200 OK)
+  - Basic mode: fast liveness check (200 OK, <1s)
   - Detailed mode: database, storage, GPU, registry status
   - Return 503 if unhealthy (detailed mode only)
   - Per health.yaml contract
-  - **Effort**: 4 hours
+  - Fixed ~20 import errors across 15 files during implementation
+  - **Effort**: 5 hours (actual, including import fixes)
 
-- [ ] **T069** [P] Write health endpoint tests in `tests/unit/api/test_health.py`
+- [x] **T069** [P] Write health endpoint tests in `tests/api/test_health.py` ✅
   - Test basic mode returns quickly
   - Test detailed mode includes all subsystems
   - Test 503 when database unavailable
+  - 22 comprehensive tests covering all scenarios
+  - **Completed**: All tests passing
   - **Depends on**: T068
-  - **Effort**: 2 hours
+  - **Effort**: Included in T068 (combined implementation)
 
 ### Diagnostic CLI (FR-067-068)
 
