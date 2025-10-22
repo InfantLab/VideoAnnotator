@@ -50,18 +50,10 @@ class JobProcessor:
             retry_delay_base: Base delay for exponential backoff (default: env RETRY_DELAY_BASE or 2.0)
         """
         self.storage = storage_backend or get_storage_backend()
-        self.poll_interval = (
-            poll_interval if poll_interval is not None else WORKER_POLL_INTERVAL
-        )
-        self.max_concurrent_jobs = (
-            max_concurrent_jobs
-            if max_concurrent_jobs is not None
-            else MAX_CONCURRENT_JOBS
-        )
+        self.poll_interval = poll_interval if poll_interval is not None else WORKER_POLL_INTERVAL
+        self.max_concurrent_jobs = max_concurrent_jobs if max_concurrent_jobs is not None else MAX_CONCURRENT_JOBS
         self.max_retries = max_retries if max_retries is not None else MAX_JOB_RETRIES
-        self.retry_delay_base = (
-            retry_delay_base if retry_delay_base is not None else RETRY_DELAY_BASE
-        )
+        self.retry_delay_base = retry_delay_base if retry_delay_base is not None else RETRY_DELAY_BASE
         self.orchestrator = BatchOrchestrator(storage_backend=self.storage)
 
         self.running = False
@@ -156,18 +148,28 @@ class JobProcessor:
                 logger.debug("No pending or retrying jobs found")
                 return
 
+            # v1.3.0 (T065): Count RUNNING jobs to ensure we respect concurrent limit
+            running_job_ids = self.storage.list_jobs(status_filter="running")
+            
             # Remove any completed jobs from our tracking
             self.processing_jobs = {
                 job_id
                 for job_id in self.processing_jobs
-                if job_id in all_processable_ids
+                if job_id in all_processable_ids or job_id in running_job_ids
             }
 
-            # Determine how many new jobs we can start
-            available_slots = self.max_concurrent_jobs - len(self.processing_jobs)
+            # v1.3.0 (T065): Determine how many new jobs we can start
+            # Count both tracked jobs and database RUNNING jobs to avoid race conditions
+            current_running_count = len(running_job_ids)
+            available_slots = self.max_concurrent_jobs - current_running_count
 
+            # v1.3.0 (T065): Log queue status and skip if at limit
             if available_slots <= 0:
-                logger.debug(f"All {self.max_concurrent_jobs} slots busy, waiting...")
+                pending_count = len(pending_job_ids)
+                logger.info(
+                    f"[QUEUE] At concurrent job limit ({current_running_count}/{self.max_concurrent_jobs}), "
+                    f"{pending_count} jobs waiting in queue"
+                )
                 return
 
             # Select jobs to process

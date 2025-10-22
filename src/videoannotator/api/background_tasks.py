@@ -40,14 +40,8 @@ class BackgroundJobManager:
             max_concurrent_jobs: Maximum jobs to process simultaneously (default: env MAX_CONCURRENT_JOBS or 2)
         """
         self.storage = storage_backend or get_storage_backend()
-        self.poll_interval = (
-            poll_interval if poll_interval is not None else WORKER_POLL_INTERVAL
-        )
-        self.max_concurrent_jobs = (
-            max_concurrent_jobs
-            if max_concurrent_jobs is not None
-            else MAX_CONCURRENT_JOBS
-        )
+        self.poll_interval = poll_interval if poll_interval is not None else WORKER_POLL_INTERVAL
+        self.max_concurrent_jobs = max_concurrent_jobs if max_concurrent_jobs is not None else MAX_CONCURRENT_JOBS
         # Defer creating JobProcessor until the first job is actually processed.
         # Constructing JobProcessor eagerly triggers imports of pipeline modules
         # (which may load heavy ML libraries or perform IO) and can block
@@ -128,18 +122,26 @@ class BackgroundJobManager:
                 logger.debug("No pending jobs found")
                 return
 
+            # v1.3.0 (T065): Count RUNNING jobs to ensure we respect concurrent limit
+            running_job_ids = self.storage.list_jobs(status_filter="running")
+
             # Clean up completed jobs from our tracking
-            completed_jobs = self.processing_jobs - set(pending_job_ids)
+            completed_jobs = self.processing_jobs - set(pending_job_ids) - set(running_job_ids)
             for job_id in completed_jobs:
                 self.processing_jobs.discard(job_id)
                 logger.debug(f"Job {job_id} completed, removed from tracking")
 
-            # Determine how many new jobs we can start
-            available_slots = self.max_concurrent_jobs - len(self.processing_jobs)
+            # v1.3.0 (T065): Determine how many new jobs we can start
+            # Count both tracked jobs and database RUNNING jobs to avoid race conditions
+            current_running_count = len(running_job_ids)
+            available_slots = self.max_concurrent_jobs - current_running_count
 
+            # v1.3.0 (T065): Log queue status and skip if at limit
             if available_slots <= 0:
-                logger.debug(
-                    f"All {self.max_concurrent_jobs} slots busy with jobs: {list(self.processing_jobs)}"
+                pending_count = len(pending_job_ids)
+                logger.info(
+                    f"[QUEUE] At concurrent job limit ({current_running_count}/{self.max_concurrent_jobs}), "
+                    f"{pending_count} jobs waiting in queue"
                 )
                 return
 
