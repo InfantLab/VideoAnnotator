@@ -104,26 +104,106 @@ class JobResultsResponse(BaseModel):
     result_path: str | None = None
 
 
-@router.post("/", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=JobResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Submit Video Processing Job",
+    description="""
+Submit a video file for processing with one or more annotation pipelines.
+
+The video is uploaded as multipart/form-data and processed asynchronously.
+Returns immediately with a job ID that can be used to check status and retrieve results.
+
+**Configuration Validation**: If both config and selected_pipelines are provided,
+the configuration is validated against each pipeline's requirements before job creation.
+
+**Supported Video Formats**: MP4, AVI, MOV, MKV, WEBM (FFmpeg-compatible formats)
+
+**curl Example - Basic Submission**:
+```bash
+curl -X POST "http://localhost:18011/api/v1/jobs/" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -F "video=@/path/to/video.mp4"
+```
+
+**curl Example - With Pipeline Selection**:
+```bash
+curl -X POST "http://localhost:18011/api/v1/jobs/" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -F "video=@/path/to/video.mp4" \\
+  -F "selected_pipelines=person_tracking,face_recognition"
+```
+
+**curl Example - With Configuration**:
+```bash
+curl -X POST "http://localhost:18011/api/v1/jobs/" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -F "video=@/path/to/video.mp4" \\
+  -F "selected_pipelines=person_tracking" \\
+  -F 'config={"person_tracking":{"confidence_threshold":0.7}}'
+```
+
+**Success Response** (201 Created):
+```json
+{
+  "id": "abc123-def456-ghi789",
+  "status": "pending",
+  "video_path": "/tmp/uploads/video.mp4",
+  "config": {"person_tracking": {"confidence_threshold": 0.7}},
+  "selected_pipelines": ["person_tracking"],
+  "created_at": "2025-10-22T10:30:00Z",
+  "completed_at": null,
+  "error_message": null,
+  "result_path": null,
+  "storage_path": "/storage/jobs/abc123-def456-ghi789"
+}
+```
+
+**Error Response** (400 Bad Request - Invalid Configuration):
+```json
+{
+  "error": {
+    "code": "INVALID_CONFIG",
+    "message": "Configuration validation failed: person_tracking: Invalid value for confidence_threshold (must be between 0 and 1)",
+    "hint": "Fix the validation errors and resubmit",
+    "timestamp": "2025-10-22T10:30:00Z"
+  }
+}
+```
+
+**Error Response** (401 Unauthorized - Missing/Invalid API Key):
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid or missing API key",
+    "hint": "Include valid API key in Authorization header: Bearer YOUR_KEY",
+    "timestamp": "2025-10-22T10:30:00Z"
+  }
+}
+```
+""",
+)
 async def submit_job(
-    video: UploadFile = File(..., description="Video file to process"),
-    config: str | None = Form(None, description="JSON configuration"),
+    video: UploadFile = File(
+        ..., description="Video file to process (MP4, AVI, MOV, MKV, WEBM)"
+    ),
+    config: str | None = Form(
+        None,
+        description="JSON configuration object for pipeline parameters. "
+        'Example: \'{"person_tracking":{"confidence_threshold":0.7}}\'',
+    ),
     selected_pipelines: str | None = Form(
-        None, description="Comma-separated pipeline names"
+        None,
+        description="Comma-separated list of pipeline names to run. "
+        "Example: 'person_tracking,face_recognition'. "
+        "Use GET /api/v1/pipelines to list available pipelines.",
     ),
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobResponse:
-    """Submit a video processing job.
-
-    Args:
-        video: Video file to process
-        config: Optional JSON configuration string
-        selected_pipelines: Optional comma-separated pipeline names
-
-    Returns:
-        Job information including ID and status
-    """
+    """Submit a video processing job (see endpoint description for details)."""
     try:
         # Parse configuration if provided
         parsed_config = None
@@ -223,20 +303,93 @@ async def submit_job(
         ) from e
 
 
-@router.get("/{job_id}", response_model=JobResponse)
+@router.get(
+    "/{job_id}",
+    response_model=JobResponse,
+    summary="Get Job Status",
+    description="""
+Retrieve the current status and details of a specific video processing job.
+
+Use this endpoint to poll job status during processing. The status field indicates
+the current state of the job: pending, running, completed, failed, or cancelled.
+
+**Status Values**:
+- `pending`: Job queued, not yet started
+- `running`: Job currently processing
+- `completed`: Job finished successfully, results available
+- `failed`: Job encountered an error (see error_message)
+- `cancelled`: Job was cancelled by user request
+
+**curl Example**:
+```bash
+curl -X GET "http://localhost:18011/api/v1/jobs/abc123-def456" \\
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**Success Response** (200 OK - Running Job):
+```json
+{
+  "id": "abc123-def456",
+  "status": "running",
+  "video_path": "/tmp/uploads/video.mp4",
+  "config": {"person_tracking": {"confidence_threshold": 0.7}},
+  "selected_pipelines": ["person_tracking", "face_recognition"],
+  "created_at": "2025-10-22T10:00:00Z",
+  "completed_at": null,
+  "error_message": null,
+  "result_path": null,
+  "storage_path": "/storage/jobs/abc123-def456"
+}
+```
+
+**Success Response** (200 OK - Completed Job):
+```json
+{
+  "id": "abc123-def456",
+  "status": "completed",
+  "video_path": "/tmp/uploads/video.mp4",
+  "config": {"person_tracking": {"confidence_threshold": 0.7}},
+  "selected_pipelines": ["person_tracking"],
+  "created_at": "2025-10-22T10:00:00Z",
+  "completed_at": "2025-10-22T10:05:23Z",
+  "error_message": null,
+  "result_path": "/storage/jobs/abc123-def456/results",
+  "storage_path": "/storage/jobs/abc123-def456"
+}
+```
+
+**Error Response** (404 Not Found):
+```json
+{
+  "error": {
+    "code": "JOB_NOT_FOUND",
+    "message": "Job abc123-invalid not found",
+    "detail": {"job_id": "abc123-invalid"},
+    "hint": "Check job ID or use GET /api/v1/jobs to list all jobs",
+    "timestamp": "2025-10-22T10:30:00Z"
+  }
+}
+```
+
+**Error Response** (401 Unauthorized):
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid or missing API key",
+    "hint": "Include valid API key in Authorization header",
+    "timestamp": "2025-10-22T10:30:00Z"
+  }
+}
+```
+""",
+)
 async def get_job_status(
     job_id: str,
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobResponse:
-    """Get job status and details.
-
-    Args:
-        job_id: Job ID to query
-
-    Returns:
-        Job information including current status
-    """
+    """Get job status and details (see endpoint description for details)."""
     try:
         # Load job from database
         job = storage.load_job_metadata(job_id)
@@ -277,7 +430,84 @@ async def get_job_status(
         ) from e
 
 
-@router.get("/", response_model=JobListResponse)
+@router.get(
+    "/",
+    response_model=JobListResponse,
+    summary="List Processing Jobs",
+    description="""
+List all video processing jobs with pagination and optional status filtering.
+
+Returns a paginated list of jobs with their current status, configuration, and metadata.
+Use this endpoint to monitor multiple jobs or filter by status.
+
+**Status Values**: pending, running, completed, failed, cancelled
+
+**curl Example - List All Jobs**:
+```bash
+curl -X GET "http://localhost:18011/api/v1/jobs/" \\
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**curl Example - Filter by Status**:
+```bash
+curl -X GET "http://localhost:18011/api/v1/jobs/?status_filter=completed" \\
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**curl Example - Pagination**:
+```bash
+curl -X GET "http://localhost:18011/api/v1/jobs/?page=2&per_page=20" \\
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**Success Response** (200 OK):
+```json
+{
+  "jobs": [
+    {
+      "id": "abc123-def456",
+      "status": "completed",
+      "video_path": "/tmp/uploads/video1.mp4",
+      "config": {"person_tracking": {"confidence_threshold": 0.7}},
+      "selected_pipelines": ["person_tracking"],
+      "created_at": "2025-10-22T10:00:00Z",
+      "completed_at": "2025-10-22T10:05:23Z",
+      "error_message": null,
+      "result_path": "/storage/jobs/abc123-def456/results",
+      "storage_path": "/storage/jobs/abc123-def456"
+    },
+    {
+      "id": "xyz789-uvw012",
+      "status": "running",
+      "video_path": "/tmp/uploads/video2.mp4",
+      "config": null,
+      "selected_pipelines": ["face_recognition"],
+      "created_at": "2025-10-22T10:10:00Z",
+      "completed_at": null,
+      "error_message": null,
+      "result_path": null,
+      "storage_path": "/storage/jobs/xyz789-uvw012"
+    }
+  ],
+  "total": 2,
+  "page": 1,
+  "per_page": 10
+}
+```
+
+**Error Response** (401 Unauthorized):
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid or missing API key",
+    "hint": "Include valid API key in Authorization header",
+    "timestamp": "2025-10-22T10:30:00Z"
+  }
+}
+```
+""",
+)
 async def list_jobs(
     page: int = 1,
     per_page: int = 10,
@@ -285,16 +515,7 @@ async def list_jobs(
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobListResponse:
-    """List jobs with pagination and filtering.
-
-    Args:
-        page: Page number (1-based)
-        per_page: Items per page
-        status_filter: Optional status filter
-
-    Returns:
-        Paginated list of jobs
-    """
+    """List jobs with pagination and filtering (see endpoint description for details)."""
     try:
         # Get job IDs from storage
         all_job_ids = storage.list_jobs(status_filter=status_filter)
@@ -391,29 +612,77 @@ async def cancel_job(
         ) from e
 
 
-@router.post("/{job_id}/cancel", response_model=JobResponse)
+@router.post(
+    "/{job_id}/cancel",
+    response_model=JobResponse,
+    summary="Cancel Job",
+    description="""
+Cancel a running or pending video processing job.
+
+Attempts to gracefully stop job execution. Jobs that are already completed, failed,
+or previously cancelled return their current status (idempotent operation).
+
+**Cancellation Behavior**:
+- `pending` jobs: Removed from queue, never started
+- `running` jobs: Interrupted, partial results may be available
+- `completed/failed` jobs: Cannot be cancelled (returns 409 error)
+- `cancelled` jobs: Returns current state (idempotent)
+
+**curl Example**:
+```bash
+curl -X POST "http://localhost:18011/api/v1/jobs/abc123-def456/cancel" \\
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**Success Response** (200 OK - Job Cancelled):
+```json
+{
+  "id": "abc123-def456",
+  "status": "cancelled",
+  "video_path": "/tmp/uploads/video.mp4",
+  "config": {"person_tracking": {"confidence_threshold": 0.7}},
+  "selected_pipelines": ["person_tracking"],
+  "created_at": "2025-10-22T10:00:00Z",
+  "completed_at": "2025-10-22T10:02:15Z",
+  "error_message": "Job cancelled by user request",
+  "result_path": null,
+  "storage_path": "/storage/jobs/abc123-def456"
+}
+```
+
+**Error Response** (404 Not Found):
+```json
+{
+  "error": {
+    "code": "JOB_NOT_FOUND",
+    "message": "Job abc123-invalid not found",
+    "detail": {"job_id": "abc123-invalid"},
+    "hint": "Check job ID or use GET /api/v1/jobs to list all jobs",
+    "timestamp": "2025-10-22T10:30:00Z"
+  }
+}
+```
+
+**Error Response** (409 Conflict - Already Completed):
+```json
+{
+  "error": {
+    "code": "JOB_ALREADY_COMPLETED",
+    "message": "Job abc123-def456 is already completed (status: completed)",
+    "detail": {"job_id": "abc123-def456", "status": "completed"},
+    "hint": "Cannot cancel a job that has already finished",
+    "timestamp": "2025-10-22T10:30:00Z"
+  }
+}
+```
+""",
+)
 async def cancel_job_endpoint(
     job_id: str,
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobResponse:
-    """Cancel a running or pending job.
-
-    Cancels a job that is currently running or queued. Jobs that are already
-    completed, failed, or cancelled return their current status (idempotent).
-
-    Args:
-        job_id: Job ID to cancel
-        storage: Storage backend
-        user: Authenticated user (optional)
-
-    Returns:
-        Updated job information with CANCELLED status
-
-    Raises:
-        404: Job not found
-        409: Job cannot be cancelled (already completed/failed)
-    """
+    """Cancel a running or pending job (see endpoint description for details)."""
     try:
         # Load job from database
         try:
@@ -496,20 +765,82 @@ async def cancel_job_endpoint(
         ) from e
 
 
-@router.get("/{job_id}/results", response_model=JobResultsResponse)
+@router.get(
+    "/{job_id}/results",
+    response_model=JobResultsResponse,
+    summary="Get Job Results",
+    description="""
+Retrieve detailed results for a completed video processing job.
+
+Returns pipeline-specific outputs, annotation counts, processing times, and download URLs
+for generated files. Only available after job completes successfully.
+
+**Result Files**: Each pipeline generates output files (e.g., person_tracking.json,
+face_recognition.json) that can be downloaded using the provided download_url.
+
+**curl Example**:
+```bash
+curl -X GET "http://localhost:18011/api/v1/jobs/abc123-def456/results" \\
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**Success Response** (200 OK):
+```json
+{
+  "job_id": "abc123-def456",
+  "status": "completed",
+  "pipeline_results": {
+    "person_tracking": {
+      "pipeline_name": "person_tracking",
+      "status": "completed",
+      "start_time": "2025-10-22T10:00:05Z",
+      "end_time": "2025-10-22T10:03:12Z",
+      "processing_time": 187.3,
+      "annotation_count": 1245,
+      "output_file": "/storage/jobs/abc123-def456/person_tracking.json",
+      "download_url": "/api/v1/jobs/abc123-def456/results/files/person_tracking",
+      "error_message": null
+    },
+    "face_recognition": {
+      "pipeline_name": "face_recognition",
+      "status": "completed",
+      "start_time": "2025-10-22T10:03:15Z",
+      "end_time": "2025-10-22T10:05:23Z",
+      "processing_time": 128.1,
+      "annotation_count": 423,
+      "output_file": "/storage/jobs/abc123-def456/face_recognition.json",
+      "download_url": "/api/v1/jobs/abc123-def456/results/files/face_recognition",
+      "error_message": null
+    }
+  },
+  "created_at": "2025-10-22T10:00:00Z",
+  "completed_at": "2025-10-22T10:05:23Z",
+  "result_path": "/storage/jobs/abc123-def456/results"
+}
+```
+
+**Error Response** (404 Not Found):
+```json
+{
+  "error": {
+    "code": "JOB_NOT_FOUND",
+    "message": "Job abc123-invalid not found",
+    "detail": {"job_id": "abc123-invalid"},
+    "hint": "Check job ID or use GET /api/v1/jobs to list all jobs",
+    "timestamp": "2025-10-22T10:30:00Z"
+  }
+}
+```
+
+**Note**: For jobs still in progress, use GET /jobs/{job_id} to check status first.
+""",
+)
 async def get_job_results(
     job_id: str,
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobResultsResponse:
-    """Get detailed results for a completed job.
-
-    Args:
-        job_id: Job ID to get results for
-
-    Returns:
-        Detailed job results including pipeline outputs and file paths
-    """
+    """Get detailed results for a completed job (see endpoint description for details)."""
     try:
         # Load job from database
         job = storage.load_job_metadata(job_id)

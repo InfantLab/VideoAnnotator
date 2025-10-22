@@ -25,6 +25,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Platform detection tests for all OS types
   - Exit code verification tests
 - Made `scripts/` a proper Python package (added `__init__.py`) for cleaner test imports
+- Enhanced API endpoint documentation for JOSS publication requirements
+  - Comprehensive docstrings with curl examples for all major endpoints
+  - Detailed request/response examples in Swagger UI
+  - Parameter descriptions with types, constraints, and examples
+  - Success and error response examples for common cases
+  - Endpoints enhanced:
+    - `POST /api/v1/jobs/` (submit job with multipart/form-data)
+    - `GET /api/v1/jobs/` (list jobs with pagination/filtering)
+    - `GET /api/v1/jobs/{job_id}` (get job status)
+    - `GET /api/v1/jobs/{job_id}/results` (get detailed results)
+    - `POST /api/v1/jobs/{job_id}/cancel` (cancel job)
+    - `GET /api/v1/pipelines` (list all pipelines)
+    - `GET /api/v1/pipelines/{name}` (get pipeline details)
+    - `GET /api/v1/system/health` (comprehensive health check)
 
 ### Planned
 

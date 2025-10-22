@@ -42,13 +42,117 @@ def _get_database_status() -> dict[str, Any]:
         return {"status": "error", "message": str(e)}
 
 
-@router.get("/health")
-async def detailed_health_check():
-    """Detailed system health check.
+@router.get(
+    "/health",
+    summary="Comprehensive system health and resource monitoring",
+    description="""
+Returns detailed system health information including CPU, memory, disk usage,
+GPU availability, database status, pipeline registry, and service health.
 
-    Returns:
-        Comprehensive system health information
-    """
+This endpoint provides comprehensive diagnostics useful for:
+- Monitoring system resource usage
+- Verifying GPU availability for ML pipelines
+- Checking pipeline registry status
+- Validating database connectivity
+- Assessing overall system capacity
+
+**Example Request:**
+```bash
+curl -X GET "http://localhost:18011/api/v1/system/health" \\
+  -H "X-API-Key: your-api-key-here"
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-01-08T10:30:45.123456",
+  "api_version": "1.2.0",
+  "videoannotator_version": "1.2.0",
+  "system": {
+    "platform": "Linux-6.5.0-1025-azure-x86_64-with-glibc2.35",
+    "python_version": "3.10.12",
+    "cpu_count": 8,
+    "cpu_percent": 15.3,
+    "memory_percent": 42.5,
+    "memory": {
+      "total": 16777216000,
+      "available": 9663676416,
+      "percent": 42.5,
+      "used": 7113539584,
+      "free": 9663676416
+    },
+    "disk": {
+      "total": 107374182400,
+      "used": 45097156608,
+      "free": 62277025792,
+      "percent": 42.0
+    }
+  },
+  "database": {
+    "status": "healthy",
+    "message": "Database is accessible",
+    "writable": true
+  },
+  "gpu": {
+    "available": true,
+    "device_count": 1,
+    "current_device": 0,
+    "device_name": "NVIDIA GeForce RTX 3090",
+    "memory_allocated": 512000000,
+    "memory_reserved": 1024000000
+  },
+  "pipelines": {
+    "total": 12,
+    "names": [
+      "openface3_identity",
+      "whisper_transcription",
+      "diarization_pyannote"
+    ]
+  },
+  "services": {
+    "database": {
+      "status": "healthy",
+      "message": "Database is accessible"
+    },
+    "job_queue": "embedded",
+    "pipelines": "ready"
+  },
+  "uptime_seconds": 3672
+}
+```
+
+**Unhealthy Response (200 OK with status unhealthy):**
+```json
+{
+  "status": "unhealthy",
+  "timestamp": "2025-01-08T10:30:45.123456",
+  "error": "Failed to connect to database",
+  "api_version": "1.2.0",
+  "videoannotator_version": "1.2.0"
+}
+```
+
+**GPU Not Available Response:**
+```json
+{
+  "gpu": {
+    "available": false,
+    "reason": "CUDA not available"
+  }
+}
+```
+
+**Note**: This endpoint is more resource-intensive than the basic `/health` endpoint
+due to system metrics collection (CPU sampling, disk I/O). For lightweight health
+checks, use the root `/health` endpoint instead.
+
+The `uptime_seconds` field shows how long the API server has been running,
+useful for monitoring restarts and stability.
+""",
+)
+async def detailed_health_check():
+    """Detailed system health check with comprehensive diagnostics."""
     try:
         # Get system information
         cpu_percent = psutil.cpu_percent(interval=1)

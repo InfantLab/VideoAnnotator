@@ -3,7 +3,7 @@
 import logging
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Path
 from pydantic import BaseModel
 
 from api.errors import APIError
@@ -44,13 +44,82 @@ class PipelineListResponse(BaseModel):
     total: int
 
 
-@router.get("/", response_model=PipelineListResponse)
-async def list_pipelines():
-    """List all available pipelines.
+@router.get(
+    "/",
+    response_model=PipelineListResponse,
+    summary="List all available video annotation pipelines",
+    description="""
+Retrieves a comprehensive list of all registered pipelines available for video annotation,
+including their metadata, configuration schemas, capabilities, and supported tasks.
 
-    Returns:
-        List of available pipelines with their configurations
-    """
+Each pipeline includes:
+- Basic metadata (name, display_name, description, family, variant)
+- Task taxonomy (tasks, modalities, capabilities)
+- Backend requirements and stability level
+- Output formats and types
+- Configuration schema with parameter types and defaults
+- Usage examples
+
+**Example Request:**
+```bash
+curl -X GET "http://localhost:18011/api/v1/pipelines" \\
+  -H "X-API-Key: your-api-key-here"
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "pipelines": [
+    {
+      "name": "openface3_identity",
+      "display_name": "OpenFace 3 - Identity",
+      "description": "Face detection, tracking, and identity recognition",
+      "pipeline_family": "openface",
+      "variant": "identity",
+      "tasks": ["face_detection", "face_tracking", "face_recognition"],
+      "modalities": ["video"],
+      "capabilities": ["detection", "tracking", "recognition"],
+      "backends": ["openface"],
+      "stability": "stable",
+      "outputs": [
+        {
+          "format": "COCO",
+          "types": ["detection", "tracking", "recognition"]
+        }
+      ],
+      "config_schema": {
+        "detection_confidence": {
+          "type": "float",
+          "default": 0.5,
+          "description": "Minimum confidence threshold for face detection"
+        }
+      },
+      "examples": [
+        "videoannotator job submit --video input.mp4 --pipeline openface3_identity"
+      ]
+    }
+  ],
+  "total": 1
+}
+```
+
+**Error Response (401 Unauthorized):**
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid or missing API key"
+  }
+}
+```
+
+The pipeline list is dynamically loaded from the registry metadata, ensuring all
+registered pipelines are discoverable. Use this endpoint to explore available
+pipelines before submitting jobs.
+""",
+)
+async def list_pipelines():
+    """List all available pipelines."""
     try:
         reg = get_registry()
         reg.load()  # idempotent
@@ -97,16 +166,99 @@ async def list_pipelines():
         ) from e
 
 
-@router.get("/{pipeline_name}", response_model=PipelineInfo)
-async def get_pipeline_info(pipeline_name: str) -> PipelineInfo:
-    """Get detailed information about a specific pipeline.
+@router.get(
+    "/{pipeline_name}",
+    response_model=PipelineInfo,
+    summary="Get detailed information about a specific pipeline",
+    description="""
+Retrieves comprehensive metadata and configuration details for a single pipeline
+specified by name. Use this endpoint to explore pipeline capabilities, configuration
+options, and usage examples before submitting jobs.
 
-    Args:
-        pipeline_name: Name of the pipeline
+**Pipeline Information Includes:**
+- Taxonomy: tasks, modalities, capabilities
+- Backend requirements and stability level
+- Output formats and annotation types
+- Complete configuration schema with types, defaults, and descriptions
+- Usage examples (CLI and API)
 
-    Returns:
-        Detailed pipeline information
-    """
+**Example Request:**
+```bash
+curl -X GET "http://localhost:18011/api/v1/pipelines/openface3_identity" \\
+  -H "X-API-Key: your-api-key-here"
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "name": "openface3_identity",
+  "display_name": "OpenFace 3 - Identity",
+  "description": "Face detection, tracking, and identity recognition using OpenFace 3",
+  "pipeline_family": "openface",
+  "variant": "identity",
+  "tasks": ["face_detection", "face_tracking", "face_recognition"],
+  "modalities": ["video"],
+  "capabilities": ["detection", "tracking", "recognition"],
+  "backends": ["openface"],
+  "stability": "stable",
+  "outputs": [
+    {
+      "format": "COCO",
+      "types": ["detection", "tracking", "recognition"]
+    }
+  ],
+  "config_schema": {
+    "detection_confidence": {
+      "type": "float",
+      "default": 0.5,
+      "description": "Minimum confidence threshold for face detection (0.0-1.0)"
+    },
+    "enable_landmarks": {
+      "type": "bool",
+      "default": true,
+      "description": "Extract facial landmarks for alignment"
+    }
+  },
+  "examples": [
+    "videoannotator job submit --video input.mp4 --pipeline openface3_identity",
+    "videoannotator job submit --video input.mp4 --pipeline openface3_identity --config detection_confidence=0.7"
+  ]
+}
+```
+
+**Error Response (404 Not Found):**
+```json
+{
+  "error": {
+    "code": "PIPELINE_NOT_FOUND",
+    "message": "Pipeline 'invalid_name' not found",
+    "hint": "Run 'videoannotator pipelines --detailed' to list available pipelines"
+  }
+}
+```
+
+**Error Response (401 Unauthorized):**
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid or missing API key"
+  }
+}
+```
+
+Use the configuration schema to validate parameters before job submission.
+All configuration parameters are optional and have sensible defaults.
+""",
+)
+async def get_pipeline_info(
+    pipeline_name: str = Path(
+        ...,
+        description="The unique identifier/name of the pipeline (e.g., 'openface3_identity', 'whisper_transcription')",
+        example="openface3_identity",
+    ),
+) -> PipelineInfo:
+    """Get detailed information about a specific pipeline."""
     try:
         reg = get_registry()
         meta = reg.get(pipeline_name)

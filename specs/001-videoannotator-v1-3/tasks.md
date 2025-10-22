@@ -7,7 +7,7 @@
 **Generated**: October 12, 2025
 **Last Updated**: October 16, 2025
 **Total Estimated Effort**: 240-320 hours (6-8 weeks, 1-2 developers)
-**Progress**: 49/60+ tasks complete (82%), 195 tests passing
+**Progress**: 52/60+ tasks complete (87%), 195 tests passing
 
 ## 🎯 Progress Summary
 
@@ -37,12 +37,16 @@
   - All API endpoints use consistent ErrorEnvelope format
   - VideoAnnotatorException and APIError handlers unified
   - 6 integration tests passing (3 skipped)
-- **Phase 7**: User Story 7 - JOSS Publication Requirements (2/8 tasks) 🔄
+- **Phase 7**: User Story 7 - JOSS Publication Requirements (5/8 tasks) 🔄
   - Installation verification script with progressive checks ✅
   - Comprehensive test suite (30 tests) ✅
   - Made scripts/ a proper Python package ✅
+  - Enhanced API endpoint documentation for all major endpoints ✅
+    - jobs.py: 5 endpoints with curl examples and detailed responses
+    - pipelines.py: 2 endpoints with pipeline metadata examples
+    - system.py: comprehensive health check documentation
   - 30 tests passing
-  - REMAINING: API docstrings enhancement (T041-T043), coverage validation (T044-T046)
+  - REMAINING: Coverage validation (T044-T046)
 - **Phase 8**: User Story 4 - Security Hardening (7 tasks) - T047-T053 ✅
   - AUTH_REQUIRED defaults to true (secure-by-default)
   - Auto API key generation on first startup
@@ -530,25 +534,31 @@ Tasks are organized by user story to enable independent implementation and testi
   - **Commit**: PENDING
   - **Note**: Made scripts/ a proper package (added __init__.py) for clean test imports
 
-- [ ] **T041** [US7] Enhance API docstrings in `src/api/v1/jobs.py`
+- [x] **T041** [US7] Enhance API docstrings in `src/api/v1/jobs.py`
   - Add detailed descriptions to all endpoints
   - Add curl command examples
   - Add parameter descriptions
   - Add response examples (success + errors)
   - Use FastAPI @app.post(description="...") syntax
   - **Effort**: 3 hours
+  - **Status**: COMPLETE - Enhanced 5 endpoints (submit, list, get status, get results, cancel)
+  - **Commit**: PENDING
 
-- [ ] **T042** [US7] Enhance API docstrings in `src/api/v1/pipelines.py`
+- [x] **T042** [US7] Enhance API docstrings in `src/api/v1/pipelines.py`
   - Add detailed descriptions to all endpoints
   - Add curl command examples
   - Add parameter descriptions
   - Add response examples
   - **Effort**: 3 hours
+  - **Status**: COMPLETE - Enhanced 2 endpoints (list pipelines, get pipeline info)
+  - **Commit**: PENDING
 
-- [ ] **T043** [US7] Enhance API docstrings in `src/api/v1/health.py`
+- [x] **T043** [US7] Enhance API docstrings in `src/api/v1/system.py`
   - Add detailed description
-  - Add curl examples for basic and detailed modes
+  - Add curl examples for health endpoint
   - **Effort**: 1 hour
+  - **Status**: COMPLETE - Enhanced comprehensive health check endpoint
+  - **Commit**: PENDING
 
 - [ ] **T044** [P] [US7] Add pytest-cov configuration in `pyproject.toml`
   - Target >80% coverage for src/pipelines/
