@@ -725,6 +725,120 @@ def diagnose(
         raise typer.Exit(0)
 
 
+@app.command()
+def storage_cleanup(
+    retention_days: int | None = typer.Option(
+        None,
+        "--retention-days",
+        help="Days to retain jobs (overrides STORAGE_RETENTION_DAYS env var)",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Actually delete files (default is dry-run preview)",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output results as JSON"),
+):
+    """Clean up old job storage based on retention policy.
+
+    By default, this command runs in DRY-RUN mode (safe preview).
+    Use --force to actually delete files.
+
+    Cleanup is disabled by default. Enable by setting STORAGE_RETENTION_DAYS
+    environment variable or using --retention-days option.
+
+    Exit codes:
+    - 0: Success (jobs deleted or would be deleted)
+    - 1: Errors occurred during cleanup
+    - 2: Cleanup is disabled (no retention policy set)
+    """
+    import json
+
+    from videoannotator.storage.cleanup import cleanup_old_jobs, is_cleanup_enabled
+
+    # Check if cleanup is enabled
+    if retention_days is None and not is_cleanup_enabled():
+        if json_output:
+            typer.echo(
+                json.dumps(
+                    {
+                        "enabled": False,
+                        "error": "Cleanup disabled (STORAGE_RETENTION_DAYS not set)",
+                    }
+                )
+            )
+        else:
+            typer.echo("[WARNING] Cleanup is disabled")
+            typer.echo(
+                "Set STORAGE_RETENTION_DAYS environment variable or use --retention-days"
+            )
+        raise typer.Exit(2)
+
+    # Run cleanup
+    dry_run = not force
+
+    if not json_output:
+        mode = "DRY-RUN" if dry_run else "FORCE"
+        days = retention_days or "from env"
+        typer.echo(f"[START] Storage cleanup ({mode}, retention={days} days)")
+
+    try:
+        result = cleanup_old_jobs(retention_days=retention_days, dry_run=dry_run)
+
+        if json_output:
+            output = result.to_dict()
+            output["dry_run"] = dry_run
+            output["enabled"] = True
+            typer.echo(json.dumps(output, indent=2))
+        else:
+            # Human-readable output
+            typer.echo(f"[INFO] Found {result.jobs_found} eligible jobs")
+
+            if dry_run:
+                typer.echo(
+                    f"[INFO] Would delete {result.jobs_deleted + result.jobs_skipped} jobs"
+                )
+                typer.echo(
+                    f"[INFO] Would free {result.bytes_freed / 1024 / 1024:.2f} MB"
+                )
+                if result.jobs_found > 0:
+                    typer.echo("")
+                    typer.echo("[INFO] Use --force to actually delete files")
+            else:
+                typer.echo(f"[OK] Deleted {result.jobs_deleted} jobs")
+                typer.echo(f"[OK] Freed {result.bytes_freed / 1024 / 1024:.2f} MB")
+
+            if result.jobs_skipped > 0:
+                typer.echo(f"[WARNING] Skipped {result.jobs_skipped} jobs")
+                for skip_info in result.skipped_jobs[:5]:  # Show first 5
+                    typer.echo(f"  - {skip_info['job_id']}: {skip_info['reason']}")
+                if len(result.skipped_jobs) > 5:
+                    typer.echo(f"  ... and {len(result.skipped_jobs) - 5} more")
+
+            if result.errors:
+                typer.echo(f"[ERROR] {len(result.errors)} errors occurred")
+                for error in result.errors[:5]:  # Show first 5
+                    typer.echo(f"  - {error}")
+                if len(result.errors) > 5:
+                    typer.echo(f"  ... and {len(result.errors) - 5} more")
+
+        # Exit code based on result
+        if result.errors:
+            raise typer.Exit(1)
+        else:
+            raise typer.Exit(0)
+
+    except Exception as e:
+        if json_output:
+            typer.echo(
+                json.dumps({"enabled": True, "error": str(e)}),
+                err=True,
+            )
+        else:
+            typer.echo(f"[ERROR] Cleanup failed: {e}", err=True)
+        raise typer.Exit(1)
+
+
 if __name__ == "__main__":
     app()
 
