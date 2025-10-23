@@ -64,7 +64,7 @@
   - Created comprehensive namespace tests (20 tests)
   - Upgrade guide with migration script
   - 11 namespace tests passing (core functionality works)
-- **Phase 11**: Polish & Cross-Cutting Concerns (5/14 tasks) 🔄
+- **Phase 11**: Polish & Cross-Cutting Concerns (10/14 tasks) 🔄
   - MAX_CONCURRENT_JOBS environment variable configuration ✅
   - Worker queue logic respects concurrent limit ✅
   - 28 tests passing (19 config + 9 concurrency)
@@ -903,43 +903,49 @@ Tasks are organized by user story to enable independent implementation and testi
 
 ### Diagnostic CLI (FR-067-068)
 
-- [ ] **T070** [P] Create system diagnostic module in `src/diagnostics/system.py`
+- [x] **T070** [P] Create system diagnostic module in `src/diagnostics/system.py` ✅
   - Check Python version
   - Check FFmpeg
   - Check OS info
   - Return structured data
-  - **Effort**: 2 hours
+  - **Completed**: All checks working
+  - **Effort**: 2 hours (actual)
 
-- [ ] **T071** [P] Create GPU diagnostic module in `src/diagnostics/gpu.py`
+- [x] **T071** [P] Create GPU diagnostic module in `src/diagnostics/gpu.py` ✅
   - Check CUDA availability
   - Check device info
   - Check memory
   - Return structured data
-  - **Effort**: 2 hours
+  - **Completed**: All checks working
+  - **Effort**: 2 hours (actual)
 
-- [ ] **T072** [P] Create storage diagnostic module in `src/diagnostics/storage.py`
-  - Check free space
+- [x] **T072** [P] Create storage diagnostic module in `src/diagnostics/storage.py` ✅
+  - Check free space (with warnings at 80%, errors at 90%)
   - Check write permissions
   - Return structured data
-  - **Effort**: 1 hour
+  - **Completed**: All checks working
+  - **Effort**: 1 hour (actual)
 
-- [ ] **T073** [P] Create database diagnostic module in `src/diagnostics/database.py`
+- [x] **T073** [P] Create database diagnostic module in `src/diagnostics/database.py` ✅
   - Check connectivity
   - Check schema version
   - Return structured data
-  - **Effort**: 1 hour
+  - **Completed**: All checks working
+  - **Effort**: 1 hour (actual)
 
-- [ ] **T074** Add 'diagnose' command group in `src/cli.py`
+- [x] **T074** Add 'diagnose' command group in `src/cli.py` ✅
   - videoannotator diagnose system
   - videoannotator diagnose gpu
   - videoannotator diagnose storage
   - videoannotator diagnose database
   - videoannotator diagnose all
   - --json flag for scripting
-  - ASCII-safe output
+  - ASCII-safe output (no emoji/unicode)
   - Exit codes: 0=pass, 1=errors, 2=warnings
+  - 15 comprehensive tests covering all modules
+  - **Completed**: All commands working
   - **Depends on**: T070, T071, T072, T073
-  - **Effort**: 3 hours
+  - **Effort**: 3 hours (actual)
 
 ### Scripts Audit & Consolidation (FR-065-066)
 
