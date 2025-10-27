@@ -2,8 +2,8 @@
 
 import pytest
 
-from validation.models import FieldError, FieldWarning, ValidationResult
-from validation.validator import ConfigValidator
+from videoannotator.validation.models import FieldError, FieldWarning, ValidationResult
+from videoannotator.validation.validator import ConfigValidator
 
 
 class TestValidationModels:

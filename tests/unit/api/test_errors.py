@@ -10,8 +10,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from api.v1.errors import ErrorDetail, ErrorEnvelope
-from api.v1.exceptions import (
+from videoannotator.api.v1.errors import ErrorDetail, ErrorEnvelope
+from videoannotator.api.v1.exceptions import (
     CancellationFailedException,
     ForbiddenException,
     GPUOutOfMemoryException,
@@ -26,7 +26,7 @@ from api.v1.exceptions import (
     ValidationSystemException,
     VideoAnnotatorException,
 )
-from api.v1.handlers import register_v1_exception_handlers
+from videoannotator.api.v1.handlers import register_v1_exception_handlers
 
 
 class TestErrorDetail:

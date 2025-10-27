@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from api.startup import ensure_api_key_exists, initialize_security
-from auth.token_manager import SecureTokenManager, TokenType
+from videoannotator.api.startup import ensure_api_key_exists, initialize_security
+from videoannotator.auth.token_manager import SecureTokenManager, TokenType
 
 
 class TestAutoAPIKeyGeneration:
@@ -134,7 +134,7 @@ class TestAutoAPIKeyGeneration:
 
     def test_generated_api_key_format(self):
         """Test that generated API keys have correct format."""
-        from auth.token_manager import SecureTokenManager
+        from videoannotator.auth.token_manager import SecureTokenManager
 
         manager = SecureTokenManager()
         api_key, token_info = manager.generate_api_key(

@@ -5,7 +5,7 @@ Tests the POST /api/v1/config/validate and /api/v1/pipelines/{name}/validate end
 
 from fastapi.testclient import TestClient
 
-from api.main import app
+from videoannotator.api.main import app
 
 client = TestClient(app)
 

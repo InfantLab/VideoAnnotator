@@ -949,19 +949,19 @@ Tasks are organized by user story to enable independent implementation and testi
 
 ### Scripts Audit & Consolidation (FR-065-066)
 
-- [ ] **T075** [P] Audit scripts directory in `docs/development/scripts_inventory.md`
+- [x] **T075** [P] Audit scripts directory in `docs/development/scripts_inventory.md`
   - Categorize each script: keep/migrate/remove
   - Document purpose and usage
   - **Effort**: 2 hours
 
-- [ ] **T076** Remove obsolete scripts based on audit
+- [x] **T076** Remove obsolete scripts based on audit
   - Delete redundant check scripts (replaced by diagnostic CLI)
   - **Depends on**: T074, T075
   - **Effort**: 1 hour
 
 ### Storage Cleanup (FR-012, FR-070 - OPTIONAL)
 
-- [ ] **T077** [P] Create cleanup logic in `src/storage/cleanup.py`
+- [x] **T077** [P] Create cleanup logic in `src/storage/cleanup.py`
   - Find jobs completed > STORAGE_RETENTION_DAYS ago
   - Verify job in terminal state
   - Multiple safety checks (never delete RUNNING)
@@ -970,7 +970,7 @@ Tasks are organized by user story to enable independent implementation and testi
   - Dry-run mode
   - **Effort**: 4 hours
 
-- [ ] **T078** [P] Write cleanup tests in `tests/unit/storage/test_cleanup.py`
+- [x] **T078** [P] Write cleanup tests in `tests/unit/storage/test_cleanup.py`
   - Test dry-run mode
   - Test safety checks prevent data loss
   - Test audit logging

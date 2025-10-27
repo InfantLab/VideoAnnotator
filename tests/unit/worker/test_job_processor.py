@@ -16,9 +16,9 @@ from unittest.mock import patch
 
 import pytest
 
-from batch.types import BatchJob, JobStatus
-from storage.sqlite_backend import SQLiteStorageBackend
-from worker.job_processor import JobProcessor
+from videoannotator.batch.types import BatchJob, JobStatus
+from videoannotator.storage.sqlite_backend import SQLiteStorageBackend
+from videoannotator.worker.job_processor import JobProcessor
 
 
 class TestJobProcessor:

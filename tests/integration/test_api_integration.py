@@ -15,7 +15,7 @@ import pytest
 from src.database.crud import APIKeyCRUD, UserCRUD
 from src.database.database import SessionLocal
 from src.database.migrations import create_admin_user, init_database
-from version import __version__ as videoannotator_version
+from videoannotator.version import __version__ as videoannotator_version
 
 
 class APITestClient:

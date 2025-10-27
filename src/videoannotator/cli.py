@@ -45,7 +45,7 @@ def server(
 
     try:
         uvicorn.run(
-            "api.main:app",
+            "videoannotator.api.main:app",
             host=host,
             port=port,
             reload=reload,
@@ -102,8 +102,8 @@ def worker(
     """
     import asyncio
 
-    from utils.logging_config import setup_videoannotator_logging
-    from worker import run_job_processor
+    from videoannotator.utils.logging_config import setup_videoannotator_logging
+    from videoannotator.worker import run_job_processor
 
     # Setup logging: capture Python warnings so torch/CUDA compatibility warnings
     # (which are often emitted via warnings.warn) are routed to our log files.
@@ -497,8 +497,8 @@ def config(
 @app.command()
 def info():
     """Show VideoAnnotator system information including database status."""
-    from api.database import check_database_health, get_database_info
-    from version import __version__
+    from videoannotator.api.database import check_database_health, get_database_info
+    from videoannotator.version import __version__
 
     typer.echo(f"VideoAnnotator v{__version__}")
     typer.echo(f"API Version: {__version__}")
@@ -541,7 +541,7 @@ def backup(
     output_path: Path = typer.Argument(..., help="Path where to save backup file"),
 ):
     """Backup database to specified location (SQLite only)."""
-    from api.database import backup_database, get_current_database_path
+    from videoannotator.api.database import backup_database, get_current_database_path
 
     try:
         current_path = get_current_database_path()
@@ -562,7 +562,7 @@ def backup(
 @app.command()
 def version():
     """Show version information."""
-    from version import __version__
+    from videoannotator.version import __version__
 
     typer.echo(f"VideoAnnotator v{__version__}")
     typer.echo(f"API Version: {__version__}")

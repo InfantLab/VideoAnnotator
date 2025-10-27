@@ -13,9 +13,9 @@ from pathlib import Path
 
 import pytest
 
-from batch.types import BatchJob, JobStatus
-from storage.config import ensure_job_storage_path, get_job_storage_path
-from storage.sqlite_backend import SQLiteStorageBackend
+from videoannotator.batch.types import BatchJob, JobStatus
+from videoannotator.storage.config import ensure_job_storage_path, get_job_storage_path
+from videoannotator.storage.sqlite_backend import SQLiteStorageBackend
 
 
 class TestStoragePathsIntegration:

@@ -10,7 +10,7 @@ from pathlib import Path
 # Ensure package import works from repo root
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from api.database import get_storage_backend
+from videoannotator.api.database import get_storage_backend
 
 JOB_ID = sys.argv[1] if len(sys.argv) > 1 else "52325a4e-71e8-4a22-b934-0c4836fd746e"
 

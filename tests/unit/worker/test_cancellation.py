@@ -7,7 +7,7 @@ import asyncio
 
 import pytest
 
-from worker.cancellation import CancellationManager
+from videoannotator.worker.cancellation import CancellationManager
 
 
 class TestCancellationManager:

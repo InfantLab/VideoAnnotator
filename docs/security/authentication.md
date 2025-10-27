@@ -165,7 +165,7 @@ Your test suite should use a test API key:
 @pytest.fixture
 def api_client():
     """API client with test authentication."""
-    from auth.token_manager import get_token_manager
+    from videoannotator.auth.token_manager import get_token_manager
 
     manager = get_token_manager()
     api_key, _ = manager.generate_api_key(

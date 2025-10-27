@@ -16,7 +16,7 @@ from src.api.database import reset_storage_backend, set_database_path
 
 # Import the API application
 from src.api.main import create_app
-from version import __version__ as videoannotator_version
+from videoannotator.version import __version__ as videoannotator_version
 
 
 @pytest.fixture

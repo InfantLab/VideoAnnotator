@@ -8,9 +8,9 @@ from datetime import datetime
 import pytest
 from fastapi.testclient import TestClient
 
-from api.database import reset_storage_backend
-from api.main import app
-from batch.types import JobStatus
+from videoannotator.api.database import reset_storage_backend
+from videoannotator.api.main import app
+from videoannotator.batch.types import JobStatus
 
 client = TestClient(app)
 

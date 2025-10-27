@@ -7,7 +7,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from storage.config import (
+from videoannotator.storage.config import (
     get_job_storage_path,
     get_storage_root,
 )
