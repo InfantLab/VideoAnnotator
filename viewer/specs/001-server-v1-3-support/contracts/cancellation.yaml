@@ -1,0 +1,159 @@
+openapi: 3.0.3
+info:
+  title: VideoAnnotator Job Cancellation API
+  version: 1.3.0
+  description: API contract for cancelling running or queued annotation jobs
+
+servers:
+  - url: http://localhost:18011
+    description: Local development server
+
+paths:
+  /api/v1/jobs/{job_id}/cancel:
+    post:
+      summary: Cancel a job
+      description: |
+        Cancels a running or queued annotation job. The job status will be updated to "cancelled" 
+        and processing will stop gracefully (current pipeline stage completes). 
+        Completed or failed jobs cannot be cancelled.
+      
+      operationId: cancelJob
+      tags:
+        - Jobs
+      
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Unique identifier of the job to cancel
+          schema:
+            type: string
+            example: "abc-123-def-456"
+      
+      security:
+        - bearerAuth: []
+      
+      responses:
+        '200':
+          description: Job successfully cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobCancellationResponse'
+              examples:
+                success:
+                  value:
+                    id: "abc-123-def-456"
+                    status: "cancelled"
+                    error_message: "Job cancelled by user request"
+                    completed_at: "2025-10-27T14:35:22Z"
+        
+        '400':
+          description: Job cannot be cancelled (already completed/failed/cancelled)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                alreadyCompleted:
+                  value:
+                    error_code: "JOB_NOT_CANCELLABLE"
+                    message: "Job cannot be cancelled"
+                    hint: "Job has already completed or failed"
+                    status: 400
+        
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                notFound:
+                  value:
+                    error_code: "JOB_NOT_FOUND"
+                    message: "Job with id 'abc-123' not found"
+                    status: 404
+        
+        '401':
+          description: Unauthorized - invalid or missing API token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              examples:
+                unauthorized:
+                  value:
+                    error_code: "UNAUTHORIZED"
+                    message: "Authentication required"
+                    hint: "Provide a valid API token in the Authorization header"
+                    status: 401
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+      description: API token obtained from server console or environment variable
+
+  schemas:
+    JobCancellationResponse:
+      type: object
+      required:
+        - id
+        - status
+        - error_message
+        - completed_at
+      properties:
+        id:
+          type: string
+          description: Job identifier
+          example: "abc-123-def-456"
+        status:
+          type: string
+          enum: [cancelled]
+          description: Job status (always "cancelled" for successful cancellation)
+        error_message:
+          type: string
+          description: Cancellation reason
+          example: "Job cancelled by user request"
+        completed_at:
+          type: string
+          format: date-time
+          description: Timestamp when job was cancelled (ISO 8601)
+          example: "2025-10-27T14:35:22Z"
+        metadata:
+          type: object
+          description: Optional additional metadata
+          additionalProperties: true
+    
+    ErrorEnvelope:
+      type: object
+      required:
+        - message
+      properties:
+        error_code:
+          type: string
+          description: Machine-readable error code (SCREAMING_SNAKE_CASE)
+          example: "JOB_NOT_CANCELLABLE"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Job cannot be cancelled"
+        field:
+          type: string
+          description: Field name for field-level validation errors (dot notation)
+          example: "job_id"
+        hint:
+          type: string
+          description: Helpful suggestion for resolving the error
+          example: "Job has already completed or failed"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        request_id:
+          type: string
+          description: Unique request identifier for support/debugging
+          example: "req_xyz789"

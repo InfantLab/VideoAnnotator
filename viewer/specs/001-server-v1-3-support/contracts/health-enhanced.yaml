@@ -1,0 +1,234 @@
+openapi: 3.0.3
+info:
+  title: VideoAnnotator Enhanced Health API
+  version: 1.3.0
+  description: Enhanced health endpoint with GPU status, worker information, and diagnostics
+
+servers:
+  - url: http://localhost:18011
+    description: Local development server
+
+paths:
+  /api/v1/system/health:
+    get:
+      summary: Get system health status
+      description: |
+        Returns comprehensive system health information including server status, 
+        GPU availability, worker status, and diagnostic details. 
+        v1.3.0 includes additional fields; v1.2.x returns only basic status/message.
+      
+      operationId: getSystemHealth
+      tags:
+        - System
+      
+      responses:
+        '200':
+          description: Health status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnhancedHealthResponse'
+              examples:
+                v1_3_healthy:
+                  summary: v1.3.0 server (healthy)
+                  value:
+                    status: "ok"
+                    message: "System operational"
+                    version: "1.3.0"
+                    uptime: 86400
+                    gpu_status:
+                      available: true
+                      cuda_version: "12.1"
+                      device_count: 1
+                      device_names: ["NVIDIA GeForce RTX 4090"]
+                      memory_total: 25769803776
+                      memory_available: 20615843020
+                    worker_info:
+                      active_jobs: 2
+                      max_concurrent: 4
+                      queue_depth: 1
+                      worker_status: "healthy"
+                    diagnostics:
+                      database_connected: true
+                      storage_accessible: true
+                      ffmpeg_available: true
+                    timestamp: "2025-10-27T14:35:22Z"
+                
+                v1_3_degraded:
+                  summary: v1.3.0 server (degraded)
+                  value:
+                    status: "degraded"
+                    message: "System operational with warnings"
+                    version: "1.3.0"
+                    uptime: 3600
+                    gpu_status:
+                      available: false
+                    worker_info:
+                      active_jobs: 4
+                      max_concurrent: 4
+                      queue_depth: 10
+                      worker_status: "degraded"
+                    diagnostics:
+                      database_connected: true
+                      storage_accessible: true
+                      ffmpeg_available: true
+                    timestamp: "2025-10-27T14:35:22Z"
+                
+                v1_2_basic:
+                  summary: v1.2.x server (basic)
+                  value:
+                    status: "ok"
+                    message: "Service is running"
+                    timestamp: "2025-10-27T14:35:22Z"
+        
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnhancedHealthResponse'
+              examples:
+                error:
+                  value:
+                    status: "error"
+                    message: "Database connection failed"
+                    timestamp: "2025-10-27T14:35:22Z"
+
+  /health:
+    get:
+      summary: Basic health check (legacy endpoint)
+      description: |
+        Simple health check endpoint. Returns minimal status information.
+        Useful for load balancers and monitoring systems.
+        Does not require authentication.
+      
+      operationId: getHealth
+      tags:
+        - System
+      
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  message:
+                    type: string
+              example:
+                status: "ok"
+                message: "Service is running"
+
+components:
+  schemas:
+    EnhancedHealthResponse:
+      type: object
+      required:
+        - status
+        - message
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, error]
+          description: Overall system status
+        message:
+          type: string
+          description: Human-readable status message
+          example: "System operational"
+        version:
+          type: string
+          description: Server version (v1.3.0+)
+          example: "1.3.0"
+        uptime:
+          type: integer
+          description: Server uptime in seconds (v1.3.0+)
+          example: 86400
+        gpu_status:
+          $ref: '#/components/schemas/GPUInfo'
+        worker_info:
+          $ref: '#/components/schemas/WorkerInfo'
+        diagnostics:
+          $ref: '#/components/schemas/Diagnostics'
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when health was checked (ISO 8601)
+          example: "2025-10-27T14:35:22Z"
+    
+    GPUInfo:
+      type: object
+      required:
+        - available
+      properties:
+        available:
+          type: boolean
+          description: Whether GPU is available for processing
+        cuda_version:
+          type: string
+          description: CUDA version (if GPU available)
+          example: "12.1"
+        device_count:
+          type: integer
+          description: Number of GPU devices detected
+          example: 1
+        device_names:
+          type: array
+          items:
+            type: string
+          description: Names of available GPU devices
+          example: ["NVIDIA GeForce RTX 4090"]
+        memory_total:
+          type: integer
+          description: Total GPU memory in bytes
+          example: 25769803776
+        memory_available:
+          type: integer
+          description: Available GPU memory in bytes
+          example: 20615843020
+    
+    WorkerInfo:
+      type: object
+      required:
+        - active_jobs
+        - max_concurrent
+        - queue_depth
+        - worker_status
+      properties:
+        active_jobs:
+          type: integer
+          description: Number of currently running jobs
+          example: 2
+        max_concurrent:
+          type: integer
+          description: Maximum concurrent jobs allowed
+          example: 4
+        queue_depth:
+          type: integer
+          description: Number of jobs waiting in queue
+          example: 1
+        worker_status:
+          type: string
+          enum: [healthy, degraded, offline]
+          description: Worker health status
+    
+    Diagnostics:
+      type: object
+      required:
+        - database_connected
+        - storage_accessible
+        - ffmpeg_available
+      properties:
+        database_connected:
+          type: boolean
+          description: Whether database connection is active
+        storage_accessible:
+          type: boolean
+          description: Whether storage directory is accessible
+        ffmpeg_available:
+          type: boolean
+          description: Whether FFmpeg is installed and available
