@@ -508,6 +508,166 @@ class APIClient {
       };
     }
   }
+
+  // =============================================================================
+  // v1.3.0 ENHANCED API METHODS
+  // =============================================================================
+
+  /**
+   * Cancel a running or queued job
+   * POST /api/v1/jobs/{job_id}/cancel
+   * 
+   * @param jobId - Job ID to cancel
+   * @param reason - Optional cancellation reason
+   * @returns Job cancellation response
+   * @throws APIError if cancellation fails
+   */
+  async cancelJob(
+    jobId: string,
+    reason?: string
+  ): Promise<{
+    job_id: string;
+    status: 'cancelled' | 'cancelling';
+    message: string;
+    cancelled_at?: string;
+  }> {
+    const payload = reason ? { reason } : undefined;
+
+    return this.request(`/api/v1/jobs/${jobId}/cancel`, {
+      method: 'POST',
+      body: payload ? JSON.stringify(payload) : undefined,
+    });
+  }
+
+  /**
+   * Validate a full configuration object
+   * POST /api/v1/config/validate
+   * 
+   * @param config - Configuration object to validate
+   * @returns Validation result with errors/warnings
+   * @throws APIError if validation request fails
+   */
+  async validateConfig(config: Record<string, unknown>): Promise<{
+    valid: boolean;
+    errors: Array<{
+      field: string;
+      message: string;
+      severity: 'error' | 'warning' | 'info';
+      error_code?: string;
+      hint?: string;
+      suggested_value?: unknown;
+    }>;
+    warnings: Array<{
+      field: string;
+      message: string;
+      severity: 'error' | 'warning' | 'info';
+      error_code?: string;
+      hint?: string;
+      suggested_value?: unknown;
+    }>;
+    validated_config?: Record<string, unknown>;
+  }> {
+    return this.request('/api/v1/config/validate', {
+      method: 'POST',
+      body: JSON.stringify({ config }),
+    });
+  }
+
+  /**
+   * Validate a pipeline-specific configuration
+   * POST /api/v1/pipelines/{pipeline_name}/validate
+   * 
+   * @param pipelineName - Name of the pipeline
+   * @param config - Configuration object to validate
+   * @returns Validation result with errors/warnings
+   * @throws APIError if validation request fails
+   */
+  async validatePipeline(
+    pipelineName: string,
+    config: Record<string, unknown>
+  ): Promise<{
+    valid: boolean;
+    errors: Array<{
+      field: string;
+      message: string;
+      severity: 'error' | 'warning' | 'info';
+      error_code?: string;
+      hint?: string;
+      suggested_value?: unknown;
+    }>;
+    warnings: Array<{
+      field: string;
+      message: string;
+      severity: 'error' | 'warning' | 'info';
+      error_code?: string;
+      hint?: string;
+      suggested_value?: unknown;
+    }>;
+    validated_config?: Record<string, unknown>;
+  }> {
+    return this.request(`/api/v1/pipelines/${pipelineName}/validate`, {
+      method: 'POST',
+      body: JSON.stringify({ config }),
+    });
+  }
+
+  /**
+   * Get enhanced health status (v1.3.0+)
+   * GET /api/v1/system/health
+   * 
+   * Returns enhanced health response with GPU status, worker info, diagnostics
+   * Falls back gracefully to basic health response for v1.2.x servers
+   * 
+   * @returns Health response (enhanced if v1.3.0+, basic if v1.2.x)
+   */
+  async getEnhancedHealth(): Promise<{
+    status: 'healthy' | 'degraded' | 'unhealthy' | string;
+    version?: string;
+    api_version?: string;
+    videoannotator_version?: string;
+    uptime_seconds?: number;
+    gpu_status?: {
+      available: boolean;
+      device_name?: string;
+      cuda_version?: string;
+      memory_total?: number;
+      memory_used?: number;
+      memory_free?: number;
+    };
+    worker_info?: {
+      active_jobs: number;
+      queued_jobs: number;
+      max_concurrent_jobs: number;
+      worker_status: 'idle' | 'busy' | 'overloaded';
+    };
+    diagnostics?: {
+      database: {
+        status: 'healthy' | 'degraded' | 'unhealthy';
+        message?: string;
+      };
+      storage: {
+        status: 'healthy' | 'degraded' | 'unhealthy';
+        disk_usage_percent?: number;
+        message?: string;
+      };
+      ffmpeg: {
+        available: boolean;
+        version?: string;
+      };
+    };
+    message?: string;
+  }> {
+    // Try enhanced endpoint first (v1.3.0)
+    try {
+      return await this.request('/api/v1/system/health');
+    } catch (error) {
+      // Fall back to basic health endpoint (v1.2.x)
+      if (error instanceof APIError && error.status === 404) {
+        return await this.request('/health');
+      }
+      throw error;
+    }
+  }
 }
 
 // Export a singleton instance
@@ -515,3 +675,4 @@ export const apiClient = new APIClient();
 
 // Export the class for custom instances
 export { APIClient };
+

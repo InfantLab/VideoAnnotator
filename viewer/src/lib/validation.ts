@@ -302,3 +302,132 @@ export function isVideoAnnotatorFormat(data: unknown): boolean {
         return false;
     }
 }
+
+// =============================================================================
+// VIDEOANNOTATOR v1.3.0 API VALIDATION
+// =============================================================================
+
+/**
+ * Field-level error from config validation
+ */
+export const FieldErrorSchema = z.object({
+    field: z.string(),
+    message: z.string(),
+    error_code: z.string().optional(),
+    hint: z.string().optional(),
+}).strict();
+
+/**
+ * Error envelope (v1.3.0 standard format)
+ */
+export const ErrorEnvelopeSchema = z.object({
+    error: z.union([z.string(), z.array(FieldErrorSchema)]),
+    error_code: z.string().optional(),
+    request_id: z.string().optional(),
+    hint: z.string().optional(),
+});
+
+/**
+ * Job cancellation response
+ */
+export const JobCancellationResponseSchema = z.object({
+    job_id: z.string(),
+    status: z.enum(['cancelled', 'cancelling']),
+    message: z.string(),
+    cancelled_at: z.string().optional(),
+});
+
+/**
+ * Validation issue
+ */
+export const ValidationIssueSchema = z.object({
+    field: z.string(),
+    message: z.string(),
+    severity: z.enum(['error', 'warning', 'info']),
+    error_code: z.string().optional(),
+    hint: z.string().optional(),
+    suggested_value: z.unknown().optional(),
+});
+
+/**
+ * Config validation result
+ */
+export const ConfigValidationResultSchema = z.object({
+    valid: z.boolean(),
+    errors: z.array(ValidationIssueSchema),
+    warnings: z.array(ValidationIssueSchema),
+    validated_config: z.record(z.unknown()).optional(),
+});
+
+/**
+ * GPU status
+ */
+export const GpuStatusSchema = z.object({
+    available: z.boolean(),
+    device_name: z.string().optional(),
+    cuda_version: z.string().optional(),
+    memory_total: z.number().optional(),
+    memory_used: z.number().optional(),
+    memory_free: z.number().optional(),
+});
+
+/**
+ * Worker info
+ */
+export const WorkerInfoSchema = z.object({
+    active_jobs: z.number(),
+    queued_jobs: z.number(),
+    max_concurrent_jobs: z.number(),
+    worker_status: z.enum(['idle', 'busy', 'overloaded']),
+});
+
+/**
+ * System diagnostics
+ */
+export const SystemDiagnosticsSchema = z.object({
+    database: z.object({
+        status: z.enum(['healthy', 'degraded', 'unhealthy']),
+        message: z.string().optional(),
+    }),
+    storage: z.object({
+        status: z.enum(['healthy', 'degraded', 'unhealthy']),
+        disk_usage_percent: z.number().optional(),
+        message: z.string().optional(),
+    }),
+    ffmpeg: z.object({
+        available: z.boolean(),
+        version: z.string().optional(),
+    }),
+});
+
+/**
+ * Enhanced health response (v1.3.0)
+ */
+export const EnhancedHealthResponseSchema = z.object({
+    status: z.enum(['healthy', 'degraded', 'unhealthy']),
+    version: z.string(),
+    api_version: z.string(),
+    uptime_seconds: z.number(),
+    gpu_status: GpuStatusSchema.optional(),
+    worker_info: WorkerInfoSchema.optional(),
+    diagnostics: SystemDiagnosticsSchema.optional(),
+    message: z.string().optional(),
+});
+
+/**
+ * Legacy health response (v1.2.x)
+ */
+export const LegacyHealthResponseSchema = z.object({
+    status: z.string(),
+    api_version: z.string().optional(),
+    videoannotator_version: z.string().optional(),
+    message: z.string().optional(),
+});
+
+/**
+ * Union health response schema
+ */
+export const HealthResponseSchema = z.union([
+    EnhancedHealthResponseSchema,
+    LegacyHealthResponseSchema,
+]);

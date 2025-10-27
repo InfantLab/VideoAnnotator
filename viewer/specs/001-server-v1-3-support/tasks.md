@@ -27,11 +27,11 @@ description: "Implementation tasks for VideoAnnotator Server v1.3.0 Client Suppo
 
 **Purpose**: Project initialization and dependency verification
 
-- [ ] T001 Verify VideoAnnotator server v1.3.0 is running at http://localhost:18011 and API key is available
-- [ ] T002 [P] Create `.env` file with VITE_API_BASE_URL and VITE_API_TOKEN from server console
-- [ ] T003 [P] Verify existing dependencies support new features (React 18, Vite 5, Zod, shadcn/ui)
+- [x] T001 Verify VideoAnnotator server v1.3.0 is running at http://localhost:18011 and API key is available
+- [x] T002 [P] Create `.env` file with VITE_API_BASE_URL and VITE_API_TOKEN from server console
+- [x] T003 [P] Verify existing dependencies support new features (React 18, Vite 5, Zod, shadcn/ui)
 
-**Checkpoint**: Development environment ready
+**Checkpoint**: Development environment ready ✅
 
 ---
 
@@ -41,14 +41,14 @@ description: "Implementation tasks for VideoAnnotator Server v1.3.0 Client Suppo
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create TypeScript types in src/types/api.ts for v1.3.0 entities (ErrorEnvelope, ServerCapabilities, ConfigValidationResult, EnhancedHealthResponse, JobCancellationResponse)
-- [ ] T005 [P] Create Zod schemas in src/lib/validation.ts for all v1.3.0 response types (ErrorEnvelopeSchema, ConfigValidationResultSchema, EnhancedHealthResponseSchema, etc.)
-- [ ] T006 [P] Create src/lib/errorHandling.ts with parseApiError function for defensive ErrorEnvelope parsing (supports both v1.3.0 and legacy formats)
-- [ ] T007 [P] Create src/api/capabilities.ts with detectServerCapabilities function (inspects health endpoint for v1.3.0 fields)
-- [ ] T008 Extend src/api/client.ts with new method signatures (cancelJob, validateConfig, validatePipeline, enhanced getHealth)
-- [ ] T009 [P] Create src/hooks/useServerCapabilities.ts hook for capability detection with caching and refresh
+- [x] T004 Create TypeScript types in src/types/api.ts for v1.3.0 entities (ErrorEnvelope, ServerCapabilities, ConfigValidationResult, EnhancedHealthResponse, JobCancellationResponse)
+- [x] T005 [P] Create Zod schemas in src/lib/validation.ts for all v1.3.0 response types (ErrorEnvelopeSchema, ConfigValidationResultSchema, EnhancedHealthResponseSchema, etc.)
+- [x] T006 [P] Create src/lib/errorHandling.ts with parseApiError function for defensive ErrorEnvelope parsing (supports both v1.3.0 and legacy formats)
+- [x] T007 [P] Create src/api/capabilities.ts with detectServerCapabilities function (inspects health endpoint for v1.3.0 fields)
+- [x] T008 Extend src/api/client.ts with new method signatures (cancelJob, validateConfig, validatePipeline, enhanced getHealth)
+- [x] T009 [P] Create src/hooks/useServerCapabilities.ts hook for capability detection with caching and refresh
 
-**Checkpoint**: Foundation ready - user story implementation can now begin in parallel
+**Checkpoint**: Foundation ready - user story implementation can now begin in parallel ✅
 
 ---
 
