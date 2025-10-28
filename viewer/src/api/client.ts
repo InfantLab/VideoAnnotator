@@ -670,9 +670,27 @@ class APIClient {
   }
 }
 
-// Export a singleton instance
-export const apiClient = new APIClient();
+// Lazy singleton instance (avoids localStorage access at module load time)
+let _apiClientInstance: APIClient | null = null;
+
+/**
+ * Get the singleton API client instance
+ * Creates it on first access to avoid localStorage issues in tests
+ */
+export function getApiClient(): APIClient {
+  if (!_apiClientInstance) {
+    _apiClientInstance = new APIClient();
+  }
+  return _apiClientInstance;
+}
+
+// Export singleton as property for backward compatibility
+export const apiClient = new Proxy({} as APIClient, {
+  get(_target, prop) {
+    return getApiClient()[prop as keyof APIClient];
+  },
+});
 
 // Export the class for custom instances
-export { APIClient };
+export { APIClient};
 

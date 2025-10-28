@@ -194,7 +194,7 @@ export type HealthResponse = EnhancedHealthResponse | LegacyHealthResponse;
 /**
  * Job status including new cancelled state
  */
-export type JobStatus = 
+export type JobStatus =
   | 'pending'
   | 'queued'
   | 'running'

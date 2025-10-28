@@ -84,13 +84,24 @@ HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation((contextId) 
 // Mock fetch for file loading tests
 global.fetch = vi.fn()
 
+// Mock localStorage for API client tests
+const localStorageMock = {
+  getItem: vi.fn(() => null),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  length: 0,
+  key: vi.fn(() => null),
+}
+global.localStorage = localStorageMock as any
+
 // Mock File constructor for file upload tests
 global.File = class MockFile {
-  constructor(public chunks: any[], public name: string, public options: any = {}) {}
+  constructor(public chunks: any[], public name: string, public options: any = {}) { }
   get size() { return this.chunks.reduce((size, chunk) => size + chunk.length, 0) }
   get type() { return this.options.type || '' }
   text() { return Promise.resolve(this.chunks.join('')) }
-  slice(start?: number, end?: number) { 
+  slice(start?: number, end?: number) {
     const content = this.chunks.join('').slice(start, end)
     return { text: () => Promise.resolve(content) }
   }

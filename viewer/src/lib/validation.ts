@@ -169,7 +169,7 @@ export function validateCOCOPersonData(data: unknown[]): COCOPersonAnnotation[] 
             throw new ValidationError(
                 `Invalid COCO person tracking data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-(error.errors[0] as any)?.received
+                (error.errors[0] as any)?.received
             );
         }
         throw error;
@@ -187,7 +187,7 @@ export function validateWebVTTData(data: unknown[]): WebVTTCue[] {
             throw new ValidationError(
                 `Invalid WebVTT data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-(error.errors[0] as any)?.received
+                (error.errors[0] as any)?.received
             );
         }
         throw error;
@@ -205,7 +205,7 @@ export function validateRTTMData(data: unknown[]): RTTMSegment[] {
             throw new ValidationError(
                 `Invalid RTTM data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-(error.errors[0] as any)?.received
+                (error.errors[0] as any)?.received
             );
         }
         throw error;
@@ -223,7 +223,7 @@ export function validateSceneData(data: unknown[]): SceneAnnotation[] {
             throw new ValidationError(
                 `Invalid scene detection data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-(error.errors[0] as any)?.received
+                (error.errors[0] as any)?.received
             );
         }
         throw error;
@@ -241,7 +241,7 @@ export function validateStandardAnnotationData(data: unknown): StandardAnnotatio
             throw new ValidationError(
                 `Invalid annotation data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-(error.errors[0] as any)?.received
+                (error.errors[0] as any)?.received
             );
         }
         throw error;

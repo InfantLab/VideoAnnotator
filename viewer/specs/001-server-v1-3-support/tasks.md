@@ -62,14 +62,14 @@ description: "Implementation tasks for VideoAnnotator Server v1.3.0 Client Suppo
 
 > **Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T010 [P] [US1] Create unit test in src/test/api/client.v1.3.test.ts for cancelJob endpoint with mocked fetch responses (success, 400 already-cancelled, 404 not-found)
+- [x] T010 [P] [US1] Create unit test in src/test/api/client.v1.3.test.ts for cancelJob endpoint with mocked fetch responses (success, 400 already-cancelled, 404 not-found)
 - [ ] T011 [P] [US1] Create unit test in src/test/hooks/useJobCancellation.test.ts for confirmation dialog flow and optimistic updates
 - [ ] T012 [P] [US1] Create component test in src/test/components/JobCancelButton.test.tsx for button states (enabled, disabled, loading) and click handling
 - [ ] T013 [P] [US1] Create integration test in src/test/integration/jobCancellation.test.ts for full cancel flow (API mock → optimistic update → cache invalidation → toast)
 
 ### Implementation for User Story 1
 
-- [ ] T014 [P] [US1] Implement cancelJob method in src/api/client.ts (POST /api/v1/jobs/{job_id}/cancel with Bearer auth)
+- [x] T014 [P] [US1] Implement cancelJob method in src/api/client.ts (POST /api/v1/jobs/{job_id}/cancel with Bearer auth)
 - [ ] T015 [P] [US1] Create src/hooks/useJobCancellation.ts hook with confirmation dialog, optimistic updates, and error rollback
 - [ ] T016 [US1] Create src/components/JobCancelButton.tsx with AlertDialog for confirmation, loading state, and disabled states for non-cancellable jobs
 - [ ] T017 [US1] Integrate JobCancelButton into src/pages/CreateJobDetail.tsx (render conditionally based on job status)
