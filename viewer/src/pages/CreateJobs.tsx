@@ -45,7 +45,7 @@ const CreateJobs = () => {
     };
 
     const config = statusMap[status as keyof typeof statusMap] || statusMap.pending;
-    
+
     return (
       <Badge variant={config.variant} className={config.color}>
         {status.toUpperCase()}
@@ -169,8 +169,8 @@ const CreateJobs = () => {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {canCancelJob(job.status as JobStatus) && (
-                          <JobCancelButton 
-                            jobId={job.id} 
+                          <JobCancelButton
+                            jobId={job.id}
                             jobStatus={job.status as JobStatus}
                             size="sm"
                             variant="outline"

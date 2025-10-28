@@ -38,7 +38,7 @@ const CreateJobDetail = () => {
   const getStatusColor = (status: string) => {
     const colors = {
       pending: "text-yellow-600",
-      running: "text-blue-600", 
+      running: "text-blue-600",
       completed: "text-green-600",
       failed: "text-red-600",
       cancelled: "text-gray-600",
@@ -62,12 +62,12 @@ const CreateJobDetail = () => {
   // Button handlers
   const handleOpenInViewer = () => {
     if (!job) return;
-    
+
     if (job.status !== 'completed') {
       alert(`Job ${job.id} is not yet completed (status: ${job.status}).\n\nOnly completed jobs can be opened in the viewer.`);
       return;
     }
-    
+
     // TODO: Implement proper job results loading
     // This requires API endpoints to fetch job output files
     const shouldProceed = confirm(
@@ -78,7 +78,7 @@ const CreateJobDetail = () => {
       `• Click "Cancel" to stay on this page\n\n` +
       `Full integration coming in v0.4.0`
     );
-    
+
     if (shouldProceed) {
       navigate('/');
     }
@@ -86,7 +86,7 @@ const CreateJobDetail = () => {
 
   const handleDownloadResults = async () => {
     if (!job) return;
-    
+
     try {
       // TODO: Implement actual download from API
       // For now, show placeholder
@@ -99,7 +99,7 @@ const CreateJobDetail = () => {
 
   const handleViewRawData = () => {
     if (!job) return;
-    
+
     // TODO: Navigate to raw data view or open in new tab
     // For now, show job data in new window
     const dataWindow = window.open("", "_blank");
@@ -162,16 +162,16 @@ const CreateJobDetail = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {canCancelJob(job.status as JobStatus) && (
-            <JobCancelButton 
-              jobId={job.id} 
+            <JobCancelButton
+              jobId={job.id}
               jobStatus={job.status as JobStatus}
               size="sm"
             />
           )}
-          
+
           {job.status === "completed" && (
             <Button onClick={handleOpenInViewer}>
               <Eye className="h-4 w-4 mr-2" />
@@ -200,7 +200,7 @@ const CreateJobDetail = () => {
               </div>
               <Progress value={getProgressValue(job.status)} className="h-2" />
             </div>
-            
+
             {job.status === "running" && (
               <Alert>
                 <AlertDescription>
@@ -208,7 +208,7 @@ const CreateJobDetail = () => {
                 </AlertDescription>
               </Alert>
             )}
-            
+
             {job.status === "failed" && (
               <Alert>
                 <AlertDescription>
@@ -234,7 +234,7 @@ const CreateJobDetail = () => {
             <div>
               <label className="text-sm font-medium text-muted-foreground">File Size</label>
               <p className="mt-1">
-                {job.video_size_bytes 
+                {job.video_size_bytes
                   ? `${(job.video_size_bytes / (1024 * 1024)).toFixed(1)} MB`
                   : "N/A"
                 }
@@ -276,7 +276,7 @@ const CreateJobDetail = () => {
                 )) || <span className="text-muted-foreground">No pipelines selected</span>}
               </div>
             </div>
-            
+
             {job.config && (
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Configuration</label>
@@ -300,7 +300,7 @@ const CreateJobDetail = () => {
               <p className="text-muted-foreground">
                 Job completed successfully! Results are ready for viewing.
               </p>
-              
+
               <div className="flex gap-2">
                 <Button onClick={handleOpenInViewer}>
                   <Eye className="h-4 w-4 mr-2" />

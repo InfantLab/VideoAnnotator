@@ -140,7 +140,7 @@ export const useSSE = (options: UseSSEOptions = {}) => {
 
       eventSource.onerror = (event) => {
         setIsConnected(false);
-        
+
         // Check if this is a 404 error (endpoint doesn't exist)
         // EventSource doesn't give us HTTP status, but we can infer from readyState
         if (eventSource.readyState === EventSource.CLOSED) {
@@ -149,14 +149,14 @@ export const useSSE = (options: UseSSEOptions = {}) => {
           onError?.(error);
           return;
         }
-        
+
         // Attempt to reconnect with exponential backoff for other errors
         if (reconnectAttempts.current < maxReconnectAttempts) {
           const delay = Math.pow(2, reconnectAttempts.current) * 1000; // 1s, 2s, 4s, 8s, 16s
           reconnectAttempts.current++;
-          
-          console.log(`🔄 SSE reconnect attempt ${reconnectAttempts.current}/${maxReconnectAttempts} in ${delay/1000}s`);
-          
+
+          console.log(`🔄 SSE reconnect attempt ${reconnectAttempts.current}/${maxReconnectAttempts} in ${delay / 1000}s`);
+
           reconnectTimeoutRef.current = setTimeout(() => {
             disconnect();
             connect();

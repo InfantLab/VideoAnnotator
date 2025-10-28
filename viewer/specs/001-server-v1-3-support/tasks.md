@@ -104,10 +104,10 @@ description: "Implementation tasks for VideoAnnotator Server v1.3.0 Client Suppo
 
 ### Implementation for User Story 2
 
-- [ ] T025 [P] [US2] Implement validateConfig method in src/api/client.ts (POST /api/v1/config/validate with full config object)
-- [ ] T026 [P] [US2] Implement validatePipeline method in src/api/client.ts (POST /api/v1/pipelines/{name}/validate with pipeline-specific config)
-- [ ] T027 [P] [US2] Create src/hooks/useConfigValidation.ts with debounced validation (500ms), config hash caching, and result state management
-- [ ] T028 [US2] Create src/components/ConfigValidationPanel.tsx to display errors/warnings with field names, messages, hints, and error codes (collapsible for dev mode)
+- [x] T025 [P] [US2] Implement validateConfig method in src/api/client.ts (POST /api/v1/config/validate with full config object) - already complete from T008
+- [x] T026 [P] [US2] Implement validatePipeline method in src/api/client.ts (POST /api/v1/pipelines/{name}/validate with pipeline-specific config) - already complete from T008
+- [x] T027 [P] [US2] Create src/hooks/useConfigValidation.ts with debounced validation (500ms), config hash caching, and result state management
+- [x] T028 [US2] Create src/components/ConfigValidationPanel.tsx to display errors/warnings with field names, messages, hints, and error codes (collapsible for dev mode)
 - [ ] T029 [US2] Integrate ConfigValidationPanel into src/pages/CreateNewJob.tsx below the JSON config editor
 - [ ] T030 [US2] Add submit button state management in CreateNewJob.tsx (disable if validationResult.valid === false)
 - [ ] T031 [US2] Add warning confirmation dialog in CreateNewJob.tsx for valid-with-warnings case ("Submit Anyway?" prompt)
