@@ -172,8 +172,8 @@ export function ConfigValidationPanel({
                                     <div
                                         key={`${field}-${index}`}
                                         className={`p-3 rounded-md ${issue.severity === 'error'
-                                                ? 'bg-red-50 border border-red-200'
-                                                : 'bg-yellow-50 border border-yellow-200'
+                                            ? 'bg-red-50 border border-red-200'
+                                            : 'bg-yellow-50 border border-yellow-200'
                                             }`}
                                     >
                                         <div className="flex items-start gap-2">
