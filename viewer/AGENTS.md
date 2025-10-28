@@ -86,31 +86,25 @@ v1.2.x pipeline introspection (roadmap):
 
 ### Task Tracking and Commits
 
-**CRITICAL: Follow this workflow for feature implementation:**
+**When working from specs with tasks.md:**
 
-- **Update tasks.md as you go**: When working from a specification with tasks.md checklist, mark tasks complete `[x]` as you implement them.
-- **Commit code and tasks.md together**: Always stage and commit both code changes AND tasks.md updates in the same commit. This keeps progress tracking synchronized with implementation.
-- **Commit message pattern**: Include task ID (e.g., "feat: T021-T023 - Config validation hook and component") so commits are traceable to specification.
-- **Why this matters**: Keeps specification, implementation, and git history aligned. Allows reviewers to see what was intended vs. what was delivered in each commit.
+- Mark tasks `[x]` as you implement them
+- Commit code + tasks.md together (same commit)
+- Include task ID in commit message (e.g., "feat: T021 - Config validation hook")
 
-Example workflow:
 ```bash
-# Implement T021
-# Edit code files...
-# Update specs/XXX/tasks.md to mark T021 complete [x]
+# Edit code + mark task complete in tasks.md
 git add src/hooks/useConfigValidation.ts specs/XXX/tasks.md
 git commit -m "feat: T021 - Create useConfigValidation hook with debouncing"
 ```
 
 ### QA Testing Guidelines
 
-**CRITICAL: Agents must follow these QA rules:**
+**For QA checklists:**
 
-- **Don't mark your own homework**: NEVER mark QA checklist items as complete `[x]`. Only human testers can verify functionality works in practice.
-- **Just the facts**: QA checklists are for manual verification steps, not detailed technical explanations of what was fixed.
-- **Code fixes vs Testing**: Use comments like `**CODE FIXED**:` to note what was changed in code, but leave actual testing checkboxes `[ ]` unchecked for human verification.
-
-QA testers need clean, actionable checklists - not implementation details.
+- NEVER mark QA items `[x]` - only humans verify functionality
+- Note code fixes with `**CODE FIXED**:` comments
+- Leave test checkboxes `[ ]` unchecked for human testers
 
 ## Documentation
 

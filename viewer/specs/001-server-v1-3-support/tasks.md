@@ -97,7 +97,7 @@ description: "Implementation tasks for VideoAnnotator Server v1.3.0 Client Suppo
 
 > **Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T021 [P] [US2] Create unit test in src/test/api/client.v1.3.test.ts for validateConfig and validatePipeline endpoints with various error/warning scenarios
+- [x] T021 [P] [US2] Create unit test in src/test/api/client.v1.3.test.ts for validateConfig and validatePipeline endpoints with various error/warning scenarios (already completed in T010)
 - [ ] T022 [P] [US2] Create unit test in src/test/hooks/useConfigValidation.test.ts for debouncing (500ms), caching by config hash, and validation state management
 - [ ] T023 [P] [US2] Create component test in src/test/components/ConfigValidationPanel.test.tsx for error/warning display, grouping by field, and hint rendering
 - [ ] T024 [P] [US2] Create integration test in src/test/integration/configValidation.test.ts for full validation flow (config change → debounced API call → field-level error display → submit blocking)
