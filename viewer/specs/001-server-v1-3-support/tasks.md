@@ -127,9 +127,9 @@ description: "Implementation tasks for VideoAnnotator Server v1.3.0 Client Suppo
 
 > **Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T033 [P] [US3] Create unit test in src/test/api/capabilities.test.ts for server capability detection with v1.2.x and v1.3.0 health responses
-- [ ] T034 [P] [US3] Create component test in src/test/components/TokenStatusIndicator.test.tsx for status states (connected, error, warning) and version display
-- [ ] T035 [P] [US3] Create integration test in src/test/integration/authentication.test.ts for token setup flow, validation, and error handling
+- [x] T033 [P] [US3] Create unit test in src/test/api/capabilities.test.ts for server capability detection with v1.2.x and v1.3.0 health responses
+- [x] T034 [P] [US3] Create component test in src/test/components/TokenStatusIndicator.test.tsx for status states (connected, error, warning) and version display
+- [x] T035 [P] [US3] Create integration test in src/test/integration/authentication.test.ts for token setup flow, validation, and error handling
 
 ### Implementation for User Story 3
 
