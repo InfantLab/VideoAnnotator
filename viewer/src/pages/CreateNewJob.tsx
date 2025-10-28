@@ -8,6 +8,16 @@ import { Link, useNavigate } from "react-router-dom";
 import { apiClient } from "@/api/client";
 import { handleAPIError } from "@/api/handleError";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import vavIcon from "@/assets/v-a-v.icon.png";
 import { usePipelineCatalog, useRefreshPipelineCatalog } from "@/hooks/usePipelineCatalog";
 import { DynamicPipelineParameters } from "@/components/DynamicPipelineParameters";
@@ -62,6 +72,7 @@ const CreateNewJob = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string[]>([]);
+  const [showWarningDialog, setShowWarningDialog] = useState(false);
 
   // Real-time configuration validation
   const { validationResult, isValidating, validateConfig } = useConfigValidation();
@@ -114,7 +125,18 @@ const CreateNewJob = () => {
     }
   };
 
-  const handleSubmitJobs = async () => {
+  const handleSubmitJobs = () => {
+    // Check for warnings before submitting
+    if (validationResult?.warnings && validationResult.warnings.length > 0) {
+      setShowWarningDialog(true);
+      return;
+    }
+
+    // No warnings, proceed directly
+    performActualSubmission();
+  };
+
+  const performActualSubmission = async () => {
     console.log('🚀 Submit button clicked - starting job submission');
     console.log('Selected files:', selectedFiles.map(f => f.name));
     console.log('Selected pipelines:', selectedPipelines);
@@ -351,6 +373,37 @@ const CreateNewJob = () => {
           </Button>
         )}
       </div>
+
+      {/* Warning confirmation dialog */}
+      <AlertDialog open={showWarningDialog} onOpenChange={setShowWarningDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Configuration Warnings Detected</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your configuration has {validationResult?.warnings?.length || 0} warning(s). 
+              These may indicate suboptimal settings, but you can proceed if you understand the implications.
+              {validationResult?.warnings && validationResult.warnings.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {validationResult.warnings.map((warning, idx) => (
+                    <div key={idx} className="text-sm">
+                      <strong className="text-yellow-700">{warning.field}:</strong> {warning.message}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setShowWarningDialog(false);
+              performActualSubmission();
+            }}>
+              Submit Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

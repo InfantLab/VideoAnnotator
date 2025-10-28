@@ -110,7 +110,7 @@ description: "Implementation tasks for VideoAnnotator Server v1.3.0 Client Suppo
 - [x] T028 [US2] Create src/components/ConfigValidationPanel.tsx to display errors/warnings with field names, messages, hints, and error codes (collapsible for dev mode)
 - [x] T029 [US2] Integrate ConfigValidationPanel into src/pages/CreateNewJob.tsx below the JSON config editor
 - [x] T030 [US2] Add submit button state management in CreateNewJob.tsx (disable if validationResult.valid === false)
-- [ ] T031 [US2] Add warning confirmation dialog in CreateNewJob.tsx for valid-with-warnings case ("Submit Anyway?" prompt)
+- [x] T031 [US2] Add warning confirmation dialog in CreateNewJob.tsx for valid-with-warnings case ("Submit Anyway?" prompt)
 - [ ] T032 [US2] Add inline field-level error indicators in config editor (if using form inputs instead of JSON editor)
 
 **Checkpoint**: Configuration validation fully functional - users get immediate feedback on invalid configs, submit is blocked, warnings allow submission with confirmation
