@@ -8,6 +8,9 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ExternalLink, Download, Eye } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import vavIcon from "@/assets/v-a-v.icon.png";
+import { JobCancelButton } from "@/components/JobCancelButton";
+import { canCancelJob } from "@/hooks/useJobCancellation";
+import type { JobStatus } from "@/types/api";
 
 const CreateJobDetail = () => {
   const { jobId } = useParams<{ jobId: string }>();
@@ -27,7 +30,8 @@ const CreateJobDetail = () => {
     refetchInterval: (data) => {
       if (!data) return false;
       const status = data.status;
-      return status === "running" || status === "pending" ? 2000 : false;
+      // Poll while job is active or cancelling
+      return status === "running" || status === "pending" || status === "cancelling" ? 2000 : false;
     },
   });
 
@@ -37,6 +41,8 @@ const CreateJobDetail = () => {
       running: "text-blue-600", 
       completed: "text-green-600",
       failed: "text-red-600",
+      cancelled: "text-gray-600",
+      cancelling: "text-orange-600",
     };
     return colors[status as keyof typeof colors] || "text-gray-600";
   };
@@ -47,6 +53,8 @@ const CreateJobDetail = () => {
       running: 50,
       completed: 100,
       failed: 0,
+      cancelled: 0,
+      cancelling: 25,
     };
     return progressMap[status as keyof typeof progressMap] || 0;
   };
@@ -155,12 +163,22 @@ const CreateJobDetail = () => {
           </div>
         </div>
         
-        {job.status === "completed" && (
-          <Button onClick={handleOpenInViewer}>
-            <Eye className="h-4 w-4 mr-2" />
-            Open in Viewer
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canCancelJob(job.status as JobStatus) && (
+            <JobCancelButton 
+              jobId={job.id} 
+              jobStatus={job.status as JobStatus}
+              size="sm"
+            />
+          )}
+          
+          {job.status === "completed" && (
+            <Button onClick={handleOpenInViewer}>
+              <Eye className="h-4 w-4 mr-2" />
+              Open in Viewer
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Status Card */}

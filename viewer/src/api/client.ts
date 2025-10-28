@@ -692,5 +692,5 @@ export const apiClient = new Proxy({} as APIClient, {
 });
 
 // Export the class for custom instances
-export { APIClient};
+export { APIClient };
 

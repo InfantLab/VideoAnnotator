@@ -72,8 +72,8 @@ description: "Implementation tasks for VideoAnnotator Server v1.3.0 Client Suppo
 - [x] T014 [P] [US1] Implement cancelJob method in src/api/client.ts (POST /api/v1/jobs/{job_id}/cancel with Bearer auth)
 - [x] T015 [P] [US1] Create src/hooks/useJobCancellation.ts hook with confirmation dialog, optimistic updates, and error rollback
 - [x] T016 [US1] Create src/components/JobCancelButton.tsx with AlertDialog for confirmation, loading state, and disabled states for non-cancellable jobs
-- [ ] T017 [US1] Integrate JobCancelButton into src/pages/CreateJobDetail.tsx (render conditionally based on job status)
-- [ ] T018 [P] [US1] Add cancellation button to job list items in src/pages/CreateJobs.tsx (if applicable, with same conditional logic)
+- [x] T017 [US1] Integrate JobCancelButton into src/pages/CreateJobDetail.tsx (render conditionally based on job status)
+- [x] T018 [P] [US1] Add cancellation button to job list items in src/pages/CreateJobs.tsx (if applicable, with same conditional logic)
 - [ ] T019 [US1] Update SSE handling in src/hooks/useSSE.ts to refresh job data when cancellation event received
 - [ ] T020 [US1] Add toast notifications in JobCancelButton for success/error cases using src/hooks/use-toast.ts
 

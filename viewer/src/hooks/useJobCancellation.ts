@@ -21,87 +21,87 @@ import type { JobStatus } from '@/types/api';
  * @returns Mutation object with cancelJob function and loading state
  */
 export function useJobCancellation(jobId: string, currentStatus: JobStatus) {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
 
-  const mutation = useMutation({
-    mutationFn: async (reason?: string) => {
-      return await apiClient.cancelJob(jobId, reason);
-    },
+    const mutation = useMutation({
+        mutationFn: async (reason?: string) => {
+            return await apiClient.cancelJob(jobId, reason);
+        },
 
-    // Optimistic update: immediately set status to 'cancelling'
-    onMutate: async (reason?: string) => {
-      // Cancel any outgoing refetches for this job
-      await queryClient.cancelQueries({ queryKey: QueryKeys.job(jobId) });
+        // Optimistic update: immediately set status to 'cancelling'
+        onMutate: async (reason?: string) => {
+            // Cancel any outgoing refetches for this job
+            await queryClient.cancelQueries({ queryKey: QueryKeys.job(jobId) });
 
-      // Snapshot the previous value for rollback
-      const previousJob = queryClient.getQueryData(QueryKeys.job(jobId));
+            // Snapshot the previous value for rollback
+            const previousJob = queryClient.getQueryData(QueryKeys.job(jobId));
 
-      // Optimistically update the job status
-      queryClient.setQueryData(QueryKeys.job(jobId), (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          status: 'cancelling' as JobStatus,
-          updated_at: new Date().toISOString(),
-        };
-      });
+            // Optimistically update the job status
+            queryClient.setQueryData(QueryKeys.job(jobId), (old: any) => {
+                if (!old) return old;
+                return {
+                    ...old,
+                    status: 'cancelling' as JobStatus,
+                    updated_at: new Date().toISOString(),
+                };
+            });
 
-      return { previousJob };
-    },
+            return { previousJob };
+        },
 
-    // On success: update to 'cancelled' and show success toast
-    onSuccess: (data) => {
-      queryClient.setQueryData(QueryKeys.job(jobId), (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          status: data.status,
-          cancelled_at: data.cancelled_at || new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-      });
+        // On success: update to 'cancelled' and show success toast
+        onSuccess: (data) => {
+            queryClient.setQueryData(QueryKeys.job(jobId), (old: any) => {
+                if (!old) return old;
+                return {
+                    ...old,
+                    status: data.status,
+                    cancelled_at: data.cancelled_at || new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                };
+            });
 
-      // Invalidate job list to refresh
-      queryClient.invalidateQueries({ queryKey: QueryKeys.jobs });
+            // Invalidate job list to refresh
+            queryClient.invalidateQueries({ queryKey: QueryKeys.jobs });
 
-      toast({
-        title: 'Job cancelled',
-        description: data.message || `Job ${jobId} has been cancelled successfully.`,
-      });
-    },
+            toast({
+                title: 'Job cancelled',
+                description: data.message || `Job ${jobId} has been cancelled successfully.`,
+            });
+        },
 
-    // On error: rollback to previous status and show error toast
-    onError: (error, _variables, context) => {
-      // Rollback optimistic update
-      if (context?.previousJob) {
-        queryClient.setQueryData(QueryKeys.job(jobId), context.previousJob);
-      }
+        // On error: rollback to previous status and show error toast
+        onError: (error, _variables, context) => {
+            // Rollback optimistic update
+            if (context?.previousJob) {
+                queryClient.setQueryData(QueryKeys.job(jobId), context.previousJob);
+            }
 
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to cancel job';
+            const errorMessage =
+                error instanceof Error ? error.message : 'Failed to cancel job';
 
-      toast({
-        title: 'Cancellation failed',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    },
+            toast({
+                title: 'Cancellation failed',
+                description: errorMessage,
+                variant: 'destructive',
+            });
+        },
 
-    // Always refetch job data after mutation settles
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: QueryKeys.job(jobId) });
-    },
-  });
+        // Always refetch job data after mutation settles
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: QueryKeys.job(jobId) });
+        },
+    });
 
-  return {
-    cancelJob: mutation.mutate,
-    cancelJobAsync: mutation.mutateAsync,
-    isLoading: mutation.isPending,
-    isSuccess: mutation.isSuccess,
-    isError: mutation.isError,
-    error: mutation.error,
-  };
+    return {
+        cancelJob: mutation.mutate,
+        cancelJobAsync: mutation.mutateAsync,
+        isLoading: mutation.isPending,
+        isSuccess: mutation.isSuccess,
+        isError: mutation.isError,
+        error: mutation.error,
+    };
 }
 
 /**
@@ -111,5 +111,5 @@ export function useJobCancellation(jobId: string, currentStatus: JobStatus) {
  * @returns true if job can be cancelled
  */
 export function canCancelJob(status: JobStatus): boolean {
-  return status === 'pending' || status === 'queued' || status === 'running';
+    return status === 'pending' || status === 'queued' || status === 'running';
 }

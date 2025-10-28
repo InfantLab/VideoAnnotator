@@ -15,6 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import vavIcon from "@/assets/v-a-v.icon.png";
+import { JobCancelButton } from "@/components/JobCancelButton";
+import { canCancelJob } from "@/hooks/useJobCancellation";
+import type { JobStatus } from "@/types/api";
 
 const CreateJobs = () => {
   const [page, setPage] = useState(1);
@@ -37,6 +40,8 @@ const CreateJobs = () => {
       running: { variant: "default" as const, color: "text-blue-600" },
       completed: { variant: "default" as const, color: "text-green-600" },
       failed: { variant: "destructive" as const, color: "text-red-600" },
+      cancelled: { variant: "secondary" as const, color: "text-gray-600" },
+      cancelling: { variant: "secondary" as const, color: "text-orange-600" },
     };
 
     const config = statusMap[status as keyof typeof statusMap] || statusMap.pending;
@@ -162,12 +167,22 @@ const CreateJobs = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Link to={`/create/jobs/${job.id}`}>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        {canCancelJob(job.status as JobStatus) && (
+                          <JobCancelButton 
+                            jobId={job.id} 
+                            jobStatus={job.status as JobStatus}
+                            size="sm"
+                            variant="outline"
+                          />
+                        )}
+                        <Link to={`/create/jobs/${job.id}`}>
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                        </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

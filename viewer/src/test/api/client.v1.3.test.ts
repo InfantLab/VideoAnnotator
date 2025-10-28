@@ -13,7 +13,7 @@ describe('APIClient v1.3.0 methods', () => {
     if (global.localStorage && global.localStorage.getItem) {
       (global.localStorage.getItem as any) = vi.fn(() => null);
     }
-    
+
     // Reset mocks
     mockFetch = vi.fn();
     global.fetch = mockFetch as any;
