@@ -3,10 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle, AlertCircle, Settings, ExternalLink, Eye, EyeOff } from 'lucide-react';
+import { CheckCircle, AlertCircle, Settings, ExternalLink, Eye, EyeOff, Rocket, HelpCircle } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import { handleAPIError } from '@/api/handleError';
 
@@ -182,8 +182,43 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
     validateToken();
   };
 
+  // Check if this is a first-time user (no saved token)
+  const isFirstTimeUser = !localStorage.getItem('videoannotator_api_token') && !tokenStatus;
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {/* First-Time User Guide (T040) */}
+      {isFirstTimeUser && (
+        <Alert className="border-blue-200 bg-blue-50">
+          <Rocket className="h-5 w-5 text-blue-600" />
+          <AlertTitle className="text-blue-900 font-semibold">Welcome! Let's get you connected</AlertTitle>
+          <AlertDescription className="text-blue-800 space-y-3 mt-2">
+            <p>
+              To start creating annotation jobs, you need to configure your VideoAnnotator server connection.
+            </p>
+            <div className="space-y-2 text-sm">
+              <p className="font-medium">Quick Start:</p>
+              <ol className="list-decimal list-inside space-y-1 ml-2">
+                <li>Make sure your VideoAnnotator server is running (default: http://localhost:18011)</li>
+                <li>Get your API token from the server console or administrator</li>
+                <li>Enter the token below and click "Test Connection"</li>
+                <li>Once validated, click "Save Configuration"</li>
+              </ol>
+            </div>
+            <div className="flex items-start gap-2 mt-3 p-3 bg-white/50 rounded-md border border-blue-200">
+              <HelpCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium mb-1">For local development:</p>
+                <p>
+                  Use the default values below. Click <strong>"Reset to Defaults"</strong> to auto-fill, 
+                  then <strong>"Test Connection"</strong> to verify.
+                </p>
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

@@ -137,8 +137,8 @@ description: "Implementation tasks for VideoAnnotator Server v1.3.0 Client Suppo
 - [x] T037 [P] [US3] Create React Context in src/contexts/ServerCapabilitiesContext.tsx to share capabilities app-wide with refresh mechanism
 - [x] T038 [US3] Extend src/components/TokenStatusIndicator.tsx to display server version from capabilities context
 - [x] T039 [US3] Add authentication mode indicator (required/optional) to TokenStatusIndicator with appropriate icon/color
-- [ ] T040 [US3] Update src/pages/CreateSettings.tsx with prominent token setup guide for first-time users (when no token configured)
-- [ ] T041 [US3] Add "unsecured connection" warning in TokenStatusIndicator when auth is disabled (VIDEOANNOTATOR_REQUIRE_AUTH=false) - IMPLEMENTED in T039
+- [x] T040 [US3] Update src/pages/CreateSettings.tsx with prominent token setup guide for first-time users (when no token configured)
+- [x] T041 [US3] Add "unsecured connection" warning in TokenStatusIndicator when auth is disabled (VIDEOANNOTATOR_REQUIRE_AUTH=false) - IMPLEMENTED in T039
 - [x] T042 [US3] Add manual "Refresh Server Info" button in CreateSettings that calls detectServerCapabilities and updates context - IMPLEMENTED in T038 (refresh button in popover)
 
 **Checkpoint**: Authentication management improved - users see clear connection status, server version, and helpful setup guidance
