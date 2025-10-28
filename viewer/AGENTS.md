@@ -84,6 +84,24 @@ v1.2.x pipeline introspection (roadmap):
 - When adding API features, add tests that mock network. For CI, avoid real network calls.
 - For local API verification, you may use `scripts/test_api_quick.py` against `http://localhost:18011`.
 
+### Task Tracking and Commits
+
+**CRITICAL: Follow this workflow for feature implementation:**
+
+- **Update tasks.md as you go**: When working from a specification with tasks.md checklist, mark tasks complete `[x]` as you implement them.
+- **Commit code and tasks.md together**: Always stage and commit both code changes AND tasks.md updates in the same commit. This keeps progress tracking synchronized with implementation.
+- **Commit message pattern**: Include task ID (e.g., "feat: T021-T023 - Config validation hook and component") so commits are traceable to specification.
+- **Why this matters**: Keeps specification, implementation, and git history aligned. Allows reviewers to see what was intended vs. what was delivered in each commit.
+
+Example workflow:
+```bash
+# Implement T021
+# Edit code files...
+# Update specs/XXX/tasks.md to mark T021 complete [x]
+git add src/hooks/useConfigValidation.ts specs/XXX/tasks.md
+git commit -m "feat: T021 - Create useConfigValidation hook with debouncing"
+```
+
 ### QA Testing Guidelines
 
 **CRITICAL: Agents must follow these QA rules:**
