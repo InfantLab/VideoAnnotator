@@ -200,7 +200,8 @@ export type JobStatus =
   | 'running'
   | 'completed'
   | 'failed'
-  | 'cancelled';
+  | 'cancelled'
+  | 'cancelling'; // Transition state during cancellation
 
 /**
  * Cancellable job statuses
