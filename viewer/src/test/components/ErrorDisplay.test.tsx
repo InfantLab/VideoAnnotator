@@ -6,12 +6,8 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ErrorDisplay } from '@/components/ErrorDisplay';
 import type { ParsedError } from '@/types/api';
-
-// Mock component - to be replaced with real implementation
-function ErrorDisplay({ error }: { error: ParsedError }) {
-  return <div data-testid="error-display-mock">Mock ErrorDisplay - Not Implemented</div>;
-}
 
 describe('ErrorDisplay', () => {
   describe('basic error display', () => {
@@ -25,7 +21,8 @@ describe('ErrorDisplay', () => {
       expect(screen.getByText(/job not found/i)).toBeInTheDocument();
     });
 
-    it('should render error with code', () => {
+    it('should render error with code', async () => {
+      const user = userEvent.setup();
       const error: ParsedError = {
         message: 'Pipeline configuration invalid',
         code: 'CONFIG_INVALID',
@@ -34,7 +31,12 @@ describe('ErrorDisplay', () => {
       render(<ErrorDisplay error={error} />);
 
       expect(screen.getByText(/pipeline configuration invalid/i)).toBeInTheDocument();
-      expect(screen.getByText(/CONFIG_INVALID/)).toBeInTheDocument();
+      
+      // Code is in technical details section - need to expand
+      const detailsButton = screen.getByRole('button', { name: /technical details/i });
+      await user.click(detailsButton);
+      
+      expect(screen.getByText('CONFIG_INVALID')).toBeInTheDocument();
     });
 
     it('should render hint when present', () => {
@@ -64,15 +66,17 @@ describe('ErrorDisplay', () => {
       // Should have a button/trigger to expand details
       const detailsButton = screen.getByRole('button', { name: /technical details/i });
       expect(detailsButton).toBeInTheDocument();
+      expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
 
       // Request ID should not be visible initially
-      expect(screen.queryByText(/req-12345/)).not.toBeInTheDocument();
+      expect(screen.queryByText('req-12345')).not.toBeInTheDocument();
 
       // Click to expand
       await user.click(detailsButton);
 
       // Now request ID should be visible
-      expect(screen.getByText(/req-12345/)).toBeInTheDocument();
+      expect(detailsButton).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByText('req-12345')).toBeInTheDocument();
     });
 
     it('should show request ID in technical details', async () => {
@@ -87,7 +91,7 @@ describe('ErrorDisplay', () => {
       const detailsButton = screen.getByRole('button', { name: /technical details/i });
       await user.click(detailsButton);
 
-      expect(screen.getByText(/req-xyz789/)).toBeInTheDocument();
+      expect(screen.getByText('req-xyz789')).toBeInTheDocument();
     });
 
     it('should hide technical details section if no technical info', () => {
@@ -149,8 +153,8 @@ describe('ErrorDisplay', () => {
 
       const { container } = render(<ErrorDisplay error={error} />);
 
-      // Field errors should be in a distinct section
-      const fieldErrorSection = container.querySelector('[data-testid*="field-error"]');
+      // Field errors should be in a distinct section with data-testid
+      const fieldErrorSection = container.querySelector('[data-testid="field-errors"]');
       expect(fieldErrorSection).toBeInTheDocument();
     });
   });
@@ -222,14 +226,15 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} />);
 
-      // Main error should be in a heading
-      const heading = screen.getByRole('heading', { name: /error occurred/i });
+      // AlertTitle acts as heading
+      const heading = screen.getByText('Error');
       expect(heading).toBeInTheDocument();
     });
   });
 
   describe('copy functionality', () => {
-    it('should allow copying technical details', () => {
+    it('should allow copying technical details', async () => {
+      const user = userEvent.setup();
       const error: ParsedError = {
         message: 'Error',
         code: 'TEST_ERROR',
@@ -238,7 +243,11 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} />);
 
-      // Should have a copy button for technical details
+      // Need to expand technical details first
+      const detailsButton = screen.getByRole('button', { name: /technical details/i });
+      await user.click(detailsButton);
+
+      // Now copy button should be visible
       const copyButton = screen.getByRole('button', { name: /copy/i });
       expect(copyButton).toBeInTheDocument();
     });

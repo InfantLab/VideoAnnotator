@@ -84,6 +84,18 @@ HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation((contextId) 
 // Mock fetch for file loading tests
 global.fetch = vi.fn()
 
+// Mock clipboard API (configurable so userEvent can override)
+if (!navigator.clipboard) {
+  Object.defineProperty(navigator, 'clipboard', {
+    value: {
+      writeText: vi.fn().mockResolvedValue(undefined),
+      readText: vi.fn().mockResolvedValue(''),
+    },
+    writable: true,
+    configurable: true,
+  });
+}
+
 // Mock localStorage for API client tests
 const localStorageMock = {
   getItem: vi.fn(() => null),
