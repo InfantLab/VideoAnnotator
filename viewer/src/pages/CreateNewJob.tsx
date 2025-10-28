@@ -63,6 +63,9 @@ const CreateNewJob = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string[]>([]);
 
+  // Real-time configuration validation
+  const { validationResult, isValidating, validateConfig } = useConfigValidation();
+
   const defaultSelectedPipelines = useMemo(
     () => pipelines.filter((pipeline) => pipeline.defaultEnabled !== false).map((pipeline) => pipeline.id),
     [pipelines]
@@ -89,6 +92,13 @@ const CreateNewJob = () => {
       return Object.keys(nextConfig).length ? nextConfig : buildDefaultConfig(pipelines);
     });
   }, [pipelines, defaultSelectedPipelines]);
+
+  // Validate config whenever it changes
+  useEffect(() => {
+    if (Object.keys(config).length > 0) {
+      validateConfig(config);
+    }
+  }, [config, validateConfig]);
 
   const progress = (currentStep / STEPS.length) * 100;
 
@@ -214,6 +224,8 @@ const CreateNewJob = () => {
             setConfig={setConfig}
             selectedPipelines={selectedPipelines}
             pipelines={pipelines}
+            validationResult={validationResult}
+            isValidating={isValidating}
           />
         );
       case 4:
@@ -241,8 +253,11 @@ const CreateNewJob = () => {
       case 2:
         return selectedPipelines.length > 0 && pipelines.length > 0 && !catalogLoading;
       case 3:
+        // Can proceed from config step if validation passes (or is still loading)
+        return validationResult?.valid !== false;
       case 4:
-        return true;
+        // Cannot submit if config is invalid
+        return validationResult?.valid !== false;
       default:
         return false;
     }
@@ -559,27 +574,21 @@ const ConfigurationStep = ({
   config,
   setConfig,
   selectedPipelines,
-  pipelines
+  pipelines,
+  validationResult,
+  isValidating
 }: {
   config: Record<string, unknown>;
   setConfig: Dispatch<SetStateAction<Record<string, unknown>>>;
   selectedPipelines: string[];
   pipelines: PipelineDescriptor[];
+  validationResult: ReturnType<typeof useConfigValidation>['validationResult'];
+  isValidating: boolean;
 }) => {
   const activePipelines = useMemo(
     () => pipelines.filter((pipeline) => selectedPipelines.includes(pipeline.id)),
     [pipelines, selectedPipelines]
   );
-
-  // Real-time configuration validation with 500ms debounce
-  const { validationResult, isValidating, validateConfig } = useConfigValidation();
-
-  // Validate config whenever it changes
-  useEffect(() => {
-    if (Object.keys(config).length > 0) {
-      validateConfig(config);
-    }
-  }, [config, validateConfig]);
 
   return (
     <div className="space-y-6">
