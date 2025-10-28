@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ExternalLink, Download, Eye } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ErrorDisplay } from "@/components/ErrorDisplay";
+import { parseApiError } from "@/lib/errorHandling";
 import vavIcon from "@/assets/v-a-v.icon.png";
 import { JobCancelButton } from "@/components/JobCancelButton";
 import { canCancelJob } from "@/hooks/useJobCancellation";
@@ -134,11 +136,7 @@ const CreateJobDetail = () => {
             Back to Jobs
           </Button>
         </Link>
-        <Alert>
-          <AlertDescription>
-            {error instanceof Error ? error.message : "Job not found"}
-          </AlertDescription>
-        </Alert>
+        <ErrorDisplay error={parseApiError(error || 'Job not found')} />
       </div>
     );
   }

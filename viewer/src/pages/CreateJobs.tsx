@@ -17,6 +17,8 @@ import {
 import vavIcon from "@/assets/v-a-v.icon.png";
 import { JobCancelButton } from "@/components/JobCancelButton";
 import { canCancelJob } from "@/hooks/useJobCancellation";
+import { ErrorDisplay } from "@/components/ErrorDisplay";
+import { parseApiError } from "@/lib/errorHandling";
 import type { JobStatus } from "@/types/api";
 
 const CreateJobs = () => {
@@ -68,14 +70,14 @@ const CreateJobs = () => {
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-600 mb-4">
-          Failed to load jobs: {error instanceof Error ? error.message : "Unknown error"}
-        </p>
-        <Button onClick={() => refetch()} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Retry
-        </Button>
+      <div className="py-8">
+        <ErrorDisplay error={parseApiError(error)} />
+        <div className="mt-4 text-center">
+          <Button onClick={() => refetch()} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }

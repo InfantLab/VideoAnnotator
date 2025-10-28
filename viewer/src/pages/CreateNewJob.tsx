@@ -7,6 +7,9 @@ import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw } from "
 import { Link, useNavigate } from "react-router-dom";
 import { apiClient } from "@/api/client";
 import { handleAPIError } from "@/api/handleError";
+import { parseApiError } from "@/lib/errorHandling";
+import { ErrorDisplay } from "@/components/ErrorDisplay";
+import type { ParsedError } from "@/types/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -70,7 +73,7 @@ const CreateNewJob = () => {
   const [selectedPipelines, setSelectedPipelines] = useState<string[]>([]);
   const [config, setConfig] = useState<Record<string, unknown>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<ParsedError | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string[]>([]);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
 
@@ -143,12 +146,12 @@ const CreateNewJob = () => {
     console.log('Config:', config);
 
     if (selectedFiles.length === 0) {
-      setSubmitError("No videos selected");
+      setSubmitError(parseApiError("No videos selected"));
       return;
     }
 
     if (selectedPipelines.length === 0) {
-      setSubmitError("No pipelines selected");
+      setSubmitError(parseApiError("No pipelines selected"));
       return;
     }
 
@@ -179,8 +182,8 @@ const CreateNewJob = () => {
           jobIds.push(response.id);
         } catch (error) {
           console.error(`❌ Job submission failed for ${file.name}:`, error);
-          const errorMsg = handleAPIError(error);
-          errors.push(`${file.name}: ${errorMsg}`);
+          const parsedError = parseApiError(error);
+          errors.push(`${file.name}: ${parsedError.message}`);
         }
       }
 
@@ -197,22 +200,23 @@ const CreateNewJob = () => {
 
       if (errors.length > 0) {
         console.warn(`⚠️ Some jobs failed: ${errors.length} out of ${selectedFiles.length}`);
-        setSubmitError(`Failed to submit ${errors.length} job(s): \n${errors.join('\n')}`);
+        setSubmitError(parseApiError({
+          error: `Failed to submit ${errors.length} job(s)`,
+          hint: `${errors.join('\n')}`
+        }));
       }
 
       if (jobIds.length === 0 && errors.length > 0) {
         console.error('❌ All job submissions failed');
-        setSubmitError(
-          `All job submissions failed. Common issues:\n\n` +
-          `• VideoAnnotator API server not running (check http://localhost:18011)\n` +
-          `• Invalid API token or authentication\n` +
-          `• Network connectivity issues\n\n` +
-          `Errors:\n${errors.join('\n')}`
-        );
+        setSubmitError(parseApiError({
+          error: 'All job submissions failed',
+          hint: 'Common issues:\n• VideoAnnotator API server not running (check http://localhost:18011)\n• Invalid API token or authentication\n• Network connectivity issues',
+          error_code: 'ALL_JOBS_FAILED'
+        }));
       }
     } catch (error) {
       console.error('💥 Unexpected error during job submission:', error);
-      setSubmitError(handleAPIError(error));
+      setSubmitError(parseApiError(error));
     } finally {
       setIsSubmitting(false);
       console.log('🏁 Job submission process completed');
@@ -533,17 +537,7 @@ const PipelineSelectionStep = ({
 
   if (error) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>Unable to load pipelines</AlertTitle>
-        <AlertDescription className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            {error instanceof Error ? error.message : 'Unknown error while fetching pipeline catalog.'}
-          </p>
-          <Button size="sm" onClick={onRetry} className="gap-2">
-            <RefreshCw className="h-4 w-4" /> Try Again
-          </Button>
-        </AlertDescription>
-      </Alert>
+      <ErrorDisplay error={parseApiError(error)} />
     );
   }
 
@@ -716,7 +710,7 @@ const ReviewStep = ({
   config: Record<string, unknown>;
   onSubmit: () => void;
   isSubmitting: boolean;
-  submitError: string | null;
+  submitError: ParsedError | null;
   submitSuccess: string[];
   pipelines: PipelineDescriptor[];
 }) => {
@@ -732,12 +726,7 @@ const ReviewStep = ({
       </p>
 
       {submitError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="whitespace-pre-line">
-            {submitError}
-          </AlertDescription>
-        </Alert>
+        <ErrorDisplay error={submitError} />
       )}
 
       {submitSuccess.length > 0 && (

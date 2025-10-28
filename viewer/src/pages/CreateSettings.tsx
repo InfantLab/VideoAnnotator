@@ -17,6 +17,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { parseApiError } from '@/lib/errorHandling';
+import type { ParsedError } from '@/types/api';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -171,12 +174,11 @@ const CreateSettings = () => {
 
         <TabsContent value="server" className="space-y-4">
           {(serverInfoError || catalogError || (tokenStatus.error && !tokenStatus.isLoading)) && (
-            <Alert variant="destructive">
-              <AlertTitle>Server diagnostics issue</AlertTitle>
-              <AlertDescription>
-                {catalogError?.message || serverInfoError?.message || tokenStatus.error}
-              </AlertDescription>
-            </Alert>
+            <ErrorDisplay 
+              error={parseApiError(
+                catalogError || serverInfoError || tokenStatus.error || 'Server diagnostics issue'
+              )} 
+            />
           )}
 
           <Card>
