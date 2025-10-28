@@ -124,6 +124,20 @@ export const useSSE = (options: UseSSEOptions = {}) => {
         }
       });
 
+      eventSource.addEventListener('job.cancelled', (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          addEvent({
+            type: 'job.cancelled',
+            data,
+            id: event.lastEventId,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (error) {
+          console.warn('Failed to parse job.cancelled event:', event.data);
+        }
+      });
+
       eventSource.onerror = (event) => {
         setIsConnected(false);
         

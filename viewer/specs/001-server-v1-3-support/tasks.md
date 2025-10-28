@@ -74,10 +74,10 @@ description: "Implementation tasks for VideoAnnotator Server v1.3.0 Client Suppo
 - [x] T016 [US1] Create src/components/JobCancelButton.tsx with AlertDialog for confirmation, loading state, and disabled states for non-cancellable jobs
 - [x] T017 [US1] Integrate JobCancelButton into src/pages/CreateJobDetail.tsx (render conditionally based on job status)
 - [x] T018 [P] [US1] Add cancellation button to job list items in src/pages/CreateJobs.tsx (if applicable, with same conditional logic)
-- [ ] T019 [US1] Update SSE handling in src/hooks/useSSE.ts to refresh job data when cancellation event received
-- [ ] T020 [US1] Add toast notifications in JobCancelButton for success/error cases using src/hooks/use-toast.ts
+- [x] T019 [US1] Update SSE handling in src/hooks/useSSE.ts to refresh job data when cancellation event received
+- [x] T020 [US1] Add toast notifications in JobCancelButton for success/error cases using src/hooks/use-toast.ts
 
-**Checkpoint**: Job cancellation fully functional - users can cancel jobs from detail and list pages with immediate feedback
+**Checkpoint**: Job cancellation fully functional - users can cancel jobs from detail and list pages with immediate feedback ✅
 
 ---
 
