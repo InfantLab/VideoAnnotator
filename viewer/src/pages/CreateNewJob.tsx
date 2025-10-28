@@ -12,6 +12,8 @@ import vavIcon from "@/assets/v-a-v.icon.png";
 import { usePipelineCatalog, useRefreshPipelineCatalog } from "@/hooks/usePipelineCatalog";
 import { DynamicPipelineParameters } from "@/components/DynamicPipelineParameters";
 import type { PipelineDescriptor } from "@/types/pipelines";
+import { useConfigValidation } from "@/hooks/useConfigValidation";
+import { ConfigValidationPanel } from "@/components/ConfigValidationPanel";
 
 // Wizard steps
 const STEPS = [
@@ -569,6 +571,16 @@ const ConfigurationStep = ({
     [pipelines, selectedPipelines]
   );
 
+  // Real-time configuration validation with 500ms debounce
+  const { validationResult, isValidating, validateConfig } = useConfigValidation();
+
+  // Validate config whenever it changes
+  useEffect(() => {
+    if (Object.keys(config).length > 0) {
+      validateConfig(config);
+    }
+  }, [config, validateConfig]);
+
   return (
     <div className="space-y-6">
       <p className="text-muted-foreground">
@@ -607,6 +619,12 @@ const ConfigurationStep = ({
           Edit the JSON configuration above. Invalid JSON will be ignored.
         </p>
       </div>
+
+      {/* Configuration validation results */}
+      <ConfigValidationPanel
+        validationResult={validationResult}
+        isValidating={isValidating}
+      />
     </div>
   );
 };
