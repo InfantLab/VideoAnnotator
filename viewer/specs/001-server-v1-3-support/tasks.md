@@ -63,9 +63,9 @@ description: "Implementation tasks for VideoAnnotator Server v1.3.0 Client Suppo
 > **Write these tests FIRST, ensure they FAIL before implementation**
 
 - [x] T010 [P] [US1] Create unit test in src/test/api/client.v1.3.test.ts for cancelJob endpoint with mocked fetch responses (success, 400 already-cancelled, 404 not-found)
-- [ ] T011 [P] [US1] Create unit test in src/test/hooks/useJobCancellation.test.ts for confirmation dialog flow and optimistic updates
-- [ ] T012 [P] [US1] Create component test in src/test/components/JobCancelButton.test.tsx for button states (enabled, disabled, loading) and click handling
-- [ ] T013 [P] [US1] Create integration test in src/test/integration/jobCancellation.test.ts for full cancel flow (API mock → optimistic update → cache invalidation → toast)
+- [x] T011 [P] [US1] Create unit test in src/test/hooks/useJobCancellation.test.tsx for confirmation dialog flow and optimistic updates
+- [x] T012 [P] [US1] Create component test in src/test/components/JobCancelButton.test.tsx for button states (enabled, disabled, loading) and click handling
+- [x] T013 [P] [US1] Create integration test in src/test/integration/job-cancellation.test.tsx for full cancel flow (API mock → optimistic update → cache invalidation → toast)
 
 ### Implementation for User Story 1
 
