@@ -90,7 +90,7 @@ describe('ServerDiagnostics Integration', () => {
   describe('full diagnostics flow', () => {
     it('should load → display → allow refresh', async () => {
       const user = userEvent.setup();
-      
+
       // Mock initial load
       mockGetEnhancedHealth
         .mockResolvedValueOnce(mockHealthResponse)
@@ -170,7 +170,7 @@ describe('ServerDiagnostics Integration', () => {
 
     it('should invalidate cache on manual refresh', async () => {
       const user = userEvent.setup();
-      
+
       // Enable cache for this test
       const cachedQueryClient = new QueryClient({
         defaultOptions: {
@@ -259,7 +259,7 @@ describe('ServerDiagnostics Integration', () => {
 
     it('should pause auto-refresh when collapsed', async () => {
       const user = userEvent.setup({ delay: null }); // No delay for fake timers
-      
+
       mockGetEnhancedHealth.mockResolvedValue(mockHealthResponse);
 
       renderWithQueryClient(<ServerDiagnostics />);
@@ -281,7 +281,7 @@ describe('ServerDiagnostics Integration', () => {
 
     it('should resume auto-refresh when expanded again', async () => {
       const user = userEvent.setup({ delay: null });
-      
+
       mockGetEnhancedHealth.mockResolvedValue(mockHealthResponse);
 
       renderWithQueryClient(<ServerDiagnostics />);
@@ -362,7 +362,7 @@ describe('ServerDiagnostics Integration', () => {
   describe('real-world scenarios', () => {
     it('should handle server becoming overloaded during session', async () => {
       vi.useFakeTimers();
-      
+
       const normalResponse = mockHealthResponse;
       const overloadedResponse = {
         ...mockHealthResponse,
@@ -421,7 +421,7 @@ describe('ServerDiagnostics Integration', () => {
 
     it('should show stale data warning after connectivity issues', async () => {
       vi.useFakeTimers();
-      
+
       mockGetEnhancedHealth
         .mockResolvedValueOnce(mockHealthResponse)
         .mockRejectedValueOnce(new Error('Network error'))

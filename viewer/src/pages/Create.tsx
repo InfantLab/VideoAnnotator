@@ -5,10 +5,13 @@ import { Link, useLocation } from "react-router-dom";
 import { Plus, Database, List, Settings, ArrowLeft } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { TokenStatusIndicator } from "@/components/TokenStatusIndicator";
+import { ConnectionErrorBanner } from "@/components/ConnectionErrorBanner";
+import { useServerCapabilitiesContext } from "@/contexts/ServerCapabilitiesContext";
 import vavIcon from "@/assets/v-a-v.icon.png";
 
 const CreateLayout = () => {
   const location = useLocation();
+  const { error, refresh } = useServerCapabilitiesContext();
 
   const navigationItems = [
     { path: "/create/jobs", label: "Jobs", icon: List },
@@ -16,6 +19,10 @@ const CreateLayout = () => {
     { path: "/create/datasets", label: "Datasets", icon: Database },
     { path: "/create/settings", label: "Settings", icon: Settings },
   ];
+
+  const apiUrl = localStorage.getItem('videoannotator_api_url') ||
+    import.meta.env.VITE_API_BASE_URL ||
+    'http://localhost:18011';
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -42,25 +49,36 @@ const CreateLayout = () => {
             </p>
           </div>
 
-        {/* Navigation */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <nav className="flex space-x-2">
-              {navigationItems.map(({ path, label, icon: Icon }) => (
-                <Link key={path} to={path}>
-                  <Button
-                    variant={location.pathname === path ? "default" : "outline"}
-                    className="flex items-center gap-2"
-                  >
-                    <Icon className="h-4 w-4" />
-                    {label}
-                  </Button>
-                </Link>
-              ))}
-            </nav>
-            <TokenStatusIndicator showDetails={true} />
+          {/* Navigation */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between">
+              <nav className="flex space-x-2">
+                {navigationItems.map(({ path, label, icon: Icon }) => (
+                  <Link key={path} to={path}>
+                    <Button
+                      variant={location.pathname === path ? "default" : "outline"}
+                      className="flex items-center gap-2"
+                    >
+                      <Icon className="h-4 w-4" />
+                      {label}
+                    </Button>
+                  </Link>
+                ))}
+              </nav>
+              <TokenStatusIndicator showDetails={true} />
+            </div>
           </div>
-        </div>
+
+          {/* Connection Error Banner */}
+          {error && (
+            <div className="mb-6">
+              <ConnectionErrorBanner
+                error={error}
+                apiUrl={apiUrl}
+                onRetry={refresh}
+              />
+            </div>
+          )}
 
           {/* Content */}
           <Card className="min-h-[600px] p-6">
