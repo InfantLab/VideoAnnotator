@@ -149,15 +149,15 @@ def create_app() -> FastAPI:
         exclude_paths={"/health", "/docs", "/redoc", "/openapi.json", "/favicon.ico"},
     )
 
-    # CORS middleware (outermost) - secure by default
-    import os
+    # CORS middleware (outermost) - permissive defaults for local development
+    from ..config_env import CORS_ORIGINS
 
-    cors_origins_str = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
-    cors_origins = [origin.strip() for origin in cors_origins_str.split(",")]
+    # CORS_ORIGINS is already a string from config_env
+    cors_origins = [origin.strip() for origin in CORS_ORIGINS.split(",")]
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=cors_origins,  # Restricted by default, configure via CORS_ORIGINS
+        allow_origins=cors_origins,  # Configured via CORS_ORIGINS env var
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

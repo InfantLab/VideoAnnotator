@@ -29,7 +29,7 @@ def _default(ctx: typer.Context):
 
     # Launch server with recommended defaults
     # NOTE: calling server() directly will run uvicorn and block the process.
-    server(host="0.0.0.0", port=18011, reload=False, workers=1)
+    server(host="0.0.0.0", port=18011, reload=False, workers=1, dev=False)
 
 
 @app.command()
@@ -38,10 +38,36 @@ def server(
     port: int = typer.Option(18011, help="Port to bind the server to"),
     reload: bool = typer.Option(False, help="Enable auto-reload for development"),
     workers: int = typer.Option(1, help="Number of worker processes"),
+    dev: bool = typer.Option(
+        False,
+        "--dev",
+        help="Enable development mode: allows all CORS origins (*), disables auth",
+    ),
 ):
-    """Start the VideoAnnotator API server."""
+    """Start the VideoAnnotator API server.
+
+    By default, the server runs with secure settings (authentication required,
+    restricted CORS origins). For local development with web clients, common
+    development ports (3000, 5173, 8080, etc.) are already allowed.
+
+    If you need to allow ALL origins (e.g., for testing with a remote client),
+    use --dev mode or set CORS_ORIGINS="*" environment variable.
+    """
     typer.echo(f"[START] Starting VideoAnnotator API server on http://{host}:{port}")
     typer.echo(f"[INFO] API documentation available at http://{host}:{port}/docs")
+
+    # Configure development mode if requested
+    if dev:
+        import os
+
+        os.environ["CORS_ORIGINS"] = "*"
+        os.environ["VIDEOANNOTATOR_REQUIRE_AUTH"] = "false"
+        typer.echo("")
+        typer.echo("[DEV MODE] Development mode enabled:")
+        typer.echo("  - CORS: All origins allowed (*)")
+        typer.echo("  - Authentication: Disabled")
+        typer.echo("  - [WARNING] Do not use in production!")
+        typer.echo("")
 
     try:
         uvicorn.run(

@@ -56,15 +56,23 @@ uv run videoannotator --help
 
 ### 🚀 Start the API Server
 
-VideoAnnotator v1.2.0 runs everything through one integrated API server with built-in background processing:
+VideoAnnotator v1.2.0+ runs everything through one integrated API server with built-in background processing:
 
 ```bash
-# Start the API server (recommended)
+# Quick start (recommended for most users)
+uv run videoannotator
+
+# Or explicitly start the server
 uv run videoannotator server --host 0.0.0.0 --port 18011
+
+# For web client development (allows all CORS origins)
+uv run videoannotator server --dev
 
 # View interactive API documentation at http://localhost:18011/docs
 # Server includes integrated background job processing - no separate worker needed!
 ```
+
+**CORS Note**: Common development ports (3000, 5173, 8080, 4200, etc.) are automatically allowed. If your web client runs on a different port, use `--dev` mode or set `CORS_ORIGINS` environment variable.
 
 ### 📹 Process Videos via CLI
 

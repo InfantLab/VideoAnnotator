@@ -572,28 +572,54 @@ uvicorn.run("api.main:app", host="0.0.0.0", port=18011)
 **Symptoms**:
 - Browser console: `CORS policy: No 'Access-Control-Allow-Origin' header`
 - Fetch requests fail from web app
+- API works in Postman/curl but not in browser
 
-**Solution**:
-
-**1. Check CORS configuration**:
+**Quick Solution - Use Development Mode**:
 ```bash
-# Show current CORS origins
-export CORS_ORIGINS="http://localhost:3000,http://localhost:5173"
+# Easiest: Start server in dev mode (allows all CORS origins)
+uv run videoannotator server --dev
+
+# Or just start the server normally (common dev ports already allowed)
+uv run videoannotator
 ```
 
-**2. Restart API with CORS origins**:
+**What's Allowed by Default** (v1.3.0+):
+The server automatically allows these common development ports:
+- `http://localhost:3000` (React)
+- `http://localhost:5173` (Vite)
+- `http://localhost:8080` (Vue)
+- `http://localhost:4200` (Angular)
+- `http://localhost:18011` (Server port)
+- Plus `127.0.0.1` variants
+
+**Custom Origins**:
+If your client runs on a different port:
+
 ```bash
-export CORS_ORIGINS="http://localhost:3000"
-uv run python api_server.py
+# Option 1: Environment variable
+export CORS_ORIGINS="http://localhost:4000,http://localhost:5000"
+uv run videoannotator server
+
+# Option 2: Allow all origins (development only)
+uv run videoannotator server --dev
 ```
 
-**3. For development, allow all origins** (insecure, development only):
+**Production Configuration**:
 ```bash
-export CORS_ORIGINS="*"
-uv run python api_server.py
+# Only allow your production domain
+export CORS_ORIGINS="https://app.example.com"
+uv run videoannotator server
 ```
 
-See [CORS Guide](../security/cors.md) for production configuration.
+**Verification**:
+Check browser console for CORS headers:
+```javascript
+// In browser console
+fetch('http://localhost:18011/health')
+  .then(r => console.log(r.headers.get('access-control-allow-origin')))
+```
+
+See [CORS Guide](../security/cors.md) for detailed configuration.
 
 ---
 

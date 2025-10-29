@@ -131,8 +131,13 @@ def initialize_security() -> None:
         )
 
     # Log CORS configuration
-    cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
-    logger.info(f"[SECURITY] CORS allowed origins: {cors_origins}")
+    from ..config_env import CORS_ORIGINS
+
+    cors_count = len(CORS_ORIGINS.split(","))
+    logger.info(
+        f"[SECURITY] CORS: {cors_count} allowed origins (set CORS_ORIGINS to customize)"
+    )
+    logger.debug(f"[SECURITY] CORS allowed origins: {CORS_ORIGINS}")
 
 
 __all__ = ["ensure_api_key_exists", "initialize_security"]
