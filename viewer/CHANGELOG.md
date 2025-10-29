@@ -47,8 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ErrorBoundary for React rendering errors
   - Copy-to-clipboard for technical details
   - **User-friendly connection error guidance**: No technical jargon, step-by-step troubleshooting
-  - **Automatic CORS detection**: Clear instructions for running server in dev mode
-  - **Clickable health check link**: Direct browser test of server connectivity
+  - **Connection timeout**: 10-second timeout prevents indefinite hanging when server is offline
+  - **Automatic CORS detection**: Clear instructions for starting VideoAnnotator server
+  - **Simplified setup (v1.3.0+)**: Port 19011 auto-whitelisted, just run `uv run videoannotator`
   
 - **Server Diagnostics (US5)**:
   - ServerDiagnostics component with collapsible UI
@@ -105,7 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Feature detection and graceful degradation
 - UI elements hidden when server doesn't support features
 - No breaking changes to existing functionality
-- **Note**: VideoAnnotator server (October 2025+) now supports 12 common development ports automatically, making CORS configuration frictionless for most users. Use `uv run videoannotator server --dev` for testing with custom ports or remote clients.
+- **Note**: VideoAnnotator server v1.3.0+ (October 2025) now automatically whitelists port 19011 (this web app) and port 18011 (server). Simple setup: `uv run videoannotator` - no configuration needed. For custom development or remote testing, use `--dev` flag.
 
 ### ⚠️ **Known Issues**
 - Some timing-related tests for auto-refresh need refinement (React Query + fake timers interaction)

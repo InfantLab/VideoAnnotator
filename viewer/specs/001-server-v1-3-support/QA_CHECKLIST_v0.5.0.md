@@ -32,34 +32,30 @@ Manual testing checklist for VideoAnnotator v1.3.0 support features.
 - [ ] **Connection banner** appears at top of page with clear error message
 - [ ] **User-friendly troubleshooting** displayed:
   - [ ] Step 1: Check server is running (with explanation of what to look for)
-  - [ ] Step 2: Verify server URL (with link to settings)
-  - [ ] Step 3: Test URL in browser (clickable link to /health endpoint)
-  - [ ] Step 4: Server restart instructions with TWO options:
-    - [ ] Standard mode: `uv run videoannotator server` (works for common ports automatically)
-    - [ ] Dev mode: `uv run videoannotator server --dev` (allows all origins for testing)
-    - [ ] Explanation that standard mode works for React/Vite/Vue/Angular ports
-    - [ ] Clear note that dev mode is for testing/custom ports
+  - [ ] Step 2: Start the VideoAnnotator server:
+    - [ ] Simple command shown: `uv run videoannotator`
+    - [ ] Note: Port 19011 (this web app) is auto-whitelisted in v1.3.0+
+    - [ ] Green box with prominent command display
+  - [ ] Step 3: Verify connection works (Retry Connection button)
   - [ ] NO mention of raw "CORS" jargon without context
-  - [ ] NO complex `--allow-origins` flags (server handles this automatically now)
+  - [ ] NO mention of `--dev` flag (no longer needed for normal use)
 - [ ] **Action buttons work**:
   - [ ] "Check API Settings" → navigates to Settings tab
   - [ ] "Retry Connection" → retries without page reload
   - [ ] "Server Setup Guide" → opens docs in new tab
-- [ ] **Test the /health link** - Click the health endpoint link, opens server health in new tab
 - [ ] **Browser console** - Check F12 console for original error details (for debugging)
-- [ ] **Retry works** - Start server with `uv run videoannotator server` or `--dev`, click retry, banner disappears
+- [ ] **Retry works** - Start server with `uv run videoannotator`, click retry, banner disappears
 
 ### ServerDiagnostics CORS Error
 - [ ] Navigate to `/create/settings` with server offline
 - [ ] ServerDiagnostics component shows simplified error:
   - [ ] "Cannot connect to server" heading
   - [ ] Shows server URL in code block
-  - [ ] "Quick fixes" section with 3 actionable items
+  - [ ] "Quick fixes" section with actionable items
   - [ ] NO technical jargon like "CORS policy" or "Access-Control-Allow-Origin"
   - [ ] Language is beginner-friendly
   - [ ] "Retry Connection" button available
-- [ ] Start server with `uv run videoannotator server` → click refresh → diagnostics load successfully
-- [ ] Test with dev mode: `uv run videoannotator server --dev` → works on any port
+- [ ] Start server with `uv run videoannotator` → click refresh → diagnostics load successfully
 - [ ] No console errors about missing error handling
 
 ### Token Setup Onboarding
