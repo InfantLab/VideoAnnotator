@@ -1,6 +1,6 @@
 <div align="center">
   <img src="public/icon-64x64.png" alt="Video Annotation Viewer Icon" width="64" height="64">
-  <h1>Video Annotation Viewer v0.3.0</h1>
+  <h1>Video Annotation Viewer v0.5.0</h1>
 </div>
 
 [![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -38,12 +38,16 @@ Video Annotation Viewer is a sophisticated web-based application designed for re
 - **Multi-file Loading**: Drag-and-drop interface for video + annotation files
 - **Automatic Detection**: Intelligent file type recognition and validation
 
-### 🎬 **Job Creation & Management** *(New in v0.3.0)*
+### 🎬 **Job Creation & Management** *(Enhanced in v0.5.0)*
 - **Create Annotation Jobs**: Submit videos for processing through VideoAnnotator API
 - **Pipeline Selection**: Choose from scene detection, person tracking, face analysis, and audio processing
 - **Batch Processing**: Handle multiple videos simultaneously
-- **Real-time Monitoring**: Track job progress with live status updates
+- **Real-time Monitoring**: Track job progress with live status updates (SSE)
 - **Job Management**: View, monitor, and manage all annotation jobs in one interface
+- **Job Cancellation**: Cancel running jobs with confirmation dialog *(v1.3.0)*
+- **Configuration Validation**: Pre-submission validation with helpful error messages *(v1.3.0)*
+- **Enhanced Authentication**: Improved token setup wizard with status indicator *(v1.3.0)*
+- **Server Diagnostics**: Monitor GPU, worker queue, and system health in real-time *(v1.3.0)*
 
 ### 🎥 **Multimodal Visualization**
 - **Pose Detection**: COCO-format human pose keypoints with 17-point skeleton rendering
