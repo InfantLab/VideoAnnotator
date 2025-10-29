@@ -27,23 +27,23 @@ const App = () => (
             <Sonner />
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/create" element={<Create />}>
-                <Route path="jobs" element={<CreateJobs />} />
-                <Route path="jobs/:jobId" element={<CreateJobDetail />} />
-                <Route path="new" element={<CreateNewJob />} />
-                <Route path="datasets" element={<CreateDatasets />} />
-                <Route path="settings" element={<CreateSettings />} />
-                <Route index element={<CreateJobs />} />
-              </Route>
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </PipelineProvider>
-    </SSEProvider>
-  </QueryClientProvider>
+                <Route path="/" element={<Index />} />
+                <Route path="/create" element={<Create />}>
+                  <Route path="jobs" element={<CreateJobs />} />
+                  <Route path="jobs/:jobId" element={<CreateJobDetail />} />
+                  <Route path="new" element={<CreateNewJob />} />
+                  <Route path="datasets" element={<CreateDatasets />} />
+                  <Route path="settings" element={<CreateSettings />} />
+                  <Route index element={<CreateJobs />} />
+                </Route>
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </PipelineProvider>
+      </SSEProvider>
+    </QueryClientProvider>
   </ErrorBoundary>
 );
 

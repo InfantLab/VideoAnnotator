@@ -50,8 +50,8 @@ const FileTypeIcon = ({ type }: { type: FileTypeInfo['type'] }) => {
 const FileTypeLabel = ({ type, confidence }: { type: FileTypeInfo['type']; confidence?: string }) => {
   return (
     <span className={`text-xs px-2 py-1 rounded ${confidence === 'high' ? 'bg-green-100 text-green-800' :
-        confidence === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-          'bg-red-100 text-red-800'
+      confidence === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+        'bg-red-100 text-red-800'
       }`}>
       {getFileTypeDescription(type)}
     </span>
@@ -94,19 +94,19 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
         try {
           // First try the simple fileUtils detection
           detected = await detectJSONType(file);
-          
+
           // If still unknown, use the more sophisticated merger detection
           if (detected.type === 'unknown') {
             const { detectFileType: mergerDetect } = await import('@/lib/parsers/merger');
             const mergerResult = await mergerDetect(file);
-            
+
             // Convert merger result to fileUtils format
             detected = {
               type: mergerResult.type as any, // Now that fileUtils supports all types, no conversion needed
               extension: 'json',
               mimeType: 'application/json',
-              confidence: mergerResult.confidence > 0.7 ? 'high' : 
-                         mergerResult.confidence > 0.4 ? 'medium' : 'low',
+              confidence: mergerResult.confidence > 0.7 ? 'high' :
+                mergerResult.confidence > 0.4 ? 'medium' : 'low',
               reason: `Detected via content analysis (${mergerResult.confidence.toFixed(2)} confidence)`
             };
           }
@@ -277,7 +277,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
 
       // Import the demo loading utilities
       const { loadDemoAnnotations, loadDemoVideo } = await import('../utils/debugUtils');
-      
+
       setProcessingStage('Fetching demo files...');
       setProcessingProgress(30);
 
@@ -295,9 +295,9 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
 
         onVideoLoad(videoFile);
         onAnnotationLoad(annotation);
-        
+
         setProcessingProgress(100);
-        
+
         toast({
           title: "Demo dataset loaded",
           description: `Successfully loaded ${datasetKey} with ${annotation.metadata?.pipelines?.length || 0} pipelines.`,
@@ -340,8 +340,8 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
         {/* File Drop Zone */}
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isProcessing
-              ? 'border-muted bg-muted/10'
-              : 'border-border hover:border-primary cursor-pointer'
+            ? 'border-muted bg-muted/10'
+            : 'border-border hover:border-primary cursor-pointer'
             }`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}

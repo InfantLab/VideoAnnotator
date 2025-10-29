@@ -6,11 +6,11 @@
 import type { ParsedError } from '@/types/api';
 
 export interface ToastFunction {
-  (props: {
-    title?: string;
-    description?: string;
-    variant?: 'default' | 'destructive';
-  }): void;
+    (props: {
+        title?: string;
+        description?: string;
+        variant?: 'default' | 'destructive';
+    }): void;
 }
 
 /**
@@ -18,46 +18,46 @@ export interface ToastFunction {
  * Includes hint as part of description if available
  */
 export function showErrorToast(toast: ToastFunction, error: ParsedError) {
-  const description = error.hint 
-    ? `${error.message}\n\n💡 Tip: ${error.hint}`
-    : error.message;
+    const description = error.hint
+        ? `${error.message}\n\n💡 Tip: ${error.hint}`
+        : error.message;
 
-  toast({
-    title: 'Error',
-    description,
-    variant: 'destructive',
-  });
+    toast({
+        title: 'Error',
+        description,
+        variant: 'destructive',
+    });
 }
 
 /**
  * Show a success toast
  */
 export function showSuccessToast(toast: ToastFunction, message: string, description?: string) {
-  toast({
-    title: message,
-    description,
-    variant: 'default',
-  });
+    toast({
+        title: message,
+        description,
+        variant: 'default',
+    });
 }
 
 /**
  * Show a validation error toast with field-level details
  */
 export function showValidationErrorToast(toast: ToastFunction, error: ParsedError) {
-  if (error.fieldErrors && error.fieldErrors.length > 0) {
-    const fieldCount = error.fieldErrors.length;
-    const firstError = error.fieldErrors[0];
-    
-    const description = fieldCount === 1
-      ? `${firstError.field}: ${firstError.message}${firstError.hint ? `\n💡 ${firstError.hint}` : ''}`
-      : `${fieldCount} validation errors. First: ${firstError.field}: ${firstError.message}`;
+    if (error.fieldErrors && error.fieldErrors.length > 0) {
+        const fieldCount = error.fieldErrors.length;
+        const firstError = error.fieldErrors[0];
 
-    toast({
-      title: 'Validation Error',
-      description,
-      variant: 'destructive',
-    });
-  } else {
-    showErrorToast(toast, error);
-  }
+        const description = fieldCount === 1
+            ? `${firstError.field}: ${firstError.message}${firstError.hint ? `\n💡 ${firstError.hint}` : ''}`
+            : `${fieldCount} validation errors. First: ${firstError.field}: ${firstError.message}`;
+
+        toast({
+            title: 'Validation Error',
+            description,
+            variant: 'destructive',
+        });
+    } else {
+        showErrorToast(toast, error);
+    }
 }

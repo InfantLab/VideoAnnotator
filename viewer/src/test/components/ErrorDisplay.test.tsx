@@ -10,246 +10,246 @@ import { ErrorDisplay } from '@/components/ErrorDisplay';
 import type { ParsedError } from '@/types/api';
 
 describe('ErrorDisplay', () => {
-  describe('basic error display', () => {
-    it('should render error message', () => {
-      const error: ParsedError = {
-        message: 'Job not found',
-      };
+    describe('basic error display', () => {
+        it('should render error message', () => {
+            const error: ParsedError = {
+                message: 'Job not found',
+            };
 
-      render(<ErrorDisplay error={error} />);
+            render(<ErrorDisplay error={error} />);
 
-      expect(screen.getByText(/job not found/i)).toBeInTheDocument();
+            expect(screen.getByText(/job not found/i)).toBeInTheDocument();
+        });
+
+        it('should render error with code', async () => {
+            const user = userEvent.setup();
+            const error: ParsedError = {
+                message: 'Pipeline configuration invalid',
+                code: 'CONFIG_INVALID',
+            };
+
+            render(<ErrorDisplay error={error} />);
+
+            expect(screen.getByText(/pipeline configuration invalid/i)).toBeInTheDocument();
+
+            // Code is in technical details section - need to expand
+            const detailsButton = screen.getByRole('button', { name: /technical details/i });
+            await user.click(detailsButton);
+
+            expect(screen.getByText('CONFIG_INVALID')).toBeInTheDocument();
+        });
+
+        it('should render hint when present', () => {
+            const error: ParsedError = {
+                message: 'Video URL is invalid',
+                hint: 'Use http:// or https:// scheme',
+            };
+
+            render(<ErrorDisplay error={error} />);
+
+            expect(screen.getByText(/video url is invalid/i)).toBeInTheDocument();
+            expect(screen.getByText(/use http/i)).toBeInTheDocument();
+        });
     });
 
-    it('should render error with code', async () => {
-      const user = userEvent.setup();
-      const error: ParsedError = {
-        message: 'Pipeline configuration invalid',
-        code: 'CONFIG_INVALID',
-      };
+    describe('technical details section', () => {
+        it('should have collapsible technical details', async () => {
+            const user = userEvent.setup();
+            const error: ParsedError = {
+                message: 'Server error',
+                code: 'INTERNAL_ERROR',
+                requestId: 'req-12345',
+            };
 
-      render(<ErrorDisplay error={error} />);
+            render(<ErrorDisplay error={error} />);
 
-      expect(screen.getByText(/pipeline configuration invalid/i)).toBeInTheDocument();
-      
-      // Code is in technical details section - need to expand
-      const detailsButton = screen.getByRole('button', { name: /technical details/i });
-      await user.click(detailsButton);
-      
-      expect(screen.getByText('CONFIG_INVALID')).toBeInTheDocument();
+            // Should have a button/trigger to expand details
+            const detailsButton = screen.getByRole('button', { name: /technical details/i });
+            expect(detailsButton).toBeInTheDocument();
+            expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
+
+            // Request ID should not be visible initially
+            expect(screen.queryByText('req-12345')).not.toBeInTheDocument();
+
+            // Click to expand
+            await user.click(detailsButton);
+
+            // Now request ID should be visible
+            expect(detailsButton).toHaveAttribute('aria-expanded', 'true');
+            expect(screen.getByText('req-12345')).toBeInTheDocument();
+        });
+
+        it('should show request ID in technical details', async () => {
+            const user = userEvent.setup();
+            const error: ParsedError = {
+                message: 'Error occurred',
+                requestId: 'req-xyz789',
+            };
+
+            render(<ErrorDisplay error={error} />);
+
+            const detailsButton = screen.getByRole('button', { name: /technical details/i });
+            await user.click(detailsButton);
+
+            expect(screen.getByText('req-xyz789')).toBeInTheDocument();
+        });
+
+        it('should hide technical details section if no technical info', () => {
+            const error: ParsedError = {
+                message: 'Simple error',
+            };
+
+            render(<ErrorDisplay error={error} />);
+
+            expect(screen.queryByRole('button', { name: /technical details/i })).not.toBeInTheDocument();
+        });
     });
 
-    it('should render hint when present', () => {
-      const error: ParsedError = {
-        message: 'Video URL is invalid',
-        hint: 'Use http:// or https:// scheme',
-      };
+    describe('field errors display', () => {
+        it('should render field errors list', () => {
+            const error: ParsedError = {
+                message: '2 validation errors',
+                code: 'VALIDATION_ERROR',
+                fieldErrors: [
+                    { field: 'video_url', message: 'Must be a valid URL' },
+                    { field: 'pipeline_id', message: 'Pipeline not found' },
+                ],
+            };
 
-      render(<ErrorDisplay error={error} />);
+            render(<ErrorDisplay error={error} />);
 
-      expect(screen.getByText(/video url is invalid/i)).toBeInTheDocument();
-      expect(screen.getByText(/use http/i)).toBeInTheDocument();
-    });
-  });
+            expect(screen.getByText(/video_url/i)).toBeInTheDocument();
+            expect(screen.getByText(/must be a valid url/i)).toBeInTheDocument();
+            expect(screen.getByText(/pipeline_id/i)).toBeInTheDocument();
+            expect(screen.getByText(/pipeline not found/i)).toBeInTheDocument();
+        });
 
-  describe('technical details section', () => {
-    it('should have collapsible technical details', async () => {
-      const user = userEvent.setup();
-      const error: ParsedError = {
-        message: 'Server error',
-        code: 'INTERNAL_ERROR',
-        requestId: 'req-12345',
-      };
+        it('should render field error hints', () => {
+            const error: ParsedError = {
+                message: 'Validation failed',
+                fieldErrors: [
+                    {
+                        field: 'config.threshold',
+                        message: 'Must be between 0 and 1',
+                        hint: 'Typical values are 0.5 to 0.8',
+                    },
+                ],
+            };
 
-      render(<ErrorDisplay error={error} />);
+            render(<ErrorDisplay error={error} />);
 
-      // Should have a button/trigger to expand details
-      const detailsButton = screen.getByRole('button', { name: /technical details/i });
-      expect(detailsButton).toBeInTheDocument();
-      expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
+            expect(screen.getByText(/config\.threshold/i)).toBeInTheDocument();
+            expect(screen.getByText(/must be between 0 and 1/i)).toBeInTheDocument();
+            expect(screen.getByText(/typical values/i)).toBeInTheDocument();
+        });
 
-      // Request ID should not be visible initially
-      expect(screen.queryByText('req-12345')).not.toBeInTheDocument();
+        it('should highlight field errors visually', () => {
+            const error: ParsedError = {
+                message: 'Validation failed',
+                fieldErrors: [
+                    { field: 'email', message: 'Invalid format' },
+                ],
+            };
 
-      // Click to expand
-      await user.click(detailsButton);
+            const { container } = render(<ErrorDisplay error={error} />);
 
-      // Now request ID should be visible
-      expect(detailsButton).toHaveAttribute('aria-expanded', 'true');
-      expect(screen.getByText('req-12345')).toBeInTheDocument();
-    });
-
-    it('should show request ID in technical details', async () => {
-      const user = userEvent.setup();
-      const error: ParsedError = {
-        message: 'Error occurred',
-        requestId: 'req-xyz789',
-      };
-
-      render(<ErrorDisplay error={error} />);
-
-      const detailsButton = screen.getByRole('button', { name: /technical details/i });
-      await user.click(detailsButton);
-
-      expect(screen.getByText('req-xyz789')).toBeInTheDocument();
-    });
-
-    it('should hide technical details section if no technical info', () => {
-      const error: ParsedError = {
-        message: 'Simple error',
-      };
-
-      render(<ErrorDisplay error={error} />);
-
-      expect(screen.queryByRole('button', { name: /technical details/i })).not.toBeInTheDocument();
-    });
-  });
-
-  describe('field errors display', () => {
-    it('should render field errors list', () => {
-      const error: ParsedError = {
-        message: '2 validation errors',
-        code: 'VALIDATION_ERROR',
-        fieldErrors: [
-          { field: 'video_url', message: 'Must be a valid URL' },
-          { field: 'pipeline_id', message: 'Pipeline not found' },
-        ],
-      };
-
-      render(<ErrorDisplay error={error} />);
-
-      expect(screen.getByText(/video_url/i)).toBeInTheDocument();
-      expect(screen.getByText(/must be a valid url/i)).toBeInTheDocument();
-      expect(screen.getByText(/pipeline_id/i)).toBeInTheDocument();
-      expect(screen.getByText(/pipeline not found/i)).toBeInTheDocument();
+            // Field errors should be in a distinct section with data-testid
+            const fieldErrorSection = container.querySelector('[data-testid="field-errors"]');
+            expect(fieldErrorSection).toBeInTheDocument();
+        });
     });
 
-    it('should render field error hints', () => {
-      const error: ParsedError = {
-        message: 'Validation failed',
-        fieldErrors: [
-          {
-            field: 'config.threshold',
-            message: 'Must be between 0 and 1',
-            hint: 'Typical values are 0.5 to 0.8',
-          },
-        ],
-      };
+    describe('visual states', () => {
+        it('should use alert/destructive styling', () => {
+            const error: ParsedError = {
+                message: 'Critical error',
+            };
 
-      render(<ErrorDisplay error={error} />);
+            const { container } = render(<ErrorDisplay error={error} />);
 
-      expect(screen.getByText(/config\.threshold/i)).toBeInTheDocument();
-      expect(screen.getByText(/must be between 0 and 1/i)).toBeInTheDocument();
-      expect(screen.getByText(/typical values/i)).toBeInTheDocument();
+            // Should use destructive/error variant (check for appropriate classes or role)
+            const alert = container.querySelector('[role="alert"]');
+            expect(alert).toBeInTheDocument();
+        });
+
+        it('should have appropriate icon for error', () => {
+            const error: ParsedError = {
+                message: 'Error occurred',
+            };
+
+            render(<ErrorDisplay error={error} />);
+
+            // Should have an error icon (AlertCircle, XCircle, etc.)
+            // This will depend on the icon library used
+            const icon = screen.getByTestId('error-icon');
+            expect(icon).toBeInTheDocument();
+        });
     });
 
-    it('should highlight field errors visually', () => {
-      const error: ParsedError = {
-        message: 'Validation failed',
-        fieldErrors: [
-          { field: 'email', message: 'Invalid format' },
-        ],
-      };
+    describe('accessibility', () => {
+        it('should have role="alert" for error announcement', () => {
+            const error: ParsedError = {
+                message: 'Job failed',
+            };
 
-      const { container } = render(<ErrorDisplay error={error} />);
+            const { container } = render(<ErrorDisplay error={error} />);
 
-      // Field errors should be in a distinct section with data-testid
-      const fieldErrorSection = container.querySelector('[data-testid="field-errors"]');
-      expect(fieldErrorSection).toBeInTheDocument();
-    });
-  });
+            expect(container.querySelector('[role="alert"]')).toBeInTheDocument();
+        });
 
-  describe('visual states', () => {
-    it('should use alert/destructive styling', () => {
-      const error: ParsedError = {
-        message: 'Critical error',
-      };
+        it('should have accessible collapsible region', async () => {
+            const user = userEvent.setup();
+            const error: ParsedError = {
+                message: 'Error',
+                requestId: 'req-123',
+            };
 
-      const { container } = render(<ErrorDisplay error={error} />);
+            render(<ErrorDisplay error={error} />);
 
-      // Should use destructive/error variant (check for appropriate classes or role)
-      const alert = container.querySelector('[role="alert"]');
-      expect(alert).toBeInTheDocument();
-    });
+            const detailsButton = screen.getByRole('button', { name: /technical details/i });
 
-    it('should have appropriate icon for error', () => {
-      const error: ParsedError = {
-        message: 'Error occurred',
-      };
+            // Button should have aria-expanded
+            expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
 
-      render(<ErrorDisplay error={error} />);
+            await user.click(detailsButton);
 
-      // Should have an error icon (AlertCircle, XCircle, etc.)
-      // This will depend on the icon library used
-      const icon = screen.getByTestId('error-icon');
-      expect(icon).toBeInTheDocument();
-    });
-  });
+            expect(detailsButton).toHaveAttribute('aria-expanded', 'true');
+        });
 
-  describe('accessibility', () => {
-    it('should have role="alert" for error announcement', () => {
-      const error: ParsedError = {
-        message: 'Job failed',
-      };
+        it('should have proper heading hierarchy', () => {
+            const error: ParsedError = {
+                message: 'Error occurred',
+                fieldErrors: [
+                    { field: 'test', message: 'Invalid' },
+                ],
+            };
 
-      const { container } = render(<ErrorDisplay error={error} />);
+            render(<ErrorDisplay error={error} />);
 
-      expect(container.querySelector('[role="alert"]')).toBeInTheDocument();
+            // AlertTitle acts as heading
+            const heading = screen.getByText('Error');
+            expect(heading).toBeInTheDocument();
+        });
     });
 
-    it('should have accessible collapsible region', async () => {
-      const user = userEvent.setup();
-      const error: ParsedError = {
-        message: 'Error',
-        requestId: 'req-123',
-      };
+    describe('copy functionality', () => {
+        it('should allow copying technical details', async () => {
+            const user = userEvent.setup();
+            const error: ParsedError = {
+                message: 'Error',
+                code: 'TEST_ERROR',
+                requestId: 'req-456',
+            };
 
-      render(<ErrorDisplay error={error} />);
+            render(<ErrorDisplay error={error} />);
 
-      const detailsButton = screen.getByRole('button', { name: /technical details/i });
-      
-      // Button should have aria-expanded
-      expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
+            // Need to expand technical details first
+            const detailsButton = screen.getByRole('button', { name: /technical details/i });
+            await user.click(detailsButton);
 
-      await user.click(detailsButton);
-
-      expect(detailsButton).toHaveAttribute('aria-expanded', 'true');
+            // Now copy button should be visible
+            const copyButton = screen.getByRole('button', { name: /copy/i });
+            expect(copyButton).toBeInTheDocument();
+        });
     });
-
-    it('should have proper heading hierarchy', () => {
-      const error: ParsedError = {
-        message: 'Error occurred',
-        fieldErrors: [
-          { field: 'test', message: 'Invalid' },
-        ],
-      };
-
-      render(<ErrorDisplay error={error} />);
-
-      // AlertTitle acts as heading
-      const heading = screen.getByText('Error');
-      expect(heading).toBeInTheDocument();
-    });
-  });
-
-  describe('copy functionality', () => {
-    it('should allow copying technical details', async () => {
-      const user = userEvent.setup();
-      const error: ParsedError = {
-        message: 'Error',
-        code: 'TEST_ERROR',
-        requestId: 'req-456',
-      };
-
-      render(<ErrorDisplay error={error} />);
-
-      // Need to expand technical details first
-      const detailsButton = screen.getByRole('button', { name: /technical details/i });
-      await user.click(detailsButton);
-
-      // Now copy button should be visible
-      const copyButton = screen.getByRole('button', { name: /copy/i });
-      expect(copyButton).toBeInTheDocument();
-    });
-  });
 });

@@ -654,10 +654,10 @@ const ConfigurationStep = ({
       <div className="p-4 bg-blue-50 rounded-lg">
         <h4 className="font-medium text-blue-800 mb-2">Advanced JSON Overrides</h4>
         <div className={`bg-white p-3 rounded border ${validationResult?.errors && validationResult.errors.length > 0
-            ? 'border-red-300 shadow-sm shadow-red-100'
-            : validationResult?.warnings && validationResult.warnings.length > 0
-              ? 'border-yellow-300 shadow-sm shadow-yellow-100'
-              : ''
+          ? 'border-red-300 shadow-sm shadow-red-100'
+          : validationResult?.warnings && validationResult.warnings.length > 0
+            ? 'border-yellow-300 shadow-sm shadow-yellow-100'
+            : ''
           }`}>
           <textarea
             value={JSON.stringify(config, null, 2)}
@@ -670,10 +670,10 @@ const ConfigurationStep = ({
               }
             }}
             className={`w-full h-64 text-sm font-mono resize-none border rounded px-3 py-2 text-foreground bg-background ${validationResult?.errors && validationResult.errors.length > 0
-                ? 'border-red-400 focus:ring-2 focus:ring-red-500 focus:border-red-500'
-                : validationResult?.warnings && validationResult.warnings.length > 0
-                  ? 'border-yellow-400 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500'
-                  : 'border focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+              ? 'border-red-400 focus:ring-2 focus:ring-red-500 focus:border-red-500'
+              : validationResult?.warnings && validationResult.warnings.length > 0
+                ? 'border-yellow-400 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500'
+                : 'border focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
               }`}
             placeholder="Pipeline configuration JSON..."
           />

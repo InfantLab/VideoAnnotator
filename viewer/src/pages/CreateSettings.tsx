@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import { TokenSetup } from '@/components/TokenSetup';
+import { ServerDiagnostics } from '@/components/ServerDiagnostics';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -174,10 +175,10 @@ const CreateSettings = () => {
 
         <TabsContent value="server" className="space-y-4">
           {(serverInfoError || catalogError || (tokenStatus.error && !tokenStatus.isLoading)) && (
-            <ErrorDisplay 
+            <ErrorDisplay
               error={parseApiError(
                 catalogError || serverInfoError || tokenStatus.error || 'Server diagnostics issue'
-              )} 
+              )}
             />
           )}
 
@@ -335,6 +336,9 @@ const CreateSettings = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Server Diagnostics */}
+          <ServerDiagnostics className="mt-6" defaultOpen={false} />
 
           <Card>
             <CardHeader>
