@@ -577,10 +577,10 @@ uvicorn.run("api.main:app", host="0.0.0.0", port=18011)
 **Quick Solution**:
 ```bash
 # Standard usage: Official client (port 19011) works automatically
-uv run videoannotator server
+uv run videoannotator
 
 # Custom client development: Use dev mode (allows all CORS origins)
-uv run videoannotator server --dev
+uv run videoannotator --dev
 ```
 
 **What's Allowed by Default** (v1.3.0+):
@@ -594,17 +594,17 @@ If developing a custom client on a different port:
 ```bash
 # Option 1: Set specific origin
 export CORS_ORIGINS="http://localhost:YOUR_PORT"
-uv run videoannotator server
+uv run videoannotator
 
 # Option 2: Allow all origins (development only)
-uv run videoannotator server --dev
+uv run videoannotator --dev
 ```
 
 **Production Configuration**:
 ```bash
 # Only allow your production domain
 export CORS_ORIGINS="https://viewer.example.com"
-uv run videoannotator server
+uv run videoannotator
 ```
 
 **Verification**:

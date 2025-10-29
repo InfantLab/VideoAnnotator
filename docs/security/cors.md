@@ -11,7 +11,7 @@ VideoAnnotator is configured for the official client by default:
 ```bash
 # Default: Allows official video-annotation-viewer (19011) + server (18011)
 # No configuration needed for standard usage
-uv run videoannotator server
+uv run videoannotator
 ```
 
 Console output will show:
@@ -25,7 +25,7 @@ The default origins are:
 
 **For custom clients or testing**, use development mode:
 ```bash
-uv run videoannotator server --dev
+uv run videoannotator --dev
 # Allows ALL origins (*), disables authentication
 ```
 
@@ -64,7 +64,7 @@ Set the `CORS_ORIGINS` environment variable:
 ```bash
 # Allow your web app's origin
 export CORS_ORIGINS="https://app.yourdomain.com"
-uv run videoannotator server
+uv run videoannotator
 ```
 
 ### Multiple Origins
@@ -74,7 +74,7 @@ Provide a comma-separated list:
 ```bash
 # Allow multiple web apps
 export CORS_ORIGINS="https://app.yourdomain.com,https://admin.yourdomain.com,https://staging.yourdomain.com"
-uv run videoannotator server
+uv run videoannotator
 ```
 
 Whitespace is automatically stripped, so this also works:

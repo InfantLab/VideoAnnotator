@@ -11,13 +11,21 @@ from .version import __version__
 
 app = typer.Typer(
     name="videoannotator",
-    help=f"VideoAnnotator v{__version__} - Production-ready video annotation toolkit",
+    help=f"VideoAnnotator v{__version__} - Production-ready video annotation toolkit\n\n"
+    "Default: Starts API server when run without a command (uv run videoannotator)",
     add_completion=False,
 )
 
 
 @app.callback(invoke_without_command=True)
-def _default(ctx: typer.Context):
+def _default(
+    ctx: typer.Context,
+    dev: bool = typer.Option(
+        False,
+        "--dev",
+        help="Enable development mode: allows all CORS origins (*), disables auth",
+    ),
+):
     """Start the API server when no subcommand is provided.
 
     This makes `uv run videoannotator` behave like `uv run videoannotator server`
@@ -29,7 +37,7 @@ def _default(ctx: typer.Context):
 
     # Launch server with recommended defaults
     # NOTE: calling server() directly will run uvicorn and block the process.
-    server(host="0.0.0.0", port=18011, reload=False, workers=1, dev=False)
+    server(host="0.0.0.0", port=18011, reload=False, workers=1, dev=dev)
 
 
 @app.command()

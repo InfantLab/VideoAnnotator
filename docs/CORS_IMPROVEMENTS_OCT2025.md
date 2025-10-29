@@ -22,14 +22,16 @@
 **Just works** - no configuration needed:
 
 ```bash
-# Terminal 1: Start VideoAnnotator server
-uv run videoannotator server
+# Terminal 1: Start VideoAnnotator server (simplest command)
+uv run videoannotator
 
 # Terminal 2: Start video-annotation-viewer
 npm start  # Runs on localhost:19011 by default ✅
 
 # CORS just works - no configuration needed!
 ```
+
+**Note**: `uv run videoannotator` automatically starts the server - no need for `server` subcommand.
 
 The server logs will show:
 ```
@@ -42,7 +44,7 @@ If you're developing a **custom client** or testing from a **remote machine/code
 
 ```bash
 # Allows ALL origins (*), disables auth - perfect for testing
-uv run videoannotator server --dev
+uv run videoannotator --dev
 ```
 
 Console shows:
@@ -59,11 +61,11 @@ For production, set specific allowed origins:
 ```bash
 # Only allow your production domain
 export CORS_ORIGINS="https://myapp.example.com"
-uv run videoannotator server
+uv run videoannotator
 
 # Or multiple domains
 export CORS_ORIGINS="https://app.example.com,https://admin.example.com"
-uv run videoannotator server
+uv run videoannotator
 ```
 
 ## 🚀 Quick Start Examples
@@ -71,7 +73,7 @@ uv run videoannotator server
 ### Standard Usage (Official Client)
 ```bash
 # Terminal 1: Start VideoAnnotator server
-uv run videoannotator server
+uv run videoannotator
 
 # Terminal 2: Start video-annotation-viewer
 cd /path/to/video-annotation-viewer
@@ -80,14 +82,16 @@ npm start  # Default: localhost:19011 ✅
 # CORS is automatically configured!
 ```
 
+**Tip**: `uv run videoannotator` is shorthand for `uv run videoannotator server` - the server is the default command.
+
 ### Custom Client Development
 ```bash
 # If developing a custom client on a different port:
 export CORS_ORIGINS="http://localhost:YOUR_PORT"
-uv run videoannotator server
+uv run videoannotator
 
 # Or use dev mode to allow any origin:
-uv run videoannotator server --dev
+uv run videoannotator --dev
 ```
 
 ## 🔍 Verification
@@ -127,13 +131,13 @@ Console logs show CORS configuration on startup:
 
 2. **Try dev mode** (allows all origins - for testing only):
    ```bash
-   uv run videoannotator server --dev
+   uv run videoannotator --dev
    ```
 
 3. **Set custom origin** (if using non-standard port):
    ```bash
    export CORS_ORIGINS="http://localhost:YOUR_PORT"
-   uv run videoannotator server
+   uv run videoannotator
    ```
 
 4. **Check browser console**:
