@@ -6,12 +6,12 @@ import { render, screen } from '@testing-library/react';
 import React from 'react';
 
 // Mock TokenStatusIndicator component (to be updated)
-const TokenStatusIndicator = ({ 
-    status, 
-    version, 
+const TokenStatusIndicator = ({
+    status,
+    version,
     authRequired,
-    error 
-}: { 
+    error
+}: {
     status: 'connected' | 'error' | 'warning' | 'loading';
     version?: string;
     authRequired?: boolean;
@@ -24,8 +24,8 @@ describe('TokenStatusIndicator', () => {
     describe('connection status display', () => {
         it('should display connected state with green indicator', () => {
             render(
-                <TokenStatusIndicator 
-                    status="connected" 
+                <TokenStatusIndicator
+                    status="connected"
                     version="1.3.0"
                 />
             );
@@ -36,8 +36,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should display error state with red indicator', () => {
             render(
-                <TokenStatusIndicator 
-                    status="error" 
+                <TokenStatusIndicator
+                    status="error"
                     error="Connection failed"
                 />
             );
@@ -48,8 +48,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should display warning state with yellow indicator', () => {
             render(
-                <TokenStatusIndicator 
-                    status="warning" 
+                <TokenStatusIndicator
+                    status="warning"
                 />
             );
 
@@ -58,8 +58,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should display loading state with appropriate indicator', () => {
             render(
-                <TokenStatusIndicator 
-                    status="loading" 
+                <TokenStatusIndicator
+                    status="loading"
                 />
             );
 
@@ -70,8 +70,8 @@ describe('TokenStatusIndicator', () => {
     describe('server version display', () => {
         it('should display server version when connected', () => {
             render(
-                <TokenStatusIndicator 
-                    status="connected" 
+                <TokenStatusIndicator
+                    status="connected"
                     version="1.3.0"
                 />
             );
@@ -81,8 +81,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should display version with prerelease tag', () => {
             render(
-                <TokenStatusIndicator 
-                    status="connected" 
+                <TokenStatusIndicator
+                    status="connected"
                     version="1.3.0-beta.1"
                 />
             );
@@ -92,8 +92,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should not display version when not connected', () => {
             render(
-                <TokenStatusIndicator 
-                    status="error" 
+                <TokenStatusIndicator
+                    status="error"
                     error="Network error"
                 />
             );
@@ -104,8 +104,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should handle unknown version gracefully', () => {
             render(
-                <TokenStatusIndicator 
-                    status="connected" 
+                <TokenStatusIndicator
+                    status="connected"
                     version="unknown"
                 />
             );
@@ -118,8 +118,8 @@ describe('TokenStatusIndicator', () => {
     describe('authentication mode indicators', () => {
         it('should display "Auth Required" indicator when authRequired is true', () => {
             render(
-                <TokenStatusIndicator 
-                    status="connected" 
+                <TokenStatusIndicator
+                    status="connected"
                     version="1.3.0"
                     authRequired={true}
                 />
@@ -130,8 +130,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should display "Auth Optional" indicator when authRequired is false', () => {
             render(
-                <TokenStatusIndicator 
-                    status="connected" 
+                <TokenStatusIndicator
+                    status="connected"
                     version="1.3.0"
                     authRequired={false}
                 />
@@ -142,8 +142,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should show warning icon for unsecured connection (auth disabled)', () => {
             render(
-                <TokenStatusIndicator 
-                    status="warning" 
+                <TokenStatusIndicator
+                    status="warning"
                     version="1.3.0"
                     authRequired={false}
                 />
@@ -155,8 +155,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should not display auth indicator when auth status is unknown', () => {
             render(
-                <TokenStatusIndicator 
-                    status="connected" 
+                <TokenStatusIndicator
+                    status="connected"
                     version="1.2.0"
                 />
             );
@@ -170,8 +170,8 @@ describe('TokenStatusIndicator', () => {
     describe('error messages', () => {
         it('should display custom error message', () => {
             render(
-                <TokenStatusIndicator 
-                    status="error" 
+                <TokenStatusIndicator
+                    status="error"
                     error="Invalid API token"
                 />
             );
@@ -181,8 +181,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should display network error with helpful hint', () => {
             render(
-                <TokenStatusIndicator 
-                    status="error" 
+                <TokenStatusIndicator
+                    status="error"
                     error="Network error: Failed to fetch"
                 />
             );
@@ -193,8 +193,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should display auth error with setup guidance', () => {
             render(
-                <TokenStatusIndicator 
-                    status="error" 
+                <TokenStatusIndicator
+                    status="error"
                     error="401 Unauthorized"
                 />
             );
@@ -204,8 +204,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should not display error message when status is connected', () => {
             render(
-                <TokenStatusIndicator 
-                    status="connected" 
+                <TokenStatusIndicator
+                    status="connected"
                     version="1.3.0"
                     error="This should not display"
                 />
@@ -219,48 +219,48 @@ describe('TokenStatusIndicator', () => {
     describe('visual indicators', () => {
         it('should use appropriate icon for connected status', () => {
             const { container } = render(
-                <TokenStatusIndicator 
-                    status="connected" 
+                <TokenStatusIndicator
+                    status="connected"
                     version="1.3.0"
                 />
             );
 
             // Should have check/success icon (implementation will determine exact icon)
-            expect(container.querySelector('[data-status="connected"]') || 
-                   container.textContent).toBeTruthy();
+            expect(container.querySelector('[data-status="connected"]') ||
+                container.textContent).toBeTruthy();
         });
 
         it('should use appropriate icon for error status', () => {
             const { container } = render(
-                <TokenStatusIndicator 
-                    status="error" 
+                <TokenStatusIndicator
+                    status="error"
                     error="Connection failed"
                 />
             );
 
             // Should have error/alert icon
-            expect(container.querySelector('[data-status="error"]') || 
-                   container.textContent).toBeTruthy();
+            expect(container.querySelector('[data-status="error"]') ||
+                container.textContent).toBeTruthy();
         });
 
         it('should use appropriate icon for warning status', () => {
             const { container } = render(
-                <TokenStatusIndicator 
-                    status="warning" 
+                <TokenStatusIndicator
+                    status="warning"
                 />
             );
 
             // Should have warning icon
-            expect(container.querySelector('[data-status="warning"]') || 
-                   container.textContent).toBeTruthy();
+            expect(container.querySelector('[data-status="warning"]') ||
+                container.textContent).toBeTruthy();
         });
     });
 
     describe('accessibility', () => {
         it('should have appropriate ARIA role for status', () => {
             render(
-                <TokenStatusIndicator 
-                    status="connected" 
+                <TokenStatusIndicator
+                    status="connected"
                     version="1.3.0"
                 />
             );
@@ -271,8 +271,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should have appropriate ARIA role for error', () => {
             render(
-                <TokenStatusIndicator 
-                    status="error" 
+                <TokenStatusIndicator
+                    status="error"
                     error="Connection failed"
                 />
             );
@@ -283,8 +283,8 @@ describe('TokenStatusIndicator', () => {
 
         it('should provide clear text alternatives for icons', () => {
             const { container } = render(
-                <TokenStatusIndicator 
-                    status="connected" 
+                <TokenStatusIndicator
+                    status="connected"
                     version="1.3.0"
                 />
             );
@@ -292,8 +292,8 @@ describe('TokenStatusIndicator', () => {
             // Icons should have aria-label or sr-only text
             const icons = container.querySelectorAll('svg');
             icons.forEach(icon => {
-                const hasLabel = icon.hasAttribute('aria-label') || 
-                               icon.querySelector('.sr-only') !== null;
+                const hasLabel = icon.hasAttribute('aria-label') ||
+                    icon.querySelector('.sr-only') !== null;
                 expect(hasLabel || icon.getAttribute('aria-hidden') === 'true').toBe(true);
             });
         });
@@ -302,8 +302,8 @@ describe('TokenStatusIndicator', () => {
     describe('compact mode', () => {
         it('should support compact display mode', () => {
             const { container } = render(
-                <TokenStatusIndicator 
-                    status="connected" 
+                <TokenStatusIndicator
+                    status="connected"
                     version="1.3.0"
                 />
             );

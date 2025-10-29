@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Popover, 
-  PopoverContent, 
-  PopoverTrigger 
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
 } from '@/components/ui/popover';
-import { 
-  CheckCircle, 
-  AlertTriangle, 
-  Settings, 
-  RefreshCw, 
+import {
+  CheckCircle,
+  AlertTriangle,
+  Settings,
+  RefreshCw,
   ExternalLink,
   Shield,
   ShieldAlert,
@@ -28,8 +28,8 @@ interface TokenStatusIndicatorProps {
   compact?: boolean;
 }
 
-export function TokenStatusIndicator({ 
-  showDetails = false, 
+export function TokenStatusIndicator({
+  showDetails = false,
   className = '',
   compact = false
 }: TokenStatusIndicatorProps) {
@@ -43,11 +43,11 @@ export function TokenStatusIndicator({
   // Determine authentication requirement status
   // Note: v1.3.0 doesn't expose auth_required in health endpoint
   // We infer from connection attempts: if we get 401 without token, auth is required
-  const authStatus = error?.includes('401') || error?.includes('Unauthorized') 
-    ? 'required' 
-    : isValid 
-    ? 'optional' 
-    : undefined;
+  const authStatus = error?.includes('401') || error?.includes('Unauthorized')
+    ? 'required'
+    : isValid
+      ? 'optional'
+      : undefined;
 
   if (loading && !capabilities) {
     return (
@@ -59,8 +59,8 @@ export function TokenStatusIndicator({
   }
 
   const statusBadge = (
-    <Badge 
-      variant={isValid ? "default" : "destructive"} 
+    <Badge
+      variant={isValid ? "default" : "destructive"}
       className={`cursor-pointer ${className}`}
     >
       {isValid ? (
@@ -88,9 +88,9 @@ export function TokenStatusIndicator({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="font-medium">API Status</h4>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 refreshToken();
                 refreshCaps();
@@ -169,9 +169,9 @@ export function TokenStatusIndicator({
 
           <div className="flex items-center gap-2 pt-2 border-t">
             <Link to="/create/settings">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-1"
               >
@@ -179,15 +179,15 @@ export function TokenStatusIndicator({
                 Settings
               </Button>
             </Link>
-            
-            <Button 
-              variant="link" 
-              size="sm" 
+
+            <Button
+              variant="link"
+              size="sm"
               onClick={() => setIsOpen(false)}
               asChild
               className="p-0 h-auto"
             >
-              <a 
+              <a
                 href="https://github.com/InfantLab/VideoAnnotator/blob/master/docs/CLIENT_TOKEN_SETUP_GUIDE.md"
                 target="_blank"
                 rel="noopener noreferrer"

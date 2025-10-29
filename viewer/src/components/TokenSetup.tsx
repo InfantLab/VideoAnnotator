@@ -210,7 +210,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
               <div className="text-sm">
                 <p className="font-medium mb-1">For local development:</p>
                 <p>
-                  Use the default values below. Click <strong>"Reset to Defaults"</strong> to auto-fill, 
+                  Use the default values below. Click <strong>"Reset to Defaults"</strong> to auto-fill,
                   then <strong>"Test Connection"</strong> to verify.
                 </p>
               </div>
