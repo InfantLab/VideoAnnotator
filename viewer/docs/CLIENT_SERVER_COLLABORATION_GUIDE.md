@@ -2,10 +2,214 @@
 
 ## Overview
 
+# 🤝 Client-Server Testing Collaboration Guide
+
+## Overview
+
 This guide provides client-side developers with tools and protocols for effective collaboration with the VideoAnnotator server team during API integration and testing.
 
-**Target Server**: VideoAnnotator v1.2.0 API Server  
+**Target Server**: VideoAnnotator v1.2.x / v1.3.x API Server  
 **Client Application**: Video Annotation Viewer (React + TypeScript)  
+**Latest Supported Version**: v1.3.0
+
+---
+
+## 🆕 VideoAnnotator v1.3.0 Features
+
+### **New Endpoints**
+
+#### **Job Cancellation**
+```http
+POST /api/v1/jobs/{job_id}/cancel
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "reason": "User requested cancellation"  # Optional
+}
+```
+
+**Response**:
+```json
+{
+  "job_id": "string",
+  "status": "cancelled" | "cancelling",
+  "message": "Job cancelled successfully",
+  "cancelled_at": "2025-10-29T10:00:00Z"
+}
+```
+
+#### **Configuration Validation**
+```http
+POST /api/v1/validate/config
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "config": {
+    "pipelines": ["openface3", "whisper"],
+    "openface3": { "model": "mobilenet" },
+    "whisper": { "model": "base" }
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "valid": true,
+  "errors": [],
+  "warnings": [
+    {
+      "field": "whisper.model",
+      "message": "Model 'base' may not provide optimal accuracy",
+      "hint": "Consider using 'medium' or 'large' for better results"
+    }
+  ]
+}
+```
+
+#### **Pipeline-Specific Validation**
+```http
+POST /api/v1/validate/pipeline/{pipeline_id}
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "config": {
+    "model": "mobilenet",
+    "confidence_threshold": 0.5
+  }
+}
+```
+
+#### **Enhanced Health Endpoint**
+```http
+GET /api/v1/system/health
+Authorization: Bearer {token}
+```
+
+**Response (v1.3.0)**:
+```json
+{
+  "status": "healthy" | "degraded" | "unhealthy",
+  "version": "1.3.0",
+  "api_version": "1.3.0",
+  "uptime_seconds": 3600,
+  "gpu_status": {
+    "available": true,
+    "device_name": "NVIDIA GeForce RTX 3080",
+    "cuda_version": "11.8",
+    "memory_total": 10737418240,
+    "memory_used": 5368709120,
+    "memory_free": 5368709120
+  },
+  "worker_info": {
+    "active_jobs": 2,
+    "queued_jobs": 3,
+    "max_concurrent_jobs": 4,
+    "worker_status": "idle" | "busy" | "overloaded"
+  },
+  "diagnostics": {
+    "database": {
+      "status": "healthy" | "degraded" | "unhealthy",
+      "message": "All systems operational"
+    },
+    "storage": {
+      "status": "healthy",
+      "disk_usage_percent": 45
+    },
+    "ffmpeg": {
+      "available": true,
+      "version": "5.1.2"
+    }
+  }
+}
+```
+
+**Fallback (v1.2.x)**:
+```http
+GET /health
+```
+
+**Response**:
+```json
+{
+  "status": "healthy",
+  "api_version": "1.2.1",
+  "videoannotator_version": "1.2.1",
+  "message": "API is running"
+}
+```
+
+### **Client Implementation**
+
+#### **Feature Detection**
+```typescript
+import { apiClient } from '@/api/client';
+
+// Detect v1.3.0 features
+const health = await apiClient.getEnhancedHealth();
+const hasJobCancellation = !!health.version && health.version >= '1.3.0';
+const hasValidation = !!health.version && health.version >= '1.3.0';
+const hasAdvancedDiagnostics = !!health.gpu_status || !!health.worker_info;
+```
+
+#### **Job Cancellation Hook**
+```typescript
+import { useJobCancellation } from '@/hooks/useJobCancellation';
+
+function JobDetailPage() {
+  const { cancelJob, isCancelling, canCancel } = useJobCancellation(jobId);
+  
+  if (!canCancel) return null; // Feature not available
+  
+  return (
+    <button onClick={() => cancelJob('User requested')} disabled={isCancelling}>
+      {isCancelling ? 'Cancelling...' : 'Cancel Job'}
+    </button>
+  );
+}
+```
+
+#### **Configuration Validation Hook**
+```typescript
+import { useConfigValidation } from '@/hooks/useConfigValidation';
+
+function JobCreationWizard() {
+  const { validateConfig, validation, isValidating } = useConfigValidation();
+  
+  const handleConfigChange = (newConfig) => {
+    setConfig(newConfig);
+    validateConfig(newConfig); // Debounced validation
+  };
+  
+  return (
+    <>
+      {validation.errors.map(error => (
+        <ErrorMessage key={error.field}>
+          {error.message}
+          {error.hint && <Hint>{error.hint}</Hint>}
+        </ErrorMessage>
+      ))}
+    </>
+  );
+}
+```
+
+#### **Server Diagnostics Component**
+```typescript
+import { ServerDiagnostics } from '@/components/ServerDiagnostics';
+
+function SettingsPage() {
+  return (
+    <>
+      {/* Other settings */}
+      <ServerDiagnostics defaultOpen={false} />
+    </>
+  );
+}
+```
 
 ---
 
@@ -283,7 +487,7 @@ jobs:
 
 ---
 
-**Document Version**: v1.0  
-**Last Updated**: January 2025  
-**VideoAnnotator Compatibility**: v1.2.0+  
+**Document Version**: v2.0  
+**Last Updated**: October 2025  
+**VideoAnnotator Compatibility**: v1.2.0+ (Full backward compatibility, v1.3.0+ for enhanced features)  
 **Status**: Active development collaboration tool

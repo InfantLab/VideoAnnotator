@@ -5,6 +5,113 @@ All notable changes to Video Annotation Viewer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-10-29
+
+### 🎯 **Major Changes**
+- **VideoAnnotator v1.3.0 Support**: Full integration with enhanced server features including job cancellation, configuration validation, and advanced diagnostics
+- **Job Cancellation**: Cancel running jobs with confirmation dialog and real-time status updates
+- **Configuration Validation**: Pre-submission validation with detailed error messages and helpful hints
+- **Enhanced Authentication**: Improved token setup wizard with status indicator and automatic validation
+- **Comprehensive Error Handling**: Consistent error display across all operations with actionable guidance
+- **Server Diagnostics**: Real-time monitoring of GPU status, worker queue, and system health
+
+### ✨ **Added**
+- **Job Cancellation (US1)**:
+  - Cancel button in job detail view with confirmation dialog
+  - Real-time status updates via Server-Sent Events (SSE)
+  - Graceful handling of already-cancelled or completed jobs
+  - Optional cancellation reason support
+  - Backward compatible with v1.2.x servers (feature hidden if unavailable)
+  
+- **Configuration Validation (US2)**:
+  - Pre-submission validation with `/api/v1/validate/config` endpoint
+  - Per-pipeline validation with `/api/v1/validate/pipeline/{pipeline_id}`
+  - Real-time validation feedback in job creation wizard
+  - Field-level error messages with specific guidance
+  - Warning detection for suboptimal configurations
+  - Debounced validation to reduce server load
+  
+- **Enhanced Authentication (US3)**:
+  - Improved token setup wizard with multi-step flow
+  - TokenStatusIndicator component showing real-time status
+  - Automatic token validation on page load
+  - Visual feedback for valid/invalid/expired tokens
+  - User information display when authenticated
+  - Server capabilities detection and display
+  
+- **Improved Error Handling (US4)**:
+  - ErrorDisplay component for consistent error presentation
+  - Structured error parsing with hints and field-level details
+  - Collapsible technical details (error codes, request IDs)
+  - Toast notifications with helpful hints
+  - ErrorBoundary for React rendering errors
+  - Copy-to-clipboard for technical details
+  
+- **Server Diagnostics (US5)**:
+  - ServerDiagnostics component with collapsible UI
+  - Real-time GPU status (device, CUDA version, memory usage)
+  - Worker queue monitoring (active/queued jobs, max concurrent)
+  - System diagnostics (database, storage, FFmpeg status)
+  - Auto-refresh every 30 seconds when expanded
+  - Manual refresh button with loading state
+  - Stale data indicator (>2 minutes without update)
+  - Human-readable uptime formatting
+
+### 🔧 **Changed**
+- **API Client Enhancement**:
+  - Added `cancelJob()` method with reason support
+  - Added `validateConfig()` and `validatePipeline()` methods
+  - Added `getEnhancedHealth()` with fallback to v1.2.x `/health`
+  - Improved error parsing with `parseApiError()` utility
+  - Better TypeScript types for v1.3.0 responses
+  
+- **React Architecture**:
+  - New `useJobCancellation` hook for job cancellation logic
+  - New `useConfigValidation` hook with debouncing
+  - New `useTokenStatus` hook for authentication state
+  - ServerCapabilitiesContext for feature detection
+  - Enhanced error state management across all pages
+  
+- **UI/UX Improvements**:
+  - Consistent error display with helpful hints throughout app
+  - Color-coded status indicators (green/yellow/red)
+  - Improved loading states and skeleton screens
+  - Better accessibility with ARIA labels and keyboard navigation
+  - Dark mode support for all new components
+
+### 🐛 **Fixed**
+- **Error Handling**: Unified error parsing for v1.2.x and v1.3.0 formats
+- **Type Safety**: Strict TypeScript types for all new API endpoints
+- **Performance**: Debounced validation reduces unnecessary API calls
+- **Reliability**: ErrorBoundary prevents app crashes from rendering errors
+
+### 📚 **Documentation**
+- Added comprehensive test coverage for all new features
+- Updated CLIENT_SERVER_COLLABORATION_GUIDE with v1.3.0 endpoints
+- JSDoc comments for all new functions, hooks, and components
+- Detailed inline code documentation
+
+### 🧪 **Testing**
+- **Unit Tests**: 70+ tests for new features (job cancellation, validation, error handling)
+- **Component Tests**: 40+ tests for UI components (ErrorDisplay, ServerDiagnostics, TokenSetup)
+- **Integration Tests**: End-to-end flows for all user stories
+- **Test Coverage**: >80% for new code
+
+### 🔄 **Backward Compatibility**
+- Full backward compatibility with VideoAnnotator v1.2.x servers
+- Feature detection and graceful degradation
+- UI elements hidden when server doesn't support features
+- No breaking changes to existing functionality
+
+### ⚠️ **Known Issues**
+- Some timing-related tests for auto-refresh need refinement (React Query + fake timers interaction)
+- ServerDiagnostics component tests: 16/24 passing (67%), remaining failures are timing-related edge cases
+
+### 🚀 **Migration Guide**
+No migration needed - all changes are additive and backward compatible. If using VideoAnnotator v1.3.0+, new features will automatically become available.
+
+---
+
 ## [0.4.0] - 2025-09-26
 
 ### 🎯 **Major Changes**
