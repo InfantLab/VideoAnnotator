@@ -1,44 +1,44 @@
 # CORS Configuration Update — October 2025
 
-**Quick Summary for Client Team**: CORS is now frictionless for local development while remaining secure by default.
+**Quick Summary for Client Team**: CORS now correctly whitelists the official video-annotation-viewer client (port 19011) by default.
 
 ## 🎯 What Changed
 
-### Before (Painful)
-- Only 2 origins allowed by default: `http://localhost:3000` and `http://localhost:18011`
-- If your React/Vite/Vue/Angular app ran on a different port → CORS error
-- Manual environment variable setup required
-- Documentation was intimidating and technical
+### Before (Broken)
+- Default CORS only allowed port 3000
+- The official client runs on port 19011 → **CORS error**
+- Users had to manually configure `CORS_ORIGINS` environment variable
 
-### After (Frictionless)
-- **12 common development ports work out of the box**
-- **New `--dev` flag for testing** (allows all origins)
-- **Simple troubleshooting** with copy-paste solutions
-- Production remains secure (can still lock down to specific origins)
+### After (Fixed)
+- **Default allows port 19011** (video-annotation-viewer) and 18011 (server)
+- **Official client works out of the box**
+- **New `--dev` flag** for testing with custom/remote clients (allows all origins)
+- Production remains secure (just 2 specific ports by default)
 
 ## ✅ What This Means for You
 
-### Zero Configuration Development
+### Official Client (video-annotation-viewer)
 
-Just start the server and your web app works:
+**Just works** - no configuration needed:
 
 ```bash
-# Start server
+# Terminal 1: Start VideoAnnotator server
 uv run videoannotator server
 
-# Your web client automatically works if running on:
-# - React:   http://localhost:3000 or 3001
-# - Vite:    http://localhost:5173 or 5174
-# - Vue CLI: http://localhost:8080 or 8081
-# - Angular: http://localhost:4200
-# - 127.0.0.1 variants of above ports
+# Terminal 2: Start video-annotation-viewer
+npm start  # Runs on localhost:19011 by default ✅
+
+# CORS just works - no configuration needed!
 ```
 
-**No environment variables needed!**
+The server logs will show:
+```
+[SECURITY] CORS: Allowing official client (port 19011) and server (port 18011)
+```
 
-### Testing with Remote Clients or Unusual Ports
+### Testing with Custom Ports or Remote Clients
 
-Use the new `--dev` flag:
+If you're developing a **custom client** or testing from a **remote machine/codespace**, use the `--dev` flag:
 
 ```bash
 # Allows ALL origins (*), disables auth - perfect for testing
@@ -68,56 +68,35 @@ uv run videoannotator server
 
 ## 🚀 Quick Start Examples
 
-### React Development (Create React App / Vite)
+### Standard Usage (Official Client)
 ```bash
 # Terminal 1: Start VideoAnnotator server
 uv run videoannotator server
 
-# Terminal 2: Start your React app
-npm start    # CRA default: localhost:3000 ✅
-# or
-npm run dev  # Vite default: localhost:5173 ✅
+# Terminal 2: Start video-annotation-viewer
+cd /path/to/video-annotation-viewer
+npm start  # Default: localhost:19011 ✅
 
-# CORS just works - no configuration needed!
+# CORS is automatically configured!
 ```
 
-### Vue Development
+### Custom Client Development
 ```bash
-# Terminal 1: Start VideoAnnotator server
+# If developing a custom client on a different port:
+export CORS_ORIGINS="http://localhost:YOUR_PORT"
 uv run videoannotator server
 
-# Terminal 2: Start your Vue app
-npm run serve  # Default: localhost:8080 ✅
-
-# CORS just works!
-```
-
-### Angular Development
-```bash
-# Terminal 1: Start VideoAnnotator server
-uv run videoannotator server
-
-# Terminal 2: Start your Angular app
-ng serve  # Default: localhost:4200 ✅
-
-# CORS just works!
-```
-
-### Testing from Remote Machine or Codespace
-```bash
-# Use dev mode to allow any origin
+# Or use dev mode to allow any origin:
 uv run videoannotator server --dev
-
-# Your remote client can now connect
 ```
 
 ## 🔍 Verification
 
-Check if your origin is allowed:
+Check if CORS is working:
 
 ```bash
-# Test CORS preflight request
-curl -H "Origin: http://localhost:5173" \
+# Test the official client port (19011)
+curl -H "Origin: http://localhost:19011" \
      -H "Access-Control-Request-Method: POST" \
      -X OPTIONS http://localhost:18011/api/v1/jobs
 
@@ -127,8 +106,7 @@ curl -H "Origin: http://localhost:5173" \
 
 Console logs show CORS configuration on startup:
 ```
-[SECURITY] CORS: 12 origins allowed (includes common dev ports: 3000, 5173, 8080, 4200, ...)
-[SECURITY] CORS debug - Full origins list: http://localhost:3000,http://localhost:3001,...
+[SECURITY] CORS: Allowing official client (port 19011) and server (port 18011)
 ```
 
 ## 📚 Updated Documentation
@@ -141,18 +119,18 @@ Console logs show CORS configuration on startup:
 
 ### Still Getting CORS Errors?
 
-1. **Check your client port**:
+1. **Verify video-annotation-viewer port**:
    ```bash
-   # Is your app running on one of these?
-   # 3000, 3001, 5173, 5174, 8080, 8081, 4200, 18011
+   # Check if running on default port 19011
+   # Look for "Local: http://localhost:19011" in npm start output
    ```
 
-2. **Try dev mode** (allows all origins):
+2. **Try dev mode** (allows all origins - for testing only):
    ```bash
    uv run videoannotator server --dev
    ```
 
-3. **Set custom origin**:
+3. **Set custom origin** (if using non-standard port):
    ```bash
    export CORS_ORIGINS="http://localhost:YOUR_PORT"
    uv run videoannotator server
@@ -160,7 +138,8 @@ Console logs show CORS configuration on startup:
 
 4. **Check browser console**:
    - Look for the exact origin being blocked
-   - Verify the server is running and accessible
+   - Verify the server is running on port 18011
+   - Verify the client is running on port 19011
 
 ### Common Pitfalls
 
@@ -171,10 +150,15 @@ Console logs show CORS configuration on startup:
 
 ## 💡 Best Practices
 
-### Development
-- Use default configuration (just works for common frameworks)
-- Use `--dev` flag for testing remote clients or unusual configurations
-- Check server logs to see active CORS configuration
+### Development (Official Client)
+- Use default configuration (automatically allows port 19011)
+- No environment variables needed
+- Check server logs to confirm CORS config
+
+### Development (Custom Client)
+- Set `CORS_ORIGINS` to your custom port
+- Or use `--dev` flag for maximum flexibility (disables auth)
+- Test CORS preflight with curl
 
 ### Staging
 - Set explicit `CORS_ORIGINS` for your staging domain
@@ -182,9 +166,9 @@ Console logs show CORS configuration on startup:
 - Test with realistic client origins
 
 ### Production
-- **Always** set specific `CORS_ORIGINS` (never use `*`)
+- **Default is secure**: Only ports 18011 and 19011 allowed
+- For deployed clients, set `CORS_ORIGINS` to your domain: `https://viewer.example.com`
 - Enable authentication (`AUTH_REQUIRED=true`, which is the default)
-- Use HTTPS origins: `https://app.example.com`
 - Monitor logs for blocked CORS requests
 
 ## 🔗 Related Changes

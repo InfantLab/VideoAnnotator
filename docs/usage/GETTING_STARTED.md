@@ -65,14 +65,14 @@ uv run videoannotator
 # Or explicitly start the server
 uv run videoannotator server --host 0.0.0.0 --port 18011
 
-# For web client development (allows all CORS origins)
+# For custom client development or testing (allows all CORS origins)
 uv run videoannotator server --dev
 
 # View interactive API documentation at http://localhost:18011/docs
 # Server includes integrated background job processing - no separate worker needed!
 ```
 
-**CORS Note**: Common development ports (3000, 5173, 8080, 4200, etc.) are automatically allowed. If your web client runs on a different port, use `--dev` mode or set `CORS_ORIGINS` environment variable.
+**CORS Note**: The official web client (video-annotation-viewer on port 19011) is automatically allowed. For custom clients, use `--dev` mode or set `CORS_ORIGINS` environment variable.
 
 ### 📹 Process Videos via CLI
 

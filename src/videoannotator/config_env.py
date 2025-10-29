@@ -100,27 +100,11 @@ STORAGE_RETENTION_DAYS = int(d) if (d := os.getenv("STORAGE_RETENTION_DAYS")) el
 AUTH_REQUIRED = get_bool_env("AUTH_REQUIRED", True)
 
 # CORS (Cross-Origin Resource Sharing) Configuration
-# Comma-separated list of allowed origins for browser-based clients
-# Default includes common local development ports to reduce friction
-# Note: The server runs on port 18011, but CORS origins are the CLIENT ports
-DEFAULT_CORS_ORIGINS = ",".join(
-    [
-        "http://localhost:3000",  # React default
-        "http://localhost:3001",  # Alternative React port
-        "http://localhost:5173",  # Vite default
-        "http://localhost:5174",  # Alternative Vite port
-        "http://localhost:8080",  # Vue CLI default
-        "http://localhost:8081",  # Alternative Vue port
-        "http://localhost:4200",  # Angular default
-        "http://localhost:18011",  # Server port (for testing/same-origin)
-        "http://127.0.0.1:3000",  # Localhost IP variants
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:8080",
-        "http://127.0.0.1:18011",
-    ]
-)
+# Default allows the official web client (video-annotation-viewer) and server's own port
+# Server runs on 18011, official client runs on 19011
+DEFAULT_CORS_ORIGINS = "http://localhost:18011,http://localhost:19011"
 
-CORS_ORIGINS = get_str_env("CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
+CORS_ORIGINS: str = get_str_env("CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
 
 # Path to token storage directory
 TOKEN_DIR = Path(get_str_env("TOKEN_DIR", "./tokens"))
@@ -138,7 +122,6 @@ API_HOST = get_str_env("API_HOST", "0.0.0.0")
 
 # Port to listen on
 API_PORT = get_int_env("API_PORT", 18011)
-
 
 # Enable CORS credentials support
 CORS_ALLOW_CREDENTIALS = get_bool_env("CORS_ALLOW_CREDENTIALS", True)
@@ -205,7 +188,7 @@ def print_config() -> None:
     print("\nAPI Server:")
     print(f"  API_HOST: {API_HOST}")
     print(f"  API_PORT: {API_PORT}")
-    print(f"  CORS_ORIGINS: {', '.join(CORS_ORIGINS)}")
+    print(f"  CORS_ORIGINS: {CORS_ORIGINS}")
     print("\nDatabase:")
     print(f"  DATABASE_URL: {DATABASE_URL}")
     print(f"  DB_POOL_SIZE: {DB_POOL_SIZE}")

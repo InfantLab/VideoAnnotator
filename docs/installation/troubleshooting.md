@@ -574,30 +574,26 @@ uvicorn.run("api.main:app", host="0.0.0.0", port=18011)
 - Fetch requests fail from web app
 - API works in Postman/curl but not in browser
 
-**Quick Solution - Use Development Mode**:
+**Quick Solution**:
 ```bash
-# Easiest: Start server in dev mode (allows all CORS origins)
-uv run videoannotator server --dev
+# Standard usage: Official client (port 19011) works automatically
+uv run videoannotator server
 
-# Or just start the server normally (common dev ports already allowed)
-uv run videoannotator
+# Custom client development: Use dev mode (allows all CORS origins)
+uv run videoannotator server --dev
 ```
 
 **What's Allowed by Default** (v1.3.0+):
-The server automatically allows these common development ports:
-- `http://localhost:3000` (React)
-- `http://localhost:5173` (Vite)
-- `http://localhost:8080` (Vue)
-- `http://localhost:4200` (Angular)
-- `http://localhost:18011` (Server port)
-- Plus `127.0.0.1` variants
+The server automatically allows:
+- `http://localhost:19011` (video-annotation-viewer - official client)
+- `http://localhost:18011` (server port - same-origin requests)
 
-**Custom Origins**:
-If your client runs on a different port:
+**Custom Client Ports**:
+If developing a custom client on a different port:
 
 ```bash
-# Option 1: Environment variable
-export CORS_ORIGINS="http://localhost:4000,http://localhost:5000"
+# Option 1: Set specific origin
+export CORS_ORIGINS="http://localhost:YOUR_PORT"
 uv run videoannotator server
 
 # Option 2: Allow all origins (development only)
@@ -607,7 +603,7 @@ uv run videoannotator server --dev
 **Production Configuration**:
 ```bash
 # Only allow your production domain
-export CORS_ORIGINS="https://app.example.com"
+export CORS_ORIGINS="https://viewer.example.com"
 uv run videoannotator server
 ```
 

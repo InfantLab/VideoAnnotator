@@ -6,29 +6,24 @@ Cross-Origin Resource Sharing (CORS) controls which web origins can access your 
 
 ### Default Configuration
 
-VideoAnnotator is secure and developer-friendly by default:
+VideoAnnotator is configured for the official client by default:
 
 ```bash
-# Default: 12 common development ports are allowed (3000, 5173, 8080, 4200, etc.)
-# No configuration needed for most local web development
+# Default: Allows official video-annotation-viewer (19011) + server (18011)
+# No configuration needed for standard usage
 uv run videoannotator server
 ```
 
 Console output will show:
 ```
-[SECURITY] CORS: 12 origins allowed (includes common dev ports: 3000, 5173, 8080, 4200, ...)
-[SECURITY] CORS debug - Full origins list: http://localhost:3000,http://localhost:3001,http://localhost:5173,...
+[SECURITY] CORS: Allowing official client (port 19011) and server (port 18011)
 ```
 
-The default origins include:
-- React (3000, 3001)
-- Vite (5173, 5174)
-- Vue CLI (8080, 8081)
-- Angular (4200)
-- Server port (18011)
-- 127.0.0.1 variants
+The default origins are:
+- **Port 19011**: video-annotation-viewer (official web client)
+- **Port 18011**: VideoAnnotator server (same-origin requests)
 
-**For testing with unusual ports or remote clients**, use development mode:
+**For custom clients or testing**, use development mode:
 ```bash
 uv run videoannotator server --dev
 # Allows ALL origins (*), disables authentication
@@ -37,17 +32,17 @@ uv run videoannotator server --dev
 ### Testing CORS
 
 ```bash
-# Allowed origin (default) - should succeed
-curl -H "Origin: http://localhost:3000" \
+# Test official client port (19011) - should succeed
+curl -H "Origin: http://localhost:19011" \
      -H "Access-Control-Request-Method: POST" \
      -X OPTIONS http://localhost:18011/api/v1/jobs
 
 # Response includes:
-# access-control-allow-origin: http://localhost:3000
+# access-control-allow-origin: http://localhost:19011
 # access-control-allow-methods: POST, GET, OPTIONS, ...
 
-# Another default allowed origin - should succeed
-curl -H "Origin: http://localhost:5173" \
+# Test server port (18011) - should succeed
+curl -H "Origin: http://localhost:18011" \
      -H "Access-Control-Request-Method: POST" \
      -X OPTIONS http://localhost:18011/api/v1/jobs
 
