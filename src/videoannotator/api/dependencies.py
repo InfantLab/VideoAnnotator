@@ -78,16 +78,20 @@ async def get_optional_user(
 
 
 def _validate_api_key_header(raw: str, db: Session) -> dict[str, Any] | None:
-    """Validate legacy API key headers that use the va_ prefix.
+    """Validate API key headers that use the va_ prefix.
+
+    Uses database storage for token validation (v1.3.0+ standard).
 
     Returns user dict if valid else None.
     """
     if not raw.startswith("va_"):
         return None
-    # Perform lookup using CRUD (legacy compatibility path)
+    
+    # Validate using database CRUD
     user = APIKeyCRUD.authenticate(db, raw)
     if not user:
         return None
+    
     return {
         "id": str(user.id),
         "username": user.username,

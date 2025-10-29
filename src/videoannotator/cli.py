@@ -1,5 +1,6 @@
 """VideoAnnotator CLI - Unified command-line interface."""
 
+import os
 from pathlib import Path
 
 import typer
@@ -61,13 +62,37 @@ def server(
     If you need to allow ALL origins (e.g., for testing with a remote client),
     use --dev mode or set CORS_ORIGINS="*" environment variable.
     """
+    # Check if port is already in use before starting
+    import socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind((host, port))
+        sock.close()
+    except OSError:
+        typer.echo("")
+        typer.echo(f"[ERROR] Port {port} is already in use", err=True)
+        typer.echo("")
+        typer.echo("To find the VideoAnnotator server process:", err=True)
+        typer.echo("  ps aux | grep videoannotator | grep -v grep", err=True)
+        typer.echo("")
+        typer.echo("To stop ALL VideoAnnotator processes:", err=True)
+        typer.echo("  pkill -f videoannotator", err=True)
+        typer.echo("")
+        typer.echo("To stop a specific process:", err=True)
+        typer.echo("  kill <PID>  # Use PID from ps command above", err=True)
+        typer.echo("")
+        typer.echo("Alternatively, start on a different port (18012-18020 are CORS-enabled):", err=True)
+        typer.echo("  uv run videoannotator server --port 18012", err=True)
+        typer.echo("")
+        raise typer.Exit(code=1)
+
     typer.echo(f"[START] Starting VideoAnnotator API server on http://{host}:{port}")
     typer.echo(f"[INFO] API documentation available at http://{host}:{port}/docs")
 
     # Configure development mode if requested
     if dev:
-        import os
-
+    
         os.environ["CORS_ORIGINS"] = "*"
         os.environ["VIDEOANNOTATOR_REQUIRE_AUTH"] = "false"
         typer.echo("")
@@ -88,6 +113,27 @@ def server(
             else 1,  # Reload doesn't work with multiple workers
             log_level="info",
         )
+    except OSError as e:
+        if e.errno == 98:  # Address already in use
+            typer.echo("")
+            typer.echo(f"[ERROR] Port {port} is already in use", err=True)
+            typer.echo("")
+            typer.echo("To find the process using this port:", err=True)
+            typer.echo(f"  lsof -i :{port}", err=True)
+            typer.echo("  OR", err=True)
+            typer.echo(f"  ss -tlnp | grep :{port}", err=True)
+            typer.echo("")
+            typer.echo("To stop the process:", err=True)
+            typer.echo(f"  pkill -f 'uvicorn.*videoannotator'  # Stop any VideoAnnotator server", err=True)
+            typer.echo("  OR", err=True)
+            typer.echo(f"  kill <PID>  # Replace <PID> with the process ID from lsof/ss", err=True)
+            typer.echo("")
+            typer.echo("Alternatively, start the server on a different port:", err=True)
+            typer.echo(f"  uv run videoannotator server --port <PORT>", err=True)
+            typer.echo("")
+        else:
+            typer.echo(f"[ERROR] Failed to start server: {e}", err=True)
+        raise typer.Exit(code=1)
     except Exception as e:
         typer.echo(f"[ERROR] Failed to start server: {e}", err=True)
         raise typer.Exit(code=1)
@@ -894,3 +940,118 @@ def validate_emotion(
         raise typer.Exit(code=1)
     if not quiet:
         typer.echo(f"[OK] Emotion file valid: {file}")
+
+
+@app.command("generate-token")
+def generate_token(
+    user: str = typer.Option(None, "--user", help="User email address"),
+    username: str = typer.Option(None, "--username", help="Username (defaults to email prefix)"),
+    key_name: str = typer.Option(None, "--key-name", help="Descriptive name for the key"),
+    expires_days: int = typer.Option(365, "--expires-days", help="Days until expiration (0 for never)"),
+    output_file: Path = typer.Option(None, "--output", "-o", help="Save token to JSON file"),
+):
+    """Generate a new API token for authentication (stored in database).
+    
+    Examples:
+        # Interactive mode (prompts for details)
+        uv run videoannotator generate-token
+        
+        # With parameters
+        uv run videoannotator generate-token --user john@example.com --username john
+        
+        # No expiration
+        uv run videoannotator generate-token --user john@example.com --expires-days 0
+    """
+    import json
+    from datetime import datetime
+    
+    from videoannotator.database.crud import APIKeyCRUD, UserCRUD
+    from videoannotator.database.database import SessionLocal
+    from videoannotator.utils.logging_config import setup_videoannotator_logging
+    
+    # Setup logging
+    setup_videoannotator_logging(log_level="INFO")
+    
+    # Get user information (interactive if not provided)
+    if not user:
+        user = typer.prompt("Enter user email")
+    
+    if not username:
+        default_username = user.split("@")[0]
+        username = typer.prompt(f"Enter username", default=default_username)
+    
+    if not key_name:
+        key_name = typer.prompt("Enter key name/description", default=f"{username}'s API key")
+    
+    # Handle expiration
+    expires_in_days_val = None if expires_days == 0 else expires_days
+    
+    # Generate token in database
+    db = SessionLocal()
+    try:
+        # Get or create user
+        db_user = UserCRUD.get_by_email(db, user)
+        if not db_user:
+            typer.echo(f"[INFO] Creating new user: {username} ({user})")
+            db_user = UserCRUD.create(db, email=user, username=username)
+        
+        # Create API key
+        api_key_obj, raw_key = APIKeyCRUD.create(
+            db,
+            user_id=str(db_user.id),
+            key_name=key_name,
+            expires_days=expires_in_days_val,  # type: ignore[arg-type]
+        )
+        
+        # Display results
+        typer.echo("")
+        typer.echo("=" * 80)
+        typer.echo("[SUCCESS] API Key Created Successfully!")
+        typer.echo("=" * 80)
+        typer.echo(f"Token:      {raw_key}")
+        typer.echo(f"User:       {username} ({user})")
+        typer.echo(f"Key Name:   {key_name}")
+        typer.echo(f"Key ID:     {api_key_obj.id}")
+        typer.echo(f"Created:    {api_key_obj.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        expires_at = api_key_obj.expires_at
+        if expires_at is not None:
+            typer.echo(f"Expires:    {expires_at.strftime('%Y-%m-%d %H:%M:%S')}")
+        else:
+            typer.echo("Expires:    Never")
+        
+        typer.echo("")
+        typer.echo("[IMPORTANT] Save this token securely - it cannot be recovered!")
+        typer.echo("=" * 80)
+        typer.echo("")
+        typer.echo("Usage:")
+        typer.echo(f'  export API_KEY="{raw_key}"')
+        typer.echo('  curl -H "Authorization: Bearer $API_KEY" http://localhost:18011/api/v1/jobs')
+        typer.echo("")
+        
+        # Save to file if requested
+        if output_file:
+            token_data = {
+                "token": raw_key,
+                "username": username,
+                "email": user,
+                "key_name": key_name,
+                "key_id": api_key_obj.id,
+                "created_at": api_key_obj.created_at.isoformat(),
+                "expires_at": expires_at.isoformat() if expires_at is not None else None,
+            }
+            
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_file, "w") as f:
+                json.dump(token_data, f, indent=2)
+            
+            typer.echo(f"[OK] Token saved to: {output_file}")
+            typer.echo("")
+        
+    except Exception as e:
+        typer.echo(f"[ERROR] Failed to generate token: {e}", err=True)
+        import traceback
+        typer.echo(traceback.format_exc(), err=True)
+        raise typer.Exit(code=1)
+    finally:
+        db.close()

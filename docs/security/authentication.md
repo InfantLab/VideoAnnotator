@@ -24,7 +24,7 @@ To disable authentication (development only):
   export AUTH_REQUIRED=false
 
 To generate additional keys:
-  python -m scripts.manage_tokens create
+  uv run videoannotator generate-token --user email@example.com
 ================================================================================
 ```
 
@@ -87,14 +87,23 @@ job_id = response.json()["job_id"]
 
 ### Retrieving Lost Keys
 
-If you lose your API key, you can retrieve it from the token manager:
+If you lose your API key, you need to generate a new one:
 
 ```bash
-# List all active API keys
-uv run python -m scripts.manage_tokens list
+# Generate a new token (interactive mode)
+uv run videoannotator generate-token
 
-# Output shows key IDs and metadata (NOT the full key)
-# To get the actual key, you'll need to regenerate
+# Generate with parameters
+uv run videoannotator generate-token \
+  --user john@example.com \
+  --username john \
+  --scopes read,write,admin \
+  --expires-days 365
+
+# Save to file for scripting
+uv run videoannotator generate-token \
+  --user service@example.com \
+  --output /path/to/token.json
 ```
 
 **Note**: For security, the full key is never stored - only a hash. If lost, you must generate a new key.
