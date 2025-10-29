@@ -102,6 +102,7 @@ class JobResultsResponse(BaseModel):
     created_at: datetime | None = None
     completed_at: datetime | None = None
     result_path: str | None = None
+    error_message: str | None = None  # Job-level error message for failed jobs
 
 
 @router.post(
@@ -883,6 +884,7 @@ async def get_job_results(
             created_at=job.created_at,
             completed_at=job.completed_at,
             result_path=getattr(job, "result_path", None),
+            error_message=job.error_message,  # Include job-level error for failed jobs
         )
 
     except (JobNotFoundException, APIError):
