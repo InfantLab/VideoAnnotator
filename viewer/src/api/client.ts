@@ -62,7 +62,8 @@ class APIClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    timeoutMs: number = 10000 // 10 second default timeout (shorter for better UX)
   ): Promise<T> {
     // Always get fresh values from localStorage in case they were updated
     this.baseURL = getApiBaseUrl().replace(/\/$/, '');
@@ -79,16 +80,22 @@ class APIClient {
       defaultHeaders['Content-Type'] = 'application/json';
     }
 
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     const config: RequestInit = {
       ...options,
       headers: {
         ...defaultHeaders,
         ...options.headers,
       },
+      signal: controller.signal,
     };
 
     try {
       const response = await fetch(url, config);
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
@@ -115,8 +122,18 @@ class APIClient {
         return {} as T;
       }
     } catch (error) {
+      clearTimeout(timeoutId);
+      
       if (error instanceof APIError) {
         throw error;
+      }
+
+      // Handle abort/timeout
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new APIError(
+          `Request timeout: Server did not respond within ${timeoutMs / 1000} seconds. The server may be offline or unreachable.`,
+          0
+        );
       }
 
       // Network or other errors

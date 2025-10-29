@@ -68,14 +68,12 @@ export function ServerCapabilitiesProvider({
             setError(error);
 
             // Keep stale capabilities on refresh error (better UX than clearing)
-            // Only set capabilities to null on initial load failure
-            if (!capabilities) {
-                setCapabilities(null);
-            }
+            // setCapabilities to null only on initial load failure
+            setCapabilities((prev) => prev || null);
         } finally {
             setIsLoading(false);
         }
-    }, [capabilities]);
+    }, []); // Remove capabilities from dependencies to prevent infinite loop
 
     // Initial fetch on mount
     useEffect(() => {

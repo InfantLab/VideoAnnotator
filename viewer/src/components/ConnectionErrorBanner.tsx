@@ -26,6 +26,8 @@ function isCorsOrNetworkError(error: Error): boolean {
         message.includes('network') ||
         message.includes('failed to fetch') ||
         message.includes('networkerror') ||
+        message.includes('timeout') ||
+        message.includes('timed out') ||
         message.includes('access-control-allow-origin')
     );
 }
@@ -52,64 +54,49 @@ export function ConnectionErrorBanner({
                             <code className="bg-destructive/20 px-1 py-0.5 rounded text-xs">
                                 {apiUrl}
                             </code>{' '}
-                            is not responding or CORS is not configured correctly.
+                            {error.message.toLowerCase().includes('access-control-allow-origin') 
+                                ? 'is blocking requests from this web app (CORS issue).'
+                                : 'is not responding or cannot be reached.'}
                         </p>
+
+
 
                         <div className="bg-destructive/10 rounded-md p-3 text-sm space-y-2">
                             <p className="font-semibold">Troubleshooting Steps:</p>
                             <ol className="list-decimal list-inside space-y-2 ml-2">
                                 <li>
-                                    <strong>Check the server is running</strong>
+                                    <strong>Stop your current server</strong>
                                     <div className="ml-6 mt-1 text-xs text-muted-foreground">
-                                        Open a terminal and verify VideoAnnotator is started. You should see output like "Server running on port 18011"
+                                        If VideoAnnotator is already running, stop it (Ctrl+C in the terminal)
                                     </div>
                                 </li>
                                 <li>
-                                    <strong>Verify the server URL is correct</strong>
-                                    <div className="ml-6 mt-1 text-xs text-muted-foreground">
-                                        Click "Check API Settings" below to confirm the URL matches where your server is running
+                                    <strong>Start the VideoAnnotator server</strong>
+                                    <div className="ml-6 mt-1 space-y-2">
+                                        <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-600 dark:border-green-500 rounded p-2">
+                                            <p className="text-green-900 dark:text-green-200 mb-1 font-semibold">✅ Simple command (auto-configured for port 19011)</p>
+                                            <code className="bg-green-100 dark:bg-green-900 px-2 py-1 rounded text-xs block font-mono">
+                                                uv run videoannotator
+                                            </code>
+                                            <p className="text-green-800 dark:text-green-300 text-xs mt-1.5">
+                                                Server automatically allows requests from port 19011 (this web app)
+                                            </p>
+                                        </div>
                                     </div>
                                 </li>
                                 <li>
-                                    <strong>Test the server in your browser</strong>
+                                    <strong>Verify connection works</strong>
                                     <div className="ml-6 mt-1 text-xs text-muted-foreground">
-                                        Visit{' '}
-                                        <a
-                                            href={`${apiUrl}/health`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="underline hover:text-destructive-foreground"
-                                        >
-                                            {apiUrl}/health
-                                        </a>
-                                        {' '}in a new tab. You should see a JSON response with server status.
-                                    </div>
-                                </li>
-                                <li>
-                                    <strong>Restart the server (if needed)</strong>
-                                    <div className="ml-6 mt-1 text-xs">
-                                        <p className="text-muted-foreground mb-1">For local development, the server now supports common ports automatically:</p>
-                                        <code className="bg-destructive/20 px-2 py-1 rounded text-xs block mb-2">
-                                            uv run videoannotator server
-                                        </code>
-                                        <p className="text-muted-foreground mb-1 italic">
-                                            This works automatically for React, Vite, Vue, Angular on standard ports (3000, 5173, 8080, 4200, etc.)
-                                        </p>
-                                        <p className="text-muted-foreground mb-1 mt-2">
-                                            <strong>Testing or using a custom port?</strong> Use dev mode:
-                                        </p>
-                                        <code className="bg-destructive/20 px-2 py-1 rounded text-xs block">
-                                            uv run videoannotator server --dev
-                                        </code>
-                                        <p className="text-muted-foreground mt-1 italic text-xs">
-                                            Dev mode allows all origins - perfect for testing!
-                                        </p>
+                                        After restarting the server, click "Retry Connection" below
                                     </div>
                                 </li>
                             </ol>
                         </div>
 
                         <div className="pt-2 space-y-2">
+                            <p className="text-xs text-muted-foreground">
+                                <strong>Note:</strong> As of VideoAnnotator v1.3.0+, port 19011 (this web app) is automatically whitelisted. Just start the server with <code className="bg-muted px-1 rounded">uv run videoannotator</code>.
+                            </p>
                             <p className="text-xs text-muted-foreground">
                                 <strong>Still having trouble?</strong> Check the browser console (press F12, click Console tab) for more detailed error information.
                             </p>
