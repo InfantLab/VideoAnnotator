@@ -22,7 +22,43 @@ const getApiBaseUrl = () => {
 const getApiToken = () => {
   return localStorage.getItem('videoannotator_api_token') ||
     import.meta.env.VITE_API_TOKEN ||
-    'dev-token';
+    ''; // Empty string = no token (anonymous)
+};
+
+/**
+ * Validates if a token looks like a valid API key or JWT token
+ * Valid formats:
+ * - API Key: starts with 'va_' (e.g., 'va_xxxxxxxxxxxx')
+ * - JWT: starts with 'eyJ' (e.g., 'eyJhbGciOiJIUzI1NiIs...')
+ * - Other tokens: At least 8 characters and contains only valid characters
+ * 
+ * Rejects obviously invalid tokens like 'dev-token', 'Bearer xyz', empty strings
+ */
+const isValidToken = (token: string): boolean => {
+  if (!token || token.trim() === '') return false;
+
+  const trimmed = token.trim();
+
+  // Check for API key format (starts with 'va_')
+  if (trimmed.startsWith('va_')) return true;
+
+  // Check for JWT format (starts with 'eyJ')
+  if (trimmed.startsWith('eyJ')) return true;
+
+  // Reject known invalid patterns
+  const invalidPatterns = ['dev-token', 'test-token', 'Bearer ', 'your-api-token'];
+  if (invalidPatterns.some(pattern => trimmed.toLowerCase().includes(pattern.toLowerCase()))) {
+    return false;
+  }
+
+  // Accept any token that's at least 8 characters and looks like a valid token
+  // (alphanumeric, dashes, underscores, dots)
+  if (trimmed.length >= 8 && /^[a-zA-Z0-9_\-\.]+$/.test(trimmed)) {
+    return true;
+  }
+
+  // Reject everything else
+  return false;
 };
 
 // Type definitions from OpenAPI schema
@@ -71,9 +107,22 @@ class APIClient {
 
     const url = `${this.baseURL}${endpoint}`;
 
-    const defaultHeaders: Record<string, string> = {
-      'Authorization': `Bearer ${this.token}`,
-    };
+    const defaultHeaders: Record<string, string> = {};
+
+    // Only add Authorization header if we have a valid token
+    // This prevents JWT validation warnings on the server
+    if (this.token && isValidToken(this.token)) {
+      defaultHeaders['Authorization'] = `Bearer ${this.token}`;
+      console.log('✅ Using valid token for request:', endpoint);
+    } else if (this.token) {
+      console.warn('⚠️ Token exists but failed validation:', {
+        tokenPreview: this.token.substring(0, 10) + '...',
+        tokenLength: this.token.length,
+        startsWithVa: this.token.startsWith('va_'),
+        startsWithEyJ: this.token.startsWith('eyJ')
+      });
+    }
+    // If no valid token, make anonymous request (no Authorization header)
 
     // Only add Content-Type for non-FormData requests
     if (!(options.body instanceof FormData)) {
@@ -123,7 +172,7 @@ class APIClient {
       }
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof APIError) {
         throw error;
       }
@@ -470,54 +519,54 @@ class APIClient {
     error?: string;
   }> {
     try {
-      // Try health check first
-      await this.healthCheck();
+      // Refresh token from localStorage
+      this.token = getApiToken();
 
-      // Try to get detailed token info if available (optional debug endpoint)
+      // Build headers for direct fetch calls
+      const headers: Record<string, string> = {};
+      if (this.token && isValidToken(this.token)) {
+        headers['Authorization'] = `Bearer ${this.token}`;
+      }
+
+      // Test with jobs endpoint FIRST - this actually requires proper auth
+      const jobsResponse = await fetch(`${this.baseURL}/api/v1/jobs?per_page=1`, { headers });
+
+      // If jobs endpoint returns 401, auth is failing
+      if (jobsResponse.status === 401) {
+        return { isValid: false, error: 'Authentication required or invalid token' };
+      }
+
+      // If jobs endpoint fails for other reasons (500, etc), still check health
+      if (!jobsResponse.ok && jobsResponse.status !== 404) {
+        try {
+          await this.healthCheck();
+          // Health works but jobs doesn't - might be server issue
+          return { isValid: false, error: `Server error: ${jobsResponse.status}` };
+        } catch {
+          // Both failed - server unreachable
+          return { isValid: false, error: 'Cannot connect to server' };
+        }
+      }
+
+      // Jobs endpoint worked! Try to get detailed token info
       try {
-        const response = await fetch(`${this.baseURL}/api/v1/debug/token-info`, {
-          headers: { 'Authorization': `Bearer ${this.token}` }
-        });
+        const response = await fetch(`${this.baseURL}/api/v1/debug/token-info`, { headers });
 
         if (response.ok) {
           const data = await response.json();
           return {
             isValid: true,
-            user: data.token?.user_id,
+            user: data.token?.user_id || 'Anonymous',
             permissions: data.token?.permissions,
             expiresAt: data.token?.expires_at
           };
         }
-        // If 401/404, silently fall through to alternative validation
       } catch {
-        // Debug endpoint might not exist or require special permissions - this is normal
+        // Debug endpoint might not exist - this is normal
       }
 
-      // Fallback: try multiple authenticated endpoints
-      const candidateEndpoints = [
-        '/api/v1/pipelines',     // This endpoint works according to test results
-        '/api/v1/jobs?per_page=1' // Original fallback (might return 500)
-      ];
-
-      for (const endpoint of candidateEndpoints) {
-        try {
-          const response = await fetch(`${this.baseURL}${endpoint}`, {
-            headers: { 'Authorization': `Bearer ${this.token}` }
-          });
-
-          if (response.ok || response.status === 404) {
-            return { isValid: true };
-          } else if (response.status === 401) {
-            return { isValid: false, error: 'Invalid or expired token' };
-          }
-          // Continue to next endpoint if we get 500 or other errors
-        } catch {
-          // Continue to next endpoint on network errors
-        }
-      }
-
-      // If all endpoints failed, assume invalid token
-      return { isValid: false, error: 'Could not verify token with any endpoint' };
+      // Jobs worked, just no debug info available
+      return { isValid: true, user: this.token ? 'Authenticated' : 'Anonymous' };
     } catch (error) {
       return {
         isValid: false,

@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Loader2, RefreshCw, Eye, Play } from "lucide-react";
+import { Loader2, RefreshCw, Eye, Play, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   Table,
@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 import vavIcon from "@/assets/v-a-v.icon.png";
 import { JobCancelButton } from "@/components/JobCancelButton";
 import { canCancelJob } from "@/hooks/useJobCancellation";
@@ -21,9 +22,51 @@ import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { parseApiError } from "@/lib/errorHandling";
 import type { JobStatus } from "@/types/api";
 
+/**
+ * Enhances authentication error messages with actionable guidance
+ * CANONICAL error messages - used consistently across the app
+ */
+function enhanceAuthError(error: any) {
+  const errorMessage = error?.message || String(error);
+  const currentToken = localStorage.getItem('videoannotator_api_token') || '';
+
+  // Check if it's an authentication error
+  if (
+    errorMessage.includes('API key required') ||
+    errorMessage.includes('AUTH_REQUIRED') ||
+    errorMessage.includes('401') ||
+    errorMessage.includes('Unauthorized') ||
+    errorMessage.includes('authentication')
+  ) {
+    // Check if they have the placeholder token
+    const isPlaceholderToken = currentToken === 'dev-token' || currentToken === 'test-token';
+
+    if (isPlaceholderToken) {
+      return {
+        message: 'Authentication Required',
+        hint: 'You have a placeholder token ("dev-token") that doesn\'t work. Go to Settings and clear the API Token field to connect anonymously.',
+        fieldErrors: [],
+        code: error?.code,
+        requestId: error?.requestId
+      };
+    }
+
+    return {
+      message: 'Authentication Required',
+      hint: 'The server requires authentication. Go to Settings to configure your API token.',
+      fieldErrors: [],
+      code: error?.code,
+      requestId: error?.requestId
+    };
+  }
+
+  return parseApiError(error);
+}
+
 const CreateJobs = () => {
   const [page, setPage] = useState(1);
   const perPage = 10;
+  const { toast } = useToast();
 
   const {
     data: jobsData,
@@ -32,9 +75,57 @@ const CreateJobs = () => {
     refetch,
   } = useQuery({
     queryKey: ["jobs", page],
-    queryFn: () => apiClient.getJobs(page, perPage),
+    queryFn: async () => {
+      console.log('🔍 Fetching jobs...', { page, perPage });
+      const response = await apiClient.getJobs(page, perPage);
+      console.log('📦 Jobs API response:', response);
+
+      // Validate response structure
+      if (!response) {
+        console.error('❌ Jobs API returned null/undefined');
+        throw new Error('Jobs API returned empty response');
+      }
+
+      if (!Array.isArray(response.jobs)) {
+        console.error('❌ Jobs API response missing jobs array:', response);
+        throw new Error('Invalid jobs API response format');
+      }
+
+      console.log(`✅ Found ${response.jobs.length} jobs (total: ${response.total})`);
+      return response;
+    },
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
+
+  // Show error toast when error occurs
+  useEffect(() => {
+    if (error) {
+      const enhancedError = enhanceAuthError(error);
+      const errorText = `${enhancedError.message}\n\n${enhancedError.hint}`;
+      
+      toast({
+        title: enhancedError.message,
+        description: enhancedError.hint,
+        variant: 'destructive',
+        duration: 10000, // Show for 10 seconds (longer than default)
+        action: (
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(errorText);
+              toast({
+                title: "Copied!",
+                description: "Error message copied to clipboard",
+                duration: 2000,
+              });
+            }}
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-muted/40 bg-transparent px-3 text-sm font-medium hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            Copy
+          </button>
+        ),
+      });
+    }
+  }, [error, toast]);
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
@@ -69,15 +160,54 @@ const CreateJobs = () => {
   };
 
   if (error) {
+    const enhancedError = enhanceAuthError(error);
+    const isAuthError = enhancedError.message === 'Authentication Required';
+
     return (
-      <div className="py-8">
-        <ErrorDisplay error={parseApiError(error)} />
-        <div className="mt-4 text-center">
+      <div className="py-8 space-y-4">
+        <ErrorDisplay error={enhancedError} />
+        <div className="flex gap-2 justify-center">
+          {isAuthError && (
+            <Link to="/create/settings">
+              <Button variant="default">
+                <Settings className="h-4 w-4 mr-2" />
+                Configure API Token
+              </Button>
+            </Link>
+          )}
           <Button onClick={() => refetch()} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Retry
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  // Check for data integrity issues
+  const hasDataIssue = jobsData && !Array.isArray(jobsData.jobs);
+
+  if (hasDataIssue) {
+    return (
+      <div className="py-8">
+        <Card className="p-6 border-yellow-500">
+          <h3 className="text-lg font-semibold text-yellow-700 mb-2">
+            ⚠️ Unexpected API Response
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            The jobs API returned data in an unexpected format. This might indicate a server issue.
+          </p>
+          <details className="text-xs bg-gray-50 p-3 rounded">
+            <summary className="cursor-pointer font-semibold">View raw response</summary>
+            <pre className="mt-2 overflow-auto">{JSON.stringify(jobsData, null, 2)}</pre>
+          </details>
+          <div className="mt-4">
+            <Button onClick={() => refetch()} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
+          </div>
+        </Card>
       </div>
     );
   }
@@ -130,10 +260,22 @@ const CreateJobs = () => {
               {jobsData?.jobs?.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
-                    <p className="text-gray-500 mb-4">No jobs found</p>
-                    <Link to="/create/new">
-                      <Button>Create your first job</Button>
-                    </Link>
+                    <p className="text-gray-500 mb-4">
+                      {jobsData?.total > 0
+                        ? `No jobs on this page (${jobsData.total} total jobs found)`
+                        : "No jobs found"}
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                      {jobsData?.total > 0 && page > 1 ? (
+                        <Button onClick={() => setPage(1)} variant="outline">
+                          Go to First Page
+                        </Button>
+                      ) : (
+                        <Link to="/create/new">
+                          <Button>Create your first job</Button>
+                        </Link>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (

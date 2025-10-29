@@ -31,77 +31,126 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
   const [token, setToken] = useState(
     localStorage.getItem('videoannotator_api_token') ||
     import.meta.env.VITE_API_TOKEN ||
-    'dev-token'
+    '' // Empty = anonymous access
   );
   const [showToken, setShowToken] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [tokenStatus, setTokenStatus] = useState<TokenStatus | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [serverAuthRequired, setServerAuthRequired] = useState<boolean | null>(null);
 
   // Check token validity
   const validateToken = async (testUrl?: string, testToken?: string) => {
     const urlToTest = testUrl || apiUrl;
-    const tokenToTest = testToken || token;
+    const tokenToTest = testToken !== undefined ? testToken : token;
 
+    setIsValidating(true);
+
+    // Empty token = anonymous access
     if (!tokenToTest.trim()) {
-      setTokenStatus({ isValid: false, error: 'Token is required' });
+      try {
+        // Test anonymous access
+        const response = await fetch(`${urlToTest}/api/v1/jobs?per_page=1`);
+        if (response.ok) {
+          setTokenStatus({ isValid: true, user: 'Anonymous' });
+        } else if (response.status === 401) {
+          // Server requires auth - this is expected, not an error in the config
+          setTokenStatus({ 
+            isValid: false, 
+            error: 'Server requires authentication. You need to provide an API token to connect.' 
+          });
+        } else {
+          setTokenStatus({ isValid: false, error: `Server error: ${response.status}` });
+        }
+      } catch (error) {
+        setTokenStatus({ isValid: false, error: 'Cannot connect to server' });
+      } finally {
+        setIsValidating(false);
+      }
       return;
     }
 
-    setIsValidating(true);
     try {
-      // Create a temporary client for testing
-      const { APIClient } = await import('@/api/client');
-      const testClient = new APIClient(urlToTest, tokenToTest);
+      // First, check server's auth requirements
+      const healthResponse = await fetch(`${urlToTest}/api/v1/system/health`);
+      const healthData = await healthResponse.json();
+      const authRequired = healthData.auth_required ?? true; // Default to true if not present
+      setServerAuthRequired(authRequired); // Store for use in UI
 
-      // Test basic connectivity
-      await testClient.healthCheck();
+      // Check if this is a known placeholder token
+      const isPlaceholderToken = ['dev-token', 'test-token', 'your-api-token'].includes(tokenToTest.toLowerCase());
 
-      // Try to get token info if debug endpoint is available (optional, may not be enabled)
+      // If server doesn't require auth and user has a placeholder token, tell them to clear it
+      if (!authRequired && isPlaceholderToken) {
+        setTokenStatus({
+          isValid: false,
+          error: 'This is a placeholder, not a real token. Clear this field - the server does not require authentication.'
+        });
+        setIsValidating(false);
+        return;
+      }
+
+      // Test with actual jobs endpoint 
+      const jobsResponse = await fetch(`${urlToTest}/api/v1/jobs?per_page=1`, {
+        headers: { 'Authorization': `Bearer ${tokenToTest}` }
+      });
+
+      // Server rejected this token
+      if (jobsResponse.status === 401) {
+        if (isPlaceholderToken) {
+          setTokenStatus({ 
+            isValid: false, 
+            error: authRequired 
+              ? 'This is a placeholder, not a real token. The server requires authentication - you need a real token.'
+              : 'This is a placeholder, not a real token. Clear this field to connect without authentication.'
+          });
+        } else {
+          setTokenStatus({ 
+            isValid: false, 
+            error: 'Server rejected this token. It may be expired or invalid.' 
+          });
+        }
+        setIsValidating(false);
+        return;
+      }
+
+      if (!jobsResponse.ok && jobsResponse.status !== 404) {
+        setTokenStatus({ isValid: false, error: `Server error: ${jobsResponse.status}` });
+        setIsValidating(false);
+        return;
+      }
+
+      // Server accepted a placeholder token when auth is required - shouldn't happen but handle it
+      if (isPlaceholderToken && authRequired) {
+        setTokenStatus({
+          isValid: false,
+          error: 'This is a placeholder, not a real token. Clear this field or use a real token.'
+        });
+        setIsValidating(false);
+        return;
+      }
+
+      // Jobs endpoint accepted the token, now try to get token details
       try {
-        const response = await fetch(`${urlToTest}/api/v1/debug/token-info`, {
+        const debugResponse = await fetch(`${urlToTest}/api/v1/debug/token-info`, {
           headers: { 'Authorization': `Bearer ${tokenToTest}` }
         });
 
-        if (response.ok) {
-          const data = await response.json();
+        if (debugResponse.ok) {
+          const data = await debugResponse.json();
           setTokenStatus({
             isValid: true,
             user: data.token?.user_id || 'Unknown',
             permissions: data.token?.permissions || [],
             expiresAt: data.token?.expires_at
           });
-        } else if (response.status === 401 || response.status === 404) {
-          // Debug endpoint not available or requires special permissions - this is normal
-          // Fall through to basic validation
-          const jobsResponse = await fetch(`${urlToTest}/api/v1/jobs?per_page=1`, {
-            headers: { 'Authorization': `Bearer ${tokenToTest}` }
-          });
-
-          if (jobsResponse.ok || jobsResponse.status === 404) {
-            setTokenStatus({ isValid: true });
-          } else if (jobsResponse.status === 401) {
-            setTokenStatus({ isValid: false, error: 'Invalid or expired token' });
-          } else {
-            setTokenStatus({ isValid: false, error: `Unexpected response: ${jobsResponse.status}` });
-          }
         } else {
-          // Token works but no debug info available
-          setTokenStatus({ isValid: true });
+          // Debug endpoint not available, but jobs endpoint worked
+          setTokenStatus({ isValid: true, user: 'Authenticated' });
         }
       } catch {
-        // Fallback: try a simple authenticated request
-        const response = await fetch(`${urlToTest}/api/v1/jobs?per_page=1`, {
-          headers: { 'Authorization': `Bearer ${tokenToTest}` }
-        });
-
-        if (response.ok || response.status === 404) {
-          setTokenStatus({ isValid: true });
-        } else if (response.status === 401) {
-          setTokenStatus({ isValid: false, error: 'Invalid or expired token' });
-        } else {
-          setTokenStatus({ isValid: false, error: `Unexpected response: ${response.status}` });
-        }
+        // Debug endpoint failed, but jobs endpoint worked
+        setTokenStatus({ isValid: true, user: 'Authenticated' });
       }
     } catch (error) {
       setTokenStatus({
@@ -123,39 +172,60 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
     (apiClient as any).baseURL = apiUrl.replace(/\/$/, '');
     (apiClient as any).token = token;
 
+    // Show success message
+    const tokenMode = token.trim() ? 'with API token' : 'in anonymous mode';
+    console.log(`✅ Configuration saved: URL=${apiUrl}, Token=${token ? '***' : '(empty)'}`);
+    
+    // Note: The validation error (if any) is separate from saving the config
+    // The config is saved successfully even if the server requires auth
+
     onTokenConfigured?.();
+    
+    // Force a page refresh to ensure all components pick up the new token
+    // This is necessary because some queries might be cached
+    console.log('🔄 Reloading page to apply new token configuration...');
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
-  // Load saved configuration on mount
+  // Load saved configuration on mount and auto-validate to get server status
   useEffect(() => {
     const savedUrl = localStorage.getItem('videoannotator_api_url');
-    const savedToken = localStorage.getItem('videoannotator_api_token');
+    const savedToken = localStorage.getItem('videoannotator_api_token') || '';
 
-    if (savedUrl || savedToken) {
-      if (savedUrl) setApiUrl(savedUrl);
-      if (savedToken) setToken(savedToken);
+    if (savedUrl) setApiUrl(savedUrl);
+    if (savedToken) setToken(savedToken);
 
-      // Auto-validate if we have both URL and token
-      if (savedUrl && savedToken) {
-        validateToken(savedUrl, savedToken);
-      }
-    }
+    // ALWAYS auto-validate on mount to get server's auth_required status
+    // This provides immediate feedback without requiring user to click "Test Connection"
+    const urlToValidate = savedUrl || apiUrl;
+    const tokenToValidate = savedToken;
+    
+    // Small delay to let the UI render first
+    setTimeout(() => {
+      validateToken(urlToValidate, tokenToValidate);
+    }, 100);
   }, []);
 
-  // Track changes
+  // Track changes and clear stale validation status
   useEffect(() => {
     const savedUrl = localStorage.getItem('videoannotator_api_url') || '';
     const savedToken = localStorage.getItem('videoannotator_api_token') || '';
 
-    setHasUnsavedChanges(
-      apiUrl !== savedUrl || token !== savedToken
-    );
+    const hasChanges = apiUrl !== savedUrl || token !== savedToken;
+    setHasUnsavedChanges(hasChanges);
+
+    // Clear validation status when token/url changes to avoid showing stale results
+    if (hasChanges) {
+      setTokenStatus(null);
+    }
   }, [apiUrl, token]);
 
   const resetToDefaults = () => {
     // Reset to environment variable defaults
     const defaultUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:18011';
-    const defaultToken = import.meta.env.VITE_API_TOKEN || 'dev-token';
+    const defaultToken = import.meta.env.VITE_API_TOKEN || ''; // Empty = anonymous
 
     // Save defaults to localStorage immediately
     localStorage.setItem('videoannotator_api_url', defaultUrl);
@@ -248,14 +318,25 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
 
           {/* Token Configuration */}
           <div className="space-y-2">
-            <Label htmlFor="api-token">API Token</Label>
+            <Label htmlFor="api-token">
+              API Token
+              {serverAuthRequired === false && <span className="text-muted-foreground"> (Optional)</span>}
+              {serverAuthRequired === true && <span className="text-destructive"> (Required)</span>}
+              {serverAuthRequired === null && <span className="text-muted-foreground"> (Click Test Connection to check)</span>}
+            </Label>
             <div className="relative">
               <Input
                 id="api-token"
                 type={showToken ? "text" : "password"}
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                placeholder="your-api-token"
+                placeholder={
+                  serverAuthRequired === false 
+                    ? "Leave empty for anonymous access" 
+                    : serverAuthRequired === true
+                    ? "va_xxxxxxxxxxxx (required by server)"
+                    : "va_xxxxxxxxxxxx or leave empty"
+                }
                 className="pr-10"
               />
               <Button
@@ -268,8 +349,113 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                 {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Your VideoAnnotator API authentication token. Keep this secure and never share it.
+            {token === 'dev-token' && (
+              <Alert className="mt-2 bg-yellow-50 border-yellow-200">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertTitle className="text-yellow-900">Invalid Token Configuration</AlertTitle>
+                <AlertDescription className="text-yellow-800 space-y-3">
+                  <p>"dev-token" is a placeholder. You need to choose how to authenticate:</p>
+
+                  <div className="space-y-3">
+                    {/* Option 1: Anonymous */}
+                    <div className="bg-white rounded-md p-3 border border-yellow-300">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1">
+                          <p className="font-semibold text-yellow-900 mb-1">Option 1: No Authentication (Local Testing)</p>
+                          <p className="text-xs mb-2">
+                            {serverAuthRequired === null && "Click 'Test Connection' to check if your server requires authentication."}
+                            {serverAuthRequired === false && "✅ Your server does not require authentication. Clear this field to connect."}
+                            {serverAuthRequired === true && "❌ Your server requires authentication. Use Option 2 instead."}
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setToken('');
+                              setHasUnsavedChanges(true);
+                            }}
+                            className="text-xs"
+                            disabled={serverAuthRequired === true}
+                          >
+                            Clear Token Field
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Option 2: Real Token */}
+                    <div className="bg-white rounded-md p-3 border border-yellow-300">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1">
+                          <p className="font-semibold text-yellow-900 mb-1">Option 2: Use API Token (Production/Secure)</p>
+                          <p className="text-xs mb-2">Get a token from your VideoAnnotator server. Tokens start with "va_" or are JWT format (starts with "eyJ").</p>
+                          <details className="text-xs">
+                            <summary className="cursor-pointer text-yellow-700 hover:text-yellow-900 font-medium">
+                              How to get a token
+                            </summary>
+                            <div className="mt-2 space-y-1 text-yellow-800 bg-yellow-50 p-2 rounded">
+                              <p>• <strong>From server admin:</strong> Ask your VideoAnnotator admin for an API key</p>
+                              <p>• <strong>Generate yourself:</strong> If you run the server, use: <code className="bg-yellow-100 px-1 rounded">uv run videoannotator generate-token</code></p>
+                              <p>• <strong>Token format:</strong> Should look like <code className="bg-yellow-100 px-1 rounded">va_abc123xyz...</code></p>
+                            </div>
+                          </details>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+            {!token && serverAuthRequired === false && (
+              <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                <p className="text-sm text-green-800">
+                  ✅ <strong>No token set</strong> - You'll connect anonymously (your server doesn't require authentication)
+                </p>
+              </div>
+            )}
+            {!token && serverAuthRequired === true && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <div className="space-y-3">
+                  <p className="text-sm text-yellow-800 font-medium">
+                    ⚠️ <strong>No token set</strong> - Your server requires authentication.
+                  </p>
+                  <div className="bg-white/60 border border-yellow-300 rounded p-2">
+                    <p className="text-xs font-semibold text-yellow-900 mb-2">How to get an API token:</p>
+                    <div className="space-y-1 text-xs text-yellow-800">
+                      <p>• <strong>From server admin:</strong> Ask your VideoAnnotator admin for an API key</p>
+                      <p>• <strong>Generate yourself:</strong> If you run the server, use: <code className="bg-yellow-100 px-1 rounded">uv run videoannotator generate-token</code></p>
+                      <p>• <strong>Token format:</strong> Should look like <code className="bg-yellow-100 px-1 rounded">va_abc123xyz...</code></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {!token && serverAuthRequired === null && (
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                <p className="text-sm text-blue-800">
+                  💡 <strong>No token set</strong> - Click "Test Connection" to check if your server requires authentication.
+                </p>
+              </div>
+            )}
+            {token.trim() && tokenStatus && !tokenStatus.isValid && serverAuthRequired === true && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-2">
+                <div className="space-y-3">
+                  <p className="text-sm text-yellow-800 font-medium">
+                    💡 <strong>Token invalid or authentication failed</strong>
+                  </p>
+                  <div className="bg-white/60 border border-yellow-300 rounded p-2">
+                    <p className="text-xs font-semibold text-yellow-900 mb-2">How to get a valid API token:</p>
+                    <div className="space-y-1 text-xs text-yellow-800">
+                      <p>• <strong>From server admin:</strong> Ask your VideoAnnotator admin for an API key</p>
+                      <p>• <strong>Generate yourself:</strong> If you run the server, use: <code className="bg-yellow-100 px-1 rounded">uv run videoannotator generate-token</code></p>
+                      <p>• <strong>Token format:</strong> Should look like <code className="bg-yellow-100 px-1 rounded">va_abc123xyz...</code></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              💡 Click "Test Connection" to verify your configuration
             </p>
           </div>
 
@@ -302,9 +488,28 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                             Expires: {new Date(tokenStatus.expiresAt).toLocaleString()}
                           </p>
                         )}
+                        {hasUnsavedChanges && (
+                          <div className="bg-green-50 border border-green-200 rounded p-2 mt-2">
+                            <p className="text-sm text-green-800 font-medium">
+                              ⚠️ <strong>Remember to click "Save Configuration"</strong> below to apply this token!
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <p className="font-medium text-red-700">❌ {tokenStatus.error}</p>
+                      <div className="space-y-3">
+                        <p className="font-medium text-red-700">❌ {tokenStatus.error}</p>
+                        {!token && serverAuthRequired === true && (
+                          <div className="bg-red-50 border border-red-200 rounded-md p-3 mt-2">
+                            <p className="text-sm font-semibold text-red-900 mb-2">How to get an API token:</p>
+                            <div className="space-y-1 text-xs text-red-800">
+                              <p>• <strong>From server admin:</strong> Ask your VideoAnnotator admin for an API key</p>
+                              <p>• <strong>Generate yourself:</strong> If you run the server, use: <code className="bg-red-100 px-1 rounded">uv run videoannotator generate-token</code></p>
+                              <p>• <strong>Token format:</strong> Should look like <code className="bg-red-100 px-1 rounded">va_abc123xyz...</code></p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </AlertDescription>
                 </div>
@@ -316,7 +521,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
           <div className="flex items-center gap-3">
             <Button
               onClick={handleTestConnection}
-              disabled={isValidating || !token.trim()}
+              disabled={isValidating}
               variant="outline"
             >
               {isValidating ? 'Testing...' : 'Test Connection'}
@@ -326,14 +531,14 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
               onClick={resetToDefaults}
               variant="outline"
               className="text-orange-600 hover:text-orange-700"
-              title={`Reset to: URL=${import.meta.env.VITE_API_BASE_URL || 'http://localhost:18011'}, Token=${import.meta.env.VITE_API_TOKEN || 'dev-token'}`}
+              title={`Reset to: URL=${import.meta.env.VITE_API_BASE_URL || 'http://localhost:18011'}, Token=${import.meta.env.VITE_API_TOKEN || '(empty - anonymous)'}`}
             >
               Reset to Defaults
             </Button>
 
             <Button
               onClick={saveConfiguration}
-              disabled={!hasUnsavedChanges || !token.trim()}
+              disabled={!apiUrl.trim()}
             >
               Save Configuration
             </Button>

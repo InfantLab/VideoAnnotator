@@ -54,7 +54,7 @@ export function ConnectionErrorBanner({
                             <code className="bg-destructive/20 px-1 py-0.5 rounded text-xs">
                                 {apiUrl}
                             </code>{' '}
-                            {error.message.toLowerCase().includes('access-control-allow-origin') 
+                            {error.message.toLowerCase().includes('access-control-allow-origin')
                                 ? 'is blocking requests from this web app (CORS issue).'
                                 : 'is not responding or cannot be reached.'}
                         </p>
