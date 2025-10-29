@@ -6,23 +6,38 @@ Cross-Origin Resource Sharing (CORS) controls which web origins can access your 
 
 ### Default Configuration
 
-VideoAnnotator v1.3.0+ is secure by default:
+VideoAnnotator is secure and developer-friendly by default:
 
 ```bash
-# Default: Only localhost:3000 is allowed
-# No configuration needed for local development
-uv run python api_server.py
+# Default: 12 common development ports are allowed (3000, 5173, 8080, 4200, etc.)
+# No configuration needed for most local web development
+uv run videoannotator server
 ```
 
 Console output will show:
 ```
-[SECURITY] CORS allowed origins: http://localhost:3000
+[SECURITY] CORS: 12 origins allowed (includes common dev ports: 3000, 5173, 8080, 4200, ...)
+[SECURITY] CORS debug - Full origins list: http://localhost:3000,http://localhost:3001,http://localhost:5173,...
+```
+
+The default origins include:
+- React (3000, 3001)
+- Vite (5173, 5174)
+- Vue CLI (8080, 8081)
+- Angular (4200)
+- Server port (18011)
+- 127.0.0.1 variants
+
+**For testing with unusual ports or remote clients**, use development mode:
+```bash
+uv run videoannotator server --dev
+# Allows ALL origins (*), disables authentication
 ```
 
 ### Testing CORS
 
 ```bash
-# Allowed origin - should succeed
+# Allowed origin (default) - should succeed
 curl -H "Origin: http://localhost:3000" \
      -H "Access-Control-Request-Method: POST" \
      -X OPTIONS http://localhost:18011/api/v1/jobs
@@ -30,6 +45,11 @@ curl -H "Origin: http://localhost:3000" \
 # Response includes:
 # access-control-allow-origin: http://localhost:3000
 # access-control-allow-methods: POST, GET, OPTIONS, ...
+
+# Another default allowed origin - should succeed
+curl -H "Origin: http://localhost:5173" \
+     -H "Access-Control-Request-Method: POST" \
+     -X OPTIONS http://localhost:18011/api/v1/jobs
 
 # Disallowed origin - should be rejected
 curl -H "Origin: http://unauthorized-site.com" \
@@ -49,7 +69,7 @@ Set the `CORS_ORIGINS` environment variable:
 ```bash
 # Allow your web app's origin
 export CORS_ORIGINS="https://app.yourdomain.com"
-uv run python api_server.py
+uv run videoannotator server
 ```
 
 ### Multiple Origins
@@ -59,7 +79,7 @@ Provide a comma-separated list:
 ```bash
 # Allow multiple web apps
 export CORS_ORIGINS="https://app.yourdomain.com,https://admin.yourdomain.com,https://staging.yourdomain.com"
-uv run python api_server.py
+uv run videoannotator server
 ```
 
 Whitespace is automatically stripped, so this also works:
