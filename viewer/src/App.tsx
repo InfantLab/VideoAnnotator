@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SSEProvider } from "@/contexts/SSEContext";
 import { PipelineProvider } from "@/contexts/PipelineContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Create from "./pages/Create";
@@ -17,14 +18,15 @@ import CreateSettings from "./pages/CreateSettings";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <SSEProvider enabled={false}>
-      <PipelineProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <Routes>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <SSEProvider enabled={false}>
+        <PipelineProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/create" element={<Create />}>
                 <Route path="jobs" element={<CreateJobs />} />
@@ -42,6 +44,7 @@ const App = () => (
       </PipelineProvider>
     </SSEProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

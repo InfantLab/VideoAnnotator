@@ -5,6 +5,9 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { StandardAnnotationData } from '@/types/annotations';
 import { useToast } from '@/hooks/use-toast';
+import { parseApiError } from '@/lib/errorHandling';
+import { showErrorToast, showValidationErrorToast } from '@/lib/toastHelpers';
+import type { ParsedError } from '@/types/api';
 import {
   detectFileType,
   detectJSONType,
@@ -220,17 +223,14 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
       onAnnotationLoad(result.data);
 
     } catch (error) {
-      toast({
-        title: "Error processing files",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      });
+      showErrorToast(toast, parseApiError(error));
 
       // Update file statuses to show errors
+      const parsedError = parseApiError(error);
       setFileStatuses(prev => prev.map(status => ({
         ...status,
         status: 'error',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: parsedError.message
       })));
     } finally {
       setIsProcessing(false);
