@@ -28,10 +28,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Copy to clipboard functionality
 
 ### 🐛 Fixed
+- **Job Table Video Information**: Video filename now always displayed (defensive field name handling)
+  - Checks multiple possible field names: `video_filename`, `filename`, `video_name`
+  - Duration and size fields similarly handle variations: `video_duration_seconds`/`duration_seconds`, `video_size_bytes`/`file_size_bytes`
+  - Fixes "N/A" display issue for failed jobs where metadata exists but uses different field names
 - **Connection Error Banner Persistence**: Banner now clears within 10 seconds when server reconnects (auto-refresh drops to 10s during errors, returns to 2min when healthy)
 - Console error noise from unnecessary `/api/v1/debug/token-info` endpoint calls
 - Text color contrast in JSON configuration examples (was white on white)
 - Textarea editability in Advanced JSON Overrides section
+
+### 🎨 UX Improvements
+- **Double-Click to View Jobs**: Table rows now support double-click to open job details
+- **Removed View Button**: Simplified actions column by removing redundant View button (use double-click instead)
+- **Visual Feedback**: Rows show hover effect and cursor pointer to indicate clickability
+- **Helpful Tip**: Added "💡 Tip: Double-click any row to view job details" above table
 
 ## [0.5.0] - 2025-10-29
 

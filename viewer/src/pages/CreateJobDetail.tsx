@@ -104,13 +104,17 @@ const CreateJobDetail = () => {
   const handleRetryJob = () => {
     if (!job) return;
 
+    // Extract video filename with fallback
+    const jobData = job as any;
+    const videoFilename = jobData.video_filename || jobData.filename || jobData.video_name;
+
     // Navigate to create new job with pre-filled settings
     navigate('/create/new', {
       state: {
         retryJobId: job.id,
         retryJobConfig: job.config,
         retryJobPipelines: job.selected_pipelines,
-        retryJobVideoFilename: job.video_filename,
+        retryJobVideoFilename: videoFilename,
       }
     });
   };
@@ -156,6 +160,13 @@ const CreateJobDetail = () => {
       </div>
     );
   }
+
+  // Defensive field access - server may use different field names
+  const jobData = job as any;
+  const videoFilename = jobData.video_filename || jobData.filename || jobData.video_name || "N/A";
+  const videoSizeBytes = jobData.video_size_bytes || jobData.file_size_bytes || null;
+  const videoDurationSeconds = jobData.video_duration_seconds || jobData.duration_seconds || null;
+  const videoPath = jobData.video_path || jobData.file_path || jobData.input_file || "N/A";
 
   return (
     <div className="space-y-6">
@@ -266,13 +277,13 @@ const CreateJobDetail = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground">Filename</label>
-              <p className="mt-1">{job.video_filename || "N/A"}</p>
+              <p className="mt-1">{videoFilename}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">File Size</label>
               <p className="mt-1">
-                {job.video_size_bytes
-                  ? `${(job.video_size_bytes / (1024 * 1024)).toFixed(1)} MB`
+                {videoSizeBytes
+                  ? `${(videoSizeBytes / (1024 * 1024)).toFixed(1)} MB`
                   : "N/A"
                 }
               </p>
@@ -280,8 +291,8 @@ const CreateJobDetail = () => {
             <div>
               <label className="text-sm font-medium text-muted-foreground">Duration</label>
               <p className="mt-1">
-                {job.video_duration_seconds
-                  ? `${Math.floor(job.video_duration_seconds / 60)}:${(job.video_duration_seconds % 60).toFixed(0).padStart(2, '0')}`
+                {videoDurationSeconds
+                  ? `${Math.floor(videoDurationSeconds / 60)}:${(videoDurationSeconds % 60).toFixed(0).padStart(2, '0')}`
                   : "N/A"
                 }
               </p>
@@ -289,7 +300,7 @@ const CreateJobDetail = () => {
             <div>
               <label className="text-sm font-medium text-muted-foreground">Path</label>
               <p className="mt-1 font-mono text-sm break-all">
-                {job.video_path || "N/A"}
+                {videoPath}
               </p>
             </div>
           </div>
@@ -367,7 +378,7 @@ const CreateJobDetail = () => {
             {/* TODO: Implement real-time log streaming */}
             <div className="space-y-1">
               <div>[{new Date().toISOString()}] Job {job.id} created</div>
-              <div>[{new Date().toISOString()}] Video uploaded: {job.video_filename}</div>
+              <div>[{new Date().toISOString()}] Video uploaded: {videoFilename}</div>
               {job.status !== "pending" && (
                 <div>[{new Date().toISOString()}] Processing started...</div>
               )}

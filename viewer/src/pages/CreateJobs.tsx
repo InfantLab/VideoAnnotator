@@ -11,7 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Loader2, RefreshCw, Eye, Play, Settings, AlertCircle, RotateCcw } from "lucide-react";
+import { Loader2, RefreshCw, Play, Settings, AlertCircle, RotateCcw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Table,
@@ -323,6 +323,11 @@ const CreateJobs = () => {
         </div>
       ) : (
         <Card>
+          <div className="px-6 pt-4 pb-2">
+            <p className="text-xs text-muted-foreground">
+              💡 Tip: Double-click any row to view job details
+            </p>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -358,8 +363,18 @@ const CreateJobs = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                jobsData?.jobs?.map((job) => (
-                  <TableRow key={job.id}>
+                jobsData?.jobs?.map((job) => {
+                  // Defensive field access - server may use different field names
+                  const videoName = (job as any).video_filename || (job as any).filename || (job as any).video_name || "N/A";
+                  const videoDuration = (job as any).video_duration_seconds || (job as any).duration_seconds || null;
+                  const videoSize = (job as any).video_size_bytes || (job as any).file_size_bytes || null;
+
+                  return (
+                  <TableRow 
+                    key={job.id}
+                    onDoubleClick={() => navigate(`/create/jobs/${job.id}`)}
+                    className="cursor-pointer hover:bg-muted/50"
+                  >
                     <TableCell className="font-mono text-sm">
                       {job.id.slice(0, 8)}...
                     </TableCell>
@@ -367,13 +382,13 @@ const CreateJobs = () => {
                       {getStatusBadge(job.status, job.error_message)}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
-                      {job.video_filename || "N/A"}
+                      {videoName}
                     </TableCell>
                     <TableCell>
-                      {formatDuration(job.video_duration_seconds)}
+                      {formatDuration(videoDuration)}
                     </TableCell>
                     <TableCell>
-                      {formatFileSize(job.video_size_bytes)}
+                      {formatFileSize(videoSize)}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
@@ -403,7 +418,10 @@ const CreateJobs = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleRetryJob(job)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRetryJob(job);
+                            }}
                           >
                             <RotateCcw className="h-4 w-4 mr-1" />
                             Retry
@@ -418,16 +436,11 @@ const CreateJobs = () => {
                             onDeleted={() => refetch()}
                           />
                         )}
-                        <Link to={`/create/jobs/${job.id}`}>
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                        </Link>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
