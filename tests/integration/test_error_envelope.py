@@ -7,8 +7,9 @@ from fastapi.testclient import TestClient
 @pytest.fixture
 def client():
     """Create test client."""
-    from api.main import app
+    from videoannotator.api.main import create_app
 
+    app = create_app()
     return TestClient(app)
 
 
