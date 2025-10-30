@@ -113,10 +113,10 @@ class TestGetJobStoragePath:
                 # Force reload to pick up new env var
                 from importlib import reload
 
-                import storage.config
+                import videoannotator.storage.config
 
-                reload(storage.config)
-                from storage.config import get_job_storage_path as gjsp
+                reload(videoannotator.storage.config)
+                from videoannotator.storage.config import get_job_storage_path as gjsp
 
                 path = gjsp(job_id)
 
@@ -143,10 +143,12 @@ class TestEnsureJobStoragePath:
                 # Force reload
                 from importlib import reload
 
-                import storage.config
+                import videoannotator.storage.config
 
-                reload(storage.config)
-                from storage.config import ensure_job_storage_path as ejsp
+                reload(videoannotator.storage.config)
+                from videoannotator.storage.config import (
+                    ensure_job_storage_path as ejsp,
+                )
 
                 job_id = "new-job-dir"
                 path = ejsp(job_id)
@@ -171,10 +173,12 @@ class TestEnsureJobStoragePath:
 
                 from importlib import reload
 
-                import storage.config
+                import videoannotator.storage.config
 
-                reload(storage.config)
-                from storage.config import ensure_job_storage_path as ejsp
+                reload(videoannotator.storage.config)
+                from videoannotator.storage.config import (
+                    ensure_job_storage_path as ejsp,
+                )
 
                 job_id = "idempotent-job"
 
@@ -203,10 +207,12 @@ class TestEnsureJobStoragePath:
 
                 from importlib import reload
 
-                import storage.config
+                import videoannotator.storage.config
 
-                reload(storage.config)
-                from storage.config import ensure_job_storage_path as ejsp
+                reload(videoannotator.storage.config)
+                from videoannotator.storage.config import (
+                    ensure_job_storage_path as ejsp,
+                )
 
                 job_id = "nested-job"
                 path = ejsp(job_id)
@@ -239,10 +245,12 @@ class TestEnsureJobStoragePath:
 
                 from importlib import reload
 
-                import storage.config
+                import videoannotator.storage.config
 
-                reload(storage.config)
-                from storage.config import ensure_job_storage_path as ejsp
+                reload(videoannotator.storage.config)
+                from videoannotator.storage.config import (
+                    ensure_job_storage_path as ejsp,
+                )
 
                 # Now call ensure
                 path = ejsp(job_id)
@@ -270,16 +278,16 @@ class TestStoragePathIntegration:
 
                 from importlib import reload
 
-                import storage.config
+                import videoannotator.storage.config
 
-                reload(storage.config)
-                from storage.config import (
+                reload(videoannotator.storage.config)
+                from videoannotator.storage.config import (
                     ensure_job_storage_path as ejsp,
                 )
-                from storage.config import (
+                from videoannotator.storage.config import (
                     get_job_storage_path as gjsp,
                 )
-                from storage.config import (
+                from videoannotator.storage.config import (
                     get_storage_root as gsr,
                 )
 
@@ -315,10 +323,12 @@ class TestStoragePathIntegration:
 
                 from importlib import reload
 
-                import storage.config
+                import videoannotator.storage.config
 
-                reload(storage.config)
-                from storage.config import ensure_job_storage_path as ejsp
+                reload(videoannotator.storage.config)
+                from videoannotator.storage.config import (
+                    ensure_job_storage_path as ejsp,
+                )
 
                 # Create multiple job directories
                 job_ids = ["job-1", "job-2", "job-3"]
