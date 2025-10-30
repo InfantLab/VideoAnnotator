@@ -216,23 +216,23 @@ Manual testing checklist for VideoAnnotator v1.3.0 support features.
 ## US5: Enhanced Diagnostics (T053-T065)
 
 ### ServerDiagnostics Component
-- [ ] **T056**: Navigate to Create/Settings page
-- [ ] **T057**: ServerDiagnostics card visible (collapsed by default)
-- [ ] **T058**: Click header to expand - diagnostics load
-- [ ] **T059**: Server info displayed:
-  - [ ] Server version (e.g., "1.3.0")
-  - [ ] Uptime in human-readable format (e.g., "3 days, 4 hours")
-  - [ ] Status: healthy/degraded/unhealthy with color indicator
+- [x] **T056**: Navigate to Create/Settings page
+- [x] **T057**: ServerDiagnostics card visible (collapsed by default)
+- [x] **T058**: Click header to expand - diagnostics load
+- [x] **T059**: Server info displayed:
+  - [x] Server version (e.g., "1.3.0")
+  - [x] Uptime in human-readable format (e.g., "3 days, 4 hours")
+  - [x] Status: healthy/degraded/unhealthy with color indicator
 
 ### GPU Information
-- [ ] **T060**: GPU section visible (if server has GPU)
-- [ ] **T061**: GPU info includes:
-  - [ ] Device name (e.g., "NVIDIA GeForce RTX 3090")
-  - [ ] CUDA version (e.g., "12.1")
-  - [ ] Memory usage percentage
-  - [ ] Memory used / total (e.g., "5 GB / 24 GB")
-- [ ] GPU status color-coded (green <50%, yellow <80%, red ≥80%)
-- [ ] No GPU → "No GPU detected" message shown
+- [x] **T060**: GPU section visible (if server has GPU)
+- [x] **T061**: GPU info includes:
+  - [x] Device name (e.g., "NVIDIA GeForce RTX 3090")
+  - [x] CUDA version (e.g., "12.1")
+  - [x] Memory usage percentage
+  - [x] Memory used / total (e.g., "5 GB / 24 GB")
+- [x] GPU status color-coded (green <50%, yellow <80%, red ≥80%)
+- [x] No GPU → "No GPU detected" message shown
 
 ### Worker Information
 - [ ] **T062**: Worker section displayed
@@ -247,39 +247,39 @@ Manual testing checklist for VideoAnnotator v1.3.0 support features.
   - [ ] Overloaded: red
 
 ### System Diagnostics
-- [ ] **T063**: Diagnostics section displayed
-- [ ] Database status: healthy/degraded/unhealthy with icon
-- [ ] Storage info:
-  - [ ] Disk usage percentage
-  - [ ] Used / total space (e.g., "50 GB / 100 GB")
-- [ ] FFmpeg status: available/unavailable
-- [ ] Each diagnostic has status icon (CheckCircle/AlertTriangle/XCircle)
+- [x] **T063**: Diagnostics section displayed
+- [x] Database status: healthy/degraded/unhealthy with icon
+- [x] Storage info:
+  - [x] Disk usage percentage
+  - [x] Used / total space (e.g., "50 GB / 100 GB")
+- [x] FFmpeg status: available/unavailable
+- [x] Each diagnostic has status icon (CheckCircle/AlertTriangle/XCircle)
 
 ### Auto-Refresh Functionality
-- [ ] **T064**: Expand diagnostics - data auto-refreshes every 30 seconds
-- [ ] Wait 30 seconds - "Last updated" timestamp changes
-- [ ] Data updates without page reload
-- [ ] Collapse diagnostics - auto-refresh pauses
-- [ ] Re-expand diagnostics - auto-refresh resumes
+- [x] **T064**: Expand diagnostics - data auto-refreshes every 30 seconds
+- [x] Wait 30 seconds - "Last updated" timestamp changes
+- [x] Data updates without page reload
+- [x] Collapse diagnostics - auto-refresh pauses
+- [x] Re-expand diagnostics - auto-refresh resumes
 
 ### Manual Refresh
-- [ ] **T065**: Click "Refresh Now" button
-- [ ] Loading spinner appears on button
-- [ ] Data refreshes immediately
-- [ ] "Last updated" timestamp updates
-- [ ] Button re-enabled after refresh completes
+- [x] **T065**: Click "Refresh Now" button
+- [x] Loading spinner appears on button
+- [x] Data refreshes immediately
+- [x] "Last updated" timestamp updates
+- [x] Button re-enabled after refresh completes
 
 ### Stale Data Indicator
-- [ ] Keep diagnostics open for 3+ minutes
-- [ ] After 2 minutes, yellow "Data may be stale" alert appears
-- [ ] Manual refresh clears stale indicator
-- [ ] Auto-refresh clears stale indicator
+- [x] Keep diagnostics open for 3+ minutes
+- [x] After 2 minutes, yellow "Data may be stale" alert appears
+- [x] Manual refresh clears stale indicator
+- [x] Auto-refresh clears stale indicator
 
 ### Error Handling
-- [ ] Server offline → error message displayed with ErrorDisplay
-- [ ] Server timeout → appropriate error message
-- [ ] v1.2.x server (no diagnostics) → graceful degradation or clear message
-- [ ] API error → retry button available
+- [x] Server offline → error message displayed with ErrorDisplay
+- [x] Server timeout → appropriate error message
+- [x] v1.2.x server (no diagnostics) → graceful degradation or clear message
+- [x] API error → retry button available
 
 ---
 
@@ -321,64 +321,64 @@ Manual testing checklist for VideoAnnotator v1.3.0 support features.
 - [ ] Styles render correctly
 
 ### Edge (Latest)
-- [ ] All US1-US5 features work
-- [ ] No console errors
-- [ ] All interactions work
+- [x] All US1-US5 features work
+- [x] No console errors
+- [x] All interactions work
 
 ---
 
 ## Accessibility (WCAG 2.1 AA)
 
 ### Keyboard Navigation
-- [ ] All interactive elements accessible via Tab key
-- [ ] Tab order logical and intuitive
-- [ ] Enter/Space activates buttons
-- [ ] Escape closes dialogs
-- [ ] Focus indicators visible
+- [x] All interactive elements accessible via Tab key
+- [x] Tab order logical and intuitive
+- [x] Enter/Space activates buttons
+- [x] Escape closes dialogs
+- [x] Focus indicators visible
 
 ### Screen Reader (Test with NVDA/JAWS/VoiceOver)
-- [ ] Error messages announced
-- [ ] Success toasts announced
-- [ ] Button states announced (loading, disabled)
-- [ ] Form labels associated with inputs
-- [ ] Landmarks properly defined (role="alert", etc.)
+- [x] Error messages announced
+- [x] Success toasts announced
+- [x] Button states announced (loading, disabled)
+- [x] Form labels associated with inputs
+- [x] Landmarks properly defined (role="alert", etc.)
 
 ### Color Contrast
-- [ ] Error text meets 4.5:1 contrast ratio
-- [ ] Status indicators readable with colorblindness simulation
-- [ ] Focus indicators meet 3:1 contrast ratio
+- [x] Error text meets 4.5:1 contrast ratio
+- [x] Status indicators readable with colorblindness simulation
+- [x] Focus indicators meet 3:1 contrast ratio
 
 ### Visual Indicators
-- [ ] Color not sole indicator (icons + text)
-- [ ] Loading states clear (spinner + text)
-- [ ] Status changes visible
+- [x] Color not sole indicator (icons + text)
+- [x] Loading states clear (spinner + text)
+- [x] Status changes visible
 
 ---
 
 ## Performance
 
 ### Page Load
-- [ ] Initial page load <3 seconds
-- [ ] Time to Interactive <5 seconds
-- [ ] No layout shift during load
+- [x] Initial page load <3 seconds
+- [x] Time to Interactive <5 seconds
+- [x] No layout shift during load
 
 ### Interactions
-- [ ] Button clicks respond <100ms
-- [ ] Form validation <500ms (debounced)
-- [ ] API calls show loading state immediately
-- [ ] No UI blocking during network requests
+- [x] Button clicks respond <100ms
+- [x] Form validation <500ms (debounced)
+- [x] API calls show loading state immediately
+- [x] No UI blocking during network requests
 
 ### Memory Usage
-- [ ] Open DevTools → Performance → Memory tab
-- [ ] Use app for 5 minutes (navigate, create jobs, cancel, validate)
-- [ ] No significant memory increase (heap should stabilize)
-- [ ] Close all dialogs → memory released
+- [ x] Open DevTools → Performance → Memory tab
+- [x] Use app for 5 minutes (navigate, create jobs, cancel, validate)
+- [x] No significant memory increase (heap should stabilize)
+- [x] Close all dialogs → memory released
 
 ### Network Efficiency
-- [ ] Check DevTools Network tab
-- [ ] No unnecessary duplicate requests
-- [ ] API calls cached when appropriate (React Query)
-- [ ] Debouncing prevents request spam
+- [x] Check DevTools Network tab
+- [x] No unnecessary duplicate requests
+- [x] API calls cached when appropriate (React Query)
+- [x] Debouncing prevents request spam
 
 ---
 
@@ -406,37 +406,37 @@ bun run lhci
 ## Regression Testing
 
 ### Existing Features (v0.3.x)
-- [ ] Video playback works
-- [ ] Timeline displays annotations
-- [ ] COCO keypoints render correctly
-- [ ] WebVTT transcripts display
-- [ ] RTTM speaker segments work
-- [ ] Scene detection markers visible
-- [ ] Face detection (OpenFace3) works
-- [ ] File upload and parsing works
-- [ ] Multiple annotation types merge correctly
+- [x] Video playback works
+- [x] Timeline displays annotations
+- [x] COCO keypoints render correctly
+- [x] WebVTT transcripts display
+- [x] RTTM speaker segments work
+- [x] Scene detection markers visible
+- [x] Face detection (OpenFace3) works
+- [x] File upload and parsing works
+- [x] Multiple annotation types merge correctly
 
 ### No Breaking Changes
-- [ ] Old job results still viewable
-- [ ] Local file loading still works
-- [ ] All existing parsers functional
-- [ ] Settings persist correctly
+- [x] Old job results still viewable
+- [x] Local file loading still works
+- [x] All existing parsers functional
+- [x] Settings persist correctly
 
 ---
 
 ## Edge Cases and Stress Testing
 
 ### Rapid Interactions
-- [ ] Rapid button clicks (cancel, validate, refresh)
-- [ ] Rapid form input changes
-- [ ] Rapid page navigation
-- [ ] No UI freezing or crashes
+- [x] Rapid button clicks (cancel, validate, refresh)
+- [x] Rapid form input changes
+- [x] Rapid page navigation
+- [x] No UI freezing or crashes
 
 ### Large Data
-- [ ] Job list with 100+ jobs
-- [ ] Very long error messages
-- [ ] Long server uptime (e.g., 30+ days)
-- [ ] Large GPU memory (e.g., 80GB)
+- [>] Job list with 100+ jobs
+- [>] Very long error messages
+- [-] Long server uptime (e.g., 30+ days)
+- [-] Large GPU memory (e.g., 80GB)
 
 ### Boundary Values
 - [ ] Uptime: 0 seconds, 59 seconds, 60 seconds, 86400 seconds (1 day)
@@ -454,14 +454,14 @@ bun run lhci
 ## Security Considerations
 
 ### Token Handling
-- [ ] Token not visible in URL
-- [ ] Token not logged to console (in production build)
-- [ ] Token stored securely (localStorage, not cookies)
-- [ ] Token masked in UI by default
+- [x] Token not visible in URL
+- [x] Token not logged to console (in production build)
+- [x] Token stored securely (localStorage, not cookies)
+- [x] Token masked in UI by default
 
 ### Input Sanitization
-- [ ] XSS attempts in form fields (e.g., `<script>alert('XSS')</script>`)
-- [ ] SQL injection attempts in text fields (if applicable)
+- [>] XSS attempts in form fields (e.g., `<script>alert('XSS')</script>`)
+- [> ] SQL injection attempts in text fields (if applicable)
 - [ ] Special characters handled correctly
 
 ### HTTPS (Production)

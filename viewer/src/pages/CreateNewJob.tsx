@@ -1,6 +1,7 @@
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw } from "lucide-react";
@@ -631,9 +632,17 @@ const PipelineSelectionStep = ({
                         />
                         <span className="text-sm font-medium text-foreground">{pipeline.name}</span>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {pipeline.version && <span className="text-[11px] text-muted-foreground">v{pipeline.version}</span>}
-                        {pipeline.model && <span className="text-[11px] text-muted-foreground">{pipeline.model}</span>}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {pipeline.version && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            v{pipeline.version}
+                          </Badge>
+                        )}
+                        {pipeline.model && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {pipeline.model}
+                          </Badge>
+                        )}
                         {pipeline.capabilities?.length ? (
                           <span className="text-[11px] text-muted-foreground">
                             {pipeline.capabilities.length} capabilities
@@ -714,7 +723,7 @@ const ConfigurationStep = ({
           <div className="p-3 bg-white border border-blue-200 rounded text-sm">
             <p className="font-semibold text-blue-900 mb-2">💡 What is this?</p>
             <p className="text-gray-700 mb-2">
-              The JSON below represents your complete pipeline configuration. Each pipeline (like "openface3" or "whisper") 
+              The JSON below represents your complete pipeline configuration. Each pipeline (like "openface3" or "whisper")
               can have custom parameters. Most users can ignore this and use the form controls above.
             </p>
             <p className="text-gray-700 mb-2">
@@ -729,7 +738,7 @@ const ConfigurationStep = ({
               <strong>Example structure:</strong>
             </p>
             <pre className="mt-2 p-2 bg-gray-50 rounded text-xs overflow-x-auto text-gray-800">
-{`{
+              {`{
   "openface3": {
     "model": "mobilenet",
     "confidence_threshold": 0.5
@@ -773,7 +782,7 @@ const ConfigurationStep = ({
               onChange={(e) => {
                 const newText = e.target.value;
                 setJsonText(newText);
-                
+
                 try {
                   const newConfig = JSON.parse(newText);
                   setConfig(newConfig);
@@ -783,14 +792,13 @@ const ConfigurationStep = ({
                   setJsonError(err instanceof Error ? err.message : 'Invalid JSON');
                 }
               }}
-              className={`w-full h-64 text-sm font-mono resize-y border-2 rounded px-3 py-2 text-gray-900 bg-white focus:outline-none ${
-                jsonError
-                  ? 'border-orange-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500'
-                  : validationResult?.errors && validationResult.errors.length > 0
-                    ? 'border-red-400 focus:ring-2 focus:ring-red-500 focus:border-red-500'
-                    : validationResult?.warnings && validationResult.warnings.length > 0
-                      ? 'border-yellow-400 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500'
-                      : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+              className={`w-full h-64 text-sm font-mono resize-y border-2 rounded px-3 py-2 text-gray-900 bg-white focus:outline-none ${jsonError
+                ? 'border-orange-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500'
+                : validationResult?.errors && validationResult.errors.length > 0
+                  ? 'border-red-400 focus:ring-2 focus:ring-red-500 focus:border-red-500'
+                  : validationResult?.warnings && validationResult.warnings.length > 0
+                    ? 'border-yellow-400 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500'
+                    : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
                 }`}
               placeholder='{"pipeline_name": {"parameter": "value"}}'
             />

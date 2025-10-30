@@ -13,6 +13,8 @@ import {
 
 import { TokenSetup } from '@/components/TokenSetup';
 import { ServerDiagnostics } from '@/components/ServerDiagnostics';
+import { GPUInfo } from '@/components/GPUInfo';
+import { WorkerInfo } from '@/components/WorkerInfo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -340,6 +342,12 @@ const CreateSettings = () => {
           {/* Server Diagnostics */}
           <ServerDiagnostics className="mt-6" defaultOpen={false} />
 
+          {/* GPU Information */}
+          <GPUInfo />
+
+          {/* Worker Information */}
+          <WorkerInfo />
+
           <Card>
             <CardHeader>
               <CardTitle>Server Debugging Tools</CardTitle>
@@ -374,6 +382,20 @@ const CreateSettings = () => {
                   <p className="text-xs text-muted-foreground mt-1">
                     Browser console debugging suite (paste in browser dev tools)
                   </p>
+                </div>
+
+                <div className="pt-3 border-t">
+                  <h4 className="font-medium text-sm mb-2">API Documentation</h4>
+                  <Button variant="link" className="pl-0 h-auto" asChild>
+                    <a
+                      href={`${serverUrl}/docs`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm"
+                    >
+                      📖 Open Interactive API Docs ({serverUrl}/docs)
+                    </a>
+                  </Button>
                 </div>
               </div>
             </CardContent>

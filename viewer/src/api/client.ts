@@ -10,6 +10,7 @@ import type {
   VideoAnnotatorServerInfo,
   PipelineCapability
 } from '@/types/pipelines';
+import type { SystemHealthResponse } from '@/types/system';
 import { APIError } from './handleError';
 
 // API configuration with localStorage fallback
@@ -447,8 +448,12 @@ class APIClient {
     return this.request('/health');
   }
 
-  async detailedHealth(): Promise<any> {
+  async detailedHealth(): Promise<SystemHealthResponse> {
     return this.request('/api/v1/system/health');
+  }
+
+  async getSystemHealth(): Promise<SystemHealthResponse> {
+    return this.detailedHealth();
   }
 
   // Job management endpoints
