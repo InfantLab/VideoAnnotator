@@ -1,0 +1,96 @@
+name: speech_recognition
+display_name: Speech Recognition
+description: Speech transcription using OpenAI Whisper with word-level timestamps, producing WebVTT format output for subtitles and captions.
+pipeline_family: audio
+variant: whisper
+tasks:
+  - speech-transcription
+  - automatic-speech-recognition
+modalities:
+  - audio
+capabilities:
+  - streaming
+  - word-timestamps
+  - multilingual
+outputs:
+  - format: WebVTT
+    types: [transcript]
+config_schema:
+  whisper_model:
+    type: string
+    default: base
+    description: Whisper model size (tiny, base, small, medium, large, large-v2, large-v3)
+  language:
+    type: string
+    default: null
+    description: Language code (e.g., en, es, fr) or null for auto-detection
+  task:
+    type: string
+    default: transcribe
+    description: Task type - transcribe or translate (translate converts to English)
+  beam_size:
+    type: integer
+    default: 5
+    description: Beam size for beam search decoding
+  best_of:
+    type: integer
+    default: 5
+    description: Number of candidates when sampling
+  temperature:
+    type: float
+    default: 0.0
+    description: Temperature for sampling (0.0 for deterministic)
+  patience:
+    type: float
+    default: 1.0
+    description: Beam search patience factor
+  length_penalty:
+    type: float
+    default: 1.0
+    description: Length penalty for beam search
+  word_timestamps:
+    type: boolean
+    default: true
+    description: Generate word-level timestamps
+  min_segment_duration:
+    type: float
+    default: 1.0
+    description: Minimum segment duration in seconds
+  prepend_punctuations:
+    type: string
+    default: "\"'¿([{-"
+    description: Punctuation marks to prepend to next word
+  append_punctuations:
+    type: string
+    default: "\"'..,!?:)]},"
+    description: Punctuation marks to append to previous word
+  suppress_tokens:
+    type: string
+    default: null
+    description: Comma-separated list of token IDs to suppress
+examples:
+  - cli: videoannotator job submit demo.mp4 --pipelines speech_recognition
+    description: Submit speech transcription job with default settings
+  - cli: videoannotator job submit demo.mp4 --pipelines speech_recognition --config '{"speech_recognition":{"whisper_model":"medium","language":"en"}}'
+    description: Use medium model with English language
+  - api: |
+      {
+        "video_url": "demo.mp4",
+        "pipelines": ["speech_recognition"],
+        "config": {
+          "speech_recognition": {
+            "whisper_model": "large-v3",
+            "word_timestamps": true,
+            "language": "es"
+          }
+        }
+      }
+    description: Spanish transcription with large model via API
+version: 1
+stability: stable
+backends:
+  - pytorch
+requirements:
+  packages:
+    - openai-whisper
+    - ffmpeg-python

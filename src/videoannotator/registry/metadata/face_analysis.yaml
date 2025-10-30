@@ -1,0 +1,103 @@
+name: face_analysis
+display_name: Face Analysis (DeepFace)
+description: Standards-only face detection and analysis using DeepFace with emotion recognition, age, and gender prediction, producing COCO format output.
+pipeline_family: face
+variant: deepface
+tasks:
+  - face-detection
+  - emotion-recognition
+  - age-estimation
+  - gender-prediction
+modalities:
+  - video
+capabilities:
+  - person-linking
+  - frame-level-analysis
+outputs:
+  - format: COCO
+    types: [face_detections, emotions, demographics]
+config_schema:
+  detection_backend:
+    type: string
+    default: deepface
+    description: Face detection backend (opencv, deepface, ssd, dlib, mtcnn, retinaface)
+  emotion_backend:
+    type: string
+    default: deepface
+    description: Emotion analysis backend (deepface, disabled)
+  confidence_threshold:
+    type: float
+    default: 0.7
+    description: Minimum confidence threshold for face detection
+  min_face_size:
+    type: integer
+    default: 30
+    description: Minimum face size in pixels
+  max_faces:
+    type: integer
+    default: 10
+    description: Maximum number of faces to detect per frame
+  scale_factor:
+    type: float
+    default: 1.1
+    description: Scale factor for OpenCV Haar cascades
+  min_neighbors:
+    type: integer
+    default: 5
+    description: Minimum neighbors for OpenCV Haar cascades
+  detect_emotions:
+    type: boolean
+    default: true
+    description: Enable emotion recognition
+  detect_age:
+    type: boolean
+    default: true
+    description: Enable age estimation
+  detect_gender:
+    type: boolean
+    default: true
+    description: Enable gender prediction
+  deepface:
+    type: object
+    default:
+      emotion_model: VGG-Face
+      age_gender_model: VGG-Face
+      detector_backend: opencv
+      enforce_detection: false
+    description: DeepFace-specific configuration
+  person_identity:
+    type: object
+    default:
+      enabled: true
+      link_to_persons: true
+      iou_threshold: 0.5
+      require_person_id: false
+    description: Person identity linking configuration
+examples:
+  - cli: videoannotator job submit demo.mp4 --pipelines face_analysis
+    description: Submit face analysis job with default settings
+  - cli: videoannotator job submit demo.mp4 --pipelines face_analysis --config '{"face_analysis":{"detect_emotions":true,"max_faces":5}}'
+    description: Analyze up to 5 faces with emotions
+  - api: |
+      {
+        "video_url": "demo.mp4",
+        "pipelines": ["face_analysis"],
+        "config": {
+          "face_analysis": {
+            "detection_backend": "retinaface",
+            "detect_emotions": true,
+            "detect_age": true,
+            "detect_gender": true
+          }
+        }
+      }
+    description: Full face analysis with RetinaFace detector via API
+version: 1
+stability: stable
+backends:
+  - tensorflow
+  - opencv
+requirements:
+  packages:
+    - deepface
+    - opencv-python
