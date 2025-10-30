@@ -4,8 +4,87 @@
 
 **Date Created:** 2025-10-09  
 **Client Version:** v0.4.0  
-**Server Version Tested:** v1.2.2  
+**Server Version Tested:** v1.2.2 → v1.3.0  
 **Status:** Active tracking
+
+---
+
+## 🟡 API Quirks & Documentation Needs (2025-10-30)
+
+### 1. Trailing Slash Redirect Confusion
+
+**Endpoint:** All API endpoints (e.g., `/api/v1/jobs`)  
+**Issue:** Server returns 307 Temporary Redirect when trailing slash is missing.
+
+**Observed Behavior:**
+```bash
+# Without trailing slash - gets redirected
+GET /api/v1/jobs → 307 Redirect → /api/v1/jobs/
+
+# With trailing slash - works directly  
+GET /api/v1/jobs/ → 200 OK
+```
+
+**Impact on Testing:**
+- PowerShell/curl testing confusing (auth worked in browser, failed in CLI)
+- Initial requests return 307 instead of data
+- Some HTTP clients don't auto-follow redirects with auth headers
+- Wasted debugging time thinking auth was broken
+
+**Questions for Server Team:**
+1. Is the trailing slash requirement intentional?
+2. Should this be documented in API docs?
+3. Can server accept both formats without redirect?
+4. Does this affect all endpoints or just some?
+
+**Recommendation:**
+- Document trailing slash requirement in API docs
+- OR accept both formats (with/without slash)
+- OR return 400 with helpful message instead of silent redirect
+
+---
+
+### 2. Missing Video Metadata in Job Response
+
+**Endpoint:** `GET /api/v1/jobs/`  
+**Issue:** Job objects lack `video_filename`, `video_duration_seconds`, `video_size_bytes` fields.
+
+**Current Response:**
+```json
+{
+  "id": "...",
+  "status": "failed",
+  "video_path": "/tmp/tmpjxv1hu24/video.mp4",  ✅
+  "error_message": "...",
+  // Missing: video_filename ❌
+  // Missing: video_duration_seconds ❌  
+  // Missing: video_size_bytes ❌
+}
+```
+
+**Impact:**
+- Client showed "N/A" for all video info columns
+- Had to implement workaround: extract filename from `video_path`
+- Duration and size still show "N/A" (no data available)
+
+**Client Workaround Applied:**
+```typescript
+// Extract filename from path when direct field missing
+if (!videoName && jobData.video_path) {
+  videoName = jobData.video_path.split('/').pop();
+}
+```
+
+**Questions for Server Team:**
+1. Are video metadata fields planned for future API versions?
+2. Should we request these fields be added?
+3. Is `video_path` the canonical field going forward?
+4. Can duration/size be computed from video file?
+
+**Recommendation:**
+- Add `video_filename`, `video_duration_seconds`, `video_size_bytes` to job response
+- OR document that clients should extract from `video_path`
+- OR add separate `/api/v1/jobs/{id}/metadata` endpoint
 
 ---
 
