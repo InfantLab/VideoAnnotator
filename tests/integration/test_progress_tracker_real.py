@@ -5,8 +5,8 @@ These tests focus on the real API - get_status(jobs) method that takes a jobs li
 
 from datetime import datetime, timedelta
 
-from src.batch.progress_tracker import ProgressTracker
-from src.batch.types import BatchJob, BatchStatus, JobStatus
+from videoannotator.batch.progress_tracker import ProgressTracker
+from videoannotator.batch.types import BatchJob, BatchStatus, JobStatus
 
 
 class TestProgressTrackerReal:

@@ -3,8 +3,8 @@
 from datetime import datetime
 from pathlib import Path
 
-from src.batch.recovery import FailureRecovery, RetryStrategy
-from src.batch.types import BatchJob, JobStatus, PipelineResult
+from videoannotator.batch.recovery import FailureRecovery, RetryStrategy
+from videoannotator.batch.types import BatchJob, JobStatus, PipelineResult
 
 
 class TestFailureRecoveryReal:

@@ -11,8 +11,8 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from src.batch.types import BatchJob, BatchReport, JobStatus
-from src.storage.file_backend import FileStorageBackend
+from videoannotator.batch.types import BatchJob, BatchReport, JobStatus
+from videoannotator.storage.file_backend import FileStorageBackend
 
 
 class TestFileStorageBackend:
@@ -340,7 +340,7 @@ class TestFileStorageBackendIntegration:
         )
 
         # Add pipeline results
-        from src.batch.types import PipelineResult
+        from videoannotator.batch.types import PipelineResult
 
         result = PipelineResult(
             pipeline_name="audio",

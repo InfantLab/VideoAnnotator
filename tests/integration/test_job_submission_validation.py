@@ -13,8 +13,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from src.api.database import reset_storage_backend, set_database_path
-from src.api.main import create_app
+from videoannotator.api.database import reset_storage_backend, set_database_path
+from videoannotator.api.main import create_app
 
 
 @pytest.fixture

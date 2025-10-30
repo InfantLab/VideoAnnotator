@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from src.batch.batch_orchestrator import BatchOrchestrator
-from src.batch.types import JobStatus
-from src.storage.file_backend import FileStorageBackend
+from videoannotator.batch.batch_orchestrator import BatchOrchestrator
+from videoannotator.batch.types import JobStatus
+from videoannotator.storage.file_backend import FileStorageBackend
 
 
 class TestBatchOrchestratorReal:

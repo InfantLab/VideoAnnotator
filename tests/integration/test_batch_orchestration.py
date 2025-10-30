@@ -12,8 +12,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.batch.batch_orchestrator import BatchOrchestrator
-from src.batch.types import JobStatus, PipelineResult
+from videoannotator.batch.batch_orchestrator import BatchOrchestrator
+from videoannotator.batch.types import JobStatus, PipelineResult
 
 
 class TestBatchComponentsIntegration:
