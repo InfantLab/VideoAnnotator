@@ -57,7 +57,8 @@ class TestDiarizationPipeline:
         assert not pipeline.is_initialized
 
     @patch(
-        "src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE", True
+        "videoannotator.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE",
+        True,
     )
     @patch(
         "videoannotator.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline"
@@ -92,7 +93,8 @@ class TestDiarizationPipeline:
         pipeline.cleanup()
 
     @patch(
-        "src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE", False
+        "videoannotator.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE",
+        False,
     )
     def test_diarization_pipeline_initialize_no_pyannote(self):
         """Test initialization fails when PyAnnote not available."""
@@ -119,7 +121,8 @@ class TestDiarizationPipeline:
         pass
 
     @patch(
-        "src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE", True
+        "videoannotator.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE",
+        True,
     )
     @patch(
         "videoannotator.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline"
@@ -172,7 +175,8 @@ class TestDiarizationPipeline:
         pipeline.cleanup()
 
     @patch(
-        "src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE", True
+        "videoannotator.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE",
+        True,
     )
     @patch(
         "videoannotator.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline"
@@ -191,7 +195,8 @@ class TestDiarizationPipeline:
         pipeline.cleanup()
 
     @patch(
-        "src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE", True
+        "videoannotator.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE",
+        True,
     )
     @patch(
         "videoannotator.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline"
