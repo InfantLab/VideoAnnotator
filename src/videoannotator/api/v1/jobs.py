@@ -43,6 +43,51 @@ def get_storage() -> StorageBackend:
     return get_storage_backend()
 
 
+def extract_video_metadata(
+    video_path: Path | str | None,
+) -> tuple[str | None, int | None, int | None]:
+    """Extract video metadata (filename, size, duration).
+
+    Args:
+        video_path: Path to video file
+
+    Returns:
+        Tuple of (filename, size_bytes, duration_seconds)
+    """
+    video_filename = None
+    video_size_bytes = None
+    video_duration_seconds = None
+
+    if not video_path:
+        return video_filename, video_size_bytes, video_duration_seconds
+
+    video_path = Path(video_path)
+    if not video_path.exists():
+        return video_filename, video_size_bytes, video_duration_seconds
+
+    video_filename = video_path.name
+
+    try:
+        video_size_bytes = video_path.stat().st_size
+    except Exception as e:
+        logger.debug(f"Could not get video file size: {e}")
+
+    try:
+        import cv2
+
+        cap = cv2.VideoCapture(str(video_path))
+        if cap.isOpened():
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            if fps > 0:
+                video_duration_seconds = int(frame_count / fps)
+            cap.release()
+    except Exception as e:
+        logger.debug(f"Could not extract video duration: {e}")
+
+    return video_filename, video_size_bytes, video_duration_seconds
+
+
 # Pydantic models for API
 class JobSubmissionRequest(BaseModel):
     """Request model for job submission."""
@@ -61,6 +106,15 @@ class JobResponse(BaseModel):
     id: str
     status: str
     video_path: str | None = None
+    video_filename: str | None = Field(
+        default=None, description="Original video filename"
+    )
+    video_size_bytes: int | None = Field(
+        default=None, description="Video file size in bytes"
+    )
+    video_duration_seconds: int | None = Field(
+        default=None, description="Video duration in seconds"
+    )
     config: dict[str, Any] | None = None
     selected_pipelines: list[str] | None = None
     created_at: datetime | None = None
@@ -263,6 +317,11 @@ async def submit_job(
             content = await video.read()
             f.write(content)
 
+        # Extract video metadata
+        video_filename, video_size_bytes, video_duration_seconds = (
+            extract_video_metadata(video_path)
+        )
+
         # Create BatchJob instance with storage path
         batch_job = BatchJob(
             video_path=Path(video_path),
@@ -282,6 +341,9 @@ async def submit_job(
             id=batch_job.job_id,
             status=batch_job.status.value,
             video_path=str(batch_job.video_path),
+            video_filename=video_filename,
+            video_size_bytes=video_size_bytes,
+            video_duration_seconds=video_duration_seconds,
             config=batch_job.config,
             selected_pipelines=batch_job.selected_pipelines,
             created_at=batch_job.created_at,
@@ -395,10 +457,18 @@ async def get_job_status(
         # Load job from database
         job = storage.load_job_metadata(job_id)
 
+        # Extract video metadata if available
+        video_filename, video_size_bytes, video_duration_seconds = (
+            extract_video_metadata(job.video_path)
+        )
+
         return JobResponse(
             id=job.job_id,
             status=job.status.value,
             video_path=str(job.video_path) if job.video_path else None,
+            video_filename=video_filename,
+            video_size_bytes=video_size_bytes,
+            video_duration_seconds=video_duration_seconds,
             config=job.config,
             selected_pipelines=job.selected_pipelines,
             created_at=job.created_at,
@@ -532,11 +602,22 @@ async def list_jobs(
         for job_id in page_job_ids:
             try:
                 job = storage.load_job_metadata(job_id)
+
+                # Extract video metadata
+                (
+                    video_filename,
+                    video_size_bytes,
+                    video_duration_seconds,
+                ) = extract_video_metadata(job.video_path)
+
                 job_responses.append(
                     JobResponse(
                         id=job.job_id,
                         status=job.status.value,
                         video_path=str(job.video_path) if job.video_path else None,
+                        video_filename=video_filename,
+                        video_size_bytes=video_size_bytes,
+                        video_duration_seconds=video_duration_seconds,
                         config=job.config,
                         selected_pipelines=job.selected_pipelines,
                         created_at=job.created_at,
@@ -700,10 +781,19 @@ async def cancel_job_endpoint(
         # If already cancelled, return current state (idempotent)
         if current_status == JobStatus.CANCELLED:
             logger.info(f"[CANCEL] Job {job_id} already cancelled (idempotent)")
+
+            # Extract video metadata
+            video_filename, video_size_bytes, video_duration_seconds = (
+                extract_video_metadata(job_data.video_path)
+            )
+
             return JobResponse(
                 id=str(job_id),
                 status=JobStatus.CANCELLED.value,
                 video_path=str(job_data.video_path) if job_data.video_path else None,
+                video_filename=video_filename,
+                video_size_bytes=video_size_bytes,
+                video_duration_seconds=video_duration_seconds,
                 config=job_data.config,
                 selected_pipelines=job_data.selected_pipelines,
                 created_at=job_data.created_at if job_data.created_at else None,
@@ -740,11 +830,19 @@ async def cancel_job_endpoint(
 
         logger.info(f"[OK] Job {job_id} cancelled successfully")
 
+        # Extract video metadata
+        video_filename, video_size_bytes, video_duration_seconds = (
+            extract_video_metadata(job_data.video_path)
+        )
+
         # Return updated job response
         return JobResponse(
             id=str(job_id),
             status=JobStatus.CANCELLED.value,
             video_path=str(job_data.video_path) if job_data.video_path else None,
+            video_filename=video_filename,
+            video_size_bytes=video_size_bytes,
+            video_duration_seconds=video_duration_seconds,
             config=job_data.config,
             selected_pipelines=job_data.selected_pipelines,
             created_at=job_data.created_at if job_data.created_at else None,
