@@ -1,11 +1,17 @@
 # Video Annotation Viewer v0.4.0 - Feature Roadmap
 
-## 🎯 **VERSION 0.4.0 OVERVIEW**
+> **⚠️ STATUS: SUPERSEDED**  
+> **Released**: October 2025 (as part of v0.5.0)  
+> This roadmap was superseded during development. The planned features evolved based on VideoAnnotator v1.3.0 server capabilities and user needs. Core monitoring and UX features were delivered, while enterprise features (bulk processing, visual config builder, landing page redesign) were deferred to v0.6.0. See [ROADMAP_v0.5.0.md](./ROADMAP_v0.5.0.md) for actual deliverables and [ROADMAP_v0.6.0.md](./ROADMAP_v0.6.0.md) for deferred features.
+
+---
+
+## 🎯 **VERSION 0.4.0 OVERVIEW** (ORIGINAL PLAN)
 
 Building on the **v0.3.0 VideoAnnotator integration foundation**, v0.4.0 focuses on **advanced user experience, enterprise features, and performance optimization**. This version transitions from "functional" to "professional-grade" with enhanced configuration management, bulk processing capabilities, and comprehensive pipeline control.
 
-### **Target Release**: Q1 2026  
-### **Development Timeline**: 12-16 weeks  
+### **Target Release**: Q1 2026 ~~(Actual: October 2025 as v0.5.0)~~  
+### **Development Timeline**: 12-16 weeks ~~(Actual: Evolved into v0.5.0)~~  
 ### **Focus Areas**: UX/UI Polish, Advanced Features, Performance, Enterprise Readiness
 
 ---
