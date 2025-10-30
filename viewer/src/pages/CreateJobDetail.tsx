@@ -163,7 +163,15 @@ const CreateJobDetail = () => {
 
   // Defensive field access - server may use different field names
   const jobData = job as any;
-  const videoFilename = jobData.video_filename || jobData.filename || jobData.video_name || "N/A";
+  let videoFilename = jobData.video_filename || jobData.filename || jobData.video_name;
+  
+  // If no direct filename field, extract from video_path
+  if (!videoFilename && jobData.video_path) {
+    videoFilename = jobData.video_path.split('/').pop() || jobData.video_path;
+  }
+  
+  videoFilename = videoFilename || "N/A";
+  
   const videoSizeBytes = jobData.video_size_bytes || jobData.file_size_bytes || null;
   const videoDurationSeconds = jobData.video_duration_seconds || jobData.duration_seconds || null;
   const videoPath = jobData.video_path || jobData.file_path || jobData.input_file || "N/A";

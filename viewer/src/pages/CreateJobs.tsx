@@ -365,9 +365,18 @@ const CreateJobs = () => {
               ) : (
                 jobsData?.jobs?.map((job) => {
                   // Defensive field access - server may use different field names
-                  const videoName = (job as any).video_filename || (job as any).filename || (job as any).video_name || "N/A";
-                  const videoDuration = (job as any).video_duration_seconds || (job as any).duration_seconds || null;
-                  const videoSize = (job as any).video_size_bytes || (job as any).file_size_bytes || null;
+                  const jobData = job as any;
+                  let videoName = jobData.video_filename || jobData.filename || jobData.video_name;
+                  
+                  // If no direct filename field, extract from video_path
+                  if (!videoName && jobData.video_path) {
+                    videoName = jobData.video_path.split('/').pop() || jobData.video_path;
+                  }
+                  
+                  videoName = videoName || "N/A";
+                  
+                  const videoDuration = jobData.video_duration_seconds || jobData.duration_seconds || null;
+                  const videoSize = jobData.video_size_bytes || jobData.file_size_bytes || null;
 
                   return (
                   <TableRow 

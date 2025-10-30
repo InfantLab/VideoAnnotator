@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 Fixed
 - **Job Table Video Information**: Video filename now always displayed (defensive field name handling)
   - Checks multiple possible field names: `video_filename`, `filename`, `video_name`
+  - **Extracts filename from `video_path`** when direct filename field unavailable (e.g., `/path/to/video.mp4` → `video.mp4`)
   - Duration and size fields similarly handle variations: `video_duration_seconds`/`duration_seconds`, `video_size_bytes`/`file_size_bytes`
   - Fixes "N/A" display issue for failed jobs where metadata exists but uses different field names
 - **Connection Error Banner Persistence**: Banner now clears within 10 seconds when server reconnects (auto-refresh drops to 10s during errors, returns to 2min when healthy)
