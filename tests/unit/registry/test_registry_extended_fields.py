@@ -1,5 +1,5 @@
-from src.registry import constants
-from src.registry.pipeline_registry import get_registry
+from videoannotator.registry import constants
+from videoannotator.registry.pipeline_registry import get_registry
 
 
 def test_registry_loads_with_extended_fields():

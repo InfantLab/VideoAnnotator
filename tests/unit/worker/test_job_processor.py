@@ -115,7 +115,7 @@ class TestJobProcessor:
     @pytest.mark.asyncio
     async def test_storage_directory_creation(self):
         """Test storage directory is created for job."""
-        from storage.config import get_job_storage_path
+        from videoannotator.storage.config import get_job_storage_path
 
         job = BatchJob(
             video_path=Path("/test/video.mp4"),
@@ -143,7 +143,7 @@ class TestJobProcessor:
             status=JobStatus.PENDING,
             config={},
         )
-        from storage.config import get_job_storage_path
+        from videoannotator.storage.config import get_job_storage_path
 
         job.storage_path = get_job_storage_path(job.job_id)
         self.storage.save_job_metadata(job)
@@ -169,7 +169,7 @@ class TestJobProcessor:
             config={},
             retry_count=0,
         )
-        from storage.config import get_job_storage_path
+        from videoannotator.storage.config import get_job_storage_path
 
         job.storage_path = get_job_storage_path(job.job_id)
         self.storage.save_job_metadata(job)
@@ -194,7 +194,7 @@ class TestJobProcessor:
             config={},
             retry_count=3,  # Already at max
         )
-        from storage.config import get_job_storage_path
+        from videoannotator.storage.config import get_job_storage_path
 
         job.storage_path = get_job_storage_path(job.job_id)
         self.storage.save_job_metadata(job)
@@ -221,7 +221,7 @@ class TestJobProcessor:
             config={},
             retry_count=0,
         )
-        from storage.config import get_job_storage_path
+        from videoannotator.storage.config import get_job_storage_path
 
         job.storage_path = get_job_storage_path(job.job_id)
         self.storage.save_job_metadata(job)
@@ -315,7 +315,7 @@ class TestJobProcessor:
             status=JobStatus.PENDING,
             config={},
         )
-        from storage.config import get_job_storage_path
+        from videoannotator.storage.config import get_job_storage_path
 
         job.storage_path = get_job_storage_path(job.job_id)
         self.storage.save_job_metadata(job)

@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 
-from api_server import app
+from videoannotator.api.main import create_app
+
+app = create_app()
 
 
 def test_pipelines_list_includes_new_taxonomy_fields():

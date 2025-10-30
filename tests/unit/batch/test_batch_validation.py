@@ -9,11 +9,11 @@ from pathlib import Path
 
 import pytest
 
-from src.batch.batch_orchestrator import BatchOrchestrator
-from src.batch.progress_tracker import ProgressTracker
-from src.batch.recovery import FailureRecovery, RetryStrategy
-from src.batch.types import BatchJob, BatchStatus, JobStatus, PipelineResult
-from src.storage.file_backend import FileStorageBackend
+from videoannotator.batch.batch_orchestrator import BatchOrchestrator
+from videoannotator.batch.progress_tracker import ProgressTracker
+from videoannotator.batch.recovery import FailureRecovery, RetryStrategy
+from videoannotator.batch.types import BatchJob, BatchStatus, JobStatus, PipelineResult
+from videoannotator.storage.file_backend import FileStorageBackend
 
 
 class TestBatchTypesValidation:

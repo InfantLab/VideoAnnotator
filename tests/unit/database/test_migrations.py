@@ -16,14 +16,14 @@ class TestDatabaseModelsV1_3_0:
 
     def test_job_status_enum_has_cancelled(self):
         """Test that JobStatus enum includes CANCELLED state."""
-        from batch.types import JobStatus
+        from videoannotator.batch.types import JobStatus
 
         assert hasattr(JobStatus, "CANCELLED")
         assert JobStatus.CANCELLED.value == "cancelled"
 
     def test_database_job_status_constant_has_cancelled(self):
         """Test that database JobStatus constants include CANCELLED."""
-        from database.models import JobStatus
+        from videoannotator.storage.models import JobStatus
 
         assert hasattr(JobStatus, "CANCELLED")
         assert JobStatus.CANCELLED == "cancelled"
@@ -36,13 +36,13 @@ class TestMigrationFunction:
 
     def test_migrate_to_v1_3_0_exists(self):
         """Test that migrate_to_v1_3_0 function exists."""
-        from database.migrations import migrate_to_v1_3_0
+        from videoannotator.storage.migrations import migrate_to_v1_3_0
 
         assert callable(migrate_to_v1_3_0)
 
     def test_migrate_to_v1_3_0_returns_bool(self):
         """Test that migrate_to_v1_3_0 has correct return type signature."""
-        from database.migrations import migrate_to_v1_3_0
+        from videoannotator.storage.migrations import migrate_to_v1_3_0
 
         # Check function signature
         import inspect

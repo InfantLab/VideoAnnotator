@@ -19,7 +19,7 @@ class TestAutoAPIKeyGeneration:
         tokens_dir = tmp_path / "tokens"
         tokens_dir.mkdir()
 
-        with patch("api.startup.get_token_manager") as mock_get_manager:
+        with patch("videoannotator.api.startup.get_token_manager") as mock_get_manager:
             mock_manager = MagicMock()
             mock_manager._token_cache = {
                 "va_api_existing": MagicMock(
@@ -29,7 +29,7 @@ class TestAutoAPIKeyGeneration:
             mock_get_manager.return_value = mock_manager
 
             # Mock Path.exists to return True
-            with patch("api.startup.Path") as mock_path:
+            with patch("videoannotator.api.startup.Path") as mock_path:
                 mock_file = MagicMock()
                 mock_file.exists.return_value = True
                 mock_file.stat.return_value = MagicMock(st_size=100)
@@ -47,7 +47,7 @@ class TestAutoAPIKeyGeneration:
         tokens_dir = tmp_path / "tokens"
         tokens_dir.mkdir()
 
-        with patch("api.startup.get_token_manager") as mock_get_manager:
+        with patch("videoannotator.api.startup.get_token_manager") as mock_get_manager:
             mock_manager = MagicMock()
             mock_manager._token_cache = {}
 
@@ -58,7 +58,7 @@ class TestAutoAPIKeyGeneration:
             mock_get_manager.return_value = mock_manager
 
             # Mock Path to return empty/non-existent file
-            with patch("api.startup.Path") as mock_path:
+            with patch("videoannotator.api.startup.Path") as mock_path:
                 mock_file = MagicMock()
                 mock_file.exists.return_value = False
                 mock_path.return_value = mock_file
@@ -88,13 +88,13 @@ class TestAutoAPIKeyGeneration:
 
     def test_ensure_api_key_exists_handles_generation_failure(self, tmp_path):
         """Test graceful handling of key generation failure."""
-        with patch("api.startup.get_token_manager") as mock_get_manager:
+        with patch("videoannotator.api.startup.get_token_manager") as mock_get_manager:
             mock_manager = MagicMock()
             mock_manager._token_cache = {}
             mock_manager.generate_api_key.side_effect = Exception("Database error")
             mock_get_manager.return_value = mock_manager
 
-            with patch("api.startup.Path") as mock_path:
+            with patch("videoannotator.api.startup.Path") as mock_path:
                 mock_file = MagicMock()
                 mock_file.exists.return_value = False
                 mock_path.return_value = mock_file
@@ -108,7 +108,7 @@ class TestAutoAPIKeyGeneration:
 
     def test_initialize_security_calls_ensure_api_key(self):
         """Test that initialize_security calls ensure_api_key_exists."""
-        with patch("api.startup.ensure_api_key_exists") as mock_ensure:
+        with patch("videoannotator.api.startup.ensure_api_key_exists") as mock_ensure:
             mock_ensure.return_value = ("va_api_test", True)
 
             with patch("api.middleware.auth.is_auth_required", return_value=True):
@@ -120,11 +120,11 @@ class TestAutoAPIKeyGeneration:
 
     def test_initialize_security_logs_auth_disabled(self):
         """Test that security initialization logs when auth is disabled."""
-        with patch("api.startup.ensure_api_key_exists") as mock_ensure:
+        with patch("videoannotator.api.startup.ensure_api_key_exists") as mock_ensure:
             mock_ensure.return_value = (None, False)
 
             with patch("api.middleware.auth.is_auth_required", return_value=False):
-                with patch("api.startup.logger") as mock_logger:
+                with patch("videoannotator.api.startup.logger") as mock_logger:
                     initialize_security()
 
                     # Verify warning logged

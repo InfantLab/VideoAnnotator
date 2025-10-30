@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from src.batch.progress_tracker import ProgressTracker
-from src.batch.types import BatchJob, BatchStatus, JobStatus
+from videoannotator.batch.progress_tracker import ProgressTracker
+from videoannotator.batch.types import BatchJob, BatchStatus, JobStatus
 
 
 class TestProgressTracker:

@@ -22,7 +22,9 @@ mock_transformers = Mock()
 sys.modules["transformers"] = mock_transformers
 
 # Import after mocking
-from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
+from videoannotator.pipelines.person_tracking.person_pipeline import (
+    PersonTrackingPipeline,
+)
 
 
 class TestPersonTrackingSizeAnalysisIntegration:
@@ -115,8 +117,8 @@ class TestPersonTrackingSizeAnalysisIntegration:
         assert size_config["height_threshold"] == 0.4
         assert size_config["confidence"] == 0.7
 
-    @patch("src.pipelines.person_tracking.person_pipeline.cv2.VideoCapture")
-    @patch("src.pipelines.person_tracking.person_pipeline.YOLO")
+    @patch("videoannotator.pipelines.person_tracking.person_pipeline.cv2.VideoCapture")
+    @patch("videoannotator.pipelines.person_tracking.person_pipeline.YOLO")
     def test_person_tracking_with_size_analysis(
         self,
         mock_yolo_class,
@@ -229,7 +231,9 @@ class TestPersonTrackingSizeAnalysisIntegration:
         assert filtered_person_ids == {"person_001"}
         assert len(filtered_tracks) == 3
 
-    @patch("src.pipelines.person_tracking.person_pipeline.run_size_based_analysis")
+    @patch(
+        "videoannotator.pipelines.person_tracking.person_pipeline.run_size_based_analysis"
+    )
     def test_size_analysis_function_called(self, mock_size_analysis, pipeline_config):
         """Test that the size-based analysis function is called correctly."""
         mock_size_analysis.return_value = {
@@ -249,7 +253,7 @@ class TestPersonTrackingSizeAnalysisIntegration:
         ]
 
         # Initialize identity manager
-        from src.utils.person_identity import PersonIdentityManager
+        from videoannotator.utils.person_identity import PersonIdentityManager
 
         pipeline.identity_manager = PersonIdentityManager("test_video")
 

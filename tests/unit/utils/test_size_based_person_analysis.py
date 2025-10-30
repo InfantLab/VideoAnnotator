@@ -5,7 +5,7 @@ Test suite for the simplified size-based person analysis functionality.
 
 import pytest
 
-from src.utils.size_based_person_analysis import (
+from videoannotator.utils.size_based_person_analysis import (
     SizeBasedPersonAnalyzer,
     print_analysis_results,
     run_size_based_analysis,

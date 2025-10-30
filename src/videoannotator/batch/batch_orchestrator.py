@@ -107,7 +107,7 @@ class BatchOrchestrator:
         _try_import(
             "scene_detection",
             lambda: __import__(
-                "pipelines.scene_detection.scene_pipeline",
+                "videoannotator.pipelines.scene_detection.scene_pipeline",
                 globals(),
                 locals(),
                 ["SceneDetectionPipeline"],
@@ -117,7 +117,7 @@ class BatchOrchestrator:
         _try_import(
             "person_tracking",
             lambda: __import__(
-                "pipelines.person_tracking.person_pipeline",
+                "videoannotator.pipelines.person_tracking.person_pipeline",
                 globals(),
                 locals(),
                 ["PersonTrackingPipeline"],
@@ -127,7 +127,7 @@ class BatchOrchestrator:
         _try_import(
             "face_analysis",
             lambda: __import__(
-                "pipelines.face_analysis.face_pipeline",
+                "videoannotator.pipelines.face_analysis.face_pipeline",
                 globals(),
                 locals(),
                 ["FaceAnalysisPipeline"],
@@ -137,14 +137,17 @@ class BatchOrchestrator:
         _try_import(
             "audio_processing",
             lambda: __import__(
-                "pipelines.audio_processing", globals(), locals(), ["AudioPipeline"]
+                "videoannotator.pipelines.audio_processing",
+                globals(),
+                locals(),
+                ["AudioPipeline"],
             ).AudioPipeline,
         )
         # LAION pipelines
         _try_import(
             "laion_face",
             lambda: __import__(
-                "pipelines.face_analysis.laion_face_pipeline",
+                "videoannotator.pipelines.face_analysis.laion_face_pipeline",
                 globals(),
                 locals(),
                 ["LAIONFacePipeline"],
@@ -153,7 +156,7 @@ class BatchOrchestrator:
         _try_import(
             "laion_voice",
             lambda: __import__(
-                "pipelines.audio_processing.laion_voice_pipeline",
+                "videoannotator.pipelines.audio_processing.laion_voice_pipeline",
                 globals(),
                 locals(),
                 ["LAIONVoicePipeline"],
@@ -233,7 +236,7 @@ class BatchOrchestrator:
         output_dir: VideoPath | None = None,
         config: ConfigDict | None = None,
         selected_pipelines: list[str] | None = None,
-        extensions: list[str] = None,
+        extensions: list[str] | None = None,
     ) -> list[str]:
         """Add multiple jobs from a directory of videos.
 

@@ -67,11 +67,13 @@ class TestCORSConfiguration:
 
     def test_initialize_security_logs_cors_configuration(self):
         """Test that security initialization logs CORS origins."""
-        from api.startup import initialize_security
+        from videoannotator.api.startup import initialize_security
 
         with patch.dict(os.environ, {"CORS_ORIGINS": "https://secure.example.com"}):
-            with patch("api.startup.logger") as mock_logger:
-                with patch("api.startup.ensure_api_key_exists") as mock_ensure:
+            with patch("videoannotator.api.startup.logger") as mock_logger:
+                with patch(
+                    "videoannotator.api.startup.ensure_api_key_exists"
+                ) as mock_ensure:
                     mock_ensure.return_value = (None, False)
 
                     with patch(
