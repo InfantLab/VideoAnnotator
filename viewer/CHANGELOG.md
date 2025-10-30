@@ -5,6 +5,28 @@ All notable changes to Video Annotation Viewer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ✨ Added
+- **GPU Information Display**: Collapsible GPU status panel in Settings showing device name, compute capability, PyTorch version, and memory usage
+- **GPU Compatibility Warnings**: Automatic detection and display of GPU/PyTorch compatibility issues with actionable recommendations
+- **Worker Information Display**: Collapsible worker status panel showing active jobs, queue depth, max concurrent workers, and poll interval
+- **API Documentation Link**: Quick link to server's interactive API docs (`/docs`) in Server Debugging Tools section
+
+### 🎨 Improved
+- **Pipeline Display**: Version and model now shown as styled badges instead of plain text on pipeline selection cards
+- **JSON Configuration Editor**: 
+  - Collapsible by default with progressive disclosure
+  - Comprehensive explainer with examples and use cases
+  - Fixed textarea editability with separate state management
+  - Live validation feedback with visual indicators
+  - Copy to clipboard functionality
+
+### 🐛 Fixed
+- Console error noise from unnecessary `/api/v1/debug/token-info` endpoint calls
+- Text color contrast in JSON configuration examples (was white on white)
+- Textarea editability in Advanced JSON Overrides section
+
 ## [0.5.0] - 2025-10-29
 
 ### 🎯 **Major Changes**

@@ -38,13 +38,18 @@ Commands (Bun preferred; npm works too):
 
 ## Repository Structure (essentials)
 
-- `src/components/` UI components (e.g., `VideoAnnotationViewer.tsx`, `VideoPlayer.tsx`, `Timeline.tsx`)
+- `src/components/` UI components (e.g., `VideoAnnotationViewer.tsx`, `VideoPlayer.tsx`, `Timeline.tsx`, `GPUInfo.tsx`, `WorkerInfo.tsx`, `JobDeleteButton.tsx`)
 - `src/lib/parsers/` Data parsers (`coco.ts`, `webvtt.ts`, `rttm.ts`, `scene.ts`, `face.ts`, `merger.ts`)
 - `src/lib/validation.ts` Zod schemas and validation helpers
+- `src/lib/toastHelpers.tsx` Toast notification helpers with copyable error toasts
 - `src/types/annotations.ts` Shared TS types
-- `src/api/client.ts` VideoAnnotator API client (jobs, pipelines, SSE, health)
+- `src/types/system.ts` System health and diagnostics types
+- `src/api/client.ts` VideoAnnotator API client (jobs, pipelines, SSE, health, system diagnostics)
 - `src/hooks/useSSE.ts` SSE integration for live job updates
-- `src/pages/` Job management pages and settings
+- `src/hooks/useSystemHealth.ts` System health monitoring (GPU, workers, etc.)
+- `src/hooks/useJobDeletion.ts` Job deletion with optimistic updates
+- `src/hooks/useJobCancellation.ts` Job cancellation with copyable error toasts
+- `src/pages/` Job management pages and settings (CreateJobs, CreateJobDetail, CreateNewJob, CreateSettings)
 - `src/test/` Vitest setup and tests
 - `e2e/` Playwright smoke tests
 - `scripts/` API debugging tools (`test_api_quick.py`, `browser_debug_console.js`)
@@ -65,11 +70,12 @@ Commands (Bun preferred; npm works too):
 Default server: `http://localhost:18011/` (local dev). Configure via env or localStorage.
 
 API client: see `src/api/client.ts`.
-- Health: `/health`, `/api/v1/system/health`
-- Jobs: `/api/v1/jobs`, `/api/v1/jobs/:id`
+- Health: `/health`, `/api/v1/system/health` (includes GPU, workers, system info)
+- Jobs: `/api/v1/jobs`, `/api/v1/jobs/:id` (GET, POST, DELETE)
 - Pipelines: `/api/v1/pipelines`
 - SSE: `/api/v1/events/stream?token=...&job_id=...`
 - Debug (optional): `/api/v1/debug/*`
+- API Docs: `/docs` (interactive Swagger/OpenAPI documentation)
 
 v1.2.x pipeline introspection (roadmap):
 - Add a typed client at `src/lib/api/videoAnnotatorClient.ts` (or extend `src/api/client.ts`) for pipeline catalog, parameter schemas, health/capabilities, and version detection.
