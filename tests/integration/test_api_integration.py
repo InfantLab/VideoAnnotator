@@ -7,7 +7,7 @@ import asyncio
 import json
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Generator
 
 import httpx
 import pytest
@@ -142,6 +142,18 @@ def anonymous_client() -> APITestClient:
     return APITestClient()
 
 
+@pytest.fixture
+def enable_auth(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
+    """Enable authentication for tests that need it.
+
+    v1.3.0 introduced secure-by-default authentication.
+    Tests that specifically test authentication behavior need to
+    enable it explicitly since conftest.py disables it by default.
+    """
+    monkeypatch.setenv("AUTH_REQUIRED", "true")
+    yield
+
+
 class TestAPIAuthentication:
     """Test API authentication system."""
 
@@ -204,7 +216,7 @@ class TestAPIAuthentication:
         assert "config_schema" in pipeline
 
     @pytest.mark.asyncio
-    async def test_invalid_api_key(self) -> None:
+    async def test_invalid_api_key(self, enable_auth: None) -> None:
         """Test that invalid API key is rejected."""
         invalid_client = APITestClient(api_key="va_invalid_key_12345")
         response = await invalid_client.get("/api/v1/jobs")
@@ -214,7 +226,7 @@ class TestAPIAuthentication:
 
     @pytest.mark.asyncio
     async def test_missing_api_key_for_protected_endpoint(
-        self, anonymous_client: APITestClient
+        self, enable_auth: None, anonymous_client: APITestClient
     ) -> None:
         """Test that protected endpoints require authentication."""
         response = await anonymous_client.post("/api/v1/jobs", files={}, data={})

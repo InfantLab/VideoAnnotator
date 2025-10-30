@@ -39,6 +39,18 @@ import os
 
 
 @pytest.fixture(autouse=True)
+def disable_auth_for_tests(monkeypatch):
+    """Disable API authentication for tests.
+
+    v1.3.0 introduced secure-by-default authentication. For tests,
+    we disable it unless explicitly testing authentication behavior.
+    Individual tests can override this by setting AUTH_REQUIRED=true.
+    """
+    monkeypatch.setenv("AUTH_REQUIRED", "false")
+    yield
+
+
+@pytest.fixture(autouse=True)
 def patch_hf_token(monkeypatch):
     """Patch HuggingFace token for tests: use real token if available, else fake."""
     real_token = os.environ.get("HF_AUTH_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN")

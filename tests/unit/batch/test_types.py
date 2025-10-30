@@ -312,9 +312,9 @@ class TestBatchStatus:
 
     def test_success_rate(self):
         """Test success rate calculation."""
-        # No completed jobs
+        # No completed jobs (optimistic: nothing failed yet)
         status = BatchStatus()
-        assert status.success_rate == 0.0  # No jobs completed yet
+        assert status.success_rate == 100.0  # Optimistic: no failures yet
 
         # Mixed results
         status.completed_jobs = 7

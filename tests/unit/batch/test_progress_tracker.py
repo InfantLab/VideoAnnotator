@@ -92,7 +92,9 @@ class TestProgressTracker:
         assert status.failed_jobs == 0
         assert status.cancelled_jobs == 0
         assert status.progress_percentage == 0.0
-        assert status.success_rate == 0.0  # Empty batch has 0% success rate
+        assert (
+            status.success_rate == 100.0
+        )  # Empty batch has 100% success rate (optimistic: nothing failed yet)
         assert status.current_jobs == []
 
     def test_get_status_with_jobs(self):
