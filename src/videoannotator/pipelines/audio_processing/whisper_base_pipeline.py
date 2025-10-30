@@ -29,10 +29,11 @@ except ImportError:
 # Suppress librosa warnings that might indicate instability
 warnings.filterwarnings("ignore", category=UserWarning, module="librosa")
 
+from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.utils.model_loader import log_model_download
+
 from .ffmpeg_utils import check_ffmpeg_available
 from .ffmpeg_utils import extract_audio_from_video as ffmpeg_extract
-from .pipelines.base_pipeline import BasePipeline
-from .utils.model_loader import log_model_download
 
 # Try to import both standard Whisper and HF Whisper
 try:

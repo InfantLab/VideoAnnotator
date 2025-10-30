@@ -13,15 +13,15 @@ from typing import Any
 import cv2
 import numpy as np
 
-from .exporters.native_formats import (
+from videoannotator.exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
     export_coco_json,
     validate_coco_json,
 )
-from .pipelines.base_pipeline import BasePipeline
-from .utils.person_identity import PersonIdentityManager
-from .version import __version__
+from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.utils.person_identity import PersonIdentityManager
+from videoannotator.version import __version__
 
 # Optional import for enhanced face analysis
 try:

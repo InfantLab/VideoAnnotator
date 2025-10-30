@@ -7,7 +7,7 @@ from typing import Any
 
 # Note: After standards migration, base schemas are no longer used
 # Pipelines now return native format dictionaries (COCO, WebVTT, RTTM, etc.)
-from .version import create_annotation_metadata, get_model_info
+from videoannotator.version import create_annotation_metadata, get_model_info
 
 
 class BasePipeline(ABC):

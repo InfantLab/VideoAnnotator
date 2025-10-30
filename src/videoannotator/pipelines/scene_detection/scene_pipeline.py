@@ -11,14 +11,15 @@ from typing import Any
 
 import numpy as np
 
+from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.version import __version__
+
 from .exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
     export_coco_json,
     validate_coco_json,
 )
-from .pipelines.base_pipeline import BasePipeline
-from .version import __version__
 
 # Optional imports
 try:

@@ -15,15 +15,16 @@ from typing import Any
 import cv2
 import numpy as np
 
+from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.utils.person_identity import PersonIdentityManager
+from videoannotator.version import __version__
+
 from .exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
     export_coco_json,
     validate_coco_json,
 )
-from .pipelines.base_pipeline import BasePipeline
-from .utils.person_identity import PersonIdentityManager
-from .version import __version__
 
 
 # Apply SciPy compatibility patch first - OpenFace 3.0 uses deprecated scipy.integrate.simps

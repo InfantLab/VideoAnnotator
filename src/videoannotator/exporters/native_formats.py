@@ -21,8 +21,8 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 
-# Import version information
-from .version import __version__
+# Import version information from videoannotator package
+from videoannotator.version import __version__
 
 if TYPE_CHECKING:
     try:
