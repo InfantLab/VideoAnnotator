@@ -163,13 +163,20 @@ class APIClient {
         throw new APIError(errorMessage, response.status, response);
       }
 
-      // Handle responses that don't return JSON (like 204 No Content)
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        return await response.json();
-      } else {
-        return {} as T;
+      // Handle 204 No Content responses (like DELETE operations)
+      if (response.status === 204) {
+        return undefined as T;
       }
+
+      // Handle responses that don't return JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        // No content type or not JSON - don't try to parse
+        return undefined as T;
+      }
+
+      // Parse JSON response
+      return await response.json();
     } catch (error) {
       clearTimeout(timeoutId);
 
@@ -451,6 +458,12 @@ class APIClient {
 
   async getJob(jobId: string): Promise<JobResponse> {
     return this.request(`/api/v1/jobs/${jobId}`);
+  }
+
+  async deleteJob(jobId: string): Promise<void> {
+    return this.request(`/api/v1/jobs/${jobId}`, {
+      method: 'DELETE',
+    });
   }
 
   async submitJob(

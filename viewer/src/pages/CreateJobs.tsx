@@ -4,8 +4,14 @@ import { apiClient } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Loader2, RefreshCw, Eye, Play, Settings } from "lucide-react";
-import { Link } from "react-router-dom";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Loader2, RefreshCw, Eye, Play, Settings, AlertCircle, RotateCcw } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -17,7 +23,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import vavIcon from "@/assets/v-a-v.icon.png";
 import { JobCancelButton } from "@/components/JobCancelButton";
+import { JobDeleteButton } from "@/components/JobDeleteButton";
 import { canCancelJob } from "@/hooks/useJobCancellation";
+import { canDeleteJob } from "@/hooks/useJobDeletion";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { parseApiError } from "@/lib/errorHandling";
 import type { JobStatus } from "@/types/api";
@@ -64,6 +72,7 @@ function enhanceAuthError(error: any) {
 }
 
 const CreateJobs = () => {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const perPage = 10;
   const { toast } = useToast();
@@ -102,7 +111,7 @@ const CreateJobs = () => {
     if (error) {
       const enhancedError = enhanceAuthError(error);
       const errorText = `${enhancedError.message}\n\n${enhancedError.hint}`;
-      
+
       toast({
         title: enhancedError.message,
         description: enhancedError.hint,
@@ -127,7 +136,18 @@ const CreateJobs = () => {
     }
   }, [error, toast]);
 
-  const getStatusBadge = (status: string) => {
+  const handleRetryJob = (job: any) => {
+    navigate('/create/new', {
+      state: {
+        retryJobId: job.id,
+        retryJobConfig: job.config,
+        retryJobPipelines: job.selected_pipelines,
+        retryJobVideoFilename: job.video_filename,
+      }
+    });
+  };
+
+  const getStatusBadge = (status: string, errorMessage?: string | null) => {
     const statusMap = {
       pending: { variant: "secondary" as const, color: "text-yellow-600" },
       running: { variant: "default" as const, color: "text-blue-600" },
@@ -139,11 +159,33 @@ const CreateJobs = () => {
 
     const config = statusMap[status as keyof typeof statusMap] || statusMap.pending;
 
-    return (
+    const badge = (
       <Badge variant={config.variant} className={config.color}>
         {status.toUpperCase()}
+        {status === 'failed' && errorMessage && (
+          <AlertCircle className="ml-1 h-3 w-3 inline" />
+        )}
       </Badge>
     );
+
+    // Show tooltip with error message for failed jobs
+    if (status === 'failed' && errorMessage) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {badge}
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p className="font-semibold">Error:</p>
+              <p>{errorMessage}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    return badge;
   };
 
   const formatDuration = (seconds: number | null) => {
@@ -285,7 +327,7 @@ const CreateJobs = () => {
                       {job.id.slice(0, 8)}...
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(job.status)}
+                      {getStatusBadge(job.status, job.error_message)}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
                       {job.video_filename || "N/A"}
@@ -318,6 +360,25 @@ const CreateJobs = () => {
                             jobStatus={job.status as JobStatus}
                             size="sm"
                             variant="outline"
+                          />
+                        )}
+                        {job.status === 'failed' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRetryJob(job)}
+                          >
+                            <RotateCcw className="h-4 w-4 mr-1" />
+                            Retry
+                          </Button>
+                        )}
+                        {canDeleteJob(job.status as JobStatus) && (
+                          <JobDeleteButton
+                            jobId={job.id}
+                            jobStatus={job.status as JobStatus}
+                            size="sm"
+                            variant="outline"
+                            onDeleted={() => refetch()}
                           />
                         )}
                         <Link to={`/create/jobs/${job.id}`}>

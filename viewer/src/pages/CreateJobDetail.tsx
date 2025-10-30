@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ExternalLink, Download, Eye } from "lucide-react";
+import { ArrowLeft, ExternalLink, Download, Eye, RotateCcw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { parseApiError } from "@/lib/errorHandling";
 import vavIcon from "@/assets/v-a-v.icon.png";
 import { JobCancelButton } from "@/components/JobCancelButton";
+import { JobDeleteButton } from "@/components/JobDeleteButton";
 import { canCancelJob } from "@/hooks/useJobCancellation";
+import { canDeleteJob } from "@/hooks/useJobDeletion";
 import type { JobStatus } from "@/types/api";
 
 const CreateJobDetail = () => {
@@ -99,6 +101,20 @@ const CreateJobDetail = () => {
     }
   };
 
+  const handleRetryJob = () => {
+    if (!job) return;
+
+    // Navigate to create new job with pre-filled settings
+    navigate('/create/new', {
+      state: {
+        retryJobId: job.id,
+        retryJobConfig: job.config,
+        retryJobPipelines: job.selected_pipelines,
+        retryJobVideoFilename: job.video_filename,
+      }
+    });
+  };
+
   const handleViewRawData = () => {
     if (!job) return;
 
@@ -170,6 +186,22 @@ const CreateJobDetail = () => {
             />
           )}
 
+          {job.status === "failed" && (
+            <Button onClick={handleRetryJob} variant="outline" size="sm">
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Retry Job
+            </Button>
+          )}
+
+          {canDeleteJob(job.status as JobStatus) && (
+            <JobDeleteButton
+              jobId={job.id}
+              jobStatus={job.status as JobStatus}
+              size="sm"
+              onDeleted={() => navigate('/create/jobs')}
+            />
+          )}
+
           {job.status === "completed" && (
             <Button onClick={handleOpenInViewer}>
               <Eye className="h-4 w-4 mr-2" />
@@ -208,9 +240,16 @@ const CreateJobDetail = () => {
             )}
 
             {job.status === "failed" && (
-              <Alert>
+              <Alert variant="destructive">
                 <AlertDescription>
-                  Job failed during processing. Check the logs below for details.
+                  <div className="space-y-2">
+                    <p className="font-semibold">Job failed during processing</p>
+                    {job.error_message && (
+                      <p className="text-sm">
+                        <span className="font-medium">Error:</span> {job.error_message}
+                      </p>
+                    )}
+                  </div>
                 </AlertDescription>
               </Alert>
             )}

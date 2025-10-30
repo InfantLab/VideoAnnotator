@@ -55,9 +55,9 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
           setTokenStatus({ isValid: true, user: 'Anonymous' });
         } else if (response.status === 401) {
           // Server requires auth - this is expected, not an error in the config
-          setTokenStatus({ 
-            isValid: false, 
-            error: 'Server requires authentication. You need to provide an API token to connect.' 
+          setTokenStatus({
+            isValid: false,
+            error: 'Server requires authentication. You need to provide an API token to connect.'
           });
         } else {
           setTokenStatus({ isValid: false, error: `Server error: ${response.status}` });
@@ -98,16 +98,16 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
       // Server rejected this token
       if (jobsResponse.status === 401) {
         if (isPlaceholderToken) {
-          setTokenStatus({ 
-            isValid: false, 
-            error: authRequired 
+          setTokenStatus({
+            isValid: false,
+            error: authRequired
               ? 'This is a placeholder, not a real token. The server requires authentication - you need a real token.'
               : 'This is a placeholder, not a real token. Clear this field to connect without authentication.'
           });
         } else {
-          setTokenStatus({ 
-            isValid: false, 
-            error: 'Server rejected this token. It may be expired or invalid.' 
+          setTokenStatus({
+            isValid: false,
+            error: 'Server rejected this token. It may be expired or invalid.'
           });
         }
         setIsValidating(false);
@@ -175,12 +175,12 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
     // Show success message
     const tokenMode = token.trim() ? 'with API token' : 'in anonymous mode';
     console.log(`✅ Configuration saved: URL=${apiUrl}, Token=${token ? '***' : '(empty)'}`);
-    
+
     // Note: The validation error (if any) is separate from saving the config
     // The config is saved successfully even if the server requires auth
 
     onTokenConfigured?.();
-    
+
     // Force a page refresh to ensure all components pick up the new token
     // This is necessary because some queries might be cached
     console.log('🔄 Reloading page to apply new token configuration...');
@@ -201,7 +201,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
     // This provides immediate feedback without requiring user to click "Test Connection"
     const urlToValidate = savedUrl || apiUrl;
     const tokenToValidate = savedToken;
-    
+
     // Small delay to let the UI render first
     setTimeout(() => {
       validateToken(urlToValidate, tokenToValidate);
@@ -331,11 +331,11 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 placeholder={
-                  serverAuthRequired === false 
-                    ? "Leave empty for anonymous access" 
+                  serverAuthRequired === false
+                    ? "Leave empty for anonymous access"
                     : serverAuthRequired === true
-                    ? "va_xxxxxxxxxxxx (required by server)"
-                    : "va_xxxxxxxxxxxx or leave empty"
+                      ? "va_xxxxxxxxxxxx (required by server)"
+                      : "va_xxxxxxxxxxxx or leave empty"
                 }
                 className="pr-10"
               />

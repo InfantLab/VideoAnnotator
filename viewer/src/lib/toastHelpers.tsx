@@ -7,15 +7,8 @@ import React from 'react';
 import type { ParsedError } from '@/types/api';
 import { toast as toastFn } from '@/hooks/use-toast';
 
-export interface ToastFunction {
-    (props: {
-        title?: string;
-        description?: string;
-        variant?: 'default' | 'destructive';
-        action?: React.ReactNode;
-        duration?: number;
-    }): void;
-}
+// Type for toast function - uses ReturnType to match actual signature
+export type ToastFunction = typeof toastFn;
 
 /**
  * Creates a copy button action for toasts

@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { apiClient } from "@/api/client";
 import { handleAPIError } from "@/api/handleError";
 import { parseApiError } from "@/lib/errorHandling";
@@ -62,8 +62,19 @@ const buildDefaultConfig = (pipelines: PipelineDescriptor[]) => {
   }, {});
 };
 
+// Type for retry state passed via React Router
+interface RetryJobState {
+  retryJobId: string;
+  retryJobConfig?: Record<string, unknown>;
+  retryJobPipelines?: string[];
+  retryJobVideoFilename?: string;
+}
+
 const CreateNewJob = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const retryState = location.state as RetryJobState | undefined;
+
   const { data: catalogData, isLoading: catalogLoading, error: catalogError } = usePipelineCatalog();
   const refreshPipelineCatalog = useRefreshPipelineCatalog();
   const pipelines = catalogData?.catalog.pipelines ?? [];
@@ -106,6 +117,20 @@ const CreateNewJob = () => {
       return Object.keys(nextConfig).length ? nextConfig : buildDefaultConfig(pipelines);
     });
   }, [pipelines, defaultSelectedPipelines]);
+
+  // Handle retry state - pre-fill form with failed job's configuration
+  useEffect(() => {
+    if (retryState && pipelines.length) {
+      if (retryState.retryJobPipelines) {
+        setSelectedPipelines(retryState.retryJobPipelines);
+      }
+      if (retryState.retryJobConfig) {
+        setConfig(retryState.retryJobConfig);
+      }
+      // Clear the state after using it to prevent re-filling on navigation
+      window.history.replaceState({}, document.title);
+    }
+  }, [retryState, pipelines]);
 
   // Validate config whenever it changes
   useEffect(() => {
@@ -307,6 +332,26 @@ const CreateNewJob = () => {
           </div>
         </div>
       </div>
+
+      {/* Retry Banner */}
+      {retryState && (
+        <Alert>
+          <RotateCcw className="h-4 w-4" />
+          <AlertTitle>Retrying Failed Job</AlertTitle>
+          <AlertDescription>
+            <div className="space-y-1">
+              <p>Job ID: <span className="font-mono text-sm">{retryState.retryJobId}</span></p>
+              <p>Pipeline settings and configuration have been pre-filled.</p>
+              <p className="font-semibold">
+                {retryState.retryJobVideoFilename
+                  ? `Please upload "${retryState.retryJobVideoFilename}" again to retry the job.`
+                  : 'Please upload the same video file to retry the job.'
+                }
+              </p>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Progress */}
       <Card>
@@ -637,6 +682,15 @@ const ConfigurationStep = ({
     [pipelines, selectedPipelines]
   );
 
+  // Manage JSON text separately to allow editing even when temporarily invalid
+  const [jsonText, setJsonText] = useState(() => JSON.stringify(config, null, 2));
+  const [jsonError, setJsonError] = useState<string | null>(null);
+
+  // Sync jsonText when config changes from form controls
+  useEffect(() => {
+    setJsonText(JSON.stringify(config, null, 2));
+  }, [config]);
+
   return (
     <div className="space-y-6">
       <p className="text-muted-foreground">
@@ -651,40 +705,115 @@ const ConfigurationStep = ({
         onConfigChange={setConfig}
       />
 
-      <div className="p-4 bg-blue-50 rounded-lg">
-        <h4 className="font-medium text-blue-800 mb-2">Advanced JSON Overrides</h4>
-        <div className={`bg-white p-3 rounded border ${validationResult?.errors && validationResult.errors.length > 0
-          ? 'border-red-300 shadow-sm shadow-red-100'
-          : validationResult?.warnings && validationResult.warnings.length > 0
-            ? 'border-yellow-300 shadow-sm shadow-yellow-100'
-            : ''
-          }`}>
-          <textarea
-            value={JSON.stringify(config, null, 2)}
-            onChange={(e) => {
-              try {
-                const newConfig = JSON.parse(e.target.value);
-                setConfig(newConfig);
-              } catch {
-                // Invalid JSON, ignore to prevent breaking form
-              }
-            }}
-            className={`w-full h-64 text-sm font-mono resize-none border rounded px-3 py-2 text-foreground bg-background ${validationResult?.errors && validationResult.errors.length > 0
-              ? 'border-red-400 focus:ring-2 focus:ring-red-500 focus:border-red-500'
-              : validationResult?.warnings && validationResult.warnings.length > 0
-                ? 'border-yellow-400 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500'
-                : 'border focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-              }`}
-            placeholder="Pipeline configuration JSON..."
-          />
+      <details className="p-4 bg-blue-50 rounded-lg">
+        <summary className="font-medium text-blue-800 mb-2 cursor-pointer hover:text-blue-900">
+          Advanced: Raw JSON Configuration (click to expand)
+        </summary>
+        <div className="mt-4 space-y-3">
+          {/* Explainer */}
+          <div className="p-3 bg-white border border-blue-200 rounded text-sm">
+            <p className="font-semibold text-blue-900 mb-2">💡 What is this?</p>
+            <p className="text-gray-700 mb-2">
+              The JSON below represents your complete pipeline configuration. Each pipeline (like "openface3" or "whisper") 
+              can have custom parameters. Most users can ignore this and use the form controls above.
+            </p>
+            <p className="text-gray-700 mb-2">
+              <strong>When to use this:</strong>
+            </p>
+            <ul className="list-disc ml-5 space-y-1 text-gray-700">
+              <li>Testing specific parameter combinations not exposed in the UI</li>
+              <li>Copying/pasting configurations between jobs</li>
+              <li>Applying parameters that don't have form controls yet</li>
+            </ul>
+            <p className="text-gray-700 mt-2">
+              <strong>Example structure:</strong>
+            </p>
+            <pre className="mt-2 p-2 bg-gray-50 rounded text-xs overflow-x-auto text-gray-800">
+{`{
+  "openface3": {
+    "model": "mobilenet",
+    "confidence_threshold": 0.5
+  },
+  "whisper": {
+    "model": "base",
+    "language": "en"
+  }
+}`}</pre>
+          </div>
+
+          {/* JSON Editor */}
+          <div className={`bg-white p-4 rounded border-2 ${validationResult?.errors && validationResult.errors.length > 0
+            ? 'border-red-300 shadow-sm shadow-red-100'
+            : validationResult?.warnings && validationResult.warnings.length > 0
+              ? 'border-yellow-300 shadow-sm shadow-yellow-100'
+              : 'border-blue-300'
+            }`}>
+            <div className="flex justify-between items-center mb-3">
+              <div>
+                <label className="text-sm font-semibold text-gray-900">
+                  ✏️ Edit Configuration JSON (Editable)
+                </label>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  Click inside and type to edit the configuration directly
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(JSON.stringify(config, null, 2));
+                  // Could show a toast here
+                }}
+                className="text-xs text-blue-600 hover:text-blue-800 underline"
+              >
+                Copy to clipboard
+              </button>
+            </div>
+            <textarea
+              value={jsonText}
+              onChange={(e) => {
+                const newText = e.target.value;
+                setJsonText(newText);
+                
+                try {
+                  const newConfig = JSON.parse(newText);
+                  setConfig(newConfig);
+                  setJsonError(null);
+                } catch (err) {
+                  // Store error but allow editing to continue
+                  setJsonError(err instanceof Error ? err.message : 'Invalid JSON');
+                }
+              }}
+              className={`w-full h-64 text-sm font-mono resize-y border-2 rounded px-3 py-2 text-gray-900 bg-white focus:outline-none ${
+                jsonError
+                  ? 'border-orange-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500'
+                  : validationResult?.errors && validationResult.errors.length > 0
+                    ? 'border-red-400 focus:ring-2 focus:ring-red-500 focus:border-red-500'
+                    : validationResult?.warnings && validationResult.warnings.length > 0
+                      ? 'border-yellow-400 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500'
+                      : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                }`}
+              placeholder='{"pipeline_name": {"parameter": "value"}}'
+            />
+            <div className="mt-2 space-y-1">
+              {jsonError && (
+                <p className="text-xs text-orange-600 font-medium">
+                  ⚠️ JSON Parse Error: {jsonError} (config will update when valid)
+                </p>
+              )}
+              <div className="flex justify-between items-start">
+                <p className="text-xs text-muted-foreground">
+                  Active pipelines: {activePipelines.map((pipeline) => pipeline.name).join(', ') || 'None'}
+                </p>
+                {!jsonError && (
+                  <p className="text-xs text-green-600">
+                    ✓ Valid JSON
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Active pipelines: {activePipelines.map((pipeline) => pipeline.name).join(', ') || 'None'}
-        </p>
-        <p className="text-xs text-blue-600 mt-2">
-          Edit the JSON configuration above. Invalid JSON will be ignored.
-        </p>
-      </div>
+      </details>
 
       {/* Configuration validation results */}
       <ConfigValidationPanel

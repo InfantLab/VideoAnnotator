@@ -6,6 +6,8 @@ import { apiClient } from '@/api/client';
 import { useToast } from '@/hooks/use-toast';
 import { QueryKeys } from '@/types/api';
 import type { JobStatus } from '@/types/api';
+import { showErrorToast } from '@/lib/toastHelpers';
+import { parseApiError } from '@/lib/errorHandling';
 
 /**
  * Hook to cancel a job with confirmation dialog and optimistic updates
@@ -71,21 +73,17 @@ export function useJobCancellation(jobId: string, currentStatus: JobStatus) {
             });
         },
 
-        // On error: rollback to previous status and show error toast
+        // On error: rollback to previous status and show error toast WITH COPY BUTTON
         onError: (error, _variables, context) => {
             // Rollback optimistic update
             if (context?.previousJob) {
                 queryClient.setQueryData(QueryKeys.job(jobId), context.previousJob);
             }
 
-            const errorMessage =
-                error instanceof Error ? error.message : 'Failed to cancel job';
-
-            toast({
-                title: 'Cancellation failed',
-                description: errorMessage,
-                variant: 'destructive',
-            });
+            // Parse the error and show toast with copy button
+            const parsedError = parseApiError(error);
+            // @ts-expect-error - toast type mismatch with ToastFunction, but runtime works fine
+            showErrorToast(toast, parsedError);
         },
 
         // Always refetch job data after mutation settles
