@@ -30,7 +30,8 @@ describe('ServerDiagnostics Integration', () => {
       defaultOptions: {
         queries: {
           retry: false,
-          gcTime: 0, // Disable caching for tests
+          staleTime: 0, // Disable caching for tests
+          gcTime: 0,
         },
       },
     });
