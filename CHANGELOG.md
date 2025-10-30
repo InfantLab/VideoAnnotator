@@ -7,73 +7,191 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Planned for v1.4.0
 
-- Installation verification script (`scripts/verify_installation.py`) providing progressive environment validation for JOSS reviewers and users
-  - Python version check (>= 3.10)
-  - FFmpeg availability validation
-  - VideoAnnotator package import verification
-  - Database write access testing
-  - GPU availability detection (optional)
-  - Sample video processing test (optional)
+- Queue position display for pending jobs
+- Deterministic test fixtures with synthetic video generation
+- Research workflow examples for JOSS paper
+- Benchmark results and performance validation
+- Additional contributor documentation improvements
+
+## [1.3.0] - 2025-11-XX (Release Candidate)
+
+### 🚀 Major Features - Production Reliability & Critical Fixes
+
+This release addresses critical production blockers identified during client integration testing and establishes a solid foundation for JOSS publication.
+
+#### Added
+
+**🔧 Job Management & Concurrency Control**
+- Job cancellation API endpoint (`POST /api/v1/jobs/{id}/cancel`) with `CancellationManager` for async task tracking
+- `CANCELLED` job status with proper state machine transitions
+- `MAX_CONCURRENT_JOBS` environment variable (default: 2) with worker queue enforcement
+- Worker retry logic with exponential backoff
+- Enhanced worker signal handling for graceful cancellation
+- 24 comprehensive tests for cancellation (15 unit + 9 integration)
+
+**💾 Persistent Storage System**
+- Persistent storage implementation with `STORAGE_DIR` environment variable (default: `./storage`)
+- Automatic directory structure creation (`uploads/`, `results/`, `temp/`, `logs/`)
+- Storage cleanup module with configurable retention policies (`STORAGE_RETENTION_DAYS`)
+- Dry-run mode and multiple safety checks to prevent data loss
+- Audit logging for all storage operations
+- 15 tests for storage paths and cleanup logic
+
+**✅ Configuration Validation**
+- Schema-based config validation using pipeline metadata
+- Validation API endpoint (`POST /api/v1/pipelines/{name}/validate`)
+- Field-level error messages with specific paths, types, and valid values
+- Pre-flight validation integrated into job submission workflow
+- `ConfigValidator` with comprehensive validation logic
+- 49 tests (26 unit + 14 API + 9 job submission)
+
+**🔒 Security Hardening**
+- Secure-by-default configuration with `AUTH_REQUIRED=true`
+- Automatic API key generation on first startup with database-backed token storage
+- `videoannotator generate-token` CLI command for additional API keys
+- CORS restrictions defaulting to `http://localhost:19011` (configurable via `ALLOWED_ORIGINS`)
+- Frictionless CORS configuration for web client developers
+- Security warnings logged on startup for insecure configurations
+- Comprehensive security documentation suite (`docs/security/`)
+- 15 tests (7 startup + 8 CORS)
+
+**📦 Package Namespace Migration**
+- Restructured to standard src layout (`src/videoannotator/`)
+- Modern Python package structure following PEP 517/518 best practices
+- All imports updated to `videoannotator.*` namespace
+- Better test isolation and cleaner package boundaries
+- Migration guide with automated migration script (`docs/UPGRADING_TO_v1.3.0.md`)
+- 20 namespace tests (11 passing core functionality)
+
+**🏥 Enhanced Diagnostics & Health Monitoring**
+- Comprehensive diagnostic CLI commands:
+  - `videoannotator diagnose system` (Python, FFmpeg, OS info)
+  - `videoannotator diagnose gpu` (CUDA, device info, memory)
+  - `videoannotator diagnose storage` (free space, write permissions)
+  - `videoannotator diagnose database` (connectivity, schema version)
+  - `videoannotator diagnose all` (combined report)
+- Enhanced health endpoint (`/api/v1/system/health?detailed=true`) with:
+  - GPU compute capability detection and compatibility warnings
+  - Worker status and active job count
+  - Storage diagnostics with disk space warnings
+  - Database health checks
+  - Pipeline registry status
+- ASCII-safe output with `--json` flag for scripting
+- Exit codes: 0=pass, 1=errors, 2=warnings
+- 15 diagnostic tests + 22 health endpoint tests
+
+**⚙️ Environment Configuration System**
+- Comprehensive environment variable configuration module (`src/videoannotator/config_env.py`)
+- 19 configurable options including:
+  - `STORAGE_DIR`, `STORAGE_RETENTION_DAYS`
+  - `MAX_CONCURRENT_JOBS`
+  - `AUTH_REQUIRED`, `ALLOWED_ORIGINS`
+  - `RETRY_BASE_DELAY`, `RETRY_MAX_DELAY`, `RETRY_JITTER`
+  - Database, logging, and pipeline configuration
+- Complete documentation at `docs/usage/environment_variables.md`
+- Updated `.env.example` with all options
+- 19 passing configuration tests
+
+**🐛 Critical Bug Fixes**
+- Fixed broken import paths causing "No pipeline classes available" errors
+- Added missing pipeline metadata (speaker_diarization, speech_recognition, face_analysis, LAION voice)
+- Fixed unit test and integration test imports to use videoannotator package paths
+- Resolved pipeline name resolution failures
+
+**📊 API Enhancements**
+- Video metadata in job responses (filename, size, duration)
+- Disabled trailing slash redirects for better API compatibility
+- Job error messages exposed in API responses
+- Standardized `ErrorEnvelope` with consistent structure across all endpoints:
+  - Fields: `code`, `message`, `detail`, `hint`, `field`, `timestamp`
+  - Unified exception handlers (VideoAnnotatorException, APIError)
+  - 6 integration tests for error format consistency
+
+**📚 JOSS Publication Requirements**
+- Installation verification script (`scripts/verify_installation.py`) with 30 tests
+  - Progressive environment validation (Python, FFmpeg, imports, database, GPU, video processing)
   - Platform detection (Linux, macOS, Windows, WSL2)
-  - ASCII-safe output for Windows compatibility
-  - Exit codes: 0=pass, 1=critical failure, 2=warnings
-  - CLI flags: `--verbose`, `--skip-video-test`
-- Comprehensive test suite for installation verification (30 tests, 100% coverage)
-  - Mock-based testing for all check scenarios
-  - Platform detection tests for all OS types
-  - Exit code verification tests
-- Made `scripts/` a proper Python package (added `__init__.py`) for cleaner test imports
-- Enhanced API endpoint documentation for JOSS publication requirements
+  - ASCII-safe output with exit codes
+- Test coverage validation system (`scripts/validate_coverage.py`)
+  - Module-specific thresholds: API (90%), pipelines (80%), database (85%), storage (85%)
+  - HTML and XML report generation
+  - Comprehensive documentation (`docs/testing/coverage_report.md`)
+- Enhanced API endpoint documentation
   - Comprehensive docstrings with curl examples for all major endpoints
   - Detailed request/response examples in Swagger UI
-  - Parameter descriptions with types, constraints, and examples
-  - Success and error response examples for common cases
-  - Endpoints enhanced:
-    - `POST /api/v1/jobs/` (submit job with multipart/form-data)
-    - `GET /api/v1/jobs/` (list jobs with pagination/filtering)
-    - `GET /api/v1/jobs/{job_id}` (get job status)
-    - `GET /api/v1/jobs/{job_id}/results` (get detailed results)
-    - `POST /api/v1/jobs/{job_id}/cancel` (cancel job)
-    - `GET /api/v1/pipelines` (list all pipelines)
-    - `GET /api/v1/pipelines/{name}` (get pipeline details)
-    - `GET /api/v1/system/health` (comprehensive health check)
-- Test coverage validation system for JOSS publication requirements
-  - pytest-cov configuration in `pyproject.toml` with module-specific thresholds
-  - Coverage validation script (`scripts/validate_coverage.py`) with automated threshold checks
-  - Module-specific thresholds: API (90%), pipelines (80%), database (85%), storage (85%)
-  - Global threshold: 80% overall coverage
-  - HTML and XML report generation for local and CI use
-  - Comprehensive documentation in `docs/testing/coverage_report.md`
-  - CLI options: `--verbose`, `--html`, `--xml`, `--fail-under`, `--module`
-  - Exit codes: 0=pass, 1=coverage fail, 2=test fail
-- JOSS reviewer documentation for efficient evaluation
+  - Success and error response examples
+- JOSS reviewer documentation
+  - Quick start guide (`docs/GETTING_STARTED_REVIEWERS.md`) with <15 minute evaluation
   - Comprehensive troubleshooting guide (`docs/installation/troubleshooting.md`)
-    - Common issues: FFmpeg, Python version, imports, ports, disk space, permissions
-    - GPU/CUDA issues: detection, out of memory, version mismatch, macOS support
-    - Database issues: locks, corruption, write permissions
-    - Network issues: 401 errors, connection refused, CORS errors
-    - Diagnostic commands and advanced troubleshooting
-    - Target: 80% issue self-resolution rate achieved
-  - JOSS reviewer quick start guide (`docs/GETTING_STARTED_REVIEWERS.md`)
-    - 5-minute installation walkthrough
-    - 10-minute functional test with sample job
-    - 5-minute architecture overview with diagram
-    - 5-minute code exploration guide
-    - Validation checklist for reviewers
-    - Total time target: <15 minutes achieved
+  - Security configuration guide (`docs/security/`)
+- Made `scripts/` a proper Python package for cleaner imports
 
-### Planned
+**📖 Documentation Improvements**
+- `docs/UPGRADING_TO_v1.3.0.md` - Complete migration guide
+- `docs/V1.3.0_CLIENT_UPDATE.md` - Client team integration notes
+- `docs/API_IMPROVEMENTS_2025-10-30.md` - API enhancement details
+- `docs/CORS_IMPROVEMENTS_OCT2025.md` - CORS configuration guide
+- `docs/CLIENT_TEAM_UPDATE.md` - Updated client integration info
+- `docs/development/PRE_COMMIT_GUIDE.md` - Pre-commit hook guidance
+- `docs/development/scripts_inventory.md` - Scripts audit and documentation
+- Enhanced `README.md` and getting started guides
 
-- Enhanced pipeline configuration system
-- Advanced batch processing optimizations
-- Extended annotation tool integration
-- Multi-language CLI support
+### Changed
 
-### Pending (will become 1.2.3)
+- **BREAKING**: Package namespace changed to `videoannotator.*` (migration guide provided)
+- **BREAKING**: Authentication now required by default (`AUTH_REQUIRED=true`)
+- **BREAKING**: CORS restricted to localhost by default (`ALLOWED_ORIGINS=http://localhost:19011`)
+- Default storage moved from `/tmp` to `./storage` for persistence
+- All curl examples in documentation updated with Authorization headers
+- API version updated to 1.3.0-dev during development
 
-- (placeholder) Minor fixes and doc refinements following 1.2.2 release
+### Fixed
+
+- Pipeline registry validation and name resolution failures
+- Import path issues preventing pipeline loading
+- Data loss risk from ephemeral `/tmp` storage
+- Runaway jobs continuing after delete request
+- Invalid configurations passing validation
+- Inconsistent error formats across endpoints
+- Test import errors across unit and integration tests
+
+### Migration Guide
+
+See `docs/UPGRADING_TO_v1.3.0.md` for detailed migration instructions including:
+- Import path updates for `videoannotator.*` namespace
+- Environment variable configuration
+- API authentication setup
+- Storage migration from temp to persistent directories
+
+### Testing
+
+- **Total**: 234 tests passing across all modules
+- **Coverage**: Meeting module-specific thresholds (80-90%)
+- **New Tests**:
+  - 24 cancellation tests
+  - 49 validation tests
+  - 15 security tests
+  - 20 namespace tests
+  - 15 diagnostic tests
+  - 22 health endpoint tests
+  - 30 installation verification tests
+  - 19 configuration tests
+
+### Documentation
+
+- 10+ new documentation files
+- Complete API documentation with examples
+- Security configuration guide
+- JOSS reviewer quick start
+- Troubleshooting guide
+- Migration guide
+- Environment variables reference
+
+### Acknowledgments
+
+Special thanks to the Video Annotation Viewer team for extensive integration testing that identified critical production issues addressed in this release.
 
 ## [1.2.2] - 2025-09-18
 

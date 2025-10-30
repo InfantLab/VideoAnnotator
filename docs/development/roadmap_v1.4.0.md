@@ -2,26 +2,43 @@
 
 ## Release Overview
 
-VideoAnnotator v1.4.0 represents the **First Public Release** with accompanying **JOSS (Journal of Open Source Software) paper**. This release transforms VideoAnnotator from a working research tool into a polished, reproducible, and well-documented platform ready for community adoption.
+VideoAnnotator v1.4.0 is the **JOSS Publication Release** - a tightly focused release dedicated to JOSS (Journal of Open Source Software) paper submission and first public release. This release concentrates exclusively on publication requirements, reproducible research examples, and community onboarding.
 
-**Target Release**: Q2 2026 (3-4 months after v1.3.0)
-**Current Status**: Planning Phase
-**Main Goal**: Research-ready platform with publication-quality documentation
+**Target Release**: Q1 2026 (2-3 months after v1.3.0)
+**Current Status**: Planning Phase (v1.3.0 complete)
+**Main Goal**: JOSS paper acceptance and successful first public release
+**Duration**: 8-10 weeks (focused scope)
+
+**Prerequisites**: v1.3.0 delivered production-ready foundation:
+- ✅ Persistent storage with retention policies
+- ✅ Job cancellation and concurrency control
+- ✅ Schema-based config validation
+- ✅ Secure-by-default configuration
+- ✅ Standardized error envelope
+- ✅ Modern videoannotator package namespace
 
 ---
 
-## 🎯 Core Principles
+## 🎯 Core Principles - JOSS FOCUSED
 
-This release focuses on:
+This release has a **tight scope** focused on JOSS requirements ONLY:
 
-- ✅ **Research Reproducibility** - Pinned dependencies, example datasets, benchmark results
-- ✅ **Documentation Excellence** - Publication-quality docs suitable for academic citation
-- ✅ **Community Onboarding** - One-line install, guided setup, clear examples
-- ✅ **Production Polish** - Resolve deferred v1.3.0 items, usability improvements
-- ✅ **Academic Rigor** - Method descriptions, validation data, comparison studies
-- ❌ NO advanced ML features (active learning, multi-modal) - deferred to v1.5.0+
-- ❌ NO enterprise features (SSO, RBAC, multi-tenancy) - deferred to v1.5.0+
-- ❌ NO plugin system or extensibility framework - deferred to v1.5.0+
+- ✅ **JOSS Paper** - Complete manuscript meeting all JOSS requirements
+- ✅ **Research Reproducibility** - Example datasets with reproducible workflows
+- ✅ **Publication Documentation** - Method descriptions, validation, benchmarks
+- ✅ **Community Onboarding** - Quick start, tutorials, clear installation
+- ✅ **PyPI Release** - `pip install videoannotator` for easy adoption
+- ✅ **Minor Polish** - Only v1.3.0 deferred items (16 hours total)
+
+**Explicitly OUT OF SCOPE** (moved to v1.5.0):
+- ❌ Advanced features (quality assessment, batch optimization, pipeline comparison)
+- ❌ Enhanced progress indicators and notifications
+- ❌ Alternative export formats (FiftyOne, Label Studio, custom CSV)
+- ❌ Structured logging and log analysis tools
+- ❌ Interactive config wizard and templates
+- ❌ Model auto-download and setup wizard
+- ❌ Resource monitoring and advanced health metrics
+- ❌ All advanced ML features, plugins, enterprise features
 
 ---
 
@@ -45,7 +62,7 @@ This release focuses on:
 
 #### 3. Example Usage & Workflows
 
-- **Classroom Interaction Study**: Multi-person tracking + speech diarization
+- **Parent Child Interaction**: Multi-person tracking + speech diarization
 - **Clinical Assessment**: Face analysis + emotion recognition over time
 - **Infant Attention**: Gaze tracking + object detection coordination
 - **Group Dynamics**: Social interaction patterns across multiple individuals
@@ -67,741 +84,381 @@ This release focuses on:
 
 ---
 
-## 📋 v1.4.0 Deliverables
+## 📋 v1.4.0 Deliverables - JOSS FOCUSED
 
-### Phase 1: Research Workflows & Examples (Weeks 1-3)
+### Phase 1: Quick Polish (Week 1)
 
-#### 1.1 Example Research Scenarios
+Complete the minimal deferred items from v1.3.0 (16 hours total):
 
-- [ ] **Classroom Interaction Analysis** - Complete workflow example
+#### 1.1 Queue Position Display
 
-  - Multi-person tracking across video
-  - Speech diarization (who spoke when)
-  - Synchronization and temporal alignment
-  - Export to analysis-ready format (CSV + ELAN compatible)
+- [ ] Add computed `queue_position` property for PENDING jobs
+- [ ] Include in API responses
+- [ ] Add tests
+- **Effort**: 2 hours
 
-- [ ] **Clinical Session Assessment** - Complete workflow example
+#### 1.2 Deterministic Test Fixtures
 
-  - Face detection and emotion recognition
-  - Head pose and gaze estimation
-  - Temporal pattern analysis
-  - Visualization and summary statistics
+- [ ] Synthetic video generator with known properties
+- [ ] Mock OpenCV capture for unit tests
+- [ ] Eliminate flaky tests
+- **Effort**: 8 hours
 
-- [ ] **Developmental Micro-Coding** - Complete workflow example
+#### 1.3 Documentation Touch-ups
 
-  - Frame-level behavior annotation
-  - Multi-modal data integration (video + audio)
-  - Reliability metrics and validation
-  - Publication-ready figures
+- [ ] Enhance contributor workflow docs
+- [ ] Expand troubleshooting based on feedback
+- **Effort**: 6 hours
 
-- [ ] **Group Dynamics Study** - Complete workflow example
-  - Multi-person interaction detection
-  - Social network visualization
-  - Turn-taking and engagement metrics
-  - Statistical analysis integration (R/Python)
+**Checkpoint**: v1.3.0 polish complete (16 hours)
 
-**Deliverables**:
+---
 
-- 4 complete example projects in `examples/research_workflows/`
-- Jupyter notebooks with narrative explanations
-- Sample videos and ground truth data
-- Expected outputs and validation scripts
-- README with installation and execution instructions
+### Phase 2: Research Examples (Weeks 2-3)
 
-#### 1.2 Reproducibility Suite
+#### 2.1 Four Research Workflow Examples
 
-- [ ] **Docker Images** - Pre-built images with pinned dependencies
+Complete, reproducible research examples (JOSS requirement):
 
-  - CPU-only image (lightweight, fast download)
-  - GPU-enabled image (CUDA 11.8/12.1)
-  - All models pre-downloaded and cached
-  - Versioned tags (v1.4.0, v1.4.0-cpu, v1.4.0-gpu)
+- [ ] **Example 1: Classroom Interaction** - Multi-person tracking + speech diarization
+- [ ] **Example 2: Clinical Assessment** - Face analysis + emotion recognition
+- [ ] **Example 3: Infant Attention** - Gaze tracking coordination example
+- [ ] **Example 4: Group Dynamics** - Multi-person interaction patterns
 
-- [ ] **Example Datasets** - Curated test data with ground truth
+**Each example includes**:
+- Jupyter notebook with narrative
+- Sample video (5-10 minutes, properly licensed)
+- Ground truth annotations (where applicable)
+- Expected outputs
+- README with clear instructions
 
-  - 5-10 minute video clips (various scenarios)
-  - Manual annotations for validation
-  - Licensing: CC-BY or similar (redistributable)
-  - Metadata: resolution, FPS, audio quality, number of people
+**Deliverables**: `examples/research_workflows/` with 4 complete examples
 
-- [ ] **Benchmark Results** - Performance data for reproducibility
+**Effort**: 40 hours (10 hours per example)
 
+#### 2.2 Reproducibility Assets
+
+Minimal reproducibility requirements for JOSS:
+
+- [ ] **Docker Images** - CPU and GPU images with pinned dependencies
+  - `videoannotator:1.4.0-cpu` (lightweight)
+  - `videoannotator:1.4.0-gpu` (CUDA 12.1)
+  - Published to Docker Hub
+
+- [ ] **Benchmark Data** - Basic performance metrics
   - Processing time vs video length (CPU/GPU)
   - Memory usage profiles
-  - Accuracy metrics (where ground truth available)
-  - Hardware specifications for benchmarks
+  - Hardware specifications used
 
-- [ ] **Validation Tools** - Compare outputs to ground truth
-  - Accuracy calculation scripts
-  - Inter-rater reliability metrics
-  - Visualization of differences
-  - Statistical significance tests
+- [ ] **Validation Scripts** - Compare outputs to ground truth
+  - Basic accuracy calculation where applicable
+  - Simple visualization of results
 
 **Deliverables**:
-
-- `docker/` with Dockerfiles for CPU/GPU
-- `datasets/` with example videos + annotations
-- `benchmarks/` with timing and accuracy results
+- `docker/` with Dockerfiles
+- `benchmarks/results.md` with performance data
 - `validation/` with comparison scripts
 
-### Phase 2: Documentation Excellence (Weeks 4-6)
+**Effort**: 24 hours (8 hours Docker, 8 hours benchmarks, 8 hours validation)
 
-#### 2.1 Academic Documentation
+**Checkpoint**: Research examples complete (64 hours total)
 
-- [ ] **Method Descriptions** - Scientific explanations for each pipeline
+### Phase 3: JOSS Paper & Academic Documentation (Weeks 4-5)
 
-  - Underlying models and algorithms
-  - Training data and performance characteristics
-  - Known limitations and failure modes
-  - Citation information for models used
+#### 3.1 JOSS Paper Manuscript
 
-- [ ] **Validation Studies** - Accuracy and reliability data
+Complete JOSS paper (JOSS requirement):
 
-  - Comparison with manual coding (agreement metrics)
-  - Performance on standard benchmarks
-  - Edge case analysis
-  - Best practices for different research scenarios
+- [ ] **Abstract & Introduction** - Problem statement and contribution
+- [ ] **Implementation Section** - Architecture and pipeline descriptions
+- [ ] **Example Usage** - Reference to the 4 research examples
+- [ ] **Quality & Performance** - Benchmark results and validation
+- [ ] **Acknowledgments & References** - Citations and funding
 
-- [ ] **Comparison with Alternatives** - Position in ecosystem
-      | Tool | Strengths | Weaknesses | Use Case Fit |
-      |------|-----------|------------|--------------|
-      | ELAN | Manual precision | No automation | Rich manual coding |
-      | BORIS | Behavioral focus | Limited AI | Ethology studies |
-      | OpenPose | High accuracy | Single-purpose | Pose-only projects |
-      | VideoAnnotator | Multi-modal automation | Learning curve | Large-scale studies |
+**Deliverables**: `paper/paper.md` (JOSS format) + `paper/paper.bib`
 
-- [ ] **Citation Guidelines** - How to cite in papers
-  - Recommended citation format (BibTeX)
-  - DOI and version information
-  - Pipeline-specific citations (models used)
-  - Example citations from mock papers
+**Effort**: 40 hours
+
+#### 3.2 Method Documentation (for JOSS)
+
+Scientific documentation for each major pipeline:
+
+- [ ] **Pipeline Methods** - Brief descriptions of:
+  - Person tracking (YOLO-based detection + tracking)
+  - Face analysis (detection + recognition pipelines)
+  - Audio diarization (speaker segmentation)
+  - Speech recognition (Whisper-based transcription)
+
+- [ ] **Model Citations** - Proper attribution for all models used
+- [ ] **Limitations** - Known issues and edge cases
+- [ ] **Comparison Table** - VideoAnnotator vs alternatives (ELAN, BORIS, OpenPose)
 
 **Deliverables**:
-
-- `docs/methods/` with scientific documentation
-- `docs/validation/` with accuracy studies
-- `CITATION.cff` with complete citation info
+- `docs/methods/` with pipeline documentation
+- `CITATION.cff` updated with complete citation info
 - `docs/comparison.md` with ecosystem positioning
 
-#### 2.2 User Documentation
+**Effort**: 24 hours
 
-- [ ] **Quick Start Guide** - 5 minutes to first result
+**Checkpoint**: JOSS paper and academic docs complete (64 hours)
 
-  - Installation (all platforms: Linux, macOS, Windows)
+### Phase 4: User Documentation (Week 6)
+
+Essential documentation for community onboarding (JOSS requirement):
+
+#### 4.1 Quick Start Guide
+
+- [ ] 5-minute quick start (`docs/quickstart.md`)
+  - Installation on Linux/macOS/Windows
   - Test video processing
   - View results
-  - Next steps pointer
+  - Next steps
 
-- [ ] **Tutorial Series** - Progressive learning path
+**Effort**: 8 hours
 
-  - Tutorial 1: Single pipeline (person tracking)
-  - Tutorial 2: Multi-pipeline workflow (person + face)
-  - Tutorial 3: Configuration customization
-  - Tutorial 4: Export and analysis integration
-  - Tutorial 5: Troubleshooting common issues
+#### 4.2 Tutorial Series (3 tutorials minimum)
 
-- [ ] **Configuration Reference** - Complete config documentation
+- [ ] Tutorial 1: Single pipeline (person tracking)
+- [ ] Tutorial 2: Multi-pipeline workflow (person + audio)
+- [ ] Tutorial 3: Configuration and customization
 
-  - All pipeline parameters explained
-  - Default values and ranges
-  - Performance vs accuracy tradeoffs
-  - Hardware requirement guidance
+**Effort**: 16 hours (5-6 hours per tutorial)
 
-- [ ] **API Reference** - Complete endpoint documentation
-  - All endpoints with examples
-  - Request/response schemas
-  - Error codes and handling
-  - Client library examples (Python, JavaScript)
+#### 4.3 Contributing Guide Enhancement
 
-**Deliverables**:
-
-- `docs/quickstart.md` - Getting started in 5 minutes
-- `docs/tutorials/` - 5 progressive tutorials
-- `docs/configuration/` - Complete config reference
-- `docs/api/` - Complete API documentation
-
-#### 2.3 Developer Documentation
-
-- [ ] **Architecture Guide** - System design and patterns
-
-  - High-level architecture diagrams
-  - Pipeline execution flow
-  - Storage and database design
-  - API design patterns
-
-- [ ] **Contributing Guide** - How to extend VideoAnnotator
-
-  - Development setup
-  - Adding a new pipeline
+- [ ] Update `CONTRIBUTING.md` with:
+  - Development setup walkthrough
+  - Adding a new pipeline (basic example)
   - Writing tests
-  - Documentation standards
+  - Submitting PRs
 
-- [ ] **Testing Guide** - Test strategy and execution
-  - Running tests locally
-  - Test coverage expectations
-  - Adding integration tests
-  - CI/CD pipeline
+**Effort**: 8 hours
 
-**Deliverables**:
+**Checkpoint**: Core user documentation complete (32 hours)
 
-- `docs/architecture.md` - System design documentation
-- `CONTRIBUTING.md` - Enhanced with examples
-- `docs/development/testing.md` - Complete test guide
+---
 
-### Phase 3: Deferred v1.3.0 Issues (Weeks 7-8)
+### Phase 5: PyPI Release & Testing (Weeks 7-8)
 
-#### 3.1 Version Information
+#### 5.1 PyPI Package Preparation
 
-- [ ] **Version Endpoint** - `/api/v1/system/version`
+- [ ] **Package Setup** - Prepare for PyPI
+  - Update `pyproject.toml` for PyPI
+  - Build wheels for major platforms
+  - Test installation from test.pypi.org
+  - Publish to PyPI: `pip install videoannotator`
 
-  - Single source of truth version number
-  - Build timestamp and commit hash
-  - Dependency versions (PyTorch, OpenCV, etc.)
-  - Model versions loaded
+**Effort**: 16 hours
 
-- [ ] **Health Endpoint Enhancement** - More detailed system info
+#### 5.2 Platform Testing
 
-  - GPU memory usage (used/total)
-  - Storage info (used/available)
-  - Uptime and restart count
-  - Queue depth and worker status
+- [ ] Test installation on:
+  - Ubuntu 22.04, 24.04
+  - macOS (Intel and Apple Silicon)
+  - Windows 11 (WSL2)
+  - Docker (both CPU and GPU images)
 
-- [ ] **CLI Version Command** - `videoannotator version --detailed`
-  - Version info in human-readable format
-  - JSON output for scripting
-  - Diagnostic info for bug reports
+**Effort**: 16 hours
 
-**Deliverables**:
+#### 5.3 Final Testing & QA
 
-- Enhanced `/api/v1/system/version` endpoint
-- Updated `/api/v1/system/health` with detailed metrics
-- `videoannotator version` CLI command
+- [ ] Run all examples on fresh installs
+- [ ] Verify benchmark reproducibility
+- [ ] Test documentation accuracy
+- [ ] Fix any critical issues found
 
-#### 3.2 Configuration & Validation
+**Effort**: 16 hours
 
-- [ ] **YAML Loader Edge Cases** - Comprehensive test coverage
+**Checkpoint**: PyPI release tested (48 hours)
 
-  - Malformed YAML handling
-  - Missing required fields
-  - Type mismatches
-  - Circular references
+---
 
-- [ ] **Config Templates** - Common research scenarios
+### Phase 6: Community Launch (Weeks 9-10)
 
-  - `templates/fast.yaml` - Quick processing (lower accuracy)
-  - `templates/balanced.yaml` - Default settings
-  - `templates/high-quality.yaml` - Best accuracy (slower)
-  - `templates/cpu-only.yaml` - No GPU required
+#### 6.1 JOSS Submission
 
-- [ ] **Config Wizard** - Interactive configuration builder
-  - `videoannotator config init --interactive`
-  - Step-by-step prompts
-  - Hardware detection (GPU availability)
-  - Scenario selection (research use case)
+- [ ] **Finalize Paper** - Review and polish manuscript
+- [ ] **Submit to JOSS** - Follow JOSS submission process
+- [ ] **Address Reviewer Feedback** - Respond to initial review
 
-**Deliverables**:
+**Effort**: 24 hours
 
-- Comprehensive YAML validation tests
-- 4+ configuration templates
-- Interactive config wizard CLI
+#### 6.2 Release Preparation
 
-#### 3.3 Logging & Observability
+- [ ] **Release Notes** - Comprehensive changelog since v1.3.0
+- [ ] **Migration Guide** - v1.3.0 → v1.4.0 changes
+- [ ] **GitHub Release** - Tag v1.4.0 and create release
+- [ ] **Zenodo Archive** - Create DOI for paper
 
-- [ ] **Structured Logging** - Machine-readable logs
+**Effort**: 16 hours
 
-  - JSON output option (`--log-format json`)
-  - Consistent log levels and categories
-  - Request ID tracking across components
-  - Performance timing instrumentation
+#### 6.3 Community Setup (Minimal)
 
-- [ ] **Log Analysis Tools** - Debug assistance
-  - `videoannotator logs analyze` - Parse and summarize logs
-  - Error extraction and grouping
-  - Performance bottleneck identification
-  - Common issue detection
+- [ ] **README Polish** - Ensure GitHub README is excellent
+- [ ] **GitHub Discussions** - Enable and create initial topics
+- [ ] **Issue Templates** - Update for v1.4.0
+- [ ] **Demo Video** - 5-minute overview screencast
 
-**Deliverables**:
+**Effort**: 16 hours
 
-- JSON structured logging option
-- Log analysis CLI tools
-- Documentation for log interpretation
+**Checkpoint**: v1.4.0 released, JOSS submitted (56 hours)
 
-#### 3.4 Example Cleanup & Migration
+---
 
-- [ ] **Legacy Example Deprecation** - Remove outdated examples
+## ✅ Success Criteria - JOSS FOCUSED
 
-  - Mark deprecated examples clearly
-  - Provide migration path to new examples
-  - Remove after one minor version (v1.5.0)
+### Must-Have for Release (JOSS Requirements)
 
-- [ ] **Example Standardization** - Consistent format
-  - README in each example directory
-  - Requirements.txt or explicit dependencies
-  - Expected output description
-  - Troubleshooting section
+- [ ] JOSS paper submitted and under review
+- [ ] 4 complete research workflow examples (reproducible)
+- [ ] PyPI package published (`pip install videoannotator`)
+- [ ] Docker images published (CPU + GPU)
+- [ ] Method documentation for major pipelines
+- [ ] Benchmark data published
+- [ ] Quick start + 3 tutorials minimum
+- [ ] Enhanced contributing guide
+- [ ] Multi-platform testing passed
+- [ ] All examples verified on fresh installs
 
-**Deliverables**:
+### Quality Targets (Minimal)
 
-- Migration guide for old examples
-- Standardized example format
-- Deprecation notices
+- [ ] Example reproducibility: 100% success rate
+- [ ] Documentation clarity: Clear for JOSS reviewers
+- [ ] API stability: No breaking changes from v1.3.0
+- [ ] Installation: Works on Linux, macOS, Windows
+- [ ] Test coverage: Maintain ≥80% from v1.3.0
 
-### Phase 4: Usability Improvements (Weeks 9-10)
+### JOSS Acceptance
 
-#### 4.1 Installation Simplification
+- [ ] Paper meets all JOSS submission requirements
+- [ ] Responds to reviewer feedback within 2 weeks
+- [ ] Paper accepted for publication
 
-- [ ] **One-Line Install** - `pip install videoannotator`
+---
 
-  - Published to PyPI
-  - Optional extras: `[gpu]`, `[all]`, `[dev]`
-  - Pre-built wheels for major platforms
+## 🚫 Explicitly DEFERRED to v1.5.0
 
-- [ ] **Model Auto-Download** - On first use, not during install
+All "nice-to-have" features are moved to v1.5.0 to keep v1.4.0 focused on JOSS:
 
-  - Progress bar for downloads
-  - Cache directory configuration
-  - Offline mode (use cached models only)
-  - Manual download script for air-gapped systems
+### Usability Enhancements → v1.5.0
 
-- [ ] **Setup Wizard** - First-run configuration
-  - Detect GPU availability
-  - Set storage directory
-  - Create API token
-  - Test installation with sample video
+- Model auto-download with progress bars
+- Setup wizard and first-run configuration
+- Real-time progress indicators and ETA
+- Resource usage monitoring
+- Job notifications (email, webhook, desktop)
+- Interactive config wizard
+- Config templates library
+- Structured logging (JSON format)
+- Log analysis tools
 
-**Deliverables**:
+### Export & Integration → v1.5.0
 
-- PyPI package published
-- Auto-download with progress indication
-- `videoannotator setup` first-run wizard
-
-#### 4.2 Progress Indicators & Feedback
-
-- [ ] **Real-Time Progress** - Show processing status
-
-  - Progress bar for video processing
-  - ETA estimation based on video length
-  - Current stage (loading model, processing frames, saving results)
-  - Percentage complete
-
-- [ ] **Resource Usage Display** - Monitor system resources
-
-  - CPU/GPU utilization
-  - Memory usage
-  - Disk I/O
-  - Network (if downloading models)
-
-- [ ] **Job Notifications** - Alert on completion
-  - Email notification (optional)
-  - Webhook callback (optional)
-  - Desktop notification (CLI mode)
-  - Slack/Discord integration (optional)
-
-**Deliverables**:
-
-- Progress bars in CLI and API responses
-- Resource monitoring in health endpoint
-- Notification system (pluggable)
-
-#### 4.3 Export Format Flexibility
-
-- [ ] **FiftyOne Export** - Integration with FiftyOne
-
-  - Direct export to FiftyOne dataset format
-  - Metadata preservation
-  - Visualization in FiftyOne App
-
-- [ ] **Label Studio Export** - Integration with Label Studio
-
-  - Export annotations for review/correction
-  - Import corrected annotations back
-  - Active learning workflow support
-
-- [ ] **Custom CSV Templates** - Flexible tabular export
-  - User-defined CSV column mapping
-  - Template library (common formats)
-  - Pandas DataFrame export for Python
-
-**Deliverables**:
-
-- FiftyOne export pipeline
+- FiftyOne export integration
 - Label Studio import/export
-- Flexible CSV template system
+- Custom CSV templates
+- Advanced export formats
 
-### Phase 5: Quality & Performance (Weeks 11-12)
-
-#### 5.1 Quality Assessment Pipeline
-
-- [ ] **Annotation Confidence** - Per-annotation quality metrics
-
-  - Model confidence scores
-  - Bounding box quality (IOU with expected)
-  - Temporal consistency checks
-  - Outlier detection
-
-- [ ] **Quality Report** - Overall processing quality summary
-  - Frame-level quality scores
-  - Detected issues (low confidence, tracking failures)
-  - Recommendations for re-processing
-  - Visualization of quality over time
-
-**Deliverables**:
+### Performance & Quality → v1.5.0
 
 - Quality assessment pipeline
-- Quality report generation
-- Visualization tools
-
-#### 5.2 Batch Processing Optimization
-
-- [ ] **Smart Job Scheduling** - Optimize resource usage
-
-  - Priority queue (user-defined priorities)
-  - Resource-aware scheduling (GPU vs CPU)
-  - Parallel processing (multiple videos)
-  - Load balancing across workers
-
-- [ ] **Progress Aggregation** - Multi-job tracking
-  - Overall batch progress
-  - Individual job status
-  - Failed job identification
-  - Retry failed jobs
-
-**Deliverables**:
-
-- Enhanced job scheduler
-- Batch progress API endpoints
-- Retry mechanism for failed jobs
-
-#### 5.3 Pipeline Comparison Tools
-
-- [ ] **Model Comparison** - Side-by-side evaluation
-
-  - Run multiple models on same video
-  - Compare accuracy metrics
-  - Compare processing time
-  - Visual diff of annotations
-
-- [ ] **Parameter Optimization** - Find best config
-  - Grid search over parameters
-  - Performance vs accuracy tradeoffs
-  - Recommendation engine
-  - Results visualization
-
-**Deliverables**:
-
-- Pipeline comparison CLI tool
+- Batch processing optimization
+- Smart job scheduling
+- Pipeline comparison tools
 - Parameter optimization framework
-- Visualization of comparisons
 
-### Phase 6: Testing & Release Preparation (Weeks 13-16)
-
-#### 6.1 Comprehensive Testing
-
-- [ ] **Test Coverage** - Achieve 80%+ coverage
-
-  - Unit tests for all core modules
-  - Integration tests for all pipelines
-  - API endpoint tests
-  - Configuration validation tests
-
-- [ ] **Performance Regression Tests** - Automated benchmarks
-
-  - Processing time benchmarks
-  - Memory usage benchmarks
-  - Accuracy benchmarks (with test data)
-  - CI/CD integration
-
-- [ ] **Platform Testing** - Multi-platform verification
-  - Ubuntu 20.04, 22.04, 24.04
-  - macOS (Intel and Apple Silicon)
-  - Windows 10/11
-  - Docker (CPU and GPU images)
-
-**Deliverables**:
-
-- Test suite with 80%+ coverage
-- Automated benchmark suite
-- Multi-platform CI/CD
-
-#### 6.2 JOSS Paper Submission
-
-- [ ] **Paper Draft** - Complete manuscript
-
-  - Abstract and introduction
-  - Implementation section
-  - Example usage section
-  - Quality and performance section
-  - Acknowledgments and references
-
-- [ ] **Figures and Tables** - Publication-quality visuals
-
-  - Architecture diagram
-  - Example output visualizations
-  - Performance comparison charts
-  - Accuracy comparison tables
-
-- [ ] **Supplementary Materials** - Additional resources
-  - Extended method descriptions
-  - Full benchmark data
-  - Tutorial videos (optional)
-  - Interactive demos (optional)
-
-**Deliverables**:
-
-- Complete JOSS paper draft
-- Publication-quality figures
-- Supplementary materials package
-
-#### 6.3 Community Preparation
-
-- [ ] **Website & Landing Page** - Public-facing presence
-
-  - Overview of features
-  - Quick start guide
-  - Example gallery
-  - Documentation links
-  - Download/install instructions
-
-- [ ] **Demo Videos** - Screencasts and tutorials
-
-  - 2-minute overview video
-  - 10-minute tutorial video
-  - Example workflow demonstrations
-  - YouTube channel setup
-
-- [ ] **Community Channels** - Support and discussion
-  - GitHub Discussions setup
-  - Discord/Slack server (optional)
-  - Mailing list (optional)
-  - Twitter/social media presence
-
-**Deliverables**:
-
-- Public website/landing page
-- 3-5 demo videos
-- Community discussion channels
-
-#### 6.4 Release Preparation
-
-- [ ] **Release Notes** - Comprehensive changelog
-
-  - New features since v1.3.0
-  - Breaking changes and migration guide
-  - Deprecations and future removals
-  - Known issues and workarounds
-
-- [ ] **Migration Guide** - v1.3.0 → v1.4.0
-
-  - Configuration changes
-  - API changes
-  - Deprecated features
-  - New recommended practices
-
-- [ ] **Security Audit** - Pre-release security review
-  - Dependency vulnerability scan
-  - Code security review
-  - API security testing
-  - Disclosure policy
-
-**Deliverables**:
-
-- Complete release notes
-- Migration guide documentation
-- Security audit report
-
----
-
-## 📊 Success Criteria
-
-### Must-Have for Release
-
-- [ ] 3+ complete research workflow examples
-- [ ] Docker images published (CPU + GPU)
-- [ ] PyPI package published (`pip install videoannotator`)
-- [ ] JOSS paper submitted (or ready for submission)
-- [ ] Documentation complete (all sections)
-- [ ] All deferred v1.3.0 issues resolved
-- [ ] Test coverage ≥ 80%
-- [ ] Multi-platform testing passed
-- [ ] Benchmark data published
-
-### Quality Targets
-
-- [ ] Installation success rate ≥ 95% (tested across platforms)
-- [ ] Documentation clarity: User survey ≥ 4.0/5.0
-- [ ] Example reproducibility: 100% (all examples run successfully)
-- [ ] API stability: No breaking changes from v1.3.0
-- [ ] Performance: No regression from v1.3.0
-
-### Community Readiness
-
-- [ ] GitHub README polished and complete
-- [ ] Contributing guide with examples
-- [ ] Issue templates and PR templates
-- [ ] Code of conduct
-- [ ] License clearly stated (MIT/Apache)
-
----
-
-## 🚫 Explicitly Out of Scope for v1.4.0
-
-The following remain deferred to future releases:
-
-### Deferred to v1.5.0+ (Advanced Features)
+### Advanced Features → v1.5.0+
 
 - Active learning system
-- Advanced multi-modal correlation
+- Multi-modal correlation analysis
 - Plugin system architecture
-- Real-time streaming support
+- Real-time streaming
 - GraphQL API
 - Enterprise features (SSO, RBAC, multi-tenancy)
 - Advanced analytics dashboard
 - Cloud provider integration
-- Microservice architecture
-
-### Not Planned (Beyond Scope)
-
-- Video editing capabilities
-- Custom model training from scratch
-- Mobile applications (beyond SDK)
-- Desktop GUI application
-- Hardware-specific optimization (beyond CUDA)
 
 ---
 
-## 📅 Detailed Timeline
+## 📅 Streamlined Timeline - 10 Weeks
 
-### Month 1: Examples & Reproducibility
+### Weeks 1: Quick Polish (16 hours)
+- Queue position display
+- Deterministic test fixtures
+- Documentation touch-ups
 
-- **Week 1-2**: Research workflow examples
-- **Week 3**: Docker images and example datasets
-- **Week 4**: Benchmark suite and validation tools
+### Weeks 2-3: Research Examples (64 hours)
+- 4 complete research workflow examples
+- Docker images (CPU/GPU)
+- Benchmark data and validation scripts
 
-### Month 2: Documentation & Deferred Issues
+### Weeks 4-5: JOSS Paper & Academic Docs (64 hours)
+- Complete JOSS paper manuscript
+- Method documentation for pipelines
+- Comparison with alternatives
+- Citations and references
 
-- **Week 5-6**: Academic and user documentation
-- **Week 7**: Developer documentation
-- **Week 8**: Version info, health, and config improvements
+### Week 6: User Documentation (32 hours)
+- Quick start guide
+- 3 progressive tutorials
+- Enhanced contributing guide
 
-### Month 3: Usability & Quality
+### Weeks 7-8: PyPI & Testing (48 hours)
+- PyPI package preparation and publication
+- Multi-platform testing
+- Example verification on fresh installs
+- Critical bug fixes
 
-- **Week 9-10**: Installation, progress indicators, export formats
-- **Week 11**: Quality assessment and batch optimization
-- **Week 12**: Pipeline comparison tools
+### Weeks 9-10: Launch (56 hours)
+- JOSS paper submission
+- Release preparation (notes, migration guide)
+- Minimal community setup (README, discussions, demo video)
+- v1.4.0 release and announcement
 
-### Month 4: Testing & Release
-
-- **Week 13**: Comprehensive testing and platform verification
-- **Week 14**: JOSS paper finalization
-- **Week 15**: Community preparation and website
-- **Week 16**: Release preparation and launch
-
----
-
-## 🎯 Key Performance Indicators
-
-### Research Impact
-
-- **Publications**: 5+ papers using VideoAnnotator v1.4.0 within 6 months
-- **Citations**: JOSS paper cited 10+ times within first year
-- **Datasets**: 3+ public datasets annotated with VideoAnnotator
-
-### Adoption Metrics
-
-- **Downloads**: 1,000+ PyPI downloads in first month
-- **Stars**: 500+ GitHub stars
-- **Users**: 100+ active users (tracked via opt-in telemetry)
-- **Institutions**: 20+ research institutions using VideoAnnotator
-
-### Quality Metrics
-
-- **Issues**: < 10 critical bugs reported in first month
-- **Response Time**: < 48 hours median response to issues
-- **Documentation**: < 5% "documentation unclear" issue reports
-- **Installation**: ≥ 95% first-time installation success
-
-### Community Health
-
-- **Contributors**: 10+ external contributors
-- **Pull Requests**: 20+ community PRs merged
-- **Discussions**: Active GitHub Discussions (≥ 5 posts/week)
-- **Satisfaction**: ≥ 4.0/5.0 user satisfaction score
+**Total Effort**: ~280 hours (8-10 weeks with focused effort)
 
 ---
 
-## 🤝 Stakeholder Communication
+## 📊 Effort Summary
 
-### Academic Community
-
-- **Pre-prints**: Share JOSS paper draft for feedback
-- **Conferences**: Present at relevant conferences (ICMI, IMFAR, CogSci)
-- **Workshops**: Host workshops at major conferences
-- **Collaborations**: Partner with research groups for case studies
-
-### User Community
-
-- **Monthly Updates**: Progress reports and roadmap updates
-- **Office Hours**: Monthly Q&A sessions (video call)
-- **Newsletter**: Bi-weekly email with tips and updates
-- **Blog**: Technical blog posts and tutorials
-
-### Development Team
-
-- **Sprint Planning**: Bi-weekly sprint planning meetings
-- **Code Reviews**: All PRs reviewed within 48 hours
-- **Testing**: Continuous integration on all PRs
-- **Documentation**: Documentation requirements for all features
+| Phase | Duration | Effort (hours) | Key Deliverables |
+|-------|----------|----------------|------------------|
+| Phase 1: Quick Polish | Week 1 | 16 | v1.3.0 deferred items complete |
+| Phase 2: Research Examples | Weeks 2-3 | 64 | 4 examples + Docker + benchmarks |
+| Phase 3: JOSS Paper | Weeks 4-5 | 64 | Paper manuscript + methods docs |
+| Phase 4: User Docs | Week 6 | 32 | Quick start + 3 tutorials |
+| Phase 5: PyPI & Testing | Weeks 7-8 | 48 | PyPI release + testing |
+| Phase 6: Launch | Weeks 9-10 | 56 | JOSS submission + release |
+| **TOTAL** | **10 weeks** | **280 hours** | **JOSS-ready release** |
 
 ---
 
-## 🔄 Post-v1.4.0 Roadmap Preview
+## 🎯 Summary: Tight JOSS Focus
 
-### v1.5.0 (Planned Q3 2026) - Advanced Features
+v1.4.0 is intentionally streamlined to focus on JOSS acceptance:
 
-- Active learning and quality assessment
-- Multi-modal correlation analysis
-- Plugin system (basic)
-- Enhanced analytics and monitoring
+**Core Goals**:
+1. ✅ Complete, reproducible research examples
+2. ✅ JOSS paper manuscript and submission
+3. ✅ Essential documentation (methods, tutorials, quick start)
+4. ✅ PyPI release for easy installation
+5. ✅ Multi-platform testing
 
-### v1.6.0 (Planned Q4 2026) - Enterprise Ready
+**Deferred to v1.5.0**:
+- All usability enhancements (progress bars, wizards, notifications)
+- All advanced features (quality assessment, batch optimization)
+- All alternative integrations (FiftyOne, Label Studio)
+- All advanced tooling (log analysis, parameter optimization)
 
-- SSO and advanced RBAC
-- Multi-tenancy support
-- Cloud provider integration
-- Advanced scaling and performance
-
-### v2.0.0 (Planned 2027) - Next Generation
-
-- Real-time streaming
-- Microservice architecture
-- GraphQL API
-- Mobile SDK
-- Federated learning
-
----
-
-## 📚 References & Resources
-
-### Documentation Standards
-
-- [JOSS Submission Guidelines](https://joss.readthedocs.io/)
-- [ReadTheDocs Best Practices](https://docs.readthedocs.io/)
-- [Semantic Versioning](https://semver.org/)
-
-### Research Standards
-
-- [FAIR Principles](https://www.go-fair.org/fair-principles/)
-- [Reproducibility Guidelines](https://www.nature.com/articles/d41586-019-03350-5)
-- [Open Science Framework](https://osf.io/)
-
-### Community Standards
-
-- [Contributor Covenant](https://www.contributor-covenant.org/)
-- [Open Source Guide](https://opensource.guide/)
-- [GitHub Community Guidelines](https://docs.github.com/en/site-policy/github-terms/github-community-guidelines)
+This tight scope ensures we can:
+- Complete v1.4.0 in 10 weeks (~280 hours)
+- Get JOSS paper submitted and accepted
+- Make first public release successful
+- Build momentum for v1.5.0 feature enhancements
 
 ---
 
-**Last Updated**: October 9, 2025
-**Target Release**: Q2 2026 (3-4 months after v1.3.0)
-**Status**: Planning Phase
+**Last Updated**: October 30, 2025
+**Target Release**: Q1 2026 (2-3 months after v1.3.0)
+**Duration**: 8-10 weeks
+**Status**: Planning Phase - JOSS Focused
