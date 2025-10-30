@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **API Documentation Link**: Quick link to server's interactive API docs (`/docs`) in Server Debugging Tools section
 
 ### 🎨 Improved
+- **Smart Polling**: Adaptive auto-refresh intervals based on job activity
+  - Fast polling (5s) when jobs are active/running/cancelling
+  - Slower polling (30s) when all jobs complete (reduces server load)
+  - "Last checked" timestamp with auto-refresh status indicator
+  - Manual refresh button always available
 - **Pipeline Display**: Version and model now shown as styled badges instead of plain text on pipeline selection cards
 - **JSON Configuration Editor**: 
   - Collapsible by default with progressive disclosure
@@ -23,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Copy to clipboard functionality
 
 ### 🐛 Fixed
+- **Connection Error Banner Persistence**: Banner now clears within 10 seconds when server reconnects (auto-refresh drops to 10s during errors, returns to 2min when healthy)
 - Console error noise from unnecessary `/api/v1/debug/token-info` endpoint calls
 - Text color contrast in JSON configuration examples (was white on white)
 - Textarea editability in Advanced JSON Overrides section

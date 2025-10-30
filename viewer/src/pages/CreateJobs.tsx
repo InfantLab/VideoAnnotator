@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
 import { apiClient } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +83,7 @@ const CreateJobs = () => {
     isLoading,
     error,
     refetch,
+    dataUpdatedAt,
   } = useQuery({
     queryKey: ["jobs", page],
     queryFn: async () => {
@@ -103,7 +105,23 @@ const CreateJobs = () => {
       console.log(`✅ Found ${response.jobs.length} jobs (total: ${response.total})`);
       return response;
     },
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchInterval: (query) => {
+      // Smart polling: adapt interval based on job activity
+      const data = query.state.data;
+      if (!data?.jobs) return 5000; // Default: 5s when no data yet
+
+      const hasActiveJobs = data.jobs.some(
+        (job: any) => job.status === 'pending' || job.status === 'running' || job.status === 'cancelling'
+      );
+
+      if (hasActiveJobs) {
+        // Fast polling when jobs are active
+        return 5000; // 5 seconds
+      }
+
+      // Exponential backoff when idle: 30s initially, then 60s
+      return 30000; // 30 seconds when all jobs complete/cancelled/failed
+    },
   });
 
   // Show error toast when error occurs
@@ -254,6 +272,20 @@ const CreateJobs = () => {
     );
   }
 
+  // Calculate last checked time
+  const lastChecked = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
+  const lastCheckedText = lastChecked
+    ? `Last checked ${formatDistanceToNow(lastChecked, { addSuffix: true })}`
+    : 'Never checked';
+
+  // Determine polling status
+  const hasActiveJobs = jobsData?.jobs?.some(
+    (job: any) => job.status === 'pending' || job.status === 'running' || job.status === 'cancelling'
+  );
+  const pollingStatus = hasActiveJobs
+    ? '⚡ Auto-refreshing every 5s'
+    : '💤 Auto-refreshing every 30s';
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -265,17 +297,22 @@ const CreateJobs = () => {
             <p className="text-gray-600">Monitor and manage your annotation jobs</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => refetch()} variant="outline" size="sm">
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Link to="/create/new">
-            <Button>
-              <Play className="h-4 w-4 mr-2" />
-              New Job
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex gap-2">
+            <Button onClick={() => refetch()} variant="outline" size="sm">
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
-          </Link>
+            <Link to="/create/new">
+              <Button>
+                <Play className="h-4 w-4 mr-2" />
+                New Job
+              </Button>
+            </Link>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {lastCheckedText} • {pollingStatus}
+          </div>
         </div>
       </div>
 

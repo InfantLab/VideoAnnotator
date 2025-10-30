@@ -80,18 +80,21 @@ export function ServerCapabilitiesProvider({
         refresh();
     }, [refresh]);
 
-    // Auto-refresh interval
+    // Auto-refresh interval - use faster polling when there's an error for quick recovery
     useEffect(() => {
         if (!autoRefreshInterval || autoRefreshInterval <= 0) {
             return;
         }
 
+        // When there's an error, poll more frequently (every 10 seconds) for faster recovery
+        const effectiveInterval = error ? 10000 : autoRefreshInterval;
+
         const intervalId = setInterval(() => {
             refresh();
-        }, autoRefreshInterval);
+        }, effectiveInterval);
 
         return () => clearInterval(intervalId);
-    }, [autoRefreshInterval, refresh]);
+    }, [autoRefreshInterval, refresh, error]);
 
     const value: ServerCapabilitiesContextValue = {
         capabilities,
