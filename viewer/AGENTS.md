@@ -104,6 +104,19 @@ git add src/hooks/useConfigValidation.ts specs/XXX/tasks.md
 git commit -m "feat: T021 - Create useConfigValidation hook with debouncing"
 ```
 
+**Commit message guidelines:**
+
+- **Quick fixes/small changes**: Keep it concise (one line is fine)
+  - Good: `"fix: Extract filename from video_path when video_filename missing"`
+  - Bad: Multi-paragraph essay for a 3-line change
+  
+- **Complex features**: Add context in commit body
+  - Summary line (50 chars or less)
+  - Blank line
+  - Details: problem, solution, impact
+  
+- **User preference**: If user says "doesn't need an essay", keep it short!
+
 ### QA Testing Guidelines
 
 **For QA checklists:**
