@@ -67,7 +67,9 @@ class TestDiarizationPipeline:
     @patch(
         "src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE", True
     )
-    @patch("src.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline")
+    @patch(
+        "videoannotator.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline"
+    )
     def test_diarization_pipeline_initialize_success(self, mock_pyannote):
         """Test successful diarization pipeline initialization."""
         import os
@@ -128,7 +130,9 @@ class TestDiarizationPipeline:
     @patch(
         "src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE", True
     )
-    @patch("src.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline")
+    @patch(
+        "videoannotator.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline"
+    )
     def test_diarization_audio_processing(self, mock_pyannote, temp_audio_file):
         """Test audio diarization processing."""
         # Mock turn objects that have start, duration, end attributes
@@ -179,7 +183,9 @@ class TestDiarizationPipeline:
     @patch(
         "src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE", True
     )
-    @patch("src.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline")
+    @patch(
+        "videoannotator.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline"
+    )
     def test_diarization_audio_file_not_found(self, mock_pyannote):
         """Test error handling for missing audio file."""
         config = {"huggingface_token": "test_token"}
@@ -196,7 +202,9 @@ class TestDiarizationPipeline:
     @patch(
         "src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE", True
     )
-    @patch("src.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline")
+    @patch(
+        "videoannotator.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline"
+    )
     def test_diarization_pipeline_info(self, mock_pyannote):
         """Test pipeline info generation."""
         config = {"huggingface_token": "test_token"}
@@ -242,11 +250,19 @@ class TestSpeechPipeline:
         assert pipeline.config["language"] == "en"
         assert not pipeline.is_initialized
 
-    @patch("src.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE", True)
+    @patch(
+        "videoannotator.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE",
+        True,
+    )
     @patch("torch.cuda.is_available", return_value=False)
-    @patch("src.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE", True)
+    @patch(
+        "videoannotator.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE",
+        True,
+    )
     @patch("torch.cuda.is_available", return_value=True)
-    @patch("src.pipelines.audio_processing.speech_pipeline.whisper.load_model")
+    @patch(
+        "videoannotator.pipelines.audio_processing.speech_pipeline.whisper.load_model"
+    )
     def test_speech_audio_processing(
         self, mock_whisper_load_model, mock_cuda, mock_whisper, temp_audio_file
     ):

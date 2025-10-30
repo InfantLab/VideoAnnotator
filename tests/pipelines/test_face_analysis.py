@@ -197,7 +197,7 @@ class TestDeepFaceAnalysis:
         not os.getenv("TEST_DEEPFACE"),
         reason="DeepFace tests disabled. Set TEST_DEEPFACE=1 to enable",
     )
-    @patch("src.pipelines.face_analysis.face_pipeline.DeepFace")
+    @patch("videoannotator.pipelines.face_analysis.face_pipeline.DeepFace")
     def test_deepface_analysis_with_mock(self, mock_deepface):
         """Test DeepFace analysis with mocked DeepFace library."""
         mock_deepface.extract_faces.return_value = [np.zeros((224, 224, 3))]

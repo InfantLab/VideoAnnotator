@@ -78,7 +78,7 @@ class TestAudioPipeline:
 
         pipeline.cleanup()
 
-    @patch("src.pipelines.audio_processing.speech_pipeline.whisper")
+    @patch("videoannotator.pipelines.audio_processing.speech_pipeline.whisper")
     def test_speech_recognition_component(self, mock_whisper, temp_audio_file):
         """Test speech recognition component within modular pipeline."""
         # Mock whisper model
