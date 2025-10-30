@@ -62,7 +62,7 @@ class BatchOrchestrator:
         """
         if storage_backend is None:
             # Lazy import to avoid circular import
-            from storage.file_backend import FileStorageBackend
+            from videoannotator.storage.file_backend import FileStorageBackend
 
             storage_backend = FileStorageBackend(Path("batch_results"))
 

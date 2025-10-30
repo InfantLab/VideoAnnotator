@@ -5,7 +5,7 @@ instances into ErrorEnvelope responses. These handlers work alongside the existi
 APIError handlers from src/api/errors.py.
 
 Usage:
-    from api.v1.handlers import register_v1_exception_handlers
+    from videoannotator.api.v1.handlers import register_v1_exception_handlers
     register_v1_exception_handlers(app)
 """
 

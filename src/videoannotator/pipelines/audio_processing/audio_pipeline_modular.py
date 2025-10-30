@@ -16,7 +16,7 @@ import librosa
 # from .emotion_pipeline import EmotionPipeline
 # from .f0_pipeline import F0Pipeline
 # from .timbre_pipeline import TimbrePipeline
-from src.exporters.native_formats import (
+from videoannotator.exporters.native_formats import (
     export_rttm_diarization,
 )
 

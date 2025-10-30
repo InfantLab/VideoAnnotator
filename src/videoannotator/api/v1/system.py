@@ -12,6 +12,7 @@ from ...registry.pipeline_registry import get_registry
 from ...version import __version__ as videoannotator_version
 from ..database import check_database_health, get_database_info
 from ..errors import APIError
+from ..middleware.auth import is_auth_required
 
 PROCESS_START_TIME = time.time()
 
@@ -99,6 +100,7 @@ curl -X GET "http://localhost:18011/api/v1/system/health" \\
     "device_count": 1,
     "current_device": 0,
     "device_name": "NVIDIA GeForce RTX 3090",
+    "compute_capability": "8.6",
     "memory_allocated": 512000000,
     "memory_reserved": 1024000000
   },
@@ -117,6 +119,9 @@ curl -X GET "http://localhost:18011/api/v1/system/health" \\
     },
     "job_queue": "embedded",
     "pipelines": "ready"
+  },
+  "security": {
+    "auth_required": true
   },
   "uptime_seconds": 3672
 }
@@ -143,12 +148,31 @@ curl -X GET "http://localhost:18011/api/v1/system/health" \\
 }
 ```
 
+**GPU Compatibility Warning (old GPU detected):**
+```json
+{
+  "gpu": {
+    "available": true,
+    "device_name": "NVIDIA GeForce GTX 1060 6GB",
+    "compute_capability": "6.1",
+    "compatibility_warning": "GPU compute capability 6.1 is below PyTorch 2.5.0 minimum requirement (7.0). GPU acceleration may not work. Consider downgrading PyTorch to 1.13.x for older GPUs or upgrading hardware.",
+    "pytorch_version": "2.5.0",
+    "min_compute_capability": 7.0
+  }
+}
+```
+
 **Note**: This endpoint is more resource-intensive than the basic `/health` endpoint
 due to system metrics collection (CPU sampling, disk I/O). For lightweight health
 checks, use the root `/health` endpoint instead.
 
 The `uptime_seconds` field shows how long the API server has been running,
 useful for monitoring restarts and stability.
+
+The `gpu.compute_capability` field indicates the CUDA compute capability of the GPU,
+which determines compatibility with PyTorch versions. Modern PyTorch (2.5+) requires
+compute capability 7.0 or higher (Volta architecture). If your GPU is older, a
+`compatibility_warning` will be included with recommended actions.
 """,
 )
 async def detailed_health_check():
@@ -174,20 +198,51 @@ async def detailed_health_check():
             import torch
 
             if torch.cuda.is_available():
+                device_count = torch.cuda.device_count()
                 gpu_info = {
                     "available": True,
-                    "device_count": torch.cuda.device_count(),
+                    "device_count": device_count,
                     "current_device": torch.cuda.current_device(),
                     "device_name": torch.cuda.get_device_name(0)
-                    if torch.cuda.device_count() > 0
+                    if device_count > 0
                     else None,
                     "memory_allocated": torch.cuda.memory_allocated(0)
-                    if torch.cuda.device_count() > 0
+                    if device_count > 0
                     else 0,
                     "memory_reserved": torch.cuda.memory_reserved(0)
-                    if torch.cuda.device_count() > 0
+                    if device_count > 0
                     else 0,
                 }
+
+                # Add compute capability for compatibility checking
+                if device_count > 0:
+                    try:
+                        props = torch.cuda.get_device_properties(0)
+                        compute_capability = f"{props.major}.{props.minor}"
+                        gpu_info["compute_capability"] = compute_capability
+
+                        # Check PyTorch version compatibility
+                        # PyTorch 2.5+ requires compute capability >= 7.0 (Volta architecture)
+                        # PyTorch 2.0-2.4 requires >= 3.5 (Kepler architecture)
+                        pytorch_version = torch.__version__.split("+")[
+                            0
+                        ]  # Strip +cuXXX suffix
+                        major_minor = tuple(map(int, pytorch_version.split(".")[:2]))
+
+                        min_compute_capability = 7.0 if major_minor >= (2, 5) else 3.5
+                        current_compute_capability = float(compute_capability)
+
+                        if current_compute_capability < min_compute_capability:
+                            gpu_info["compatibility_warning"] = (
+                                f"GPU compute capability {compute_capability} is below PyTorch {pytorch_version} "
+                                f"minimum requirement ({min_compute_capability}). GPU acceleration may not work. "
+                                f"Consider downgrading PyTorch to 1.13.x for older GPUs or upgrading hardware."
+                            )
+                            gpu_info["pytorch_version"] = pytorch_version
+                            gpu_info["min_compute_capability"] = min_compute_capability
+                    except Exception:
+                        pass  # Silently skip if we can't get compute capability
+
             else:
                 gpu_info = {"available": False, "reason": "CUDA not available"}
         except ImportError:
@@ -245,6 +300,9 @@ async def detailed_health_check():
                 "job_queue": "embedded",  # in-process execution model
                 "pipelines": "ready",
             },
+            "security": {
+                "auth_required": is_auth_required(),
+            },
             "uptime_seconds": uptime_seconds,
         }
 
@@ -256,6 +314,9 @@ async def detailed_health_check():
             "error": str(e),
             "api_version": videoannotator_version,
             "videoannotator_version": videoannotator_version,
+            "security": {
+                "auth_required": is_auth_required(),
+            },
         }
 
 

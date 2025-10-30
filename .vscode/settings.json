@@ -10,6 +10,7 @@
         ".specify/scripts/bash/": true,
         ".specify/scripts/powershell/": true
     },
+    "peacock.remoteColor": "#7fc168",
     "workbench.colorCustomizations": {
         "activityBar.activeBackground": "#9ed08c",
         "activityBar.background": "#9ed08c",
@@ -28,6 +29,5 @@
         "titleBar.activeForeground": "#15202b",
         "titleBar.inactiveBackground": "#7fc16899",
         "titleBar.inactiveForeground": "#15202b99"
-    },
-    "peacock.remoteColor": "#7fc168"
+    }
 }

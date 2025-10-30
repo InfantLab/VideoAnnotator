@@ -101,8 +101,14 @@ AUTH_REQUIRED = get_bool_env("AUTH_REQUIRED", True)
 
 # CORS (Cross-Origin Resource Sharing) Configuration
 # Default allows the official web client (video-annotation-viewer) and server's own port
-# Server runs on 18011, official client runs on 19011
-DEFAULT_CORS_ORIGINS = "http://localhost:18011,http://localhost:19011"
+# Server runs on 18011-18020, official client runs on 19011-19020
+# Allowing port ranges enables running multiple instances for testing/development
+DEFAULT_CORS_ORIGINS = ",".join(
+    [
+        *[f"http://localhost:{port}" for port in range(18011, 18021)],  # Server ports
+        *[f"http://localhost:{port}" for port in range(19011, 19021)],  # Client ports
+    ]
+)
 
 CORS_ORIGINS: str = get_str_env("CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
 

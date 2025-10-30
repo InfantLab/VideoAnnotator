@@ -38,7 +38,7 @@ def apply_scipy_compatibility_patch():
             logging.info(
                 "Applying scipy.integrate.simps compatibility patch for OpenFace 3.0"
             )
-            scipy.integrate.simps = scipy.integrate.simpson
+            scipy.integrate.simps = scipy.integrate.simpson  # type: ignore[attr-defined]
             logging.info("Successfully patched scipy.integrate.simps")
     except ImportError:
         pass  # SciPy not available

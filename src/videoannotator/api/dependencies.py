@@ -86,12 +86,12 @@ def _validate_api_key_header(raw: str, db: Session) -> dict[str, Any] | None:
     """
     if not raw.startswith("va_"):
         return None
-    
+
     # Validate using database CRUD
     user = APIKeyCRUD.authenticate(db, raw)
     if not user:
         return None
-    
+
     return {
         "id": str(user.id),
         "username": user.username,

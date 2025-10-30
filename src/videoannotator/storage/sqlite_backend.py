@@ -32,7 +32,7 @@ from .models import (
 from .models import BatchReport as BatchReportModel
 
 if TYPE_CHECKING:
-    from batch.types import BatchJob, BatchReport
+    from videoannotator.batch.types import BatchJob, BatchReport
 
 
 class SQLiteStorageBackend(StorageBackend):
@@ -140,8 +140,8 @@ class SQLiteStorageBackend(StorageBackend):
 
     def _db_job_to_batch_job(self, db_job: Job) -> "BatchJob":
         """Convert database Job model to BatchJob."""
-        from batch.types import BatchJob, JobStatus
-        from batch.types import PipelineResult as BatchPipelineResult
+        from videoannotator.batch.types import BatchJob, JobStatus
+        from videoannotator.batch.types import PipelineResult as BatchPipelineResult
 
         batch_job = BatchJob(
             job_id=db_job.id,
@@ -478,7 +478,7 @@ class SQLiteStorageBackend(StorageBackend):
                     raise FileNotFoundError(f"Batch report {batch_id} not found")
 
                 # Reconstruct BatchReport from stored JSON data
-                from batch.types import BatchReport
+                from videoannotator.batch.types import BatchReport
 
                 return BatchReport.from_dict(db_report.report_data)
 

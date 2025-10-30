@@ -134,10 +134,10 @@ def initialize_security() -> None:
     from ..config_env import CORS_ORIGINS
 
     cors_count = len(CORS_ORIGINS.split(","))
-    if cors_count == 2 and "19011" in CORS_ORIGINS:
-        # Default: official client + server
+    if cors_count == 20 and "18011" in CORS_ORIGINS and "19011" in CORS_ORIGINS:
+        # Default: port ranges for server and client
         logger.info(
-            "[SECURITY] CORS: Allowing official client (port 19011) and server (port 18011)"
+            "[SECURITY] CORS: Allowing server ports 18011-18020 and client ports 19011-19020"
         )
     else:
         logger.info(

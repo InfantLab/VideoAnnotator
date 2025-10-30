@@ -29,16 +29,18 @@ class JobProcessor:
         """Import all available pipeline classes."""
         try:
             # Import standard pipelines
-            from pipelines.audio_processing import AudioPipeline
-            from pipelines.audio_processing.laion_voice_pipeline import (
+            from videoannotator.pipelines.audio_processing import AudioPipeline
+            from videoannotator.pipelines.audio_processing.laion_voice_pipeline import (
                 LAIONVoicePipeline,
             )
-            from pipelines.face_analysis import FaceAnalysisPipeline
+            from videoannotator.pipelines.face_analysis import FaceAnalysisPipeline
 
             # Import LAION pipelines
-            from pipelines.face_analysis.laion_face_pipeline import LAIONFacePipeline
-            from pipelines.person_tracking import PersonTrackingPipeline
-            from pipelines.scene_detection import SceneDetectionPipeline
+            from videoannotator.pipelines.face_analysis.laion_face_pipeline import (
+                LAIONFacePipeline,
+            )
+            from videoannotator.pipelines.person_tracking import PersonTrackingPipeline
+            from videoannotator.pipelines.scene_detection import SceneDetectionPipeline
 
             self.pipeline_classes = {
                 "scene_detection": SceneDetectionPipeline,
@@ -54,10 +56,18 @@ class JobProcessor:
                 "laion_voice_analysis": LAIONVoicePipeline,
                 "laion_voice": LAIONVoicePipeline,
             }
-            logger.debug("Pipeline classes imported successfully")
+            logger.info(
+                f"Pipeline classes imported successfully: {list(self.pipeline_classes.keys())}"
+            )
 
         except ImportError as e:
-            logger.error(f"Failed to import pipeline classes: {e}")
+            logger.error(f"Failed to import pipeline classes: {e}", exc_info=True)
+            self.pipeline_classes = {}
+
+        except Exception as e:
+            logger.error(
+                f"Unexpected error importing pipeline classes: {e}", exc_info=True
+            )
             self.pipeline_classes = {}
 
     def process_job(self, job: BatchJob) -> bool:
@@ -70,6 +80,12 @@ class JobProcessor:
             True if successful, False if failed
         """
         try:
+            # Check if pipelines are loaded
+            if not self.pipeline_classes:
+                logger.error("No pipeline classes loaded! Import may have failed.")
+                job.error_message = "No pipeline classes available"
+                return False
+
             logger.info(f"Processing job {job.job_id}: {job.video_path}")
 
             # Ensure video file exists

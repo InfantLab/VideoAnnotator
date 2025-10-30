@@ -40,8 +40,14 @@ class BackgroundJobManager:
             max_concurrent_jobs: Maximum jobs to process simultaneously (default: env MAX_CONCURRENT_JOBS or 2)
         """
         self.storage = storage_backend or get_storage_backend()
-        self.poll_interval = poll_interval if poll_interval is not None else WORKER_POLL_INTERVAL
-        self.max_concurrent_jobs = max_concurrent_jobs if max_concurrent_jobs is not None else MAX_CONCURRENT_JOBS
+        self.poll_interval = (
+            poll_interval if poll_interval is not None else WORKER_POLL_INTERVAL
+        )
+        self.max_concurrent_jobs = (
+            max_concurrent_jobs
+            if max_concurrent_jobs is not None
+            else MAX_CONCURRENT_JOBS
+        )
         # Defer creating JobProcessor until the first job is actually processed.
         # Constructing JobProcessor eagerly triggers imports of pipeline modules
         # (which may load heavy ML libraries or perform IO) and can block
@@ -126,7 +132,9 @@ class BackgroundJobManager:
             running_job_ids = self.storage.list_jobs(status_filter="running")
 
             # Clean up completed jobs from our tracking
-            completed_jobs = self.processing_jobs - set(pending_job_ids) - set(running_job_ids)
+            completed_jobs = (
+                self.processing_jobs - set(pending_job_ids) - set(running_job_ids)
+            )
             for job_id in completed_jobs:
                 self.processing_jobs.discard(job_id)
                 logger.debug(f"Job {job_id} completed, removed from tracking")
@@ -226,7 +234,7 @@ class BackgroundJobManager:
             # Lazily create JobProcessor to avoid heavy imports during server startup
             if self.job_processor is None:
                 try:
-                    from api.job_processor import JobProcessor
+                    from videoannotator.api.job_processor import JobProcessor
 
                     self.job_processor = JobProcessor()
                 except Exception as e:

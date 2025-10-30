@@ -364,7 +364,12 @@ class SecureTokenManager:
             logger.warning("JWT token expired")
             return None
         except jwt.InvalidTokenError as e:
-            logger.warning(f"Invalid JWT token: {e}")
+            # Common case: malformed/incomplete tokens from browser/client
+            # Log at debug level for "Not enough segments" (empty/partial token)
+            if "Not enough segments" in str(e):
+                logger.debug(f"Malformed JWT token (likely empty or incomplete): {e}")
+            else:
+                logger.warning(f"Invalid JWT token: {e}")
             return None
 
     def revoke_token(self, token: str) -> bool:
