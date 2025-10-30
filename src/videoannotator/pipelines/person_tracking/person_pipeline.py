@@ -11,18 +11,18 @@ from typing import Any
 import cv2
 import numpy as np
 
-from .exporters.native_formats import (
+from videoannotator.exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
     create_coco_keypoints_annotation,
     export_coco_json,
     validate_coco_json,
 )
-from .pipelines.base_pipeline import BasePipeline
-from .utils.automatic_labeling import infer_person_labels_from_tracks
-from .utils.model_loader import log_model_download
-from .utils.person_identity import PersonIdentityManager
-from .utils.size_based_person_analysis import run_size_based_analysis
+from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.utils.automatic_labeling import infer_person_labels_from_tracks
+from videoannotator.utils.model_loader import log_model_download
+from videoannotator.utils.person_identity import PersonIdentityManager
+from videoannotator.utils.size_based_person_analysis import run_size_based_analysis
 
 # Optional imports
 try:

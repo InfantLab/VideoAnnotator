@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from src.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
+from videoannotator.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
 
 
 @pytest.mark.unit

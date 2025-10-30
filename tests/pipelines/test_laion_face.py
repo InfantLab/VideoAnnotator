@@ -11,7 +11,7 @@ import pytest
 
 # Try importing the pipeline, skip tests if not available
 try:
-    from src.pipelines.face_analysis.laion_face_pipeline import (
+    from videoannotator.pipelines.face_analysis.laion_face_pipeline import (
         EMOTION_LABELS,
         LAIONFacePipeline,
     )

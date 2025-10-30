@@ -27,11 +27,11 @@ except Exception:
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from src.pipelines.face_analysis.openface3_pipeline import (
+from videoannotator.pipelines.face_analysis.openface3_pipeline import (
     OPENFACE3_AVAILABLE,
     OpenFace3Pipeline,
 )
-from src.version import __version__
+from videoannotator.version import __version__
 
 
 @pytest.mark.unit
@@ -49,7 +49,9 @@ class TestOpenFace3Availability:
     def test_openface3_imports(self):
         """Test that OpenFace 3.0 imports work when available."""
         try:
-            from src.pipelines.face_analysis.openface3_pipeline import OpenFace3Pipeline
+            from videoannotator.pipelines.face_analysis.openface3_pipeline import (
+                OpenFace3Pipeline,
+            )
 
             assert OpenFace3Pipeline is not None
         except ImportError:

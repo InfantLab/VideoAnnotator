@@ -10,6 +10,7 @@ from fastapi import APIRouter
 
 from ...registry.pipeline_registry import get_registry
 from ...version import __version__ as videoannotator_version
+from ..background_tasks import get_background_manager
 from ..database import check_database_health, get_database_info
 from ..errors import APIError
 from ..middleware.auth import is_auth_required
@@ -112,6 +113,14 @@ curl -X GET "http://localhost:18011/api/v1/system/health" \\
       "diarization_pyannote"
     ]
   },
+  "workers": {
+    "status": "running",
+    "active_jobs": 2,
+    "processing_jobs": ["job-123", "job-456"],
+    "queued_jobs": 3,
+    "max_concurrent_workers": 2,
+    "poll_interval_seconds": 5
+  },
   "services": {
     "database": {
       "status": "healthy",
@@ -161,6 +170,18 @@ curl -X GET "http://localhost:18011/api/v1/system/health" \\
   }
 }
 ```
+
+**Worker Information:**
+
+The `workers` section provides real-time information about the background job processing:
+- `status`: Whether the worker is "running" or "stopped"
+- `active_jobs`: Number of jobs currently being processed
+- `processing_jobs`: List of job IDs currently being processed
+- `queued_jobs`: Number of jobs waiting in the queue (pending status)
+- `max_concurrent_workers`: Maximum number of jobs that can run simultaneously
+- `poll_interval_seconds`: How often the worker checks for new jobs
+
+This information is useful for monitoring system load and capacity planning.
 
 **Note**: This endpoint is more resource-intensive than the basic `/health` endpoint
 due to system metrics collection (CPU sampling, disk I/O). For lightweight health
@@ -259,6 +280,24 @@ async def detailed_health_check():
         uptime_seconds = int(time.time() - PROCESS_START_TIME)
 
         db_status = _get_database_status()
+
+        # Get worker/job queue status
+        worker_manager = get_background_manager()
+        worker_status = worker_manager.get_status()
+
+        # Get job statistics from database
+        db_info = get_database_info()
+        job_stats = db_info.get("statistics", {})
+
+        worker_info = {
+            "status": "running" if worker_status["running"] else "stopped",
+            "active_jobs": worker_status["concurrent_jobs"],
+            "processing_jobs": worker_status["processing_jobs"],
+            "queued_jobs": job_stats.get("pending_jobs", 0),
+            "max_concurrent_workers": worker_status["max_concurrent_jobs"],
+            "poll_interval_seconds": worker_status["poll_interval"],
+        }
+
         system_info = {
             "platform": platform.platform(),
             "python_version": platform.python_version(),
@@ -295,6 +334,7 @@ async def detailed_health_check():
                 "total": len(reg_pipelines),
                 "names": [p.name for p in reg_pipelines][:20],  # cap list
             },
+            "workers": worker_info,
             "services": {
                 "database": db_status,
                 "job_queue": "embedded",  # in-process execution model

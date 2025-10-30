@@ -9,8 +9,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.pipelines.audio_processing.diarization_pipeline import DiarizationPipeline
-from src.pipelines.audio_processing.speech_pipeline import SpeechPipeline
+from videoannotator.pipelines.audio_processing.diarization_pipeline import (
+    DiarizationPipeline,
+)
+from videoannotator.pipelines.audio_processing.speech_pipeline import SpeechPipeline
 
 
 @pytest.mark.unit

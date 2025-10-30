@@ -15,7 +15,7 @@ import pytest
 try:
     import torch
 
-    from src.pipelines.audio_processing.speech_pipeline import SpeechPipeline
+    from videoannotator.pipelines.audio_processing.speech_pipeline import SpeechPipeline
 
     TORCH_AVAILABLE = True
 except ImportError:
@@ -51,7 +51,9 @@ class TestWhisperBasePipelineAdvanced:
 
     def test_embedding_shape_validation(self):
         """Test embedding shape validation logic."""
-        from src.pipelines.audio_processing.speech_pipeline import SpeechPipeline
+        from videoannotator.pipelines.audio_processing.speech_pipeline import (
+            SpeechPipeline,
+        )
 
         pipeline = SpeechPipeline()
 
@@ -73,7 +75,9 @@ class TestWhisperBasePipelineIntegrationAdvanced:
 
     def test_initialization_with_real_dependencies(self):
         """Test initialization with real PyTorch."""
-        from src.pipelines.audio_processing.speech_pipeline import SpeechPipeline
+        from videoannotator.pipelines.audio_processing.speech_pipeline import (
+            SpeechPipeline,
+        )
 
         pipeline = SpeechPipeline()
 
@@ -89,7 +93,9 @@ class TestWhisperBasePipelineIntegrationAdvanced:
 
     def test_cleanup_with_real_resources(self):
         """Test cleanup with real resources."""
-        from src.pipelines.audio_processing.speech_pipeline import SpeechPipeline
+        from videoannotator.pipelines.audio_processing.speech_pipeline import (
+            SpeechPipeline,
+        )
 
         pipeline = SpeechPipeline()
 

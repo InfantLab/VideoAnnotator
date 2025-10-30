@@ -13,10 +13,13 @@ import torch
 from huggingface_hub import hf_hub_download  # new import
 from transformers import AutoModel, AutoProcessor
 
-from .exporters.native_formats import create_coco_image_entry, export_coco_json
-from .pipelines.base_pipeline import BasePipeline
-from .pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
-from .utils.person_identity import PersonIdentityManager
+from videoannotator.exporters.native_formats import (
+    create_coco_image_entry,
+    export_coco_json,
+)
+from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
+from videoannotator.utils.person_identity import PersonIdentityManager
 
 # List of emotion categories based on LAION taxonomy with correct file mappings
 EMOTION_LABELS = {

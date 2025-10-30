@@ -12,10 +12,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from src.api.database import reset_storage_backend, set_database_path
+from videoannotator.api.database import reset_storage_backend, set_database_path
 
 # Import the API application
-from src.api.main import create_app
+from videoannotator.api.main import create_app
 from videoannotator.version import __version__ as videoannotator_version
 
 
@@ -90,6 +90,7 @@ class TestHealthEndpoint:
             # Only check detailed fields if status is healthy
             assert "system" in data
             assert "services" in data
+            assert "workers" in data
 
             # Check system info structure
             system = data["system"]
@@ -97,6 +98,16 @@ class TestHealthEndpoint:
             assert "python_version" in system
             assert "cpu_percent" in system
             assert "memory_percent" in system
+
+            # Check worker info structure
+            workers = data["workers"]
+            assert "status" in workers
+            assert workers["status"] in ["running", "stopped"]
+            assert "active_jobs" in workers
+            assert "queued_jobs" in workers
+            assert "max_concurrent_workers" in workers
+            assert "poll_interval_seconds" in workers
+            assert isinstance(workers["processing_jobs"], list)
 
             # Check database service status
             services = data["services"]

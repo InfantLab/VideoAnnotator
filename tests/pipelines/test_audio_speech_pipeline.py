@@ -17,8 +17,10 @@ def mock_librosa_load_class(request):
     request.addfinalizer(patcher.stop)
 
 
-from src.pipelines.audio_processing.diarization_pipeline import DiarizationPipeline
-from src.pipelines.audio_processing.speech_pipeline import SpeechPipeline
+from videoannotator.pipelines.audio_processing.diarization_pipeline import (
+    DiarizationPipeline,
+)
+from videoannotator.pipelines.audio_processing.speech_pipeline import SpeechPipeline
 
 
 @pytest.mark.unit
