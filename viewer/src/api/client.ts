@@ -561,24 +561,10 @@ class APIClient {
         }
       }
 
-      // Jobs endpoint worked! Try to get detailed token info
-      try {
-        const response = await fetch(`${this.baseURL}/api/v1/debug/token-info`, { headers });
-
-        if (response.ok) {
-          const data = await response.json();
-          return {
-            isValid: true,
-            user: data.token?.user_id || 'Anonymous',
-            permissions: data.token?.permissions,
-            expiresAt: data.token?.expires_at
-          };
-        }
-      } catch {
-        // Debug endpoint might not exist - this is normal
-      }
-
-      // Jobs worked, just no debug info available
+      // Jobs endpoint worked! Token is valid.
+      // Note: We could try /api/v1/debug/token-info for detailed info,
+      // but it may not exist or may require different permissions,
+      // causing unnecessary 401 errors in console. Skip it for cleaner logs.
       return { isValid: true, user: this.token ? 'Authenticated' : 'Anonymous' };
     } catch (error) {
       return {
