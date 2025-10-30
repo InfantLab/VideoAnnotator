@@ -329,7 +329,7 @@ async def validate_pipeline_config(
         Validation result with errors and warnings
     """
     try:
-        from validation.validator import ConfigValidator
+        from videoannotator.validation.validator import ConfigValidator
 
         # Confirm pipeline exists
         _ = await get_pipeline_info(pipeline_name)

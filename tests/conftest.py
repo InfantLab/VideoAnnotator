@@ -69,7 +69,7 @@ def patch_pipeline_availability(monkeypatch):
     # Patch for speech pipeline (whisper)
     try:
         monkeypatch.setattr(
-            "src.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE",
+            "videoannotator.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE",
             True,
             raising=False,
         )
@@ -78,7 +78,7 @@ def patch_pipeline_availability(monkeypatch):
     # Patch for diarization pipeline (pyannote)
     try:
         monkeypatch.setattr(
-            "src.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE",
+            "videoannotator.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE",
             True,
             raising=False,
         )
