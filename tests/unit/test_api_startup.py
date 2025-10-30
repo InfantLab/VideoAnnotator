@@ -111,7 +111,9 @@ class TestAutoAPIKeyGeneration:
         with patch("videoannotator.api.startup.ensure_api_key_exists") as mock_ensure:
             mock_ensure.return_value = ("va_api_test", True)
 
-            with patch("api.middleware.auth.is_auth_required", return_value=True):
+            with patch(
+                "videoannotator.api.middleware.auth.is_auth_required", return_value=True
+            ):
                 with patch.dict(os.environ, {"CORS_ORIGINS": "http://localhost:3000"}):
                     initialize_security()
 
@@ -123,7 +125,10 @@ class TestAutoAPIKeyGeneration:
         with patch("videoannotator.api.startup.ensure_api_key_exists") as mock_ensure:
             mock_ensure.return_value = (None, False)
 
-            with patch("api.middleware.auth.is_auth_required", return_value=False):
+            with patch(
+                "videoannotator.api.middleware.auth.is_auth_required",
+                return_value=False,
+            ):
                 with patch("videoannotator.api.startup.logger") as mock_logger:
                     initialize_security()
 
