@@ -367,87 +367,87 @@ const CreateJobs = () => {
                   // Defensive field access - server may use different field names
                   const jobData = job as any;
                   let videoName = jobData.video_filename || jobData.filename || jobData.video_name;
-                  
+
                   // If no direct filename field, extract from video_path
                   if (!videoName && jobData.video_path) {
                     videoName = jobData.video_path.split('/').pop() || jobData.video_path;
                   }
-                  
+
                   videoName = videoName || "N/A";
-                  
+
                   const videoDuration = jobData.video_duration_seconds || jobData.duration_seconds || null;
                   const videoSize = jobData.video_size_bytes || jobData.file_size_bytes || null;
 
                   return (
-                  <TableRow 
-                    key={job.id}
-                    onDoubleClick={() => navigate(`/create/jobs/${job.id}`)}
-                    className="cursor-pointer hover:bg-muted/50"
-                  >
-                    <TableCell className="font-mono text-sm">
-                      {job.id.slice(0, 8)}...
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(job.status, job.error_message)}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {videoName}
-                    </TableCell>
-                    <TableCell>
-                      {formatDuration(videoDuration)}
-                    </TableCell>
-                    <TableCell>
-                      {formatFileSize(videoSize)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {job.selected_pipelines?.slice(0, 2).map((pipeline) => (
-                          <Badge key={pipeline} variant="outline" className="text-xs">
-                            {pipeline}
-                          </Badge>
-                        ))}
-                        {job.selected_pipelines && job.selected_pipelines.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{job.selected_pipelines.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {canCancelJob(job.status as JobStatus) && (
-                          <JobCancelButton
-                            jobId={job.id}
-                            jobStatus={job.status as JobStatus}
-                            size="sm"
-                            variant="outline"
-                          />
-                        )}
-                        {job.status === 'failed' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRetryJob(job);
-                            }}
-                          >
-                            <RotateCcw className="h-4 w-4 mr-1" />
-                            Retry
-                          </Button>
-                        )}
-                        {canDeleteJob(job.status as JobStatus) && (
-                          <JobDeleteButton
-                            jobId={job.id}
-                            jobStatus={job.status as JobStatus}
-                            size="sm"
-                            variant="outline"
-                            onDeleted={() => refetch()}
-                          />
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                    <TableRow
+                      key={job.id}
+                      onDoubleClick={() => navigate(`/create/jobs/${job.id}`)}
+                      className="cursor-pointer hover:bg-muted/50"
+                    >
+                      <TableCell className="font-mono text-sm">
+                        {job.id.slice(0, 8)}...
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(job.status, job.error_message)}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        {videoName}
+                      </TableCell>
+                      <TableCell>
+                        {formatDuration(videoDuration)}
+                      </TableCell>
+                      <TableCell>
+                        {formatFileSize(videoSize)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {job.selected_pipelines?.slice(0, 2).map((pipeline) => (
+                            <Badge key={pipeline} variant="outline" className="text-xs">
+                              {pipeline}
+                            </Badge>
+                          ))}
+                          {job.selected_pipelines && job.selected_pipelines.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{job.selected_pipelines.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {canCancelJob(job.status as JobStatus) && (
+                            <JobCancelButton
+                              jobId={job.id}
+                              jobStatus={job.status as JobStatus}
+                              size="sm"
+                              variant="outline"
+                            />
+                          )}
+                          {job.status === 'failed' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRetryJob(job);
+                              }}
+                            >
+                              <RotateCcw className="h-4 w-4 mr-1" />
+                              Retry
+                            </Button>
+                          )}
+                          {canDeleteJob(job.status as JobStatus) && (
+                            <JobDeleteButton
+                              jobId={job.id}
+                              jobStatus={job.status as JobStatus}
+                              size="sm"
+                              variant="outline"
+                              onDeleted={() => refetch()}
+                            />
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   );
                 })
               )}
