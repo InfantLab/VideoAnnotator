@@ -12,11 +12,11 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from src.api.database import reset_storage_backend, set_database_path
+from videoannotator.api.database import reset_storage_backend, set_database_path
 
 # Import the API application
-from src.api.main import create_app
-from version import __version__ as videoannotator_version
+from videoannotator.api.main import create_app
+from videoannotator.version import __version__ as videoannotator_version
 
 
 @pytest.fixture
@@ -90,6 +90,7 @@ class TestHealthEndpoint:
             # Only check detailed fields if status is healthy
             assert "system" in data
             assert "services" in data
+            assert "workers" in data
 
             # Check system info structure
             system = data["system"]
@@ -97,6 +98,16 @@ class TestHealthEndpoint:
             assert "python_version" in system
             assert "cpu_percent" in system
             assert "memory_percent" in system
+
+            # Check worker info structure
+            workers = data["workers"]
+            assert "status" in workers
+            assert workers["status"] in ["running", "stopped"]
+            assert "active_jobs" in workers
+            assert "queued_jobs" in workers
+            assert "max_concurrent_workers" in workers
+            assert "poll_interval_seconds" in workers
+            assert isinstance(workers["processing_jobs"], list)
 
             # Check database service status
             services = data["services"]
@@ -180,7 +191,7 @@ class TestJobEndpoints:
     def test_submit_job_with_config(self, client, sample_video_file):
         """Test job submission with configuration and pipelines."""
         config = {"output_format": "coco", "confidence_threshold": 0.8}
-        pipelines = "person,scene"
+        pipelines = "person_tracking,scene_detection"
 
         files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
         data = {"config": json.dumps(config), "selected_pipelines": pipelines}
@@ -190,7 +201,7 @@ class TestJobEndpoints:
 
         job_data = response.json()
         assert job_data["config"] == config
-        assert job_data["selected_pipelines"] == ["person", "scene"]
+        assert job_data["selected_pipelines"] == ["person_tracking", "scene_detection"]
 
     def test_get_job_status(self, client, sample_video_file):
         """Test retrieving job status from database."""

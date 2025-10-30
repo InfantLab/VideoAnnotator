@@ -3,10 +3,38 @@
   "build": {
     "dockerfile": "../Dockerfile.gpu",
     "context": "..",
-    "args": { "SKIP_IMAGE_UV_SYNC": "true", "SKIP_TORCH_INSTALL": "true" }
+    "args": {
+      "SKIP_IMAGE_UV_SYNC": "true",
+      "SKIP_TORCH_INSTALL": "true"
+    }
   },
-  "runArgs": ["--gpus", "all"],
+  "runArgs": [
+    "--gpus",
+    "all"
+  ],
   "features": {},
+  "forwardPorts": [
+    18011,
+    18012,
+    18013,
+    18014,
+    18015,
+    19011,
+    19012,
+    19013,
+    19014,
+    19015
+  ],
+  "portsAttributes": {
+    "18011": {
+      "label": "VideoAnnotator API (default)",
+      "onAutoForward": "notify"
+    },
+    "19011": {
+      "label": "Video Annotation Viewer",
+      "onAutoForward": "notify"
+    }
+  },
   "postCreateCommand": "uv sync && uv sync --extra dev && uv pip install \"torch==2.8.0+cu124\" \"torchvision==0.21.0+cu124\" \"torchaudio==2.8.0+cu124\" --index-url https://download.pytorch.org/whl/cu124 && uv run pre-commit install",
   "customizations": {
     "vscode": {

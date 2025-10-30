@@ -13,7 +13,7 @@ class TestWhisperBasePipelineStage1:
     def test_pipeline_module_exists(self):
         """Test that the WhisperBasePipeline module can be imported."""
         try:
-            from src.pipelines.audio_processing.whisper_base_pipeline import (
+            from videoannotator.pipelines.audio_processing.whisper_base_pipeline import (
                 WhisperBasePipeline,
             )
 
@@ -24,7 +24,9 @@ class TestWhisperBasePipelineStage1:
     def test_basic_instantiation(self):
         """Test basic pipeline instantiation."""
         try:
-            from src.pipelines.audio_processing.speech_pipeline import SpeechPipeline
+            from videoannotator.pipelines.audio_processing.speech_pipeline import (
+                SpeechPipeline,
+            )
 
             pipeline = SpeechPipeline()
             assert pipeline is not None
@@ -37,7 +39,9 @@ class TestWhisperBasePipelineStage1:
     def test_config_handling(self):
         """Test configuration handling."""
         try:
-            from src.pipelines.audio_processing.speech_pipeline import SpeechPipeline
+            from videoannotator.pipelines.audio_processing.speech_pipeline import (
+                SpeechPipeline,
+            )
 
             # Test with empty config
             pipeline1 = SpeechPipeline({})

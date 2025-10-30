@@ -1,4 +1,4 @@
-from src.validation.emotion_validator import validate_emotion_data
+from videoannotator.validation.emotion_validator import validate_emotion_data
 
 
 def test_valid_emotion_minimal():

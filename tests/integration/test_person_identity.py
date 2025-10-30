@@ -9,9 +9,9 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from src.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
-from src.pipelines.face_analysis.laion_face_pipeline import LAIONFacePipeline
-from src.pipelines.face_analysis.openface3_pipeline import OpenFace3Pipeline
+from videoannotator.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
+from videoannotator.pipelines.face_analysis.laion_face_pipeline import LAIONFacePipeline
+from videoannotator.pipelines.face_analysis.openface3_pipeline import OpenFace3Pipeline
 
 
 def setup_logging():

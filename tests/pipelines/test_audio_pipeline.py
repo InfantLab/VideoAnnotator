@@ -9,7 +9,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.pipelines.audio_processing import AudioPipeline  # Uses the modular system
+from videoannotator.pipelines.audio_processing import (
+    AudioPipeline,
+)  # Uses the modular system
 
 
 @pytest.mark.unit

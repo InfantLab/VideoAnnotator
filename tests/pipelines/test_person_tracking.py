@@ -11,7 +11,9 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
+from videoannotator.pipelines.person_tracking.person_pipeline import (
+    PersonTrackingPipeline,
+)
 
 
 @pytest.mark.unit

@@ -8,7 +8,7 @@ import pytest
 
 # Try importing the pipeline, skip tests if not available
 try:
-    from src.pipelines.audio_processing.laion_voice_pipeline import (
+    from videoannotator.pipelines.audio_processing.laion_voice_pipeline import (
         EMOTION_LABELS,
         LAIONVoicePipeline,
     )
@@ -19,7 +19,9 @@ except ImportError:
 
 # Try importing the base pipeline
 try:
-    from src.pipelines.audio_processing.whisper_base_pipeline import WhisperBasePipeline
+    from videoannotator.pipelines.audio_processing.whisper_base_pipeline import (
+        WhisperBasePipeline,
+    )
 
     WHISPER_BASE_AVAILABLE = True
 except ImportError:
@@ -192,7 +194,7 @@ class TestLAIONVoicePipelineAudioProcessing:
     def test_whisper_integration_constants(self):
         """Test Whisper integration constants."""
         # These constants should be defined in the module
-        from src.pipelines.audio_processing.laion_voice_pipeline import (
+        from videoannotator.pipelines.audio_processing.laion_voice_pipeline import (
             WHISPER_EMBED_DIM,
             WHISPER_SEQ_LEN,
         )
@@ -203,7 +205,9 @@ class TestLAIONVoicePipelineAudioProcessing:
     def test_mlp_model_structure(self):
         """Test MLP model structure definition."""
         # Should have MLP model class
-        from src.pipelines.audio_processing.laion_voice_pipeline import FullEmbeddingMLP
+        from videoannotator.pipelines.audio_processing.laion_voice_pipeline import (
+            FullEmbeddingMLP,
+        )
 
         # Should be a class
         assert isinstance(FullEmbeddingMLP, type)

@@ -12,7 +12,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from utils.size_based_person_analysis import (
+from videoannotator.utils.size_based_person_analysis import (
     SizeBasedPersonAnalyzer,
     demo_size_based_analysis,
     print_analysis_results,

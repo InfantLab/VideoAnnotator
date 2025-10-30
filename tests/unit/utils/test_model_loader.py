@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.utils.model_loader import (
+from videoannotator.utils.model_loader import (
     log_first_run_info,
     log_model_download,
     setup_download_logging,

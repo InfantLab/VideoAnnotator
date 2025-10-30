@@ -12,10 +12,10 @@ from typing import Any
 import httpx
 import pytest
 
-from src.database.crud import APIKeyCRUD, UserCRUD
-from src.database.database import SessionLocal
-from src.database.migrations import create_admin_user, init_database
-from version import __version__ as videoannotator_version
+from videoannotator.database.crud import APIKeyCRUD, UserCRUD
+from videoannotator.database.database import SessionLocal
+from videoannotator.database.migrations import create_admin_user, init_database
+from videoannotator.version import __version__ as videoannotator_version
 
 
 class APITestClient:
@@ -47,7 +47,7 @@ class APITestClient:
             return
         if self.use_inprocess:
             # Lazy import to avoid side effects during test collection
-            from src.api.main import create_app
+            from videoannotator.api.main import create_app
 
             app = create_app()
             transport = httpx.ASGITransport(app=app)
@@ -177,6 +177,14 @@ class TestAPIAuthentication:
         assert data["api_version"] == videoannotator_version
         assert "database" in data
         assert "system" in data
+        assert "workers" in data
+
+        # Check worker info structure
+        workers = data["workers"]
+        assert "status" in workers
+        assert "active_jobs" in workers
+        assert "queued_jobs" in workers
+        assert "max_concurrent_workers" in workers
 
     @pytest.mark.asyncio
     async def test_pipelines_endpoint(self, anonymous_client: APITestClient) -> None:

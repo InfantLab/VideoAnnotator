@@ -6,8 +6,8 @@ classification, and recovery strategies.
 
 from pathlib import Path
 
-from src.batch.recovery import FailureRecovery, RetryStrategy
-from src.batch.types import BatchJob, JobStatus
+from videoannotator.batch.recovery import FailureRecovery, RetryStrategy
+from videoannotator.batch.types import BatchJob, JobStatus
 
 
 class TestFailureRecovery:

@@ -1,0 +1,81 @@
+name: laion_voice
+display_name: LAION Empathic Voice Analysis
+description: Advanced audio emotion analysis using LAION's Empathic Insight model with Whisper embeddings for nuanced emotional understanding.
+pipeline_family: audio
+variant: laion-empathic-whisper
+tasks:
+  - emotion-recognition
+  - audio-analysis
+modalities:
+  - audio
+capabilities:
+  - embedding
+  - empathic-analysis
+outputs:
+  - format: JSON
+    types: [emotion_segments, empathic_scores]
+  - format: WebVTT
+    types: [emotion_timeline]
+config_schema:
+  model_size:
+    type: string
+    default: small
+    description: LAION model size (small or large)
+  whisper_model:
+    type: string
+    default: mkrausio/EmoWhisper-AnS-Small-v0.1
+    description: Hugging Face model identifier for LAION emotion whisper
+  cache_dir:
+    type: string
+    default: ./models/laion_voice
+    description: Directory to cache downloaded models
+  min_segment_duration:
+    type: float
+    default: 1.0
+    description: Minimum duration for audio segments (seconds)
+  max_segment_duration:
+    type: float
+    default: 30.0
+    description: Maximum duration for audio segments (seconds)
+  segmentation_mode:
+    type: string
+    default: fixed_interval
+    description: Audio segmentation strategy (fixed_interval, diarization, scene_based, vad)
+  segment_overlap:
+    type: float
+    default: 0.0
+    description: Overlap between segments in seconds
+  enable_diarization:
+    type: boolean
+    default: false
+    description: Enable simultaneous speaker diarization
+  enable_scene_alignment:
+    type: boolean
+    default: false
+    description: Align emotion detection with scene boundaries
+  include_raw_scores:
+    type: boolean
+    default: false
+    description: Include raw emotion classification scores in output
+  include_transcription:
+    type: boolean
+    default: false
+    description: Include optional transcription with emotions
+  top_k_emotions:
+    type: integer
+    default: 5
+    description: Number of top emotions to include in results
+examples:
+  - cli: videoannotator job submit demo.mp4 --pipelines laion_voice
+    description: Submit LAION empathic voice analysis job
+  - api: |
+      curl -X POST -H "Authorization: Bearer $API_KEY" \
+        -F "video=@demo.mp4" \
+        -F "selected_pipelines=laion_voice" \
+        http://localhost:18011/api/v1/jobs/
+    description: Submit via API with authentication
+version: 1
+stability: stable
+backends:
+  - pytorch
+  - huggingface

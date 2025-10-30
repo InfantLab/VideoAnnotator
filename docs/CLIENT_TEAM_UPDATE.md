@@ -51,6 +51,7 @@ The server binds to 0.0.0.0:18011 by default.
 2. Check the health endpoint:
 
 ```bash
+# Health endpoint is publicly accessible (no auth required)
 curl -sS http://127.0.0.1:18011/health | jq .
 ```
 
@@ -61,7 +62,12 @@ Confirm `api_version` matches the package version from `src/version.py`.
 - Put a deliberately-broken job metadata file into storage (or simulate a corrupt entry if you have a test fixture) and call the jobs API:
 
 ```bash
-curl -sS http://127.0.0.1:18011/api/v1/jobs | jq .
+# Set API key from server startup
+export API_KEY="va_api_your_key_here"
+
+# List jobs (requires authentication)
+curl -sS -H "Authorization: Bearer $API_KEY" \
+  http://127.0.0.1:18011/api/v1/jobs | jq .
 ```
 
 The API should return the list of healthy jobs; check server logs (logs/api_server.log or stdout) for a warning referencing the problematic job id.

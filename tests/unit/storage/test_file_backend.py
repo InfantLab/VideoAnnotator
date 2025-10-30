@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from src.batch.types import BatchJob, JobStatus
-from src.storage.file_backend import FileStorageBackend
+from videoannotator.batch.types import BatchJob, JobStatus
+from videoannotator.storage.file_backend import FileStorageBackend
 
 
 class TestFileStorageBackendReal:

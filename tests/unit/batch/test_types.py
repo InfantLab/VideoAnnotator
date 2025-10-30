@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from src.batch.types import (
+from videoannotator.batch.types import (
     BatchJob,
     BatchReport,
     BatchStatus,

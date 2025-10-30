@@ -56,15 +56,23 @@ uv run videoannotator --help
 
 ### 🚀 Start the API Server
 
-VideoAnnotator v1.2.0 runs everything through one integrated API server with built-in background processing:
+VideoAnnotator v1.2.0+ runs everything through one integrated API server with built-in background processing:
 
 ```bash
-# Start the API server (recommended)
+# Quick start (simplest - server is default)
+uv run videoannotator
+
+# Or explicitly specify the server command with options
 uv run videoannotator server --host 0.0.0.0 --port 18011
+
+# For custom client development or testing (allows all CORS origins)
+uv run videoannotator --dev
 
 # View interactive API documentation at http://localhost:18011/docs
 # Server includes integrated background job processing - no separate worker needed!
 ```
+
+**CORS Note**: The official web client (video-annotation-viewer on port 19011) is automatically allowed. For custom clients, use `--dev` mode or set `CORS_ORIGINS` environment variable.
 
 ### 📹 Process Videos via CLI
 
@@ -105,19 +113,26 @@ uv run videoannotator backup backup.db
 Direct API access for integration with other systems:
 
 ```bash
+# Get your API key (printed on first server startup)
+export API_KEY="va_api_your_key_here"
+
 # Submit a video processing job
 curl -X POST "http://localhost:18011/api/v1/jobs/" \
+  -H "Authorization: Bearer $API_KEY" \
   -F "video=@video.mp4" \
   -F "selected_pipelines=scene,person,face"
 
 # Check job status
-curl "http://localhost:18011/api/v1/jobs/{job_id}"
+curl -H "Authorization: Bearer $API_KEY" \
+  "http://localhost:18011/api/v1/jobs/{job_id}"
 
 # Get detailed results with pipeline outputs
-curl "http://localhost:18011/api/v1/jobs/{job_id}/results"
+curl -H "Authorization: Bearer $API_KEY" \
+  "http://localhost:18011/api/v1/jobs/{job_id}/results"
 
 # Download specific pipeline result files
-curl "http://localhost:18011/api/v1/jobs/{job_id}/results/files/scene_detection" -O
+curl -H "Authorization: Bearer $API_KEY" \
+  "http://localhost:18011/api/v1/jobs/{job_id}/results/files/scene_detection" -O
 ```
 
 ### Using the Python API

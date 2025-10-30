@@ -10,9 +10,9 @@ from unittest.mock import patch
 
 import pytest
 
-from src.batch.batch_orchestrator import BatchOrchestrator
-from src.batch.types import BatchStatus, JobStatus
-from src.storage.file_backend import FileStorageBackend
+from videoannotator.batch.batch_orchestrator import BatchOrchestrator
+from videoannotator.batch.types import BatchStatus, JobStatus
+from videoannotator.storage.file_backend import FileStorageBackend
 
 
 class TestBatchOrchestratorBasics:
@@ -130,7 +130,9 @@ class TestBatchOrchestratorJobExecution:
         self.test_video = self.temp_dir / "test.mp4"
         self.test_video.write_bytes(b"fake video content")
 
-    @patch("src.batch.batch_orchestrator.BatchOrchestrator._process_single_job")
+    @patch(
+        "videoannotator.batch.batch_orchestrator.BatchOrchestrator._process_single_job"
+    )
     def test_process_single_job_success(self, mock_process):
         """Test successful single job processing."""
         # Mock successful processing
@@ -143,7 +145,9 @@ class TestBatchOrchestratorJobExecution:
         result = mock_process(job)
         assert result is True
 
-    @patch("src.batch.batch_orchestrator.BatchOrchestrator._process_single_job")
+    @patch(
+        "videoannotator.batch.batch_orchestrator.BatchOrchestrator._process_single_job"
+    )
     def test_process_single_job_failure(self, mock_process):
         """Test job processing failure."""
         # Mock failed processing

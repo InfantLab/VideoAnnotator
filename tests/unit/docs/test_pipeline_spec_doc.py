@@ -6,7 +6,7 @@ after changing registry metadata.
 
 from pathlib import Path
 
-from src.registry.pipeline_registry import get_registry
+from videoannotator.registry.pipeline_registry import get_registry
 
 SPEC_PATH = Path("docs/pipelines_spec.md")
 

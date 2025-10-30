@@ -10,7 +10,9 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from src.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
+from videoannotator.pipelines.scene_detection.scene_pipeline import (
+    SceneDetectionPipeline,
+)
 
 
 @pytest.mark.unit
