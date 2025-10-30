@@ -201,7 +201,7 @@ class TestAPIAuthentication:
     @pytest.mark.asyncio
     async def test_pipelines_endpoint(self, anonymous_client: APITestClient) -> None:
         """Test pipelines endpoint works without authentication."""
-        response = await anonymous_client.get("/api/v1/pipelines")
+        response = await anonymous_client.get("/api/v1/pipelines/")
         assert response.status_code == 200
         data = response.json()
         assert "pipelines" in data
@@ -219,7 +219,7 @@ class TestAPIAuthentication:
     async def test_invalid_api_key(self, enable_auth: None) -> None:
         """Test that invalid API key is rejected."""
         invalid_client = APITestClient(api_key="va_invalid_key_12345")
-        response = await invalid_client.get("/api/v1/jobs")
+        response = await invalid_client.get("/api/v1/jobs/")
         assert response.status_code == 401
         data = response.json()
         assert "Invalid API key" in data["detail"]
@@ -229,7 +229,7 @@ class TestAPIAuthentication:
         self, enable_auth: None, anonymous_client: APITestClient
     ) -> None:
         """Test that protected endpoints require authentication."""
-        response = await anonymous_client.post("/api/v1/jobs", files={}, data={})
+        response = await anonymous_client.post("/api/v1/jobs/", files={}, data={})
         assert response.status_code == 422  # Validation error for missing file
 
         # The endpoint allows anonymous access but requires form data
@@ -241,7 +241,7 @@ class TestAPIAuthentication:
         try:
             with open(tmp_path, "rb") as f:
                 files = {"video": ("test.mp4", f, "video/mp4")}
-                response = await anonymous_client.post("/api/v1/jobs", files=files)
+                response = await anonymous_client.post("/api/v1/jobs/", files=files)
                 # Should work for anonymous users too
                 assert response.status_code in [
                     200,
@@ -258,7 +258,7 @@ class TestJobManagement:
     @pytest.mark.asyncio
     async def test_list_jobs_empty(self, test_client: APITestClient) -> None:
         """Test listing jobs when none exist."""
-        response = await test_client.get("/api/v1/jobs")
+        response = await test_client.get("/api/v1/jobs/")
         assert response.status_code == 200
         data = response.json()
         assert "jobs" in data
@@ -278,12 +278,12 @@ class TestJobManagement:
     async def test_job_submission_validation(self, test_client: APITestClient) -> None:
         """Test job submission with various validation scenarios."""
         # Test without video file
-        response = await test_client.post("/api/v1/jobs")
+        response = await test_client.post("/api/v1/jobs/")
         assert response.status_code == 422  # Validation error
 
         # Test with empty file
         files = {"video": ("empty.mp4", b"", "video/mp4")}
-        response = await test_client.post("/api/v1/jobs", files=files)
+        response = await test_client.post("/api/v1/jobs/", files=files)
         # This should create a job even with empty file (validation happens during processing)
         assert response.status_code in [200, 201, 500]  # May fail during processing
 
@@ -305,7 +305,7 @@ class TestJobManagement:
                 files = {"video": ("test_video.mp4", f, "video/mp4")}
                 data = {"config": config, "selected_pipelines": pipelines}
                 response = await test_client.post(
-                    "/api/v1/jobs", files=files, data=data
+                    "/api/v1/jobs/", files=files, data=data
                 )
 
                 # Job submission should succeed
@@ -347,7 +347,7 @@ class TestJobProcessingIntegration:
                     "selected_pipelines": "scene_detection"
                 }  # Use only one pipeline to speed up test
                 response = await test_client.post(
-                    "/api/v1/jobs", files=files, data=data
+                    "/api/v1/jobs/", files=files, data=data
                 )
 
             assert response.status_code in [200, 201]
