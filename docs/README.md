@@ -1,10 +1,10 @@
 # VideoAnnotator Documentation
 
-## Current Release: v1.2.0 ✨
+## Current Release: v1.3.0 ✨
 
-**Major breakthrough achieved!** Complete integrated background job processing, modern FastAPI server, and production-ready video processing API.
+**Production-ready release achieved!** Massive test suite improvements (720/763 passing - 94.4%), comprehensive bug fixes, and enhanced stability across all pipeline operations.
 
-## Next Development: v1.2.1 (Polish & Documentation Updates)
+## Next Development: v1.4.0 (First Public Release + JOSS Paper)
 
 This documentation is organized into clear sections for different user types and development phases.
 
@@ -36,8 +36,9 @@ This documentation is organized into clear sections for different user types and
 
 ## 🔧 Development Documentation
 
-### Current Release (v1.2.0)
+### Current Release (v1.3.0)
 
+- [v1.3.0 Roadmap](development/roadmap_v1.3.0.md) - Production reliability & critical fixes (COMPLETED)
 - [v1.2.0 Release Summary](development/v1.2.0_RELEASE_SUMMARY.md) - Complete release overview and achievements
 - [v1.2.0 Roadmap](development/roadmap_v1.2.0.md) - Development roadmap and completed milestones
 - [API Upgrade Guide](development/api_upgrade_v1.2.0.md) - Major API changes implemented in v1.2.0
@@ -46,18 +47,17 @@ This documentation is organized into clear sections for different user types and
 ### Active Development & Roadmap
 
 - **[Roadmap Overview](development/roadmap_overview.md)** - Complete release strategy v1.3.0 → v2.0.0
-- [v1.3.0 Roadmap](development/roadmap_v1.3.0.md) - **CURRENT**: Production reliability & critical fixes (Q4 2025)
-- [v1.4.0 Roadmap](development/roadmap_v1.4.0.md) - **NEXT**: First public release + JOSS paper (Q2 2026)
+- [v1.4.0 Roadmap](development/roadmap_v1.4.0.md) - **CURRENT**: First public release + JOSS paper (Q2 2026)
 - [v1.2.1 Roadmap](development/roadmap_v1.2.1.md) - Polish and documentation updates (completed)
 - [Examples CLI Update Plan](development/EXAMPLES_CLI_UPDATE_CHECKLIST.md) - CLI modernization checklist
 
 ## 🧪 Testing & QA
 
-### Current Testing (v1.2.0)
+### Current Testing (v1.3.0)
 
-- [v1.2.0 QA Checklist](testing/qa_checklist_v1.2.0.md) - Complete QA validation for v1.2.0 release
 - [Testing Overview](testing/testing_overview.md) - Complete testing strategy and results
 - [Testing Standards](testing/testing_standards.md) - Quality assurance standards
+- [v1.2.0 QA Checklist](testing/qa_checklist_v1.2.0.md) - Complete QA validation for v1.2.0 release
 - [Batch Testing Guide](testing/batch_testing_guide.md) - Batch processing test procedures
 
 ## 📁 Archive

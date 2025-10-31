@@ -4,18 +4,21 @@
 
 VideoAnnotator v1.4.0 is the **JOSS Publication Release** - a tightly focused release dedicated to JOSS (Journal of Open Source Software) paper submission and first public release. This release concentrates exclusively on publication requirements, reproducible research examples, and community onboarding.
 
-**Target Release**: Q1 2026 (2-3 months after v1.3.0)
-**Current Status**: Planning Phase (v1.3.0 complete)
+**Target Release**: Q2 2026 (3-4 months after v1.3.0)
+**Current Status**: IN PROGRESS (v1.3.0 released Oct 31, 2025)
 **Main Goal**: JOSS paper acceptance and successful first public release
 **Duration**: 8-10 weeks (focused scope)
 
-**Prerequisites**: v1.3.0 delivered production-ready foundation:
+**Prerequisites - ALL COMPLETED in v1.3.0**:
 - ✅ Persistent storage with retention policies
 - ✅ Job cancellation and concurrency control
 - ✅ Schema-based config validation
 - ✅ Secure-by-default configuration
 - ✅ Standardized error envelope
 - ✅ Modern videoannotator package namespace
+- ✅ Test suite at 94.4% passing (720/763)
+- ✅ Real test fixtures infrastructure
+- ✅ ffmpeg across all platforms
 
 ---
 

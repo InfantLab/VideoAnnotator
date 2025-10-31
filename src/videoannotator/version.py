@@ -9,8 +9,8 @@ from typing import Any
 
 from videoannotator.utils.logging_config import get_logger
 
-# VideoAnnotator Version
-__version__ = "1.3.0-dev"
+logger = get_logger("videoannotator.version")
+__version__ = "1.3.0"
 __version_info__ = (1, 3, 0, "dev")
 # Development version for v1.3.0 feature branch (job cancellation, config validation, etc.)
 __release_date__ = "2025-10-15"

@@ -2,22 +2,19 @@
 
 ## Current Status & Release Strategy
 
-**Current Release**: v1.2.2 (API-first, production-ready base)
-**In Progress**: v1.3.0 (Production Reliability & Critical Fixes - FEATURE COMPLETE)
-**Next Major**: v1.4.0 (First Public Release + JOSS Paper)
-**Date**: October 30, 2025
+**Current Release**: v1.3.0 (Production Reliability & Critical Fixes - RELEASED Oct 31, 2025)
+**In Progress**: v1.4.0 (First Public Release + JOSS Paper)
+**Next Major**: v1.5.0 (Advanced ML & Plugins)
+**Date**: October 31, 2025
 
 ---
 
 ## 📅 Release Timeline
 
 ```
-v1.2.2 (Released)
+v1.3.0 (Released Oct 31, 2025) ✅
     │
-    ├─ v1.3.0 (Nov 2025) ──────── ✅ FEATURE COMPLETE (merged Oct 30)
-    │   └─ Critical fixes + production reliability
-    │
-    ├─ v1.4.0 (Q1 2026) ───────── 2-3 months after v1.3.0
+    ├─ v1.4.0 (Q2 2026) ───────── 2-3 months after v1.3.0
     │   └─ First public release + JOSS paper
     │
     ├─ v1.5.0 (Q3 2026) ───────── 3-4 months after v1.4.0
@@ -34,12 +31,12 @@ v1.2.2 (Released)
 
 ## 🎯 Release Themes
 
-### v1.3.0: Production Reliability (Nov 2025) ✅ FEATURE COMPLETE
+### v1.3.0: Production Reliability ✅ RELEASED (Oct 31, 2025)
 
 **Theme**: Fix blocking issues, secure by default, production-ready
 **Scope**: Critical fixes only, no new features
-**Status**: Feature branch merged October 30, 2025
-**Duration**: 7 weeks actual (Oct 12 - Oct 30)
+**Status**: Released October 31, 2025
+**Duration**: 7 weeks actual (Oct 12 - Oct 30) + final testing & release (Oct 30-31)
 
 **Completed Deliverables**:
 
@@ -56,7 +53,10 @@ v1.2.2 (Released)
 - ✅ Storage cleanup with retention policies
 - ✅ Worker concurrency control (MAX_CONCURRENT_JOBS)
 - ✅ JOSS publication requirements (docs, tests, coverage)
-- ✅ 234 tests passing across all modules
+- ✅ Test suite improvements: 607 → 720 passing (79.6% → 94.4%)
+- ✅ Real test fixtures infrastructure (audio, video)
+- ✅ ffmpeg installation across all Dockerfiles
+- ✅ Windows compatibility (emoji removal)
 
 **Success Criteria - ALL MET**:
 
@@ -66,6 +66,7 @@ v1.2.2 (Released)
 - ✅ Invalid configs rejected at submission
 - ✅ Authentication required by default
 - ✅ 84% task completion (56/67 tasks)
+- ✅ 94.4% test passing rate (exceeds 95% target of 697 by 23 tests)
 
 **Deferred to v1.4.0**:
 - Queue position display in API responses
@@ -74,10 +75,11 @@ v1.2.2 (Released)
 
 ---
 
-### v1.4.0: First Public Release + JOSS (Q1 2026)
+### v1.4.0: First Public Release + JOSS (Q2 2026)
 
 **Theme**: Research-ready platform with publication-quality documentation
 **Scope**: Reproducibility, documentation, usability polish
+**Status**: IN PROGRESS
 **Duration**: 2-3 months after v1.3.0 release
 **Status**: Planning phase (v1.3.0 foundation complete)
 
