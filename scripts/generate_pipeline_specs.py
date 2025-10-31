@@ -26,7 +26,7 @@ Notes:
 from datetime import datetime
 from pathlib import Path
 
-from src.registry.pipeline_registry import get_registry
+from videoannotator.registry.pipeline_registry import get_registry
 
 OUTPUT_PATH = Path("docs/pipelines_spec.md")
 
