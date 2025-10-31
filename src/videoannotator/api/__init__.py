@@ -1,5 +1,7 @@
 """VideoAnnotator API package."""
 
+import importlib
+
 from ..version import __version__ as _videoannotator_version
 
 __version__ = _videoannotator_version
@@ -9,13 +11,9 @@ __version__ = _videoannotator_version
 def __getattr__(name: str):
     """Lazy load API submodules."""
     if name == "main":
-        from . import main as _main
-
-        return _main
+        return importlib.import_module(".main", __name__)
     elif name == "database":
-        from . import database as _database
-
-        return _database
+        return importlib.import_module(".database", __name__)
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 

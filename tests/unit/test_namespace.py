@@ -68,7 +68,7 @@ class TestNamespaceImports:
         worker_module = videoannotator.worker
 
         assert worker_module is not None
-        assert hasattr(worker_module, "executor")
+        assert hasattr(worker_module, "JobProcessor")
 
     def test_import_invalid_module_raises_attribute_error(self):
         """Test that invalid module names raise AttributeError."""
@@ -168,8 +168,10 @@ class TestPackageStructure:
 
         # Test get_version_info returns expected structure
         info = get_version_info()
-        assert "version" in info
-        assert "python_version" in info
+        assert "videoannotator" in info
+        assert "version" in info["videoannotator"]
+        assert "system" in info
+        assert "python_version" in info["system"]
 
 
 class TestImportExamples:

@@ -14,7 +14,7 @@ SHELL ["/bin/bash","-o","pipefail","-lc"]
 # Install base packages and locales in a single RUN to reduce image layers and
 # avoid pulling recommended packages unnecessarily (DL3015, DL3059)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl python3 python3-venv python3-pip git git-lfs \
+    curl python3 python3-venv python3-pip git git-lfs ffmpeg \
     libgl1-mesa-dri libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 locales \
     && locale-gen en_US.UTF-8 \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \

@@ -50,7 +50,6 @@ def sample_video_file():
 class TestJobSubmissionValidation:
     """Test configuration validation in job submission endpoint."""
 
-    @pytest.mark.skip(reason="Database write permission issue in test environment")
     def test_submit_job_with_valid_config(self, client, sample_video_file):
         """Test job submission with valid configuration succeeds."""
         config = {
@@ -158,7 +157,6 @@ class TestJobSubmissionValidation:
         assert "unknown1" in error_data["detail"]
         assert "unknown2" in error_data["detail"]
 
-    @pytest.mark.skip(reason="Database write permission issue in test environment")
     def test_submit_job_without_config_succeeds(self, client, sample_video_file):
         """Test job submission without config uses defaults (valid)."""
         pipelines = "person_tracking"
@@ -173,7 +171,6 @@ class TestJobSubmissionValidation:
         assert job_data["config"] == {}
         assert job_data["selected_pipelines"] == ["person_tracking"]
 
-    @pytest.mark.skip(reason="Database write permission issue in test environment")
     def test_submit_job_without_pipelines_skips_validation(
         self, client, sample_video_file
     ):
@@ -189,7 +186,6 @@ class TestJobSubmissionValidation:
         # Should succeed because validation only runs when pipelines are specified
         assert response.status_code == 201
 
-    @pytest.mark.skip(reason="Database write permission issue in test environment")
     def test_submit_job_with_empty_config_and_pipelines(
         self, client, sample_video_file
     ):
@@ -275,7 +271,6 @@ class TestJobSubmissionValidation:
         # Should mention multiple errors - check for multiple semicolons or multiple mentions of "range"
         assert detail.count(";") >= 2 or detail.count("range") >= 2
 
-    @pytest.mark.skip(reason="Database write permission issue in test environment")
     def test_submit_job_with_all_pipeline_types(self, client, sample_video_file):
         """Test job submission with all valid pipeline types succeeds."""
         config = {
