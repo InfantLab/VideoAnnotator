@@ -127,9 +127,7 @@ def temp_audio_file():
     For integration tests, real audio with speech is required.
     """
     # Check for real test audio first
-    real_audio = (
-        Path(__file__).parent / "fixtures" / "audio" / "speech_single_speaker.wav"
-    )
+    real_audio = Path(__file__).parent / "fixtures" / "audio" / "test.wav"
 
     if real_audio.exists():
         # Use real test audio (don't delete)
@@ -166,15 +164,13 @@ def multi_speaker_audio_file():
 
     Uses real test audio if available, required for integration tests.
     """
-    real_audio = (
-        Path(__file__).parent / "fixtures" / "audio" / "speech_multiple_speakers.wav"
-    )
+    real_audio = Path(__file__).parent / "fixtures" / "audio" / "test.wav"
 
     if real_audio.exists():
         yield real_audio
     else:
         pytest.skip(
-            "Multi-speaker audio not available - add tests/fixtures/audio/speech_multiple_speakers.wav"
+            "Multi-speaker audio not available - add tests/fixtures/audio/test.wav"
         )
 
 
