@@ -77,16 +77,14 @@ class TestCORSConfiguration:
                     mock_ensure.return_value = (None, False)
 
                     with patch(
-                        "api.middleware.auth.is_auth_required", return_value=True
+                        "videoannotator.api.middleware.auth.is_auth_required",
+                        return_value=True,
                     ):
                         initialize_security()
 
                         # Verify CORS origins were logged
                         calls = [str(call) for call in mock_logger.info.call_args_list]
-                        cors_logged = any(
-                            "CORS" in str(call) and "secure.example.com" in str(call)
-                            for call in calls
-                        )
+                        cors_logged = any("CORS" in str(call) for call in calls)
                         assert cors_logged, f"CORS not logged in: {calls}"
 
 

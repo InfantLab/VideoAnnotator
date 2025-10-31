@@ -108,7 +108,7 @@ class TestJobCancellationAPI:
         job_id = response.json()["id"]
 
         # Manually mark job as completed in database
-        from api.database import get_storage_backend
+        from videoannotator.api.database import get_storage_backend
 
         storage = get_storage_backend()
         job = storage.load_job_metadata(job_id)
@@ -121,7 +121,8 @@ class TestJobCancellationAPI:
 
         # Should return 409 Conflict
         assert response.status_code == 409
-        assert "already complete" in response.json()["detail"].lower()
+        detail = response.json()["detail"].lower()
+        assert "cannot cancel" in detail and "completed" in detail
 
     def test_cannot_cancel_failed_job(self, tmp_path):
         """Test that failed jobs cannot be cancelled."""
@@ -139,7 +140,7 @@ class TestJobCancellationAPI:
         job_id = response.json()["id"]
 
         # Manually mark job as failed in database
-        from api.database import get_storage_backend
+        from videoannotator.api.database import get_storage_backend
 
         storage = get_storage_backend()
         job = storage.load_job_metadata(job_id)
@@ -153,7 +154,8 @@ class TestJobCancellationAPI:
 
         # Should return 409 Conflict
         assert response.status_code == 409
-        assert "already complete" in response.json()["detail"].lower()
+        detail = response.json()["detail"].lower()
+        assert "cannot cancel" in detail and "failed" in detail
 
     def test_cancel_running_job(self, tmp_path):
         """Test cancelling a job that is currently running."""
@@ -171,7 +173,7 @@ class TestJobCancellationAPI:
         job_id = response.json()["id"]
 
         # Manually mark job as running in database
-        from api.database import get_storage_backend
+        from videoannotator.api.database import get_storage_backend
 
         storage = get_storage_backend()
         job = storage.load_job_metadata(job_id)

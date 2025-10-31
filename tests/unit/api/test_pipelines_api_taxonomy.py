@@ -7,7 +7,7 @@ app = create_app()
 
 def test_pipelines_list_includes_new_taxonomy_fields():
     client = TestClient(app)
-    resp = client.get("/api/v1/pipelines")
+    resp = client.get("/api/v1/pipelines/")
     assert resp.status_code == 200
     data = resp.json()
     assert "pipelines" in data
@@ -24,7 +24,7 @@ def test_pipelines_list_includes_new_taxonomy_fields():
 
 def test_single_pipeline_detail_matches_list():
     client = TestClient(app)
-    resp = client.get("/api/v1/pipelines")
+    resp = client.get("/api/v1/pipelines/")
     name = resp.json()["pipelines"][0]["name"]
     detail = client.get(f"/api/v1/pipelines/{name}")
     assert detail.status_code == 200
