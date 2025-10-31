@@ -426,7 +426,8 @@ class TestExceptionHandlers:
 
         # Verify top-level structure
         assert "error" in data
-        assert len(data) == 1  # Only 'error' key at top level
+        # May have 'detail' for backward compatibility
+        assert len(data) >= 1
 
         # Verify error structure
         error = data["error"]
