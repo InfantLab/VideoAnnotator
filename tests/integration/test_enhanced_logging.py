@@ -78,7 +78,9 @@ class TestEnhancedLoggingIntegration:
         log_messages = [record.message for record in caplog.records]
         assert any("YOLO11 Pose Detection Model" in msg for msg in log_messages)
         assert any("yolo11n-pose.pt" in msg for msg in log_messages)
-        assert any("✅" in msg for msg in log_messages)  # Success indicator
+        assert any(
+            "[OK]" in msg or "SUCCESS" in msg for msg in log_messages
+        )  # Success indicator
 
     def test_whisper_pipeline_logging_integration(self, caplog):
         """Test enhanced logging integration with Whisper pipeline loading.
@@ -166,8 +168,10 @@ class TestEnhancedLoggingIntegration:
         assert any("Whisper" in msg for msg in log_messages)
         assert any("CLIP" in msg for msg in log_messages)
 
-        # Should see success messages for all
-        success_messages = [msg for msg in log_messages if "✅" in msg]
+        # Should see success messages for all (no emoji - Windows compat)
+        success_messages = [
+            msg for msg in log_messages if "[OK]" in msg or "SUCCESS" in msg
+        ]
         assert len(success_messages) >= 3
 
     def test_error_handling_in_pipeline_context(self, caplog):
@@ -189,7 +193,9 @@ class TestEnhancedLoggingIntegration:
                 )
 
         log_messages = [record.message for record in caplog.records]
-        error_messages = [msg for msg in log_messages if "❌" in msg]
+        error_messages = [
+            msg for msg in log_messages if "[ERROR]" in msg or "ERROR" in msg
+        ]
         assert len(error_messages) >= 1
         assert any("CUDA out of memory" in msg for msg in log_messages)
 
@@ -243,7 +249,9 @@ class TestEnhancedLoggingIntegration:
 
         # Should have logged all attempts
         log_messages = [record.message for record in caplog.records]
-        success_messages = [msg for msg in log_messages if "✅" in msg]
+        success_messages = [
+            msg for msg in log_messages if "[OK]" in msg or "SUCCESS" in msg
+        ]
         assert len(success_messages) == 10
 
 
@@ -369,8 +377,8 @@ class TestFirstRunExperience:
         log_messages = [record.message for record in caplog.records]
         combined_log = " ".join(log_messages)
 
-        # Should have welcome message
-        assert any("🎉 Welcome" in msg for msg in log_messages)
+        # Should have welcome message (no emoji - Windows compat)
+        assert any("Welcome" in msg or "WELCOME" in msg for msg in log_messages)
 
         # Should explain first-run process
         assert any("FIRST RUN" in msg for msg in log_messages)
@@ -380,7 +388,9 @@ class TestFirstRunExperience:
         assert "Whisper" in combined_log
 
         # Should show success for both models
-        success_count = len([msg for msg in log_messages if "✅" in msg])
+        success_count = len(
+            [msg for msg in log_messages if "[OK]" in msg or "SUCCESS" in msg]
+        )
         assert success_count >= 2
 
     def test_subsequent_run_experience(self, caplog):
@@ -409,4 +419,4 @@ class TestFirstRunExperience:
 
         # Should still show model loading progress
         assert any("Cached Model" in msg for msg in log_messages)
-        assert any("✅" in msg for msg in log_messages)
+        assert any("[OK]" in msg or "SUCCESS" in msg for msg in log_messages)
