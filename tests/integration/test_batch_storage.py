@@ -88,8 +88,8 @@ class TestFileStorageBackend:
 
     def test_load_nonexistent_job(self):
         """Test loading non-existent job."""
-        result = self.storage.load_job_metadata("nonexistent_job_id")
-        assert result is None
+        with pytest.raises(FileNotFoundError):
+            self.storage.load_job_metadata("nonexistent_job_id")
 
     def test_delete_job(self):
         """Test deleting job from storage."""
@@ -104,8 +104,9 @@ class TestFileStorageBackend:
         result = self.storage.delete_job(job.job_id)
         assert result is True
 
-        # Verify job is gone
-        assert self.storage.load_job_metadata(job.job_id) is None
+        # Verify job is gone - should raise FileNotFoundError
+        with pytest.raises(FileNotFoundError):
+            self.storage.load_job_metadata(job.job_id)
 
     def test_delete_nonexistent_job(self):
         """Test deleting non-existent job."""
@@ -126,8 +127,8 @@ class TestFileStorageBackend:
             jobs.append(job)
             self.storage.save_job_metadata(job)
 
-        # List jobs
-        listed_jobs = self.storage.list_jobs()
+        # List jobs - use get_all_jobs to get BatchJob objects
+        listed_jobs = self.storage.get_all_jobs()
         assert len(listed_jobs) == 3
 
         # Verify job IDs match
@@ -370,7 +371,9 @@ class TestFileStorageBackendIntegration:
 
         # 5. Delete
         assert self.storage.delete_job(job.job_id) is True
-        assert self.storage.load_job_metadata(job.job_id) is None
+        # After deletion, loading should raise FileNotFoundError
+        with pytest.raises(FileNotFoundError):
+            self.storage.load_job_metadata(job.job_id)
 
     def test_batch_operations(self):
         """Test batch operations with multiple jobs and reports."""
