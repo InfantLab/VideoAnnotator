@@ -5,7 +5,7 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/badge/uv-package%20manager-FF4B4B?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
 [![Docker](https://img.shields.io/badge/Docker-GPU%20Ready-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/)
-[![Tests](https://img.shields.io/badge/tests-83%25%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-720%20passing%20(94.4%25)-success.svg)](tests/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/InfantLab/VideoAnnotator)
 
 **Automated video analysis toolkit for human interaction research** - Extract comprehensive behavioral annotations from videos using AI pipelines, with an intuitive web interface for visualization and analysis.
