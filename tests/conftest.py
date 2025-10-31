@@ -121,7 +121,22 @@ def temp_video_file():
 
 @pytest.fixture
 def temp_audio_file():
-    """Create a temporary audio file for testing."""
+    """Provide an audio file for testing.
+
+    Uses real test audio if available, otherwise generates synthetic audio.
+    For integration tests, real audio with speech is required.
+    """
+    # Check for real test audio first
+    real_audio = (
+        Path(__file__).parent / "fixtures" / "audio" / "speech_single_speaker.wav"
+    )
+
+    if real_audio.exists():
+        # Use real test audio (don't delete)
+        yield real_audio
+        return
+
+    # Fall back to synthetic audio for unit tests
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
         # Create a simple test audio file
         import scipy.io.wavfile as wavfile
@@ -130,7 +145,7 @@ def temp_audio_file():
         duration = 3.0  # 3 seconds
         t = np.linspace(0, duration, int(sample_rate * duration))
 
-        # Generate a simple sine wave
+        # Generate a simple sine wave (NOT speech - for unit tests only)
         frequency = 440  # A4 note
         audio_data = np.sin(2 * np.pi * frequency * t)
 
@@ -143,6 +158,24 @@ def temp_audio_file():
     yield temp_path
     # Cleanup
     temp_path.unlink(missing_ok=True)
+
+
+@pytest.fixture
+def multi_speaker_audio_file():
+    """Provide audio with multiple speakers for diarization testing.
+
+    Uses real test audio if available, required for integration tests.
+    """
+    real_audio = (
+        Path(__file__).parent / "fixtures" / "audio" / "speech_multiple_speakers.wav"
+    )
+
+    if real_audio.exists():
+        yield real_audio
+    else:
+        pytest.skip(
+            "Multi-speaker audio not available - add tests/fixtures/audio/speech_multiple_speakers.wav"
+        )
 
 
 @pytest.fixture
