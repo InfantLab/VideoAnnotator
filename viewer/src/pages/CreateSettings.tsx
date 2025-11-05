@@ -54,7 +54,8 @@ const CreateSettings = () => {
 
   const tokenStatus = useTokenStatus();
   const { data: serverInfoData, isLoading: serverInfoLoading, error: serverInfoError } = useVideoAnnotatorServerInfo();
-  const { data: catalogData, isLoading: catalogLoading, error: catalogError } = usePipelineCatalog();
+  // Don't fetch catalog on settings page - not needed, only manual refresh button
+  const { data: catalogData, isLoading: catalogLoading, error: catalogError } = usePipelineCatalog({ enabled: false });
   const refreshCatalog = useRefreshPipelineCatalog();
   const clearPipelineCache = useClearPipelineCatalogCache();
 

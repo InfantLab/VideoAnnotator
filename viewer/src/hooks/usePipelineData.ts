@@ -132,11 +132,13 @@ export function usePipelineUtils() {
 /**
  * Hook that combines pipeline catalog and server info for convenience.
  * 
+ * @param options - Configuration options
+ * @param options.enabled - Whether to automatically fetch data (default: false for lazy loading)
  * @returns Combined state with catalog, server info, and loading states
  */
-export function usePipelineData() {
-    const catalogQuery = usePipelineCatalog();
-    const serverQuery = useServerInfo();
+export function usePipelineData(options: { enabled?: boolean } = { enabled: false }) {
+    const catalogQuery = usePipelineCatalog({ enabled: options.enabled });
+    const serverQuery = useServerInfo({ enabled: options.enabled });
 
     return {
         catalog: catalogQuery.data?.catalog,

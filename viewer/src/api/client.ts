@@ -100,7 +100,7 @@ class APIClient {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    timeoutMs: number = 10000 // 10 second default timeout (shorter for better UX)
+    timeoutMs: number = 30000 // 30 second timeout (server takes 2-3s, browser needs buffer)
   ): Promise<T> {
     // Always get fresh values from localStorage in case they were updated
     this.baseURL = getApiBaseUrl().replace(/\/$/, '');
@@ -125,8 +125,9 @@ class APIClient {
     }
     // If no valid token, make anonymous request (no Authorization header)
 
-    // Only add Content-Type for non-FormData requests
-    if (!(options.body instanceof FormData)) {
+    // Only add Content-Type for requests with a body (POST/PUT/PATCH)
+    // Don't add it for GET/DELETE as it triggers unnecessary CORS preflight
+    if (options.body && !(options.body instanceof FormData)) {
       defaultHeaders['Content-Type'] = 'application/json';
     }
 
@@ -141,6 +142,8 @@ class APIClient {
         ...options.headers,
       },
       signal: controller.signal,
+      mode: 'cors', // Explicitly enable CORS
+      credentials: 'omit', // Don't send cookies (we use Authorization header)
     };
 
     try {
@@ -201,92 +204,12 @@ class APIClient {
     }
   }
 
-  private async detectServerInfo(): Promise<VideoAnnotatorServerInfo | null> {
-    // Try endpoints in order from most likely to work to least likely
-    // Based on server's actual OpenAPI spec at /openapi.json
-    const candidateEndpoints = [
-      '/api/v1/debug/server-info',  // ✅ Exists in server v1.2.0 OpenAPI spec
-      '/api/v1/system/server-info', // ❌ Missing from server OpenAPI spec (404 expected)
-      '/api/v1/system/info'         // ❌ Missing from server OpenAPI spec (404 expected)
-    ];
-
-    for (const endpoint of candidateEndpoints) {
-      try {
-        const data = await this.request<any>(endpoint);
-        if (data) {
-          const version =
-            data.version ||
-            data.server_version ||
-            data.app_version ||
-            data.git_sha ||
-            'unknown';
-
-          const features: VideoAnnotatorFeatureFlags = {
-            ...this.featureFlags,
-            pipelineCatalog: Boolean(data.features?.pipeline_catalog ?? data.pipeline_catalog),
-            pipelineSchemas: Boolean(data.features?.pipeline_schemas ?? data.pipeline_schemas),
-            pipelineHealth: Boolean(data.features?.pipeline_health ?? data.pipeline_health),
-            jobSSE: Boolean(data.features?.job_sse ?? data.job_sse ?? true),
-            artifactListing: Boolean(data.features?.artifact_listing ?? data.artifact_listing)
-          };
-
-          const capabilities: PipelineCapability[] | undefined = Array.isArray(data.capabilities)
-            ? data.capabilities
-            : undefined;
-
-          return {
-            version: String(version),
-            build: data.build_id || data.build,
-            commit: data.commit || data.git_sha,
-            catalogVersion: data.catalog_version,
-            lastUpdated: data.updated_at || data.last_updated,
-            features,
-            capabilities
-          };
-        }
-      } catch (error) {
-        if (error instanceof APIError && (error.status === 404 || error.status === 405)) {
-          continue;
-        }
-        // Other failures should bubble up to let caller handle network issues
-        throw error;
-      }
-    }
-
-    return null;
-  }
+  // detectServerInfo removed - not needed for core functionality
 
   async getServerInfo(forceRefresh = false): Promise<VideoAnnotatorServerInfo | null> {
-    if (!forceRefresh && this.serverInfoCache) {
-      return this.serverInfoCache;
-    }
-
-    // Prevent concurrent requests
-    if (!forceRefresh && this.serverInfoPromise) {
-      return this.serverInfoPromise;
-    }
-
-    this.serverInfoPromise = this.fetchServerInfo();
-    const result = await this.serverInfoPromise;
-    this.serverInfoPromise = null;
-
-    return result;
-  }
-
-  private async fetchServerInfo(): Promise<VideoAnnotatorServerInfo | null> {
-    try {
-      const info = await this.detectServerInfo();
-      if (info) {
-        this.serverInfoCache = info;
-        this.featureFlags = info.features ?? this.featureFlags;
-        return info;
-      }
-    } catch (error) {
-      // If we cannot fetch server info, ignore and rely on defaults
-      console.warn('VideoAnnotator server info unavailable:', error);
-    }
-
-    return null;
+    // Server info detection disabled - not essential for core functionality
+    // Return cached value if available, otherwise null
+    return this.serverInfoCache ?? null;
   }
 
   private mapLegacyPipelineResponse(pipelines: PipelineResponse[]): PipelineCatalog {
@@ -338,6 +261,7 @@ class APIClient {
     const { forceRefresh = false } = options;
     const now = Date.now();
 
+    // Check cache first
     if (!forceRefresh && this.pipelineCatalogCache) {
       const age = now - this.pipelineCatalogCache.fetchedAt;
       if (age < this.pipelineCatalogTTL) {
@@ -348,44 +272,23 @@ class APIClient {
       }
     }
 
-    const serverInfo = await this.getServerInfo(forceRefresh);
+    // Simple: just fetch pipelines, no server info needed
+    const pipelineData = await this.getPipelines();
+    const catalog = this.mapLegacyPipelineResponse(pipelineData);
 
-    // Use the actual server endpoint: /api/v1/pipelines/ (not /catalog)
-    // This is the real endpoint that exists according to server OpenAPI spec
-    try {
-      const pipelineData = await this.getPipelines();
-      const catalog = this.mapLegacyPipelineResponse(pipelineData);
+    // Use cached or default server info
+    const serverInfo = this.serverInfoCache ?? {
+      version: 'unknown',
+      features: this.featureFlags
+    };
 
-      this.pipelineCatalogCache = {
-        catalog,
-        server: serverInfo ?? this.serverInfoCache ?? {
-          version: 'unknown',
-          features: this.featureFlags
-        },
-        fetchedAt: now
-      };
+    this.pipelineCatalogCache = {
+      catalog,
+      server: serverInfo,
+      fetchedAt: now
+    };
 
-      return this.buildCatalogResponse(catalog, serverInfo);
-    } catch (error) {
-      console.warn('Legacy pipeline endpoint also failed:', error);
-
-      // Return empty catalog as final fallback
-      const emptyCatalog: PipelineCatalog = {
-        pipelines: [],
-        source: 'fallback-empty'
-      };
-
-      this.pipelineCatalogCache = {
-        catalog: emptyCatalog,
-        server: serverInfo ?? this.serverInfoCache ?? {
-          version: 'unknown',
-          features: this.featureFlags
-        },
-        fetchedAt: now
-      };
-
-      return this.buildCatalogResponse(emptyCatalog, serverInfo);
-    }
+    return this.buildCatalogResponse(catalog, serverInfo);
   }
 
   async getPipelineSchema(pipelineId: string): Promise<PipelineSchemaResponse> {
@@ -458,7 +361,7 @@ class APIClient {
 
   // Job management endpoints
   async getJobs(page: number = 1, perPage: number = 20): Promise<JobListResponse> {
-    return this.request(`/api/v1/jobs?page=${page}&per_page=${perPage}`);
+    return this.request(`/api/v1/jobs/?page=${page}&per_page=${perPage}`);
   }
 
   async getJob(jobId: string): Promise<JobResponse> {
@@ -496,7 +399,7 @@ class APIClient {
 
   // Pipeline endpoints
   async getPipelines(): Promise<PipelineResponse[]> {
-    const response = await this.request<{ pipelines: PipelineResponse[]; total?: number }>('/api/v1/pipelines');
+    const response = await this.request<{ pipelines: PipelineResponse[]; total?: number }>('/api/v1/pipelines/');
 
     // Handle both legacy format (direct array) and new format (object with pipelines key)
     if (Array.isArray(response)) {
@@ -546,15 +449,50 @@ class APIClient {
         headers['Authorization'] = `Bearer ${this.token}`;
       }
 
-      // Test with jobs endpoint FIRST - this actually requires proper auth
-      const jobsResponse = await fetch(`${this.baseURL}/api/v1/jobs?per_page=1`, { headers });
+      // First, check if auth is required by examining health endpoint
+      let authRequired = false;
+      try {
+        const healthResponse = await fetch(`${this.baseURL}/api/v1/system/health`);
+        if (healthResponse.ok) {
+          const healthData = await healthResponse.json();
+          authRequired = healthData?.security?.auth_required === true;
+        }
+      } catch {
+        // Health check failed, continue anyway
+      }
+
+      // Test with jobs endpoint - this actually requires proper auth when auth_required=true
+      const jobsResponse = await fetch(`${this.baseURL}/api/v1/jobs/?per_page=1`, { headers });
 
       // If jobs endpoint returns 401, auth is failing
       if (jobsResponse.status === 401) {
         return { isValid: false, error: 'Authentication required or invalid token' };
       }
 
-      // If jobs endpoint fails for other reasons (500, etc), still check health
+      // v1.3.0: When auth_required=true, server returns 404 for invalid/missing tokens
+      // BUT we need to check the response body to distinguish between:
+      // - {"detail": "Not Found"} = auth failure (error response)
+      // - {"jobs": [], ...} = valid token, no jobs yet (success response)
+      if (jobsResponse.status === 404 && authRequired) {
+        try {
+          const body = await jobsResponse.json();
+          // If response has "detail" field, it's an error (auth failure)
+          if (body && typeof body === 'object' && 'detail' in body) {
+            return {
+              isValid: false,
+              error: 'Authentication required. Your token may be invalid or missing.'
+            };
+          }
+        } catch {
+          // Failed to parse JSON, treat as error
+          return {
+            isValid: false,
+            error: 'Authentication required. Your token may be invalid or missing.'
+          };
+        }
+      }
+
+      // If jobs endpoint fails for other reasons (500, etc), check if server is reachable
       if (!jobsResponse.ok && jobsResponse.status !== 404) {
         try {
           await this.healthCheck();
@@ -566,10 +504,8 @@ class APIClient {
         }
       }
 
-      // Jobs endpoint worked! Token is valid.
-      // Note: We could try /api/v1/debug/token-info for detailed info,
-      // but it may not exist or may require different permissions,
-      // causing unnecessary 401 errors in console. Skip it for cleaner logs.
+      // Jobs endpoint returned success (200) or we couldn't determine auth failure from 404
+      // Consider token valid if we got here
       return { isValid: true, user: this.token ? 'Authenticated' : 'Anonymous' };
     } catch (error) {
       return {

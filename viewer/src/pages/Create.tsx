@@ -11,7 +11,10 @@ import vavIcon from "@/assets/v-a-v.icon.png";
 
 const CreateLayout = () => {
   const location = useLocation();
-  const { error, refresh } = useServerCapabilitiesContext();
+  const { error, refresh, capabilities, isLoading } = useServerCapabilitiesContext();
+
+  // Capabilities are auto-fetched by the provider after a short delay
+  // This avoids React StrictMode double-mount issues
 
   const navigationItems = [
     { path: "/create/jobs", label: "Jobs", icon: List },
@@ -69,8 +72,8 @@ const CreateLayout = () => {
             </div>
           </div>
 
-          {/* Connection Error Banner */}
-          {error && (
+          {/* Connection Error Banner - only show if we've tried and failed */}
+          {error && !isLoading && (
             <div className="mb-6">
               <ConnectionErrorBanner
                 error={error}

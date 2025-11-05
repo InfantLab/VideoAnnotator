@@ -40,10 +40,13 @@ function enhanceAuthError(error: any) {
   const currentToken = localStorage.getItem('videoannotator_api_token') || '';
 
   // Check if it's an authentication error
+  // Note: v1.3.0 server may return 404 "Not Found" for unauthenticated /api/v1/jobs requests
   if (
     errorMessage.includes('API key required') ||
     errorMessage.includes('AUTH_REQUIRED') ||
     errorMessage.includes('401') ||
+    errorMessage.includes('404') ||
+    errorMessage.includes('Not Found') ||
     errorMessage.includes('Unauthorized') ||
     errorMessage.includes('authentication')
   ) {
@@ -122,6 +125,8 @@ const CreateJobs = () => {
       // Exponential backoff when idle: 30s initially, then 60s
       return 30000; // 30 seconds when all jobs complete/cancelled/failed
     },
+    refetchOnMount: false, // Don't refetch when component remounts
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 
   // Show error toast when error occurs

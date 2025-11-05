@@ -43,13 +43,16 @@ interface PipelineProviderProps {
 }
 
 /**
- * Provider component that fetches and provides pipeline data to child components.
+ * Provider component that provides pipeline data context to child components.
+ * Data is NOT fetched automatically - components must call refetch() when needed.
+ * This prevents unnecessary API calls on pages that don't need pipeline data.
  * 
  * @param props - Provider props containing children
  * @returns JSX element wrapping children with pipeline context
  */
 export function PipelineProvider({ children }: PipelineProviderProps) {
-    const pipelineData = usePipelineData();
+    // enabled: false means data is NOT fetched on mount - lazy loading
+    const pipelineData = usePipelineData({ enabled: false });
     const pipelineUtils = usePipelineUtils();
 
     // Helper functions

@@ -42,7 +42,7 @@ interface TokenStatus {
 export function useTokenStatus() {
   const [status, setStatus] = useState<TokenStatus>({
     isValid: false,
-    isLoading: true
+    isLoading: false // Don't auto-validate - too slow, hangs page load
   });
 
   const validateToken = async () => {
@@ -75,9 +75,13 @@ export function useTokenStatus() {
     validateToken();
   };
 
+  // DISABLED: Don't auto-validate on mount - too slow, causes page hang
+  // Components can call refresh() manually when needed
+  /*
   useEffect(() => {
     validateToken();
   }, []);
+  */
 
   return {
     ...status,
