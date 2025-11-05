@@ -34,11 +34,14 @@ export function TokenStatusIndicator({
   compact = false
 }: TokenStatusIndicatorProps) {
   const { isValid, user, error, isLoading, refresh: refreshToken } = useTokenStatus();
-  const { capabilities, isLoading: capsLoading, refresh: refreshCaps } = useServerCapabilitiesContext();
+  const { capabilities, error: capsError, isLoading: capsLoading, refresh: refreshCaps } = useServerCapabilitiesContext();
   const [isOpen, setIsOpen] = useState(false);
 
   const loading = isLoading || capsLoading;
   const serverVersion = capabilities?.version || 'unknown';
+
+  // We're connected if we successfully fetched capabilities
+  const isConnected = !!capabilities;
 
   // Determine authentication requirement status
   // Note: v1.3.0 doesn't expose auth_required in health endpoint
@@ -60,16 +63,16 @@ export function TokenStatusIndicator({
 
   const statusBadge = (
     <Badge
-      variant={isValid ? "default" : "destructive"}
+      variant={isConnected ? "default" : "destructive"}
       className={`cursor-pointer ${className}`}
     >
-      {isValid ? (
+      {isConnected ? (
         <CheckCircle className="h-3 w-3 mr-1" />
       ) : (
         <AlertTriangle className="h-3 w-3 mr-1" />
       )}
-      {isValid ? 'Connected' : 'Error'}
-      {isValid && !compact && serverVersion !== 'unknown' && (
+      {isConnected ? 'Connected' : 'Error'}
+      {isConnected && !compact && serverVersion !== 'unknown' && (
         <span className="ml-1 text-xs opacity-80">v{serverVersion}</span>
       )}
     </Badge>
@@ -101,7 +104,7 @@ export function TokenStatusIndicator({
             </Button>
           </div>
 
-          {isValid ? (
+          {isConnected ? (
             <Alert>
               <CheckCircle className="h-4 w-4 text-green-600" />
               <AlertDescription>
@@ -120,12 +123,12 @@ export function TokenStatusIndicator({
               <AlertDescription>
                 <div className="space-y-2">
                   <p className="font-medium">❌ Connection Issue</p>
-                  <p className="text-sm">{error || 'Unable to connect to server'}</p>
-                  {error?.includes('401') || error?.includes('Unauthorized') ? (
+                  <p className="text-sm">{capsError?.message || error || 'Unable to connect to server'}</p>
+                  {error?.includes('401') || error?.includes('Unauthorized') || capsError?.message?.includes('401') || capsError?.message?.includes('Unauthorized') ? (
                     <p className="text-xs text-muted-foreground mt-2">
                       💡 Hint: Check your API token in Settings
                     </p>
-                  ) : error?.includes('fetch') || error?.includes('network') ? (
+                  ) : error?.includes('fetch') || error?.includes('network') || capsError?.message?.includes('fetch') || capsError?.message?.includes('network') ? (
                     <p className="text-xs text-muted-foreground mt-2">
                       💡 Hint: Verify server is running at the configured URL
                     </p>

@@ -45,56 +45,76 @@ export function ServerCapabilitiesProvider({
     autoRefreshInterval = 2 * 60 * 1000, // 2 minutes default
 }: ServerCapabilitiesProviderProps) {
     const [capabilities, setCapabilities] = useState<ServerCapabilities | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [isLoading, setIsLoading] = useState<boolean>(false); // Start false - no auto-fetch
     const [error, setError] = useState<Error | null>(null);
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
     /**
      * Fetch server capabilities from health endpoint
+     * Uses functional state updates to avoid stale closure issues with React StrictMode
      */
     const refresh = useCallback(async () => {
+        console.log('[ServerCapabilities] refresh() called - START');
+
         setIsLoading(true);
         setError(null);
 
         try {
+            console.log('[ServerCapabilities] Calling apiClient.getEnhancedHealth()...');
             const healthResponse = await apiClient.getEnhancedHealth();
+            console.log('[ServerCapabilities] Health response received:', healthResponse);
+
             const detectedCapabilities = detectServerCapabilities(healthResponse);
+            console.log('[ServerCapabilities] Capabilities detected:', detectedCapabilities);
 
             setCapabilities(detectedCapabilities);
             setLastRefresh(new Date());
             setError(null);
+            console.log('[ServerCapabilities] SUCCESS - capabilities set');
         } catch (err) {
+            console.error('[ServerCapabilities] ERROR caught:', err);
             const error = err instanceof Error ? err : new Error('Failed to detect server capabilities');
             setError(error);
 
             // Keep stale capabilities on refresh error (better UX than clearing)
-            // setCapabilities to null only on initial load failure
-            setCapabilities((prev) => prev || null);
+            setCapabilities((prev) => {
+                console.log('[ServerCapabilities] ERROR - keeping previous capabilities:', prev);
+                return prev;
+            });
         } finally {
             setIsLoading(false);
+            console.log('[ServerCapabilities] refresh() called - END');
         }
-    }, []); // Remove capabilities from dependencies to prevent infinite loop
+    }, []); // Empty deps is safe now - we use functional updates and don't read state
 
-    // Initial fetch on mount
+    // Auto-refresh with initial delay to avoid React StrictMode double-mount issues
     useEffect(() => {
-        refresh();
-    }, [refresh]);
+        console.log('[ServerCapabilities] useEffect triggered', {
+            autoRefreshInterval,
+        });
 
-    // Auto-refresh interval - use faster polling when there's an error for quick recovery
-    useEffect(() => {
-        if (!autoRefreshInterval || autoRefreshInterval <= 0) {
-            return;
-        }
-
-        // When there's an error, poll more frequently (every 10 seconds) for faster recovery
-        const effectiveInterval = error ? 10000 : autoRefreshInterval;
-
-        const intervalId = setInterval(() => {
+        // Initial fetch after short delay (avoids StrictMode double-fetch)
+        const initialTimeout = setTimeout(() => {
+            console.log('[ServerCapabilities] AUTO-REFRESH: Calling refresh() from initial timeout');
             refresh();
-        }, effectiveInterval);
+        }, 500); // 500ms delay
 
-        return () => clearInterval(intervalId);
-    }, [autoRefreshInterval, refresh, error]);
+        // Set up periodic refresh
+        let intervalId: NodeJS.Timeout | null = null;
+
+        if (autoRefreshInterval && autoRefreshInterval > 0) {
+            intervalId = setInterval(() => {
+                console.log('[ServerCapabilities] AUTO-REFRESH: Calling refresh() from interval');
+                refresh();
+            }, autoRefreshInterval);
+        }
+
+        return () => {
+            console.log('[ServerCapabilities] useEffect cleanup');
+            clearTimeout(initialTimeout);
+            if (intervalId) clearInterval(intervalId);
+        };
+    }, [autoRefreshInterval, refresh]); // Don't depend on capabilities - let refresh() handle it
 
     const value: ServerCapabilitiesContextValue = {
         capabilities,

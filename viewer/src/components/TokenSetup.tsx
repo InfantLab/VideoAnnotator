@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle, AlertCircle, Settings, ExternalLink, Eye, EyeOff, Rocket, HelpCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, Settings, ExternalLink, Eye, EyeOff, Rocket, HelpCircle, Stethoscope } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import { handleAPIError } from '@/api/handleError';
+import { runConnectionDiagnostics, formatDiagnosticReport, type DiagnosticReport } from '@/lib/connectionDiagnostics';
 
 interface TokenSetupProps {
   onTokenConfigured?: () => void;
@@ -38,126 +39,58 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
   const [tokenStatus, setTokenStatus] = useState<TokenStatus | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [serverAuthRequired, setServerAuthRequired] = useState<boolean | null>(null);
+  const [diagnosticReport, setDiagnosticReport] = useState<DiagnosticReport | null>(null);
+  const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
 
-  // Check token validity
+  // Check token validity - SIMPLIFIED
   const validateToken = async (testUrl?: string, testToken?: string) => {
     const urlToTest = testUrl || apiUrl;
     const tokenToTest = testToken !== undefined ? testToken : token;
 
     setIsValidating(true);
 
-    // Empty token = anonymous access
-    if (!tokenToTest.trim()) {
-      try {
-        // Test anonymous access
-        const response = await fetch(`${urlToTest}/api/v1/jobs?per_page=1`);
-        if (response.ok) {
-          setTokenStatus({ isValid: true, user: 'Anonymous' });
-        } else if (response.status === 401) {
-          // Server requires auth - this is expected, not an error in the config
-          setTokenStatus({
-            isValid: false,
-            error: 'Server requires authentication. You need to provide an API token to connect.'
-          });
-        } else {
-          setTokenStatus({ isValid: false, error: `Server error: ${response.status}` });
-        }
-      } catch (error) {
-        setTokenStatus({ isValid: false, error: 'Cannot connect to server' });
-      } finally {
-        setIsValidating(false);
-      }
-      return;
-    }
+    // Update API client temporarily for this test
+    const originalUrl = apiClient.baseURL;
+    const originalToken = apiClient.token;
+    apiClient.updateConfig(urlToTest, tokenToTest || undefined);
 
     try {
-      // First, check server's auth requirements
-      const healthResponse = await fetch(`${urlToTest}/api/v1/system/health`);
-      const healthData = await healthResponse.json();
-      const authRequired = healthData.auth_required ?? true; // Default to true if not present
-      setServerAuthRequired(authRequired); // Store for use in UI
+      // Simple test: check health endpoint (lightweight)
+      const health = await apiClient.getSystemHealth();
 
-      // Check if this is a known placeholder token
-      const isPlaceholderToken = ['dev-token', 'test-token', 'your-api-token'].includes(tokenToTest.toLowerCase());
-
-      // If server doesn't require auth and user has a placeholder token, tell them to clear it
-      if (!authRequired && isPlaceholderToken) {
-        setTokenStatus({
-          isValid: false,
-          error: 'This is a placeholder, not a real token. Clear this field - the server does not require authentication.'
-        });
-        setIsValidating(false);
-        return;
-      }
-
-      // Test with actual jobs endpoint 
-      const jobsResponse = await fetch(`${urlToTest}/api/v1/jobs?per_page=1`, {
-        headers: { 'Authorization': `Bearer ${tokenToTest}` }
-      });
-
-      // Server rejected this token
-      if (jobsResponse.status === 401) {
-        if (isPlaceholderToken) {
-          setTokenStatus({
-            isValid: false,
-            error: authRequired
-              ? 'This is a placeholder, not a real token. The server requires authentication - you need a real token.'
-              : 'This is a placeholder, not a real token. Clear this field to connect without authentication.'
-          });
-        } else {
-          setTokenStatus({
-            isValid: false,
-            error: 'Server rejected this token. It may be expired or invalid.'
-          });
-        }
-        setIsValidating(false);
-        return;
-      }
-
-      if (!jobsResponse.ok && jobsResponse.status !== 404) {
-        setTokenStatus({ isValid: false, error: `Server error: ${jobsResponse.status}` });
-        setIsValidating(false);
-        return;
-      }
-
-      // Server accepted a placeholder token when auth is required - shouldn't happen but handle it
-      if (isPlaceholderToken && authRequired) {
-        setTokenStatus({
-          isValid: false,
-          error: 'This is a placeholder, not a real token. Clear this field or use a real token.'
-        });
-        setIsValidating(false);
-        return;
-      }
-
-      // Jobs endpoint accepted the token, now try to get token details
-      try {
-        const debugResponse = await fetch(`${urlToTest}/api/v1/debug/token-info`, {
-          headers: { 'Authorization': `Bearer ${tokenToTest}` }
-        });
-
-        if (debugResponse.ok) {
-          const data = await debugResponse.json();
-          setTokenStatus({
-            isValid: true,
-            user: data.token?.user_id || 'Unknown',
-            permissions: data.token?.permissions || [],
-            expiresAt: data.token?.expires_at
-          });
-        } else {
-          // Debug endpoint not available, but jobs endpoint worked
-          setTokenStatus({ isValid: true, user: 'Authenticated' });
-        }
-      } catch {
-        // Debug endpoint failed, but jobs endpoint worked
-        setTokenStatus({ isValid: true, user: 'Authenticated' });
-      }
-    } catch (error) {
+      // If we got here, connection works!
       setTokenStatus({
-        isValid: false,
-        error: handleAPIError(error)
+        isValid: true,
+        user: tokenToTest ? 'Authenticated' : 'Anonymous'
       });
+      setServerAuthRequired(health.security.auth_required);
+
+    } catch (error: any) {
+      // Parse the error
+      const errorMsg = error?.message || String(error);
+
+      if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
+        setTokenStatus({
+          isValid: false,
+          error: 'Server requires authentication. Please provide a valid API token.'
+        });
+        setServerAuthRequired(true);
+      } else if (errorMsg.includes('404') || errorMsg.includes('Not Found')) {
+        // v1.3.0 may return 404 for auth errors
+        setTokenStatus({
+          isValid: false,
+          error: 'Authentication failed. Token may be invalid.'
+        });
+        setServerAuthRequired(true);
+      } else {
+        setTokenStatus({
+          isValid: false,
+          error: errorMsg
+        });
+      }
     } finally {
+      // Restore original config
+      apiClient.updateConfig(originalUrl, originalToken);
       setIsValidating(false);
     }
   };
@@ -189,7 +122,8 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
     }, 500);
   };
 
-  // Load saved configuration on mount and auto-validate to get server status
+  // Load saved configuration on mount
+  // Don't auto-validate - let user click "Test Connection" button
   useEffect(() => {
     const savedUrl = localStorage.getItem('videoannotator_api_url');
     const savedToken = localStorage.getItem('videoannotator_api_token') || '';
@@ -197,15 +131,8 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
     if (savedUrl) setApiUrl(savedUrl);
     if (savedToken) setToken(savedToken);
 
-    // ALWAYS auto-validate on mount to get server's auth_required status
-    // This provides immediate feedback without requiring user to click "Test Connection"
-    const urlToValidate = savedUrl || apiUrl;
-    const tokenToValidate = savedToken;
-
-    // Small delay to let the UI render first
-    setTimeout(() => {
-      validateToken(urlToValidate, tokenToValidate);
-    }, 100);
+    // Don't auto-validate - it makes the page slow and isn't essential
+    // User can click "Test Connection" if they want to validate
   }, []);
 
   // Track changes and clear stale validation status
@@ -250,6 +177,26 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
 
   const handleTestConnection = () => {
     validateToken();
+  };
+
+  const handleRunDiagnostics = async () => {
+    setIsRunningDiagnostics(true);
+    setDiagnosticReport(null);
+
+    try {
+      const report = await runConnectionDiagnostics(apiUrl, token || undefined);
+      setDiagnosticReport(report);
+
+      // Auto-copy to clipboard for easy sharing
+      const formatted = formatDiagnosticReport(report);
+      navigator.clipboard.writeText(formatted).catch(() => {
+        // Clipboard write failed, ignore
+      });
+    } catch (error) {
+      console.error('Diagnostics failed:', error);
+    } finally {
+      setIsRunningDiagnostics(false);
+    }
   };
 
   // Check if this is a first-time user (no saved token)
@@ -517,14 +464,69 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
             </Alert>
           )}
 
+          {/* Diagnostic Report */}
+          {diagnosticReport && (
+            <Alert className={diagnosticReport.summary === 'all_passed' ? 'border-green-500' : 'border-yellow-500'}>
+              <Stethoscope className="h-4 w-4" />
+              <AlertTitle>Connection Diagnostics</AlertTitle>
+              <AlertDescription>
+                <div className="space-y-3 mt-2">
+                  <div className="text-sm">
+                    Status: <Badge variant={diagnosticReport.summary === 'all_passed' ? 'default' : 'destructive'}>
+                      {diagnosticReport.summary.replace('_', ' ').toUpperCase()}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-1">
+                    {diagnosticReport.results.map((result, i) => (
+                      <div key={i} className="text-sm flex items-start gap-2">
+                        <span>{result.passed ? '✅' : '❌'}</span>
+                        <span className="flex-1">
+                          <strong>{result.test}</strong>
+                          {result.duration && <span className="text-muted-foreground"> ({Math.round(result.duration)}ms)</span>}
+                          {result.error && <div className="text-red-600 text-xs mt-1">{result.error}</div>}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {diagnosticReport.recommendations.length > 0 && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mt-2">
+                      <p className="text-sm font-semibold text-yellow-900 mb-2">Recommendations:</p>
+                      <ul className="text-xs text-yellow-800 space-y-1">
+                        {diagnosticReport.recommendations.map((rec, i) => (
+                          <li key={i}>• {rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-muted-foreground">
+                    Report copied to clipboard. Share with support if needed.
+                  </p>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Button
               onClick={handleTestConnection}
               disabled={isValidating}
               variant="outline"
             >
               {isValidating ? 'Testing...' : 'Test Connection'}
+            </Button>
+
+            <Button
+              onClick={handleRunDiagnostics}
+              disabled={isRunningDiagnostics}
+              variant="outline"
+              className="text-blue-600 hover:text-blue-700"
+            >
+              <Stethoscope className="h-4 w-4 mr-2" />
+              {isRunningDiagnostics ? 'Running...' : 'Run Diagnostics'}
             </Button>
 
             <Button
