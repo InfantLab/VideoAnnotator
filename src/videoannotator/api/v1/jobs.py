@@ -4,6 +4,7 @@ import contextlib
 import json
 import logging
 import os
+import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -15,7 +16,7 @@ from pydantic import BaseModel, Field
 
 from ...batch.types import BatchJob, JobStatus
 from ...storage.base import StorageBackend
-from ...storage.config import get_job_storage_path
+from ...storage.config import ensure_job_storage_path
 from ...validation.validator import ConfigValidator
 from ..database import get_storage_backend
 from ..errors import APIError
@@ -307,32 +308,49 @@ async def submit_job(
                     hint="Fix the validation errors and resubmit",
                 )
 
-        # Save uploaded video to temporary file
-        # TODO: Implement proper file storage (local/S3)
+        # Save uploaded video to temporary file first
         temp_dir = tempfile.mkdtemp()
         filename = video.filename or "video"
-        video_path = os.path.join(temp_dir, filename)
+        temp_video_path = os.path.join(temp_dir, filename)
 
-        with open(video_path, "wb") as f:
-            content = await video.read()
-            f.write(content)
+        try:
+            with open(temp_video_path, "wb") as f:
+                content = await video.read()
+                f.write(content)
 
-        # Extract video metadata
-        video_filename, video_size_bytes, video_duration_seconds = (
-            extract_video_metadata(video_path)
-        )
+            # Extract video metadata from temp file
+            video_filename, video_size_bytes, video_duration_seconds = (
+                extract_video_metadata(temp_video_path)
+            )
 
-        # Create BatchJob instance with storage path
-        batch_job = BatchJob(
-            video_path=Path(video_path),
-            output_dir=None,  # Will be set by processing system
-            config=parsed_config or {},
-            status=JobStatus.PENDING,
-            selected_pipelines=parsed_pipelines,
-        )
+            # Create BatchJob instance to get job_id
+            batch_job = BatchJob(
+                video_path=Path(temp_video_path),  # Temporary, will be updated
+                output_dir=None,  # Will be set by processing system
+                config=parsed_config or {},
+                status=JobStatus.PENDING,
+                selected_pipelines=parsed_pipelines,
+            )
 
-        # Set storage path for persistent job artifacts
-        batch_job.storage_path = get_job_storage_path(batch_job.job_id)
+            # Create persistent storage directory for this job
+            job_storage_dir = ensure_job_storage_path(batch_job.job_id)
+            batch_job.storage_path = job_storage_dir
+
+            # Copy video file to persistent storage
+            persistent_video_path = job_storage_dir / filename
+            shutil.copy2(temp_video_path, persistent_video_path)
+
+            # Update job to use persistent path
+            batch_job.video_path = persistent_video_path
+
+        finally:
+            # Clean up temporary directory
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as cleanup_error:
+                logger.warning(
+                    f"Failed to cleanup temp directory {temp_dir}: {cleanup_error}"
+                )
 
         # Save job to database
         storage.save_job_metadata(batch_job)
