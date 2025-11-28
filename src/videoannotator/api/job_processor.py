@@ -49,6 +49,7 @@ class JobProcessor:
                 "person": PersonTrackingPipeline,
                 "face_analysis": FaceAnalysisPipeline,
                 "face": FaceAnalysisPipeline,
+                "face_laion_clip": LAIONFacePipeline,
                 "audio_processing": AudioPipeline,
                 "audio": AudioPipeline,
                 "laion_face_analysis": LAIONFacePipeline,

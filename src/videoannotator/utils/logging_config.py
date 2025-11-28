@@ -272,6 +272,34 @@ class VideoAnnotatorLoggingConfig:
 
     def _configure_third_party_loggers(self):
         """Configure third-party library logging levels."""
+        import warnings
+
+        # Filter specific deprecation warnings
+        warnings.filterwarnings(
+            "ignore",
+            message=".*torchaudio._backend.list_audio_backends has been deprecated.*",
+        )
+        warnings.filterwarnings(
+            "ignore", message=".*torchaudio._backend.utils.info has been deprecated.*"
+        )
+        warnings.filterwarnings(
+            "ignore",
+            message=".*torchaudio._backend.common.AudioMetaData has been deprecated.*",
+        )
+        warnings.filterwarnings(
+            "ignore",
+            message=".*In 2.9, this function's implementation will be changed.*",
+        )
+        warnings.filterwarnings(
+            "ignore", message=".*std\\(\\): degrees of freedom is <= 0.*"
+        )
+        warnings.filterwarnings(
+            "ignore", message=".*Performing inference on CPU when CUDA is available.*"
+        )
+        warnings.filterwarnings(
+            "ignore", message=".*FP16 is not supported on CPU; using FP32 instead.*"
+        )
+
         # Reduce noise from third-party libraries
         logging.getLogger("uvicorn").setLevel(logging.WARNING)
         logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
