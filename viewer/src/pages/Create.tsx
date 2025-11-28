@@ -9,6 +9,44 @@ import { ConnectionErrorBanner } from "@/components/ConnectionErrorBanner";
 import { useServerCapabilitiesContext } from "@/contexts/ServerCapabilitiesContext";
 import vavIcon from "@/assets/v-a-v.icon.png";
 
+/**
+ * Detects if error is likely a CORS or network connectivity issue
+ * Auth errors (401, 403, 404) should not be treated as connection issues
+ */
+function isCorsOrNetworkError(error: Error): boolean {
+  const message = error.message.toLowerCase();
+
+  // Check if it's an auth/permission error - these should NOT show the connection banner
+  const isAuthError =
+    message.includes('401') ||
+    message.includes('403') ||
+    message.includes('404') ||
+    message.includes('unauthorized') ||
+    message.includes('forbidden') ||
+    message.includes('not found') ||
+    message.includes('auth') ||
+    message.includes('permission');
+
+  if (isAuthError) {
+    console.log('[Create] Auth error detected, not showing connection banner:', message);
+    return false;
+  }
+
+  // Now check for actual connection issues
+  const isConnectionError =
+    message.includes('cors') ||
+    message.includes('fetch') ||
+    message.includes('network') ||
+    message.includes('failed to fetch') ||
+    message.includes('networkerror') ||
+    message.includes('timeout') ||
+    message.includes('timed out') ||
+    message.includes('access-control-allow-origin');
+
+  console.log('[Create] Connection error check:', { message, isConnectionError });
+  return isConnectionError;
+}
+
 const CreateLayout = () => {
   const location = useLocation();
   const { error, refresh, capabilities, isLoading } = useServerCapabilitiesContext();
@@ -26,6 +64,10 @@ const CreateLayout = () => {
   const apiUrl = localStorage.getItem('videoannotator_api_url') ||
     import.meta.env.VITE_API_BASE_URL ||
     'http://localhost:18011';
+
+  // Only show connection error if we have an actual connection problem AND no successful capabilities
+  // If we have capabilities, the server is reachable even if health check had issues
+  const showConnectionError = error && !isLoading && !capabilities && isCorsOrNetworkError(error);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -72,8 +114,8 @@ const CreateLayout = () => {
             </div>
           </div>
 
-          {/* Connection Error Banner - only show if we've tried and failed */}
-          {error && !isLoading && (
+          {/* Connection Error Banner - only show if truly unreachable */}
+          {showConnectionError && (
             <div className="mb-6">
               <ConnectionErrorBanner
                 error={error}
