@@ -43,43 +43,52 @@ def init_database(force: bool = False) -> bool:
 
         logger.info(f"Successfully created tables: {created_tables}")
 
-        # Align legacy jobs table schema with storage backend expectations
-        # The storage backend defines additional columns (output_dir, retry_count)
-        # that might not exist if database was initialized via legacy models.
-        if "jobs" in created_tables:
-            from sqlalchemy import text
+        from sqlalchemy import text
 
-            with engine.connect() as conn:
+        with engine.connect() as conn:
+            def ensure_columns(table: str, required: dict[str, str]) -> list[str]:
                 try:
-                    # SQLite pragma to introspect columns
-                    result = conn.execute(text("PRAGMA table_info('jobs')"))
-                    existing_cols = {row[1] for row in result}  # row[1] is column name
-                    alter_performed = False
-                    if "output_dir" not in existing_cols:
+                    result = conn.execute(text(f"PRAGMA table_info('{table}')"))
+                    existing_cols = {row[1] for row in result}
+                    added: list[str] = []
+                    for column, ddl in required.items():
+                        if column in existing_cols:
+                            continue
                         logger.warning(
-                            "[MIGRATION] Adding missing column jobs.output_dir"
+                            f"[MIGRATION] Adding missing column {table}.{column}"
                         )
-                        conn.execute(
-                            text("ALTER TABLE jobs ADD COLUMN output_dir VARCHAR")
-                        )
-                        alter_performed = True
-                    if "retry_count" not in existing_cols:
-                        logger.warning(
-                            "[MIGRATION] Adding missing column jobs.retry_count"
-                        )
-                        conn.execute(
-                            text(
-                                "ALTER TABLE jobs ADD COLUMN retry_count INTEGER DEFAULT 0"
-                            )
-                        )
-                        alter_performed = True
-                    if alter_performed:
-                        logger.info(
-                            "[MIGRATION] Jobs table schema updated for storage backend compatibility"
-                        )
+                        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {ddl}"))
+                        added.append(column)
+                    return added
                 except Exception as mig_e:
                     logger.error(
-                        f"[MIGRATION] Failed to align jobs table schema: {mig_e}"
+                        f"[MIGRATION] Failed to align {table} table schema: {mig_e}"
+                    )
+                    return []
+
+            if "jobs" in created_tables:
+                added = ensure_columns(
+                    "jobs",
+                    {
+                        "output_dir": "VARCHAR",
+                        "retry_count": "INTEGER DEFAULT 0",
+                    },
+                )
+                if added:
+                    logger.info(
+                        "[MIGRATION] Jobs table schema updated for storage backend compatibility"
+                    )
+
+            if "users" in created_tables:
+                added = ensure_columns(
+                    "users",
+                    {
+                        "full_name": "VARCHAR(200)",
+                    },
+                )
+                if added:
+                    logger.info(
+                        "[MIGRATION] Users table schema updated for authentication compatibility"
                     )
         return True
 

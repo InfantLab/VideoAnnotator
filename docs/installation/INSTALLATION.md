@@ -82,7 +82,12 @@ uv sync
 
 # Install development dependencies
 uv sync --extra dev
+
+# Initialize the local SQLite database (creates tables + admin API key)
+uv run videoannotator setup-db --admin-email you@example.com --admin-username you
 ```
+
+> The `setup-db` command is idempotent. Re-run it after pulling new schema changes or use `--force` when you want to drop and recreate tables. Pass `--skip-admin` if you prefer to manage API keys yourself later with `videoannotator generate-token`.
 
 ### 3. Install CUDA-enabled PyTorch (GPU acceleration)
 

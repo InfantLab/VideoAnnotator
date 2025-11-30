@@ -6,29 +6,15 @@ VideoAnnotator v1.3.0+ uses token-based authentication to secure the API. This g
 
 ### Getting Your API Key
 
-On first startup, VideoAnnotator automatically generates an API key and prints it to the console:
+Run the database bootstrap command once per environment (it is safe to rerun). It creates/updates tables and mints an admin API key:
 
-```
-================================================================================
-[API KEY] VIDEOANNOTATOR API KEY GENERATED
-================================================================================
-
-Your API key: va_api_ya9C5x_OZkweZf8JSxen60WY6KD98_VTa5_uHfN5wRM
-
-Save this key securely - it will NOT be shown again!
-
-Usage:
-  curl -H 'Authorization: Bearer va_api_ya9C5x...' http://localhost:8000/api/v1/jobs
-
-To disable authentication (development only):
-  export AUTH_REQUIRED=false
-
-To generate additional keys:
-  uv run videoannotator generate-token --user email@example.com
-================================================================================
+```bash
+uv run videoannotator setup-db \
+  --admin-email you@example.com \
+  --admin-username you
 ```
 
-**IMPORTANT**: Save this key immediately - it's only shown once!
+You will see an output block containing the API key. Copy and store it securely—the raw token is never displayed again. Use `--skip-admin` if you only want schema creation without making a key (for example in automated deployments). If you forget this step, the API server will still auto-generate an admin key the first time it starts and detects that no tokens exist, but running `setup-db` keeps the workflow predictable.
 
 ### Using Your API Key
 
@@ -87,23 +73,24 @@ job_id = response.json()["job_id"]
 
 ### Retrieving Lost Keys
 
-If you lose your API key, you need to generate a new one:
+If you lose your API key, generate a new one with the CLI (it automatically ensures the database schema is ready before creating the key):
 
 ```bash
-# Generate a new token (interactive mode)
+# Interactive mode
 uv run videoannotator generate-token
 
-# Generate with parameters
+# Provide details explicitly
 uv run videoannotator generate-token \
   --user john@example.com \
   --username john \
-  --scopes read,write,admin \
+  --key-name "John's laptop" \
   --expires-days 365
 
-# Save to file for scripting
+# Save JSON for automation
 uv run videoannotator generate-token \
   --user service@example.com \
-  --output /path/to/token.json
+  --key-name "service bot" \
+  --output tokens/service.json
 ```
 
 **Note**: For security, the full key is never stored - only a hash. If lost, you must generate a new key.
@@ -335,7 +322,7 @@ uv run python -m scripts.manage_tokens create
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AUTH_REQUIRED` | `true` | Enable/disable authentication |
-| `AUTO_GENERATE_API_KEY` | `true` | Auto-generate key on first startup |
+| `AUTO_GENERATE_API_KEY` | `true` | Auto-generate key if server starts without existing keys |
 | `SECURITY_ENABLED` | (alias for AUTH_REQUIRED) | Backward compatibility |
 
 ### Token Storage

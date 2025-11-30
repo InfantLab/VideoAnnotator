@@ -983,10 +983,31 @@ def generate_token(
 
     from videoannotator.database.crud import APIKeyCRUD, UserCRUD
     from videoannotator.database.database import SessionLocal
+    from videoannotator.database.migrations import init_database, migrate_to_v1_3_0
     from videoannotator.utils.logging_config import setup_videoannotator_logging
 
     # Setup logging
     setup_videoannotator_logging(log_level="INFO")
+
+    # Ensure database schema is ready before interacting with it
+    try:
+        init_ok = init_database(force=False)
+        if not init_ok:
+            typer.echo(
+                "[WARNING] Database initialization reported issues; continuing...",
+                err=True,
+            )
+        migration_ok = migrate_to_v1_3_0()
+        if migration_ok is False:
+            typer.echo(
+                "[WARNING] Database migration skipped or incomplete; continuing...",
+                err=True,
+            )
+    except Exception as prep_err:
+        typer.echo(
+            f"[WARNING] Database preparation failed (continuing anyway): {prep_err}",
+            err=True,
+        )
 
     # Get user information (interactive if not provided)
     if not user:
@@ -1080,3 +1101,83 @@ def generate_token(
         raise typer.Exit(code=1)
     finally:
         db.close()
+
+
+@app.command("setup-db")
+def setup_db(
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Drop and recreate tables before initialization (destructive)",
+    ),
+    create_admin: bool = typer.Option(
+        True,
+        "--create-admin/--skip-admin",
+        help="Create an admin user and API key after ensuring schema",
+    ),
+    admin_username: str = typer.Option("admin", help="Username for the admin user"),
+    admin_email: str = typer.Option(
+        "admin@videoannotator.com", help="Email for the admin user"
+    ),
+    admin_full_name: str = typer.Option(
+        "Administrator", help="Full name for the admin user"
+    ),
+):
+    """Initialize the local database and optionally create an admin API key."""
+    from videoannotator.database.migrations import (
+        create_admin_user,
+        init_database,
+        migrate_to_v1_3_0,
+    )
+    from videoannotator.utils.logging_config import setup_videoannotator_logging
+
+    setup_videoannotator_logging(log_level="INFO")
+
+    typer.echo("[START] Ensuring database schema is up to date...")
+    init_ok = init_database(force=force)
+    if not init_ok:
+        typer.echo("[ERROR] Database initialization failed", err=True)
+        raise typer.Exit(code=1)
+
+    migration_ok = migrate_to_v1_3_0()
+    if migration_ok is False:
+        typer.echo(
+            "[WARNING] v1.3.0 schema migration skipped or incomplete; review logs.",
+            err=True,
+        )
+    typer.echo("[OK] Database tables ready")
+
+    if not create_admin:
+        typer.echo("[INFO] Skipping admin API key creation per user request")
+        return
+
+    typer.echo("[START] Creating admin user and API key (idempotent)...")
+    result = create_admin_user(
+        username=admin_username,
+        email=admin_email,
+        full_name=admin_full_name,
+    )
+
+    if result is None:
+        typer.echo(
+            "[ERROR] Unable to create admin user; see logs for details.", err=True
+        )
+        raise typer.Exit(code=1)
+
+    user_obj, raw_key = result
+    typer.echo(f"[OK] Admin user ready: {user_obj.username} <{user_obj.email}>")
+
+    if raw_key:
+        typer.echo(
+            """
+================ ADMIN API KEY =================
+{key}
+================================================
+Save this key now; it will not be shown again.
+""".strip().format(key=raw_key)
+        )
+    else:
+        typer.echo(
+            "[INFO] Admin already existed; no new API key generated. "
+            "Use generate-token for additional keys."
+        )

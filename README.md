@@ -58,6 +58,9 @@ curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/Mac
 git clone https://github.com/InfantLab/VideoAnnotator.git
 cd VideoAnnotator
 uv sync  # Fast dependency installation (30 seconds)
+
+# Initialize the local database (creates tables + admin user/token)
+uv run videoannotator setup-db --admin-email you@example.com --admin-username you
 ```
 
 ### 2. Start Processing Videos
@@ -65,7 +68,7 @@ uv sync  # Fast dependency installation (30 seconds)
 ```bash
 # Start the API server
 uv run python api_server.py
-# Note the API key printed on first startup - you'll need it below
+# Use the API key printed by `setup-db` (or the server's first-start output)
 
 # Process your first video (in another terminal)
 curl -X POST "http://localhost:18011/api/v1/jobs/" \

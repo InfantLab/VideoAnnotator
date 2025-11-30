@@ -54,11 +54,13 @@ curl http://localhost:18011/api/v1/jobs
 ### Production Deployment
 
 ```bash
-# 1. Start server (auth enabled by default)
-uv run python api_server.py
-# Note the API key printed on first startup
+# 1. Initialize DB + admin token (run once per environment)
+uv run videoannotator setup-db --admin-email you@example.com --admin-username you
 
-# 2. Use API key in requests
+# 2. Start server (auth enabled by default)
+uv run python api_server.py
+
+# 3. Use API key in requests
 export API_KEY="va_api_your_key_here"
 curl -H "Authorization: Bearer $API_KEY" \
   https://yourdomain.com/api/v1/jobs
@@ -68,7 +70,7 @@ curl -H "Authorization: Bearer $API_KEY" \
 
 ### Authentication (v1.3.0+)
 - ✅ **Secure by default**: Authentication required
-- ✅ **Auto-generation**: API key created on first startup
+- ✅ **Auto-generation**: `videoannotator setup-db` creates admin key (server still auto-generates if missing)
 - ✅ **Token-based**: Standard Bearer token authentication
 - ✅ **Encrypted storage**: Keys stored in encrypted JSON
 - ✅ **Granular permissions**: Scope-based access control (read, write, admin)
@@ -133,7 +135,7 @@ curl -H "Authorization: Bearer $API_KEY" \
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AUTH_REQUIRED` | `true` | Enable/disable authentication |
-| `AUTO_GENERATE_API_KEY` | `true` | Auto-generate key on first startup |
+| `AUTO_GENERATE_API_KEY` | `true` | Auto-generate key when server starts and no keys exist |
 | `CORS_ORIGINS` | `http://localhost:3000` | Allowed CORS origins (comma-separated) |
 | `DEBUG` | `false` | Enable debug mode (disable in production) |
 

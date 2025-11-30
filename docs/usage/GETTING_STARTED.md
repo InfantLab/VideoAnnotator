@@ -40,6 +40,9 @@ uv sync
 
 # Install development dependencies
 uv sync --extra dev
+
+# Initialize the database and create an admin API key (idempotent)
+uv run videoannotator setup-db --admin-email you@example.com --admin-username you
 ```
 
 ### 3. Verify Installation
@@ -113,7 +116,7 @@ uv run videoannotator backup backup.db
 Direct API access for integration with other systems:
 
 ```bash
-# Get your API key (printed on first server startup)
+# Use the API key printed by `setup-db` (or run `videoannotator generate-token`)
 export API_KEY="va_api_your_key_here"
 
 # Submit a video processing job
