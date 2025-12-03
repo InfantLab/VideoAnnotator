@@ -6,6 +6,7 @@ based individual job processing.
 
 from datetime import datetime
 
+from videoannotator.registry import get_pipeline_loader
 from videoannotator.utils.logging_config import get_logger
 
 from ..batch.types import BatchJob, JobStatus, PipelineResult
@@ -22,54 +23,16 @@ class JobProcessor:
 
     def __init__(self):
         """Initialize the job processor."""
-        self.pipeline_classes = {}
-        self._import_pipeline_classes()
+        # Load pipeline classes dynamically from registry
+        loader = get_pipeline_loader()
+        self.pipeline_classes = loader.load_all_pipelines()
 
-    def _import_pipeline_classes(self):
-        """Import all available pipeline classes."""
-        try:
-            # Import standard pipelines
-            from videoannotator.pipelines.audio_processing import AudioPipeline
-            from videoannotator.pipelines.audio_processing.laion_voice_pipeline import (
-                LAIONVoicePipeline,
-            )
-            from videoannotator.pipelines.face_analysis import FaceAnalysisPipeline
-
-            # Import LAION pipelines
-            from videoannotator.pipelines.face_analysis.laion_face_pipeline import (
-                LAIONFacePipeline,
-            )
-            from videoannotator.pipelines.person_tracking import PersonTrackingPipeline
-            from videoannotator.pipelines.scene_detection import SceneDetectionPipeline
-
-            self.pipeline_classes = {
-                "scene_detection": SceneDetectionPipeline,
-                "scene": SceneDetectionPipeline,
-                "person_tracking": PersonTrackingPipeline,
-                "person": PersonTrackingPipeline,
-                "face_analysis": FaceAnalysisPipeline,
-                "face": FaceAnalysisPipeline,
-                "face_laion_clip": LAIONFacePipeline,
-                "audio_processing": AudioPipeline,
-                "audio": AudioPipeline,
-                "laion_face_analysis": LAIONFacePipeline,
-                "laion_face": LAIONFacePipeline,
-                "laion_voice_analysis": LAIONVoicePipeline,
-                "laion_voice": LAIONVoicePipeline,
-            }
+        if not self.pipeline_classes:
+            logger.warning("No pipeline classes loaded - check registry metadata")
+        else:
             logger.info(
-                f"Pipeline classes imported successfully: {list(self.pipeline_classes.keys())}"
+                f"Pipeline classes loaded: {sorted(self.pipeline_classes.keys())}"
             )
-
-        except ImportError as e:
-            logger.error(f"Failed to import pipeline classes: {e}", exc_info=True)
-            self.pipeline_classes = {}
-
-        except Exception as e:
-            logger.error(
-                f"Unexpected error importing pipeline classes: {e}", exc_info=True
-            )
-            self.pipeline_classes = {}
 
     def process_job(self, job: BatchJob) -> bool:
         """Process a single job through selected pipelines.

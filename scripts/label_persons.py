@@ -93,7 +93,7 @@ def analyze_persons_in_video(annotations: list[dict]) -> dict[str, dict]:
                 stats["label_confidence"] = annotation.get("label_confidence", 1.0)
 
     # Calculate average areas
-    for person_id, stats in person_stats.items():
+    for _person_id, stats in person_stats.items():
         if stats["bbox_areas"]:
             stats["avg_bbox_area"] = sum(stats["bbox_areas"]) / len(stats["bbox_areas"])
 

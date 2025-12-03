@@ -1,0 +1,29 @@
+# Enforce LF line endings for all text files
+* text=auto eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mov binary
+*.mp4 binary
+*.mp3 binary
+*.wav binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.ttf binary
+*.svg binary
+*.gz binary
+*.pyc binary
+*.whl binary
+*.pkl binary
+*.pt binary
+*.pth binary
+*.onnx binary
+
+# Shell scripts should always be LF
+*.sh text eol=lf

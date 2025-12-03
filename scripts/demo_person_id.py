@@ -157,7 +157,7 @@ def demo_person_identity_tracking():
                 stats["center_positions"].append((center_x, center_y))
 
     # Calculate averages
-    for person_id, stats in person_stats.items():
+    for _person_id, stats in person_stats.items():
         if stats["heights"]:
             stats["avg_height"] = sum(stats["heights"]) / len(stats["heights"])
         if stats["center_positions"]:

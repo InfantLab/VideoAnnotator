@@ -7,7 +7,6 @@ for robust large-scale video processing.
 import logging
 import time
 import uuid
-from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
@@ -80,114 +79,22 @@ class BatchOrchestrator:
         self.is_running = False
         self.should_stop = False
 
-        # Import pipeline classes
+        # Load pipeline classes dynamically from registry
         self._import_pipelines()
 
     def _import_pipelines(self):
-        """Import pipeline classes for processing."""
-        # Import each pipeline individually so a failure in one doesn't disable others
-        classes = {}
+        """Import pipeline classes using registry loader."""
+        from videoannotator.registry import get_pipeline_loader
 
-        def _try_import(name: str, import_callable: Callable[[], type]):
-            try:
-                cls = import_callable()
-                classes[name] = cls
-                self.logger.debug(f"Loaded pipeline class for: {name}")
-            except Exception as e:
-                # Provide a helpful hint for common missing shared libs
-                hint = ""
-                msg = str(e)
-                if "libGL.so.1" in msg or "GLIBC" in msg:
-                    hint = " - system package missing, try installing 'libgl1' or 'libgl1-mesa-glx' (apt)"
-                self.logger.error(
-                    f"Failed to import pipeline '{name}': {e}{hint}", exc_info=True
-                )
+        loader = get_pipeline_loader()
+        self.pipeline_classes = loader.load_all_pipelines()
 
-        # Scene detection
-        _try_import(
-            "scene_detection",
-            lambda: __import__(
-                "videoannotator.pipelines.scene_detection.scene_pipeline",
-                globals(),
-                locals(),
-                ["SceneDetectionPipeline"],
-            ).SceneDetectionPipeline,
-        )
-        # Person tracking
-        _try_import(
-            "person_tracking",
-            lambda: __import__(
-                "videoannotator.pipelines.person_tracking.person_pipeline",
-                globals(),
-                locals(),
-                ["PersonTrackingPipeline"],
-            ).PersonTrackingPipeline,
-        )
-        # Face analysis
-        _try_import(
-            "face_analysis",
-            lambda: __import__(
-                "videoannotator.pipelines.face_analysis.face_pipeline",
-                globals(),
-                locals(),
-                ["FaceAnalysisPipeline"],
-            ).FaceAnalysisPipeline,
-        )
-        # Audio processing (package)
-        _try_import(
-            "audio_processing",
-            lambda: __import__(
-                "videoannotator.pipelines.audio_processing",
-                globals(),
-                locals(),
-                ["AudioPipeline"],
-            ).AudioPipeline,
-        )
-        # LAION pipelines
-        _try_import(
-            "laion_face",
-            lambda: __import__(
-                "videoannotator.pipelines.face_analysis.laion_face_pipeline",
-                globals(),
-                locals(),
-                ["LAIONFacePipeline"],
-            ).LAIONFacePipeline,
-        )
-        _try_import(
-            "laion_voice",
-            lambda: __import__(
-                "videoannotator.pipelines.audio_processing.laion_voice_pipeline",
-                globals(),
-                locals(),
-                ["LAIONVoicePipeline"],
-            ).LAIONVoicePipeline,
-        )
-
-        # Aliases and consolidated mapping
-        mapping = {}
-        if "scene_detection" in classes:
-            mapping["scene_detection"] = classes["scene_detection"]
-            mapping["scene"] = classes["scene_detection"]
-        if "person_tracking" in classes:
-            mapping["person_tracking"] = classes["person_tracking"]
-            mapping["person"] = classes["person_tracking"]
-        if "face_analysis" in classes:
-            mapping["face_analysis"] = classes["face_analysis"]
-            mapping["face"] = classes["face_analysis"]
-        if "audio_processing" in classes:
-            mapping["audio_processing"] = classes["audio_processing"]
-            mapping["audio"] = classes["audio_processing"]
-        if "laion_face" in classes:
-            mapping["laion_face_analysis"] = classes["laion_face"]
-            mapping["laion_face"] = classes["laion_face"]
-        if "laion_voice" in classes:
-            mapping["laion_voice_analysis"] = classes["laion_voice"]
-            mapping["laion_voice"] = classes["laion_voice"]
-
-        self.pipeline_classes = mapping
-        self.logger.debug(
-            f"Pipeline classes available: {list(self.pipeline_classes.keys())}"
-        )
+        if not self.pipeline_classes:
+            self.logger.warning("No pipeline classes loaded - check registry metadata")
+        else:
+            self.logger.info(
+                f"Pipeline classes loaded: {sorted(self.pipeline_classes.keys())}"
+            )
 
     def add_job(
         self,

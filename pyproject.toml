@@ -42,9 +42,9 @@ dependencies = [
     # Video and computer vision - YOLO11 and detection
     "ultralytics>=8.3.0",
     "supervision>=0.16.0",
-    # Note: PyTorch with CUDA should be installed separately
-    "torch>=2.0.0", # CUDA version installed separately
-    "torchvision>=0.15.0", # CUDA version installed separately
+    # Note: PyTorch with CUDA - Use UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124 for CUDA builds
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
     "timm>=0.9.0",
     # Audio processing - Core packages that should work
     "pyannote.audio>=3.3.2",
@@ -52,7 +52,7 @@ dependencies = [
     "pyannote.database>=5.1.0",
     "pyannote.metrics>=3.2.1",
     "pyannote.pipeline>=3.0.1",
-    "torchaudio>=2.0.0", # CUDA version installed separately
+    "torchaudio>=2.0.0",
     # Scene detection and video understanding
     "scenedetect[opencv]>=0.6.3",
     "transformers>=4.40.0",
@@ -145,6 +145,16 @@ videoannotator = "videoannotator.cli:app"
 
 [tool.uv]
 # uv-native config - empty is fine for now
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu124" }
+torchvision = { index = "pytorch-cu124" }
+torchaudio = { index = "pytorch-cu124" }
 
 [tool.ruff]
 line-length = 88  # Keep existing Black line length for consistency

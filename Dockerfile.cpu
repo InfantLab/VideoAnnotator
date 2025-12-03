@@ -5,7 +5,7 @@
 #   docker build -f Dockerfile.cpu -t videoannotator:cpu .
 #   docker run --rm -p 8000:8000 -v ${PWD}/data:/app/data videoannotator:cpu
 
-FROM python:3.13-slim
+FROM python:3.12-slim
 
 # Use bash with pipefail so RUN commands that use a pipe fail when any stage does
 SHELL ["/bin/bash","-o","pipefail","-lc"]

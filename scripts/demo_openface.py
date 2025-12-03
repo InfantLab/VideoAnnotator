@@ -18,10 +18,8 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 try:
-    import cv2
     import torch
     import yaml
-
     from src.pipelines.face_analysis.openface3_pipeline import (
         OPENFACE3_AVAILABLE,
         OpenFace3Pipeline,

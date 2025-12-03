@@ -5,16 +5,24 @@
 #   docker build -f Dockerfile.gpu -t videoannotator:gpu .
 #   docker run --gpus all --rm -p 8000:8000 -v ${PWD}/data:/app/data videoannotator:gpu
 
-FROM nvidia/cuda:12.6.0-runtime-ubuntu24.04
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
 
 # Use bash with pipefail so RUN commands that use a pipe fail when any stage does
 SHELL ["/bin/bash","-o","pipefail","-lc"]
 
+# Prevent interactive prompts during package installation
+ARG DEBIAN_FRONTEND=noninteractive
+
 # Install base packages and locales in a single RUN to reduce layers and avoid
 # pulling recommended packages unnecessarily (DL3015, DL3059)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl python3 python3-venv python3-pip git ffmpeg \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    curl python3.12 python3.12-venv python3.12-dev git ffmpeg \
     libgl1-mesa-dri libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 locales \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python \
     && locale-gen en_US.UTF-8 \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && rm -rf /var/lib/apt/lists/*
@@ -34,19 +42,17 @@ WORKDIR /app
 ARG SKIP_IMAGE_UV_SYNC=true
 ARG SKIP_TORCH_INSTALL=true
 
-# Copy source code (excluding models via .dockerignore)
-# Copy project files (excluded items controlled by .dockerignore)
-COPY . .
+# Copy project definition and lock file first to leverage Docker cache
+COPY pyproject.toml uv.lock ./
 
-# Install dependencies (excluding torch to avoid conflicts)
+# Install dependencies (including torch from configured index)
 # These steps can be skipped at build time for dev containers by setting
-# build args SKIP_IMAGE_UV_SYNC=true and SKIP_TORCH_INSTALL=true. Post-create
-# commands will run `uv sync` inside the running container where network is
-# usually available.
-RUN if [ "${SKIP_IMAGE_UV_SYNC}" != "true" ]; then uv sync --frozen --no-editable; else echo "[BUILD] Skipping uv sync at image build (SKIP_IMAGE_UV_SYNC=true)"; fi
+# build args SKIP_IMAGE_UV_SYNC=true. Post-create commands will run `uv sync`
+# inside the running container where network is usually available.
+RUN if [ "${SKIP_IMAGE_UV_SYNC}" != "true" ]; then uv sync --frozen --no-install-project --no-editable; else echo "[BUILD] Skipping uv sync at image build (SKIP_IMAGE_UV_SYNC=true)"; fi
 
-# Install CUDA PyTorch for GPU acceleration (override CPU version)
-RUN if [ "${SKIP_TORCH_INSTALL}" != "true" ]; then uv pip install "torch==2.8.0+cu126" "torchvision==0.23.0+cu126" "torchaudio==2.8.0+cu126" --index-url https://download.pytorch.org/whl/cu126; else echo "[BUILD] Skipping torch install at image build (SKIP_TORCH_INSTALL=true)"; fi
+# Copy the rest of the source code
+COPY . .
 
 # Verify GPU access (no model downloading needed!)
 RUN uv run python3 -c "import torch; print(f'[GPU BUILD] CUDA available: {torch.cuda.is_available()}'); print(f'[GPU BUILD] PyTorch version: {torch.__version__}'); print('[GPU BUILD] Production image ready - models will download on first use')"

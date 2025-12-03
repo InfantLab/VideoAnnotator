@@ -17,11 +17,19 @@ FROM nvidia/cuda:11.3.1-runtime-ubuntu20.04
 # Use bash with pipefail so RUN commands that use a pipe fail when any stage does
 SHELL ["/bin/bash","-o","pipefail","-lc"]
 
+# Prevent interactive prompts during package installation
+ARG DEBIAN_FRONTEND=noninteractive
+
 # Install core system packages and locales in a single RUN to reduce layers and
 # avoid pulling recommended packages unnecessarily (DL3015, DL3059)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl python3 python3-venv python3-pip git git-lfs ffmpeg \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    curl python3.12 python3.12-venv python3.12-dev git git-lfs ffmpeg \
     libgl1-mesa-dri libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 locales \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python \
     && locale-gen en_US.UTF-8 \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && rm -rf /var/lib/apt/lists/*

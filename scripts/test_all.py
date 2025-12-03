@@ -15,7 +15,7 @@ def run_test_tier(name, paths, extra_args=None):
     print(f"\n{'=' * 20} {name.upper()} TESTS {'=' * 20}")
     start_time = time.time()
 
-    cmd = [sys.executable, "-m", "pytest"] + paths + ["-v", "--tb=short"]
+    cmd = [sys.executable, "-m", "pytest", *paths, "-v", "--tb=short"]
     if extra_args:
         cmd.extend(extra_args)
 

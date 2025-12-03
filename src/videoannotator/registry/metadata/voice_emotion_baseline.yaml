@@ -1,6 +1,6 @@
 name: voice_emotion_baseline
-display_name: Voice Emotion + Transcription (Baseline)
-description: Performs speech transcription and basic vocal emotion recognition using a lightweight spectral CNN classifier over Whisper embeddings.
+display_name: Voice Emotion + Transcription (Baseline) [NOT YET IMPLEMENTED]
+description: "[EXPERIMENTAL - NOT YET IMPLEMENTED] Performs speech transcription and basic vocal emotion recognition using a lightweight spectral CNN classifier over Whisper embeddings."
 pipeline_family: audio
 variant: whisper-spectral-emotion
 tasks:

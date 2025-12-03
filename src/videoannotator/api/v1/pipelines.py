@@ -121,11 +121,19 @@ pipelines before submitting jobs.
 async def list_pipelines():
     """List all available pipelines."""
     try:
+        from ..job_processor import JobProcessor
+
+        # Get available pipeline implementations
+        processor = JobProcessor()
+        available_pipelines = set(processor.pipeline_classes.keys())
+
         reg = get_registry()
         reg.load()  # idempotent
         metas = reg.list()
         if not metas:
             logger.warning("Registry returned no pipelines; falling back to empty list")
+
+        # Filter to only include pipelines with implementations
         pipeline_models: list[PipelineInfo] = [
             PipelineInfo(
                 name=m.name,
@@ -150,6 +158,7 @@ async def list_pipelines():
                 examples=m.examples,
             )
             for m in metas
+            if m.name in available_pipelines
         ]
         return PipelineListResponse(
             pipelines=pipeline_models, total=len(pipeline_models)
