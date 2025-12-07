@@ -115,78 +115,48 @@ brew install node
 
 ### **Creating API Keys (Server Administrator)**
 
-#### **Interactive CLI Method (User-Friendly)**
+#### **Interactive CLI Method (Recommended)**
 
 ```bash
-# Navigate to VideoAnnotator server directory
-cd /path/to/videoannotator
-
-# Create new API key interactively
-uv run python scripts/manage_tokens.py create
+# Create new API key interactively (stored in database)
+uv run videoannotator generate-token
 > Enter user email: user@example.com
 > Enter username (default: user): user
-> Available scopes: read, write, admin, debug
-> Enter scopes (comma-separated, default: read,write): read,write
+> Enter key name/description: My API Key
 > Expires in days (default: 365, 0 for no expiry): 365
 
 # Result
 [SUCCESS] API Key Created Successfully!
-Token:      va_api_A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0
+Token:      va_...
 User:       user (user@example.com)
-Scopes:     read, write
-Created:    2025-01-15 10:30:00
-Expires:    2026-01-15 10:30:00
-
-[IMPORTANT] Save this token securely - it cannot be recovered!
+...
 ```
 
-#### **Command-Line Method (Automation-Friendly)**
+#### **Command-Line Method**
 
 ```bash
 # Create API key with specific parameters
-uv run python scripts/manage_tokens.py create \
+uv run videoannotator generate-token \
   --user user@example.com \
   --username user \
-  --scopes read,write \
+  --key-name "Production client access" \
   --expires-days 365 \
-  --description "Production client access" \
-  --output-file user-token.json
+  --output user-token.json
 
-# Create admin token with no expiration
-uv run python scripts/manage_tokens.py create \
+# Create token with no expiration
+uv run videoannotator generate-token \
   --user admin@example.com \
-  --scopes admin,read,write,debug \
   --no-expiry \
-  --description "Admin access token"
-
-# Create short-term token for testing
-uv run python scripts/manage_tokens.py create \
-  --user tester@example.com \
-  --expires-days 7 \
-  --scopes read \
-  --description "Testing access"
+  --key-name "Admin access token"
 ```
 
 ### **Token Management Commands**
 
+> **Note**: The `videoannotator` CLI currently supports token generation. For listing or revoking database-backed tokens, you may need to access the database directly or use the legacy `scripts/manage_tokens.py` for file-based tokens (not recommended for new deployments).
+
 ```bash
-# List all tokens
-uv run python scripts/manage_tokens.py list
-
-# List tokens for specific user
-uv run python scripts/manage_tokens.py list --user user@example.com
-
-# Validate a token
-uv run python scripts/manage_tokens.py validate --token va_api_xyz123...
-
-# Revoke a token
-uv run python scripts/manage_tokens.py revoke --token va_api_xyz123... --force
-
-# Clean up expired tokens
-uv run python scripts/manage_tokens.py cleanup
-
-# Show token statistics
-uv run python scripts/manage_tokens.py stats
+# Initialize database and create admin user
+uv run videoannotator setup-db --create-admin
 ```
 
 ---
@@ -445,14 +415,11 @@ chmod 600 ~/.videoannotator/config.json
 #### **"Authentication failed - check your API token"**
 
 ```bash
-# 1. Validate your token
-uv run python scripts/manage_tokens.py validate --token your_token_here
+# 1. Ensure you are using a valid token
+# If using database tokens (recommended), ensure the token exists in the DB.
 
-# 2. Check token expiration
-uv run python scripts/manage_tokens.py list --user your@email.com
-
-# 3. Create new token if expired
-uv run python scripts/manage_tokens.py create --user your@email.com
+# 2. Create new token if needed
+uv run videoannotator generate-token --user your@email.com
 ```
 
 #### **"Connection refused" or "Server not found"**
@@ -471,13 +438,11 @@ tail -f logs/api_server.log
 #### **"Permission denied" or "Insufficient scopes"**
 
 ```bash
-# Check your token scopes
-uv run python scripts/manage_tokens.py list --user your@email.com
-
-# Request token with appropriate scopes
-uv run python scripts/manage_tokens.py create \
+# Request token with appropriate permissions
+# Note: Database tokens currently default to read/write scopes.
+uv run videoannotator generate-token \
   --user your@email.com \
-  --scopes read,write,admin
+  --key-name "Admin Access"
 ```
 
 ### **Development Debugging**

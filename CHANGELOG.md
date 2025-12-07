@@ -15,6 +15,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Benchmark results and performance validation
 - Additional contributor documentation improvements
 
+## [1.3.1] - 2025-12-07
+
+### ⚡ Performance & Developer Experience
+
+This patch release focuses on critical performance fixes for the API and improving the developer experience in cloud environments (Codespaces).
+
+#### Fixed
+- **Critical Performance**: Reduced `GET /api/v1/pipelines` response time from ~160s to <100ms by removing heavy module imports during listing.
+- **Critical Performance**: Removed 1-second blocking delay in `GET /api/v1/system/health` by optimizing CPU usage checks.
+- **CORS**: Fixed Cross-Origin Resource Sharing for development environments by correctly supporting wildcard origins with credentials.
+- **API Routing**: Resolved timeouts and 307 Redirect loops caused by trailing slash inconsistencies in API routes.
+- **Pipeline Discovery**: Fixed discovery issues for `face_laion_clip` and reduced log spam.
+- **Dev Container**: Fixed build issues and normalized line endings for cross-platform compatibility.
+- **Storage**: Fixed critical issues with video storage paths and cleanup logic.
+
+#### Added
+- **Documentation**: Added `docs/development/CORS_AND_AUTH_PROTOCOL.md` for frontend integration guidance.
+- **CLI**: Added `setup-db` command for streamlined database initialization.
+
 ## [1.3.0] - 2025-10-31
 
 ### 🚀 Major Features - Production Reliability & Critical Fixes

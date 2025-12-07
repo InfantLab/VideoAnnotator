@@ -44,6 +44,7 @@ class PipelineListResponse(BaseModel):
     total: int
 
 
+@router.get("", include_in_schema=False)
 @router.get(
     "/",
     response_model=PipelineListResponse,
@@ -121,19 +122,16 @@ pipelines before submitting jobs.
 async def list_pipelines():
     """List all available pipelines."""
     try:
-        from ..job_processor import JobProcessor
-
-        # Get available pipeline implementations
-        processor = JobProcessor()
-        available_pipelines = set(processor.pipeline_classes.keys())
-
         reg = get_registry()
         reg.load()  # idempotent
         metas = reg.list()
         if not metas:
             logger.warning("Registry returned no pipelines; falling back to empty list")
 
-        # Filter to only include pipelines with implementations
+        # Convert registry metadata to API response models
+        # Note: We do NOT filter by available implementations here to avoid
+        # heavy imports (torch, etc.) that would block the API for seconds/minutes.
+        # The registry is the source of truth.
         pipeline_models: list[PipelineInfo] = [
             PipelineInfo(
                 name=m.name,
@@ -158,7 +156,6 @@ async def list_pipelines():
                 examples=m.examples,
             )
             for m in metas
-            if m.name in available_pipelines
         ]
         return PipelineListResponse(
             pipelines=pipeline_models, total=len(pipeline_models)
@@ -175,6 +172,7 @@ async def list_pipelines():
         ) from e
 
 
+@router.get("/{pipeline_name}/", include_in_schema=False)
 @router.get(
     "/{pipeline_name}",
     response_model=PipelineInfo,

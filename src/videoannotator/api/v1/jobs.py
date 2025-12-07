@@ -160,6 +160,7 @@ class JobResultsResponse(BaseModel):
     error_message: str | None = None  # Job-level error message for failed jobs
 
 
+@router.post("", include_in_schema=False)
 @router.post(
     "/",
     response_model=JobResponse,
@@ -384,6 +385,7 @@ async def submit_job(
         ) from e
 
 
+@router.get("/{job_id}/", include_in_schema=False)
 @router.get(
     "/{job_id}",
     response_model=JobResponse,
@@ -519,6 +521,7 @@ async def get_job_status(
         ) from e
 
 
+@router.get("", include_in_schema=False)
 @router.get(
     "/",
     response_model=JobListResponse,

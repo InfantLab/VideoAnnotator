@@ -103,10 +103,26 @@ AUTH_REQUIRED = get_bool_env("AUTH_REQUIRED", True)
 # Default allows the official web client (video-annotation-viewer) and server's own port
 # Server runs on 18011-18020, official client runs on 19011-19020
 # Allowing port ranges enables running multiple instances for testing/development
+# Also includes common frontend development ports (3000, 5173, 8080, etc.)
 DEFAULT_CORS_ORIGINS = ",".join(
     [
-        *[f"http://localhost:{port}" for port in range(18011, 18021)],  # Server ports
-        *[f"http://localhost:{port}" for port in range(19011, 19021)],  # Client ports
+        # Server ports
+        *[f"http://localhost:{port}" for port in range(18011, 18021)],
+        *[f"http://127.0.0.1:{port}" for port in range(18011, 18021)],
+        # Client ports
+        *[f"http://localhost:{port}" for port in range(19011, 19021)],
+        *[f"http://127.0.0.1:{port}" for port in range(19011, 19021)],
+        # Common development ports
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",  # React/Next.js
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",  # Vite
+        "http://localhost:4200",
+        "http://127.0.0.1:4200",  # Angular
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",  # Vue/Generic
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",  # Common backend
     ]
 )
 

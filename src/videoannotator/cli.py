@@ -97,7 +97,7 @@ def server(
     # Configure development mode if requested
     if dev:
         os.environ["CORS_ORIGINS"] = "*"
-        os.environ["VIDEOANNOTATOR_REQUIRE_AUTH"] = "false"
+        os.environ["AUTH_REQUIRED"] = "false"
         typer.echo("")
         typer.echo("[DEV MODE] Development mode enabled:")
         typer.echo("  - CORS: All origins allowed (*)")
@@ -244,21 +244,22 @@ def submit_job(
 
     try:
         # Prepare files and data
-        files = {"video": (video.name, open(video, "rb"), "video/mp4")}
-        data = {}
+        with open(video, "rb") as video_file:
+            files = {"video": (video.name, video_file, "video/mp4")}
+            data = {}
 
-        if pipelines:
-            data["selected_pipelines"] = pipelines
+            if pipelines:
+                data["selected_pipelines"] = pipelines
 
-        if config and config.exists():
-            with open(config) as f:
-                config_data = json.load(f)
-                data["config"] = json.dumps(config_data)
+            if config and config.exists():
+                with open(config) as f:
+                    config_data = json.load(f)
+                    data["config"] = json.dumps(config_data)
 
-        # Submit job
-        response = requests.post(
-            f"{server}/api/v1/jobs/", files=files, data=data, timeout=30
-        )
+            # Submit job
+            response = requests.post(
+                f"{server}/api/v1/jobs/", files=files, data=data, timeout=30
+            )
 
         if response.status_code == 201:
             job_data = response.json()
@@ -720,7 +721,7 @@ def diagnose(
     has_errors = False
     has_warnings = False
 
-    for comp_name, (display_name, diag_func) in components_to_check:
+    for comp_name, (_display_name, diag_func) in components_to_check:
         result = diag_func()
         all_results[comp_name] = result
 
@@ -745,7 +746,7 @@ def diagnose(
 
         for comp_name, (display_name, _) in components_to_check:
             result = all_results[comp_name]
-            status = result["status"].upper()
+            # status = result["status"].upper()
 
             # Status indicator (ASCII-safe, no emoji)
             if result["status"] == "ok":

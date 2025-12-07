@@ -38,7 +38,7 @@ def apply_scipy_compatibility_patch():
             logging.info(
                 "Applying scipy.integrate.simps compatibility patch for OpenFace 3.0"
             )
-            scipy.integrate.simps = scipy.integrate.simpson  # type: ignore[attr-defined]
+            scipy.integrate.simps = scipy.integrate.simpson
             logging.info("Successfully patched scipy.integrate.simps")
     except ImportError:
         pass  # SciPy not available
@@ -87,6 +87,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # Don't fail startup if migration fails, but log prominently
 
     # Log server configuration
+    from ..config_env import CORS_ORIGINS
+
     logger.info(
         "Server configuration initialized",
         extra={
@@ -94,6 +96,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "videoannotator_version": videoannotator_version,
             "logging": "enhanced",
             "middleware": ["CORS", "RequestLogging", "ErrorLogging"],
+            "cors_origins": CORS_ORIGINS,
             "background_processing": "enabled",
         },
     )
@@ -136,7 +139,7 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
         openapi_url="/openapi.json",
         lifespan=lifespan,
-        redirect_slashes=False,  # Disable automatic trailing slash redirects
+        redirect_slashes=True,  # Enable automatic trailing slash redirects (standard behavior)
     )
 
     # Add middleware in correct order (last added = first executed)
@@ -156,9 +159,18 @@ def create_app() -> FastAPI:
     # CORS_ORIGINS is already a string from config_env
     cors_origins = [origin.strip() for origin in CORS_ORIGINS.split(",")]
 
+    # Handle wildcard CORS with credentials (common dev requirement)
+    # If "*" is present, we use allow_origin_regex to match any http/https origin
+    # This allows credentials to work, which strict allow_origins=["*"] does not permit
+    allow_origin_regex = None
+    if "*" in cors_origins:
+        cors_origins = []
+        allow_origin_regex = r"https?://.*"
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,  # Configured via CORS_ORIGINS env var
+        allow_origin_regex=allow_origin_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

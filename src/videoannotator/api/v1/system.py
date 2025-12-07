@@ -200,7 +200,9 @@ async def detailed_health_check():
     """Detailed system health check with comprehensive diagnostics."""
     try:
         # Get system information
-        cpu_percent = psutil.cpu_percent(interval=1)
+        # Use interval=None to avoid blocking for 1 second.
+        # First call returns 0.0, subsequent calls return usage since last call.
+        cpu_percent = psutil.cpu_percent(interval=None)
         memory = psutil.virtual_memory()
 
         # Get disk usage - handle Windows vs Unix paths

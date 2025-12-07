@@ -10,10 +10,10 @@ from typing import Any
 from videoannotator.utils.logging_config import get_logger
 
 logger = get_logger("videoannotator.version")
-__version__ = "1.3.0"
-__version_info__ = (1, 3, 0, "dev")
-# Development version for v1.3.0 feature branch (job cancellation, config validation, etc.)
-__release_date__ = "2025-10-15"
+__version__ = "1.3.1"
+__version_info__ = (1, 3, 1, "dev")
+# Development version for v1.3.1 (CORS fixes, API routing improvements)
+__release_date__ = "2025-12-07"
 __author__ = "VideoAnnotator Team"
 __license__ = "MIT"
 
@@ -28,7 +28,7 @@ def get_version_info() -> dict[str, Any]:
     git_info = get_git_info()
 
     # Get system information
-    system_info = {
+    system_info: dict[str, Any] = {
         "platform": platform.platform(),
         "python_version": sys.version,
         "python_executable": sys.executable,
@@ -45,6 +45,9 @@ def get_version_info() -> dict[str, Any]:
     # Get dependency versions
     dependencies = get_dependency_versions()
 
+    tz = datetime.now().astimezone().tzinfo
+    tz_name = tz.tzname(None) if tz else "UTC"
+
     return {
         "videoannotator": {
             "version": __version__,
@@ -59,12 +62,12 @@ def get_version_info() -> dict[str, Any]:
         "dependencies": dependencies,
         "metadata": {
             "generated_at": datetime.now().isoformat(),
-            "timezone": datetime.now().astimezone().tzinfo.tzname(None),
+            "timezone": tz_name,
         },
     }
 
 
-def get_git_info() -> dict[str, str] | None:
+def get_git_info() -> dict[str, Any] | None:
     """Get git repository information if available."""
     try:
         import subprocess
@@ -219,7 +222,7 @@ def get_dependency_versions() -> dict[str, str]:
 
 def get_model_info(model_name: str, model_path: str | None = None) -> dict[str, Any]:
     """Get information about a specific model."""
-    model_info = {
+    model_info: dict[str, Any] = {
         "model_name": model_name,
         "model_path": model_path,
         "loaded_at": datetime.now().isoformat(),
