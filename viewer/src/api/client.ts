@@ -15,15 +15,33 @@ import { APIError } from './handleError';
 
 // API configuration with localStorage fallback
 const getApiBaseUrl = () => {
-  return localStorage.getItem('videoannotator_api_url') ||
-    import.meta.env.VITE_API_BASE_URL ||
-    'http://localhost:18011';
+  // Check localStorage first - respect empty string (Proxy mode)
+  let url = localStorage.getItem('videoannotator_api_url');
+  
+  if (url === null) {
+    // Fallback to env var or empty string
+    url = import.meta.env.VITE_API_BASE_URL || '';
+  }
+
+  // CRITICAL FIX: Force 127.0.0.1 over localhost
+  // This ensures that every time we retrieve the URL, we apply the DNS correction.
+  if (url && url.includes('//localhost:')) {
+    // Only log this once per session to avoid spamming
+    if (!(window as any).__dns_correction_logged) {
+      console.log('🔄 DNS CORRECTION (Global): Switching API host from localhost to 127.0.0.1');
+      (window as any).__dns_correction_logged = true;
+    }
+    return url.replace('//localhost:', '//127.0.0.1:');
+  }
+
+  return url;
 };
 
 const getApiToken = () => {
-  return localStorage.getItem('videoannotator_api_token') ||
-    import.meta.env.VITE_API_TOKEN ||
-    ''; // Empty string = no token (anonymous)
+  const saved = localStorage.getItem('videoannotator_api_token');
+  if (saved !== null) return saved;
+
+  return import.meta.env.VITE_API_TOKEN || '';
 };
 
 /**
@@ -47,10 +65,14 @@ const isValidToken = (token: string): boolean => {
   if (trimmed.startsWith('eyJ')) return true;
 
   // Reject known invalid patterns
-  const invalidPatterns = ['dev-token', 'test-token', 'Bearer ', 'your-api-token'];
+  // NOTE: 'dev-token' is explicitly ALLOWED for local development
+  const invalidPatterns = ['test-token', 'Bearer ', 'your-api-token'];
   if (invalidPatterns.some(pattern => trimmed.toLowerCase().includes(pattern.toLowerCase()))) {
     return false;
   }
+
+  // Accept 'dev-token' specifically
+  if (trimmed === 'dev-token') return true;
 
   // Accept any token that's at least 8 characters and looks like a valid token
   // (alphanumeric, dashes, underscores, dots)
@@ -79,13 +101,30 @@ class APIClient {
   private readonly pipelineCatalogTTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(baseURL?: string, token?: string) {
-    this.baseURL = (baseURL || getApiBaseUrl()).replace(/\/$/, ''); // Remove trailing slash
+    let url = baseURL || getApiBaseUrl();
+    
+    // CRITICAL FIX: Force 127.0.0.1 over localhost
+    // Your machine resolves 'localhost' to 103.86.96.100 (ISP DNS), which causes timeouts.
+    // We must use 127.0.0.1 to ensure we hit the local server.
+    if (url.includes('//localhost:')) {
+      console.log('🔄 DNS CORRECTION: Switching API host from localhost to 127.0.0.1');
+      url = url.replace('//localhost:', '//127.0.0.1:');
+    }
+
+    this.baseURL = url.replace(/\/$/, ''); // Remove trailing slash
     this.token = token || getApiToken();
   }
 
   // Update configuration dynamically
   updateConfig(baseURL?: string, token?: string) {
-    if (baseURL) this.baseURL = baseURL.replace(/\/$/, '');
+    if (baseURL) {
+      let url = baseURL;
+      if (url.includes('//localhost:')) {
+        console.log('🔄 DNS CORRECTION: Switching API host from localhost to 127.0.0.1');
+        url = url.replace('//localhost:', '//127.0.0.1:');
+      }
+      this.baseURL = url.replace(/\/$/, '');
+    }
     if (token) this.token = token;
   }
 
@@ -146,9 +185,19 @@ class APIClient {
       credentials: 'omit', // Don't send cookies (we use Authorization header)
     };
 
+    console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`, {
+      headers: config.headers,
+      mode: config.mode,
+      credentials: config.credentials
+    });
+
     try {
+      const start = performance.now();
       const response = await fetch(url, config);
+      const duration = Math.round(performance.now() - start);
       clearTimeout(timeoutId);
+
+      console.log(`✅ API Response: ${response.status} ${response.statusText} (${duration}ms)`);
 
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
@@ -361,7 +410,7 @@ class APIClient {
 
   // Job management endpoints
   async getJobs(page: number = 1, perPage: number = 20): Promise<JobListResponse> {
-    return this.request(`/api/v1/jobs/?page=${page}&per_page=${perPage}`);
+    return this.request(`/api/v1/jobs?page=${page}&per_page=${perPage}`);
   }
 
   async getJob(jobId: string): Promise<JobResponse> {
@@ -391,7 +440,7 @@ class APIClient {
       formData.append('config', JSON.stringify(config));
     }
 
-    return this.request('/api/v1/jobs/', {
+    return this.request('/api/v1/jobs', {
       method: 'POST',
       body: formData,
     });
@@ -399,7 +448,7 @@ class APIClient {
 
   // Pipeline endpoints
   async getPipelines(): Promise<PipelineResponse[]> {
-    const response = await this.request<{ pipelines: PipelineResponse[]; total?: number }>('/api/v1/pipelines/');
+    const response = await this.request<{ pipelines: PipelineResponse[]; total?: number }>('/api/v1/pipelines');
 
     // Handle both legacy format (direct array) and new format (object with pipelines key)
     if (Array.isArray(response)) {
@@ -462,38 +511,43 @@ class APIClient {
       }
 
       // Test with jobs endpoint - this actually requires proper auth when auth_required=true
-      const jobsResponse = await fetch(`${this.baseURL}/api/v1/jobs/?per_page=1`, { headers });
+      const jobsResponse = await fetch(`${this.baseURL}/api/v1/jobs?per_page=1`, { headers });
 
-      // If jobs endpoint returns 401, auth is failing
-      if (jobsResponse.status === 401) {
+      // If jobs endpoint returns 401 or 403, auth is failing
+      if (jobsResponse.status === 401 || jobsResponse.status === 403) {
         return { isValid: false, error: 'Authentication required or invalid token' };
       }
 
       // v1.3.0: When auth_required=true, server returns 404 for invalid/missing tokens
-      // BUT we need to check the response body to distinguish between:
-      // - {"detail": "Not Found"} = auth failure (error response)
-      // - {"jobs": [], ...} = valid token, no jobs yet (success response)
-      if (jobsResponse.status === 404 && authRequired) {
+      // We check the response body to distinguish between error and empty list
+      if (jobsResponse.status === 404) {
         try {
           const body = await jobsResponse.json();
-          // If response has "detail" field, it's an error (auth failure)
+          // If response has "detail" field, it's an error (auth failure or endpoint missing)
           if (body && typeof body === 'object' && 'detail' in body) {
-            return {
-              isValid: false,
-              error: 'Authentication required. Your token may be invalid or missing.'
-            };
+             // If we are anonymous, this 404 likely means "Auth Required" (hidden resource)
+             if (!this.token) {
+                 return {
+                    isValid: false,
+                    error: 'Authentication required (Anonymous access not allowed)'
+                 };
+             }
+             return {
+                isValid: false,
+                error: typeof body.detail === 'string' ? body.detail : 'Resource not found or authentication failed'
+             };
           }
         } catch {
           // Failed to parse JSON, treat as error
           return {
             isValid: false,
-            error: 'Authentication required. Your token may be invalid or missing.'
+            error: 'Authentication required or invalid token (404)'
           };
         }
       }
 
       // If jobs endpoint fails for other reasons (500, etc), check if server is reachable
-      if (!jobsResponse.ok && jobsResponse.status !== 404) {
+      if (!jobsResponse.ok) {
         try {
           await this.healthCheck();
           // Health works but jobs doesn't - might be server issue
@@ -504,7 +558,7 @@ class APIClient {
         }
       }
 
-      // Jobs endpoint returned success (200) or we couldn't determine auth failure from 404
+      // Jobs endpoint returned success (200)
       // Consider token valid if we got here
       return { isValid: true, user: this.token ? 'Authenticated' : 'Anonymous' };
     } catch (error) {

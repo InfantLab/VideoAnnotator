@@ -69,9 +69,11 @@ Commands (Bun preferred; npm works too):
 
 Default server: `http://localhost:18011/` (local dev). Configure via env or localStorage.
 
+**⚠️ CRITICAL: FastAPI Strictness** - The server has been updated to be permissive with trailing slashes. Standard REST conventions (no trailing slash for collections) are preferred.
+
 API client: see `src/api/client.ts`.
 - Health: `/health`, `/api/v1/system/health` (includes GPU, workers, system info)
-- Jobs: `/api/v1/jobs`, `/api/v1/jobs/:id` (GET, POST, DELETE)
+- Jobs: `/api/v1/jobs` (GET, POST), `/api/v1/jobs/:id` (GET, DELETE)
 - Pipelines: `/api/v1/pipelines`
 - SSE: `/api/v1/events/stream?token=...&job_id=...`
 - Debug (optional): `/api/v1/debug/*`

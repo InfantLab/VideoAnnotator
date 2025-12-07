@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Strict Connection Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .test-case { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 4px; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        pre { background: #f8f9fa; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Strict Connection Test</h1>
+    <p>Testing <code>localhost</code> vs <code>127.0.0.1</code> with complex CORS requests.</p>
+    
+    <div class="test-case" id="test1">
+        <h3>Test 1: Simple GET (localhost)</h3>
+        <p>Standard fetch, no custom headers. Should pass if server is running.</p>
+        <button onclick="runTest('test1', 'http://localhost:18011/api/v1/system/health', false)">Run Test 1</button>
+        <div class="result"></div>
+    </div>
+
+    <div class="test-case" id="test2">
+        <h3>Test 2: Preflighted GET (localhost)</h3>
+        <p>Includes <code>Authorization</code> header. Forces browser to send OPTIONS request first.</p>
+        <button onclick="runTest('test2', 'http://localhost:18011/api/v1/system/health', true)">Run Test 2</button>
+        <div class="result"></div>
+    </div>
+
+    <div class="test-case" id="test3">
+        <h3>Test 3: Preflighted GET (127.0.0.1)</h3>
+        <p>Same as Test 2, but using IP address directly.</p>
+        <button onclick="runTest('test3', 'http://127.0.0.1:18011/api/v1/system/health', true)">Run Test 3</button>
+        <div class="result"></div>
+    </div>
+
+    <script>
+        async function runTest(elementId, url, useHeaders) {
+            const container = document.getElementById(elementId);
+            const resultDiv = container.querySelector('.result');
+            resultDiv.innerHTML = 'Testing...';
+            container.className = 'test-case'; // Reset class
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+            try {
+                const options = {
+                    method: 'GET',
+                    mode: 'cors',
+                    signal: controller.signal,
+                    headers: {}
+                };
+
+                if (useHeaders) {
+                    options.headers['Authorization'] = 'Bearer dev-token';
+                    options.headers['Content-Type'] = 'application/json';
+                }
+
+                const start = performance.now();
+                console.log(`[${elementId}] Fetching ${url} with options:`, options);
+                
+                const response = await fetch(url, options);
+                clearTimeout(timeoutId);
+                
+                const duration = Math.round(performance.now() - start);
+                const text = await response.text();
+                
+                if (response.ok) {
+                    container.classList.add('success');
+                    resultDiv.innerHTML = `
+                        <p><strong>✅ Success</strong> (${duration}ms)</p>
+                        <p>Status: ${response.status}</p>
+                    `;
+                } else {
+                    container.classList.add('error');
+                    resultDiv.innerHTML = `
+                        <p><strong>❌ Server Error</strong></p>
+                        <p>Status: ${response.status} ${response.statusText}</p>
+                        <pre>${text.substring(0, 200)}</pre>
+                    `;
+                }
+            } catch (error) {
+                clearTimeout(timeoutId);
+                console.error(`[${elementId}] Error:`, error);
+                container.classList.add('error');
+                
+                let errorMsg = error.message;
+                if (error.name === 'AbortError') errorMsg = 'Timeout (5000ms) - Server did not respond';
+                if (error.message === 'Failed to fetch') errorMsg = 'Failed to fetch (Network/CORS Error)';
+
+                resultDiv.innerHTML = `
+                    <p><strong>❌ Client Error</strong></p>
+                    <p>${errorMsg}</p>
+                    <p><small>Check console for details</small></p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

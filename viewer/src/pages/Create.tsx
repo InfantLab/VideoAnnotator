@@ -63,7 +63,7 @@ const CreateLayout = () => {
 
   const apiUrl = localStorage.getItem('videoannotator_api_url') ||
     import.meta.env.VITE_API_BASE_URL ||
-    'http://localhost:18011';
+    '';
 
   // Only show connection error if we have an actual connection problem AND no successful capabilities
   // If we have capabilities, the server is reachable even if health check had issues

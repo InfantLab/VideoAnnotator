@@ -48,7 +48,7 @@ const featureLabels: Record<string, string> = {
 };
 
 const CreateSettings = () => {
-  const [serverUrl, setServerUrl] = useState(() => localStorage.getItem(URL_KEY) || 'http://localhost:18011');
+  const [serverUrl, setServerUrl] = useState(() => localStorage.getItem(URL_KEY) || '');
   const [isRefreshingCatalog, setIsRefreshingCatalog] = useState(false);
   const [isClearingCache, setIsClearingCache] = useState(false);
 
@@ -64,7 +64,7 @@ const CreateSettings = () => {
       if (!event.key || (event.key !== URL_KEY && event.key !== TOKEN_KEY)) {
         return;
       }
-      setServerUrl(localStorage.getItem(URL_KEY) || 'http://localhost:18011');
+      setServerUrl(localStorage.getItem(URL_KEY) || '');
     };
 
     window.addEventListener('storage', handleStorage);
@@ -121,7 +121,7 @@ const CreateSettings = () => {
     try {
       await refreshCatalog({ forceServerRefresh: true });
       tokenStatus.refresh();
-      setServerUrl(localStorage.getItem(URL_KEY) || 'http://localhost:18011');
+      setServerUrl(localStorage.getItem(URL_KEY) || '');
     } finally {
       setIsRefreshingCatalog(false);
     }

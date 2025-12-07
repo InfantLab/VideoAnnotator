@@ -49,48 +49,36 @@ export function parseApiError(error: unknown): ParsedError {
     // Try v1.3.0 ErrorEnvelope format with Zod (defensive)
     const envelopeResult = ErrorEnvelopeSchema.safeParse(error);
     if (envelopeResult.success) {
-      return parseErrorEnvelope(envelopeResult.data);
-    }
+      const env = envelopeResult.data;
+      // Extract primary message
+      let message = 'An error occurred';
+      if (typeof env.error === 'string') {
+        message = env.error;
+      } else if (Array.isArray(env.error) && env.error.length > 0) {
+        message = env.error[0].message;
+      }
 
-    // Try legacy formats
-    const legacyError = error as Record<string, unknown>;
-
-    // Legacy: { error: "message" }
-    if ('error' in legacyError && typeof legacyError.error === 'string') {
       return {
-        message: legacyError.error,
+        message,
+        code: env.error_code,
+        requestId: env.request_id,
+        hint: env.hint,
+        details: env.error // Keep full details
       };
     }
 
-    // Legacy: { message: "message" }
-    if ('message' in legacyError && typeof legacyError.message === 'string') {
-      return {
-        message: legacyError.message,
-      };
-    }
-
-    // Legacy: { detail: "message" } (FastAPI format)
-    if ('detail' in legacyError && typeof legacyError.detail === 'string') {
-      return {
-        message: legacyError.detail,
-      };
-    }
-
-    // Fallback: stringify the object
-    try {
-      return {
-        message: JSON.stringify(error),
-      };
-    } catch {
-      return {
-        message: 'An error occurred but could not be parsed',
-      };
-    }
+    // Handle legacy/other object formats
+    const errObj = error as any;
+    const message = errObj.message || errObj.error || errObj.detail || JSON.stringify(error);
+    
+    return {
+      message: String(message),
+      code: errObj.code || errObj.status || errObj.statusCode,
+    };
   }
 
-  // Ultimate fallback
   return {
-    message: 'An unknown error occurred',
+    message: String(error),
   };
 }
 

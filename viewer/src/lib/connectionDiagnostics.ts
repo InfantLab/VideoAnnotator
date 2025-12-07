@@ -18,6 +18,14 @@ export interface DiagnosticReport {
     recommendations: string[];
 }
 
+// Helper for timeout signal (safe for older browsers)
+function timeoutSignal(ms: number): AbortSignal {
+    // Use AbortController explicitly to match test_strict_connection.html behavior
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), ms);
+    return controller.signal;
+}
+
 /**
  * Run comprehensive connection diagnostics
  */
@@ -25,183 +33,187 @@ export async function runConnectionDiagnostics(apiUrl: string, token?: string): 
     const results: DiagnosticResult[] = [];
     const recommendations: string[] = [];
 
-    // Test 1: DNS Resolution
+    console.log('🔍 DIAGNOSTICS STARTED');
+    console.log('Target API URL:', apiUrl);
+
+    // Normalize API URL
+    const cleanApiUrl = apiUrl.replace(/\/$/, '');
+    const isRelative = !cleanApiUrl.startsWith('http');
+
+    // Helper to get hostname
+    let targetHostname = 'unknown';
+    let targetPort = '';
     try {
-        const url = new URL(apiUrl);
-        const hostname = url.hostname;
-
-        if (hostname === 'localhost') {
-            // First test localhost
-            let localhostWorks = false;
-            try {
-                const response = await fetch(`${apiUrl}/api/v1/system/health`, {
-                    method: 'GET',
-                    signal: AbortSignal.timeout(3000)
-                });
-                localhostWorks = response.ok || response.status === 401 || response.status === 200;
-            } catch {
-                localhostWorks = false;
-            }
-
-            if (!localhostWorks) {
-                // localhost failed, try 127.0.0.1
-                const testUrl = apiUrl.replace('localhost', '127.0.0.1');
-                const start = performance.now();
-
-                try {
-                    const response = await fetch(`${testUrl}/api/v1/system/health`, {
-                        method: 'GET',
-                        signal: AbortSignal.timeout(3000)
-                    });
-                    const duration = performance.now() - start;
-
-                    if (response.ok || response.status === 401 || response.status === 200) {
-                        results.push({
-                            test: 'Server Address',
-                            passed: false,
-                            duration,
-                            error: '"localhost" doesn\'t work, but direct IP address does',
-                            details: { hostname }
-                        });
-                        recommendations.push('💡 Change server URL to: http://127.0.0.1:' + url.port);
-                        recommendations.push('💡 Or fix your hosts file (see troubleshooting docs)');
-                    } else {
-                        // Both failed
-                        results.push({
-                            test: 'Server Address',
-                            passed: false,
-                            error: 'Cannot reach server at localhost or 127.0.0.1',
-                            details: { hostname }
-                        });
-                    }
-                } catch {
-                    // Both failed
-                    results.push({
-                        test: 'Server Address',
-                        passed: false,
-                        error: 'Cannot reach server at localhost or 127.0.0.1',
-                        details: { hostname }
-                    });
-                }
-            } else {
-                // localhost works
-                results.push({
-                    test: 'Server Address',
-                    passed: true,
-                    details: { hostname, note: 'localhost resolves correctly' }
-                });
-            }
+        if (!isRelative) {
+            const url = new URL(cleanApiUrl);
+            targetHostname = url.hostname;
+            targetPort = url.port;
         } else {
-            results.push({
-                test: 'Server Address',
-                passed: true,
-                details: { hostname }
-            });
+            targetHostname = window.location.hostname;
+            targetPort = window.location.port;
         }
-    } catch (error) {
+        console.log('Parsed Hostname:', targetHostname, 'Port:', targetPort);
+    } catch (e) {
+        // Invalid URL
         results.push({
-            test: 'Server Address',
+            test: 'URL Validation',
             passed: false,
-            error: error instanceof Error ? error.message : String(error)
+            error: 'Invalid API URL format'
         });
+        return {
+            timestamp: new Date().toISOString(),
+            summary: 'complete_failure',
+            results,
+            recommendations: ['Check the API URL format']
+        };
     }
 
-    // Test 2: Can Reach Server
+    // Test 1: Server Reachability
+    let serverReachable = false;
+    let serverResponse: Response | null = null;
+    const testUrl = `${cleanApiUrl}/api/v1/system/health`;
+
     try {
         const start = performance.now();
-        const response = await fetch(`${apiUrl}/api/v1/system/health`, {
+        console.log(`Attempting fetch: ${testUrl}`);
+        
+        // Try the configured URL first
+        const response = await fetch(testUrl, {
             method: 'GET',
-            signal: AbortSignal.timeout(5000)
+            signal: timeoutSignal(10000) // Increased to 10s
         });
         const duration = performance.now() - start;
+        console.log(`Fetch success (${duration}ms):`, response.status);
+        serverResponse = response;
+
+        serverReachable = response.ok || response.status === 401;
 
         results.push({
             test: 'Server Reachable',
-            passed: response.ok || response.status === 401, // 401 means server is reachable
+            passed: serverReachable,
             duration,
-            details: { status: response.status, statusText: response.statusText }
+            details: {
+                status: response.status,
+                statusText: response.statusText,
+                url: testUrl,
+                mode: isRelative ? 'Proxy (Relative URL)' : 'Direct (Absolute URL)'
+            }
         });
 
         if (duration > 3000) {
             recommendations.push(`⏱️ Server is slow (${Math.round(duration / 1000)}s response time)`);
         }
+
     } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
+
         results.push({
             test: 'Server Reachable',
             passed: false,
-            error: errorMsg
+            error: errorMsg,
+            details: { url: `${cleanApiUrl}/api/v1/system/health` }
         });
 
-        if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+        if (errorMsg.includes('timeout') || errorMsg.includes('timed out') || errorMsg.includes('abort')) {
             recommendations.push('⏱️ Server not responding (timeout)');
             recommendations.push('💡 Check if VideoAnnotator server is running');
-        } else if (errorMsg.includes('fetch')) {
-            recommendations.push('🚫 Cannot connect to server');
-            recommendations.push('💡 Check if firewall or antivirus is blocking connections');
+        } else if (errorMsg.includes('fetch') || errorMsg.includes('Failed to fetch')) {
+            // Could be CORS or Connection Refused
+            recommendations.push('🚫 Cannot connect to server (Connection Refused or CORS)');
         }
     }
 
-    // Test 3: Cross-Origin Access (CORS)
-    // Note: We test this with a real GET request since OPTIONS may return 405
-    try {
-        const start = performance.now();
-        const response = await fetch(`${apiUrl}/api/v1/system/health`, {
-            method: 'GET',
-            headers: {
-                'Origin': window.location.origin
-            },
-            signal: AbortSignal.timeout(5000)
+    // Test 2: Address Resolution (localhost vs 127.0.0.1)
+    // Only relevant if we failed to reach the server and we are using localhost
+    if (!serverReachable && targetHostname === 'localhost' && !isRelative) {
+        const altUrl = cleanApiUrl.replace('localhost', '127.0.0.1');
+        try {
+            const res = await fetch(`${altUrl}/api/v1/system/health`, { signal: timeoutSignal(3000) });
+            if (res.ok || res.status === 401) {
+                results.push({
+                    test: 'Address Resolution',
+                    passed: false,
+                    error: 'localhost failed, but 127.0.0.1 worked',
+                    details: { note: 'IPv4/IPv6 resolution issue' }
+                });
+                recommendations.push(`💡 Use IP address instead of localhost: ${altUrl}`);
+            } else {
+                results.push({
+                    test: 'Address Resolution',
+                    passed: false,
+                    error: 'Both localhost and 127.0.0.1 failed'
+                });
+            }
+        } catch (e) {
+            results.push({
+                test: 'Address Resolution',
+                passed: false,
+                error: 'Both localhost and 127.0.0.1 failed'
+            });
+        }
+    } else if (serverReachable) {
+        results.push({
+            test: 'Address Resolution',
+            passed: true,
+            details: { hostname: targetHostname }
         });
-        const duration = performance.now() - start;
+    }
 
-        const allowOrigin = response.headers.get('Access-Control-Allow-Origin');
+    // Test 3: Proxy Check (if direct failed and we are in dev mode/localhost)
+    if (!serverReachable && !isRelative && window.location.hostname === 'localhost') {
+        try {
+            // Try relative path which goes through Vite proxy
+            // We assume the proxy is set up at root or /api
+            // Let's try fetching relative to current origin
+            const proxyUrl = '/api/v1/system/health';
+            const res = await fetch(proxyUrl, { signal: timeoutSignal(3000) });
+            
+            if (res.ok || res.status === 401) {
+                results.push({
+                    test: 'Proxy Availability',
+                    passed: true,
+                    details: { note: 'Proxy works!' }
+                });
+                recommendations.push('💡 Connection blocked? Try using the built-in proxy by clearing the API URL field (leave it empty).');
+            }
+        } catch (e) {
+            // Proxy also failed, no need to report
+        }
+    }
 
-        // If we got a response and can read headers, CORS is working
-        const corsWorking = response.ok || response.status === 401;
-
+    // Test 4: Cross-Origin Access (CORS)
+    // We can only definitively test this if the server is reachable but blocks us,
+    // OR if we can reach it via a mode that doesn't use CORS (not possible in browser),
+    // OR if we inspect the error carefully.
+    if (serverReachable && !isRelative) {
+        // If server is reachable, check headers
+        const allowOrigin = serverResponse?.headers.get('Access-Control-Allow-Origin');
         results.push({
             test: 'Cross-Origin Access',
-            passed: corsWorking,
-            duration,
+            passed: true, // If we got a response, CORS is technically working or not blocking this request
             details: {
-                status: response.status,
-                allowOrigin: allowOrigin || '(not visible - but request succeeded)'
+                allowOrigin: allowOrigin || '(not visible)'
             }
         });
-
-        if (!corsWorking) {
-            recommendations.push('🚫 Server is blocking browser requests');
-            recommendations.push('💡 If running VideoAnnotator locally: restart with "uv run videoannotator"');
-        }
-    } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-
-        // CORS errors often show as "Failed to fetch" or network errors
-        if (errorMsg.includes('fetch') || errorMsg.includes('network') || errorMsg.includes('CORS')) {
-            results.push({
-                test: 'Cross-Origin Access',
-                passed: false,
-                error: 'Browser blocked the request'
-            });
-            recommendations.push('🚫 Server is blocking browser requests');
-            recommendations.push('💡 If running VideoAnnotator locally: restart with "uv run videoannotator"');
-        } else {
-            results.push({
-                test: 'Cross-Origin Access',
-                passed: false,
-                error: errorMsg
-            });
-        }
+    } else if (!serverReachable && !isRelative) {
+        // If fetch failed, it MIGHT be CORS.
+        // We can't distinguish "Connection Refused" from "CORS Error" easily in JS.
+        // But if "Address Resolution" (127.0.0.1) also failed, it's likely Connection Refused.
+        results.push({
+            test: 'Cross-Origin Access',
+            passed: false,
+            error: 'Cannot test (Server unreachable)'
+        });
     }
 
-    // Test 4: Token Authentication (if token provided)
-    if (token) {
+    // Test 5: Token Authentication (if token provided)
+    if (token && serverReachable) {
         try {
             const start = performance.now();
-            const response = await fetch(`${apiUrl}/api/v1/jobs/?per_page=1`, {
+            // NOTE: Trailing slash is required by server for this endpoint
+            const response = await fetch(`${cleanApiUrl}/api/v1/jobs/?per_page=1`, {
                 headers: { 'Authorization': `Bearer ${token}` },
-                signal: AbortSignal.timeout(5000)
+                signal: timeoutSignal(10000)
             });
             const duration = performance.now() - start;
 
@@ -225,18 +237,28 @@ export async function runConnectionDiagnostics(apiUrl: string, token?: string): 
                 error: error instanceof Error ? error.message : String(error)
             });
         }
+    } else if (token) {
+         results.push({
+            test: 'API Token Valid',
+            passed: false,
+            error: 'Skipped (Server unreachable)'
+        });
     }
 
-    // Test 5: Server Version Detection
-    try {
-        const start = performance.now();
-        const response = await fetch(`${apiUrl}/api/v1/system/health`, {
-            signal: AbortSignal.timeout(5000)
-        });
-        const duration = performance.now() - start;
+    // Test 6: Server Version Detection
+    if (serverReachable) {
+        try {
+            const start = performance.now();
+            // We already fetched health, reuse if possible or fetch again
+            let data;
+            if (serverResponse && !serverResponse.bodyUsed) {
+                 data = await serverResponse.json();
+            } else {
+                 const res = await fetch(`${cleanApiUrl}/api/v1/system/health`, { signal: timeoutSignal(10000) });
+                 data = await res.json();
+            }
+            const duration = performance.now() - start;
 
-        if (response.ok) {
-            const data = await response.json();
             results.push({
                 test: 'Server Info',
                 passed: true,
@@ -246,13 +268,13 @@ export async function runConnectionDiagnostics(apiUrl: string, token?: string): 
                     api_version: data.api_version
                 }
             });
+        } catch (error) {
+            results.push({
+                test: 'Server Info',
+                passed: false,
+                error: error instanceof Error ? error.message : String(error)
+            });
         }
-    } catch (error) {
-        results.push({
-            test: 'Server Info',
-            passed: false,
-            error: error instanceof Error ? error.message : String(error)
-        });
     }
 
     // Determine overall summary
@@ -271,9 +293,11 @@ export async function runConnectionDiagnostics(apiUrl: string, token?: string): 
     // Add general recommendations if complete failure
     if (summary === 'complete_failure') {
         recommendations.push('Server appears to be completely unreachable');
-        recommendations.push('1. Verify server is running (PowerShell: Invoke-WebRequest http://localhost:18011/api/v1/system/health)');
-        recommendations.push('2. Check if another application is using port 18011');
-        recommendations.push('3. Try restarting the VideoAnnotator server');
+        recommendations.push(`1. Verify server is running on port ${targetPort || '18011'}`);
+        recommendations.push('2. Check if firewall is blocking connections');
+        if (targetHostname === 'localhost') {
+             recommendations.push('3. Try using 127.0.0.1 instead of localhost');
+        }
     }
 
     return {

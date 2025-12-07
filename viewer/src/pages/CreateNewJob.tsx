@@ -582,8 +582,15 @@ const PipelineSelectionStep = ({
   }
 
   if (error) {
+    const parsed = parseApiError(error);
+    // If we have a network error but no pipelines, it might be because we haven't connected yet
+    // Don't show "undefined" or confusing errors
+    if (parsed.message === 'undefined' || !parsed.message) {
+        parsed.message = 'Failed to load pipelines. Please check your connection.';
+    }
+    
     return (
-      <ErrorDisplay error={parseApiError(error)} />
+      <ErrorDisplay error={parsed} />
     );
   }
 

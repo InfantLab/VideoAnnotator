@@ -24,16 +24,27 @@ interface TokenStatus {
 }
 
 export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
-  const [apiUrl, setApiUrl] = useState(
-    localStorage.getItem('videoannotator_api_url') ||
-    import.meta.env.VITE_API_BASE_URL ||
-    'http://localhost:18011'
-  );
-  const [token, setToken] = useState(
-    localStorage.getItem('videoannotator_api_token') ||
-    import.meta.env.VITE_API_TOKEN ||
-    '' // Empty = anonymous access
-  );
+  const [apiUrl, setApiUrl] = useState(() => {
+    const saved = localStorage.getItem('videoannotator_api_url');
+    if (saved !== null) {
+      // Auto-fix existing localhost config to bypass broken DNS
+      if (saved.includes('//localhost:')) {
+        return saved.replace('//localhost:', '//127.0.0.1:');
+      }
+      return saved;
+    }
+    // Default to 127.0.0.1 instead of localhost
+    const envUrl = import.meta.env.VITE_API_BASE_URL;
+    if (envUrl && envUrl.includes('//localhost:')) {
+      return envUrl.replace('//localhost:', '//127.0.0.1:');
+    }
+    return envUrl || 'http://127.0.0.1:18011';
+  });
+  const [token, setToken] = useState(() => {
+    const saved = localStorage.getItem('videoannotator_api_token');
+    if (saved !== null) return saved;
+    return import.meta.env.VITE_API_TOKEN || '';
+  });
   const [showToken, setShowToken] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [tokenStatus, setTokenStatus] = useState<TokenStatus | null>(null);
@@ -42,7 +53,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
   const [diagnosticReport, setDiagnosticReport] = useState<DiagnosticReport | null>(null);
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
 
-  // Check token validity - SIMPLIFIED
+  // Check token validity - Uses the robust client validation
   const validateToken = async (testUrl?: string, testToken?: string) => {
     const urlToTest = testUrl || apiUrl;
     const tokenToTest = testToken !== undefined ? testToken : token;
@@ -55,39 +66,31 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
     apiClient.updateConfig(urlToTest, tokenToTest || undefined);
 
     try {
-      // Simple test: check health endpoint (lightweight)
-      const health = await apiClient.getSystemHealth();
+      // Use the robust validation from API client
+      // This checks both health AND permissions (by hitting /jobs)
+      const result = await apiClient.validateToken();
 
-      // If we got here, connection works!
       setTokenStatus({
-        isValid: true,
-        user: tokenToTest ? 'Authenticated' : 'Anonymous'
+        isValid: result.isValid,
+        user: result.user,
+        permissions: result.permissions,
+        expiresAt: result.expiresAt,
+        error: result.error
       });
-      setServerAuthRequired(health.security.auth_required);
+
+      // Also update auth required status
+      try {
+        const health = await apiClient.getSystemHealth();
+        setServerAuthRequired(health.security?.auth_required ?? null);
+      } catch {
+        // Ignore health check failure here, validateToken result is what matters
+      }
 
     } catch (error: any) {
-      // Parse the error
-      const errorMsg = error?.message || String(error);
-
-      if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
-        setTokenStatus({
-          isValid: false,
-          error: 'Server requires authentication. Please provide a valid API token.'
-        });
-        setServerAuthRequired(true);
-      } else if (errorMsg.includes('404') || errorMsg.includes('Not Found')) {
-        // v1.3.0 may return 404 for auth errors
-        setTokenStatus({
-          isValid: false,
-          error: 'Authentication failed. Token may be invalid.'
-        });
-        setServerAuthRequired(true);
-      } else {
-        setTokenStatus({
-          isValid: false,
-          error: errorMsg
-        });
-      }
+      setTokenStatus({
+        isValid: false,
+        error: error?.message || String(error)
+      });
     } finally {
       // Restore original config
       apiClient.updateConfig(originalUrl, originalToken);
@@ -97,17 +100,24 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
 
   // Save configuration
   const saveConfiguration = () => {
-    localStorage.setItem('videoannotator_api_url', apiUrl);
+    // Auto-fix localhost to 127.0.0.1 before saving
+    let finalUrl = apiUrl;
+    if (finalUrl.includes('//localhost:')) {
+      finalUrl = finalUrl.replace('//localhost:', '//127.0.0.1:');
+      setApiUrl(finalUrl); // Update UI state too
+    }
+
+    localStorage.setItem('videoannotator_api_url', finalUrl);
     localStorage.setItem('videoannotator_api_token', token);
     setHasUnsavedChanges(false);
 
     // Update the global API client
-    (apiClient as any).baseURL = apiUrl.replace(/\/$/, '');
+    (apiClient as any).baseURL = finalUrl.replace(/\/$/, '');
     (apiClient as any).token = token;
 
     // Show success message
     const tokenMode = token.trim() ? 'with API token' : 'in anonymous mode';
-    console.log(`✅ Configuration saved: URL=${apiUrl}, Token=${token ? '***' : '(empty)'}`);
+    console.log(`✅ Configuration saved: URL=${finalUrl}, Token=${token ? '***' : '(empty)'}`);
 
     // Note: The validation error (if any) is separate from saving the config
     // The config is saved successfully even if the server requires auth
@@ -126,10 +136,18 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
   // Don't auto-validate - let user click "Test Connection" button
   useEffect(() => {
     const savedUrl = localStorage.getItem('videoannotator_api_url');
-    const savedToken = localStorage.getItem('videoannotator_api_token') || '';
+    const savedToken = localStorage.getItem('videoannotator_api_token');
 
-    if (savedUrl) setApiUrl(savedUrl);
-    if (savedToken) setToken(savedToken);
+    if (savedUrl !== null) {
+      // Auto-fix existing localhost config to bypass broken DNS
+      if (savedUrl.includes('//localhost:')) {
+        setApiUrl(savedUrl.replace('//localhost:', '//127.0.0.1:'));
+      } else {
+        setApiUrl(savedUrl);
+      }
+    }
+    
+    if (savedToken !== null) setToken(savedToken);
 
     // Don't auto-validate - it makes the page slow and isn't essential
     // User can click "Test Connection" if they want to validate
@@ -137,10 +155,14 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
 
   // Track changes and clear stale validation status
   useEffect(() => {
-    const savedUrl = localStorage.getItem('videoannotator_api_url') || '';
-    const savedToken = localStorage.getItem('videoannotator_api_token') || '';
+    const savedUrl = localStorage.getItem('videoannotator_api_url');
+    const savedToken = localStorage.getItem('videoannotator_api_token');
 
-    const hasChanges = apiUrl !== savedUrl || token !== savedToken;
+    // Compare with saved values (handling nulls)
+    const currentSavedUrl = savedUrl !== null ? savedUrl : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:18011');
+    const currentSavedToken = savedToken !== null ? savedToken : (import.meta.env.VITE_API_TOKEN || '');
+
+    const hasChanges = apiUrl !== currentSavedUrl || token !== currentSavedToken;
     setHasUnsavedChanges(hasChanges);
 
     // Clear validation status when token/url changes to avoid showing stale results
@@ -151,12 +173,21 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
 
   const resetToDefaults = () => {
     // Reset to environment variable defaults
-    const defaultUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:18011';
+    const defaultUrl = import.meta.env.VITE_API_BASE_URL || '';
     const defaultToken = import.meta.env.VITE_API_TOKEN || ''; // Empty = anonymous
 
     // Save defaults to localStorage immediately
-    localStorage.setItem('videoannotator_api_url', defaultUrl);
-    localStorage.setItem('videoannotator_api_token', defaultToken);
+    if (defaultUrl) {
+        localStorage.setItem('videoannotator_api_url', defaultUrl);
+    } else {
+        localStorage.removeItem('videoannotator_api_url');
+    }
+    
+    if (defaultToken) {
+        localStorage.setItem('videoannotator_api_token', defaultToken);
+    } else {
+        localStorage.removeItem('videoannotator_api_token');
+    }
 
     setApiUrl(defaultUrl);
     setToken(defaultToken);
@@ -252,14 +283,39 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
           {/* Server URL Configuration */}
           <div className="space-y-2">
             <Label htmlFor="api-url">Server URL</Label>
-            <Input
-              id="api-url"
-              value={apiUrl}
-              onChange={(e) => setApiUrl(e.target.value)}
-              placeholder="http://localhost:18011"
-            />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  id="api-url"
+                  value={apiUrl}
+                  onChange={(e) => setApiUrl(e.target.value)}
+                  placeholder="http://localhost:18011"
+                  className={!apiUrl ? "pl-24" : ""}
+                />
+                {!apiUrl && (
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <Badge variant="secondary" className="h-6 bg-green-100 text-green-800 hover:bg-green-100">
+                      PROXY MODE
+                    </Badge>
+                  </div>
+                )}
+              </div>
+              {import.meta.env.DEV && (
+                <Button
+                  variant={!apiUrl ? "default" : "outline"}
+                  onClick={() => setApiUrl('')}
+                  title="Use local proxy (avoids CORS issues)"
+                  type="button"
+                  className={!apiUrl ? "bg-green-600 hover:bg-green-700" : ""}
+                >
+                  {!apiUrl ? "Using Proxy" : "Use Proxy"}
+                </Button>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground">
-              The base URL of your VideoAnnotator API server
+              {!apiUrl 
+                ? "Using built-in proxy to bypass CORS (Recommended for local dev)" 
+                : "The base URL of your VideoAnnotator API server (e.g., http://localhost:18011)"}
             </p>
           </div>
 
@@ -342,7 +398,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                             </summary>
                             <div className="mt-2 space-y-1 text-yellow-800 bg-yellow-50 p-2 rounded">
                               <p>• <strong>From server admin:</strong> Ask your VideoAnnotator admin for an API key</p>
-                              <p>• <strong>Generate yourself:</strong> If you run the server, use: <code className="bg-yellow-100 px-1 rounded">uv run videoannotator generate-token</code></p>
+                              <p>• <strong>Generate yourself:</strong> In the <em>backend</em> folder, run: <code className="bg-yellow-100 px-1 rounded">uv run videoannotator generate-token</code></p>
                               <p>• <strong>Token format:</strong> Should look like <code className="bg-yellow-100 px-1 rounded">va_abc123xyz...</code></p>
                             </div>
                           </details>
@@ -370,7 +426,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                     <p className="text-xs font-semibold text-yellow-900 mb-2">How to get an API token:</p>
                     <div className="space-y-1 text-xs text-yellow-800">
                       <p>• <strong>From server admin:</strong> Ask your VideoAnnotator admin for an API key</p>
-                      <p>• <strong>Generate yourself:</strong> If you run the server, use: <code className="bg-yellow-100 px-1 rounded">uv run videoannotator generate-token</code></p>
+                      <p>• <strong>Generate yourself:</strong> In the <em>backend</em> folder, run: <code className="bg-yellow-100 px-1 rounded">uv run videoannotator generate-token</code></p>
                       <p>• <strong>Token format:</strong> Should look like <code className="bg-yellow-100 px-1 rounded">va_abc123xyz...</code></p>
                     </div>
                   </div>
@@ -394,7 +450,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                     <p className="text-xs font-semibold text-yellow-900 mb-2">How to get a valid API token:</p>
                     <div className="space-y-1 text-xs text-yellow-800">
                       <p>• <strong>From server admin:</strong> Ask your VideoAnnotator admin for an API key</p>
-                      <p>• <strong>Generate yourself:</strong> If you run the server, use: <code className="bg-yellow-100 px-1 rounded">uv run videoannotator generate-token</code></p>
+                      <p>• <strong>Generate yourself:</strong> In the <em>backend</em> folder, run: <code className="bg-yellow-100 px-1 rounded">uv run videoannotator generate-token</code></p>
                       <p>• <strong>Token format:</strong> Should look like <code className="bg-yellow-100 px-1 rounded">va_abc123xyz...</code></p>
                     </div>
                   </div>
@@ -451,7 +507,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                             <p className="text-sm font-semibold text-red-900 mb-2">How to get an API token:</p>
                             <div className="space-y-1 text-xs text-red-800">
                               <p>• <strong>From server admin:</strong> Ask your VideoAnnotator admin for an API key</p>
-                              <p>• <strong>Generate yourself:</strong> If you run the server, use: <code className="bg-red-100 px-1 rounded">uv run videoannotator generate-token</code></p>
+                              <p>• <strong>Generate yourself:</strong> In the <em>backend</em> folder, run: <code className="bg-red-100 px-1 rounded">uv run videoannotator generate-token</code></p>
                               <p>• <strong>Token format:</strong> Should look like <code className="bg-red-100 px-1 rounded">va_abc123xyz...</code></p>
                             </div>
                           </div>

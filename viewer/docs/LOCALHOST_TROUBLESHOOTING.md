@@ -2,6 +2,30 @@
 
 If you see "Unable to connect to server" errors despite the server running, this guide will help diagnose the issue.
 
+## 🚨 Critical: DNS & Trailing Slashes (Dec 2025 Update)
+
+We encountered a complex connection failure chain that required multiple fixes. If you are seeing "COMPLETE FAILURE" or timeouts:
+
+### 1. DNS Hijacking of `localhost`
+**Symptom:** Browser requests to `localhost` timeout, but `127.0.0.1` works instantly.
+**Cause:** Some ISPs (e.g., Community Fibre) or routers hijack DNS resolution for `localhost`, resolving it to a public IP (e.g., `103.86.96.100`) instead of the local loopback.
+**Fix:** The application now automatically forces `127.0.0.1` in `src/api/client.ts`.
+**Manual Check:** Run `nslookup localhost` in terminal. If it returns a public IP, you MUST use `127.0.0.1`.
+
+### 2. Strict Trailing Slashes (FastAPI) - RESOLVED
+**Symptom:** `404 Not Found` on specific endpoints (like `/jobs`), even though the server is running.
+**Cause:** The VideoAnnotator server (FastAPI) was strict about trailing slashes.
+- `GET /api/v1/jobs` -> **404 Not Found**
+- `GET /api/v1/jobs/` -> **200 OK**
+**Fix:** The server has been updated to support both formats. The client now uses standard paths (no trailing slash).
+
+### 3. Token Validation
+**Symptom:** "Authentication Required" even with a token.
+**Cause:** The client was rejecting `dev-token` as an invalid pattern.
+**Fix:** `dev-token` is now explicitly allowed in `src/api/client.ts`.
+
+---
+
 ## Automated Diagnostics (Recommended)
 
 **The easiest way to diagnose connection issues:**
@@ -56,7 +80,7 @@ Get-Content C:\Windows\System32\drivers\etc\hosts | Select-String "localhost"
 1. Open PowerShell as Administrator
 2. Run: `notepad C:\Windows\System32\drivers\etc\hosts`
 3. Find these lines:
-   ```
+   ```    
    #       127.0.0.1       localhost
    #       ::1             localhost
    ```
