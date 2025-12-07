@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ExternalLink, Download, Eye, RotateCcw } from "lucide-react";
+import { ArrowLeft, ExternalLink, Download, Eye, RotateCcw, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { parseApiError } from "@/lib/errorHandling";
@@ -39,7 +39,7 @@ const CreateJobDetail = () => {
     },
   });
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string, errorMessage?: string | null) => {
     const colors = {
       pending: "text-yellow-600",
       running: "text-blue-600",
@@ -48,6 +48,11 @@ const CreateJobDetail = () => {
       cancelled: "text-gray-600",
       cancelling: "text-orange-600",
     };
+    
+    if (status === 'completed' && errorMessage) {
+      return "text-orange-600";
+    }
+
     return colors[status as keyof typeof colors] || "text-gray-600";
   };
 
@@ -230,12 +235,22 @@ const CreateJobDetail = () => {
         </div>
       </div>
 
+      {/* Partial Success Warning */}
+      {job.status === 'completed' && job.error_message && (
+        <Alert className="bg-orange-50 border-orange-200 text-orange-800">
+          <AlertCircle className="h-4 w-4 !text-orange-600" />
+          <AlertDescription className="ml-2">
+            <span className="font-semibold">Partial Success:</span> {job.error_message}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Status Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Job Status</span>
-            <Badge variant="outline" className={getStatusColor(job.status)}>
+            <Badge variant="outline" className={getStatusColor(job.status, job.error_message)}>
               {job.status.toUpperCase()}
             </Badge>
           </CardTitle>

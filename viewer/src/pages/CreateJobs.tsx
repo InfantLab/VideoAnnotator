@@ -180,19 +180,30 @@ const CreateJobs = () => {
       cancelling: { variant: "secondary" as const, color: "text-orange-600" },
     };
 
-    const config = statusMap[status as keyof typeof statusMap] || statusMap.pending;
+    // Handle partial success (completed with errors)
+    const isPartialSuccess = status === 'completed' && errorMessage;
+    
+    let config = statusMap[status as keyof typeof statusMap] || statusMap.pending;
+    
+    // Override for partial success
+    if (isPartialSuccess) {
+      config = { variant: "secondary" as const, color: "text-orange-600" };
+    }
 
     const badge = (
       <Badge variant={config.variant} className={config.color}>
         {status.toUpperCase()}
+        {isPartialSuccess && (
+          <AlertCircle className="ml-1 h-3 w-3 inline" />
+        )}
         {status === 'failed' && errorMessage && (
           <AlertCircle className="ml-1 h-3 w-3 inline" />
         )}
       </Badge>
     );
 
-    // Show tooltip with error message for failed jobs
-    if (status === 'failed' && errorMessage) {
+    // Show tooltip with error message for failed or partial success jobs
+    if ((status === 'failed' || isPartialSuccess) && errorMessage) {
       return (
         <TooltipProvider>
           <Tooltip>
@@ -200,7 +211,7 @@ const CreateJobs = () => {
               {badge}
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
-              <p className="font-semibold">Error:</p>
+              <p className="font-semibold">{isPartialSuccess ? 'Partial Success:' : 'Error:'}</p>
               <p>{errorMessage}</p>
             </TooltipContent>
           </Tooltip>
