@@ -39,21 +39,21 @@ const CreateJobDetail = () => {
     },
   });
 
-  const getStatusColor = (status: string, errorMessage?: string | null) => {
-    const colors = {
-      pending: "text-yellow-600",
-      running: "text-blue-600",
-      completed: "text-green-600",
-      failed: "text-red-600",
-      cancelled: "text-gray-600",
-      cancelling: "text-orange-600",
+  const getStatusClassName = (status: string, errorMessage?: string | null) => {
+    const statusMap = {
+      pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      running: "bg-blue-100 text-blue-800 border-blue-200",
+      completed: "bg-green-100 text-green-800 border-green-200",
+      failed: "bg-red-100 text-red-800 border-red-200",
+      cancelled: "bg-gray-100 text-gray-800 border-gray-200",
+      cancelling: "bg-orange-100 text-orange-800 border-orange-200",
     };
     
     if (status === 'completed' && errorMessage) {
-      return "text-orange-600";
+      return "bg-orange-100 text-orange-800 border-orange-200";
     }
 
-    return colors[status as keyof typeof colors] || "text-gray-600";
+    return statusMap[status as keyof typeof statusMap] || "bg-gray-100 text-gray-800 border-gray-200";
   };
 
   const getProgressValue = (status: string) => {
@@ -250,8 +250,11 @@ const CreateJobDetail = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Job Status</span>
-            <Badge variant="outline" className={getStatusColor(job.status, job.error_message)}>
+            <Badge variant="outline" className={getStatusClassName(job.status, job.error_message)}>
               {job.status.toUpperCase()}
+              {job.status === 'completed' && job.error_message && (
+                <AlertCircle className="ml-1 h-3 w-3 inline" />
+              )}
             </Badge>
           </CardTitle>
         </CardHeader>

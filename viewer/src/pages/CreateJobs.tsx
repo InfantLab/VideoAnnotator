@@ -171,13 +171,15 @@ const CreateJobs = () => {
   };
 
   const getStatusBadge = (status: string, errorMessage?: string | null) => {
+    // Use specific color combinations for better contrast
+    // Using 'secondary' variant as base (usually light gray) and overriding bg/text
     const statusMap = {
-      pending: { variant: "secondary" as const, color: "text-yellow-600" },
-      running: { variant: "default" as const, color: "text-blue-600" },
-      completed: { variant: "default" as const, color: "text-green-600" },
-      failed: { variant: "destructive" as const, color: "text-red-600" },
-      cancelled: { variant: "secondary" as const, color: "text-gray-600" },
-      cancelling: { variant: "secondary" as const, color: "text-orange-600" },
+      pending: { className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200" },
+      running: { className: "bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200" },
+      completed: { className: "bg-green-100 text-green-800 hover:bg-green-100 border-green-200" },
+      failed: { className: "bg-red-100 text-red-800 hover:bg-red-100 border-red-200" },
+      cancelled: { className: "bg-gray-100 text-gray-800 hover:bg-gray-100 border-gray-200" },
+      cancelling: { className: "bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200" },
     };
 
     // Handle partial success (completed with errors)
@@ -187,11 +189,11 @@ const CreateJobs = () => {
     
     // Override for partial success
     if (isPartialSuccess) {
-      config = { variant: "secondary" as const, color: "text-orange-600" };
+      config = { className: "bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200" };
     }
 
     const badge = (
-      <Badge variant={config.variant} className={config.color}>
+      <Badge variant="outline" className={config.className}>
         {status.toUpperCase()}
         {isPartialSuccess && (
           <AlertCircle className="ml-1 h-3 w-3 inline" />
