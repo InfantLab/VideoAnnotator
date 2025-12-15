@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-12-15
+
 ### ✨ Added
+- **Job Results Viewer**: New dedicated page for viewing job results directly in the browser
+  - Downloads and unzips job artifacts client-side
+  - Automatically detects and merges annotation files (COCO, VTT, RTTM, etc.)
+  - Visualizes video playback with synchronized annotations
+  - Handles missing video files gracefully
+- **Artifact Downloading**: Robust ZIP downloader with progress tracking and error handling
+- **Smart File Detection**: Enhanced logic to identify annotation file types from filenames and content within artifacts ZIP
 - **GPU Information Display**: Collapsible GPU status panel in Settings showing device name, compute capability, PyTorch version, and memory usage
 - **GPU Compatibility Warnings**: Automatic detection and display of GPU/PyTorch compatibility issues with actionable recommendations
 - **Worker Information Display**: Collapsible worker status panel showing active jobs, queue depth, max concurrent workers, and poll interval
@@ -28,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Copy to clipboard functionality
 
 ### 🐛 Fixed
+- **OpenFace3 Parsing**: Fixed validation logic to correctly identify OpenFace3 data structures and prevent false positives
 - **Job Table Video Information**: Video filename now always displayed (defensive field name handling)
   - Checks multiple possible field names: `video_filename`, `filename`, `video_name`
   - **Extracts filename from `video_path`** when direct filename field unavailable (e.g., `/path/to/video.mp4` → `video.mp4`)
