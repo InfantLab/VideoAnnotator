@@ -17,14 +17,20 @@ import { StandardAnnotationData, OverlaySettings, TimelineSettings } from '@/typ
 interface VideoAnnotationViewerProps {
   /** Pipeline IDs that were used to generate the current annotation data */
   jobPipelines?: string[];
+  /** Pre-loaded video file (optional) */
+  initialVideoFile?: File | null;
+  /** Pre-loaded annotation data (optional) */
+  initialAnnotationData?: StandardAnnotationData | null;
 }
 
 export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
-  jobPipelines = []
+  jobPipelines = [],
+  initialVideoFile = null,
+  initialAnnotationData = null
 }) => {
-  const [showWelcome, setShowWelcome] = useState(true);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [annotationData, setAnnotationData] = useState<StandardAnnotationData | null>(null);
+  const [showWelcome, setShowWelcome] = useState(!initialVideoFile);
+  const [videoFile, setVideoFile] = useState<File | null>(initialVideoFile);
+  const [annotationData, setAnnotationData] = useState<StandardAnnotationData | null>(initialAnnotationData);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);

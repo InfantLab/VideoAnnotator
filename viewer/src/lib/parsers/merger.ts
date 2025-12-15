@@ -488,8 +488,20 @@ async function isValidOpenFace3Data(file: File): Promise<boolean> {
         // Check filename patterns for OpenFace3
         if (file.name.toLowerCase().includes('openface') || 
             file.name.toLowerCase().includes('of3')) {
-            console.log('✅ Filename suggests OpenFace3');
-            return true;
+            
+            // Verify it has the faces array if it's a JSON file
+            try {
+                const data = JSON.parse(sample);
+                if (Array.isArray(data.faces)) {
+                    console.log('✅ Filename suggests OpenFace3 and has faces array');
+                    return true;
+                }
+                console.log('⚠️ Filename suggests OpenFace3 but missing faces array - likely metadata/config');
+                return false;
+            } catch (e) {
+                // If we can't parse it, assume it's not valid data
+                return false;
+            }
         }
         
         return false;

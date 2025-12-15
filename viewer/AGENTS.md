@@ -130,6 +130,7 @@ git commit -m "feat: T021 - Create useConfigValidation hook with debouncing"
 ## Documentation
 
 - User-facing docs live in `docs/`. Developer roadmaps and plans in `docs/development/`.
+- External issues (e.g., server bugs) are tracked in `docs/issues/` as standalone markdown files.
 - If you introduce user-visible changes or new developer workflows, update:
   - `CHANGELOG.md`
   - `README.md`

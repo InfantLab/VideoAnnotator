@@ -600,6 +600,52 @@ class APIClient {
   }
 
   /**
+   * Download job artifacts as a ZIP file
+   * GET /api/v1/jobs/{job_id}/artifacts
+   * 
+   * @param jobId - Job ID to download artifacts for
+   * @returns Response object that can be used to stream the ZIP file
+   */
+  async getJobArtifacts(jobId: string): Promise<Response> {
+    // Always get fresh values from localStorage
+    this.baseURL = getApiBaseUrl().replace(/\/$/, '');
+    this.token = getApiToken();
+
+    const url = `${this.baseURL}/api/v1/jobs/${jobId}/artifacts`;
+    
+    const headers: Record<string, string> = {};
+    if (this.token && isValidToken(this.token)) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    // We use fetch directly here because we need the raw Response for streaming
+    // and the request() wrapper parses JSON automatically
+    const response = await fetch(url, {
+      method: 'GET',
+      headers,
+      mode: 'cors',
+      credentials: 'omit'
+    });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.detail) {
+          errorMessage = Array.isArray(errorData.detail)
+            ? errorData.detail.map((e: any) => e.msg || e).join(', ')
+            : errorData.detail;
+        }
+      } catch {
+        // Ignore JSON parse error
+      }
+      throw new APIError(errorMessage, response.status, response);
+    }
+
+    return response;
+  }
+
+  /**
    * Validate a full configuration object
    * POST /api/v1/config/validate
    * 

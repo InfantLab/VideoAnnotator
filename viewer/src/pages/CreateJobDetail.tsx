@@ -77,20 +77,7 @@ const CreateJobDetail = () => {
       return;
     }
 
-    // TODO: Implement proper job results loading
-    // This requires API endpoints to fetch job output files
-    const shouldProceed = confirm(
-      `Opening job ${job.id} in viewer...\n\n` +
-      `Current limitation: The integration between completed jobs and the annotation viewer is not yet fully implemented.\n\n` +
-      `Would you like to:\n` +
-      `• Click "OK" to go to the main viewer (you'll need to manually upload result files)\n` +
-      `• Click "Cancel" to stay on this page\n\n` +
-      `Full integration coming in v0.4.0`
-    );
-
-    if (shouldProceed) {
-      navigate('/');
-    }
+    navigate(`/view/${job.id}`);
   };
 
   const handleDownloadResults = async () => {

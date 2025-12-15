@@ -15,6 +15,7 @@ import CreateJobDetail from "./pages/CreateJobDetail";
 import CreateNewJob from "./pages/CreateNewJob";
 import CreateDatasets from "./pages/CreateDatasets";
 import CreateSettings from "./pages/CreateSettings";
+import JobResultsViewer from "./pages/JobResultsViewer";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
               <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <Routes>
                   <Route path="/" element={<Index />} />
+                  <Route path="/view/:jobId" element={<JobResultsViewer />} />
                   <Route path="/create" element={<Create />}>
                     <Route path="jobs" element={<CreateJobs />} />
                     <Route path="jobs/:jobId" element={<CreateJobDetail />} />

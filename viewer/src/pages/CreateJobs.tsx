@@ -11,7 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Loader2, RefreshCw, Play, Settings, AlertCircle, RotateCcw } from "lucide-react";
+import { Loader2, RefreshCw, Play, Settings, AlertCircle, RotateCcw, Eye } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Table,
@@ -462,6 +462,28 @@ const CreateJobs = () => {
                               variant="outline"
                               onDeleted={() => refetch()}
                             />
+                          )}
+                          {job.status === 'completed' && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/view/${job.id}`);
+                                    }}
+                                  >
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    View
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>View Results</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                         </div>
                       </TableCell>
