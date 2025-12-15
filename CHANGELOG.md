@@ -7,13 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for v1.4.0
+### Planned for v1.5.0
 
 - Queue position display for pending jobs
 - Deterministic test fixtures with synthetic video generation
 - Research workflow examples for JOSS paper
 - Benchmark results and performance validation
 - Additional contributor documentation improvements
+
+## [1.4.0] - 2025-12-15
+
+### 🚀 Major Features - Flexible Storage & Enhanced Security
+
+This release introduces a flexible storage system allowing artifact downloads and a robust database-backed authentication system.
+
+#### Added
+- **Flexible Storage**: New artifact download capabilities, including source video retrieval.
+- **Authentication**: Migrated from file-based to database-backed authentication for improved security and scalability.
+- **Artifacts API**: New endpoint `GET /api/v1/jobs/{id}/artifacts` to download job results as a ZIP archive.
+
+#### Fixed
+- **Artifact Downloads**: Ensured source video files are included in the downloaded artifact ZIP.
 
 ## [1.3.1] - 2025-12-07
 
