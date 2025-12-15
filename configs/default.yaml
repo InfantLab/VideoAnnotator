@@ -1,6 +1,13 @@
 # Default configuration for all VideoAnnotator pipelines
 # This configuration provides sensible defaults for most use cases
 
+# Storage Configuration
+storage:
+  provider: "local"
+  root_path: "./storage/jobs"
+  options:
+    create_dirs: true
+
 # Scene Detection Pipeline
 scene_detection:
   threshold: 30.0

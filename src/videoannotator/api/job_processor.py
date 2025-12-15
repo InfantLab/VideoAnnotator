@@ -73,10 +73,31 @@ class JobProcessor:
             logger.info(f"Running pipelines for job {job.job_id}: {pipelines_to_run}")
 
             # Process each pipeline
+            failed_pipelines = []
+            successful_pipelines = []
+
             for pipeline_name in pipelines_to_run:
                 success = self._process_pipeline(job, pipeline_name)
-                if not success:
-                    return False
+                if success:
+                    successful_pipelines.append(pipeline_name)
+                else:
+                    failed_pipelines.append(pipeline_name)
+
+            if not successful_pipelines and failed_pipelines:
+                # All pipelines failed
+                logger.error(f"All pipelines failed for job {job.job_id}")
+                job.error_message = (
+                    "All pipelines failed. Check pipeline results for details."
+                )
+                return False
+
+            if failed_pipelines:
+                # Partial success
+                logger.warning(
+                    f"Job {job.job_id} completed with failures in: {failed_pipelines}"
+                )
+                job.error_message = f"Completed with errors. Failed pipelines: {', '.join(failed_pipelines)}"
+                return True
 
             logger.info(f"Job {job.job_id} completed successfully")
             return True
@@ -185,5 +206,5 @@ class JobProcessor:
                 f"Pipeline {pipeline_name} failed for job {job.job_id}: {e}",
                 exc_info=True,
             )
-            job.error_message = f"Pipeline {pipeline_name} failed: {e!s}"
+            # job.error_message is handled by process_job aggregation
             return False

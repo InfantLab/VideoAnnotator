@@ -46,6 +46,7 @@ def init_database(force: bool = False) -> bool:
         from sqlalchemy import text
 
         with engine.connect() as conn:
+
             def ensure_columns(table: str, required: dict[str, str]) -> list[str]:
                 try:
                     result = conn.execute(text(f"PRAGMA table_info('{table}')"))
@@ -192,6 +193,24 @@ def migrate_to_v1_3_0() -> bool:
                 )
                 migrations_applied.append("storage_path")
                 logger.info("[MIGRATION] ✓ Added jobs.storage_path column")
+
+            # Add output_dir column if missing (Storage Backend compatibility)
+            if "output_dir" not in existing_cols:
+                logger.info("[MIGRATION] Adding jobs.output_dir column")
+                conn.execute(
+                    text("ALTER TABLE jobs ADD COLUMN output_dir VARCHAR(500)")
+                )
+                migrations_applied.append("output_dir")
+                logger.info("[MIGRATION] ✓ Added jobs.output_dir column")
+
+            # Add retry_count column if missing (Storage Backend compatibility)
+            if "retry_count" not in existing_cols:
+                logger.info("[MIGRATION] Adding jobs.retry_count column")
+                conn.execute(
+                    text("ALTER TABLE jobs ADD COLUMN retry_count INTEGER DEFAULT 0")
+                )
+                migrations_applied.append("retry_count")
+                logger.info("[MIGRATION] ✓ Added jobs.retry_count column")
 
             conn.commit()
 

@@ -125,6 +125,7 @@ class Job(Base):
 
     # Video information
     video_path = Column(String(500), nullable=False)
+    output_dir = Column(String(500), nullable=True)
     video_filename = Column(String(255), nullable=True)
     video_size_bytes = Column(Integer, nullable=True)
     video_duration_seconds = Column(Integer, nullable=True)
@@ -137,6 +138,7 @@ class Job(Base):
 
     # Status and timing
     status = Column(String(50), nullable=False, default="pending", index=True)
+    retry_count = Column(Integer, default=0)
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

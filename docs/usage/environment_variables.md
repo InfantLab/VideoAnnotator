@@ -46,7 +46,8 @@ Control where job data is stored and how long it's retained:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STORAGE_BASE_DIR` | `./batch_results` | Base directory for job outputs |
+| `STORAGE_ROOT` | `./storage/jobs` | **(New)** Root directory for persistent job storage |
+| `STORAGE_BASE_DIR` | `./batch_results` | **(Deprecated)** Base directory for legacy batch outputs |
 | `STORAGE_RETENTION_DAYS` | _(none)_ | Days to retain completed jobs (empty = never delete) |
 
 ### Security Configuration

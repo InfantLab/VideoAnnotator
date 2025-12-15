@@ -30,7 +30,9 @@ class UserCRUD:
         return db.query(User).filter(User.username == username).first()
 
     @staticmethod
-    def create(db: Session, email: str, username: str, full_name: str = None) -> User:
+    def create(
+        db: Session, email: str, username: str, full_name: str | None = None
+    ) -> User:
         """Create a new user."""
         user = User(email=email, username=username, full_name=full_name)
         db.add(user)
@@ -88,6 +90,12 @@ class APIKeyCRUD:
         return hashlib.sha256(api_key.encode()).hexdigest()
 
     @staticmethod
+    def get_by_token(db: Session, token: str) -> APIKey | None:
+        """Get API key by raw token string (regardless of active status)."""
+        key_hash = APIKeyCRUD.hash_api_key(token)
+        return db.query(APIKey).filter(APIKey.key_hash == key_hash).first()
+
+    @staticmethod
     def get_by_hash(db: Session, key_hash: str) -> APIKey | None:
         """Get API key by hash."""
         return (
@@ -103,7 +111,7 @@ class APIKeyCRUD:
 
     @staticmethod
     def create(
-        db: Session, user_id: str, key_name: str, expires_days: int = None
+        db: Session, user_id: str, key_name: str, expires_days: int | None = None
     ) -> tuple[APIKey, str]:
         """Create a new API key for a user.
 
@@ -143,6 +151,12 @@ class APIKeyCRUD:
         if api_key_obj:
             # Check if key is expired
             if api_key_obj.expires_at and api_key_obj.expires_at < datetime.utcnow():
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"API key expired: {api_key[:10]}... (expired at {api_key_obj.expires_at})"
+                )
                 return None
 
             # Update last used timestamp
@@ -223,11 +237,11 @@ class JobCRUD:
     def create(
         db: Session,
         video_path: str,
-        user_id: str = None,
-        video_filename: str = None,
-        selected_pipelines: list[str] = None,
-        config: dict[str, Any] = None,
-        job_metadata: dict[str, Any] = None,
+        user_id: str | None = None,
+        video_filename: str | None = None,
+        selected_pipelines: list[str] | None = None,
+        config: dict[str, Any] | None = None,
+        job_metadata: dict[str, Any] | None = None,
     ) -> Job:
         """Create a new job."""
         job = Job(
@@ -249,8 +263,8 @@ class JobCRUD:
         db: Session,
         job_id: str,
         status: str,
-        error_message: str = None,
-        progress_percentage: int = None,
+        error_message: str | None = None,
+        progress_percentage: int | None = None,
     ) -> Job | None:
         """Update job status."""
         job = JobCRUD.get_by_id(db, job_id)
@@ -276,7 +290,10 @@ class JobCRUD:
 
     @staticmethod
     def update_results(
-        db: Session, job_id: str, result_path: str, job_metadata: dict[str, Any] = None
+        db: Session,
+        job_id: str,
+        result_path: str,
+        job_metadata: dict[str, Any] | None = None,
     ) -> Job | None:
         """Update job results."""
         job = JobCRUD.get_by_id(db, job_id)

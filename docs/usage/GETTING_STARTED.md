@@ -91,6 +91,9 @@ uv run videoannotator job status <job_id>
 # Get detailed results
 uv run videoannotator job results <job_id>
 
+# Download all annotations (ZIP)
+uv run videoannotator job download-annotations <job_id>
+
 # List all jobs
 uv run videoannotator job list --status completed
 ```

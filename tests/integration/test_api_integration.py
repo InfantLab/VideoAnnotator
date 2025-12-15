@@ -83,7 +83,7 @@ class APITestClient:
 
 
 @pytest.fixture(scope="session")
-def test_api_key() -> str | None:
+def test_api_key(test_storage_env: Any) -> str | None:
     """Create a test API key for authentication."""
     # Initialize database
     init_database(force=True)
@@ -222,7 +222,7 @@ class TestAPIAuthentication:
         response = await invalid_client.get("/api/v1/jobs/")
         assert response.status_code == 401
         data = response.json()
-        assert "Invalid API key" in data["detail"]
+        assert "Invalid or expired token" in data["detail"]
 
     @pytest.mark.asyncio
     async def test_missing_api_key_for_protected_endpoint(

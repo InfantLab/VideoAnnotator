@@ -87,6 +87,97 @@ def patch_pipeline_availability(monkeypatch):
     yield
 
 
+@pytest.fixture(autouse=True, scope="session")
+def test_storage_env(tmp_path_factory):
+    """Configure isolated storage environment for tests.
+
+    Sets STORAGE_ROOT and VIDEOANNOTATOR_DB_PATH to temporary directories
+    to prevent tests from polluting the main application storage.
+    """
+    # Create temp directories
+    tmp_path = tmp_path_factory.mktemp("storage_env")
+    storage_root = tmp_path / "storage" / "jobs"
+    storage_root.mkdir(parents=True, exist_ok=True)
+
+    db_path = tmp_path / "test_videoannotator.db"
+
+    # Set environment variables
+    os.environ["STORAGE_ROOT"] = str(storage_root)
+    os.environ["VIDEOANNOTATOR_DB_PATH"] = str(db_path)
+    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+
+    # Patch the database engine to use the new path
+    # We can't easily reload modules because of circular dependencies and Base class issues
+    try:
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+
+        import videoannotator.database.database as db_module
+
+        # Dispose old engine
+        if hasattr(db_module, "engine"):
+            db_module.engine.dispose()
+
+        # Create new engine
+        new_engine = create_engine(
+            f"sqlite:///{db_path}",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+            echo=False,
+        )
+
+        # Update module globals
+        db_module.engine = new_engine
+        db_module.SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=new_engine
+        )
+
+        # Also update migrations module if it imported engine
+        try:
+            import videoannotator.database.migrations as migrations_module
+
+            migrations_module.engine = new_engine
+        except ImportError:
+            pass
+
+    except ImportError:
+        pass
+
+    # Clear caches to ensure new env vars are picked up
+    # We use try-except to avoid import errors if modules aren't available yet
+    try:
+        from videoannotator.api.database import get_storage_backend
+
+        get_storage_backend.cache_clear()
+    except ImportError:
+        pass
+
+    try:
+        from videoannotator.storage.manager import get_storage_provider
+
+        get_storage_provider.cache_clear()
+    except ImportError:
+        pass
+
+    yield
+
+    # Cleanup is handled by tmp_path fixture, but we should clear caches again
+    try:
+        from videoannotator.api.database import get_storage_backend
+
+        get_storage_backend.cache_clear()
+    except ImportError:
+        pass
+
+    try:
+        from videoannotator.storage.manager import get_storage_provider
+
+        get_storage_provider.cache_clear()
+    except ImportError:
+        pass
+
+
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock

@@ -131,13 +131,16 @@ async def validate_optional_api_key(
         db = SessionLocal()
         try:
             user = _validate_api_key_header(token, db)
-            if not user:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid API key",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            return user
+            if user:
+                return user
+            # If not found in DB, fall through to TokenManager
+            # This handles cases where TokenManager generates keys starting with va_
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.info(
+                f"Token {token[:10]}... not found in DB, falling back to TokenManager"
+            )
         finally:
             db.close()
 

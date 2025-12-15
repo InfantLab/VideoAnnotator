@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 
 from ...batch.types import BatchJob, JobStatus
 from ...storage.base import StorageBackend
-from ...storage.config import ensure_job_storage_path
+from ...storage.manager import get_storage_provider
 from ...validation.validator import ConfigValidator
 from ..database import get_storage_backend
 from ..errors import APIError
@@ -333,16 +333,17 @@ async def submit_job(
                 selected_pipelines=parsed_pipelines,
             )
 
-            # Create persistent storage directory for this job
-            job_storage_dir = ensure_job_storage_path(batch_job.job_id)
-            batch_job.storage_path = job_storage_dir
+            # Use StorageProvider to save the file
+            provider = get_storage_provider()
 
-            # Copy video file to persistent storage
-            persistent_video_path = job_storage_dir / filename
-            shutil.copy2(temp_video_path, persistent_video_path)
+            with open(temp_video_path, "rb") as f:
+                provider.save_file(batch_job.job_id, filename, f)
 
             # Update job to use persistent path
-            batch_job.video_path = persistent_video_path
+            batch_job.storage_path = provider.get_absolute_path(batch_job.job_id, "")
+            batch_job.video_path = provider.get_absolute_path(
+                batch_job.job_id, filename
+            )
 
         finally:
             # Clean up temporary directory

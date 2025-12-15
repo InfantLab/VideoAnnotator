@@ -455,8 +455,15 @@ class BatchOrchestrator:
         """
         self.logger.info(f"Processing job {job.job_id}: {job.video_path}")
 
+        # v1.3.0: Use storage_path if output_dir is not set
+        if job.output_dir is None and job.storage_path:
+            job.output_dir = job.storage_path
+
         # Ensure output directory exists
-        job.output_dir.mkdir(parents=True, exist_ok=True)
+        if job.output_dir:
+            job.output_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            self.logger.warning(f"Job {job.job_id} has no output_dir or storage_path")
 
         # Save job metadata
         self.storage_backend.save_job_metadata(job)

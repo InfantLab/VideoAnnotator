@@ -20,7 +20,7 @@ from ..config_env import (
     WORKER_POLL_INTERVAL,
 )
 from ..storage.base import StorageBackend
-from ..storage.config import ensure_job_storage_path
+from ..storage.manager import get_storage_provider
 from ..utils.logging_config import get_logger
 
 logger = get_logger("api")
@@ -50,10 +50,18 @@ class JobProcessor:
             retry_delay_base: Base delay for exponential backoff (default: env RETRY_DELAY_BASE or 2.0)
         """
         self.storage = storage_backend or get_storage_backend()
-        self.poll_interval = poll_interval if poll_interval is not None else WORKER_POLL_INTERVAL
-        self.max_concurrent_jobs = max_concurrent_jobs if max_concurrent_jobs is not None else MAX_CONCURRENT_JOBS
+        self.poll_interval = (
+            poll_interval if poll_interval is not None else WORKER_POLL_INTERVAL
+        )
+        self.max_concurrent_jobs = (
+            max_concurrent_jobs
+            if max_concurrent_jobs is not None
+            else MAX_CONCURRENT_JOBS
+        )
         self.max_retries = max_retries if max_retries is not None else MAX_JOB_RETRIES
-        self.retry_delay_base = retry_delay_base if retry_delay_base is not None else RETRY_DELAY_BASE
+        self.retry_delay_base = (
+            retry_delay_base if retry_delay_base is not None else RETRY_DELAY_BASE
+        )
         self.orchestrator = BatchOrchestrator(storage_backend=self.storage)
 
         self.running = False
@@ -150,7 +158,7 @@ class JobProcessor:
 
             # v1.3.0 (T065): Count RUNNING jobs to ensure we respect concurrent limit
             running_job_ids = self.storage.list_jobs(status_filter="running")
-            
+
             # Remove any completed jobs from our tracking
             self.processing_jobs = {
                 job_id
@@ -219,7 +227,7 @@ class JobProcessor:
             # v1.3.0: Ensure storage directory exists
             if job.storage_path:
                 try:
-                    ensure_job_storage_path(job_id)
+                    get_storage_provider().create_job_dir(job_id)
                     logger.debug(f"[STORAGE] Created directory for job {job_id}")
                 except Exception as e:
                     logger.warning(f"Failed to create storage directory: {e}")

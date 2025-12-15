@@ -4,7 +4,6 @@ Handles first-run initialization including automatic API key generation.
 """
 
 import os
-from pathlib import Path
 
 from videoannotator.utils.logging_config import get_logger
 
@@ -41,21 +40,17 @@ def ensure_api_key_exists() -> tuple[str | None, bool]:
     # Get token manager
     token_manager = get_token_manager()
 
-    # Check if tokens file exists and has content
-    tokens_file = Path("tokens/tokens.json")
-    if tokens_file.exists() and tokens_file.stat().st_size > 0:
-        # Tokens exist, count active API keys
-        try:
-            active_api_keys = [
-                t
-                for t in token_manager._token_cache.values()
-                if t.token_type.value == "api_key" and t.is_active
-            ]
-            if active_api_keys:
-                logger.info(f"Found {len(active_api_keys)} existing API key(s)")
-                return None, False
-        except Exception as e:
-            logger.warning(f"Could not check existing tokens: {e}")
+    # Check if tokens exist in DB
+    try:
+        all_tokens = token_manager.list_all_tokens()
+        active_api_keys = [
+            t for t in all_tokens if t.token_type.value == "api_key" and t.is_active
+        ]
+        if active_api_keys:
+            logger.info(f"Found {len(active_api_keys)} existing API key(s)")
+            return None, False
+    except Exception as e:
+        logger.warning(f"Could not check existing tokens: {e}")
 
     # No active API keys found - generate one
     logger.info("[STARTUP] No API keys found - generating first API key")

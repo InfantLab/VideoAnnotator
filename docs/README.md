@@ -20,6 +20,8 @@ This documentation is organized into clear sections for different user types and
 ### Usage
 
 - [Getting Started](usage/GETTING_STARTED.md) - Quick start guide for new users
+- [Accessing Results](usage/accessing_results.md) - **New**: Downloading annotations and artifacts
+- [Configuration](usage/configuration.md) - **New**: Configuration guide
 - [Pipeline Specifications](usage/pipeline_specs.md) - Detailed pipeline documentation
 - [Scene Detection Guide](usage/scene_detection.md) - Scene detection usage
 - [Scene Detection Guide (Advanced)](usage/scene_detection_guide.md) - Advanced scene detection usage

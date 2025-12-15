@@ -11,29 +11,43 @@ Environment Variables:
 import os
 from pathlib import Path
 
+import yaml
+
 
 def get_storage_root() -> Path:
     """Get the root directory for persistent job storage.
 
+    Priority:
+    1. STORAGE_ROOT environment variable
+    2. 'storage.root_path' in configs/default.yaml
+    3. Default: ./storage/jobs
+
     Returns:
         Path: Absolute path to the storage root directory
-
-    Environment Variables:
-        STORAGE_ROOT: Override the default storage root path
-
-    Examples:
-        >>> root = get_storage_root()
-        >>> print(root)
-        /app/storage/jobs
-
-        >>> os.environ['STORAGE_ROOT'] = '/mnt/shared/storage'
-        >>> root = get_storage_root()
-        >>> print(root)
-        /mnt/shared/storage
     """
-    storage_root_str = os.getenv("STORAGE_ROOT", "./storage/jobs")
-    storage_root = Path(storage_root_str).expanduser().resolve()
-    return storage_root
+    # 1. Check environment variable
+    env_root = os.getenv("STORAGE_ROOT")
+    if env_root:
+        return Path(env_root).expanduser().resolve()
+
+    # 2. Check default config file
+    try:
+        # Assuming running from repo root or src/..
+        # Try to find configs/default.yaml
+        repo_root = Path(__file__).parent.parent.parent.parent
+        config_path = repo_root / "configs" / "default.yaml"
+
+        if config_path.exists():
+            with open(config_path) as f:
+                config = yaml.safe_load(f)
+                if config and "storage" in config and "root_path" in config["storage"]:
+                    return Path(config["storage"]["root_path"]).expanduser().resolve()
+    except Exception:
+        # Fallback if config parsing fails
+        pass
+
+    # 3. Default
+    return Path("./storage/jobs").expanduser().resolve()
 
 
 def get_job_storage_path(job_id: str) -> Path:

@@ -1,6 +1,6 @@
 # VideoAnnotator v1.2.0 Demo Commands & Usage
 
-> 📖 **Navigation**: [Getting Started](GETTING_STARTED.md) | [Pipeline Specs](pipeline_specs.md) | [Installation Guide](../installation/INSTALLATION.md) | [Main Documentation](../README.md)
+> 📖 **Navigation**: [Getting Started](GETTING_STARTED.md) | [Accessing Results](accessing_results.md) | [Pipeline Specs](pipeline_specs.md) | [Installation Guide](../installation/INSTALLATION.md) | [Main Documentation](../README.md)
 
 This guide demonstrates how to use VideoAnnotator v1.2.0 with its modern API server and CLI interface for video processing.
 
@@ -27,6 +27,9 @@ uv run videoannotator job status <job_id>
 
 # Get detailed results
 uv run videoannotator job results <job_id>
+
+# Download annotations (ZIP)
+uv run videoannotator job download-annotations <job_id> --output ./results/
 ```
 
 ### Process Video via HTTP API
@@ -44,6 +47,11 @@ curl -X POST "http://localhost:18011/api/v1/jobs/" \
 # Check status
 curl -H "Authorization: Bearer $API_KEY" \
   "http://localhost:18011/api/v1/jobs/{job_id}"
+
+# Download artifacts (ZIP)
+curl -H "Authorization: Bearer $API_KEY" \
+  "http://localhost:18011/api/v1/jobs/{job_id}/artifacts" \
+  --output artifacts.zip
 ```
 
 ## 🛠️ CLI Management Commands

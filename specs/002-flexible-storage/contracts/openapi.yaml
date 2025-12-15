@@ -1,0 +1,26 @@
+openapi: 3.0.0
+info:
+  title: VideoAnnotator Storage API
+  version: 1.0.0
+paths:
+  /jobs/{job_id}/artifacts:
+    get:
+      summary: Download all artifacts for a job
+      description: Returns a ZIP archive containing all annotation and report files for the specified job.
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the job
+      responses:
+        '200':
+          description: ZIP archive of artifacts
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Job not found

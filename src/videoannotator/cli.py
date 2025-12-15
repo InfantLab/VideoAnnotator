@@ -288,6 +288,52 @@ def submit_job(
                 file_tuple[1].close()
 
 
+@job_app.command("download-annotations")
+def download_annotations(
+    job_id: str = typer.Argument(..., help="ID of the job to download annotations for"),
+    output: Path = typer.Option(
+        Path("."), "--output", "-o", help="Directory to save the annotations to"
+    ),
+    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+):
+    """Download all annotations for a specific job."""
+    import requests
+
+    url = f"{server}/api/v1/jobs/{job_id}/artifacts"
+    typer.echo(f"[INFO] Downloading annotations for job {job_id} from {url}...")
+
+    try:
+        with requests.get(url, stream=True) as r:
+            if r.status_code == 404:
+                typer.echo(
+                    f"[ERROR] Job {job_id} not found or has no artifacts.", err=True
+                )
+                raise typer.Exit(code=1)
+            r.raise_for_status()
+
+            # Determine filename from header or default
+            filename = f"job_{job_id}_artifacts.zip"
+            if "Content-Disposition" in r.headers:
+                import re
+
+                fname = re.findall("filename=(.+)", r.headers["Content-Disposition"])
+                if fname:
+                    filename = fname[0].strip('"')
+
+            output_path = output / filename
+            output.mkdir(parents=True, exist_ok=True)
+
+            with open(output_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+        typer.echo(f"[SUCCESS] Annotations saved to {output_path}")
+
+    except requests.RequestException as e:
+        typer.echo(f"[ERROR] Failed to download annotations: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
 @job_app.command("status")
 def job_status(
     job_id: str = typer.Argument(..., help="Job ID to check status for"),

@@ -20,10 +20,10 @@ from datetime import datetime
 from pathlib import Path
 
 # Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from src.auth import get_token_manager, initialize_token_manager
-from src.utils.logging_config import get_logger, setup_videoannotator_logging
+from videoannotator.auth import get_token_manager, initialize_token_manager
+from videoannotator.utils.logging_config import get_logger, setup_videoannotator_logging
 
 
 def setup_logging():
@@ -145,14 +145,13 @@ def list_tokens(args):
     try:
         if args.user:
             # Find user by email
-            user_tokens = []
-            for token_info in token_manager._token_cache.values():
-                if token_info.email == args.user and token_info.is_active:
-                    user_tokens.append(token_info)
-            tokens = user_tokens
+            all_tokens = token_manager.list_all_tokens()
+            tokens = [
+                t for t in all_tokens if t.email == args.user or t.username == args.user
+            ]
         else:
             # List all active tokens
-            tokens = [t for t in token_manager._token_cache.values() if t.is_active]
+            tokens = token_manager.list_all_tokens()
 
         if not tokens:
             user_msg = f" for {args.user}" if args.user else ""
