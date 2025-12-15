@@ -27,13 +27,13 @@ def list_job_artifacts(
 
 
 def get_annotation_artifacts(job_id: str) -> list[JobArtifact]:
-    """Get only annotation and report artifacts for a job.
+    """Get all relevant artifacts for a job, including source video.
 
     Args:
         job_id: The unique identifier of the job.
 
     Returns:
-        list[JobArtifact]: List of annotation/report artifacts.
+        list[JobArtifact]: List of artifacts including video, annotations, reports, and logs.
     """
     return list(
         list_job_artifacts(
@@ -42,6 +42,7 @@ def get_annotation_artifacts(job_id: str) -> list[JobArtifact]:
                 ArtifactType.ANNOTATION,
                 ArtifactType.REPORT,
                 ArtifactType.LOG,
+                ArtifactType.VIDEO,
             ],
         )
     )
