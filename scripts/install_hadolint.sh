@@ -8,17 +8,24 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$HERE/.." && pwd)"
 
-# Detect virtualenv bin dir
-if [ -n "${VIRTUAL_ENV:-}" ]; then
-  DEST_DIR="$VIRTUAL_ENV/bin"
+# Allow callers (e.g., container builds) to override the destination.
+# Example: HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh
+if [ -n "${HADOLINT_DEST_DIR:-}" ]; then
+  DEST_DIR="$HADOLINT_DEST_DIR"
 else
-  # Fallback to .venv in project root
-  if [ -d "$ROOT_DIR/.venv" ]; then
-    DEST_DIR="$ROOT_DIR/.venv/bin"
+  # Detect virtualenv bin dir
+  if [ -n "${VIRTUAL_ENV:-}" ]; then
+    DEST_DIR="$VIRTUAL_ENV/bin"
   else
-    echo "[ERROR] No virtualenv detected and .venv not found; installing to /usr/local/bin requires sudo." >&2
-    echo "Run this script inside your project's virtualenv or create a .venv via 'python -m venv .venv'" >&2
-    exit 1
+    # Fallback to .venv in project root
+    if [ -d "$ROOT_DIR/.venv" ]; then
+      DEST_DIR="$ROOT_DIR/.venv/bin"
+    else
+      echo "[ERROR] No virtualenv detected and .venv not found." >&2
+      echo "Run inside your project's virtualenv, create a .venv via 'uv sync'," >&2
+      echo "or set HADOLINT_DEST_DIR to install elsewhere (e.g., /usr/local/bin)." >&2
+      exit 1
+    fi
   fi
 fi
 

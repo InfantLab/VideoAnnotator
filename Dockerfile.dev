@@ -63,7 +63,7 @@ COPY weights/ /app/weights/
 # Install dependencies (torch/torchvision/torchaudio come from the configured
 # `pytorch-cu124` uv index in pyproject.toml).
 RUN uv sync --frozen --no-editable \
-    && bash scripts/install_hadolint.sh \
+    && HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh \
     && uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 
 # Verify GPU access and model cache (no model downloading needed!)
