@@ -193,27 +193,34 @@ export class COCOOpenFace3Parser {
   /**
    * Validate COCO+OpenFace3 data structure
    */
-  private isValidCOCOOpenFace3Data(data: any): data is COCOOpenFace3Data {
+  private isValidCOCOOpenFace3Data(data: unknown): data is COCOOpenFace3Data {
     if (!data || typeof data !== 'object') {
       return false;
     }
 
+    const record = data as Record<string, unknown>;
+
     // Check required top-level structure
-    if (!data.info || !data.images || !data.annotations || 
-        !Array.isArray(data.images) || !Array.isArray(data.annotations)) {
+    if (!record.info || !record.images || !record.annotations || 
+        !Array.isArray(record.images) || !Array.isArray(record.annotations)) {
       return false;
     }
 
+    const info = record.info as Record<string, unknown>;
+    const annotations = record.annotations as unknown[];
+
     // Check info structure (VideoAnnotator COCO Export)
-    if (!data.info.description || !data.info.description.includes('VideoAnnotator')) {
+    if (typeof info.description !== 'string' || !info.description.includes('VideoAnnotator')) {
       return false;
     }
 
     // Check at least one annotation has OpenFace3 data
-    if (data.annotations.length > 0) {
-      const hasOpenFace3 = data.annotations.some((annotation: any) => 
-        annotation.openface3 && typeof annotation.openface3 === 'object'
-      );
+    if (annotations.length > 0) {
+      const hasOpenFace3 = annotations.some((annotation) => {
+        if (!annotation || typeof annotation !== 'object') return false;
+        const ann = annotation as Record<string, unknown>;
+        return !!ann.openface3 && typeof ann.openface3 === 'object';
+      });
       if (!hasOpenFace3) {
         return false;
       }

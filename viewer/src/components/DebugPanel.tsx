@@ -62,7 +62,7 @@ export const DebugPanel = ({ isOpen, onClose }: DebugPanelProps) => {
             
             // Convert merger result to fileUtils format (same as FileUploader)
             detected = {
-              type: mergerResult.type === 'complete_results' ? 'unknown' : mergerResult.type as any,
+              type: mergerResult.type,
               extension: 'json',
               mimeType: 'application/json',
               confidence: mergerResult.confidence > 0.7 ? 'high' : 
@@ -71,8 +71,9 @@ export const DebugPanel = ({ isOpen, onClose }: DebugPanelProps) => {
             };
             addLog(`📝 Step 3 - merger result: ${detected.type} (${detected.confidence}) - confidence: ${mergerResult.confidence.toFixed(3)}`);
           }
-        } catch (error) {
-          addLog(`❌ JSON detection failed: ${error.message}`);
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : String(error);
+          addLog(`❌ JSON detection failed: ${message}`);
         }
       }
       
@@ -83,8 +84,9 @@ export const DebugPanel = ({ isOpen, onClose }: DebugPanelProps) => {
       const wouldBeAccepted = detected.type !== 'unknown';
       addLog(`📋 Would be accepted by drag & drop: ${wouldBeAccepted ? '✅ YES' : '❌ NO - shows as "Unknown file type"'}`);
       
-    } catch (error) {
-      addLog(`❌ Failed to load file: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      addLog(`❌ Failed to load file: ${message}`);
     }
   };
 
@@ -138,24 +140,29 @@ export const DebugPanel = ({ isOpen, onClose }: DebugPanelProps) => {
     
     try {
       // Access the function from the global window object
-      const debugUtils = (window as any).debugUtils;
+      const debugUtils = (window as unknown as { debugUtils?: unknown }).debugUtils;
       if (!debugUtils || !debugUtils.checkDataIntegrity) {
         addLog('❌ debugUtils.checkDataIntegrity not available');
         addLog('Make sure debug utilities are loaded');
         setIsRunning(false);
         return;
       }
+
+      const debugUtilsWithIntegrity = debugUtils as {
+        checkDataIntegrity: (key: string) => Promise<{ valid: boolean; issues: string[] }>;
+      };
       
       for (const [key, _] of Object.entries(DEMO_DATA_SETS)) {
         addLog(`Checking ${key}...`);
-        const result = await debugUtils.checkDataIntegrity(key);
+        const result = await debugUtilsWithIntegrity.checkDataIntegrity(key);
         addLog(`${key}: ${result.valid ? '✅ Valid' : '❌ Issues found'}`);
         if (!result.valid) {
           result.issues.forEach(issue => addLog(`  - ${issue}`));
         }
       }
-    } catch (error) {
-      addLog(`Error: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      addLog(`Error: ${message}`);
     }
     
     setIsRunning(false);

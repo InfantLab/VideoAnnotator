@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import type { ConfigValidationResult } from '@/types/api';
+import type { ValidationIssue } from '@/types/api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -35,13 +36,14 @@ export function ConfigValidationPanel({
     // Update expanded sections when validationResult changes
     React.useEffect(() => {
         if (validationResult) {
-            const issuesByField = new Map<string, any[]>();
+            const issuesByField = new Map<string, ValidationIssue[]>();
             [...(validationResult.errors || []), ...(validationResult.warnings || [])].forEach((issue) => {
                 const fullField = issue.field || 'general';
                 const parentField = fullField.split('.')[0];
                 if (!issuesByField.has(parentField)) {
                     issuesByField.set(parentField, []);
                 }
+                issuesByField.get(parentField)!.push(issue);
             });
 
             // Expand all fields by default

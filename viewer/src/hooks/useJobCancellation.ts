@@ -6,6 +6,7 @@ import { apiClient } from '@/api/client';
 import { useToast } from '@/hooks/use-toast';
 import { QueryKeys } from '@/types/api';
 import type { JobStatus } from '@/types/api';
+import type { Job } from '@/types/api';
 import { showErrorToast } from '@/lib/toastHelpers';
 import { parseApiError } from '@/lib/errorHandling';
 
@@ -37,10 +38,10 @@ export function useJobCancellation(jobId: string, currentStatus: JobStatus) {
             await queryClient.cancelQueries({ queryKey: QueryKeys.job(jobId) });
 
             // Snapshot the previous value for rollback
-            const previousJob = queryClient.getQueryData(QueryKeys.job(jobId));
+            const previousJob = queryClient.getQueryData<Job>(QueryKeys.job(jobId));
 
             // Optimistically update the job status
-            queryClient.setQueryData(QueryKeys.job(jobId), (old: any) => {
+            queryClient.setQueryData<Job>(QueryKeys.job(jobId), (old) => {
                 if (!old) return old;
                 return {
                     ...old,
@@ -54,7 +55,7 @@ export function useJobCancellation(jobId: string, currentStatus: JobStatus) {
 
         // On success: update to 'cancelled' and show success toast
         onSuccess: (data) => {
-            queryClient.setQueryData(QueryKeys.job(jobId), (old: any) => {
+            queryClient.setQueryData<Job>(QueryKeys.job(jobId), (old) => {
                 if (!old) return old;
                 return {
                     ...old,

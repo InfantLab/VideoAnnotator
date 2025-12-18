@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/api/client";
+import { apiClient, type JobResponse } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,8 +97,9 @@ const CreateJobDetail = () => {
     if (!job) return;
 
     // Extract video filename with fallback
-    const jobData = job as any;
-    const videoFilename = jobData.video_filename || jobData.filename || jobData.video_name;
+    const record = job as JobResponse & Record<string, unknown>;
+    const getString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
+    const videoFilename = getString(record.video_filename) ?? getString(record.filename) ?? getString(record.video_name);
 
     // Navigate to create new job with pre-filled settings
     navigate('/create/new', {
@@ -154,19 +155,28 @@ const CreateJobDetail = () => {
   }
 
   // Defensive field access - server may use different field names
-  const jobData = job as any;
-  let videoFilename = jobData.video_filename || jobData.filename || jobData.video_name;
+  const jobData = job as JobResponse & Record<string, unknown>;
+  const getString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
+  const getNumber = (value: unknown): number | null =>
+    typeof value === 'number' && Number.isFinite(value) ? value : null;
+
+  let videoFilename = getString(jobData.video_filename) ?? getString(jobData.filename) ?? getString(jobData.video_name);
 
   // If no direct filename field, extract from video_path
-  if (!videoFilename && jobData.video_path) {
-    videoFilename = jobData.video_path.split('/').pop() || jobData.video_path;
+  const videoPathMaybe = getString(jobData.video_path);
+  if (!videoFilename && videoPathMaybe) {
+    videoFilename = videoPathMaybe.split('/').pop() || videoPathMaybe;
   }
 
   videoFilename = videoFilename || "N/A";
 
-  const videoSizeBytes = jobData.video_size_bytes || jobData.file_size_bytes || null;
-  const videoDurationSeconds = jobData.video_duration_seconds || jobData.duration_seconds || null;
-  const videoPath = jobData.video_path || jobData.file_path || jobData.input_file || "N/A";
+  const videoSizeBytes = getNumber(jobData.video_size_bytes) ?? getNumber(jobData.file_size_bytes);
+  const videoDurationSeconds = getNumber(jobData.video_duration_seconds) ?? getNumber(jobData.duration_seconds);
+  const videoPath =
+    getString(jobData.video_path) ??
+    getString(jobData.file_path) ??
+    getString(jobData.input_file) ??
+    "N/A";
 
   return (
     <div className="space-y-6">

@@ -18,14 +18,17 @@ vi.mock('@/api/client', () => ({
 
 // Simple test component that mimics job creation flow
 function TestConfigForm() {
-    const [config, setConfig] = React.useState<Record<string, any>>({
+    type SceneDetectionConfig = { enabled: boolean; threshold: number };
+    type TestConfig = { scene_detection: SceneDetectionConfig };
+
+    const [config, setConfig] = React.useState<TestConfig>({
         scene_detection: { enabled: true, threshold: 0.5 },
     });
 
     const [validationResult, setValidationResult] = React.useState<ConfigValidationResult | null>(null);
     const [isValidating, setIsValidating] = React.useState(false);
 
-    const validateConfig = React.useCallback(async (cfg: Record<string, any>) => {
+    const validateConfig = React.useCallback(async (cfg: TestConfig) => {
         setIsValidating(true);
         try {
             const result = await apiClient.validateConfig(cfg);

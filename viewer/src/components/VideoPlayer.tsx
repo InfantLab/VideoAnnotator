@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useRef, useCallback, useState } from 'react';
-import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCue, RTTMSegment, SceneAnnotation, LAIONFaceAnnotation, COCO_SKELETON_CONNECTIONS, YOLO_POSE_PALETTE, YOLO_LIMB_COLORS, YOLO_KEYPOINT_COLORS } from '@/types/annotations';
+import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCue, RTTMSegment, SceneAnnotation, LAIONFaceAnnotation, COCO_SKELETON_CONNECTIONS, YOLO_POSE_PALETTE, YOLO_LIMB_COLORS, YOLO_KEYPOINT_COLORS, OpenFace3ActionUnit, OpenFace3ActionUnits } from '@/types/annotations';
 import { getFacesAtTime, getDominantEmotion } from '@/lib/parsers/face';
-import { OpenFace3Settings } from './OpenFace3Controls';
+import type { OpenFace3Settings } from './openface3Settings';
 
 interface VideoPlayerProps {
   videoFile: File;
@@ -368,17 +368,18 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         const scaledY = y * scaleY;
         
         // Display active Action Units
-        const activeAUs = Object.entries(aus).filter(([_, au]) => {
-          const actionUnit = au as any; // Type assertion for now
-          return actionUnit.presence && actionUnit.intensity > 0.5;
-        });
+        const activeAUs = (Object.entries(aus) as Array<[
+          keyof OpenFace3ActionUnits,
+          OpenFace3ActionUnit
+        ]>).filter(([_, au]) => au.presence && au.intensity > 0.5);
         
         if (activeAUs.length > 0) {
           const labelY = scaledY + (height * scaleY) + 25;
-          const auText = activeAUs.map(([name, au]) => {
-            const actionUnit = au as any; // Type assertion for now
-            return `${name.replace('AU', '').replace('_', ' ')}: ${actionUnit.intensity.toFixed(1)}`;
-          }).join(', ');
+          const auText = activeAUs
+            .map(([name, au]) => {
+              return `${String(name).replace('AU', '').replace('_', ' ')}: ${au.intensity.toFixed(1)}`;
+            })
+            .join(', ');
           
           // Background
           const textWidth = ctx.measureText(auText).width;
@@ -675,7 +676,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         drawOpenFace3Emotions(ctx);
       }
     }, [getCurrentPoseData, drawPose, drawSubtitles, drawSpeakers, drawScenes, drawFaces, drawEmotions, 
-        getCurrentOpenFace3Data, drawOpenFace3FaceBoxes, drawOpenFace3Landmarks, drawOpenFace3ActionUnits,
+      drawOpenFace3FaceBoxes, drawOpenFace3Landmarks, drawOpenFace3ActionUnits,
         drawOpenFace3HeadPose, drawOpenFace3Gaze, drawOpenFace3Emotions, 
         currentTime, overlaySettings.pose, annotationData, openface3Settings]);
 

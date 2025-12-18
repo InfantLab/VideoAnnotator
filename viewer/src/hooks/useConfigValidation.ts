@@ -8,17 +8,19 @@ import type { ConfigValidationResult } from '@/types/api';
 /**
  * Generate stable hash for config object (order-independent)
  */
-function hashConfig(config: Record<string, any>): string {
+function hashConfig(config: Record<string, unknown>): string {
     // Sort keys recursively for order-independent hash
-    const normalize = (obj: any): any => {
+    const normalize = (obj: unknown): unknown => {
         if (obj === null || typeof obj !== 'object') return obj;
         if (Array.isArray(obj)) return obj.map(normalize);
-        return Object.keys(obj)
+
+        const record = obj as Record<string, unknown>;
+        return Object.keys(record)
             .sort()
             .reduce((acc, key) => {
-                acc[key] = normalize(obj[key]);
+                acc[key] = normalize(record[key]);
                 return acc;
-            }, {} as Record<string, any>);
+            }, {} as Record<string, unknown>);
     };
 
     const normalized = normalize(config);
@@ -29,8 +31,8 @@ interface UseConfigValidationReturn {
     validationResult: ConfigValidationResult | null;
     isValidating: boolean;
     error: Error | null;
-    validateConfig: (config: Record<string, any>) => void;
-    validateNow: (config: Record<string, any>) => Promise<void>;
+    validateConfig: (config: Record<string, unknown>) => void;
+    validateNow: (config: Record<string, unknown>) => Promise<void>;
     clearValidation: () => void;
 }
 
@@ -57,7 +59,7 @@ export function useConfigValidation(): UseConfigValidationReturn {
     /**
      * Perform validation (internal)
      */
-    const performValidation = useCallback(async (config: Record<string, any>) => {
+    const performValidation = useCallback(async (config: Record<string, unknown>) => {
         // Cancel any pending validation
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
@@ -106,7 +108,7 @@ export function useConfigValidation(): UseConfigValidationReturn {
     /**
      * Validate config with debouncing
      */
-    const validateConfig = useCallback((config: Record<string, any>) => {
+    const validateConfig = useCallback((config: Record<string, unknown>) => {
         // Clear existing timer
         if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);
@@ -121,7 +123,7 @@ export function useConfigValidation(): UseConfigValidationReturn {
     /**
      * Validate immediately without debounce
      */
-    const validateNow = useCallback(async (config: Record<string, any>) => {
+    const validateNow = useCallback(async (config: Record<string, unknown>) => {
         // Clear any pending debounced validation
         if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);

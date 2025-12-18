@@ -158,6 +158,14 @@ export class ValidationError extends Error {
     }
 }
 
+function getZodReceived(issue: z.ZodIssue | undefined): unknown {
+    if (!issue) return undefined;
+    if ('received' in issue) {
+        return (issue as { received: unknown }).received;
+    }
+    return undefined;
+}
+
 /**
  * Validates COCO person tracking data
  */
@@ -166,10 +174,11 @@ export function validateCOCOPersonData(data: unknown[]): COCOPersonAnnotation[] 
         return z.array(COCOPersonAnnotationSchema).parse(data);
     } catch (error) {
         if (error instanceof z.ZodError) {
+            const issue = error.errors[0];
             throw new ValidationError(
                 `Invalid COCO person tracking data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-                (error.errors[0] as any)?.received
+                getZodReceived(issue)
             );
         }
         throw error;
@@ -184,10 +193,11 @@ export function validateWebVTTData(data: unknown[]): WebVTTCue[] {
         return z.array(WebVTTCueSchema).parse(data);
     } catch (error) {
         if (error instanceof z.ZodError) {
+            const issue = error.errors[0];
             throw new ValidationError(
                 `Invalid WebVTT data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-                (error.errors[0] as any)?.received
+                getZodReceived(issue)
             );
         }
         throw error;
@@ -202,10 +212,11 @@ export function validateRTTMData(data: unknown[]): RTTMSegment[] {
         return z.array(RTTMSegmentSchema).parse(data);
     } catch (error) {
         if (error instanceof z.ZodError) {
+            const issue = error.errors[0];
             throw new ValidationError(
                 `Invalid RTTM data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-                (error.errors[0] as any)?.received
+                getZodReceived(issue)
             );
         }
         throw error;
@@ -220,10 +231,11 @@ export function validateSceneData(data: unknown[]): SceneAnnotation[] {
         return z.array(SceneAnnotationSchema).parse(data);
     } catch (error) {
         if (error instanceof z.ZodError) {
+            const issue = error.errors[0];
             throw new ValidationError(
                 `Invalid scene detection data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-                (error.errors[0] as any)?.received
+                getZodReceived(issue)
             );
         }
         throw error;
@@ -238,10 +250,11 @@ export function validateStandardAnnotationData(data: unknown): StandardAnnotatio
         return StandardAnnotationDataSchema.parse(data);
     } catch (error) {
         if (error instanceof z.ZodError) {
+            const issue = error.errors[0];
             throw new ValidationError(
                 `Invalid annotation data: ${error.errors[0]?.message}`,
                 error.errors[0]?.path.join('.'),
-                (error.errors[0] as any)?.received
+                getZodReceived(issue)
             );
         }
         throw error;

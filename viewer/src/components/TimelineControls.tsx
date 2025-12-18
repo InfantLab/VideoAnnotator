@@ -12,8 +12,17 @@ interface TimelineControlsProps {
   settings: TimelineSettings;
   onChange: (settings: TimelineSettings) => void;
   annotationData?: StandardAnnotationData | null;
-  overlaySettings?: any; // For sync functionality
+  overlaySettings?: OverlaySettings; // For sync functionality
 }
+
+type OverlaySettings = {
+  subtitles?: boolean;
+  speakers?: boolean;
+  scenes?: boolean;
+  pose?: boolean;
+  faces?: boolean;
+  emotions?: boolean;
+};
 
 export const TimelineControls = ({ 
   settings, 

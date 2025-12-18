@@ -18,7 +18,7 @@ export const Timeline = ({ annotationData, currentTime, duration, settings, onSe
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     setIsDragging(true);
     handleMouseMove(e);
-  }, []);
+  }, [handleMouseMove]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent | MouseEvent) => {
     if (!containerRef.current) return;

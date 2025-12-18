@@ -9,10 +9,12 @@ import { FileUploader } from './FileUploader';
 import { WelcomeScreen } from './WelcomeScreen';
 import { Footer } from './Footer';
 import { DebugPanel } from './DebugPanel';
-import { OpenFace3Controls, OpenFace3Settings, defaultOpenFace3Settings } from './OpenFace3Controls';
+import { OpenFace3Controls } from './OpenFace3Controls';
+import { defaultOpenFace3Settings, type OpenFace3Settings } from './openface3Settings';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StandardAnnotationData, OverlaySettings, TimelineSettings } from '@/types/annotations';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface VideoAnnotationViewerProps {
   /** Pipeline IDs that were used to generate the current annotation data */
@@ -28,6 +30,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   initialVideoFile = null,
   initialAnnotationData = null
 }) => {
+  const navigate = useNavigate();
   const [showWelcome, setShowWelcome] = useState(!initialVideoFile);
   const [videoFile, setVideoFile] = useState<File | null>(initialVideoFile);
   const [annotationData, setAnnotationData] = useState<StandardAnnotationData | null>(initialAnnotationData);
@@ -138,15 +141,9 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   }, []);
 
   const handleBackToHome = useCallback(() => {
-    // Reset all state and return to welcome screen
-    setVideoFile(null);
-    setAnnotationData(null);
-    setCurrentTime(0);
-    setIsPlaying(false);
-    setDuration(0);
-    setPlaybackRate(1);
-    setShowWelcome(true);
-  }, []);
+    // "Home" is the dashboard route.
+    navigate('/');
+  }, [navigate]);
 
   // Debug panel keyboard shortcut
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
@@ -187,6 +184,14 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
               <p className="text-muted-foreground">
                 Load a video file and its corresponding annotation data to begin analysis
               </p>
+              <div className="mt-4 flex items-center justify-center gap-2">
+                <Link to="/library">
+                  <Button variant="outline" size="sm">Local Library</Button>
+                </Link>
+                <Link to="/create/jobs">
+                  <Button variant="outline" size="sm">Control Panel</Button>
+                </Link>
+              </div>
             </div>
             <div className="flex flex-col items-center gap-4 mb-6">
               <button
@@ -239,9 +244,9 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                 size="sm"
                 onClick={handleBackToHome}
                 className="flex items-center gap-2"
-                title="Back to Home"
+                title="Back to Dashboard"
               >
-                ← Home
+                ← Dashboard
               </Button>
               <h1 className="text-xl font-semibold">Video Annotation Viewer</h1>
             </div>

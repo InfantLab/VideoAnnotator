@@ -105,16 +105,27 @@ const localStorageMock = {
   length: 0,
   key: vi.fn(() => null),
 }
-global.localStorage = localStorageMock as any
+global.localStorage = localStorageMock as unknown as Storage
 
 // Mock File constructor for file upload tests
 global.File = class MockFile {
-  constructor(public chunks: any[], public name: string, public options: any = {}) { }
-  get size() { return this.chunks.reduce((size, chunk) => size + chunk.length, 0) }
+  constructor(
+    public chunks: BlobPart[],
+    public name: string,
+    public options: FilePropertyBag = {}
+  ) { }
+  get size() {
+    return this.chunks.reduce((size, chunk) => {
+      if (typeof chunk === 'string') return size + chunk.length
+      if (chunk instanceof Blob) return size + chunk.size
+      if (chunk instanceof ArrayBuffer) return size + chunk.byteLength
+      return size
+    }, 0)
+  }
   get type() { return this.options.type || '' }
-  text() { return Promise.resolve(this.chunks.join('')) }
+  text() { return Promise.resolve(this.chunks.map((chunk) => (typeof chunk === 'string' ? chunk : '')).join('')) }
   slice(start?: number, end?: number) {
-    const content = this.chunks.join('').slice(start, end)
+    const content = this.chunks.map((chunk) => (typeof chunk === 'string' ? chunk : '')).join('').slice(start, end)
     return { text: () => Promise.resolve(content) }
   }
-} as any
+} as unknown as typeof File

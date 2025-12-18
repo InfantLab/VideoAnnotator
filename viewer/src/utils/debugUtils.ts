@@ -294,7 +294,12 @@ const createVideoAnnotatorDebug = () => {
 
 // Make utilities available globally for browser console testing
 if (typeof window !== 'undefined') {
-  (window as any).debugUtils = {
+  const windowWithDebug = window as unknown as {
+    debugUtils?: unknown;
+    VideoAnnotatorDebug?: unknown;
+  };
+
+  windowWithDebug.debugUtils = {
     loadDemoAnnotations,
     loadDemoVideo,
     loadDemoDataset,
@@ -402,7 +407,7 @@ if (typeof window !== 'undefined') {
   }
 
     // Add VideoAnnotatorDebug for API testing
-    ; (window as any).VideoAnnotatorDebug = createVideoAnnotatorDebug()
+    ; windowWithDebug.VideoAnnotatorDebug = createVideoAnnotatorDebug()
 
   // Add help message
   console.log(`

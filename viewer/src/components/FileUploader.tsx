@@ -102,7 +102,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
 
             // Convert merger result to fileUtils format
             detected = {
-              type: mergerResult.type as any, // Now that fileUtils supports all types, no conversion needed
+              type: mergerResult.type,
               extension: 'json',
               mimeType: 'application/json',
               confidence: mergerResult.confidence > 0.7 ? 'high' :
@@ -110,7 +110,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
               reason: `Detected via content analysis (${mergerResult.confidence.toFixed(2)} confidence)`
             };
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.warn('JSON detection failed:', error);
           // Keep as unknown if both methods fail
         }
@@ -179,7 +179,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
             fs.detected.confidence === 'medium' ? 0.7 : 0.5;
           return {
             file: fs.file,
-            type: fs.detected.type as any,
+            type: fs.detected.type,
             confidence,
             pipeline: fs.detected.type !== 'video' && fs.detected.type !== 'audio' ? fs.detected.type : undefined
           };
@@ -269,7 +269,9 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
     }
   }, []);
 
-  const handleDemoLoad = useCallback(async (datasetKey: string) => {
+  type DemoDatasetKey = keyof typeof import('../utils/debugUtils').DEMO_DATA_SETS;
+
+  const handleDemoLoad = useCallback(async (datasetKey: DemoDatasetKey) => {
     try {
       setIsProcessing(true);
       setProcessingStage(`Loading ${datasetKey} demo dataset...`);
@@ -283,8 +285,8 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
 
       // Load video and annotations in parallel
       const [videoFile, annotation] = await Promise.all([
-        loadDemoVideo(datasetKey as any),
-        loadDemoAnnotations(datasetKey as any)
+        loadDemoVideo(datasetKey),
+        loadDemoAnnotations(datasetKey)
       ]);
 
       setProcessingProgress(80);
@@ -305,7 +307,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
       } else {
         throw new Error('Failed to load demo video or annotations');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       toast({
         title: "Error loading demo dataset",
         description: error instanceof Error ? error.message : "Failed to load demo data",

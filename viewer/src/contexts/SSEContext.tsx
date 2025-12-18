@@ -41,7 +41,7 @@ export const SSEProvider: React.FC<SSEProviderProps> = ({
   );
 };
 
-export const useSSEContext = () => {
+const useSSEContext = () => {
   const context = useContext(SSEContext);
   if (context === undefined) {
     throw new Error('useSSEContext must be used within an SSEProvider');
@@ -50,7 +50,7 @@ export const useSSEContext = () => {
 };
 
 // Utility hook to get job-specific events from the global SSE stream
-export const useJobEvents = (jobId: string | undefined) => {
+const useJobEvents = (jobId: string | undefined) => {
   const { events } = useSSEContext();
   
   const jobEvents = React.useMemo(() => {

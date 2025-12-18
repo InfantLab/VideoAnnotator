@@ -308,9 +308,9 @@ export interface VideoAnnotatorCompleteResults {
     scene?: PipelineResult<SceneAnnotation>;
     person?: PipelineResult<COCOPersonAnnotation>;
     face?: PipelineResult<LAIONFaceAnnotation>;
-    audio?: PipelineResult<any>; // Audio results structure varies
+    audio?: PipelineResult<unknown>; // Audio results structure varies
   };
-  errors: any[];
+  errors: unknown[];
   end_time: string; // ISO timestamp
   total_duration: number; // seconds
 }

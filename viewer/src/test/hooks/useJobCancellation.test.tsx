@@ -9,6 +9,14 @@ import { apiClient } from '@/api/client';
 import type { JobStatus } from '@/types/api';
 import React from 'react';
 
+type CancelJobResponse = Awaited<ReturnType<(typeof apiClient)['cancelJob']>>;
+type CachedJob = {
+  id: string;
+  status: JobStatus;
+  created_at?: string;
+  updated_at?: string;
+};
+
 // Mock the API client
 vi.mock('@/api/client', () => ({
   apiClient: {
@@ -112,12 +120,12 @@ describe('useJobCancellation', () => {
     });
 
     it('should set loading state during cancellation', async () => {
-      let resolveCancel: (value: any) => void;
-      const cancelPromise = new Promise((resolve) => {
+      let resolveCancel!: (value: CancelJobResponse) => void;
+      const cancelPromise = new Promise<CancelJobResponse>((resolve) => {
         resolveCancel = resolve;
       });
 
-      vi.mocked(apiClient.cancelJob).mockReturnValueOnce(cancelPromise as any);
+      vi.mocked(apiClient.cancelJob).mockReturnValueOnce(cancelPromise);
 
       const { result } = renderHook(
         () => useJobCancellation('job123', 'running'),
@@ -147,12 +155,12 @@ describe('useJobCancellation', () => {
   describe('optimistic updates', () => {
     it('should optimistically update job status to cancelling', async () => {
       // Use a delayed response to catch the optimistic update
-      let resolveCancel: (value: any) => void;
-      const cancelPromise = new Promise((resolve) => {
+      let resolveCancel!: (value: CancelJobResponse) => void;
+      const cancelPromise = new Promise<CancelJobResponse>((resolve) => {
         resolveCancel = resolve;
       });
 
-      vi.mocked(apiClient.cancelJob).mockReturnValueOnce(cancelPromise as any);
+      vi.mocked(apiClient.cancelJob).mockReturnValueOnce(cancelPromise);
 
       // Pre-populate cache with job data
       queryClient.setQueryData(['jobs', 'job123'], {
@@ -170,7 +178,7 @@ describe('useJobCancellation', () => {
 
       // Check optimistic update happened immediately
       await waitFor(() => {
-        const jobData = queryClient.getQueryData(['jobs', 'job123']) as any;
+        const jobData = queryClient.getQueryData<CachedJob>(['jobs', 'job123']);
         expect(jobData?.status).toBe('cancelling');
       });
 
@@ -187,7 +195,7 @@ describe('useJobCancellation', () => {
       });
 
       // Check final status is 'cancelled'
-      const finalData = queryClient.getQueryData(['jobs', 'job123']) as any;
+      const finalData = queryClient.getQueryData<CachedJob>(['jobs', 'job123']);
       expect(finalData?.status).toBe('cancelled');
     });
 

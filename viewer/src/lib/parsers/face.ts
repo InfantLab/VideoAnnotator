@@ -219,16 +219,24 @@ export async function validateFaceAnalysisFile(file: File): Promise<{
 }> {
     try {
         const sample = await file.slice(0, 5000).text();
-        const data = JSON.parse(sample);
+        const data: unknown = JSON.parse(sample);
 
-        let faces: any[] = [];
-        
+        let faces: unknown[] = [];
+
         if (Array.isArray(data)) {
             faces = data;
-        } else if (data.annotations) {
-            faces = data.annotations;
-        } else if (data.results) {
-            faces = data.results;
+        } else if (data && typeof data === 'object') {
+            const record = data as Record<string, unknown>;
+            if (Array.isArray(record.annotations)) {
+                faces = record.annotations;
+            } else if (Array.isArray(record.results)) {
+                faces = record.results;
+            } else {
+                return {
+                    isValid: false,
+                    error: 'Invalid format: expected array or object with annotations/results field'
+                };
+            }
         } else {
             return {
                 isValid: false,

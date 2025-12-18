@@ -3,6 +3,15 @@ import { StandardAnnotationData } from '@/types/annotations';
 import { apiClient } from '@/api/client';
 import * as zip from '@zip.js/zip.js';
 import { detectFileType, mergeAnnotationData, DetectedFile } from '@/lib/parsers/merger';
+import {
+  ensurePermission,
+  getDatasetFolderName,
+  getDatasetForJob,
+  getRootDirHandle,
+  resolveDatasetsDir,
+  setDatasetForJob,
+  setRootDirHandle
+} from '@/lib/localLibrary/libraryStore';
 
 export type DownloadState = 'idle' | 'selecting_dir' | 'downloading' | 'unzipping' | 'ready' | 'error';
 
@@ -31,33 +40,190 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
     setAnnotationData(null);
   }, []);
 
+  const tryOpenLocalDataset = useCallback(async (jobId: string) => {
+    const root = await getRootDirHandle();
+    if (!root) return null;
+
+    const hasPermission = await ensurePermission(root, 'readwrite');
+    if (!hasPermission) return null;
+
+    const entry = await getDatasetForJob(jobId);
+    const datasetFolderName = entry?.folderName ?? getDatasetFolderName(jobId);
+
+    try {
+      const datasetsDir = await resolveDatasetsDir(root);
+      const datasetDir = await datasetsDir.getDirectoryHandle(datasetFolderName, { create: false });
+
+      const annotationsHandle = await datasetDir.getFileHandle('annotations_merged.json', { create: false }).catch(() => null);
+      if (!annotationsHandle) return null;
+
+      let videoFile: File | null = null;
+      if (entry?.videoFileName) {
+        const fileHandle = await datasetDir.getFileHandle(entry.videoFileName, { create: false }).catch(() => null);
+        if (fileHandle) {
+          videoFile = await fileHandle.getFile();
+        }
+      }
+
+      if (!videoFile) {
+        // If index entry was lost, fall back to dataset.json.
+        const manifestHandle = await datasetDir.getFileHandle('dataset.json', { create: false }).catch(() => null);
+        if (manifestHandle) {
+          const manifestFile = await manifestHandle.getFile();
+          const manifest = JSON.parse(await manifestFile.text()) as {
+            video?: { local?: { relative_path?: unknown } };
+          };
+          const relPath = manifest.video?.local?.relative_path;
+          if (typeof relPath === 'string' && relPath.length > 0) {
+            const fileHandle = await datasetDir.getFileHandle(relPath, { create: false }).catch(() => null);
+            if (fileHandle) {
+              videoFile = await fileHandle.getFile();
+            }
+          }
+        }
+      }
+
+      if (!videoFile) {
+        return null;
+      }
+
+      const annotationsFile = await annotationsHandle.getFile();
+      const annotationsText = await annotationsFile.text();
+      const annotations = JSON.parse(annotationsText) as StandardAnnotationData;
+
+      return { videoFile, annotationData: annotations };
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const pickOrReuseRootDir = useCallback(async (): Promise<FileSystemDirectoryHandle | null> => {
+    const supportsFS = 'showDirectoryPicker' in window;
+    if (!supportsFS) return null;
+
+    const existing = await getRootDirHandle();
+    if (existing) {
+      const ok = await ensurePermission(existing, 'readwrite');
+      if (ok) return existing;
+    }
+
+    try {
+      // @ts-expect-error - File System Access API is not always present in TS lib.dom
+      const handle: FileSystemDirectoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      await setRootDirHandle(handle);
+      return handle;
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return null;
+      return null;
+    }
+  }, []);
+
+  const writeFileToDir = useCallback(async (dir: FileSystemDirectoryHandle, name: string, blob: Blob) => {
+    const fileHandle = await dir.getFileHandle(name, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+  }, []);
+
+  const ingestToLocalDataset = useCallback(
+    async (jobId: string, rootDir: FileSystemDirectoryHandle, zipBlob: Blob, video: File, annotations: StandardAnnotationData) => {
+      const datasetsDir = await resolveDatasetsDir(rootDir);
+      const folderName = getDatasetFolderName(jobId);
+      const datasetDir = await datasetsDir.getDirectoryHandle(folderName, { create: true });
+
+      // Save original zip (transport) for debugging/auditing.
+      await writeFileToDir(datasetDir, `job_${jobId}_artifacts.zip`, zipBlob);
+
+      // Save canonical artifacts.
+      await writeFileToDir(datasetDir, video.name, video);
+      await writeFileToDir(datasetDir, 'annotations_merged.json', new Blob([JSON.stringify(annotations, null, 2)], { type: 'application/json' }));
+
+      const jobMeta = await apiClient.getJob(jobId).catch(() => null);
+      const config = apiClient.getConfig();
+
+      const datasetId = crypto.randomUUID();
+      const now = new Date().toISOString();
+      const datasetManifest = {
+        schema_version: '1',
+        dataset_id: datasetId,
+        created_at: now,
+        updated_at: now,
+        title: jobMeta?.video_filename ?? video.name,
+        video: {
+          original_filename: jobMeta?.video_filename ?? video.name,
+          size_bytes: jobMeta?.video_size_bytes ?? video.size,
+          duration_seconds: jobMeta?.video_duration_seconds ?? undefined,
+          local: {
+            relative_path: video.name
+          }
+        },
+        artifacts: [
+          {
+            kind: 'annotations_merged',
+            local: { relative_path: 'annotations_merged.json' }
+          }
+        ],
+        provenance: {
+          source: 'videoannotator',
+          server_job: jobMeta
+            ? {
+                base_url: config.baseURL,
+                job_id: jobId,
+                job_created_at: jobMeta.created_at,
+                job_completed_at: jobMeta.completed_at,
+                selected_pipelines: jobMeta.selected_pipelines ?? [],
+                status: jobMeta.status
+              }
+            : {
+                base_url: config.baseURL,
+                job_id: jobId
+              }
+        }
+      };
+
+      await writeFileToDir(datasetDir, 'dataset.json', new Blob([JSON.stringify(datasetManifest, null, 2)], { type: 'application/json' }));
+
+      await setDatasetForJob(jobId, {
+        datasetId,
+        folderName,
+        createdAt: now,
+        videoFileName: video.name
+      });
+    },
+    [writeFileToDir]
+  );
+
   const startDownload = useCallback(async (jobId: string) => {
     console.log('Starting download for job:', jobId);
+    setError(null);
+    setProgress(0);
+
+    // 0) Fast path: open local dataset if already ingested
+    try {
+      const local = await tryOpenLocalDataset(jobId);
+      if (local) {
+        setState('ready');
+        setVideoFile(local.videoFile);
+        setAnnotationData(local.annotationData);
+        return;
+      }
+    } catch {
+      // Ignore and continue to download path.
+    }
+
     setState('selecting_dir');
     setError(null);
     setProgress(0);
     
     try {
-      // Check for File System Access API support
       const supportsFS = 'showDirectoryPicker' in window;
-      let dirHandle: any = null;
-      let fileHandle: any = null;
-      let writable: any = null;
-
+      let rootDirHandle: FileSystemDirectoryHandle | null = null;
       if (supportsFS) {
-        try {
-          // @ts-ignore - File System Access API types might be missing
-          dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-          fileHandle = await dirHandle.getFileHandle(`job_${jobId}_artifacts.zip`, { create: true });
-          writable = await fileHandle.createWritable();
-        } catch (err) {
-          // User cancelled or permission denied
-          if (err instanceof Error && err.name === 'AbortError') {
-            setState('idle');
-            return;
-          }
-          console.warn('FS Access API failed, falling back to memory/blob', err);
-          // Fallback to memory if FS fails (or we could error out if strict)
+        rootDirHandle = await pickOrReuseRootDir();
+        if (!rootDirHandle) {
+          // User canceled folder picker.
+          setState('idle');
+          return;
         }
       }
 
@@ -87,19 +253,10 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
 
       let blob: Blob;
 
-      if (writable) {
-        // Stream directly to disk
-        // We need to tee the stream: one branch to disk, one to blob for immediate viewing?
-        // Actually, if we save to disk, we should read back from disk to avoid double memory usage.
-        // But for now, let's keep it simple: 
-        // If we have FS access, we pipe to disk AND we need the data for the viewer.
-        // Reading back from the file handle is cleaner than teeing into memory.
-        
-        await response.body.pipeThrough(progressStream).pipeTo(writable);
-        
-        // Read back from disk
-        const file = await fileHandle!.getFile();
-        blob = file;
+      if (rootDirHandle) {
+        // Stream to memory first for unzip. We also persist the ZIP into the dataset folder after unzip.
+        // (Teeing streams is possible but adds complexity; keep this robust first.)
+        blob = await new Response(response.body.pipeThrough(progressStream)).blob();
       } else {
         // Fallback: Buffer in memory
         blob = await new Response(response.body.pipeThrough(progressStream)).blob();
@@ -126,22 +283,28 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
       let foundAnnotations: StandardAnnotationData | null = null;
       const candidateFiles: File[] = [];
 
-      for (const entry of entries) {
-        if (entry.directory) continue;
+      type ZipEntryLike = {
+        filename: string;
+        directory?: boolean;
+        getData?: (writer: unknown) => Promise<Blob>;
+      };
 
-        // @ts-ignore - zip.js types might be slightly off for Entry
-        if (entry.filename.match(/\.(mp4|mov|avi|mkv|webm)$/i)) {
-          // @ts-ignore
-          const videoBlob = await entry.getData?.(new zip.BlobWriter());
+      for (const entry of entries) {
+        const entryLike = entry as unknown as ZipEntryLike;
+        if (entryLike.directory) continue;
+
+        if (entryLike.filename.match(/\.(mp4|mov|avi|mkv|webm)$/i)) {
+          const getData = entryLike.getData;
+          const videoBlob = typeof getData === 'function' ? await getData(new zip.BlobWriter()) : null;
           if (videoBlob) {
-            foundVideo = new File([videoBlob], entry.filename, { type: 'video/mp4' });
+            foundVideo = new File([videoBlob], entryLike.filename, { type: 'video/mp4' });
           }
         } else {
           // Extract other files for detection (JSON, VTT, RTTM)
-          // @ts-ignore
-          const fileBlob = await entry.getData?.(new zip.BlobWriter());
+          const getData = entryLike.getData;
+          const fileBlob = typeof getData === 'function' ? await getData(new zip.BlobWriter()) : null;
           if (fileBlob) {
-            candidateFiles.push(new File([fileBlob], entry.filename));
+            candidateFiles.push(new File([fileBlob], entryLike.filename));
           }
         }
       }
@@ -198,33 +361,36 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
         console.warn('No valid annotations found in artifacts ZIP');
         // We might want to allow viewing video without annotations, 
         // but for now let's assume annotations are expected or create empty structure
+        const now = new Date().toISOString();
         foundAnnotations = {
+          video_info: {
+            filename: foundVideo.name,
+            duration: 0,
+            width: 0,
+            height: 0,
+            frame_rate: 30
+          },
           metadata: {
-            created: new Date().toISOString(),
+            created: now,
             version: '1.0.0',
             pipelines: [],
-            source: 'videoannotator',
-            // @ts-ignore - Partial metadata for fallback
-            video_info: {
-              width: 0,
-              height: 0,
-              fps: 30,
-              duration: 0,
-              frame_count: 0
-            }
-          },
-          annotations: {
-            pose: [],
-            faces: [],
-            scenes: [],
-            speakers: [],
-            subtitles: []
+            source: 'videoannotator'
           }
         };
       }
 
       setVideoFile(foundVideo);
       setAnnotationData(foundAnnotations);
+
+      // Persist to local library if we have a chosen root folder.
+      if (rootDirHandle) {
+        try {
+          await ingestToLocalDataset(jobId, rootDirHandle, blob, foundVideo, foundAnnotations);
+        } catch (persistErr) {
+          console.warn('Failed to persist dataset locally (viewer will still work this session):', persistErr);
+        }
+      }
+
       setState('ready');
 
     } catch (err) {
@@ -232,7 +398,7 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
       setError(err instanceof Error ? err.message : 'Download failed');
       setState('error');
     }
-  }, []);
+  }, [ingestToLocalDataset, pickOrReuseRootDir, tryOpenLocalDataset]);
 
   return {
     state,

@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreateJobDetail from '../../pages/CreateJobDetail';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import type { JobResponse } from '@/api/client';
 
 // Mock API client
 vi.mock('@/api/client', () => ({
@@ -61,7 +62,7 @@ describe('CreateJobDetail - Partial Success', () => {
     // We need to mock the useQuery hook or the apiClient.getJob
     // Since the component uses useQuery calling apiClient.getJob, mocking apiClient.getJob is cleaner
     const { apiClient } = await import('@/api/client');
-    (apiClient.getJob as any).mockResolvedValue(mockJob);
+    vi.mocked(apiClient.getJob).mockResolvedValueOnce(mockJob as unknown as JobResponse);
 
     renderWithProviders(<CreateJobDetail />);
 
@@ -88,7 +89,7 @@ describe('CreateJobDetail - Partial Success', () => {
     };
 
     const { apiClient } = await import('@/api/client');
-    (apiClient.getJob as any).mockResolvedValue(mockJob);
+    vi.mocked(apiClient.getJob).mockResolvedValueOnce(mockJob as unknown as JobResponse);
 
     renderWithProviders(<CreateJobDetail />);
 
@@ -108,7 +109,7 @@ describe('CreateJobDetail - Partial Success', () => {
     };
 
     const { apiClient } = await import('@/api/client');
-    (apiClient.getJob as any).mockResolvedValue(mockJob);
+    vi.mocked(apiClient.getJob).mockResolvedValueOnce(mockJob as unknown as JobResponse);
 
     renderWithProviders(<CreateJobDetail />);
 

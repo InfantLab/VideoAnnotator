@@ -10,13 +10,13 @@ describe('APIClient v1.3.0 methods', () => {
 
   beforeEach(() => {
     // Mock localStorage.getItem to return null (triggers fallback to env vars)
-    if (global.localStorage && global.localStorage.getItem) {
-      (global.localStorage.getItem as any) = vi.fn(() => null);
+    if (globalThis.localStorage?.getItem) {
+      vi.spyOn(globalThis.localStorage, 'getItem').mockReturnValue(null);
     }
 
     // Reset mocks
     mockFetch = vi.fn();
-    global.fetch = mockFetch as any;
+    global.fetch = mockFetch as unknown as typeof fetch;
 
     // Create fresh client instance
     client = new APIClient('http://localhost:18011', 'test-token');

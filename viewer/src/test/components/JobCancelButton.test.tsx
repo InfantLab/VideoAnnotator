@@ -10,6 +10,8 @@ import { apiClient } from '@/api/client';
 import type { JobStatus } from '@/types/api';
 import React from 'react';
 
+type CancelJobResponse = Awaited<ReturnType<(typeof apiClient)['cancelJob']>>;
+
 // Mock the API client
 vi.mock('@/api/client', () => ({
     apiClient: {
@@ -155,12 +157,12 @@ describe('JobCancelButton', () => {
 
     describe('loading states', () => {
         it('should show loading spinner during cancellation', async () => {
-            let resolveCancel: (value: any) => void;
-            const cancelPromise = new Promise((resolve) => {
+            let resolveCancel!: (value: CancelJobResponse) => void;
+            const cancelPromise = new Promise<CancelJobResponse>((resolve) => {
                 resolveCancel = resolve;
             });
 
-            vi.mocked(apiClient.cancelJob).mockReturnValueOnce(cancelPromise as any);
+            vi.mocked(apiClient.cancelJob).mockReturnValueOnce(cancelPromise);
 
             render(<JobCancelButton jobId="job123" jobStatus="running" />, { wrapper });
 
@@ -184,12 +186,12 @@ describe('JobCancelButton', () => {
         });
 
         it('should disable button during cancellation', async () => {
-            let resolveCancel: (value: any) => void;
-            const cancelPromise = new Promise((resolve) => {
+            let resolveCancel!: (value: CancelJobResponse) => void;
+            const cancelPromise = new Promise<CancelJobResponse>((resolve) => {
                 resolveCancel = resolve;
             });
 
-            vi.mocked(apiClient.cancelJob).mockReturnValueOnce(cancelPromise as any);
+            vi.mocked(apiClient.cancelJob).mockReturnValueOnce(cancelPromise);
 
             render(<JobCancelButton jobId="job123" jobStatus="running" />, { wrapper });
 

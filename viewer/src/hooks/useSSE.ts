@@ -3,7 +3,7 @@ import { apiClient } from '@/api/client';
 
 export interface SSEEvent {
   type: string;
-  data: any;
+  data: unknown;
   id?: string;
   timestamp: string;
 }
@@ -37,6 +37,20 @@ export const useSSE = (options: UseSSEOptions = {}) => {
     setLastEvent(event);
     setEvents(prev => [...prev.slice(-99), event]); // Keep last 100 events
   }, []);
+
+  const disconnect = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+      setIsConnected(false);
+      onDisconnect?.();
+    }
+  }, [onDisconnect]);
 
   const connect = useCallback(() => {
     if (!enabled || eventSourceRef.current) {
@@ -172,21 +186,7 @@ export const useSSE = (options: UseSSEOptions = {}) => {
       const err = error instanceof Error ? error : new Error('Failed to create SSE connection');
       onError?.(err);
     }
-  }, [enabled, jobId, onError, onConnect, addEvent]);
-
-  const disconnect = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-      setIsConnected(false);
-      onDisconnect?.();
-    }
-  }, [onDisconnect]);
+  }, [enabled, jobId, onError, onConnect, addEvent, disconnect]);
 
   const clearEvents = useCallback(() => {
     setEvents([]);
@@ -202,14 +202,7 @@ export const useSSE = (options: UseSSEOptions = {}) => {
     return () => {
       disconnect();
     };
-  }, [enabled, jobId]); // Don't include connect/disconnect in deps to avoid loops
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      disconnect();
-    };
-  }, []);
+  }, [enabled, connect, disconnect]);
 
   return {
     isConnected,

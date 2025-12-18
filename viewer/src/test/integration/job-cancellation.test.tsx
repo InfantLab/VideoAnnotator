@@ -7,7 +7,16 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { JobCancelButton } from '@/components/JobCancelButton';
 import { apiClient } from '@/api/client';
+import type { JobStatus } from '@/types/api';
 import React from 'react';
+
+type CancelJobResponse = Awaited<ReturnType<(typeof apiClient)['cancelJob']>>;
+type CachedJob = {
+  id: string;
+  status: JobStatus;
+  created_at?: string;
+  updated_at?: string;
+};
 
 // Mock the API client
 vi.mock('@/api/client', () => ({
@@ -84,7 +93,7 @@ describe('Job Cancellation Integration', () => {
     });
 
     // 5. Optimistic update applied
-    const jobData = queryClient.getQueryData(['jobs', 'job123']) as any;
+    const jobData = queryClient.getQueryData<CachedJob>(['jobs', 'job123']);
     expect(jobData?.status).toBe('cancelling');
 
     // 6. Toast notification shown
@@ -170,13 +179,13 @@ describe('Job Cancellation Integration', () => {
   });
 
   it('should not render for non-cancellable job states', () => {
-    const nonCancellableStates = ['completed', 'failed', 'cancelled', 'cancelling'];
+    const nonCancellableStates: JobStatus[] = ['completed', 'failed', 'cancelled', 'cancelling'];
 
     nonCancellableStates.forEach((status) => {
       const { container } = render(
         <JobCancelButton
           jobId="job123"
-          jobStatus={status as any}
+          jobStatus={status}
         />,
         { wrapper }
       );
@@ -186,12 +195,12 @@ describe('Job Cancellation Integration', () => {
   });
 
   it('should show loading state during cancellation', async () => {
-    let resolveCancel: (value: any) => void;
-    const cancelPromise = new Promise((resolve) => {
+    let resolveCancel!: (value: CancelJobResponse) => void;
+    const cancelPromise = new Promise<CancelJobResponse>((resolve) => {
       resolveCancel = resolve;
     });
 
-    vi.mocked(apiClient.cancelJob).mockReturnValueOnce(cancelPromise as any);
+    vi.mocked(apiClient.cancelJob).mockReturnValueOnce(cancelPromise);
 
     render(<JobCancelButton jobId="job123" jobStatus="running" />, { wrapper });
 

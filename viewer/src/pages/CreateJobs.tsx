@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { apiClient } from "@/api/client";
+import { apiClient, type JobListResponse, type JobResponse } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -35,8 +35,9 @@ import type { JobStatus } from "@/types/api";
  * Enhances authentication error messages with actionable guidance
  * CANONICAL error messages - used consistently across the app
  */
-function enhanceAuthError(error: any) {
-  const errorMessage = error?.message || String(error);
+function enhanceAuthError(error: unknown) {
+  const parsed = parseApiError(error);
+  const errorMessage = parsed.message;
   const currentToken = localStorage.getItem('videoannotator_api_token') || '';
 
   // Check if it's an authentication error
@@ -58,8 +59,8 @@ function enhanceAuthError(error: any) {
         message: 'Authentication Required',
         hint: 'You have a placeholder token ("dev-token") that doesn\'t work. Go to Settings and clear the API Token field to connect anonymously.',
         fieldErrors: [],
-        code: error?.code,
-        requestId: error?.requestId
+        code: parsed.code,
+        requestId: parsed.requestId
       };
     }
 
@@ -67,15 +68,19 @@ function enhanceAuthError(error: any) {
       message: 'Authentication Required',
       hint: 'The server requires authentication. Go to Settings to configure your API token.',
       fieldErrors: [],
-      code: error?.code,
-      requestId: error?.requestId
+      code: parsed.code,
+      requestId: parsed.requestId
     };
   }
 
-  return parseApiError(error);
+  return parsed;
 }
 
-const CreateJobs = () => {
+type CreateJobsProps = {
+  embedded?: boolean;
+};
+
+const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const perPage = 10;
@@ -114,7 +119,7 @@ const CreateJobs = () => {
       if (!data?.jobs) return 5000; // Default: 5s when no data yet
 
       const hasActiveJobs = data.jobs.some(
-        (job: any) => job.status === 'pending' || job.status === 'running' || job.status === 'cancelling'
+        (job: JobResponse) => job.status === 'pending' || job.status === 'running' || job.status === 'cancelling'
       );
 
       if (hasActiveJobs) {
@@ -159,7 +164,7 @@ const CreateJobs = () => {
     }
   }, [error, toast]);
 
-  const handleRetryJob = (job: any) => {
+  const handleRetryJob = (job: JobResponse) => {
     navigate('/create/new', {
       state: {
         retryJobId: job.id,
@@ -248,7 +253,6 @@ const CreateJobs = () => {
           {isAuthError && (
             <Link to="/create/settings">
               <Button variant="default">
-                <Settings className="h-4 w-4 mr-2" />
                 Configure API Token
               </Button>
             </Link>
@@ -298,41 +302,43 @@ const CreateJobs = () => {
 
   // Determine polling status
   const hasActiveJobs = jobsData?.jobs?.some(
-    (job: any) => job.status === 'pending' || job.status === 'running' || job.status === 'cancelling'
+    (job: JobResponse) => job.status === 'pending' || job.status === 'running' || job.status === 'cancelling'
   );
   const pollingStatus = hasActiveJobs
     ? '⚡ Auto-refreshing every 5s'
     : '💤 Auto-refreshing every 30s';
 
   return (
-    <div className="space-y-6">
+    <div className={embedded ? "space-y-4" : "space-y-6"}>
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <img src={vavIcon} alt="VideoAnnotator" className="h-8 w-8" />
-          <div>
-            <h2 className="text-2xl font-bold">Annotation Jobs</h2>
-            <p className="text-gray-600">Monitor and manage your annotation jobs</p>
+      {!embedded && (
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <img src={vavIcon} alt="VideoAnnotator" className="h-8 w-8" />
+            <div>
+              <h2 className="text-2xl font-bold">Annotation Jobs</h2>
+              <p className="text-gray-600">Monitor and manage your annotation jobs</p>
+            </div>
           </div>
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex gap-2">
-            <Button onClick={() => refetch()} variant="outline" size="sm">
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Link to="/create/new">
-              <Button>
-                <Play className="h-4 w-4 mr-2" />
-                New Job
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex gap-2">
+              <Button onClick={() => refetch()} variant="outline" size="sm">
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
               </Button>
-            </Link>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {lastCheckedText} • {pollingStatus}
+              <Link to="/create/new">
+                <Button>
+                  <Play className="h-4 w-4 mr-2" />
+                  New Job
+                </Button>
+              </Link>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {lastCheckedText} • {pollingStatus}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Jobs Table */}
       {isLoading && !jobsData ? (
@@ -382,19 +388,34 @@ const CreateJobs = () => {
                 </TableRow>
               ) : (
                 jobsData?.jobs?.map((job) => {
+                  const record = job as JobResponse & Record<string, unknown>;
+                  const getString = (value: unknown): string | undefined =>
+                    typeof value === 'string' ? value : undefined;
+
+                  const getNumber = (value: unknown): number | null =>
+                    typeof value === 'number' && Number.isFinite(value) ? value : null;
+
                   // Defensive field access - server may use different field names
-                  const jobData = job as any;
-                  let videoName = jobData.video_filename || jobData.filename || jobData.video_name;
+                  let videoName =
+                    getString(record.video_filename) ??
+                    getString(record.filename) ??
+                    getString(record.video_name);
 
                   // If no direct filename field, extract from video_path
-                  if (!videoName && jobData.video_path) {
-                    videoName = jobData.video_path.split('/').pop() || jobData.video_path;
+                  const videoPath = getString(record.video_path);
+                  if (!videoName && videoPath) {
+                    videoName = videoPath.split('/').pop() || videoPath;
                   }
 
                   videoName = videoName || "N/A";
 
-                  const videoDuration = jobData.video_duration_seconds || jobData.duration_seconds || null;
-                  const videoSize = jobData.video_size_bytes || jobData.file_size_bytes || null;
+                  const videoDuration =
+                    getNumber(record.video_duration_seconds) ??
+                    getNumber(record.duration_seconds);
+
+                  const videoSize =
+                    getNumber(record.video_size_bytes) ??
+                    getNumber(record.file_size_bytes);
 
                   return (
                     <TableRow

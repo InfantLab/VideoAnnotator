@@ -4,7 +4,8 @@
 
 // For production builds, this would read from package.json
 // For now, we'll export the version as a constant
-export const VERSION = '0.5.0';
+export const VERSION = '0.6.0';
+// NOTE: Keep in sync with package.json until we inject this at build time.
 export const GITHUB_URL = 'https://github.com/InfantLab/video-annotation-viewer';
 export const APP_NAME = 'Video Annotation Viewer';
 
@@ -33,7 +34,7 @@ export function logVersionInfo(): void {
 
 // Make version info available globally for browser console
 if (typeof window !== 'undefined') {
-  (window as any).version = {
+  window.version = {
     VERSION,
     GITHUB_URL,
     APP_NAME,

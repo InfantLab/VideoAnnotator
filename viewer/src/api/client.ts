@@ -27,9 +27,9 @@ const getApiBaseUrl = () => {
   // This ensures that every time we retrieve the URL, we apply the DNS correction.
   if (url && url.includes('//localhost:')) {
     // Only log this once per session to avoid spamming
-    if (!(window as any).__dns_correction_logged) {
+    if (!window.__dns_correction_logged) {
       console.log('🔄 DNS CORRECTION (Global): Switching API host from localhost to 127.0.0.1');
-      (window as any).__dns_correction_logged = true;
+      window.__dns_correction_logged = true;
     }
     return url.replace('//localhost:', '//127.0.0.1:');
   }
@@ -76,7 +76,7 @@ const isValidToken = (token: string): boolean => {
 
   // Accept any token that's at least 8 characters and looks like a valid token
   // (alphanumeric, dashes, underscores, dots)
-  if (trimmed.length >= 8 && /^[a-zA-Z0-9_\-\.]+$/.test(trimmed)) {
+  if (trimmed.length >= 8 && /^[a-zA-Z0-9_.-]+$/.test(trimmed)) {
     return true;
   }
 
@@ -203,11 +203,24 @@ class APIClient {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 
         try {
-          const errorData = await response.json();
-          if (errorData.detail) {
-            errorMessage = Array.isArray(errorData.detail)
-              ? errorData.detail.map((e: any) => e.msg || e).join(', ')
-              : errorData.detail;
+          const errorData = (await response.json()) as unknown;
+          const detail =
+            errorData && typeof errorData === 'object'
+              ? (errorData as Record<string, unknown>).detail
+              : undefined;
+          if (typeof detail === 'string') {
+            errorMessage = detail;
+          } else if (Array.isArray(detail)) {
+            errorMessage = detail
+              .map((entry) => {
+                if (typeof entry === 'string') return entry;
+                if (entry && typeof entry === 'object') {
+                  const msg = (entry as Record<string, unknown>).msg;
+                  if (typeof msg === 'string') return msg;
+                }
+                return JSON.stringify(entry);
+              })
+              .join(', ');
           }
         } catch {
           // If parsing error response fails, use default message
@@ -271,18 +284,67 @@ class APIClient {
       };
     }
 
-    const descriptors: PipelineDescriptor[] = pipelines.map((pipeline: any) => ({
-      id: pipeline.slug || pipeline.name,
-      name: pipeline.display_name || pipeline.name,
-      description: pipeline.description,
-      group: pipeline.pipeline_family || pipeline.category,
-      version: pipeline.version || pipeline.variant || 'unknown',
-      model: pipeline.model_name || pipeline.variant,
-      outputFormats: pipeline.output_formats || (pipeline.outputs ? pipeline.outputs.map((o: any) => o.format) : []),
-      defaultEnabled: pipeline.default_enabled ?? pipeline.enabled ?? true,
-      capabilities: pipeline.capabilities as PipelineCapability[] | undefined,
-      parameters: []
-    }));
+    const descriptors: PipelineDescriptor[] = pipelines.map((pipeline) => {
+      const record = pipeline as unknown as Record<string, unknown>;
+      const slug = record.slug;
+      const name = record.name;
+      const displayName = record.display_name;
+      const description = record.description;
+      const family = record.pipeline_family;
+      const category = record.category;
+      const version = record.version;
+      const variant = record.variant;
+      const modelName = record.model_name;
+      const outputFormats = record.output_formats;
+      const outputs = record.outputs;
+      const defaultEnabled = record.default_enabled;
+      const enabled = record.enabled;
+
+      const formatsFromOutputs = Array.isArray(outputs)
+        ? outputs
+            .map((output) => (output && typeof output === 'object' ? (output as Record<string, unknown>).format : null))
+            .filter((value): value is string => typeof value === 'string')
+        : [];
+
+      const resolvedOutputFormats = Array.isArray(outputFormats)
+        ? outputFormats.filter((value): value is string => typeof value === 'string')
+        : formatsFromOutputs;
+
+      return {
+        id:
+          (typeof slug === 'string' && slug) ||
+          (typeof name === 'string' && name) ||
+          'unknown',
+        name:
+          (typeof displayName === 'string' && displayName) ||
+          (typeof name === 'string' && name) ||
+          'unknown',
+        description: typeof description === 'string' ? description : undefined,
+        group:
+          (typeof family === 'string' && family) ||
+          (typeof category === 'string' && category) ||
+          undefined,
+        version:
+          (typeof version === 'string' && version) ||
+          (typeof variant === 'string' && variant) ||
+          'unknown',
+        model:
+          (typeof modelName === 'string' && modelName) ||
+          (typeof variant === 'string' && variant) ||
+          undefined,
+        outputFormats: resolvedOutputFormats,
+        defaultEnabled:
+          typeof defaultEnabled === 'boolean'
+            ? defaultEnabled
+            : typeof enabled === 'boolean'
+              ? enabled
+              : true,
+        capabilities: Array.isArray(record.capabilities)
+          ? (record.capabilities as PipelineCapability[])
+          : undefined,
+        parameters: []
+      };
+    });
 
     return {
       pipelines: descriptors,
@@ -349,17 +411,24 @@ class APIClient {
 
     for (const endpoint of candidateEndpoints) {
       try {
-        const data = await this.request<any>(endpoint);
-        if (data && Array.isArray(data.parameters)) {
+        const data = await this.request<unknown>(endpoint);
+        if (data && typeof data === 'object') {
+          const record = data as Record<string, unknown>;
+          const parameters = record.parameters;
+
+          if (!Array.isArray(parameters)) {
+            continue;
+          }
+
           this.featureFlags.pipelineSchemas = true;
           return {
-            pipeline: data.pipeline ?? {
+            pipeline: (record.pipeline as PipelineDescriptor | undefined) ?? {
               id: pipelineId,
-              name: data.name || pipelineId,
-              description: data.description,
-              group: data.group
+              name: (typeof record.name === 'string' ? record.name : pipelineId),
+              description: typeof record.description === 'string' ? record.description : undefined,
+              group: typeof record.group === 'string' ? record.group : undefined
             },
-            parameters: data.parameters as PipelineParameterSchema[]
+            parameters: parameters as PipelineParameterSchema[]
           };
         }
       } catch (error) {
@@ -426,7 +495,7 @@ class APIClient {
   async submitJob(
     video: File,
     selectedPipelines?: string[],
-    config?: Record<string, any>
+    config?: Record<string, unknown>
   ): Promise<JobResponse> {
     const formData = new FormData();
     formData.append('video', video);
@@ -630,11 +699,24 @@ class APIClient {
     if (!response.ok) {
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
       try {
-        const errorData = await response.json();
-        if (errorData.detail) {
-          errorMessage = Array.isArray(errorData.detail)
-            ? errorData.detail.map((e: any) => e.msg || e).join(', ')
-            : errorData.detail;
+        const errorData = (await response.json()) as unknown;
+        const detail =
+          errorData && typeof errorData === 'object'
+            ? (errorData as Record<string, unknown>).detail
+            : undefined;
+        if (typeof detail === 'string') {
+          errorMessage = detail;
+        } else if (Array.isArray(detail)) {
+          errorMessage = detail
+            .map((entry) => {
+              if (typeof entry === 'string') return entry;
+              if (entry && typeof entry === 'object') {
+                const msg = (entry as Record<string, unknown>).msg;
+                if (typeof msg === 'string') return msg;
+              }
+              return JSON.stringify(entry);
+            })
+            .join(', ');
         }
       } catch {
         // Ignore JSON parse error

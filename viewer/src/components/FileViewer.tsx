@@ -23,7 +23,7 @@ export const FileViewer = ({ annotationData, trigger, defaultTab = 'summary' }: 
     setSearchTerm('');
   };
 
-  const formatJSON = (obj: any, indent = 2) => {
+  const formatJSON = (obj: unknown, indent = 2) => {
     return JSON.stringify(obj, null, indent);
   };
 
@@ -39,7 +39,7 @@ export const FileViewer = ({ annotationData, trigger, defaultTab = 'summary' }: 
     // TODO: Add toast notification
   };
 
-  const downloadJSON = (data: any, filename: string) => {
+  const downloadJSON = (data: unknown, filename: string) => {
     const blob = new Blob([formatJSON(data)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -68,7 +68,7 @@ export const FileViewer = ({ annotationData, trigger, defaultTab = 'summary' }: 
     return summary;
   };
 
-  const getFilteredData = (data: any) => {
+  const getFilteredData = (data: unknown) => {
     if (!searchTerm) return data;
     
     const jsonString = formatJSON(data);

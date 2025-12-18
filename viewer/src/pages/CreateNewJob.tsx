@@ -78,7 +78,7 @@ const CreateNewJob = () => {
 
   const { data: catalogData, isLoading: catalogLoading, error: catalogError } = usePipelineCatalog();
   const refreshPipelineCatalog = useRefreshPipelineCatalog();
-  const pipelines = catalogData?.catalog.pipelines ?? [];
+  const pipelines = useMemo(() => catalogData?.catalog.pipelines ?? [], [catalogData?.catalog.pipelines]);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);

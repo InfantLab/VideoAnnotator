@@ -86,10 +86,10 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
         // Ignore health check failure here, validateToken result is what matters
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       setTokenStatus({
         isValid: false,
-        error: error?.message || String(error)
+        error: error instanceof Error ? error.message : String(error)
       });
     } finally {
       // Restore original config
@@ -112,8 +112,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
     setHasUnsavedChanges(false);
 
     // Update the global API client
-    (apiClient as any).baseURL = finalUrl.replace(/\/$/, '');
-    (apiClient as any).token = token;
+    apiClient.updateConfig(finalUrl, token.trim() ? token : undefined);
 
     // Show success message
     const tokenMode = token.trim() ? 'with API token' : 'in anonymous mode';
@@ -194,8 +193,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
     setHasUnsavedChanges(false); // Already saved
 
     // Update the global API client
-    (apiClient as any).baseURL = defaultUrl.replace(/\/$/, '');
-    (apiClient as any).token = defaultToken;
+    apiClient.updateConfig(defaultUrl, defaultToken || undefined);
 
     // Clear any previous token status
     setTokenStatus(null);

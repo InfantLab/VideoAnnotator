@@ -6,7 +6,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { usePipelineData } from '@/hooks/usePipelineData';
-import { PipelineProvider, usePipelineContext } from '@/contexts/PipelineContext';
+import { usePipelineContext } from '@/contexts/PipelineContext';
+import { PipelineProvider } from '@/contexts/PipelineProvider';
 import { apiClient } from '@/api/client';
 
 // Mock localStorage

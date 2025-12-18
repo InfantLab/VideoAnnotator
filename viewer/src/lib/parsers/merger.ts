@@ -9,6 +9,7 @@ import type {
     RTTMSegment,
     SceneAnnotation,
     LAIONFaceAnnotation,
+    StandardFaceAnnotation,
     VideoAnnotatorCompleteResults
 } from '@/types/annotations';
 
@@ -626,7 +627,7 @@ export async function mergeAnnotationData(
     let speakerDiarization: RTTMSegment[] = [];
     let sceneDetection: SceneAnnotation[] = [];
     let faceAnalysis: LAIONFaceAnnotation[] = [];
-    let openface3Faces: any[] = []; // OpenFace3 faces data
+    let openface3Faces: StandardFaceAnnotation[] = []; // OpenFace3 faces data
 
     // Processing metadata from VideoAnnotator v1.1.1
     let processingConfig: VideoAnnotatorCompleteResults['config'] | undefined;

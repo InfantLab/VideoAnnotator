@@ -8,7 +8,7 @@ export interface DiagnosticResult {
     passed: boolean;
     duration?: number;
     error?: string;
-    details?: any;
+    details?: unknown;
 }
 
 export interface DiagnosticReport {

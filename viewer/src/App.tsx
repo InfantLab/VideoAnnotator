@@ -4,10 +4,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SSEProvider } from "@/contexts/SSEContext";
-import { PipelineProvider } from "@/contexts/PipelineContext";
-import { ServerCapabilitiesProvider } from "@/contexts/ServerCapabilitiesContext";
+import { PipelineProvider } from "@/contexts/PipelineProvider";
+import { ServerCapabilitiesProvider } from "@/contexts/ServerCapabilitiesProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import Create from "./pages/Create";
 import CreateJobs from "./pages/CreateJobs";
@@ -16,6 +17,7 @@ import CreateNewJob from "./pages/CreateNewJob";
 import CreateDatasets from "./pages/CreateDatasets";
 import CreateSettings from "./pages/CreateSettings";
 import JobResultsViewer from "./pages/JobResultsViewer";
+import Library from "./pages/Library";
 
 const queryClient = new QueryClient();
 
@@ -30,7 +32,9 @@ const App = () => (
               <Sonner />
               <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <Routes>
-                  <Route path="/" element={<Index />} />
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/viewer" element={<Index />} />
+                  <Route path="/library" element={<Library />} />
                   <Route path="/view/:jobId" element={<JobResultsViewer />} />
                   <Route path="/create" element={<Create />}>
                     <Route path="jobs" element={<CreateJobs />} />

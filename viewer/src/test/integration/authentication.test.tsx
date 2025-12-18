@@ -33,9 +33,10 @@ const TestAuthenticationFlow = () => {
             mockApiClient.setToken(token);
             setStatus('success');
             setServerVersion(healthResponse.version || 'unknown');
-        } catch (err: any) {
+        } catch (err: unknown) {
             setStatus('error');
-            setError(err.message || 'Failed to validate token');
+            const message = err instanceof Error ? err.message : undefined;
+            setError(message || 'Failed to validate token');
         }
     };
 
@@ -162,9 +163,9 @@ describe('Authentication Integration', () => {
         });
 
         it('should disable validate button while validating', async () => {
-            let resolveHealth: (value: any) => void;
+            let resolveHealth!: (value: { status: string; version?: string }) => void;
             mockApiClient.checkHealth.mockReturnValue(
-                new Promise((resolve) => {
+                new Promise<{ status: string; version?: string }>((resolve) => {
                     resolveHealth = resolve;
                 })
             );

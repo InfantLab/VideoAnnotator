@@ -160,6 +160,9 @@ git commit -m "feat: T021 - Create useConfigValidation hook with debouncing"
 
 ## Pitfalls and Gotchas
 
+- **Fast Refresh export rule**: ESLint `react-refresh/only-export-components` warns if a module exports a React component *and* other values (constants, helper hooks, variant builders, etc.). Fix by moving non-component exports into separate modules (e.g. `*-variants.ts`, `*Settings.ts`, `*Provider.tsx`) and keep component files exporting components only.
+- **Hook dependencies**: Keep `react-hooks/exhaustive-deps` clean by using correct dependency arrays (don’t disable the rule). If a derived array/object is used in deps, stabilize it with `useMemo`.
+
 - SSE availability varies by server; handle missing SSE endpoint gracefully (fallback to polling if needed).
 - Some older VideoAnnotator versions may lack endpoints used in docs; feature-detect and degrade.
 - Large files: prefer progressive loading and avoid blocking the UI.

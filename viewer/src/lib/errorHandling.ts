@@ -68,12 +68,18 @@ export function parseApiError(error: unknown): ParsedError {
     }
 
     // Handle legacy/other object formats
-    const errObj = error as any;
-    const message = errObj.message || errObj.error || errObj.detail || JSON.stringify(error);
+    const errObj = error as Record<string, unknown>;
+    const messageValue = errObj.message ?? errObj.error ?? errObj.detail ?? error;
+    const message =
+      typeof messageValue === 'string'
+        ? messageValue
+        : messageValue instanceof Error
+          ? messageValue.message
+          : JSON.stringify(messageValue);
     
     return {
       message: String(message),
-      code: errObj.code || errObj.status || errObj.statusCode,
+      code: (errObj.code ?? errObj.status ?? errObj.statusCode) as string | number | undefined,
     };
   }
 

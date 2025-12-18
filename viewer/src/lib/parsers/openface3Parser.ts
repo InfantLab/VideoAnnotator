@@ -23,7 +23,7 @@ export class OpenFace3Parser {
   /**
    * Main parsing method - converts OpenFace3 JSON to StandardFaceAnnotation[]
    */
-  public parseOpenFace3Data(jsonData: any): StandardFaceAnnotation[] {
+  public parseOpenFace3Data(jsonData: unknown): StandardFaceAnnotation[] {
     try {
       // Validate input structure
       if (!this.isValidOpenFace3Data(jsonData)) {
@@ -71,24 +71,29 @@ export class OpenFace3Parser {
   /**
    * Validate OpenFace3 data structure
    */
-  private isValidOpenFace3Data(data: any): data is OpenFace3Data {
+  private isValidOpenFace3Data(data: unknown): data is OpenFace3Data {
     if (!data || typeof data !== 'object') {
       return false;
     }
 
+    const record = data as Record<string, unknown>;
+
     // Check required top-level structure
-    if (!data.metadata || !data.faces || !Array.isArray(data.faces)) {
+    if (!record.metadata || !record.faces || !Array.isArray(record.faces)) {
       return false;
     }
 
+    const metadata = record.metadata as Record<string, unknown>;
+
     // Check metadata structure
-    if (!data.metadata.pipeline || !data.metadata.model_info) {
+    if (!metadata.pipeline || !metadata.model_info) {
       return false;
     }
 
     // Check at least one face has valid structure
-    if (data.faces.length > 0) {
-      const firstFace = data.faces[0];
+    const faces = record.faces as unknown[];
+    if (faces.length > 0) {
+      const firstFace = faces[0] as Record<string, unknown>;
       if (!firstFace.bbox || !firstFace.features || !firstFace.timestamp) {
         return false;
       }

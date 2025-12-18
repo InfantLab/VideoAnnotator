@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { DEMO_DATA_SETS } from '../utils/debugUtils'
 
 // Mock fetch for demo loading tests
-global.fetch = vi.fn()
+const fetchMock = vi.fn()
+global.fetch = fetchMock as unknown as typeof fetch
 
 describe('debugUtils', () => {
   beforeEach(() => {
@@ -41,9 +42,9 @@ describe('debugUtils', () => {
       const mockJsonBlob = new Blob(['{"test": "data"}'], { type: 'application/json' })
       
       // Mock successful fetch responses
-      ;(global.fetch as any)
-        .mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(mockVideoBlob) })
-        .mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(mockJsonBlob) })
+      fetchMock
+        .mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(mockVideoBlob) } as unknown as Response)
+        .mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(mockJsonBlob) } as unknown as Response)
       
       // Test that we can create File objects from the responses
       const videoResponse = await fetch('demo/videos/test.mp4')
@@ -57,7 +58,7 @@ describe('debugUtils', () => {
 
     it('should handle failed demo file loading', async () => {
       // Mock failed fetch response
-      ;(global.fetch as any).mockRejectedValueOnce(new Error('Network error'))
+      fetchMock.mockRejectedValueOnce(new Error('Network error'))
       
       try {
         await fetch('demo/videos/nonexistent.mp4')
