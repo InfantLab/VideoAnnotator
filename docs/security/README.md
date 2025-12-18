@@ -1,6 +1,6 @@
 # Security Documentation
 
-VideoAnnotator v1.3.0+ includes comprehensive security features for production deployments. This directory contains guides for securing your VideoAnnotator instance.
+VideoAnnotator includes comprehensive security features for production deployments. This directory contains guides for securing your VideoAnnotator instance.
 
 ## 📚 Documentation
 
@@ -45,7 +45,7 @@ Complete security hardening checklist:
 ```bash
 # 1. Start server (auth disabled for development)
 export AUTH_REQUIRED=false
-uv run python api_server.py
+uv run videoannotator
 
 # 2. Access API without authentication
 curl http://localhost:18011/api/v1/jobs
@@ -58,7 +58,7 @@ curl http://localhost:18011/api/v1/jobs
 uv run videoannotator setup-db --admin-email you@example.com --admin-username you
 
 # 2. Start server (auth enabled by default)
-uv run python api_server.py
+uv run videoannotator
 
 # 3. Use API key in requests
 export API_KEY="va_api_your_key_here"
@@ -68,7 +68,7 @@ curl -H "Authorization: Bearer $API_KEY" \
 
 ## 🔐 Security Features
 
-### Authentication (v1.3.0+)
+### Authentication (v1.4.1+)
 - ✅ **Secure by default**: Authentication required
 - ✅ **Auto-generation**: `videoannotator setup-db` creates admin key (server still auto-generates if missing)
 - ✅ **Token-based**: Standard Bearer token authentication
@@ -77,7 +77,7 @@ curl -H "Authorization: Bearer $API_KEY" \
 - ✅ **Key rotation**: Generate and revoke keys easily
 - ✅ **Expiration support**: Optional key expiration
 
-### CORS (v1.3.0+)
+### CORS (v1.4.1+)
 - ✅ **Restricted by default**: Only `localhost:3000` allowed
 - ✅ **No wildcards**: Prevents unauthorized access
 - ✅ **Multiple origins**: Comma-separated list support
@@ -126,7 +126,7 @@ curl -H "Authorization: Bearer $API_KEY" \
    - `/api/v1/system/*` - System operations
 
 3. **Admin Endpoints** (Admin Scope Required):
-   - TBD in v1.4.0 (user management, system config)
+   - TBD in a future release (user management, system config)
 
 ## ⚙️ Configuration
 
@@ -178,7 +178,7 @@ export CORS_ORIGINS="https://app.example.com,https://admin.example.com"
 ### Disable Authentication (Development Only)
 ```bash
 export AUTH_REQUIRED=false
-uv run python api_server.py
+uv run videoannotator
 ```
 
 ## 🐛 Troubleshooting
@@ -213,6 +213,6 @@ All security documentation is part of VideoAnnotator and follows the same licens
 ## 🔗 See Also
 
 - [Installation Guide](../installation/INSTALLATION.md)
-- [API Reference](../usage/api_reference.md)
+- [Getting Started](../usage/GETTING_STARTED.md)
 - [Deployment Guide](../deployment/Docker.md)
 - [Contributing Guide](../../CONTRIBUTING.md)

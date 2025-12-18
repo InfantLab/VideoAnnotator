@@ -1,6 +1,6 @@
 # Configuration Guide
 
-**Version**: v1.3.0+
+**Version**: v1.4.1+
 **Status**: Production Ready
 
 VideoAnnotator supports a flexible configuration system using YAML files and environment variables.
@@ -48,4 +48,4 @@ storage/jobs/
 
 ## Advanced Configuration
 
-For advanced use cases, you can create custom configuration files (e.g., `configs/production.yaml`) and load them by modifying the application entry point or using future CLI flags (planned for v1.4.0).
+For advanced use cases, you can create custom configuration files (e.g., `configs/production.yaml`) and load them via the CLI/config mechanisms supported by your deployment.

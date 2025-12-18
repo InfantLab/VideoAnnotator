@@ -1,4 +1,4 @@
-"""API dependencies for VideoAnnotator v1.2.0."""
+"""API dependencies for VideoAnnotator."""
 
 from typing import Any
 

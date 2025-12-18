@@ -1,4 +1,4 @@
-"""Debug endpoints for VideoAnnotator API v1.2.0.
+"""Debug endpoints for the VideoAnnotator API.
 
 These endpoints provide debugging and diagnostic information for client-
 server collaboration and troubleshooting.
@@ -150,7 +150,9 @@ async def get_server_debug_info():
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get server info: {e!s}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get server info: {e!s}"
+        ) from e
 
 
 @router.get("/token-info")
@@ -201,7 +203,9 @@ async def get_token_debug_info(
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get token info: {e!s}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get token info: {e!s}"
+        ) from e
 
 
 @router.get("/pipelines")
@@ -493,7 +497,7 @@ async def get_pipeline_debug_info():
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to get pipeline info: {e!s}"
-        )
+        ) from e
 
 
 @router.get("/jobs/{job_id}")
@@ -572,7 +576,7 @@ async def get_job_debug_info(
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to get job debug info: {e!s}"
-        )
+        ) from e
 
 
 @router.get("/request-log")
@@ -599,7 +603,9 @@ async def get_request_log(
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get request log: {e!s}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get request log: {e!s}"
+        ) from e
 
 
 @router.get("/mock-events")

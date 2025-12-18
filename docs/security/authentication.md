@@ -147,7 +147,7 @@ For local development, you can disable authentication:
 
 ```bash
 export AUTH_REQUIRED=false
-uv run python api_server.py
+uv run videoannotator
 ```
 
 **⚠️ WARNING**: Only use this for local development. Never deploy with authentication disabled!
@@ -297,7 +297,7 @@ Check the AUTH_REQUIRED environment variable:
 echo $AUTH_REQUIRED
 
 # Start server with explicit flag
-AUTH_REQUIRED=false uv run python api_server.py
+AUTH_REQUIRED=false uv run videoannotator
 ```
 
 ### Can't Find Auto-Generated Key

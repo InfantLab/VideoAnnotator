@@ -1,4 +1,4 @@
-# VideoAnnotator v1.2.0 Installation Guide
+# VideoAnnotator Installation Guide
 
 > 📖 **Navigation**: [Getting Started](../usage/GETTING_STARTED.md) | [Demo Commands](../usage/demo_commands.md) | [Pipeline Specs](../usage/pipeline_specs.md) | [Main Documentation](../README.md)
 
@@ -9,7 +9,7 @@ VideoAnnotator is a modern video analysis toolkit that uses AI models for compre
 - **Python 3.12+** (required)
 - **Git** for cloning repositories
 - **uv** package manager (fast, modern Python dependency management)
-- **CUDA Toolkit 13.0+** (recommended for GPU acceleration)
+- **CUDA Toolkit 12.4+** (recommended for GPU acceleration)
 - **NVIDIA GPU** with CUDA support (GTX 1060 6GB+ or better recommended)
 
 ## System Requirements
@@ -74,7 +74,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/VideoAnnotator.git
+git clone https://github.com/InfantLab/VideoAnnotator.git
 cd VideoAnnotator
 
 # Install all dependencies with uv (fast and reliable)
@@ -92,8 +92,12 @@ uv run videoannotator setup-db --admin-email you@example.com --admin-username yo
 ### 3. Install CUDA-enabled PyTorch (GPU acceleration)
 
 ```bash
-# Install PyTorch with CUDA 13.0 support (for GPU acceleration)
-uv add "torch==2.8.*+cu130" "torchvision==0.21.*+cu130" --index-url https://download.pytorch.org/whl/cu130
+# Note: This repo pins Torch sources via `pyproject.toml` to the CUDA 12.4 wheel index.
+# In most cases `uv sync` is sufficient.
+# If you need to force a reinstall of CUDA wheels in your local environment:
+uv pip install --upgrade \
+   "torch==2.8.*+cu124" "torchvision==0.21.*+cu124" "torchaudio==2.8.*+cu124" \
+   --index-url https://download.pytorch.org/whl/cu124
 ```
 
 ### 4. Install Native Dependencies (if needed)
@@ -107,7 +111,7 @@ conda install -n videoannotator cmake dlib -c conda-forge
 # Otherwise, install cmake system-wide from cmake.org
 ```
 
-### 2. Install OpenFace 3.0 (Manual Installation Required)
+### 5. Install OpenFace 3.0 (Manual Installation Required)
 
 OpenFace 3.0 requires manual compilation. Follow these steps:
 
@@ -177,8 +181,8 @@ print('All core dependencies installed!')
 "
 
 # Test the API server
-uv run python api_server.py
-# Should start server on http://localhost:8000
+uv run videoannotator
+# Interactive docs at http://localhost:18011/docs
 ```
 
 ## Development Commands
@@ -187,7 +191,10 @@ Once installed, use these commands for development:
 
 ```bash
 # Start API server
-uv run python api_server.py
+uv run videoannotator
+
+# Or explicitly specify the server subcommand
+uv run videoannotator server --host 0.0.0.0 --port 18011
 
 # Run linting and formatting
 uv run ruff check .
@@ -198,10 +205,6 @@ uv run mypy src
 
 # Run tests
 uv run pytest
-
-# Start API server
-uv run python -m src.cli server
-uv run python api_server.py
 ```
 
 ## Docker Installation (Alternative)
@@ -269,7 +272,7 @@ Open the project in VS Code and use "Reopen in Container" for a complete GPU-ena
 
 ## Modern Architecture
 
-VideoAnnotator v1.2.0 uses:
+VideoAnnotator uses:
 
 - **uv** - Fast, reliable Python package management
 - **Ruff** - Unified linting and formatting (replaces Black, isort, flake8)
@@ -296,8 +299,8 @@ After installation:
 - See `docs/usage/GETTING_STARTED.md` for usage examples
 - Check `docs/development/` for development workflows
 - Review `configs/` for configuration options
-- Use `uv run python -m src.cli --help` to test the CLI
-- Use `uv run python api_server.py` to start the server
+- Use `uv run videoannotator --help` to explore CLI commands
+- Use `uv run videoannotator` to start the server (http://localhost:18011/docs)
 
 ## Performance Tips
 

@@ -56,7 +56,7 @@ uv run python scripts/verify_installation.py
 
 ```bash
 # Start server
-uv run python api_server.py
+uv run videoannotator
 ```
 
 **Output**: Server starts on `http://localhost:18011`, API key displayed

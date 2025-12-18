@@ -224,7 +224,7 @@ Add your origin to `CORS_ORIGINS`:
 
 ```bash
 export CORS_ORIGINS="http://localhost:3001"
-uv run python api_server.py
+uv run videoannotator
 ```
 
 ### CORS Works Locally But Not in Production

@@ -29,5 +29,6 @@
         "titleBar.activeForeground": "#15202b",
         "titleBar.inactiveBackground": "#7fc16899",
         "titleBar.inactiveForeground": "#15202b99"
-    }
+    },
+    "makefile.configureOnOpen": false
 }

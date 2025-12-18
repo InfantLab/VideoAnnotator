@@ -9,7 +9,7 @@
 **Client Error**:
 
 ```
-:8000/api/v1/events/stream?token=dev-token:1 Failed to load resource: the server responded with a status of 404 (Not Found)
+:18011/api/v1/events/stream?token=dev-token:1 Failed to load resource: the server responded with a status of 404 (Not Found)
 SSE Error: Error: SSE connection failed after maximum retry attempts
 ```
 

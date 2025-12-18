@@ -1,14 +1,6 @@
-# Getting Started with VideoAnnotator v1.2.0
+# Getting Started with VideoAnnotator
 
-Welcome to VideoAnnotator v1.2.0! This guide will help you get up and running with our modern production-ready API system and integrated background processing.
-
-## What's New in v1.2.0 🎉
-
-- **🚀 Production-Ready API Server** - Complete REST API with integrated background job processing
-- **⚡ Integrated Processing** - No separate worker processes needed - everything runs in one server
-- **🛠️ Modern CLI Interface** - Complete command-line tools for server management and job control
-- **🔧 Enhanced Pipeline Support** - All pipelines (scene, person, face, audio) working through API
-- **📊 Real-time Job Status** - Live job tracking and detailed results retrieval
+This guide helps you get up and running with VideoAnnotator using Docker (recommended) or a local `uv` install.
 
 ## Prerequisites
 
@@ -18,6 +10,29 @@ Welcome to VideoAnnotator v1.2.0! This guide will help you get up and running wi
 - Optional: **CUDA-compatible GPU** for faster processing
 
 ## Quick Installation
+
+## Recommended: Run in Docker
+
+For the most reliable setup (consistent dependencies, easier GPU support), run VideoAnnotator in Docker:
+
+```bash
+# CPU (default)
+docker compose up --build
+
+# GPU (requires NVIDIA Container Toolkit)
+docker compose --profile gpu up --build videoannotator-gpu
+```
+
+Open http://localhost:18011/docs for the interactive API documentation.
+
+To initialize the database and create an admin API key explicitly:
+
+```bash
+docker compose exec videoannotator setupdb --admin-email you@example.com --admin-username you
+
+# If you launched the GPU service instead:
+docker compose exec videoannotator-gpu setupdb --admin-email you@example.com --admin-username you
+```
 
 ### 1. Install uv Package Manager
 
@@ -59,7 +74,7 @@ uv run videoannotator --help
 
 ### 🚀 Start the API Server
 
-VideoAnnotator v1.2.0+ runs everything through one integrated API server with built-in background processing:
+VideoAnnotator runs everything through one integrated API server with built-in background processing:
 
 ```bash
 # Quick start (simplest - server is default)
@@ -144,8 +159,8 @@ curl -H "Authorization: Bearer $API_KEY" \
 ### Using the Python API
 
 ```python
-from src.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
-from src.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
+from videoannotator.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
+from videoannotator.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
 
 # Scene detection
 scene_config = {
@@ -193,7 +208,7 @@ VideoAnnotator generates structured JSON files with comprehensive metadata:
 {
   "metadata": {
     "videoannotator": {
-      "version": "1.1.0",
+      "version": "1.4.1",
       "git": { "commit_hash": "359d693e..." }
     },
     "pipeline": { "name": "SceneDetectionPipeline" },
@@ -223,12 +238,11 @@ All pipelines are fully integrated with the API server and process through the b
 
 ## Next Steps
 
-- 📖 Read the [Full Installation Guide](../installation/INSTALLATION.md) for detailed setup
-- 🔧 Explore [Pipeline Specifications](pipeline_specs.md) for detailed pipeline documentation
-- 📊 Learn about [Demo Commands](demo_commands.md) for complete usage examples
-- 🧪 Check out [Testing Overview](../testing/testing_overview.md) for QA information
-- 🗺️ See the [v1.2.0 Roadmap](../development/roadmap_v1.2.0.md) for development progress
-- 🎯 Try the [v1.2.1 Examples Update](../development/EXAMPLES_CLI_UPDATE_CHECKLIST.md) for latest CLI patterns
+- Read the [Full Installation Guide](../installation/INSTALLATION.md) for detailed setup
+- Explore [Pipeline Specifications](pipeline_specs.md) for detailed pipeline documentation
+- Learn about [Demo Commands](demo_commands.md) for complete usage examples
+- Check out [Testing Overview](../testing/testing_overview.md) for QA information
+- See [Examples CLI Update Plan](../development/EXAMPLES_CLI_UPDATE_CHECKLIST.md) for updated CLI patterns
 
 ## Common Issues
 
@@ -236,7 +250,10 @@ All pipelines are fully integrated with the API server and process through the b
 
 ```bash
 # Check CUDA availability
-python -c "import torch; print(torch.cuda.is_available())"
+uv run python -c "import torch; print(torch.cuda.is_available())"
+
+# In Docker:
+docker compose exec videoannotator uv run python -c "import torch; print(torch.cuda.is_available())"
 ```
 
 ### FFmpeg Not Found

@@ -15,6 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Benchmark results and performance validation
 - Additional contributor documentation improvements
 
+## [1.4.1] - 2025-12-18
+
+### Documentation & UX Polish
+
+#### Changed
+- **Documentation**: Archived historical/versioned docs under `docs/archive/` and updated inbound links.
+- **Documentation**: Standardized examples on the canonical API port `18011` and Docker Compose-first workflows.
+- **CLI/Logging**: Removed stale v1.2.0 references and ensured first-run messaging reflects the current package version.
+
+#### Fixed
+- **Docs**: Replaced placeholder `docs/usage/accessing_results.md` with a real results retrieval guide.
+
 ## [1.4.0] - 2025-12-15
 
 ### 🚀 Major Features - Flexible Storage & Enhanced Security
@@ -163,10 +175,10 @@ This release addresses critical production blockers identified during client int
 
 **📖 Documentation Improvements**
 - `docs/UPGRADING_TO_v1.3.0.md` - Complete migration guide
-- `docs/V1.3.0_CLIENT_UPDATE.md` - Client team integration notes
-- `docs/API_IMPROVEMENTS_2025-10-30.md` - API enhancement details
-- `docs/CORS_IMPROVEMENTS_OCT2025.md` - CORS configuration guide
-- `docs/CLIENT_TEAM_UPDATE.md` - Updated client integration info
+- `docs/archive/v1.3.0/V1.3.0_CLIENT_UPDATE.md` - Client team integration notes (archived)
+- `docs/archive/2025/API_IMPROVEMENTS_2025-10-30.md` - API enhancement details (archived)
+- `docs/archive/2025/CORS_IMPROVEMENTS_OCT2025.md` - CORS configuration guide (archived)
+- `docs/archive/2025/CLIENT_TEAM_UPDATE.md` - Updated client integration info (archived)
 - `docs/development/PRE_COMMIT_GUIDE.md` - Pre-commit hook guidance
 - `docs/development/scripts_inventory.md` - Scripts audit and documentation
 - Enhanced `README.md` and getting started guides
@@ -256,12 +268,12 @@ Special thanks to the Video Annotation Viewer team for extensive integration tes
 
 - Uniform absolute import normalization across API, pipelines, storage, auth, exporters, and CLI to eliminate fragile `src.` and relative (`..`) paths after previous layout adjustments.
 - CLI server invocation now targets `api.main:app` directly (removing stale `src.` reference) improving reliability of `videoannotator server`.
-- Restored and merged accidentally truncated `docs/development/roadmap_v1.3.0.md` content; added explicit "Package Layout Normalization" technical debt section without loss of prior feature timeline, risks, or metrics.
+- Restored and merged accidentally truncated `docs/archive/development/roadmap_v1.3.0.md` content; added explicit "Package Layout Normalization" technical debt section without loss of prior feature timeline, risks, or metrics.
 - Updated Windows console output in version/dependency reporting to ASCII-safe tags only (reinforcing earlier 1.2.1 patch policy) – ensured no reintroduction of emojis in modified modules.
 
 ### Added
 
-- Status annotations in `docs/development/roadmap_v1.2.1.md` marking tasks as COMPLETED / DEFERRED / PARTIAL to synchronize roadmap with actual delivered scope.
+- Status annotations in the v1.2.1 roadmap marking tasks as COMPLETED / DEFERRED / PARTIAL to synchronize roadmap with actual delivered scope.
 - Explicit release date + version bump in `src/version.py` for 1.2.2.
 - Technical debt narrative enumerating upcoming packaging namespace migration (planned for v1.3.0) and associated deprecation shim strategy.
 
@@ -346,7 +358,7 @@ Changed:
 
 Documentation:
 
-- Appended "Technical Debt & Deferred Stabilization Items" section to `docs/development/roadmap_v1.3.0.md` enumerating deferred heavier tasks (BatchStatus semantics, retry backoff policy, pipeline config defaults, synthetic video fixtures, storage lifecycle cleanup, Whisper CUDA fallback test adjustments, error envelope taxonomy, registry extensions, residual emoji cleanup, auth follow-up tests).
+- Appended "Technical Debt & Deferred Stabilization Items" section to `docs/archive/development/roadmap_v1.3.0.md` enumerating deferred heavier tasks (BatchStatus semantics, retry backoff policy, pipeline config defaults, synthetic video fixtures, storage lifecycle cleanup, Whisper CUDA fallback test adjustments, error envelope taxonomy, registry extensions, residual emoji cleanup, auth follow-up tests).
 
 Testing / Validation:
 

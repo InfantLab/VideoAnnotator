@@ -5,7 +5,7 @@
 This guide provides secure, user-friendly methods for setting up authentication tokens between VideoAnnotator clients and servers. The system supports multiple authentication flows designed for different use cases.
 
 **Target Audience**: Client developers, system administrators, end users
-**Server Version**: VideoAnnotator API v1.2.0+
+**Server Version**: VideoAnnotator API v1.4.1+
 
 ---
 
@@ -43,7 +43,7 @@ This guide provides secure, user-friendly methods for setting up authentication 
 ```bash
 # Set your API token (most secure)
 export VIDEOANNOTATOR_API_TOKEN="va_api_your_token_here"
-export VIDEOANNOTATOR_API_URL="http://your-server:8000"
+export VIDEOANNOTATOR_API_URL="http://your-server:18011"
 
 # Start your client application
 npm run dev
@@ -57,7 +57,7 @@ Create `~/.videoannotator/config.json`:
 
 ```json
 {
-  "api_url": "http://your-server:8000",
+  "api_url": "http://your-server:18011",
   "api_token": "va_api_your_token_here",
   "user_info": {
     "username": "your_username",
@@ -82,7 +82,7 @@ videoannotator-client
 ```javascript
 // Use development tokens for testing
 const apiToken = "dev-token"; // Built-in development token
-const apiUrl = "http://localhost:8000";
+const apiUrl = "http://localhost:18011";
 
 // Make authenticated requests
 fetch(`${apiUrl}/api/v1/jobs/`, {
@@ -268,7 +268,7 @@ uv run videoannotator setup-db --create-admin
 ```javascript
 // config.js
 export const API_CONFIG = {
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000",
+  baseURL: process.env.REACT_APP_API_URL || "http://localhost:18011",
   token:
     process.env.REACT_APP_API_TOKEN ||
     localStorage.getItem("videoannotator_token"),
@@ -331,7 +331,7 @@ import json
 
 class VideoAnnotatorClient:
     def __init__(self, api_url=None, api_token=None):
-        self.api_url = api_url or os.getenv('VIDEOANNOTATOR_API_URL', 'http://localhost:8000')
+    self.api_url = api_url or os.getenv('VIDEOANNOTATOR_API_URL', 'http://localhost:18011')
         self.api_token = api_token or self._load_token()
 
         if not self.api_token:
@@ -388,7 +388,7 @@ mkdir -p ~/.videoannotator
 # Create configuration file
 cat > ~/.videoannotator/config.json << EOF
 {
-  "api_url": "http://your-server:8000",
+  "api_url": "http://your-server:18011",
   "api_token": "va_api_your_token_here",
   "user_info": {
     "username": "your_username",
@@ -426,7 +426,7 @@ uv run videoannotator generate-token --user your@email.com
 
 ```bash
 # Check server status
-curl http://your-server:8000/health
+curl http://your-server:18011/health
 
 # Check if server is running
 ps aux | grep videoannotator
@@ -450,14 +450,14 @@ uv run videoannotator generate-token \
 ```bash
 # Use debug endpoints to test authentication
 curl -H "Authorization: Bearer your_token" \
-  http://localhost:8000/api/v1/debug/token-info
+  http://localhost:18011/api/v1/debug/token-info
 
 # Check server logs for authentication issues
 tail -f logs/api_requests.log | grep "401\|403"
 
 # Test with development token
 curl -H "Authorization: Bearer dev-token" \
-  http://localhost:8000/api/v1/debug/server-info
+  http://localhost:18011/api/v1/debug/server-info
 ```
 
 ---
@@ -561,7 +561,7 @@ class TokenManager {
 # ~/.videoannotator/environments.json
 {
   "development": {
-    "api_url": "http://localhost:8000",
+    "api_url": "http://localhost:18011",
     "api_token": "dev-token"
   },
   "staging": {
@@ -583,5 +583,5 @@ videoannotator-client  # Automatically uses production config
 
 **Document Version**: v1.0
 **Last Updated**: 24 August 2025
-**Compatible With**: VideoAnnotator API v1.2.0+
+**Compatible With**: VideoAnnotator API v1.4.1+
 **Status**: Production ready with comprehensive security features

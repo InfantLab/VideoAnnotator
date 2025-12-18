@@ -138,12 +138,12 @@ run:
 
 **Default (pip via uv):**
 
-- Detect the host CUDA you want to target (e.g., 13.0).
+- Detect the host CUDA you want to target (e.g., 12.4).
 - Install PyTorch exactly as the official selector prints (pip or conda). Example:
 
 ```bash
-# Example: CUDA 13.0 wheels (confirm on pytorch.org first)
-uv add "torch==2.8.*+cu130" "torchvision==0.21.*+cu130" --index-url https://download.pytorch.org/whl/cu130
+# Example: CUDA 12.4 wheels (confirm on pytorch.org first)
+uv add "torch==2.8.*+cu124" "torchvision==0.21.*+cu124" --index-url https://download.pytorch.org/whl/cu124
 ```
 
 Always copy the exact command from the PyTorch site to match torch/torchvision/cuda triplets. ([PyTorch][3])
@@ -157,7 +157,7 @@ Always copy the exact command from the PyTorch site to match torch/torchvision/c
 ### `Dockerfile.cpu`
 
 ```dockerfile
-FROM python:3.12-slim
+FROM ubuntu:24.04
 
 # system basics
 RUN apt-get update && apt-get install -y curl build-essential && rm -rf /var/lib/apt/lists/*
@@ -179,8 +179,9 @@ CMD ["uv", "run", "python", "-m", "your_project"]
 ### `Dockerfile.gpu`
 
 ```dockerfile
-# Choose a CUDA runtime matching your torch build (e.g., 13.0)
-FROM nvidia/cuda:13.0.1-runtime-ubuntu24.04
+# Choose a CUDA runtime and Ubuntu baseline that matches your torch build.
+# In this repo we use Ubuntu 24.04 + CUDA 12.x runtime images.
+FROM nvidia/cuda:12.6.0-runtime-ubuntu24.04
 
 SHELL ["/bin/bash","-lc"]
 RUN apt-get update && apt-get install -y curl python3 python3-venv python3-pip && rm -rf /var/lib/apt/lists/*
@@ -192,12 +193,18 @@ ENV PATH="/root/.local/bin:${PATH}"
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-editable
-# Install torch for CUDA build selected (match to pytorch.org command)
-RUN uv add "torch==2.8.*+cu130" "torchvision==0.21.*+cu130" --index-url https://download.pytorch.org/whl/cu130
+
+# In this repo, torch/torchvision/torchaudio are sourced via a dedicated uv index
+# configured in pyproject.toml (e.g., `pytorch-cu124`).
 
 COPY . .
 CMD ["uv", "run", "python", "-m", "your_project"]
 ```
+
+### Production vs dev images (this repo)
+
+- `Dockerfile.cpu` and `Dockerfile.gpu` are production images and do NOT copy `models/` or `weights/` into the image; they download what they need at runtime.
+- `Dockerfile.dev` is a development image and intentionally copies your local `models/` and `weights/` so repeated runs do not re-download.
 
 **Host requirement:** Install **NVIDIA Container Toolkit** and run with `--gpus all`.
 
@@ -268,7 +275,7 @@ channels: [conda-forge]
 dependencies:
   - python=3.12
   - pytorch=*=cuda* # or cpu if desired; pin to your CUDA
-  - cudatoolkit=13.0
+  - cudatoolkit=12.4
   - numpy
   - pandas
   - pip
@@ -281,7 +288,7 @@ dependencies:
 **`Dockerfile.mamba` (sketch)**
 
 ```dockerfile
-FROM nvidia/cuda:13.0.1-runtime-ubuntu24.04
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
 SHELL ["/bin/bash","-lc"]
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 RUN curl -Ls https://micromamba.snakepit.net/api/micromamba/linux-64/latest | \

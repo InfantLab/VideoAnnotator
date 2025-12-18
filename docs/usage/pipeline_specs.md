@@ -61,13 +61,8 @@ class ModernPipeline(BasePipeline):
 **Output**: Normalized bounding boxes with persistent person IDs
 
 ```bash
-# Modern API Usage (v1.2.0)
+# Modern API Usage
 uv run videoannotator job submit video.mp4 --pipelines person
-
-# Legacy Direct Usage (for development)
-# from src.pipelines.person_tracking import PersonPipeline
-# pipeline = PersonPipeline()
-# annotations = pipeline.process("video.mp4")
 ```
 
 **Output Format**:

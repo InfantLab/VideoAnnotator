@@ -1,10 +1,20 @@
-# VideoAnnotator v1.2.0 Demo Commands & Usage
+# VideoAnnotator Demo Commands & Usage
 
 > 📖 **Navigation**: [Getting Started](GETTING_STARTED.md) | [Accessing Results](accessing_results.md) | [Pipeline Specs](pipeline_specs.md) | [Installation Guide](../installation/INSTALLATION.md) | [Main Documentation](../README.md)
 
-This guide demonstrates how to use VideoAnnotator v1.2.0 with its modern API server and CLI interface for video processing.
+This guide demonstrates how to use VideoAnnotator with its API server and CLI interface for video processing.
 
 ## 🚀 Quick Start Commands
+
+If you are running via Docker Compose (recommended), you can run commands inside the container like this:
+
+```bash
+# CPU service
+docker compose exec videoannotator va --help
+
+# GPU service (if you launched it)
+docker compose exec videoannotator-gpu va --help
+```
 
 ### Start API Server
 
@@ -83,8 +93,7 @@ uv run videoannotator job results <job_id>
 ```
 
 ## 🚀 Modern API-First Architecture
-
-### Key Features in v1.2.0:
+### Key Features:
 
 - **Integrated Background Processing** - No separate worker processes needed
 - **Real-time Job Status** - Live job tracking and progress updates

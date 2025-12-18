@@ -2,7 +2,7 @@
 
 ## 🎯 **Overview**
 
-Post-v1.2.0 cleanup to modernize all examples and documentation to use the new `videoannotator` CLI interface instead of old direct Python script execution patterns.
+Post-v1.2.x cleanup to modernize all examples and documentation to use the `videoannotator` CLI interface instead of old direct Python script execution patterns.
 
 ## 📚 **Files Requiring Updates**
 
@@ -159,4 +159,4 @@ Instead of replacing existing examples, provide both approaches:
 
 **Total**: 12-17 hours (1.5-2 developer days)
 
-This work can be done incrementally and doesn't block v1.2.0 release.
+This work can be done incrementally and does not block current releases.

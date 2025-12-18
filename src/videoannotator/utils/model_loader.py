@@ -7,6 +7,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from videoannotator.version import __version__
+
 logger = logging.getLogger(__name__)
 
 
@@ -104,7 +106,7 @@ def setup_download_logging():
 
 def log_first_run_info():
     """Display helpful information about first-run model downloads."""
-    logger.info("[WELCOME] Welcome to VideoAnnotator v1.2.0!")
+    logger.info(f"[WELCOME] Welcome to VideoAnnotator v{__version__}!")
     logger.info("")
     logger.info("[FIRST RUN] Downloading AI Models")
     logger.info("   VideoAnnotator uses several AI models for video analysis:")

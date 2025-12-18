@@ -165,7 +165,7 @@ def process(
         raise typer.Exit(code=1)
 
     # TODO: Implement direct video processing using existing pipelines
-    typer.echo("[WARNING] Direct processing not yet implemented in v1.2.0")
+    typer.echo("[WARNING] Direct processing is not yet implemented")
     typer.echo("[INFO] Use 'videoannotator server' and submit jobs via API")
     typer.echo("[INFO] See API docs at http://localhost:18011/docs")
 

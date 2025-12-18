@@ -655,7 +655,7 @@ Tasks are organized by user story to enable independent implementation and testi
   - Updated README.md quick start example
   - Updated docs/usage/GETTING_STARTED.md (all 4 curl examples)
   - Updated docs/usage/demo_commands.md (3 examples)
-  - Updated docs/CLIENT_TEAM_UPDATE.md (test procedures)
+  - Updated docs/archive/2025/CLIENT_TEAM_UPDATE.md (test procedures)
   - Updated specs/001-videoannotator-v1-3/quickstart.md (validation examples)
   - Added explanatory comments for public vs protected endpoints
   - All examples now use `export API_KEY` pattern

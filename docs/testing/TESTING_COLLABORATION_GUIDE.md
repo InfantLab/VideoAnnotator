@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide establishes workflows and protocols for effective collaboration between client-side and server-side development teams during VideoAnnotator v1.2.0 development.
+This guide establishes workflows and protocols for effective collaboration between client-side and server-side development teams during VideoAnnotator development.
 
 ---
 
@@ -35,7 +35,7 @@ This guide establishes workflows and protocols for effective collaboration betwe
 1. **Enable Debug Endpoints**:
 
    ```python
-   # Add to API router (already done in v1.2.0)
+   # Add to API router (already done)
    api_router.include_router(debug_router, prefix="/debug", tags=["debug"])
    ```
 
@@ -210,11 +210,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Start API server
-        run: uv run python api_server.py &
+            run: uv run videoannotator --dev &
       - name: Wait for server
         run: sleep 10
       - name: Run API tests
-   run: uv run python scripts/test_api_quick.py http://localhost:18011 test-token
+            run: uv run python scripts/test_api_quick.py http://localhost:18011 test-token
 ```
 
 ### **Automated Issue Detection**
@@ -284,7 +284,7 @@ jobs:
 
 ```bash
 # 1. Ensure debug endpoints are enabled
-# (Already included in v1.2.0)
+# (Already included)
 
 # 2. Test debug endpoints
 curl http://localhost:18011/api/v1/debug/server-info

@@ -1,6 +1,6 @@
 # VideoAnnotator Docker Deployment Guide
 
-VideoAnnotator v1.2.0 includes modern Docker containers using uv for fast, reliable dependency management.
+VideoAnnotator includes modern Docker containers using `uv` for fast, reliable dependency management.
 
 ## 🐳 Available Docker Images
 
@@ -16,7 +16,7 @@ VideoAnnotator v1.2.0 includes modern Docker containers using uv for fast, relia
 docker build -f Dockerfile.cpu -t videoannotator:cpu .
 
 # Run CPU container
-docker run -p 8000:8000 --rm -v "${PWD}/data:/app/data" -v "${PWD}/output:/app/output" videoannotator:cpu
+docker run -p 18011:18011 --rm -v "${PWD}/data:/app/data" -v "${PWD}/output:/app/output" videoannotator:cpu
 ```
 
 ### 2. **videoannotator:gpu** - Production GPU
@@ -31,7 +31,7 @@ docker run -p 8000:8000 --rm -v "${PWD}/data:/app/data" -v "${PWD}/output:/app/o
 docker build -f Dockerfile.gpu -t videoannotator:gpu .
 
 # Run GPU container
-docker run -p 8000:8000 --gpus all --rm -v "${PWD}/data:/app/data" -v "${PWD}/output:/app/output" videoannotator:gpu
+docker run -p 18011:18011 --gpus all --rm -v "${PWD}/data:/app/data" -v "${PWD}/output:/app/output" videoannotator:gpu
 ```
 
 ### 3. **videoannotator:dev** - Development with Local Model Cache
@@ -43,15 +43,21 @@ docker run -p 8000:8000 --gpus all --rm -v "${PWD}/data:/app/data" -v "${PWD}/ou
 
 ```bash
 # Build development image (includes models)
-docker build -f dockerfile.dev -t videoannotator:dev .
+docker build -f Dockerfile.dev -t videoannotator:dev .
 
 # Run development container
-docker run -p 8000:8000 --gpus all --rm \
+docker run -p 18011:18011 --gpus all --rm \
   -v "${PWD}/data:/app/data" \
   -v "${PWD}/output:/app/output" \
   -v "${PWD}/database:/app/database" \
   -v "${PWD}/logs:/app/logs" \
   videoannotator:dev
+
+Notes:
+
+- Production images (`Dockerfile.cpu`, `Dockerfile.gpu`) do not copy `models/` or `weights/` into the image; they download what they need at runtime.
+- The dev image (`Dockerfile.dev`) intentionally copies your local `models/` and `weights/` directories into the image so repeated runs do not re-download.
+- If your repo uses Git LFS for models/weights, run `git lfs pull` before building the dev image.
 ```
 
 ## 📊 Image Comparison
@@ -68,24 +74,24 @@ docker run -p 8000:8000 --gpus all --rm \
 
 ```bash
 # Start development service with pre-cached models
-docker compose --profile dev-gpu up videoannotator-dev-gpu
+docker compose --profile dev-gpu up --build videoannotator-dev-gpu
 
-# Access API at http://localhost:8000
-# Interactive docs at http://localhost:8000/docs
+# Access API at http://localhost:18011
+# Interactive docs at http://localhost:18011/docs
 ```
 
 ### Production GPU
 
 ```bash
 # Start production GPU service
-docker compose --profile gpu up videoannotator-gpu
+docker compose --profile gpu up --build videoannotator-gpu
 ```
 
 ### CPU-only Production
 
 ```bash
 # Start CPU service
-docker compose --profile prod up videoannotator-prod
+docker compose up --build
 ```
 
 ## Prerequisites
@@ -116,7 +122,7 @@ sudo systemctl restart docker
 ### Example with All Mounts
 
 ```bash
-docker run -p 8000:8000 --gpus all --rm \
+docker run -p 18011:18011 --gpus all --rm \
   -v "${PWD}/data:/app/data" \
   -v "${PWD}/output:/app/output" \
   -v "${PWD}/logs:/app/logs" \
@@ -129,8 +135,8 @@ docker run -p 8000:8000 --gpus all --rm \
 
 ### For Fast Testing (Use dev image)
 
-1. **Build once**: `docker build -f dockerfile.dev -t videoannotator:dev .`
-2. **Run anytime**: `docker run -p 8000:8000 --gpus all videoannotator:dev`
+1. **Build once**: `docker build -f Dockerfile.dev -t videoannotator:dev .`
+2. **Run anytime**: `docker run -p 18011:18011 --gpus all videoannotator:dev`
 3. **No wait**: Your local models copied, immediate testing
 
 ### For Production (Use optimized images)
@@ -145,13 +151,13 @@ docker run -p 8000:8000 --gpus all --rm \
 # Build all images
 docker build -f Dockerfile.cpu -t videoannotator:cpu .
 docker build -f Dockerfile.gpu -t videoannotator:gpu .
-docker build -f dockerfile.dev -t videoannotator:dev .
+docker build -f Dockerfile.dev -t videoannotator:dev .
 
 # Run development server (fastest for testing)
-docker run -p 8000:8000 --gpus all --rm videoannotator:dev
+docker run -p 18011:18011 --gpus all --rm videoannotator:dev
 
 # Run production server
-docker run -p 8000:8000 --gpus all --rm videoannotator:gpu
+docker run -p 18011:18011 --gpus all --rm videoannotator:gpu
 
 # Check GPU access in container
 docker run --gpus all --rm videoannotator:dev python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}')"
@@ -162,7 +168,7 @@ docker run --gpus all --rm videoannotator:dev python -c "import torch; print(f'C
 ### Build Issues
 
 - **"NVIDIA files in CPU build"**: Fixed in latest Dockerfile.cpu with CPU-only PyTorch
-- **"Models folder too large"**: Use .dockerignore to exclude models/ for prod builds
+- **"Dev image build context is large"**: `Dockerfile.dev` copies `models/` and `weights/` into the image; this is expected for fast iteration
 - **"Build takes too long"**: Use dev image only when you need pre-cached models
 - **"Package libgl1-mesa-glx not available"**: Fixed with correct Debian package names
 - **"No solution found when resolving dependencies"**: Fixed with --frozen flag and Python <3.13 constraint
@@ -177,14 +183,14 @@ docker run --gpus all --rm videoannotator:dev python -c "import torch; print(f'C
 
 ```powershell
 # Windows-specific command format
-docker run -p 8000:8000 --gpus all --rm -v "${PWD}\data:/app/data" -v "${PWD}\output:/app/output" videoannotator:dev
+docker run -p 18011:18011 --gpus all --rm -v "${PWD}\data:/app/data" -v "${PWD}\output:/app/output" videoannotator:dev
 ```
 
 ## Container Features
 
 - **uv package manager** for fast, reliable dependency management
 - **Python 3.12** runtime
-- **CUDA 13.0** support (GPU container)
+- **CUDA 12.x** support (GPU containers; see the `FROM nvidia/cuda:...` tag in the Dockerfile)
 - **Models download automatically** on first use (production) or pre-cached (dev)
 - **FastAPI server** ready for deployment
 - **Automatic dependency resolution** via uv.lock

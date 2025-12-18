@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides debugging tools, testing utilities, and collaboration guidelines for both client-side and server-side development teams working on VideoAnnotator v1.2.0.
+This document provides debugging tools, testing utilities, and collaboration guidelines for both client-side and server-side development teams working on VideoAnnotator.
 
 ---
 
@@ -798,7 +798,7 @@ const API_ERRORS = {
 
 ### Environment
 
-- Server Version: [e.g., v1.2.0-dev]
+- Server Version: [e.g., v1.4.1]
 - Client Version: [e.g., v1.0.3]
 - Browser: [if applicable]
 - API Base URL: [e.g., http://localhost:18011]

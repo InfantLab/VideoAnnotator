@@ -35,16 +35,17 @@
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "uv sync && uv sync --extra dev && uv run pre-commit install",
+  "postCreateCommand": "uv sync && uv sync --extra dev && bash scripts/install_hadolint.sh && uv run pre-commit install",
+  "containerEnv": {
+    "UV_LINK_MODE": "copy"
+  },
   "customizations": {
     "vscode": {
       "settings": {
         "python.defaultInterpreterPath": ".venv/bin/python",
-        "python.linting.enabled": true,
-        "python.linting.ruffEnabled": true,
         "python.formatting.provider": "none",
         "[python]": {
-          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.defaultFormatter": "astral-sh.ruff",
           "editor.formatOnSave": true,
           "editor.codeActionsOnSave": {
             "source.organizeImports": true
@@ -52,10 +53,10 @@
         }
       },
       "extensions": [
-        "charliermarsh.ruff",
+        "astral-sh.ruff",
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "openai.chatgpt"
+        "GitHub.copilot-chat"
       ]
     }
   }

@@ -500,7 +500,7 @@ As an open-source contributor, I need clearly organized documentation that separ
 
 ## Related Documents *(include if applicable)*
 
-- [v1.3.0 Development Roadmap](../../docs/development/roadmap_v1.3.0.md) - Comprehensive release plan and timeline
+- [v1.3.0 Development Roadmap](../../docs/archive/development/roadmap_v1.3.0.md) - Comprehensive release plan and timeline (archived)
 - [JOSS Readiness Assessment](./JOSS_READINESS_ASSESSMENT.md) - Detailed analysis of JOSS review requirements and gaps
 - [JOSS Paper Draft](../../docs/joss.md) - Software paper for Journal of Open Source Software submission
 - [Client Team QA Report](../../docs/testing/) - Integration testing feedback from Video Annotation Viewer team

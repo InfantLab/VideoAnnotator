@@ -144,22 +144,22 @@ sync:
 
 # Docker commands
 docker-build:
-	docker build -t videoannotator:latest .
+	docker build -f Dockerfile.cpu -t videoannotator:cpu .
 
 docker-build-gpu:
-	docker build --target gpu-base -t videoannotator:gpu .
+	docker build -f Dockerfile.gpu -t videoannotator:gpu .
 
 docker-run:
-	docker run --rm -v $(PWD)/data:/app/data -v $(PWD)/output:/app/output videoannotator:latest
+	docker run --rm -p 18011:18011 -v $(PWD)/data:/app/data -v $(PWD)/output:/app/output -v $(PWD)/database:/app/database -v $(PWD)/logs:/app/logs videoannotator:cpu
 
 docker-run-gpu:
-	docker run --gpus all --rm -v $(PWD)/data:/app/data -v $(PWD)/output:/app/output videoannotator:gpu
+	docker run --gpus all --rm -p 18011:18011 -v $(PWD)/data:/app/data -v $(PWD)/output:/app/output -v $(PWD)/database:/app/database -v $(PWD)/logs:/app/logs videoannotator:gpu
 
 docker-dev:
-	docker-compose --profile dev up --build
+	docker compose up --build
 
 docker-jupyter:
-	docker-compose --profile dev up jupyter
+	@echo "No Jupyter Compose service is defined in docker-compose.yml."
 
 # Documentation commands
 docs:

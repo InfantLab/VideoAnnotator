@@ -1,21 +1,23 @@
 # Upgrade to Latest Versions (September 2025)
 
-This document explains the upgrade from older dependency versions to the latest stable releases.
+This document records upgrade evaluation notes.
 
-## What Was Updated
+As of the current repository Dockerfiles, the baseline is still **Ubuntu 22.04** with **CUDA 12.x** (see `Dockerfile.gpu` / `Dockerfile.dev`). Treat the content below as a proposal/plan unless the Dockerfiles in the repo match the versions described.
+
+## What Was Proposed
 
 ### Container Images
 
-- **Ubuntu**: 22.04 LTS → **24.04.3 LTS** (Noble Numbat)
-- **CUDA**: 12.4.1 → **13.0.1** (latest stable)
-- **Python**: 3.12 → **3.13** (CPU containers)
+- **Ubuntu**: 22.04 LTS → 24.04.x LTS (candidate)
+- **CUDA**: 12.x → 13.x (candidate)
+- **Python**: 3.12 → 3.13 (candidate; CPU containers)
 
 ### PyTorch
 
 - **PyTorch**: 2.4.0 → **2.8.0** (current stable)
 - **TorchVision**: 0.19.0 → **0.21.0**
 - **TorchAudio**: 2.4.0 → **2.8.0**
-- **CUDA Build**: cu124 → **cu130**
+- **CUDA Build**: cu124 → cu130 (candidate)
 
 ## Why Update?
 
@@ -66,8 +68,8 @@ docker build -f Dockerfile.dev -t videoannotator:dev-latest .
 Update your PyTorch installation:
 
 ```bash
-# CUDA 13.0
-uv pip install "torch==2.8.*+cu130" "torchvision==0.21.*+cu130" --index-url https://download.pytorch.org/whl/cu130
+# Baseline example (CUDA 12.4)
+uv pip install "torch==2.8.*+cu124" "torchvision==0.21.*+cu124" "torchaudio==2.8.*+cu124" --index-url https://download.pytorch.org/whl/cu124
 
 # CPU only
 uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
@@ -81,13 +83,13 @@ uv pip install torch torchvision torchaudio --index-url https://download.pytorch
 
 ## Version Matrix
 
-| Component   | Previous | Current     | Notes                       |
-| ----------- | -------- | ----------- | --------------------------- |
-| Ubuntu      | 22.04    | 24.04.3 LTS | Latest LTS, 10 year support |
-| CUDA        | 12.4.1   | 13.0.1      | Latest stable               |
-| Python      | 3.12     | 3.13        | Latest stable               |
-| PyTorch     | 2.4.0    | 2.8.0       | Current stable release      |
-| TorchVision | 0.19.0   | 0.21.0      | Matches PyTorch 2.8         |
+| Component   | Baseline in repo | Upgrade target | Notes                       |
+| ----------- | --------------- | ------------- | --------------------------- |
+| Ubuntu      | 22.04            | 24.04.x LTS    | Candidate upgrade           |
+| CUDA        | 12.x             | 13.x           | Candidate upgrade           |
+| Python      | 3.12             | 3.13           | Candidate upgrade (CPU)     |
+| PyTorch     | (varies)         | 2.8.x          | Validate pipeline behavior  |
+| TorchVision | (varies)         | 0.21.x         | Match PyTorch build         |
 
 ## Rollback Plan
 
@@ -108,12 +110,14 @@ After upgrading:
 
 ## Files Changed
 
-- `Dockerfile.dev` - CUDA 13.0.1 + Ubuntu 24.04 + PyTorch 2.8
-- `Dockerfile.gpu` - CUDA 13.0.1 + Ubuntu 24.04 + PyTorch 2.8
-- `Dockerfile.cpu` - Python 3.13 + PyTorch 2.8 CPU
-- `.devcontainer/devcontainer.json` - Updated PyTorch versions
-- `docs/installation/*.md` - Updated version references
-- `docs/deployment/Docker.md` - Updated CUDA version notes
+Planned touchpoints (if/when the upgrade is implemented):
+
+- `Dockerfile.dev`
+- `Dockerfile.gpu`
+- `Dockerfile.cpu`
+- `.devcontainer/devcontainer.json`
+- `docs/installation/*.md`
+- `docs/deployment/Docker.md`
 
 ## Questions?
 

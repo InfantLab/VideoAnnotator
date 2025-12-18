@@ -1,10 +1,6 @@
 # VideoAnnotator Documentation
 
-## Current Release: v1.3.0 ✨
-
-**Production-ready release achieved!** Massive test suite improvements (720/763 passing - 94.4%), comprehensive bug fixes, and enhanced stability across all pipeline operations.
-
-## Next Development: v1.4.0 (First Public Release + JOSS Paper)
+## Current Release: v1.4.1
 
 This documentation is organized into clear sections for different user types and development phases.
 
@@ -21,36 +17,45 @@ This documentation is organized into clear sections for different user types and
 
 - [Getting Started](usage/GETTING_STARTED.md) - Quick start guide for new users
 - [Accessing Results](usage/accessing_results.md) - **New**: Downloading annotations and artifacts
-- [Configuration](usage/configuration.md) - **New**: Configuration guide
+- [Configuration](usage/configuration.md) - Configuration guide
 - [Pipeline Specifications](usage/pipeline_specs.md) - Detailed pipeline documentation
 - [Scene Detection Guide](usage/scene_detection.md) - Scene detection usage
-- [Scene Detection Guide (Advanced)](usage/scene_detection_guide.md) - Advanced scene detection usage
 - [Demo Commands](usage/demo_commands.md) - Example commands and workflows
-- [Output Formats](usage/output_formats.md) - Understanding output data formats
 - [Troubleshooting](usage/troubleshooting.md) - Common issues and solutions
-- [Troubleshooting Guide](usage/troubleshooting_guide.md) - Extended troubleshooting
+
+## Command Shortcuts (Containers)
+
+If you are using the provided Docker/devcontainer images, a few convenience commands are available on `PATH`.
+These are optional shortcuts; the canonical CLI remains `uv run videoannotator ...`.
+
+| Action | Shortcut | Equivalent |
+|---|---|---|
+| Initialize the database + create an admin token | `setupdb --admin-email you@example.com --admin-username you` | `uv run videoannotator setup-db --admin-email you@example.com --admin-username you` |
+| Run the VideoAnnotator CLI (any subcommand) | `va ...` | `uv run videoannotator ...` |
+| Start the API server (recommended defaults) | `va` | `uv run videoannotator` |
+| Start the API server (explicit subcommand) | `server ...` | `uv run videoannotator server ...` |
+| Generate a new API token | `newtoken ...` | `uv run videoannotator generate-token ...` |
+| List available pipelines (detailed) | `va pipelines --detailed` | `uv run videoannotator pipelines --detailed` |
+| Validate a config file | `va config --validate configs/default.yaml` | `uv run videoannotator config --validate configs/default.yaml` |
+| Submit a processing job | `va job submit video.mp4 --pipelines scene,person` | `uv run videoannotator job submit video.mp4 --pipelines scene,person` |
+| Check job status | `va job status <job_id>` | `uv run videoannotator job status <job_id>` |
+| List jobs | `va job list` | `uv run videoannotator job list` |
+| Run all tests (quick/quiet) | `vatest` | `uv run pytest -q` |
+| Run some tests (quick/quiet) | `vatest tests/unit/` | `uv run pytest -q tests/unit/` |
+
+For more copy-pasteable CLI workflows, see `usage/demo_commands.md`.
 
 ### Deployment
 
-- [Docker Guide](deployment/docker.md) - Container deployment
-- [Docker Setup](deployment/Docker.md) - Docker configuration
-- [Docker Guide Extended](deployment/Docker_Guide.md) - Advanced Docker usage
+- [Docker Guide](deployment/Docker.md) - Container deployment (Docker Compose-first)
 
 ## 🔧 Development Documentation
-
-### Current Release (v1.3.0)
-
-- [v1.3.0 Roadmap](development/roadmap_v1.3.0.md) - Production reliability & critical fixes (COMPLETED)
-- [v1.2.0 Release Summary](development/v1.2.0_RELEASE_SUMMARY.md) - Complete release overview and achievements
-- [v1.2.0 Roadmap](development/roadmap_v1.2.0.md) - Development roadmap and completed milestones
-- [API Upgrade Guide](development/api_upgrade_v1.2.0.md) - Major API changes implemented in v1.2.0
-- [Database Implementation](development/database_implementation_plan_v1.2.0.md) - Database architecture
 
 ### Active Development & Roadmap
 
 - **[Roadmap Overview](development/roadmap_overview.md)** - Complete release strategy v1.3.0 → v2.0.0
-- [v1.4.0 Roadmap](development/roadmap_v1.4.0.md) - **CURRENT**: First public release + JOSS paper (Q2 2026)
-- [v1.2.1 Roadmap](development/roadmap_v1.2.1.md) - Polish and documentation updates (completed)
+- [v1.4.0 Roadmap](development/roadmap_v1.4.0.md) - Roadmap for the v1.4.0 cycle
+- [v1.5.0 Roadmap](development/roadmap_v1.5.0.md) - Roadmap for the v1.5.0 cycle
 - [Examples CLI Update Plan](development/EXAMPLES_CLI_UPDATE_CHECKLIST.md) - CLI modernization checklist
 
 ## 🧪 Testing & QA
@@ -59,41 +64,15 @@ This documentation is organized into clear sections for different user types and
 
 - [Testing Overview](testing/testing_overview.md) - Complete testing strategy and results
 - [Testing Standards](testing/testing_standards.md) - Quality assurance standards
-- [v1.2.0 QA Checklist](testing/qa_checklist_v1.2.0.md) - Complete QA validation for v1.2.0 release
 - [Batch Testing Guide](testing/batch_testing_guide.md) - Batch processing test procedures
 
 ## 📁 Archive
 
-Historical and outdated documentation for reference:
+Historical and superseded documentation lives under `archive/`:
 
-- [Archive Folder](archive/) - Contains superseded documentation
-
-## 📋 Document Lifecycle
-
-### Active Development
-
-Documents in `development/` are tagged with version numbers and represent current development work:
-
-- `feature_name_v1.1.2.md` - Current development cycle
-- `feature_name_v1.2.0.md` - Next major release
-
-### Testing & QA
-
-Documents in `testing/` follow the same versioning pattern:
-
-- `test_plan_v1.1.1.md` - Current release testing
-- `qa_checklist_v1.1.2.md` - Development cycle QA
-
-### Completion & Archive
-
-When development cycles complete:
-
-1. Current development docs move to `archive/`
-2. Next version becomes current
-3. New development docs created for future versions
-
-## 🔄 Version Status
-
-- **v1.2.0** (Current Release) - Production-ready API with complete integrated video processing
-- **v1.2.1** (Next Development) - Documentation updates and CLI modernization
+- [Archive Root](archive/) - Top-level archive index
+- [Release Notes](archive/release-notes/) - Historical release notes
+- [Development (Archived)](archive/development/) - Completed roadmaps, checklists, and completion summaries
+- [Testing (Archived)](archive/testing/) - Historical QA checklists
+- [Dated Updates](archive/2025/) - Dated update memos
 - **v1.3.0** (Future Release) - Advanced features, security, and scalability enhancements

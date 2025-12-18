@@ -2,7 +2,7 @@
 
 ## 🚀 Executive Summary
 
-We've completed the **server-side implementation** of comprehensive debugging and collaboration tools for VideoAnnotator v1.2.0. This package provides everything needed for effective client-server team collaboration during development.
+We've completed the **server-side implementation** of comprehensive debugging and collaboration tools for VideoAnnotator. This package provides everything needed for effective client-server team collaboration during development.
 
 **Status**: ✅ **Ready for Client Team Integration**
 **Testing**: ✅ **All 18 tests pass (100% success rate)**
@@ -35,7 +35,7 @@ All endpoints are **live and tested**:
 
 - **`CLIENT_SERVER_DEBUG_TOOLS.md`** - Master debugging guide
 - **`TESTING_COLLABORATION_GUIDE.md`** - Team workflow protocols
-- **Updated roadmaps** - v1.2.0 and v1.3.0 with critical server issues prioritized
+- **Updated roadmaps** - Historical roadmaps are archived under `docs/archive/`
 
 ---
 
@@ -79,7 +79,7 @@ VideoAnnotatorDebug.monitorJob(jobId); // Real-time job monitoring
 git pull origin master
 
 # Start your API server
-uv run python api_server.py
+uv run videoannotator --dev
 
 # Test all endpoints
 uv run python scripts/test_api_quick.py http://localhost:18011 dev-token
@@ -107,7 +107,9 @@ curl http://localhost:18011/api/v1/debug/server-info
 curl http://localhost:18011/api/v1/debug/pipelines
 
 # Token validation
-curl -H "Authorization: Bearer your-token" \
+export API_KEY="va_api_xxx..."
+curl -H "X-API-Key: $API_KEY" \
+  http://localhost:18011/api/v1/jobs
   http://localhost:18011/api/v1/debug/token-info
 ```
 
@@ -186,8 +188,7 @@ scripts/browser_debug_console.js # Browser debugging tools
 docs/testing/CLIENT_SERVER_DEBUG_TOOLS.md     # Master guide
 docs/testing/TESTING_COLLABORATION_GUIDE.md   # Team workflows
 docs/testing/SERVER_SIDE_IMPROVEMENTS.md      # Original requirements
-docs/development/roadmap_v1.2.0.md            # Updated roadmap
-docs/development/roadmap_v1.3.0.md            # Future features
+docs/archive/development/roadmap_v1.3.0.md    # Historical roadmap (archived)
 ```
 
 ---
