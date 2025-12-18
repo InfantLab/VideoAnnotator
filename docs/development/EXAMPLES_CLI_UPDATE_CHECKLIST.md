@@ -1,8 +1,8 @@
-# Examples CLI Update Checklist for v1.2.1
+# Examples CLI Update Checklist
 
 ## 🎯 **Overview**
 
-Post-v1.2.x cleanup to modernize all examples and documentation to use the `videoannotator` CLI interface instead of old direct Python script execution patterns.
+Ongoing cleanup to modernize all examples and documentation to use the `videoannotator` CLI interface instead of old direct Python script execution patterns.
 
 ## 📚 **Files Requiring Updates**
 

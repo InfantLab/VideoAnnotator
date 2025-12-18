@@ -1,6 +1,6 @@
 # Emotion Output Format Specification (v0.1)
 
-Status: Draft (v1.2.1 scope)
+Status: Draft
 Audience: Pipeline developers, downstream analytics, storage adapters
 
 ## Goals

@@ -46,7 +46,7 @@ uv run python scripts/verify_installation.py
 
 **Expected output**: All checks pass ✅ (GPU optional)
 
-**Troubleshooting**: See [Troubleshooting Guide](../installation/troubleshooting.md) if any checks fail.
+**Troubleshooting**: See [Troubleshooting Guide](installation/troubleshooting.md) if any checks fail.
 
 ---
 
@@ -313,7 +313,7 @@ uv run pytest tests/integration/ -v
 2. Create YAML metadata in `src/registry/metadata/`
 3. Add tests in `tests/pipelines/`
 
-See [Pipeline Development Guide](../development/pipeline_development.md)
+See [Pipeline Specifications](usage/pipeline_specs.md)
 
 ### Q: How extensible is the system?
 
@@ -329,7 +329,7 @@ See [Pipeline Development Guide](../development/pipeline_development.md)
 - Docker: `Dockerfile.cpu`, `Dockerfile.gpu`
 - Kubernetes: Manifests in `docs/deployment/`
 - Systemd: Service files provided
-- See [Deployment Guide](../deployment/Docker.md)
+- See [Deployment Guide](deployment/Docker.md)
 
 ### Q: How is testing organized?
 
@@ -392,7 +392,7 @@ Use this checklist for JOSS review:
 
 - **Documentation**: Start with [Main README](../README.md)
 - **Issues**: [GitHub Issues](https://github.com/InfantLab/VideoAnnotator/issues)
-- **Troubleshooting**: [Troubleshooting Guide](../installation/troubleshooting.md)
-- **Security**: [Security Documentation](../security/README.md)
+- **Troubleshooting**: [Troubleshooting Guide](installation/troubleshooting.md)
+- **Security**: [Security Documentation](security/README.md)
 
 **Happy reviewing! 🎉**

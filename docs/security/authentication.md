@@ -345,4 +345,4 @@ Example: `va_api_ya9C5x_OZkweZf8JSxen60WY6KD98_VTa5_uHfN5wRM`
 
 - [CORS Configuration](cors.md) - Configure allowed origins
 - [Production Checklist](production_checklist.md) - Security hardening guide
-- [API Reference](../usage/api_reference.md) - Complete API documentation
+- [Getting Started](../usage/GETTING_STARTED.md) - API usage and common workflows

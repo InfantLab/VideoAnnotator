@@ -53,14 +53,14 @@ For more copy-pasteable CLI workflows, see `usage/demo_commands.md`.
 
 ### Active Development & Roadmap
 
-- **[Roadmap Overview](development/roadmap_overview.md)** - Complete release strategy v1.3.0 → v2.0.0
+- **[Roadmap Overview (Archived)](archive/development/roadmap_overview.md)** - Historical release strategy notes
 - [v1.4.0 Roadmap](development/roadmap_v1.4.0.md) - Roadmap for the v1.4.0 cycle
 - [v1.5.0 Roadmap](development/roadmap_v1.5.0.md) - Roadmap for the v1.5.0 cycle
 - [Examples CLI Update Plan](development/EXAMPLES_CLI_UPDATE_CHECKLIST.md) - CLI modernization checklist
 
 ## 🧪 Testing & QA
 
-### Current Testing (v1.3.0)
+### Current Testing
 
 - [Testing Overview](testing/testing_overview.md) - Complete testing strategy and results
 - [Testing Standards](testing/testing_standards.md) - Quality assurance standards

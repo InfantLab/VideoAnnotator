@@ -283,6 +283,6 @@ WORKER_POLL_INTERVAL=2 videoannotator worker
 
 ## See Also
 
-- [Deployment Guide](./deployment/README.md)
-- [Configuration Files](../configs/README.md)
-- [Worker Architecture](./development/architecture.md)
+- [Deployment Guide](../deployment/Docker.md)
+- [Configuration Files](../../configs/README.md)
+- [Development Notes](../development/README.md)
