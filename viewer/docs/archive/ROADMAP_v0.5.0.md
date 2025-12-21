@@ -75,7 +75,7 @@ The following features were originally planned for v0.5.0 but deferred:
 - ❌ **Accessibility Compliance** - WCAG 2.1 AA (from v0.4.0)
 - ❌ **User Preference Persistence** - Save/load presets (from v0.4.0)
 
-See [ROADMAP_v0.6.0.md](./ROADMAP_v0.6.0.md) for deferred features.
+See [ROADMAP_v0.6.1.md](../development/ROADMAP_v0.6.1.md) for deferred features and the JOSS release plan.
 
 ---
 
@@ -116,7 +116,7 @@ See [ROADMAP_v0.6.0.md](./ROADMAP_v0.6.0.md) for deferred features.
 
 ## 🎯 **NEXT STEPS**
 
-See ROADMAP_v0.6.0.md for public release features and deferred items.
+See ROADMAP_v0.6.1.md for public release features and deferred items.
 
 ---
 

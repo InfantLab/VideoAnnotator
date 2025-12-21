@@ -2,7 +2,7 @@
 
 > **⚠️ STATUS: SUPERSEDED**  
 > **Released**: October 2025 (as part of v0.5.0)  
-> This roadmap was superseded during development. The planned features evolved based on VideoAnnotator v1.3.0 server capabilities and user needs. Core monitoring and UX features were delivered, while enterprise features (bulk processing, visual config builder, landing page redesign) were deferred to v0.6.0. See [ROADMAP_v0.5.0.md](./ROADMAP_v0.5.0.md) for actual deliverables and [ROADMAP_v0.6.0.md](./ROADMAP_v0.6.0.md) for deferred features.
+> This roadmap was superseded during development. The planned features evolved based on VideoAnnotator v1.3.0 server capabilities and user needs. Core monitoring and UX features were delivered, while enterprise features (bulk processing, visual config builder, landing page redesign) were deferred to v0.6.x. See [ROADMAP_v0.5.0.md](./ROADMAP_v0.5.0.md) for actual deliverables and [ROADMAP_v0.6.1.md](../development/ROADMAP_v0.6.1.md) for deferred features and the JOSS release plan.
 
 ---
 
