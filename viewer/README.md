@@ -1,6 +1,6 @@
 <div align="center">
   <img src="public/icon-64x64.png" alt="Video Annotation Viewer Icon" width="64" height="64">
-  <h1>Video Annotation Viewer v0.4.0</h1>
+  <h1>Video Annotation Viewer v0.6.0</h1>
 </div>
 
 [![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -20,6 +20,10 @@
 
 
 Advanced multimodal video annotation analysis tool for both **reviewing VideoAnnotator pipeline outputs** and **creating new annotation jobs**. Features synchronized pose detection, speech recognition, speaker diarization, and scene detection visualization with integrated job management.
+
+JOSS submission prep (targeting v0.6.1) lives in:
+- `paper/paper.md`
+- `docs/development/ROADMAP_v0.6.1.md`
 
 > Companion processing pipeline: [VideoAnnotator](https://github.com/InfantLab/VideoAnnotator)
 

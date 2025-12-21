@@ -1,4 +1,7 @@
-# Video Annotation Viewer v0.6.0 Roadmap
+# Video Annotation Viewer v0.6.0 Roadmap (Superseded)
+
+> This roadmap has been superseded by [ROADMAP_v0.6.1.md](./ROADMAP_v0.6.1.md).
+> v0.6.0 was released in December 2025; the active JOSS release implementation plan is v0.6.1.
 
 **Theme:** JOSS Paper & Public Release  
 **Status:** 📋 PLANNED  
