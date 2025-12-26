@@ -1,4 +1,4 @@
-# VideoAnnotator v1.2.0 - Modern Development Workflow
+# VideoAnnotator - Modern Development Workflow
 # Uses uv for fast, reliable package management
 
 PY := uv run
@@ -7,7 +7,7 @@ UV := export PATH="$$HOME/.local/bin:$$PATH" && uv
 # Default target
 .PHONY: help
 help:
-	@echo "VideoAnnotator v1.2.0 - Development Commands"
+	@echo "VideoAnnotator - Development Commands"
 	@echo ""
 	@echo "Setup:"
 	@echo "  install        Install dependencies with uv"
@@ -115,11 +115,11 @@ build: clean
 # API server commands
 .PHONY: server
 server:
-	$(PY) python api_server.py
+	$(PY) videoannotator server --host 0.0.0.0 --port 18011
 
 .PHONY: server-dev
 server-dev:
-	$(PY) uvicorn api_server:app --host 0.0.0.0 --port 18011 --reload
+	$(PY) videoannotator server --host 0.0.0.0 --port 18011 --reload --dev
 
 # PyTorch CUDA installation helper
 .PHONY: install-torch-cuda

@@ -51,7 +51,7 @@ def apply_scipy_compatibility_patch():
 # Apply patch early
 apply_scipy_compatibility_patch()
 
-# Note: Logging is set up by api_server.py - no need to duplicate
+# Logging configuration is handled by entrypoints; this module uses the shared logger.
 logger = get_logger("api")
 
 

@@ -1,29 +1,32 @@
 #!/usr/bin/env python3
+"""Create a new API key for testing purposes.
+
+Run:
+  uv run python scripts/auth/create_test_key.py
 """
-Create a new API key for testing purposes.
-"""
 
-from src.database.crud import APIKeyCRUD
-from src.database.database import SessionLocal
-from src.database.models import User
+from __future__ import annotations
+
+from videoannotator.database.crud import APIKeyCRUD
+from videoannotator.database.database import SessionLocal, create_tables
+from videoannotator.database.models import User
 
 
-def create_test_api_key():
+def create_test_api_key() -> str | None:
     """Create a new API key for the admin user."""
+    create_tables()
     db = SessionLocal()
     try:
-        # Find admin user
         admin_user = db.query(User).filter(User.username == "admin").first()
         if not admin_user:
-            print("No admin user found")
+            print("[ERROR] No admin user found")
             return None
 
-        # Create new API key
         api_key_obj, raw_key = APIKeyCRUD.create(
             db=db,
             user_id=str(admin_user.id),
             key_name="test_key",
-            expires_days=None,  # Never expires
+            expires_days=None,
         )
 
         print(f"Admin User: {admin_user.username} ({admin_user.email})")
@@ -37,7 +40,6 @@ def create_test_api_key():
         print("Save this key - it won't be shown again!")
 
         return raw_key
-
     finally:
         db.close()
 

@@ -154,10 +154,10 @@ taskkill /PID <PID> /F
 ```bash
 # Set custom port
 export API_PORT=18012
-uv run python api_server.py
+uv run videoannotator server --host 0.0.0.0 --port 18012
 
 # Or in code
-uvicorn api.main:app --port 18012
+uvicorn videoannotator.api.main:app --port 18012
 ```
 
 ---
@@ -408,7 +408,7 @@ lsof custom_storage/jobs.db
 ```bash
 # Stop server (Ctrl+C)
 # Start fresh
-uv run python api_server.py
+uv run videoannotator server --host 0.0.0.0 --port 18011
 ```
 
 **4. Use write-ahead logging** (WAL mode):
@@ -441,7 +441,7 @@ mv custom_storage/jobs_recovered.db custom_storage/jobs.db
 ```bash
 rm custom_storage/jobs.db
 # Database will be recreated on next API start
-uv run python api_server.py
+uv run videoannotator server --host 0.0.0.0 --port 18011
 ```
 
 **Prevention**: Regular backups:
@@ -500,7 +500,7 @@ echo $AUTH_REQUIRED  # Should be "true" or empty (defaults to true)
 
 **2. Get your API key**:
 ```bash
-uv run python get_api_key.py
+uv run python scripts/auth/get_api_key.py
 ```
 
 **3. Use API key in requests**:
@@ -513,8 +513,7 @@ curl -X GET "http://localhost:18011/api/v1/jobs" \
 
 **4. Disable authentication for local testing** (not recommended for production):
 ```bash
-export AUTH_REQUIRED=false
-uv run python api_server.py
+uv run videoannotator server --dev --host 0.0.0.0 --port 18011
 ```
 
 See [Authentication Guide](../security/authentication.md) for details.
@@ -532,7 +531,7 @@ See [Authentication Guide](../security/authentication.md) for details.
 **1. Verify server is running**:
 ```bash
 # Check process
-ps aux | grep "api.main"
+ps aux | grep "videoannotator.api.main" | grep -v grep
 
 # Check port
 netstat -an | grep 18011
@@ -542,7 +541,7 @@ lsof -i :18011
 
 **2. Start server if not running**:
 ```bash
-uv run python api_server.py
+uv run videoannotator server --host 0.0.0.0 --port 18011
 ```
 
 **3. Check firewall** (if accessing remotely):
@@ -561,8 +560,7 @@ netsh advfirewall firewall add rule name="VideoAnnotator" dir=in action=allow pr
 
 Server should bind to `0.0.0.0` for external access:
 ```python
-# In api_server.py
-uvicorn.run("api.main:app", host="0.0.0.0", port=18011)
+uvicorn.run("videoannotator.api.main:app", host="0.0.0.0", port=18011)
 ```
 
 ---
@@ -725,8 +723,7 @@ grep "POST /api/v1/jobs" logs/videoannotator.log
 Set environment variable for verbose output:
 
 ```bash
-export LOG_LEVEL=DEBUG
-uv run python api_server.py
+uv run python api_server.py --log-level debug
 ```
 
 Or modify `src/utils/logging_config.py`:

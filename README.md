@@ -67,7 +67,7 @@ uv run videoannotator setup-db --admin-email you@example.com --admin-username yo
 
 ```bash
 # Start the API server
-uv run python api_server.py
+uv run videoannotator server --host 0.0.0.0 --port 18011
 # Use the API key printed by `setup-db` (or the server's first-start output)
 
 # Process your first video (in another terminal)
@@ -242,7 +242,7 @@ cd VideoAnnotator
 uv sync
 
 # Start processing
-uv run python api_server.py
+uv run videoannotator server --host 0.0.0.0 --port 18011
 ```
 
 ### **Method 2: Docker (Production)**

@@ -1,5 +1,5 @@
 ---
-title: "VideoAnnotator: an extensible, reproducible toolkit for automated and manual video annotation in behavioral research"
+title: "VideoAnnotator: an extensible, reproducible toolkit for automated video annotation in behavioral research"
 tags:
   - Python
   - video analysis
@@ -33,24 +33,48 @@ bibliography: paper.bib
 
 # Summary
 
-VideoAnnotator is an open-source Python toolkit for automated and manual annotation of video, designed for behavioral, social, and health research. It provides a modular pipeline framework, a CLI, and a local-first FastAPI service, with reproducible Docker images and standardized outputs.
+VideoAnnotator is an open-source Python toolkit for automated video annotation, designed for behavioral, social, and health research at scale. It provides:
+
+- a modular pipeline framework that wraps commonly used open detectors (e.g., OpenFace-based face and behavior features [@openface2], speech processing built on Whisper-style ASR [@whisper]);
+- a local-first FastAPI service for reproducible, scriptable processing [@fastapi];
+- Docker images for CPU/GPU execution;
+- standardized, timestamped outputs with provenance metadata suitable for downstream modeling and review.
+
+The toolkit targets researchers who need auditable, inspectable feature timelines (e.g., facial action units, gaze-related signals, diarized speech activity), while remaining domain-agnostic for use in psychology, HCI, education research, clinical observation, and related observational settings.
 
 # Statement of need
 
-Behavioral and interaction research often depends on observational video coding, but manual annotation is costly to train, slow to scale, and difficult to reproduce across sites and studies. VideoAnnotator addresses this gap by providing a maintainable software system that standardizes access to widely used open models for face, pose, and audio analysis, and produces inspectable, timestamped events and tracks suitable for downstream analysis.
+Behavioral and interaction research often depends on observational video coding, but human annotation is costly to train, slow to scale, and difficult to reproduce across sites and studies. Automated tools may assist but must run locally to maintain data privacy. VideoAnnotator addresses this gap by providing a maintainable software system that standardizes access to widely used open models for face, pose, and audio analysis, and produces inspectable, timestamped events and tracks suitable for downstream analysis.
 
 # Functionality
 
 VideoAnnotator provides:
 
-- Modular pipelines configured via YAML.
-- Batch and service execution (CLI or FastAPI).
-- Standardized outputs and provenance metadata to support reproducibility.
+- Pipelines configured via declarative YAML/JSON, enabling detector composition without code changes.
+- Batch and service execution (CLI and FastAPI) for integration into lab workflows, notebooks, and automation.
+- Timestamped events and tracks with confidences plus per-stage provenance to support reproducibility and audit.
 - Local/on-prem execution patterns to support privacy-sensitive workflows.
+
+# Illustrative use cases
+
+- Education/HCI: quantifying participation and attention-related behavior in classroom or interaction videos.
+- Clinical and therapy: triaging sessions by indicators such as engagement or agitation.
+- Team interaction and sports: timing changes in gaze and proximity during drills.
+- Developmental science: producing objective micro-codes that can later be mapped to higher-level constructs in a transparent, two-stage analysis.
+
+# Design and architecture
+
+VideoAnnotator exposes:
+
+1. An API and CLI to run configured pipelines over files, folders, or job queues.
+2. A detectors layer with consistent batching and optional GPU utilization.
+3. A structured event store emitting timestamped tracks and segments with provenance.
+4. A FastAPI service providing endpoints for health checks, job submission, and results retrieval.
+5. Dockerized runtimes (CPU/GPU) and documented installation paths for reproducible execution.
 
 # Quality control
 
-The project includes automated tests and a reviewer-friendly smoke-test path, alongside documented installation and troubleshooting guidance.
+The project includes automated tests and a reviewer-friendly smoke-test path, alongside documented installation and troubleshooting guidance. Reproducibility is supported by recording pipeline configuration and versions in output metadata.
 
 # Statement of limitations
 
@@ -60,4 +84,6 @@ VideoAnnotator depends on the behavior and accuracy of upstream detectors and mo
 
 We acknowledge the open-source communities behind the upstream models and libraries integrated by VideoAnnotator.
 
-Portions of documentation and development tooling were assisted by AI. All authors reviewed the repository and take responsibility for the software and this manuscript.
+This project was supported by the Global Parenting Initiative and funded by The LEGO Foundation.
+
+Portions of documentation and development tooling were AI-assisted. All authors reviewed the repository and take responsibility for the software and this manuscript.

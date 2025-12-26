@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "VideoAnnotator: a toolkit for automated and manual video annotation in behavioral research"
+title: "VideoAnnotator: an extensible, reproducible toolkit for automated video annotation in behavioral research"
 authors:
   - family-names: Addyman
     given-names: Caspar

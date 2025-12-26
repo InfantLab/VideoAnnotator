@@ -81,7 +81,7 @@ services:
               capabilities: [gpu]
     ports:
       - "18011:18011" # FastAPI server (host 18011)
-    command: ["uv", "run", "python", "api_server.py", "--log-level", "info"]
+    command: ["uv", "run", "videoannotator", "server", "--host", "0.0.0.0", "--port", "18011"]
     profiles:
       - dev-gpu
 

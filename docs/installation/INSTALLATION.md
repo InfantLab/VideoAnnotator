@@ -181,8 +181,8 @@ print('All core dependencies installed!')
 "
 
 # Test the API server
-uv run python api_server.py
-# Should start server on http://localhost:8000
+uv run videoannotator server --host 0.0.0.0 --port 18011
+# Should start server on http://localhost:18011
 ```
 
 ## Development Commands
@@ -191,7 +191,7 @@ Once installed, use these commands for development:
 
 ```bash
 # Start API server
-uv run python api_server.py
+uv run videoannotator server --host 0.0.0.0 --port 18011
 
 # Run linting and formatting
 uv run ruff check .
@@ -203,8 +203,10 @@ uv run mypy src
 # Run tests
 uv run pytest
 
-# Start API server
-uv run python -m src.cli server
+# CLI help
+uv run videoannotator --help
+
+# API server (compatibility wrapper)
 uv run python api_server.py
 ```
 
@@ -300,8 +302,8 @@ After installation:
 - See `docs/usage/GETTING_STARTED.md` for usage examples
 - Check `docs/development/` for development workflows
 - Review `configs/` for configuration options
-- Use `uv run python -m src.cli --help` to test the CLI
-- Use `uv run python api_server.py` to start the server
+- Use `uv run videoannotator --help` to test the CLI
+- Use `uv run videoannotator server --host 0.0.0.0 --port 18011` to start the server
 
 ## Performance Tips
 

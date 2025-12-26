@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Fix absolute imports to relative imports after src/ → src/videoannotator/ migration."""
+"""Fix absolute imports to relative imports after src/ → src/videoannotator/ migration.
+
+This is a one-off maintenance script.
+"""
+
+from __future__ import annotations
 
 import re
 from pathlib import Path
 
-# Modules that were moved into videoannotator/
 MODULES = [
     "api",
     "auth",
@@ -26,14 +30,16 @@ MODULES = [
 ]
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
 def fix_file(file_path: Path) -> bool:
     """Fix imports in a single file. Returns True if changes were made."""
     content = file_path.read_text()
     original = content
 
-    # Pattern: from MODULE import ... or from MODULE.submodule import ...
     for module in MODULES:
-        # Match: from module import X or from module.submodule import X
         pattern = rf"^from {module}(\.[a-zA-Z0-9_.]+)? import "
         replacement = rf"from .{module}\1 import "
         content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
@@ -44,14 +50,15 @@ def fix_file(file_path: Path) -> bool:
     return False
 
 
-def main():
-    src_dir = Path("src/videoannotator")
-    changed_files = []
+def main() -> None:
+    src_dir = _repo_root() / "src" / "videoannotator"
+    changed_files: list[Path] = []
 
     for py_file in src_dir.rglob("*.py"):
         if fix_file(py_file):
             changed_files.append(py_file)
-            print(f"Fixed: {py_file.relative_to(src_dir.parent)}")
+            rel = py_file.relative_to(_repo_root())
+            print(f"Fixed: {rel}")
 
     print(f"\nTotal files changed: {len(changed_files)}")
 

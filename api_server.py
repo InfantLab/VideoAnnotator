@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""
-VideoAnnotator API Server v1.2.0
+"""VideoAnnotator API server compatibility wrapper.
 
-This is the standalone API server that can be run independently to serve
-the VideoAnnotator REST API with database persistence.
+This repository's primary entrypoint is the `videoannotator` CLI.
+
+This file is kept for backwards compatibility with older docs and workflows.
 
 Usage:
-    python api_server.py                    # Start server on port 18011
-    python api_server.py --port 18011       # Start on custom port
-    uvicorn api_server:app --reload         # Development mode with auto-reload
+    uv run python api_server.py                       # Start server on port 18011
+    uv run python api_server.py --port 18011          # Start on custom port
+    uv run uvicorn api_server:app --reload            # Development mode (auto-reload)
 
-    # Or use the CLI (recommended):
-    uv run python -m src.cli server         # Uses same underlying API
+Recommended:
+    uv run videoannotator server --host 0.0.0.0 --port 18011
 """
 
 import argparse
@@ -19,9 +19,9 @@ import sys
 
 import uvicorn
 
-# Import the main API application
-from src.api.main import create_app
-from src.utils.logging_config import get_logger, setup_videoannotator_logging
+from videoannotator.api.main import create_app
+from videoannotator.utils.logging_config import get_logger, setup_videoannotator_logging
+from videoannotator.version import __version__
 
 
 def setup_logging(level: str = "INFO", logs_dir: str = "logs"):
@@ -37,7 +37,9 @@ def setup_logging(level: str = "INFO", logs_dir: str = "logs"):
 
 def main():
     """Main entry point for the API server."""
-    parser = argparse.ArgumentParser(description="VideoAnnotator API Server v1.2.0")
+    parser = argparse.ArgumentParser(
+        description=f"VideoAnnotator API Server v{__version__}"
+    )
     parser.add_argument(
         "--host", default="0.0.0.0", help="Host to bind to (default: 0.0.0.0)"
     )
@@ -71,7 +73,7 @@ def main():
 
     # Display startup information
     print("=" * 60)
-    print("[START] VideoAnnotator API Server v1.2.0")
+    print(f"[START] VideoAnnotator API Server v{__version__}")
     print("=" * 60)
     print(f"[INFO] Server starting on http://{args.host}:{args.port}")
     print(f"[INFO] API Documentation: http://{args.host}:{args.port}/docs")
@@ -103,7 +105,7 @@ def main():
         sys.exit(1)
 
 
-# Create the FastAPI app instance for direct import
+# Create the FastAPI app instance for direct import.
 # This allows: uvicorn api_server:app --reload
 app = create_app()
 

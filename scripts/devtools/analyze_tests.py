@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
+"""Analyze test collection and distribution.
+
+Run:
+  uv run python scripts/devtools/analyze_tests.py
 """
-Test Suite Analysis Script for VideoAnnotator
-Analyzes the current test structure to help organize the test suite.
-"""
+
+from __future__ import annotations
 
 import subprocess
 import sys
@@ -10,62 +13,60 @@ from collections import defaultdict
 from pathlib import Path
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
 def analyze_test_collection():
     """Analyze what tests are collected and their distribution."""
-    print("Analyzing Test Suite Structure...")
+    print("Analyzing test suite structure...")
 
-    # Get test collection output
     result = subprocess.run(
         [sys.executable, "-m", "pytest", "tests/", "--co", "-q"],
         capture_output=True,
         text=True,
-        cwd=Path(__file__).parent,
+        cwd=_repo_root(),
     )
 
     if result.returncode != 0:
-        print("❌ Error collecting tests:")
+        print("[ERROR] Error collecting tests:")
         print(result.stderr)
-        return {}
+        return {}, {}
 
     lines = result.stdout.splitlines()
     total_tests = len([line for line in lines if "::" in line])
 
-    print(f"Total Tests Collected: {total_tests}")
+    print(f"Total tests collected: {total_tests}")
 
-    # Analyze by file
     file_counts = defaultdict(int)
     category_counts = defaultdict(int)
 
     for line in lines:
-        if "::" in line:
-            file_part = line.split("::")[0]
-            file_counts[file_part] += 1
+        if "::" not in line:
+            continue
+        file_part = line.split("::")[0]
+        file_counts[file_part] += 1
 
-            # Categorize by file pattern
-            if "batch" in file_part:
-                category_counts["Batch Processing"] += 1
-            elif (
-                "pipeline" in file_part
-                or "face" in file_part
-                or "person" in file_part
-                or "audio" in file_part
-                or "scene" in file_part
-            ):
-                category_counts["Pipeline Tests"] += 1
-            elif "integration" in file_part:
-                category_counts["Integration Tests"] += 1
-            elif "storage" in file_part:
-                category_counts["Storage Tests"] += 1
-            elif "laion" in file_part:
-                category_counts["LAION Tests"] += 1
-            else:
-                category_counts["Other/Misc"] += 1
+        if "batch" in file_part:
+            category_counts["Batch Processing"] += 1
+        elif any(
+            x in file_part for x in ["pipeline", "face", "person", "audio", "scene"]
+        ):
+            category_counts["Pipeline Tests"] += 1
+        elif "integration" in file_part:
+            category_counts["Integration Tests"] += 1
+        elif "storage" in file_part:
+            category_counts["Storage Tests"] += 1
+        elif "laion" in file_part:
+            category_counts["LAION Tests"] += 1
+        else:
+            category_counts["Other/Misc"] += 1
 
-    print("\nTests by File:")
+    print("\nTests by file:")
     for file, count in sorted(file_counts.items()):
         print(f"  {file}: {count} tests")
 
-    print("\nTests by Category:")
+    print("\nTests by category:")
     for category, count in sorted(category_counts.items()):
         print(f"  {category}: {count} tests")
 
@@ -74,9 +75,9 @@ def analyze_test_collection():
 
 def analyze_test_patterns():
     """Analyze test naming patterns and types."""
-    print("\nAnalyzing Test Patterns...")
+    print("\nAnalyzing test patterns...")
 
-    test_files = list(Path("tests").glob("test_*.py"))
+    test_files = list((_repo_root() / "tests").rglob("test_*.py"))
 
     patterns = {
         "Unit Tests": 0,
@@ -100,7 +101,7 @@ def analyze_test_patterns():
         else:
             patterns["Legacy Tests"] += 1
 
-    print("Test File Patterns:")
+    print("Test file patterns:")
     for pattern, count in patterns.items():
         print(f"  {pattern}: {count} files")
 
@@ -108,8 +109,8 @@ def analyze_test_patterns():
 
 
 def propose_organization():
-    """Propose a new test organization structure."""
-    print("\nProposed Test Organization Structure:")
+    """Propose a test organization structure."""
+    print("\nProposed test organization structure:")
 
     structure = {
         "tests/unit/": [
@@ -148,21 +149,18 @@ def propose_organization():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("VideoAnnotator Test Suite Analysis")
+    print("VideoAnnotator test suite analysis")
     print("=" * 60)
 
     try:
-        file_counts, category_counts = analyze_test_collection()
-        patterns = analyze_test_patterns()
+        file_counts, _ = analyze_test_collection()
+        analyze_test_patterns()
         propose_organization()
 
-        print("\nAnalysis Complete!")
+        print("\nAnalysis complete")
         print(
-            f"Next steps: Reorganize {sum(file_counts.values())} tests into logical structure"
+            f"Next steps: Reorganize {sum(file_counts.values())} tests into a logical structure"
         )
-
     except Exception as e:
-        print(f"Error during analysis: {e}")
-        import traceback
-
-        traceback.print_exc()
+        print(f"[ERROR] Error during analysis: {e}")
+        raise

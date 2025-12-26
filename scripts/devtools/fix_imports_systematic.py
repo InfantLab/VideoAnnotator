@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Systematically fix imports from old structure to new videoannotator.* structure."""
 
+from __future__ import annotations
+
 import re
 from pathlib import Path
 
-# Modules that moved into videoannotator package
 MODULES_TO_FIX = [
     "api",
     "storage",
@@ -22,10 +23,14 @@ MODULES_TO_FIX = [
     "auth",
 ]
 
-# Pattern to match imports starting with these modules
+
 IMPORT_FROM_PATTERN = re.compile(
     r"^from (" + "|".join(MODULES_TO_FIX) + r")(\.|\ import)", re.MULTILINE
 )
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
 
 
 def fix_imports_in_file(file_path: Path) -> bool:
@@ -33,8 +38,7 @@ def fix_imports_in_file(file_path: Path) -> bool:
     content = file_path.read_text()
     original_content = content
 
-    # Replace "from module." or "from module import" with "from videoannotator.module." or "from videoannotator.module import"
-    def replace_import(match):
+    def replace_import(match: re.Match[str]) -> str:
         module = match.group(1)
         rest = match.group(2)
         return f"from videoannotator.{module}{rest}"
@@ -43,23 +47,20 @@ def fix_imports_in_file(file_path: Path) -> bool:
 
     if content != original_content:
         file_path.write_text(content)
-        print(f"✓ Fixed: {file_path}")
+        print(f"[OK] Fixed: {file_path.relative_to(_repo_root())}")
         return True
     return False
 
 
-def main():
-    """Fix imports in all test, script, and example files."""
-    base = Path("/workspaces/VideoAnnotator")
-
-    # Directories to scan
+def main() -> None:
+    """Fix imports in test, script, and example files."""
+    base = _repo_root()
     dirs_to_scan = [base / "tests", base / "scripts", base / "examples"]
 
     fixed_count = 0
     for directory in dirs_to_scan:
         if not directory.exists():
             continue
-
         for py_file in directory.rglob("*.py"):
             if fix_imports_in_file(py_file):
                 fixed_count += 1
