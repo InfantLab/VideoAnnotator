@@ -3840,9 +3840,11 @@ dev = [
     { name = "docformatter" },
     { name = "httpx" },
     { name = "libcst" },
+    { name = "mypy" },
     { name = "pre-commit" },
     { name = "pydocstyle" },
     { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
     { name = "ruff" },
 ]
 
@@ -3927,9 +3929,11 @@ dev = [
     { name = "docformatter", specifier = ">=1.7.7" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "libcst", specifier = ">=1.8.5" },
+    { name = "mypy", specifier = ">=1.5.0" },
     { name = "pre-commit", specifier = ">=4.3.0" },
     { name = "pydocstyle", specifier = ">=6.3.0" },
     { name = "pytest-asyncio", specifier = ">=1.1.0" },
+    { name = "pytest-cov", specifier = ">=4.0.0" },
     { name = "ruff", specifier = ">=0.14.0" },
 ]
 

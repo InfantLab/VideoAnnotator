@@ -15,16 +15,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Benchmark results and performance validation
 - Additional contributor documentation improvements
 
-## [1.4.1] - 2025-12-18
+## [1.4.1] - 2025-12-26
 
-### Documentation & UX Polish
+### Release Quality, Docs, and Developer Experience
+
+#### Added
+- **Container/Devcontainer**: Baked `hadolint` into Docker images and devcontainer so pre-commit hooks work reliably.
+- **Dockerfiles**: Added `git-lfs` to CPU/GPU Dockerfiles for smoother model/asset workflows.
 
 #### Changed
-- **Documentation**: Archived historical/versioned docs under `docs/archive/` and updated inbound links.
-- **Documentation**: Standardized examples on the canonical API port `18011` and Docker Compose-first workflows.
-- **CLI/Logging**: Removed stale v1.2.0 references and ensured first-run messaging reflects the current package version.
+- **Documentation**: Consolidated the JOSS manuscript into `paper/paper.md` and replaced `docs/joss.md` with a pointer to avoid divergence.
+- **Repository Hygiene**: Moved top-level helper scripts into organized subfolders under `scripts/` and updated imports to the `videoannotator.*` package namespace.
+- **Entrypoints**: Updated `api_server.py` to act as a compatibility wrapper; documentation now recommends using the `videoannotator` CLI.
+- **README**: Rationalized repeated setup/install instructions, fixed broken/non-links, and replaced hard-coded test/coverage claims with CI status.
 
 #### Fixed
+- **Docs**: Standardized examples on the canonical API port `18011` and corrected Docker run port mappings.
 - **Docs**: Replaced placeholder `docs/usage/accessing_results.md` with a real results retrieval guide.
 
 ## [1.4.0] - 2025-12-15

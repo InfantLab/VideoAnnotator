@@ -5,7 +5,7 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/badge/uv-package%20manager-FF4B4B?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
 [![Docker](https://img.shields.io/badge/Docker-GPU%20Ready-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/)
-[![Tests](https://img.shields.io/badge/tests-720%20passing%20(94.4%25)-success.svg)](tests/)
+[![CI](https://github.com/InfantLab/VideoAnnotator/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/InfantLab/VideoAnnotator/actions/workflows/ci-cd.yml)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/InfantLab/VideoAnnotator)
 
 **Automated video analysis toolkit for human interaction research** - Extract comprehensive behavioral annotations from videos using AI pipelines, with an intuitive web interface for visualization and analysis.
@@ -34,7 +34,7 @@ VideoAnnotator provides both **automated processing** and **interactive visualiz
 - Supports batch processing and custom configurations
 - Outputs standardized JSON data
 
-### 🌐 **[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)**
+### 🌐 **[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)** (paired repository)
 
 **Interactive web-based visualization tool**
 
@@ -87,12 +87,11 @@ git clone https://github.com/InfantLab/video-annotation-viewer.git
 cd video-annotation-viewer
 npm install
 npm run dev
-
-Note: Ensure Node and NPM are installed. On macOS with Homebrew:
-brew install node
-
-# Open http://localhost:3000 and load your VideoAnnotator results
 ```
+
+Note: Ensure Node and NPM are installed. On macOS with Homebrew: `brew install node`
+
+Open http://localhost:3000 and load your VideoAnnotator results.
 
 **🎉 That's it!** You now have both automated video processing and interactive visualization.
 
@@ -100,14 +99,15 @@ brew install node
 
 Authoritative pipeline metadata (names, tasks, modalities, capabilities) is generated from the registry:
 
-- Pipeline specification table: `docs/pipelines_spec.md` (auto-generated; do not edit by hand)
-- Emotion output format spec: `docs/specs/emotion_output_format.md`
+- Pipeline specification table: [docs/pipelines_spec.md](docs/pipelines_spec.md) (auto-generated; do not edit by hand)
+- Pipeline API endpoint: http://localhost:18011/api/v1/pipelines
+- Emotion output format spec: [docs/development/emotion_output_format.md](docs/development/emotion_output_format.md)
 
 Additional Specs:
 
-- Output Naming Conventions: `docs/specs/output_naming_conventions.md` (stable patterns for downstream tooling)
-- Emotion Validator Utility: `src/validation/emotion_validator.py` (programmatic validation of `.emotion.json` files)
-- CLI Validation: `videoannotator validate-emotion path/to/file.emotion.json` returns non-zero exit on failure
+- Output Naming Conventions: [docs/development/output_naming_conventions.md](docs/development/output_naming_conventions.md) (stable patterns for downstream tooling)
+- Emotion Validator Utility: [src/videoannotator/validation/emotion_validator.py](src/videoannotator/validation/emotion_validator.py) (programmatic validation of `.emotion.json` files)
+- CLI Validation: `uv run videoannotator validate-emotion path/to/file.emotion.json` returns non-zero exit on failure
   Client tools (e.g. the Video Annotation Viewer) should rely on those sources or the `/api/v1/pipelines` endpoint rather than hard-coding pipeline assumptions.
 
 ### **Person Tracking Pipeline**
@@ -118,7 +118,7 @@ Additional Specs:
 
 ### **Face Analysis Pipeline**
 
-- **Technology**: OpenFace 3.0, LAION Face, OpenCV backends
+- **Technology**: [OpenFace 3.0](https://github.com/CMU-MultiComp-Lab/OpenFace-3.0), LAION Face ([LAION](https://laion.ai/)), OpenCV backends
 - **Outputs**: 68-point landmarks, emotions, action units, gaze direction, head pose
 - **Use cases**: Emotional analysis, attention tracking, facial expression studies
 
@@ -212,68 +212,30 @@ VideoAnnotator generates rich, structured data like this:
 
 ## 🔗 Integration & Export
 
-### **Direct Integration**
+VideoAnnotator produces machine-readable outputs (primarily JSON files and API responses) intended to be easy to consume from common data tools.
 
-- **Python**: Import JSON data into pandas, matplotlib, seaborn
-- **R**: Load data with jsonlite, analyze with tidyverse
-- **MATLAB**: Process JSON with built-in functions
+- **Python**: Load JSON into pandas / numpy for analysis (see [examples/](examples/))
+- **R / MATLAB**: Not currently supported with official helper packages, but the JSON outputs can be consumed using standard JSON readers
+- **Visualization**: Use the companion [Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer) for interactive playback + overlays
 
-### **Annotation Tools**
+## 🛠️ Installation Options
 
-- **CVAT**: Computer Vision Annotation Tool integration
-- **LabelStudio**: Machine learning annotation platform
-- **ELAN**: Linguistic annotation software compatibility
+The quickstart above covers the recommended local install via `uv`. For more detail, see the [installation guide](docs/installation/INSTALLATION.md).
 
-### **Analysis Platforms**
-
-- **Video Annotation Viewer**: Interactive web-based analysis (recommended)
-- **Custom dashboards**: Build with our REST API
-- **Jupyter notebooks**: Examples included in repository
-
-## 🛠️ Installation & Usage
-
-### **Method 1: Direct Installation (Recommended)**
-
-```bash
-# Modern Python environment
-curl -LsSf https://astral.sh/uv/install.sh | sh
-git clone https://github.com/InfantLab/VideoAnnotator.git
-cd VideoAnnotator
-uv sync
-
-# Start processing
-uv run videoannotator server --host 0.0.0.0 --port 18011
-```
-
-### **Method 2: Docker (Production)**
+### **Docker (CPU/GPU)**
 
 ```bash
 # CPU version (lightweight)
 docker build -f Dockerfile.cpu -t videoannotator:cpu .
-docker run -p 18011:8000 videoannotator:cpu
+docker run -p 18011:18011 videoannotator:cpu
 
 # GPU version (faster processing)
 docker build -f Dockerfile.gpu -t videoannotator:gpu .
-docker run -p 18011:8000 --gpus all videoannotator:gpu
+docker run -p 18011:18011 --gpus all videoannotator:gpu
 
 # Development version (pre-cached models)
 docker build -f Dockerfile.dev -t videoannotator:dev .
 docker run -p 18011:18011 --gpus all videoannotator:dev
-```
-
-### **Method 3: Research Platform Integration**
-
-```python
-# Python API for custom workflows
-from videoannotator import VideoAnnotator
-
-annotator = VideoAnnotator()
-results = annotator.process("video.mp4", pipelines=["person", "face"])
-
-# Analyze results
-import pandas as pd
-df = pd.DataFrame(results['person_tracking'])
-print(f"Detected {df['person_id'].nunique()} unique people")
 ```
 
 ## 📚 Documentation & Resources
@@ -284,7 +246,7 @@ print(f"Detected {df['person_id'].nunique()} unique people")
 | **[🎮 Live API Testing](http://localhost:18011/docs)**                   | Interactive API when server is running |
 | **[🚀 Getting Started Guide](docs/usage/GETTING_STARTED.md)**            | Step-by-step setup and first video     |
 | **[🔧 Installation Guide](docs/installation/INSTALLATION.md)**           | Detailed installation instructions     |
-| **[⚙️ Pipeline Specifications](docs/usage/pipeline_specs.md)**           | Technical pipeline documentation       |
+| **[⚙️ Pipeline Specifications](docs/pipelines_spec.md)**                 | Auto-generated pipeline spec table     |
 | **[🎯 Demo Commands](docs/usage/demo_commands.md)**                      | Example commands and workflows         |
 
 ## 👥 Research Applications
@@ -342,7 +304,7 @@ print(f"Detected {df['person_id'].nunique()} unique people")
 
 ### **Development**
 
-- **Code quality**: 83% test coverage, modern Python practices
+- **Code quality**: Automated linting, typing checks, and tests (see the CI badge above)
 - **Documentation**: Comprehensive guides and API documentation
 - **CI/CD**: Automated testing and deployment pipelines
 - **Standards**: Following research software engineering best practices
@@ -355,7 +317,7 @@ If you use VideoAnnotator in your research, please cite:
 
 ```
 Addyman, C. (2025). VideoAnnotator: Automated video analysis toolkit for human interaction research.
-Zenodo. https://Zenodo. doi.org/10.5281/zenodo.16961751
+Zenodo. https://doi.org/10.5281/zenodo.16961751
 ```
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.16961751.svg)](https://doi.org/10.5281/zenodo.16961751)

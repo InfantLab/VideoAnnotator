@@ -288,8 +288,10 @@ dev = [
     "docformatter>=1.7.7",
     "httpx>=0.28.1",
     "libcst>=1.8.5",
+    "mypy>=1.5.0",
     "pre-commit>=4.3.0",
     "pydocstyle>=6.3.0",
+    "pytest-cov>=4.0.0",
     "pytest-asyncio>=1.1.0",
     "ruff>=0.14.0",
 ]
