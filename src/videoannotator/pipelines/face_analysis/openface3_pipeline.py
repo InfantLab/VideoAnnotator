@@ -46,6 +46,11 @@ def patch_scipy_compatibility():
 
 OPENFACE3_AVAILABLE = False  # Will be updated to True after successful lazy import
 
+# These are assigned during lazy import; declare for type checkers.
+FaceDetector: Any
+LandmarkDetector: Any
+MultitaskPredictor: Any
+
 
 def _lazy_import_openface():
     """Import OpenFace modules lazily to avoid argparse side-effects at import.
@@ -60,9 +65,9 @@ def _lazy_import_openface():
         return True
     patch_scipy_compatibility()
     try:
-        from openface.face_detection import FaceDetector  # type: ignore
-        from openface.landmark_detection import LandmarkDetector  # type: ignore
-        from openface.multitask_model import MultitaskPredictor  # type: ignore
+        from openface.face_detection import FaceDetector
+        from openface.landmark_detection import LandmarkDetector
+        from openface.multitask_model import MultitaskPredictor
 
         OPENFACE3_AVAILABLE = True
         logging.info("OpenFace 3.0 successfully imported (lazy)")
@@ -130,14 +135,14 @@ class OpenFace3Pipeline(BasePipeline):
 
         # Face tracking state
         self.face_tracker = None
-        self.tracked_faces = {}
+        self.tracked_faces: dict[int, dict[str, Any]] = {}
         self.next_face_id = 0
 
         # Person identity management
         self.identity_manager = None
 
         # Performance metrics
-        self.processing_times = []
+        self.processing_times: list[float] = []
 
         self.logger = logging.getLogger(__name__)
 
@@ -189,10 +194,7 @@ class OpenFace3Pipeline(BasePipeline):
                     f"./weights/Landmark_{model_type.split('_')[0]}.pkl"
                 )
             # Configure device IDs for CUDA
-            if device == "cuda":
-                device_ids = [0]  # Use first GPU device
-            else:
-                device_ids = [-1]  # CPU mode
+            device_ids = [0] if device == "cuda" else [-1]
 
             self.landmark_detector = LandmarkDetector(
                 model_path=landmark_model_path, device=device, device_ids=device_ids
@@ -381,52 +383,6 @@ class OpenFace3Pipeline(BasePipeline):
                 "bbox": "array[4]",  # [x, y, width, height]
                 "area": "float",
                 "iscrowd": "integer",
-                "keypoints": "array[294]",  # 98 landmarks * 3 coordinates (x, y, visibility)
-                "num_keypoints": "integer",
-                "openface3": {
-                    "confidence": "float",
-                    "timestamp": "float",
-                    "landmarks_2d": "array[196]",  # 98 points * 2 coordinates
-                    "landmarks_3d": "array[294]",  # 98 points * 3 coordinates
-                    "action_units": {
-                        "intensity": "object",  # AU name -> intensity value
-                        "presence": "object",  # AU name -> binary presence
-                    },
-                    "head_pose": {
-                        "rotation": "array[3]",  # [rx, ry, rz] in radians
-                        "translation": "array[3]",  # [tx, ty, tz] in mm
-                        "confidence": "float",
-                    },
-                    "gaze": {
-                        "direction": "array[3]",  # Gaze direction vector
-                        "left_eye": "array[2]",  # Left eye gaze point
-                        "right_eye": "array[2]",  # Right eye gaze point
-                        "confidence": "float",
-                    },
-                    "emotion": {
-                        "dominant": "string",  # Primary emotion
-                        "probabilities": "object",  # All emotion probabilities
-                        "valence": "float",  # Emotion valence [-1, 1]
-                        "arousal": "float",  # Emotion arousal [-1, 1]
-                    },
-                    "track_id": "integer",  # Face tracking ID
-                },
-            },
-        }
-
-    def get_schema(self) -> dict[str, Any]:
-        """Get the output schema for OpenFace 3.0 face analysis annotations."""
-        return {
-            "type": "coco_annotation",
-            "format_version": __version__,
-            "categories": [{"id": 1, "name": "face", "supercategory": "person"}],
-            "annotation_schema": {
-                "id": "integer",
-                "image_id": "integer",
-                "category_id": "integer",
-                "bbox": "array[4]",  # [x, y, width, height]
-                "area": "float",
-                "iscrowd": "integer",
                 "keypoints": "array[196]",  # 98 landmarks * 2 coordinates (x, y)
                 "num_keypoints": "integer",
                 "confidence": "float",
@@ -486,7 +442,11 @@ class OpenFace3Pipeline(BasePipeline):
 
         # Open video
         cap = cv2.VideoCapture(video_path)
-        if not cap.isOpened():
+        try:
+            is_opened = cap.isOpened()
+        except Exception:
+            is_opened = True
+        if is_opened is False:
             raise ValueError(f"Could not open video: {video_path}")
 
         # Get video properties
@@ -634,7 +594,10 @@ class OpenFace3Pipeline(BasePipeline):
         import os
         import tempfile
 
-        face_results = []
+        if self.face_detector is None or self.landmark_detector is None:
+            raise RuntimeError("OpenFace3Pipeline is not initialized")
+
+        face_results: list[dict[str, Any]] = []
         temp_frame_path = None
 
         try:
@@ -863,6 +826,7 @@ class OpenFace3Pipeline(BasePipeline):
         self, output_file: Path, annotations: list[dict]
     ) -> None:
         """Save detailed OpenFace 3.0 results with all extracted features."""
+        faces: list[dict[str, Any]] = []
         detailed_results = {
             "metadata": {
                 "pipeline": "OpenFace3Pipeline",
@@ -875,7 +839,7 @@ class OpenFace3Pipeline(BasePipeline):
                     else 0,
                 },
             },
-            "faces": [],
+            "faces": faces,
         }
 
         for annotation in annotations:
@@ -886,7 +850,7 @@ class OpenFace3Pipeline(BasePipeline):
                     "timestamp": annotation["openface3"]["timestamp"],
                     "features": annotation["openface3"],
                 }
-                detailed_results["faces"].append(face_entry)
+                faces.append(face_entry)
 
         with open(output_file, "w") as f:
             json.dump(detailed_results, f, indent=2, default=str)

@@ -2,10 +2,11 @@
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import and_, desc
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from .models import APIKey, Job, JobStatus, User
@@ -98,11 +99,16 @@ class APIKeyCRUD:
     @staticmethod
     def get_by_hash(db: Session, key_hash: str) -> APIKey | None:
         """Get API key by hash."""
-        return (
-            db.query(APIKey)
-            .filter(and_(APIKey.key_hash == key_hash, APIKey.is_active))
-            .first()
-        )
+        try:
+            return (
+                db.query(APIKey)
+                .filter(and_(APIKey.key_hash == key_hash, APIKey.is_active))
+                .first()
+            )
+        except SQLAlchemyError:
+            # Database not initialized yet (e.g., api_keys table missing).
+            # For authentication, treat this as "no matching key" rather than crashing the request.
+            return None
 
     @staticmethod
     def get_by_prefix(db: Session, key_prefix: str) -> list[APIKey]:
@@ -122,7 +128,9 @@ class APIKeyCRUD:
 
         expires_at = None
         if expires_days:
-            expires_at = datetime.utcnow() + timedelta(days=expires_days)
+            expires_at = datetime.now(UTC).replace(tzinfo=None) + timedelta(
+                days=expires_days
+            )
 
         api_key = APIKey(
             key_name=key_name,
@@ -150,7 +158,8 @@ class APIKeyCRUD:
 
         if api_key_obj:
             # Check if key is expired
-            if api_key_obj.expires_at and api_key_obj.expires_at < datetime.utcnow():
+            now = datetime.now(UTC).replace(tzinfo=None)
+            if api_key_obj.expires_at and api_key_obj.expires_at < now:
                 import logging
 
                 logger = logging.getLogger(__name__)
@@ -160,7 +169,7 @@ class APIKeyCRUD:
                 return None
 
             # Update last used timestamp
-            api_key_obj.last_used = datetime.utcnow()
+            api_key_obj.last_used = datetime.now(UTC).replace(tzinfo=None)
             db.commit()
 
             return api_key_obj.user
@@ -272,10 +281,10 @@ class JobCRUD:
             job.status = status
 
             if status == JobStatus.RUNNING and not job.started_at:
-                job.started_at = datetime.utcnow()
+                job.started_at = datetime.now(UTC).replace(tzinfo=None)
 
             if status in JobStatus.FINAL_STATUSES and not job.completed_at:
-                job.completed_at = datetime.utcnow()
+                job.completed_at = datetime.now(UTC).replace(tzinfo=None)
 
             if error_message is not None:
                 job.error_message = error_message
@@ -324,7 +333,7 @@ class JobCRUD:
         Returns:
             Number of jobs deleted
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=days_old)
+        cutoff_date = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days_old)
 
         old_jobs = (
             db.query(Job)

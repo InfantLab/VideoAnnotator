@@ -318,37 +318,39 @@ class TestBatchAsyncIntegration:
         self.orchestrator = BatchOrchestrator()
 
     @patch(
-        "src.pipelines.audio_processing.audio_pipeline_modular.extract_audio",
+        "videoannotator.pipelines.audio_processing.audio_pipeline_modular.extract_audio",
         return_value="dummy.wav",
+        create=True,
     )
     @patch(
-        "src.pipelines.audio_processing.audio_pipeline_modular.get_video_metadata",
+        "videoannotator.pipelines.audio_processing.audio_pipeline_modular.get_video_metadata",
         return_value={"duration": 1.0, "sample_rate": 16000},
+        create=True,
     )
     @patch(
-        "src.pipelines.audio_processing.speech_pipeline.whisper.load_model",
-        return_value=Mock(),
+        "videoannotator.pipelines.audio_processing.speech_pipeline.whisper",
+        new=Mock(load_model=Mock(return_value=Mock())),
+        create=True,
     )
     @patch(
-        "src.pipelines.audio_processing.laion_voice_pipeline.WhisperForConditionalGeneration.from_pretrained",
-        return_value=Mock(),
+        "videoannotator.pipelines.audio_processing.laion_voice_pipeline.WhisperForConditionalGeneration",
+        create=True,
     )
     @patch(
-        "src.pipelines.face_analysis.laion_face_pipeline.AutoProcessor.from_pretrained",
-        return_value=Mock(),
+        "videoannotator.pipelines.face_analysis.laion_face_pipeline.AutoProcessor",
+        create=True,
     )
     @patch(
-        "src.pipelines.face_analysis.laion_face_pipeline.AutoModelForFaceAnalysis.from_pretrained",
-        return_value=Mock(),
+        "videoannotator.pipelines.face_analysis.laion_face_pipeline.AutoModelForFaceAnalysis",
+        create=True,
     )
     @patch("logging.getLogger")
     async def test_async_job_processing(
         self,
         mock_logger,
-        mock_face_model,
-        mock_face_proc,
-        mock_voice_model,
-        mock_whisper,
+        mock_face_model_class,
+        mock_face_proc_class,
+        mock_voice_model_class,
         mock_metadata,
         mock_extract,
     ):
@@ -360,6 +362,11 @@ class TestBatchAsyncIntegration:
         # Patch logger to avoid closed file errors
         mock_logger.return_value = Mock()
 
+        # Ensure patched optional dependency entry points behave as expected.
+        mock_face_proc_class.from_pretrained.return_value = Mock()
+        mock_face_model_class.from_pretrained.return_value = Mock()
+        mock_voice_model_class.from_pretrained.return_value = Mock()
+
         # Add jobs
         jobs = []
         for i in range(3):
@@ -369,18 +376,26 @@ class TestBatchAsyncIntegration:
             jobs.append(job_id)
 
         # Mock the pipeline processing to avoid actual processing
-        with patch.object(self.orchestrator, "_process_job") as mock_process:
+        with patch.object(self.orchestrator, "_process_job_with_retry") as mock_process:
 
             def mock_job_processing(job):
-                job.pipeline_results["audio"] = PipelineResult(
-                    pipeline_name="audio",
-                    status=JobStatus.COMPLETED,
-                    processing_time=1.0,
-                    annotation_count=5,
-                )
-                job.status = JobStatus.COMPLETED
-                job.completed_at = datetime.now()
-                return job
+                # Return a separate object to avoid races with run_batch's
+                # submission loop setting job.status = RUNNING.
+                from copy import copy
+
+                result_job = copy(job)
+                result_job.pipeline_results = {
+                    "audio": PipelineResult(
+                        pipeline_name="audio",
+                        status=JobStatus.COMPLETED,
+                        processing_time=1.0,
+                        annotation_count=5,
+                    )
+                }
+                result_job.status = JobStatus.COMPLETED
+                result_job.completed_at = datetime.now()
+                result_job.error_message = None
+                return result_job
 
             mock_process.side_effect = mock_job_processing
 
@@ -398,8 +413,8 @@ class TestBatchAsyncIntegration:
                     pytest.fail("Jobs did not complete within timeout")
                 await asyncio.sleep(0.1)
 
-            # Stop processing
-            await self.orchestrator.stop()
+            # Wait for processing to finish (run_batch is running in an executor)
+            await processing_task
 
             # Verify final state
             final_status = self.orchestrator.get_status()
@@ -407,12 +422,7 @@ class TestBatchAsyncIntegration:
             assert final_status.completed_jobs == 3
             assert final_status.failed_jobs == 0
 
-            # Cleanup
-            processing_task.cancel()
-            try:
-                await processing_task
-            except asyncio.CancelledError:
-                pass
+            # Task already completed.
 
     async def test_dynamic_job_addition(self):
         """Test adding jobs while processing is active."""
@@ -425,18 +435,29 @@ class TestBatchAsyncIntegration:
             job_id = self.orchestrator.add_job(video_path=video_file)
             initial_jobs.append(job_id)
 
-        with patch.object(self.orchestrator, "_process_job") as mock_process:
+        with patch.object(self.orchestrator, "_process_job_with_retry") as mock_process:
             # Configure mock to simulate successful processing
             def mock_job_processing(job):
-                job.pipeline_results["audio"] = PipelineResult(
-                    pipeline_name="audio",
-                    status=JobStatus.COMPLETED,
-                    processing_time=0.5,
-                    annotation_count=3,
-                )
-                job.status = JobStatus.COMPLETED
-                job.completed_at = datetime.now()
-                return job
+                from copy import copy
+                import time
+
+                # Ensure the batch stays active long enough for additional jobs
+                # to be added and picked up.
+                time.sleep(0.2)
+
+                result_job = copy(job)
+                result_job.pipeline_results = {
+                    "audio": PipelineResult(
+                        pipeline_name="audio",
+                        status=JobStatus.COMPLETED,
+                        processing_time=0.5,
+                        annotation_count=3,
+                    )
+                }
+                result_job.status = JobStatus.COMPLETED
+                result_job.completed_at = datetime.now()
+                result_job.error_message = None
+                return result_job
 
             mock_process.side_effect = mock_job_processing
 
@@ -467,17 +488,12 @@ class TestBatchAsyncIntegration:
 
                 await asyncio.sleep(0.1)
 
-            # Stop processing
-            await self.orchestrator.stop()
+            # Wait for processing to finish (run_batch is running in an executor)
+            await processing_task
 
             # Verify all jobs were processed
             final_status = self.orchestrator.get_status()
             assert final_status.total_jobs == 5
             assert final_status.completed_jobs == 5
 
-            # Cleanup
-            processing_task.cancel()
-            try:
-                await processing_task
-            except asyncio.CancelledError:
-                pass
+            # Task already completed.

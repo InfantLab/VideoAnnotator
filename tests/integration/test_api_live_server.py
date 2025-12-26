@@ -1,13 +1,15 @@
 """Live API server integration tests.
 
-Tests API server functionality with full server startup and endpoint
-validation. Converted from test_api_live.py debugging script.
+These tests originally spawned an external `api_server.py` process.
+For CI and in-process test runs, we prefer an ASGI in-process client
+to avoid port conflicts and flaky startup timing.
 """
 
 import asyncio
 import subprocess
 import sys
 import time
+from typing import Any
 
 import httpx
 import pytest
@@ -18,44 +20,35 @@ import pytest
 async def test_api_server_startup_and_basic_endpoints():
     """Test API server startup and basic endpoint functionality."""
 
-    server_process: subprocess.Popen | None = None
+    # In-process ASGI app
+    from videoannotator.api.main import create_app
 
+    app = create_app()
+    transport = httpx.ASGITransport(app=app)
+    lifespan_cm: Any = app.router.lifespan_context(app)
+
+    await lifespan_cm.__aenter__()
     try:
-        # Start API server
-        server_process = subprocess.Popen(
-            [sys.executable, "api_server.py", "--port", "8998"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-
-        # Wait for server to be ready
-        server_ready = await wait_for_server("http://localhost:8998", timeout=30)
-        assert server_ready, "API server failed to start within timeout"
-
-        # Test basic endpoints
-        base_url = "http://localhost:8998"
-
-        # Test 1: Health endpoint
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{base_url}/health")
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test", follow_redirects=True
+        ) as client:
+            # Test 1: Health endpoint
+            response = await client.get("/health")
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "healthy"
             assert "api_version" in data
             assert "videoannotator_version" in data
 
-        # Test 2: System health endpoint
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{base_url}/api/v1/system/health")
+            # Test 2: System health endpoint
+            response = await client.get("/api/v1/system/health")
             if response.status_code == 200:
                 data = response.json()
                 assert "database" in data
             # Note: 401/404 acceptable if auth required or endpoint not implemented
 
-        # Test 3: Pipelines endpoint
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{base_url}/api/v1/pipelines")
+            # Test 3: Pipelines endpoint
+            response = await client.get("/api/v1/pipelines")
             assert response.status_code == 200
             data = response.json()
             assert "pipelines" in data
@@ -63,20 +56,11 @@ async def test_api_server_startup_and_basic_endpoints():
             assert isinstance(pipelines, list)
             assert len(pipelines) > 0, "Should have at least some pipelines available"
 
-        # Test 4: API Documentation
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{base_url}/docs")
-            # Should be accessible (200) or redirect (3xx)
+            # Test 4: API Documentation
+            response = await client.get("/docs")
             assert response.status_code in [200, 307, 308]
-
     finally:
-        # Clean up server
-        if server_process:
-            server_process.terminate()
-            try:
-                server_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                server_process.kill()
+        await lifespan_cm.__aexit__(None, None, None)
 
 
 @pytest.mark.integration

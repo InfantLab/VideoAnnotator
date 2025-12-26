@@ -88,6 +88,14 @@ class FailureRecovery:
         Returns:
             Delay in seconds
         """
+        # `prepare_retry()` increments retry_count before the orchestrator calls
+        # `calculate_retry_delay()`. In that flow, retry_count is effectively 1-based
+        # (first retry => 1). For direct callers/tests that set retry_count manually,
+        # it is treated as 0-based.
+        effective_retry_count = job.retry_count
+        if job.status == JobStatus.RETRYING and effective_retry_count > 0:
+            effective_retry_count -= 1
+
         if self.strategy == RetryStrategy.NONE:
             return 0.0
 
@@ -95,11 +103,11 @@ class FailureRecovery:
             return min(self.base_delay, self.max_delay)
 
         elif self.strategy == RetryStrategy.LINEAR_BACKOFF:
-            delay = self.base_delay * (job.retry_count + 1)
+            delay = self.base_delay * (effective_retry_count + 1)
             return min(delay, self.max_delay)
 
         elif self.strategy == RetryStrategy.EXPONENTIAL_BACKOFF:
-            delay = self.base_delay * (2**job.retry_count)
+            delay = self.base_delay * (2**effective_retry_count)
             return min(delay, self.max_delay)
 
         return self.base_delay

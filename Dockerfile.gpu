@@ -38,7 +38,6 @@ WORKDIR /app
 # For production image builds set these to "false" to perform installs in image.
 ARG SKIP_IMAGE_UV_SYNC=true
 ARG SKIP_TORCH_INSTALL=true
-ARG INSTALL_HADOLINT=false
 
 # Copy project definition and lock file first to leverage Docker cache
 COPY pyproject.toml uv.lock ./
@@ -54,22 +53,6 @@ COPY api_server.py ./
 COPY src/ ./src/
 COPY configs/ ./configs/
 COPY scripts/ ./scripts/
-
-# Hadolint is needed for the pre-commit hook. Install it into /usr/local/bin for
-# dev containers so it's available on PATH.
-RUN if [ "${INSTALL_HADOLINT}" = "true" ]; then \
-        HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh; \
-    else \
-        echo "[BUILD] Skipping hadolint install (INSTALL_HADOLINT=false)"; \
-    fi
-
-# Convenience commands (avoid typing `uv run videoannotator ...`)
-COPY scripts/container/bin/server /usr/local/bin/server
-COPY scripts/container/bin/newtoken /usr/local/bin/newtoken
-COPY scripts/container/bin/va /usr/local/bin/va
-COPY scripts/container/bin/vatest /usr/local/bin/vatest
-COPY scripts/container/bin/setupdb /usr/local/bin/setupdb
-RUN chmod +x /usr/local/bin/server /usr/local/bin/newtoken /usr/local/bin/va /usr/local/bin/vatest /usr/local/bin/setupdb
 
 # Verify GPU access (optional)
 # NOTE: Some builds may intentionally skip Torch installation/sync to speed up

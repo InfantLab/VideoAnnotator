@@ -8,6 +8,7 @@ functionality.
 import importlib.util as importlib_util
 import logging
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import librosa
@@ -26,6 +27,18 @@ load_dotenv()
 WHISPER_AVAILABLE = importlib_util.find_spec("whisper") is not None
 if not WHISPER_AVAILABLE:
     logging.warning("whisper not available. Speech recognition will be disabled.")
+
+
+def _missing_whisper(*_args: object, **_kwargs: object) -> None:
+    raise ImportError(
+        "Standard whisper not available. Install with: pip install openai-whisper"
+    )
+
+
+# Provide a patchable module-level symbol for tests.
+# When the real dependency is not installed, this stub prevents AttributeError
+# during patching (e.g. patch('...speech_pipeline.whisper.load_model')).
+whisper = SimpleNamespace(load_model=_missing_whisper)
 
 
 class SpeechPipeline(WhisperBasePipeline):
@@ -72,6 +85,10 @@ class SpeechPipeline(WhisperBasePipeline):
         super().__init__(speech_config)
         self.logger = logging.getLogger(__name__)
 
+        # Allow WhisperBasePipeline to prefer the (patchable) whisper symbol from
+        # this module.
+        self.whisper = whisper
+
     def process(
         self,
         video_path: str | Path,
@@ -92,12 +109,17 @@ class SpeechPipeline(WhisperBasePipeline):
         Returns:
             List containing SpeechRecognition result
         """
-        if not self.is_initialized:
-            self.initialize()
-
         try:
             # Convert path to Path object
             video_path = Path(video_path)
+
+            # Graceful handling for missing input paths: don't force model init.
+            if not video_path.exists():
+                self.logger.error(f"Input file not found: {video_path}")
+                return []
+
+            if not self.is_initialized:
+                self.initialize()
 
             # Extract audio using base pipeline functionality
             audio, _sample_rate = self.extract_audio_from_video(video_path)

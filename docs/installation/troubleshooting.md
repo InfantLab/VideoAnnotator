@@ -114,6 +114,12 @@ python my_script.py
 uv run python my_script.py
 ```
 
+**4. Editable install issues**:
+```bash
+# Reinstall in editable mode
+uv pip install -e .
+```
+
 ---
 
 ### Port Already in Use
@@ -146,11 +152,12 @@ taskkill /PID <PID> /F
 
 **Option 2 - Use different port**:
 ```bash
-# Local: start on a different port
-uv run videoannotator server --port 18012
+# Set custom port
+export API_PORT=18012
+uv run python api_server.py
 
-# Docker Compose: change the host port mapping in docker-compose.yml
-# Example: "18012:18011"
+# Or in code
+uvicorn api.main:app --port 18012
 ```
 
 ---
@@ -204,24 +211,21 @@ export STORAGE_BASE_PATH=/path/to/larger/disk/storage
 
 **1. Check file ownership**:
 ```bash
-ls -la database/
-ls -la output/
+ls -la custom_storage/
 ls -la tokens/
 ```
 
 **2. Fix ownership** (Linux/Mac):
 ```bash
 # Fix ownership of storage directories
-sudo chown -R $USER:$USER database/
-sudo chown -R $USER:$USER output/
+sudo chown -R $USER:$USER custom_storage/
 sudo chown -R $USER:$USER tokens/
 sudo chown -R $USER:$USER logs/
 ```
 
 **3. Fix permissions**:
 ```bash
-chmod -R u+rw database/
-chmod -R u+rw output/
+chmod -R u+rw custom_storage/
 chmod -R u+rw tokens/
 chmod -R u+rw logs/
 ```
@@ -246,7 +250,7 @@ Common fixes:
 - **Python check fails**: Install Python 3.12+
 - **FFmpeg check fails**: Install FFmpeg (see above)
 - **Import check fails**: Run `uv sync`
-- **Database check fails**: Fix permissions on `database/` (or the folder pointed to by `VIDEOANNOTATOR_DB_PATH`)
+- **Database check fails**: Fix permissions on `custom_storage/`
 - **GPU check fails**: See GPU/CUDA section below
 - **Video test fails**: Use `--skip-video-test` if no video needed
 
@@ -384,12 +388,6 @@ uv add torch torchvision torchaudio
 
 ## Database Issues
 
-VideoAnnotator uses SQLite by default.
-
-- Local default: `./videoannotator.db`
-- If set, `VIDEOANNOTATOR_DB_PATH` overrides the location
-- Docker Compose default (host): `./database/videoannotator.db`
-
 ### Database Locked Error
 
 **Symptoms**:
@@ -401,8 +399,7 @@ VideoAnnotator uses SQLite by default.
 **1. Check for concurrent access**:
 ```bash
 # Find processes accessing database
-DB_PATH="${VIDEOANNOTATOR_DB_PATH:-./videoannotator.db}"
-lsof "$DB_PATH"
+lsof custom_storage/jobs.db
 ```
 
 **2. Wait for long-running jobs** to complete
@@ -411,13 +408,12 @@ lsof "$DB_PATH"
 ```bash
 # Stop server (Ctrl+C)
 # Start fresh
-uv run videoannotator
+uv run python api_server.py
 ```
 
 **4. Use write-ahead logging** (WAL mode):
 ```bash
-DB_PATH="${VIDEOANNOTATOR_DB_PATH:-./videoannotator.db}"
-sqlite3 "$DB_PATH" "PRAGMA journal_mode=WAL;"
+sqlite3 custom_storage/jobs.db "PRAGMA journal_mode=WAL;"
 ```
 
 ---
@@ -432,31 +428,26 @@ sqlite3 "$DB_PATH" "PRAGMA journal_mode=WAL;"
 
 **1. Backup existing database**:
 ```bash
-DB_PATH="${VIDEOANNOTATOR_DB_PATH:-./videoannotator.db}"
-cp "$DB_PATH" "${DB_PATH}.backup"
+cp custom_storage/jobs.db custom_storage/jobs.db.backup
 ```
 
 **2. Attempt SQLite recovery**:
 ```bash
-DB_PATH="${VIDEOANNOTATOR_DB_PATH:-./videoannotator.db}"
-sqlite3 "$DB_PATH" ".recover" | sqlite3 "${DB_PATH}.recovered"
-mv "${DB_PATH}.recovered" "$DB_PATH"
+sqlite3 custom_storage/jobs.db ".recover" | sqlite3 custom_storage/jobs_recovered.db
+mv custom_storage/jobs_recovered.db custom_storage/jobs.db
 ```
 
 **3. If recovery fails, start fresh**:
 ```bash
-DB_PATH="${VIDEOANNOTATOR_DB_PATH:-./videoannotator.db}"
-rm -f "$DB_PATH"
+rm custom_storage/jobs.db
 # Database will be recreated on next API start
-uv run videoannotator
+uv run python api_server.py
 ```
 
 **Prevention**: Regular backups:
 ```bash
 # Add to cron/scheduled task
-DB_PATH="${VIDEOANNOTATOR_DB_PATH:-./videoannotator.db}"
-mkdir -p backups
-sqlite3 "$DB_PATH" ".backup 'backups/videoannotator_$(date +%Y%m%d).db'"
+sqlite3 custom_storage/jobs.db ".backup 'backups/jobs_$(date +%Y%m%d).db'"
 ```
 
 ---
@@ -471,19 +462,17 @@ sqlite3 "$DB_PATH" ".backup 'backups/videoannotator_$(date +%Y%m%d).db'"
 
 **1. Check permissions**:
 ```bash
-DB_PATH="${VIDEOANNOTATOR_DB_PATH:-./videoannotator.db}"
-ls -la "$DB_PATH"
+ls -la custom_storage/
 ```
 
 **2. Fix ownership and permissions**:
 ```bash
 # Linux/Mac
-DB_PATH="${VIDEOANNOTATOR_DB_PATH:-./videoannotator.db}"
-sudo chown -R "$USER":"$USER" "$(dirname "$DB_PATH")"
-chmod u+w "$DB_PATH"
+sudo chown -R $USER:$USER custom_storage/
+chmod u+w custom_storage/jobs.db
 
 # Windows - run as Administrator
-icacls videoannotator.db /grant %USERNAME%:F
+icacls custom_storage\jobs.db /grant %USERNAME%:F
 ```
 
 **3. Check disk space**:
@@ -511,7 +500,7 @@ echo $AUTH_REQUIRED  # Should be "true" or empty (defaults to true)
 
 **2. Get your API key**:
 ```bash
-uv run videoannotator generate-token
+uv run python get_api_key.py
 ```
 
 **3. Use API key in requests**:
@@ -525,7 +514,7 @@ curl -X GET "http://localhost:18011/api/v1/jobs" \
 **4. Disable authentication for local testing** (not recommended for production):
 ```bash
 export AUTH_REQUIRED=false
-uv run videoannotator
+uv run python api_server.py
 ```
 
 See [Authentication Guide](../security/authentication.md) for details.
@@ -553,7 +542,7 @@ lsof -i :18011
 
 **2. Start server if not running**:
 ```bash
-uv run videoannotator
+uv run python api_server.py
 ```
 
 **3. Check firewall** (if accessing remotely):
@@ -571,8 +560,9 @@ netsh advfirewall firewall add rule name="VideoAnnotator" dir=in action=allow pr
 **4. Check host binding**:
 
 Server should bind to `0.0.0.0` for external access:
-```bash
-uv run videoannotator server --host 0.0.0.0 --port 18011
+```python
+# In api_server.py
+uvicorn.run("api.main:app", host="0.0.0.0", port=18011)
 ```
 
 ---
@@ -593,7 +583,7 @@ uv run videoannotator
 uv run videoannotator --dev
 ```
 
-**What's Allowed by Default**:
+**What's Allowed by Default** (v1.3.0+):
 The server automatically allows:
 - `http://localhost:19011` (video-annotation-viewer - official client)
 - `http://localhost:18011` (server port - same-origin requests)
@@ -697,19 +687,17 @@ curl -X GET "http://localhost:18011/api/v1/pipelines" \
 ### Database Status
 
 ```bash
-DB_PATH="${VIDEOANNOTATOR_DB_PATH:-./videoannotator.db}"
-
 # Check database file
-ls -lh "$DB_PATH"
+ls -lh custom_storage/jobs.db
 
 # Count jobs
-sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM jobs;"
+sqlite3 custom_storage/jobs.db "SELECT COUNT(*) FROM jobs;"
 
 # Recent jobs
-sqlite3 "$DB_PATH" "SELECT id, status, created_at FROM jobs ORDER BY created_at DESC LIMIT 5;"
+sqlite3 custom_storage/jobs.db "SELECT id, status, created_at FROM jobs ORDER BY created_at DESC LIMIT 5;"
 
 # Check for locks
-lsof "$DB_PATH"
+lsof custom_storage/jobs.db
 ```
 
 ### Log Analysis
@@ -738,10 +726,10 @@ Set environment variable for verbose output:
 
 ```bash
 export LOG_LEVEL=DEBUG
-uv run videoannotator
+uv run python api_server.py
 ```
 
-Or modify `src/videoannotator/utils/logging_config.py`:
+Or modify `src/utils/logging_config.py`:
 ```python
 logger.setLevel(logging.DEBUG)
 ```

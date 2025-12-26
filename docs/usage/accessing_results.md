@@ -32,6 +32,9 @@ All examples assume the API server is running on `http://localhost:18011`.
 uv run videoannotator job status <job_id>
 ```
 
+If the job is still `pending`, the status response may include a `queue_position` field.
+`queue_position` is 1-based and indicates the job's current position among pending jobs (FIFO).
+
 ### Get job results (JSON)
 
 ```bash

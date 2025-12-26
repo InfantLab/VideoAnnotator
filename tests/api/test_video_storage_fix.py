@@ -6,6 +6,7 @@ background processing started, causing pipeline failures.
 """
 
 import io
+import os
 import tempfile
 import time
 from pathlib import Path
@@ -24,14 +25,52 @@ from videoannotator.api.main import create_app
 @pytest.fixture
 def temp_db():
     """Create a temporary database for testing."""
+    prev_db_path = os.environ.get("VIDEOANNOTATOR_DB_PATH")
+    prev_database_url = os.environ.get("DATABASE_URL")
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as f:
         db_path = Path(f.name)
 
     set_database_path(db_path)
+    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+
+    # Ensure caches pick up the per-test DB.
+    reset_storage_backend()
+    try:
+        from videoannotator.storage.manager import get_storage_provider
+
+        get_storage_provider.cache_clear()
+    except Exception:
+        pass
 
     yield db_path
 
     reset_storage_backend()
+    try:
+        from videoannotator.storage.manager import get_storage_provider
+
+        get_storage_provider.cache_clear()
+    except Exception:
+        pass
+
+    # Restore prior env to avoid cross-test contamination.
+    if prev_db_path is None:
+        os.environ.pop("VIDEOANNOTATOR_DB_PATH", None)
+    else:
+        os.environ["VIDEOANNOTATOR_DB_PATH"] = prev_db_path
+
+    if prev_database_url is None:
+        os.environ.pop("DATABASE_URL", None)
+    else:
+        os.environ["DATABASE_URL"] = prev_database_url
+
+    reset_storage_backend()
+    try:
+        from videoannotator.storage.manager import get_storage_provider
+
+        get_storage_provider.cache_clear()
+    except Exception:
+        pass
     time.sleep(0.1)
     try:
         if db_path.exists():
@@ -44,7 +83,8 @@ def temp_db():
 def client(temp_db):
     """Create a test client for the FastAPI app with temporary database."""
     app = create_app()
-    return TestClient(app)
+    with TestClient(app) as client:
+        yield client
 
 
 @pytest.fixture
@@ -54,21 +94,30 @@ def storage():
 
 
 @pytest.fixture
-def sample_video_file():
-    """Create a sample video file for upload testing."""
-    content = b"fake video content for testing"
-    return io.BytesIO(content)
+def sample_video_bytes() -> bytes:
+    """Create sample video bytes for upload testing."""
+    from tests.fixtures.synthetic_video import synthetic_video_bytes_avi
+
+    data = synthetic_video_bytes_avi()
+    assert len(data) > 0
+    return data
 
 
 class TestVideoPersistentStorage:
     """Test video file persistence in job storage."""
 
     def test_video_stored_in_persistent_location(
-        self, client, sample_video_file, storage
+        self, client, sample_video_bytes, storage
     ):
         """Test that uploaded video is copied to persistent storage."""
         # Submit a job with a video file
-        files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
+        files = {
+            "video": (
+                "test_video.avi",
+                io.BytesIO(sample_video_bytes),
+                "video/avi",
+            )
+        }
         response = client.post("/api/v1/jobs/", files=files)
 
         assert response.status_code == 201
@@ -98,10 +147,11 @@ class TestVideoPersistentStorage:
     def test_temp_directory_cleaned_up(self, client, storage):
         """Test that temporary upload directory is cleaned up after copying."""
         # Create a test video
-        video_content = b"fake video content for testing cleanup"
-        video_file = io.BytesIO(video_content)
+        from tests.fixtures.synthetic_video import synthetic_video_bytes_avi
 
-        files = {"video": ("cleanup_test.mp4", video_file, "video/mp4")}
+        video_file = io.BytesIO(synthetic_video_bytes_avi())
+
+        files = {"video": ("cleanup_test.avi", video_file, "video/avi")}
         response = client.post("/api/v1/jobs/", files=files)
 
         assert response.status_code == 201
@@ -114,11 +164,17 @@ class TestVideoPersistentStorage:
         )
 
     def test_video_available_for_background_processing(
-        self, client, sample_video_file, storage
+        self, client, sample_video_bytes, storage
     ):
         """Test that video file is accessible when background worker processes job."""
         # Submit a job
-        files = {"video": ("worker_test.mp4", sample_video_file, "video/mp4")}
+        files = {
+            "video": (
+                "worker_test.avi",
+                io.BytesIO(sample_video_bytes),
+                "video/avi",
+            )
+        }
         response = client.post("/api/v1/jobs/", files=files)
 
         assert response.status_code == 201
@@ -139,16 +195,15 @@ class TestVideoPersistentStorage:
             content = f.read()
             assert len(content) > 0
 
-    def test_multiple_jobs_isolated_storage(self, client, sample_video_file):
+    def test_multiple_jobs_isolated_storage(self, client, sample_video_bytes):
         """Test that each job gets its own isolated storage directory."""
         # Submit first job
-        files1 = {"video": ("video1.mp4", sample_video_file, "video/mp4")}
+        files1 = {"video": ("video1.avi", io.BytesIO(sample_video_bytes), "video/avi")}
         response1 = client.post("/api/v1/jobs/", files=files1)
         job1 = response1.json()
 
-        # Reset file pointer and submit second job
-        sample_video_file.seek(0)
-        files2 = {"video": ("video2.mp4", sample_video_file, "video/mp4")}
+        # Submit second job with a fresh stream
+        files2 = {"video": ("video2.avi", io.BytesIO(sample_video_bytes), "video/avi")}
         response2 = client.post("/api/v1/jobs/", files=files2)
         job2 = response2.json()
 

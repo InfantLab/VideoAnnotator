@@ -262,7 +262,12 @@ async def get_pipeline_info(
     pipeline_name: str = Path(
         ...,
         description="The unique identifier/name of the pipeline (e.g., 'openface3_identity', 'whisper_transcription')",
-        example="openface3_identity",
+        examples={
+            "openface3_identity": {
+                "summary": "Example pipeline name",
+                "value": "openface3_identity",
+            }
+        },
     ),
 ) -> PipelineInfo:
     """Get detailed information about a specific pipeline."""

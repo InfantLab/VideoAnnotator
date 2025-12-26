@@ -5,12 +5,10 @@ data structures to provide database persistence while maintaining the
 same interfaces.
 """
 
-import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
-    Boolean,
     Column,
     DateTime,
     ForeignKey,
@@ -19,10 +17,15 @@ from sqlalchemy import (
     Text,
     create_engine,
 )
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, relationship, sessionmaker
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
+
+
+def _utcnow_naive() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class Job(Base):
@@ -45,7 +48,7 @@ class Job(Base):
     progress_percentage = Column(Integer, nullable=False, default=0)
 
     # Timestamps
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=_utcnow_naive)
     started_at = Column(DateTime)
     completed_at = Column(DateTime)
     cancelled_at = Column(DateTime)  # v1.3.0: Track cancellation timestamp
@@ -119,7 +122,7 @@ class Annotation(Base):
 
     # Annotation data stored as JSON
     data = Column(JSON, nullable=False)  # The actual annotation content
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=_utcnow_naive)
 
     # Relationships
     job = relationship("Job", back_populates="annotations")
@@ -127,55 +130,6 @@ class Annotation(Base):
     def __repr__(self):
         """Return a compact string representation of the Annotation."""
         return f"<Annotation(job='{self.job_id}', pipeline='{self.pipeline}')>"
-
-
-# Optional tables for future multi-user support (v1.3.0+)
-class User(Base):
-    """User model for multi-user installations.
-
-    Currently unused but defined for future enterprise features.
-    """
-
-    __tablename__ = "users"
-
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    username = Column(String, unique=True, nullable=False)
-    email = Column(String, unique=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    is_active = Column(Boolean, default=True)
-
-    # Relationships
-    api_keys = relationship(
-        "ApiKey", back_populates="user", cascade="all, delete-orphan"
-    )
-
-    def __repr__(self):
-        """Return a compact string representation of the User."""
-        return f"<User(username='{self.username}', email='{self.email}')>"
-
-
-class ApiKey(Base):
-    """API key model for authentication.
-
-    Currently unused but defined for future enterprise features.
-    """
-
-    __tablename__ = "api_keys"
-
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey("users.id"))
-    name = Column(String)  # User-friendly name for the key
-    key_hash = Column(String, nullable=False)  # bcrypt hash of actual key
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    last_used_at = Column(DateTime)
-    is_active = Column(Boolean, default=True)
-
-    # Relationships
-    user = relationship("User", back_populates="api_keys")
-
-    def __repr__(self):
-        """Return a compact string representation of the ApiKey."""
-        return f"<ApiKey(name='{self.name}', user='{self.user_id}')>"
 
 
 class BatchReport(Base):
@@ -198,7 +152,7 @@ class BatchReport(Base):
     # Store additional report data as JSON
     report_data = Column(JSON)  # For jobs list, errors, etc.
 
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=_utcnow_naive)
 
     def __repr__(self):
         """Return a compact string representation of the BatchReport."""
@@ -279,7 +233,7 @@ class SchemaVersion(Base):
     __tablename__ = "schema_version"
 
     version = Column(Integer, primary_key=True)
-    applied_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    applied_at = Column(DateTime, nullable=False, default=_utcnow_naive)
     description = Column(String)
 
     def __repr__(self):

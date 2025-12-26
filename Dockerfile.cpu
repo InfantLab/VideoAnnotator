@@ -41,14 +41,6 @@ COPY src/ ./src/
 COPY configs/ ./configs/
 COPY scripts/ ./scripts/
 
-# Convenience commands (avoid typing `uv run videoannotator ...`)
-COPY scripts/container/bin/server /usr/local/bin/server
-COPY scripts/container/bin/newtoken /usr/local/bin/newtoken
-COPY scripts/container/bin/va /usr/local/bin/va
-COPY scripts/container/bin/vatest /usr/local/bin/vatest
-COPY scripts/container/bin/setupdb /usr/local/bin/setupdb
-RUN chmod +x /usr/local/bin/server /usr/local/bin/newtoken /usr/local/bin/va /usr/local/bin/vatest /usr/local/bin/setupdb
-
 # Install dependencies, then override with CPU-only PyTorch wheels.
 # Keep torch/torchvision/torchaudio versions compatible.
 RUN uv sync --frozen --no-editable \

@@ -5,8 +5,7 @@
     "context": "..",
     "args": {
       "SKIP_IMAGE_UV_SYNC": "false",
-      "SKIP_TORCH_INSTALL": "false",
-      "INSTALL_HADOLINT": "true"
+      "SKIP_TORCH_INSTALL": "false"
     }
   },
   "runArgs": [
@@ -36,7 +35,7 @@
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "uv sync && uv sync --extra dev && uv run pre-commit install",
+  "postCreateCommand": "uv sync && uv sync --extra dev && bash scripts/install_hadolint.sh && uv run pre-commit install",
   "containerEnv": {
     "UV_LINK_MODE": "copy"
   },

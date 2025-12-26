@@ -76,6 +76,15 @@ class ProgressTracker:
         """Get current batch status."""
         status = BatchStatus()
 
+        # Derive a meaningful batch start time from job metadata.
+        # Prefer the earliest job.started_at when available; otherwise fall back
+        # to the tracker start time (if start_batch() was used).
+        started_times = [job.started_at for job in jobs if job.started_at is not None]
+        if started_times:
+            status.start_time = min(started_times)
+        else:
+            status.start_time = self.start_time
+
         # Count jobs by status
         for job in jobs:
             status.total_jobs += 1
@@ -158,7 +167,7 @@ class ProgressTracker:
         """Get detailed ETA report."""
         status = self.get_status(jobs)
 
-        report = {
+        report: dict[str, Any] = {
             "progress_percentage": status.progress_percentage,
             "jobs_remaining": status.pending_jobs,
             "estimated_completion_time": None,
@@ -181,10 +190,10 @@ class ProgressTracker:
                     remaining_seconds = recent_avg * status.pending_jobs
 
                     report["estimated_remaining_seconds"] = remaining_seconds
-                    report["estimated_completion_time"] = (  # type: ignore[assignment]
+                    report["estimated_completion_time"] = (
                         datetime.now() + timedelta(seconds=remaining_seconds)
                     ).isoformat()
-                    report["current_processing_rate"] = f"{recent_avg:.1f}s per job"  # type: ignore[assignment]
+                    report["current_processing_rate"] = f"{recent_avg:.1f}s per job"
 
         return report
 

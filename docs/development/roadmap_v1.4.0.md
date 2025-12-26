@@ -1,13 +1,45 @@
-# 🚀 VideoAnnotator v1.4.0 Development Roadmap
+# 🚀 VideoAnnotator v1.4.2 JOSS Submission Roadmap
 
 ## Release Overview
 
-VideoAnnotator v1.4.0 is the **JOSS Publication Release** - a tightly focused release dedicated to JOSS (Journal of Open Source Software) paper submission and first public release. This release concentrates exclusively on publication requirements, reproducible research examples, and community onboarding.
+This roadmap targets **v1.4.2** as the JOSS (Journal of Open Source Software) submission release. It focuses on JOSS requirements, reproducibility assets, and reviewer-friendly onboarding.
 
-**Target Release**: Q2 2026 (3-4 months after v1.3.0)
-**Current Status**: IN PROGRESS (v1.3.0 released Oct 31, 2025)
-**Main Goal**: JOSS paper acceptance and successful first public release
+**Target Release**: Q1 2026
+**Current Status**: PLANNING (v1.4.1 released Dec 18, 2025)
+**Main Goal**: JOSS paper submission + acceptance, backed by a tagged v1.4.2 release
 **Duration**: 8-10 weeks (focused scope)
+
+Note: VideoAnnotator already has public releases; this roadmap is about making the JOSS submission and review as low-friction as possible.
+
+---
+
+## 👥 Authorship (JOSS Submission)
+
+Author order for the JOSS paper:
+
+1. Caspar Addyman (ILCHR, Stellenbosch)
+2. Jeremiah Ishaya (ILCHR, Stellenbosch)
+3. Irene Uwerikowe (ILCHR, Stellenbosch)
+4. Daniel Stamate (Computing, Goldsmiths, University of London)
+5. Jamie Lachman (DISP, University of Oxford)
+6. Mark Tomlinson (ILCHR, Stellenbosch)
+
+---
+
+## ✅ JOSS Submission Checklist (Must-Have)
+
+These items map directly to JOSS submission/review expectations and should be treated as release gates:
+
+- [ ] **Open repository**: public Git repository with issues and PRs enabled
+- [ ] **OSI license**: license file present and referenced in docs
+- [ ] **Installation**: clear install path for reviewers (CPU-only, local), plus Docker as optional reproducibility
+- [ ] **Automated tests**: documented commands and a “reviewer smoke test” path
+- [ ] **Documentation**: README + quick start + troubleshooting sufficient for first-time users
+- [ ] **Paper artifacts**: `paper/paper.md` and `paper/paper.bib` in the repository
+- [ ] **Paper format**: short JOSS format, with proper citations and statement of need
+- [ ] **Archival DOI**: tag v1.4.2, archive release (e.g., Zenodo), and reference the DOI consistently (paper + CITATION + README)
+- [ ] **Disclosure**: conflicts of interest and funding statements in the paper
+- [ ] **AI/provenance**: brief statement describing AI assistance boundaries and confirming authors’ responsibility/maintainership
 
 **Prerequisites - ALL COMPLETED in v1.3.0**:
 - ✅ Persistent storage with retention policies
@@ -87,7 +119,7 @@ This release has a **tight scope** focused on JOSS requirements ONLY:
 
 ---
 
-## 📋 v1.4.0 Deliverables - JOSS FOCUSED
+## 📋 v1.4.2 Deliverables - JOSS FOCUSED
 
 ### Phase 1: Quick Polish (Week 1)
 
@@ -100,6 +132,11 @@ Complete the minimal deferred items from v1.3.0 (16 hours total):
 - [ ] Add tests
 - **Effort**: 2 hours
 
+**Acceptance criteria**:
+- `queue_position` is 1-based and only set for `pending` jobs
+- Ordering matches the worker dequeue order (FIFO by `created_at`)
+- Verified by: `uv run pytest -q tests/api/test_api_server.py::TestJobEndpoints::test_queue_position_pending_jobs`
+
 #### 1.2 Deterministic Test Fixtures
 
 - [ ] Synthetic video generator with known properties
@@ -107,11 +144,20 @@ Complete the minimal deferred items from v1.3.0 (16 hours total):
 - [ ] Eliminate flaky tests
 - **Effort**: 8 hours
 
+**Acceptance criteria**:
+- Tests stop relying on invalid “fake video bytes” and use deterministic, OpenCV-readable fixtures
+- Default fixture avoids codec edge cases (prefer AVI/MJPG for broad OpenCV support)
+- Verified by at least one targeted smoke run (e.g., `uv run pytest -q tests/pipelines/test_scene_detection.py::TestSceneDetectionPipeline::test_pipeline_initialization`)
+
 #### 1.3 Documentation Touch-ups
 
 - [ ] Enhance contributor workflow docs
 - [ ] Expand troubleshooting based on feedback
 - **Effort**: 6 hours
+
+**Acceptance criteria**:
+- Reviewer-friendly commands use `uv` consistently (install + run + tests)
+- At least one “smoke test” flow documented (CPU-only, local)
 
 **Checkpoint**: v1.3.0 polish complete (16 hours)
 
@@ -144,8 +190,8 @@ Complete, reproducible research examples (JOSS requirement):
 Minimal reproducibility requirements for JOSS:
 
 - [ ] **Docker Images** - CPU and GPU images with pinned dependencies
-  - `videoannotator:1.4.0-cpu` (lightweight)
-  - `videoannotator:1.4.0-gpu` (CUDA 12.1)
+  - `videoannotator:1.4.2-cpu` (lightweight)
+  - `videoannotator:1.4.2-gpu` (CUDA 12.1)
   - Published to Docker Hub
 
 - [ ] **Benchmark Data** - Basic performance metrics
@@ -289,8 +335,8 @@ Essential documentation for community onboarding (JOSS requirement):
 #### 6.2 Release Preparation
 
 - [ ] **Release Notes** - Comprehensive changelog since v1.3.0
-- [ ] **Migration Guide** - v1.3.0 → v1.4.0 changes
-- [ ] **GitHub Release** - Tag v1.4.0 and create release
+- [ ] **Migration Guide** - v1.4.1 → v1.4.2 changes
+- [ ] **GitHub Release** - Tag v1.4.2 and create release
 - [ ] **Zenodo Archive** - Create DOI for paper
 
 **Effort**: 16 hours
@@ -299,12 +345,12 @@ Essential documentation for community onboarding (JOSS requirement):
 
 - [ ] **README Polish** - Ensure GitHub README is excellent
 - [ ] **GitHub Discussions** - Enable and create initial topics
-- [ ] **Issue Templates** - Update for v1.4.0
+- [ ] **Issue Templates** - Ensure issue templates are present and current
 - [ ] **Demo Video** - 5-minute overview screencast
 
 **Effort**: 16 hours
 
-**Checkpoint**: v1.4.0 released, JOSS submitted (56 hours)
+**Checkpoint**: v1.4.2 released, JOSS submitted (56 hours)
 
 ---
 
@@ -341,7 +387,7 @@ Essential documentation for community onboarding (JOSS requirement):
 
 ## 🚫 Explicitly DEFERRED to v1.5.0
 
-All "nice-to-have" features are moved to v1.5.0 to keep v1.4.0 focused on JOSS:
+All "nice-to-have" features are moved to v1.5.0 to keep v1.4.2 focused on JOSS:
 
 ### Usability Enhancements → v1.5.0
 
@@ -416,7 +462,7 @@ All "nice-to-have" features are moved to v1.5.0 to keep v1.4.0 focused on JOSS:
 - JOSS paper submission
 - Release preparation (notes, migration guide)
 - Minimal community setup (README, discussions, demo video)
-- v1.4.0 release and announcement
+- v1.4.2 release and announcement
 
 **Total Effort**: ~280 hours (8-10 weeks with focused effort)
 
@@ -438,7 +484,7 @@ All "nice-to-have" features are moved to v1.5.0 to keep v1.4.0 focused on JOSS:
 
 ## 🎯 Summary: Tight JOSS Focus
 
-v1.4.0 is intentionally streamlined to focus on JOSS acceptance:
+v1.4.2 is intentionally streamlined to focus on JOSS acceptance:
 
 **Core Goals**:
 1. ✅ Complete, reproducible research examples
@@ -454,14 +500,14 @@ v1.4.0 is intentionally streamlined to focus on JOSS acceptance:
 - All advanced tooling (log analysis, parameter optimization)
 
 This tight scope ensures we can:
-- Complete v1.4.0 in 10 weeks (~280 hours)
+- Complete v1.4.2 in 10 weeks (~280 hours)
 - Get JOSS paper submitted and accepted
-- Make first public release successful
+- Make the JOSS review experience reviewer-friendly
 - Build momentum for v1.5.0 feature enhancements
 
 ---
 
-**Last Updated**: October 30, 2025
-**Target Release**: Q1 2026 (2-3 months after v1.3.0)
+**Last Updated**: December 18, 2025
+**Target Release**: Q1 2026
 **Duration**: 8-10 weeks
-**Status**: Planning Phase - JOSS Focused
+**Status**: Planning Phase - v1.4.2 JOSS Focused

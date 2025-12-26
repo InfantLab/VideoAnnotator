@@ -6,6 +6,7 @@ database integration, job management, and system health checks.
 
 import io
 import json
+import os
 import tempfile
 from pathlib import Path
 
@@ -21,29 +22,135 @@ from videoannotator.version import __version__ as videoannotator_version
 
 @pytest.fixture
 def temp_db():
-    """Create a temporary database for testing."""
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as f:
-        db_path = Path(f.name)
+    """Create a temporary database for testing.
 
-    # Set environment variable for test database
-    set_database_path(db_path)
+    IMPORTANT: This fixture must restore environment variables on teardown.
+    Many other tests rely on the session-scoped `tests/conftest.py::test_storage_env`
+    configuration. If we leave per-test values pointing at a deleted temp directory,
+    later tests become order-dependent.
+    """
+    prev_storage_root = os.environ.get("STORAGE_ROOT")
+    prev_db_path = os.environ.get("VIDEOANNOTATOR_DB_PATH")
+    prev_database_url = os.environ.get("DATABASE_URL")
 
-    yield db_path
+    import videoannotator.database.database as db_module
 
-    # Cleanup - reset backend first to close connections
-    reset_storage_backend()
-    # Small delay to ensure connections are closed on Windows
-    import time
+    prev_engine = getattr(db_module, "engine", None)
+    prev_session_local = getattr(db_module, "SessionLocal", None)
 
-    time.sleep(0.1)
-    # Try to remove file, but don't fail test if it can't be removed
+    prev_migrations_engine = None
     try:
-        if db_path.exists():
-            db_path.unlink()
-    except PermissionError:
-        # File is still in use - this is common on Windows
-        # The file will be cleaned up when the process exits
-        pass
+        import videoannotator.database.migrations as migrations_module
+
+        prev_migrations_engine = getattr(migrations_module, "engine", None)
+    except Exception:
+        migrations_module = None
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+
+        db_path = tmp_path / "test_videoannotator.db"
+        storage_root = tmp_path / "storage" / "jobs"
+        storage_root.mkdir(parents=True, exist_ok=True)
+
+        # Ensure all codepaths use this per-test database + storage root
+        os.environ["STORAGE_ROOT"] = str(storage_root)
+        os.environ["VIDEOANNOTATOR_DB_PATH"] = str(db_path)
+        os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+        set_database_path(db_path)
+
+        # Patch the database engine/session to point at this file
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+
+        if (
+            hasattr(db_module, "engine")
+            and getattr(db_module, "engine", None) is not None
+        ):
+            try:
+                db_module.engine.dispose()
+            except Exception:
+                pass
+
+        new_engine = create_engine(
+            f"sqlite:///{db_path}",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+            echo=False,
+        )
+        db_module.engine = new_engine
+        db_module.SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=new_engine
+        )
+
+        # Also update migrations module if it imported engine
+        if migrations_module is not None:
+            migrations_module.engine = new_engine
+
+        # Clear caches so new env/engine are picked up
+        reset_storage_backend()
+
+        try:
+            from videoannotator.storage.manager import get_storage_provider
+
+            get_storage_provider.cache_clear()
+        except Exception:
+            pass
+
+        yield db_path
+
+        # Cleanup - reset backend first to close connections
+        reset_storage_backend()
+        reset_storage_backend()
+
+        try:
+            from videoannotator.storage.manager import get_storage_provider
+
+            get_storage_provider.cache_clear()
+        except Exception:
+            pass
+
+        # Restore SQLAlchemy engine/session to the previous values so later tests
+        # don't try to use a deleted temp DB file.
+        try:
+            if getattr(db_module, "engine", None) is not None:
+                db_module.engine.dispose()
+        except Exception:
+            pass
+
+        if prev_engine is not None:
+            db_module.engine = prev_engine
+        if prev_session_local is not None:
+            db_module.SessionLocal = prev_session_local
+
+        if migrations_module is not None and prev_migrations_engine is not None:
+            migrations_module.engine = prev_migrations_engine
+
+        # Restore environment to whatever it was before this test.
+        if prev_storage_root is None:
+            os.environ.pop("STORAGE_ROOT", None)
+        else:
+            os.environ["STORAGE_ROOT"] = prev_storage_root
+
+        if prev_db_path is None:
+            os.environ.pop("VIDEOANNOTATOR_DB_PATH", None)
+        else:
+            os.environ["VIDEOANNOTATOR_DB_PATH"] = prev_db_path
+
+        if prev_database_url is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = prev_database_url
+
+        # Ensure subsequent tests see the restored env.
+        reset_storage_backend()
+        try:
+            from videoannotator.storage.manager import get_storage_provider
+
+            get_storage_provider.cache_clear()
+        except Exception:
+            pass
 
 
 @pytest.fixture
@@ -56,8 +163,9 @@ def client(temp_db):
 @pytest.fixture
 def sample_video_file():
     """Create a sample video file for upload testing."""
-    content = b"fake video content for testing"
-    return io.BytesIO(content)
+    from tests.fixtures.synthetic_video import synthetic_video_bytes_avi
+
+    return io.BytesIO(synthetic_video_bytes_avi())
 
 
 class TestHealthEndpoint:
@@ -170,7 +278,7 @@ class TestJobEndpoints:
 
     def test_submit_job_basic(self, client, sample_video_file):
         """Test basic job submission with database storage."""
-        files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test_video.avi", sample_video_file, "video/avi")}
 
         response = client.post("/api/v1/jobs/", files=files)
         assert response.status_code == 201
@@ -193,7 +301,7 @@ class TestJobEndpoints:
         config = {"output_format": "coco", "confidence_threshold": 0.8}
         pipelines = "person_tracking,scene_detection"
 
-        files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test_video.avi", sample_video_file, "video/avi")}
         data = {"config": json.dumps(config), "selected_pipelines": pipelines}
 
         response = client.post("/api/v1/jobs/", files=files, data=data)
@@ -206,7 +314,7 @@ class TestJobEndpoints:
     def test_get_job_status(self, client, sample_video_file):
         """Test retrieving job status from database."""
         # Create a job first
-        files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test_video.avi", sample_video_file, "video/avi")}
         response = client.post("/api/v1/jobs/", files=files)
         assert response.status_code == 201
         job_id = response.json()["id"]
@@ -219,6 +327,34 @@ class TestJobEndpoints:
         assert data["id"] == job_id
         assert data["status"] == "pending"
         assert data["video_path"] is not None
+
+    def test_queue_position_pending_jobs(self, client):
+        """Pending jobs include a 1-based queue_position matching FIFO order."""
+        job_ids: list[str] = []
+        for i in range(3):
+            files = {
+                "video": (f"video{i}.mp4", io.BytesIO(b"test content"), "video/mp4")
+            }
+            response = client.post("/api/v1/jobs/", files=files)
+            assert response.status_code == 201
+            job_ids.append(response.json()["id"])
+
+        # List jobs and verify queue_position values exist for pending jobs
+        response = client.get("/api/v1/jobs/")
+        assert response.status_code == 200
+        data = response.json()
+
+        positions = {job["id"]: job.get("queue_position") for job in data["jobs"]}
+        assert positions[job_ids[0]] == 1
+        assert positions[job_ids[1]] == 2
+        assert positions[job_ids[2]] == 3
+
+        # Individual job status should report the same queue_position
+        response = client.get(f"/api/v1/jobs/{job_ids[1]}")
+        assert response.status_code == 200
+        job_data = response.json()
+        assert job_data["status"] == "pending"
+        assert job_data.get("queue_position") == 2
 
     def test_get_nonexistent_job(self, client):
         """Test retrieving non-existent job from database."""
@@ -295,7 +431,7 @@ class TestJobEndpoints:
     def test_delete_job(self, client, sample_video_file):
         """Test deleting a job from database."""
         # Create a job first
-        files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test_video.avi", sample_video_file, "video/avi")}
         response = client.post("/api/v1/jobs/", files=files)
         assert response.status_code == 201
         job_id = response.json()["id"]
@@ -334,7 +470,7 @@ class TestErrorHandling:
 
     def test_invalid_json_config(self, client, sample_video_file):
         """Test job submission with invalid JSON config."""
-        files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test_video.avi", sample_video_file, "video/avi")}
         data = {"config": "invalid json"}
 
         response = client.post("/api/v1/jobs/", files=files, data=data)
@@ -348,7 +484,7 @@ class TestErrorHandling:
 
     def test_empty_pipelines_string(self, client, sample_video_file):
         """Test job submission with empty pipelines string."""
-        files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test_video.avi", sample_video_file, "video/avi")}
         data = {"selected_pipelines": ""}
 
         response = client.post("/api/v1/jobs/", files=files, data=data)
@@ -365,7 +501,7 @@ class TestDatabasePersistence:
     def test_job_persistence_across_requests(self, client, sample_video_file):
         """Test that jobs persist in database across multiple requests."""
         # Create a job
-        files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test_video.avi", sample_video_file, "video/avi")}
         response = client.post("/api/v1/jobs/", files=files)
         assert response.status_code == 201
         job_id = response.json()["id"]
@@ -386,7 +522,7 @@ class TestDatabasePersistence:
         initial_total = initial_stats["total_jobs"]
 
         # Create a job
-        files = {"video": ("test_video.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test_video.avi", sample_video_file, "video/avi")}
         response = client.post("/api/v1/jobs/", files=files)
         assert response.status_code == 201
 

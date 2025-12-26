@@ -45,33 +45,9 @@ VideoAnnotator provides both **automated processing** and **interactive visualiz
 
 **Complete workflow**: `Your Videos → [VideoAnnotator Processing] → Annotation Data → [Video Annotation Viewer] → Interactive Analysis`
 
-## 🚀 Get Started (Docker)
+## 🚀 Get Started in 60 Seconds
 
-**Recommended:** Run VideoAnnotator in Docker for the most reliable experience (consistent dependencies, easier GPU support, fewer host setup issues).
-
-### 1. Start in Docker (Recommended)
-
-CPU (works anywhere):
-
-```bash
-docker compose up --build
-```
-
-GPU (faster processing; requires NVIDIA Container Toolkit):
-
-```bash
-docker compose --profile gpu up --build videoannotator-gpu
-```
-
-Then open the interactive API docs at http://localhost:18011/docs.
-
-If you want to initialize the database and create an admin API key explicitly:
-
-```bash
-docker compose exec videoannotator setupdb --admin-email you@example.com --admin-username you
-```
-
-### 2. Local Install (Advanced)
+### 1. Quick Setup
 
 ```bash
 # Install modern Python package manager
@@ -87,39 +63,11 @@ uv sync  # Fast dependency installation (30 seconds)
 uv run videoannotator setup-db --admin-email you@example.com --admin-username you
 ```
 
-### Optional: Command Shortcuts (Containers)
-
-If you are using the provided Docker/devcontainer images, a few convenience commands are available on `PATH`.
-These are optional shortcuts; the canonical CLI remains `uv run videoannotator ...`.
-
-If you are running via Docker Compose, you can use these shortcuts without “shelling in” manually:
-
-```bash
-docker compose exec videoannotator setupdb --admin-email you@example.com --admin-username you
-docker compose exec videoannotator server --host 0.0.0.0 --port 18011
-
-# If you launched the GPU service instead:
-docker compose exec videoannotator-gpu setupdb --admin-email you@example.com --admin-username you
-docker compose exec videoannotator-gpu server --host 0.0.0.0 --port 18011
-```
-
-| Action | Shortcut | Equivalent |
-|---|---|---|
-| Initialize the database + create an admin token | `setupdb --admin-email you@example.com --admin-username you` | `uv run videoannotator setup-db --admin-email you@example.com --admin-username you` |
-| Run the VideoAnnotator CLI (any subcommand) | `va ...` | `uv run videoannotator ...` |
-| Start the API server (recommended defaults) | `va` | `uv run videoannotator` |
-| Start the API server (explicit subcommand) | `server ...` | `uv run videoannotator server ...` |
-| Generate a new API token | `newtoken ...` | `uv run videoannotator generate-token ...` |
-| Run all tests (quick/quiet) | `vatest` | `uv run pytest -q` |
-| Run some tests (quick/quiet) | `vatest tests/unit/` | `uv run pytest -q tests/unit/` |
-
-For more copy-pasteable CLI workflows, see `docs/usage/demo_commands.md`.
-
-### 3. Start Processing Videos
+### 2. Start Processing Videos
 
 ```bash
 # Start the API server
-uv run videoannotator  # Local install (advanced). In Docker: `docker compose up`
+uv run python api_server.py
 # Use the API key printed by `setup-db` (or the server's first-start output)
 
 # Process your first video (in another terminal)
@@ -131,7 +79,7 @@ curl -X POST "http://localhost:18011/api/v1/jobs/" \
 # Check results at http://localhost:18011/docs
 ```
 
-### 4. Visualize Results
+### 3. Visualize Results
 
 ```bash
 # Install the companion web viewer
@@ -284,7 +232,7 @@ VideoAnnotator generates rich, structured data like this:
 
 ## 🛠️ Installation & Usage
 
-### **Method 1: Local Installation (Advanced)**
+### **Method 1: Direct Installation (Recommended)**
 
 ```bash
 # Modern Python environment
@@ -294,7 +242,7 @@ cd VideoAnnotator
 uv sync
 
 # Start processing
-uv run videoannotator
+uv run python api_server.py
 ```
 
 ### **Method 2: Docker (Production)**
@@ -302,11 +250,11 @@ uv run videoannotator
 ```bash
 # CPU version (lightweight)
 docker build -f Dockerfile.cpu -t videoannotator:cpu .
-docker run -p 18011:18011 videoannotator:cpu
+docker run -p 18011:8000 videoannotator:cpu
 
 # GPU version (faster processing)
 docker build -f Dockerfile.gpu -t videoannotator:gpu .
-docker run -p 18011:18011 --gpus all videoannotator:gpu
+docker run -p 18011:8000 --gpus all videoannotator:gpu
 
 # Development version (pre-cached models)
 docker build -f Dockerfile.dev -t videoannotator:dev .
@@ -449,4 +397,4 @@ _This project demonstrates how AI-assisted development can accelerate research s
 
 ---
 
-**🎥 Ready to start analyzing videos?** Follow the [quick start](#-get-started-docker) above!
+**🎥 Ready to start analyzing videos?** Follow the [60-second setup](#-get-started-in-60-seconds) above!

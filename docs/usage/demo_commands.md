@@ -92,6 +92,16 @@ uv run videoannotator job list --status completed
 uv run videoannotator job results <job_id>
 ```
 
+## Job queueing
+
+VideoAnnotator processes jobs in a simple FIFO queue:
+
+- Jobs are dequeued in increasing `created_at` order (oldest pending job runs first).
+- API responses may include `queue_position` for `pending` jobs.
+  - `queue_position` is **1-based** among pending jobs.
+  - `queue_position` is `null` (or absent) for non-pending jobs.
+  - `queue_position` can change over time as other jobs complete.
+
 ## 🚀 Modern API-First Architecture
 ### Key Features:
 
@@ -175,6 +185,7 @@ uv run videoannotator server --host 0.0.0.0 --port 18011
 {
   "id": "job_abc123",
   "status": "pending",
+  "queue_position": 1,
   "video_path": "/path/to/video.mp4",
   "selected_pipelines": ["scene", "person", "face"],
   "created_at": "2025-08-26T10:30:00Z"
@@ -186,9 +197,9 @@ uv run videoannotator server --host 0.0.0.0 --port 18011
 ```json
 {
   "id": "job_abc123",
-  "status": "completed",
+  "status": "pending",
+  "queue_position": 2,
   "created_at": "2025-08-26T10:30:00Z",
-  "completed_at": "2025-08-26T10:32:15Z",
   "selected_pipelines": ["scene", "person", "face"]
 }
 ```

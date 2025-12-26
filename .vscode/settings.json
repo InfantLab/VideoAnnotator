@@ -11,6 +11,7 @@
         ".specify/scripts/powershell/": true
     },
     "peacock.remoteColor": "#7fc168",
+    "makefile.configureOnOpen": false,
     "workbench.colorCustomizations": {
         "activityBar.activeBackground": "#9ed08c",
         "activityBar.background": "#9ed08c",
@@ -29,6 +30,5 @@
         "titleBar.activeForeground": "#15202b",
         "titleBar.inactiveBackground": "#7fc16899",
         "titleBar.inactiveForeground": "#15202b99"
-    },
-    "makefile.configureOnOpen": false
+    }
 }

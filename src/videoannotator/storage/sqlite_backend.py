@@ -12,7 +12,7 @@ Key features:
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -55,6 +55,8 @@ class SQLiteStorageBackend(StorageBackend):
             database_path = Path.cwd() / "videoannotator.db"
 
         self.database_path = Path(database_path)
+        # Ensure parent directory exists (common in tests using TemporaryDirectory)
+        self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self.database_url = f"sqlite:///{self.database_path}"
 
         # Create database engine
@@ -202,7 +204,7 @@ class SQLiteStorageBackend(StorageBackend):
                     # Delete old results and create new ones (simpler than complex updates)
                     session.query(PipelineResult).filter_by(job_id=job.job_id).delete()
 
-                    for name, result in job.pipeline_results.items():
+                    for _name, result in job.pipeline_results.items():
                         db_result = PipelineResult(
                             job_id=job.job_id,
                             pipeline_name=result.pipeline_name,
@@ -227,7 +229,7 @@ class SQLiteStorageBackend(StorageBackend):
                     session.add(db_job)
 
                     # Add pipeline results
-                    for name, result in job.pipeline_results.items():
+                    for _name, result in job.pipeline_results.items():
                         db_result = PipelineResult(
                             job_id=job.job_id,
                             pipeline_name=result.pipeline_name,
@@ -288,7 +290,7 @@ class SQLiteStorageBackend(StorageBackend):
                         job_id=job_id,
                         pipeline=pipeline,
                         data=annotation_data,
-                        created_at=datetime.utcnow(),
+                        created_at=datetime.now(UTC).replace(tzinfo=None),
                     )
                     session.add(db_annotation)
 
@@ -354,7 +356,8 @@ class SQLiteStorageBackend(StorageBackend):
                 if status_filter:
                     query = query.filter(Job.status == status_filter)
 
-                return [row[0] for row in query.order_by(Job.created_at.desc()).all()]
+                # FIFO ordering by creation time (oldest first) to match worker dequeue order
+                return [row[0] for row in query.order_by(Job.created_at.asc()).all()]
 
         except SQLAlchemyError as e:
             self.logger.error(f"[ERROR] Failed to list jobs: {e}")
@@ -529,9 +532,9 @@ class SQLiteStorageBackend(StorageBackend):
             Tuple of (deleted_jobs, deleted_reports)
         """
         try:
-            from datetime import timedelta
-
-            cutoff_date = datetime.utcnow() - timedelta(days=max_age_days)
+            cutoff_date = datetime.now(UTC).replace(tzinfo=None) - timedelta(
+                days=max_age_days
+            )
 
             with self.SessionLocal() as session:
                 # Delete old completed/failed jobs

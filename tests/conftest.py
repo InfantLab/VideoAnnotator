@@ -147,9 +147,9 @@ def test_storage_env(tmp_path_factory):
     # Clear caches to ensure new env vars are picked up
     # We use try-except to avoid import errors if modules aren't available yet
     try:
-        from videoannotator.api.database import get_storage_backend
+        from videoannotator.api.database import reset_storage_backend
 
-        get_storage_backend.cache_clear()
+        reset_storage_backend()
     except ImportError:
         pass
 
@@ -164,9 +164,9 @@ def test_storage_env(tmp_path_factory):
 
     # Cleanup is handled by tmp_path fixture, but we should clear caches again
     try:
-        from videoannotator.api.database import get_storage_backend
+        from videoannotator.api.database import reset_storage_backend
 
-        get_storage_backend.cache_clear()
+        reset_storage_backend()
     except ImportError:
         pass
 
@@ -190,24 +190,31 @@ import pytest
 @pytest.fixture
 def temp_video_file():
     """Create a temporary video file for testing."""
-    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
-        # Create a simple test video using OpenCV
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        out = cv2.VideoWriter(f.name, fourcc, 30.0, (640, 480))
+    # Prefer a real sample video if the developer dropped one in.
+    # This is optional and should not be required for CI.
+    repo_root = Path(__file__).parent.parent
+    real_video = repo_root / "tests" / "fixtures" / "videos" / "test.mp4"
+    if real_video.exists():
+        yield real_video
+        return
 
-        # Write a few frames
-        for i in range(90):  # 3 seconds at 30fps
-            frame = np.zeros((480, 640, 3), dtype=np.uint8)
-            # Add some variation to frames
-            frame[:, :, i % 3] = (i * 5) % 255
-            out.write(frame)
+    from tests.fixtures.synthetic_video import (
+        SyntheticVideoSpec,
+        write_synthetic_video_avi,
+    )
 
-        out.release()
+    with tempfile.NamedTemporaryFile(suffix=".avi", delete=False) as f:
+        video_path = Path(f.name)
 
-        yield Path(f.name)
+    write_synthetic_video_avi(
+        video_path,
+        spec=SyntheticVideoSpec(width=160, height=120, fps=10, num_frames=20),
+    )
 
-        # Cleanup
-        Path(f.name).unlink(missing_ok=True)
+    yield video_path
+
+    # Cleanup
+    video_path.unlink(missing_ok=True)
 
 
 @pytest.fixture

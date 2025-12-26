@@ -24,13 +24,26 @@ def temp_storage_root():
 @pytest.fixture
 def client(temp_storage_root):
     """Create a test client with a temporary database and storage."""
+    prev_storage_root = os.environ.get("STORAGE_ROOT")
+    prev_db_path = os.environ.get("VIDEOANNOTATOR_DB_PATH")
+    prev_database_url = os.environ.get("DATABASE_URL")
+
     # Setup DB
     db_fd, db_path = tempfile.mkstemp(suffix=".db")
     os.close(db_fd)
     set_database_path(Path(db_path))
+    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 
     # Setup Storage Provider
     os.environ["STORAGE_ROOT"] = str(temp_storage_root)
+
+    reset_storage_backend()
+    try:
+        from videoannotator.storage.manager import get_storage_provider
+
+        get_storage_provider.cache_clear()
+    except Exception:
+        pass
 
     app = create_app()
 
@@ -47,7 +60,30 @@ def client(temp_storage_root):
     reset_storage_backend()
     if os.path.exists(db_path):
         os.unlink(db_path)
-    del os.environ["STORAGE_ROOT"]
+
+    # Restore env and clear caches for other tests.
+    if prev_storage_root is None:
+        os.environ.pop("STORAGE_ROOT", None)
+    else:
+        os.environ["STORAGE_ROOT"] = prev_storage_root
+
+    if prev_db_path is None:
+        os.environ.pop("VIDEOANNOTATOR_DB_PATH", None)
+    else:
+        os.environ["VIDEOANNOTATOR_DB_PATH"] = prev_db_path
+
+    if prev_database_url is None:
+        os.environ.pop("DATABASE_URL", None)
+    else:
+        os.environ["DATABASE_URL"] = prev_database_url
+
+    reset_storage_backend()
+    try:
+        from videoannotator.storage.manager import get_storage_provider
+
+        get_storage_provider.cache_clear()
+    except Exception:
+        pass
 
 
 def test_job_submission_creates_files_in_storage(client, temp_storage_root):

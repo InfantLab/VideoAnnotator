@@ -1,9 +1,27 @@
-cff-version: 1.1.0
+cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
+title: "VideoAnnotator: a toolkit for automated and manual video annotation in behavioral research"
 authors:
-- family-names: Addyman
-  given-names: Caspar
-orcid: https://orcid.org/0000-0003-0001-9548
-title:InfantLab/VideoAnnotator: VideoAnnotator v1.2.0 - A tool for automatic annotation of human interaction videos with pose, face, emotion, speech & more.
-version: v1.2.0
-date-released: 2025-08-27
+  - family-names: Addyman
+    given-names: Caspar
+    affiliation: "Institute for Life Course Health Research (ILCHR), Stellenbosch University"
+    orcid: "https://orcid.org/0000-0003-0001-9548"
+  - family-names: Ishaya
+    given-names: Jeremiah
+    affiliation: "Institute for Life Course Health Research (ILCHR), Stellenbosch University"
+  - family-names: Uwerikowe
+    given-names: Irene
+    affiliation: "Institute for Life Course Health Research (ILCHR), Stellenbosch University"
+  - family-names: Stamate
+    given-names: Daniel
+    affiliation: "Department of Computing, Goldsmiths, University of London"
+  - family-names: Lachman
+    given-names: Jamie
+    affiliation: "Department of Social Policy and Intervention (DISP), University of Oxford"
+  - family-names: Tomlinson
+    given-names: Mark
+    affiliation: "Institute for Life Course Health Research (ILCHR), Stellenbosch University"
+license: "MIT"
+repository-code: "https://github.com/InfantLab/VideoAnnotator"
+version: "1.4.1"
+date-released: "2025-12-18"

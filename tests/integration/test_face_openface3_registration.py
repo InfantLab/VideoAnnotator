@@ -16,22 +16,20 @@ def test_face_openface3_embedding():
 
     # Test JobProcessor
     job_processor = JobProcessor()
-    if "face_openface3_embedding" in job_processor.pipeline_classes:
-        print("[OK] face_openface3_embedding found in JobProcessor (API)")
-    else:
-        print("[ERROR] face_openface3_embedding NOT found in JobProcessor")
-        print(f"       Available: {sorted(job_processor.pipeline_classes.keys())}")
-        return False
+    assert "face_openface3_embedding" in job_processor.pipeline_classes, (
+        "[ERROR] face_openface3_embedding NOT found in JobProcessor\n"
+        f"Available: {sorted(job_processor.pipeline_classes.keys())}"
+    )
+    print("[OK] face_openface3_embedding found in JobProcessor (API)")
 
     # Test BatchOrchestrator
     storage = FileStorageBackend(Path("storage"))
     batch = BatchOrchestrator(storage_backend=storage)
-    if "face_openface3_embedding" in batch.pipeline_classes:
-        print("[OK] face_openface3_embedding found in BatchOrchestrator")
-    else:
-        print("[ERROR] face_openface3_embedding NOT found in BatchOrchestrator")
-        print(f"       Available: {sorted(batch.pipeline_classes.keys())}")
-        return False
+    assert "face_openface3_embedding" in batch.pipeline_classes, (
+        "[ERROR] face_openface3_embedding NOT found in BatchOrchestrator\n"
+        f"Available: {sorted(batch.pipeline_classes.keys())}"
+    )
+    print("[OK] face_openface3_embedding found in BatchOrchestrator")
 
     # Test that it's the same class
     if (
@@ -45,9 +43,9 @@ def test_face_openface3_embedding():
         )
 
     print(f"\n[SUCCESS] face_openface3_embedding is properly registered and available!")
-    return True
+    return
 
 
 if __name__ == "__main__":
-    success = test_face_openface3_embedding()
-    sys.exit(0 if success else 1)
+    test_face_openface3_embedding()
+    sys.exit(0)

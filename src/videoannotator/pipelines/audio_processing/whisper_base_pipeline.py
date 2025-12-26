@@ -6,6 +6,8 @@ emotion analysis.
 """
 
 import gc
+import importlib
+import importlib.util as importlib_util
 import logging
 import tempfile
 import warnings
@@ -19,6 +21,7 @@ import torch
 
 from videoannotator.pipelines.base_pipeline import BasePipeline
 from videoannotator.utils.model_loader import log_model_download
+
 from .ffmpeg_utils import check_ffmpeg_available
 from .ffmpeg_utils import extract_audio_from_video as ffmpeg_extract
 
@@ -35,15 +38,9 @@ except ImportError:
 warnings.filterwarnings("ignore", category=UserWarning, module="librosa")
 
 # Try to import both standard Whisper and HF Whisper
-try:
-    import whisper
-
-    STANDARD_WHISPER_AVAILABLE = True
-except ImportError:
-    STANDARD_WHISPER_AVAILABLE = False
-    logging.warning(
-        "Standard whisper not available. Install with: pip install openai-whisper"
-    )
+# Note: standard whisper is resolved lazily to keep imports light and to allow
+# unit tests to patch a module-level/instance-provided `whisper` object.
+whisper = None
 
 try:
     from transformers import WhisperForConditionalGeneration, WhisperProcessor
@@ -94,10 +91,11 @@ class WhisperBasePipeline(BasePipeline):
         super().__init__(merged_config)
 
         self.logger = logging.getLogger(__name__)
-        self.whisper_model = None
-        self.whisper_processor = None
-        self.device = None
-        self.model_type = None  # "standard" or "huggingface"
+        self.is_initialized: bool = False
+        self.whisper_model: Any | None = None
+        self.whisper_processor: Any | None = None
+        self.device: torch.device = torch.device("cpu")
+        self.model_type: str | None = None  # "standard" or "huggingface"
         # Fallback state flags (for diagnostics/tests)
         self.used_cuda_initially = False
         self.fell_back_to_cpu = False
@@ -134,6 +132,16 @@ class WhisperBasePipeline(BasePipeline):
         # Load Whisper model with CUDA fallback handling
         try:
             self._load_whisper_model()
+        except ImportError as e:
+            # Optional dependency: allow the pipeline to exist but remain uninitialized.
+            # This enables environments without whisper installed (and unit tests that
+            # only validate device selection) to proceed without crashing.
+            self.logger.warning(f"Whisper dependency unavailable: {e}")
+            # Consider the pipeline initialized (device selected, resources ready) even
+            # though the model itself is unavailable. Downstream pipelines should check
+            # `self.whisper_model` before attempting inference.
+            self.is_initialized = True
+            return
         except RuntimeError as e:
             err_lower = str(e).lower()
             cuda_markers = [
@@ -189,13 +197,33 @@ class WhisperBasePipeline(BasePipeline):
             self._load_hf_whisper_model(model_id, cache_dir)
             self.model_type = "huggingface"
         else:  # Standard Whisper model
-            if not STANDARD_WHISPER_AVAILABLE:
-                raise ImportError(
-                    "Standard whisper not available. "
-                    "Install with: pip install openai-whisper"
-                )
             self._load_standard_whisper_model(model_id)
             self.model_type = "standard"
+
+    def _get_standard_whisper_module(self):
+        """Resolve the standard `whisper` module.
+
+        Preference order:
+        1) Instance attribute `self.whisper` (used by SpeechPipeline; patchable in tests)
+        2) Module global `whisper` (cached after first import)
+        3) Lazy import of the `whisper` package
+        """
+
+        module = getattr(self, "whisper", None)
+        if module is not None:
+            return module
+
+        global whisper
+        if whisper is not None:
+            return whisper
+
+        if importlib_util.find_spec("whisper") is None:
+            raise ImportError(
+                "Standard whisper not available. Install with: pip install openai-whisper"
+            )
+
+        whisper = importlib.import_module("whisper")
+        return whisper
 
     def _load_hf_whisper_model(
         self, model_id: str, cache_dir: str | None = None
@@ -263,7 +291,7 @@ class WhisperBasePipeline(BasePipeline):
 
         except Exception as e:
             self.logger.error(f"Error loading HF Whisper model '{model_id}': {e}")
-            raise RuntimeError(f"Failed to load HF Whisper model: {e}")
+            raise RuntimeError(f"Failed to load HF Whisper model: {e}") from e
 
     def _load_standard_whisper_model(self, model_size: str) -> None:
         """Load a standard Whisper model.
@@ -277,11 +305,13 @@ class WhisperBasePipeline(BasePipeline):
             # Handle FP16 for CUDA
             _fp16 = self.config.get("use_fp16", True) and self.device.type == "cuda"
 
+            whisper_module = self._get_standard_whisper_module()
+
             # Load model with enhanced logging
             self.whisper_model = log_model_download(
                 f"OpenAI Whisper {model_size.upper()} Model",
                 f"whisper-{model_size}",
-                whisper.load_model,
+                whisper_module.load_model,
                 model_size,
                 device=self.device.type,
                 download_root=self.config.get("cache_dir"),
@@ -292,12 +322,18 @@ class WhisperBasePipeline(BasePipeline):
                 f"Standard Whisper model '{model_size}' loaded successfully to {self.device}"
             )
 
+        except ImportError as e:
+            # Missing optional dependency (e.g., openai-whisper not installed).
+            self.logger.error(
+                f"Error loading standard Whisper model '{model_size}': {e}"
+            )
+            raise
         except Exception as e:
             # Propagate to outer initialize logic for potential fallback handling
             self.logger.error(
                 f"Error loading standard Whisper model '{model_size}': {e}"
             )
-            raise RuntimeError(e)
+            raise RuntimeError(str(e)) from e
 
     def extract_audio_from_video(
         self, video_path: str | Path
@@ -335,7 +371,7 @@ class WhisperBasePipeline(BasePipeline):
 
                     if extracted_path and extracted_path.exists():
                         # Load the extracted audio file with librosa (safer than direct video loading)
-                        audio, loaded_sr = librosa.load(
+                        audio, _loaded_sr = librosa.load(
                             str(extracted_path), sr=target_sr, mono=True
                         )
 
@@ -384,9 +420,9 @@ class WhisperBasePipeline(BasePipeline):
                 raise RuntimeError(
                     f"Audio processing library error. This may be due to librosa/numba compatibility issues. "
                     f"Consider installing FFmpeg for more stable audio extraction. Original error: {e}"
-                )
+                ) from e
             else:
-                raise RuntimeError(f"Failed to extract audio: {e}")
+                raise RuntimeError(f"Failed to extract audio: {e}") from e
 
     @torch.no_grad()
     def get_whisper_embedding(
@@ -408,17 +444,22 @@ class WhisperBasePipeline(BasePipeline):
         try:
             # Process differently based on model type
             if self.model_type == "huggingface":
+                processor = self.whisper_processor
+                model = self.whisper_model
+                if processor is None or model is None:
+                    raise RuntimeError("Whisper HF components not initialized")
+
                 # Process through HF Whisper
-                input_features = self.whisper_processor(
+                input_features = processor(
                     audio, sampling_rate=self.config["sample_rate"], return_tensors="pt"
                 ).input_features.to(self.device)
 
                 # Ensure input features match model dtype for FP16 compatibility
-                if self.whisper_model.dtype != input_features.dtype:
-                    input_features = input_features.to(dtype=self.whisper_model.dtype)
+                if model.dtype != input_features.dtype:
+                    input_features = input_features.to(dtype=model.dtype)
 
                 # Get encoder outputs
-                encoder_outputs = self.whisper_model.get_encoder()(input_features)
+                encoder_outputs = model.get_encoder()(input_features)
                 embedding = encoder_outputs.last_hidden_state
 
                 # Handle sequence length if needed
@@ -427,6 +468,8 @@ class WhisperBasePipeline(BasePipeline):
                 return embedding
 
             else:  # Standard Whisper
+                if self.whisper_model is None:
+                    raise RuntimeError("Whisper model not initialized")
                 # Convert audio to float32 if needed
                 if audio.dtype != np.float32:
                     audio = audio.astype(np.float32)
@@ -506,12 +549,7 @@ class WhisperBasePipeline(BasePipeline):
         self.logger.info("Segmenting audio using fixed interval mode")
 
         # Calculate segment duration based on pps
-        if pps <= 0:
-            # If pps is 0 or negative, use one segment for the entire audio
-            segment_duration = end_time - start_time
-        else:
-            # Normal case: segment duration is 1/pps
-            segment_duration = 1.0 / pps
+        segment_duration = end_time - start_time if pps <= 0 else 1.0 / pps
 
         # Ensure segment duration is within bounds
         segment_duration = max(
@@ -558,10 +596,12 @@ class WhisperBasePipeline(BasePipeline):
         """Clean up resources used by the pipeline."""
         try:
             # Release CUDA memory
-            if self.device and self.device.type == "cuda":
-                if self.whisper_model is not None:
-                    if hasattr(self.whisper_model, "to"):
-                        self.whisper_model = self.whisper_model.to("cpu")
+            if (
+                self.device.type == "cuda"
+                and self.whisper_model is not None
+                and hasattr(self.whisper_model, "to")
+            ):
+                self.whisper_model = self.whisper_model.to("cpu")
 
                 # Clear CUDA cache
                 torch.cuda.empty_cache()
@@ -666,4 +706,4 @@ class WhisperBasePipeline(BasePipeline):
 
         except Exception as e:
             self.logger.error(f"Error processing {video_path}: {e}")
-            raise RuntimeError(f"Failed to process audio: {e}")
+            raise RuntimeError(f"Failed to process audio: {e}") from e

@@ -5,7 +5,7 @@ Provides both basic liveness checks and detailed system diagnostics.
 v1.3.0: Phase 11 - T068
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import psutil
@@ -283,7 +283,7 @@ async def health_check(
     Returns:
         Health status dictionary
     """
-    timestamp = datetime.utcnow().isoformat() + "Z"
+    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     # Basic mode: fast liveness check
     if not detailed:

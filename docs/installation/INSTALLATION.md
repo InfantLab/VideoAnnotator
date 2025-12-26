@@ -1,4 +1,4 @@
-# VideoAnnotator Installation Guide
+# VideoAnnotator v1.2.0 Installation Guide
 
 > 📖 **Navigation**: [Getting Started](../usage/GETTING_STARTED.md) | [Demo Commands](../usage/demo_commands.md) | [Pipeline Specs](../usage/pipeline_specs.md) | [Main Documentation](../README.md)
 
@@ -74,7 +74,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 ```bash
 # Clone the repository
-git clone https://github.com/InfantLab/VideoAnnotator.git
+git clone https://github.com/your-org/VideoAnnotator.git
 cd VideoAnnotator
 
 # Install all dependencies with uv (fast and reliable)
@@ -111,7 +111,7 @@ conda install -n videoannotator cmake dlib -c conda-forge
 # Otherwise, install cmake system-wide from cmake.org
 ```
 
-### 5. Install OpenFace 3.0 (Manual Installation Required)
+### 2. Install OpenFace 3.0 (Manual Installation Required)
 
 OpenFace 3.0 requires manual compilation. Follow these steps:
 
@@ -181,8 +181,8 @@ print('All core dependencies installed!')
 "
 
 # Test the API server
-uv run videoannotator
-# Interactive docs at http://localhost:18011/docs
+uv run python api_server.py
+# Should start server on http://localhost:8000
 ```
 
 ## Development Commands
@@ -191,10 +191,7 @@ Once installed, use these commands for development:
 
 ```bash
 # Start API server
-uv run videoannotator
-
-# Or explicitly specify the server subcommand
-uv run videoannotator server --host 0.0.0.0 --port 18011
+uv run python api_server.py
 
 # Run linting and formatting
 uv run ruff check .
@@ -205,6 +202,10 @@ uv run mypy src
 
 # Run tests
 uv run pytest
+
+# Start API server
+uv run python -m src.cli server
+uv run python api_server.py
 ```
 
 ## Docker Installation (Alternative)
@@ -272,7 +273,7 @@ Open the project in VS Code and use "Reopen in Container" for a complete GPU-ena
 
 ## Modern Architecture
 
-VideoAnnotator uses:
+VideoAnnotator v1.2.0 uses:
 
 - **uv** - Fast, reliable Python package management
 - **Ruff** - Unified linting and formatting (replaces Black, isort, flake8)
@@ -299,8 +300,8 @@ After installation:
 - See `docs/usage/GETTING_STARTED.md` for usage examples
 - Check `docs/development/` for development workflows
 - Review `configs/` for configuration options
-- Use `uv run videoannotator --help` to explore CLI commands
-- Use `uv run videoannotator` to start the server (http://localhost:18011/docs)
+- Use `uv run python -m src.cli --help` to test the CLI
+- Use `uv run python api_server.py` to start the server
 
 ## Performance Tips
 

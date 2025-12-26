@@ -123,6 +123,10 @@ class JobResponse(BaseModel):
     error_message: str | None = None
     result_path: str | None = None
     storage_path: str | None = None  # v1.3.0: Persistent job storage directory
+    queue_position: int | None = Field(
+        default=None,
+        description="1-based position in the pending queue (only set when status is 'pending')",
+    )
 
 
 class JobListResponse(BaseModel):
@@ -309,15 +313,21 @@ async def submit_job(
                     hint="Fix the validation errors and resubmit",
                 )
 
-        # Save uploaded video to temporary file first
+        # Save uploaded video to temporary file first.
+        # NOTE: In some ASGI stacks the underlying UploadFile file pointer may be
+        # positioned at EOF after request parsing. Always seek to start.
         temp_dir = tempfile.mkdtemp()
         filename = video.filename or "video"
         temp_video_path = os.path.join(temp_dir, filename)
 
         try:
+            await video.seek(0)
             with open(temp_video_path, "wb") as f:
-                content = await video.read()
-                f.write(content)
+                while True:
+                    chunk = await video.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    f.write(chunk)
 
             # Extract video metadata from temp file
             video_filename, video_size_bytes, video_duration_seconds = (
@@ -357,6 +367,23 @@ async def submit_job(
         # Save job to database
         storage.save_job_metadata(batch_job)
 
+        queue_position: int | None = None
+        if batch_job.status == JobStatus.PENDING:
+            try:
+                pending_ids = storage.list_jobs(status_filter=JobStatus.PENDING.value)
+                queue_position = next(
+                    (
+                        idx + 1
+                        for idx, pending_job_id in enumerate(pending_ids)
+                        if pending_job_id == batch_job.job_id
+                    ),
+                    None,
+                )
+            except Exception as e:
+                logger.debug(
+                    f"Could not compute queue_position for {batch_job.job_id}: {e}"
+                )
+
         return JobResponse(
             id=batch_job.job_id,
             status=batch_job.status.value,
@@ -372,6 +399,7 @@ async def submit_job(
             storage_path=str(batch_job.storage_path)
             if batch_job.storage_path
             else None,
+            queue_position=queue_position,
         )
 
     except (InvalidRequestException, InvalidConfigException, APIError):
@@ -478,6 +506,21 @@ async def get_job_status(
         # Load job from database
         job = storage.load_job_metadata(job_id)
 
+        queue_position: int | None = None
+        if job.status == JobStatus.PENDING:
+            try:
+                pending_ids = storage.list_jobs(status_filter=JobStatus.PENDING.value)
+                queue_position = next(
+                    (
+                        idx + 1
+                        for idx, pending_job_id in enumerate(pending_ids)
+                        if pending_job_id == job.job_id
+                    ),
+                    None,
+                )
+            except Exception as e:
+                logger.debug(f"Could not compute queue_position for {job.job_id}: {e}")
+
         # Extract video metadata if available
         video_filename, video_size_bytes, video_duration_seconds = (
             extract_video_metadata(job.video_path)
@@ -497,6 +540,7 @@ async def get_job_status(
             error_message=job.error_message,
             result_path=getattr(job, "result_path", None),
             storage_path=str(job.storage_path) if job.storage_path else None,
+            queue_position=queue_position,
         )
 
     except FileNotFoundError as e:
@@ -610,6 +654,14 @@ async def list_jobs(
 ) -> JobListResponse:
     """List jobs with pagination and filtering (see endpoint description for details)."""
     try:
+        pending_positions: dict[str, int] = {}
+        if status_filter is None or status_filter == JobStatus.PENDING.value:
+            pending_ids = storage.list_jobs(status_filter=JobStatus.PENDING.value)
+            pending_positions = {
+                pending_job_id: idx + 1
+                for idx, pending_job_id in enumerate(pending_ids)
+            }
+
         # Get job IDs from storage
         all_job_ids = storage.list_jobs(status_filter=status_filter)
 
@@ -648,6 +700,9 @@ async def list_jobs(
                         result_path=getattr(job, "result_path", None),
                         storage_path=str(job.storage_path)
                         if job.storage_path
+                        else None,
+                        queue_position=pending_positions.get(job.job_id)
+                        if job.status == JobStatus.PENDING
                         else None,
                     )
                 )

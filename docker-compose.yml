@@ -1,43 +1,61 @@
 version: "3.8"
 
 services:
-  # Default (CPU) service: `docker compose up --build`
-  videoannotator:
+  # Development service
+  videoannotator-dev:
     build:
       context: .
       dockerfile: Dockerfile.cpu
-    image: videoannotator:cpu
     volumes:
+      - .:/app
       - ./data:/app/data
       - ./output:/app/output
-      - ./logs:/app/logs
-      - ./database:/app/database
     environment:
-      - VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator.db
+      - PYTHONPATH=/app
+      - CUDA_VISIBLE_DEVICES=0
     ports:
-      - "18011:18011"
-    command: ["uv", "run", "videoannotator"]
+      - "8888:8888" # Jupyter
+      - "18011:18011" # FastAPI (host 18011 -> container 18011)
+    command: ["uv", "run", "videoannotator", "--help"]
+    profiles:
+      - dev
 
-  # GPU-enabled service (optional): `docker compose --profile gpu up --build`
+  # Production service
+  videoannotator-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+    volumes:
+      - ./data:/app/data:ro
+      - ./output:/app/output
+    environment:
+      - PYTHONPATH=/app
+    command: ["uv", "run", "videoannotator", "server", "--host", "0.0.0.0", "--port", "18011"]
+    profiles:
+      - prod
+
+  # GPU-enabled service
   videoannotator-gpu:
     build:
       context: .
       dockerfile: Dockerfile.gpu
-    image: videoannotator:gpu
+    volumes:
+      - ./data:/app/data:ro
+      - ./output:/app/output
+    environment:
+      - PYTHONPATH=/app
+      - CUDA_VISIBLE_DEVICES=0
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: ["uv", "run", "videoannotator", "server", "--host", "0.0.0.0", "--port", "18011"]
     profiles:
       - gpu
-    volumes:
-      - ./data:/app/data
-      - ./output:/app/output
-      - ./logs:/app/logs
-      - ./database:/app/database
-    environment:
-      - VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator.db
-      - CUDA_VISIBLE_DEVICES=0
-    ports:
-      - "18011:18011"
-    gpus: all
-    command: ["uv", "run", "videoannotator"]
 
   # Development service with GPU and pre-cached models
   videoannotator-dev-gpu:
@@ -50,14 +68,39 @@ services:
       - ./logs:/app/logs
       - ./database:/app/database # Persistent database for development
     environment:
+      - PYTHONPATH=/app
       - CUDA_VISIBLE_DEVICES=0
       - VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator_dev.db
-    gpus: all
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     ports:
       - "18011:18011" # FastAPI server (host 18011)
-    command: ["uv", "run", "videoannotator", "--dev"]
+    command: ["uv", "run", "python", "api_server.py", "--log-level", "info"]
     profiles:
       - dev-gpu
+
+  # Jupyter service for development
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./output:/app/output
+    ports:
+      - "8888:8888"
+    environment:
+      - PYTHONPATH=/app
+    command: ["bash", "-lc", "uv sync --extra dev && uv run jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root"]
+    profiles:
+      - dev
 
   # Database service (optional, for future use)
   postgres:

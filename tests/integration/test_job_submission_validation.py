@@ -44,7 +44,9 @@ def client(temp_db):
 @pytest.fixture
 def sample_video_file():
     """Create a minimal video file for testing."""
-    return io.BytesIO(b"fake video content for testing")
+    from tests.fixtures.synthetic_video import synthetic_video_bytes_avi
+
+    return io.BytesIO(synthetic_video_bytes_avi())
 
 
 class TestJobSubmissionValidation:
@@ -58,7 +60,7 @@ class TestJobSubmissionValidation:
         }
         pipelines = "person_tracking,scene_detection"
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {
             "config": json.dumps(config),
             "selected_pipelines": pipelines,
@@ -81,7 +83,7 @@ class TestJobSubmissionValidation:
         }
         pipelines = "person_tracking"
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {
             "config": json.dumps(config),
             "selected_pipelines": pipelines,
@@ -102,7 +104,7 @@ class TestJobSubmissionValidation:
         }
         pipelines = "person_tracking"
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {
             "config": json.dumps(config),
             "selected_pipelines": pipelines,
@@ -121,7 +123,7 @@ class TestJobSubmissionValidation:
         config = {"confidence_threshold": 0.8}
         pipelines = "unknown_pipeline"
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {
             "config": json.dumps(config),
             "selected_pipelines": pipelines,
@@ -143,7 +145,7 @@ class TestJobSubmissionValidation:
         config = {"confidence_threshold": 0.8}
         pipelines = "unknown1,unknown2"
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {
             "config": json.dumps(config),
             "selected_pipelines": pipelines,
@@ -161,7 +163,7 @@ class TestJobSubmissionValidation:
         """Test job submission without config uses defaults (valid)."""
         pipelines = "person_tracking"
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {"selected_pipelines": pipelines}
 
         response = client.post("/api/v1/jobs/", files=files, data=data)
@@ -179,7 +181,7 @@ class TestJobSubmissionValidation:
             "confidence_threshold": 2.0,  # Invalid but not validated
         }
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {"config": json.dumps(config)}
 
         response = client.post("/api/v1/jobs/", files=files, data=data)
@@ -193,7 +195,7 @@ class TestJobSubmissionValidation:
         config = {}
         pipelines = "scene_detection"
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {
             "config": json.dumps(config),
             "selected_pipelines": pipelines,
@@ -213,7 +215,7 @@ class TestJobSubmissionValidation:
         config = {"confidence_threshold": 0.8}
         pipelines = "person_tracking,invalid_pipeline"
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {
             "config": json.dumps(config),
             "selected_pipelines": pipelines,
@@ -233,7 +235,7 @@ class TestJobSubmissionValidation:
         }
         pipelines = "person_tracking"
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {
             "config": json.dumps(config),
             "selected_pipelines": pipelines,
@@ -256,7 +258,7 @@ class TestJobSubmissionValidation:
         }
         pipelines = "person_tracking"
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {
             "config": json.dumps(config),
             "selected_pipelines": pipelines,
@@ -280,7 +282,7 @@ class TestJobSubmissionValidation:
         }
         pipelines = "person_tracking,scene_detection,face_analysis,audio_processing"
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {
             "config": json.dumps(config),
             "selected_pipelines": pipelines,
@@ -301,7 +303,7 @@ class TestJobSubmissionValidation:
         config = {"confidence_threshold": 2.0}
         pipelines = "person_tracking"
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {
             "config": json.dumps(config),
             "selected_pipelines": pipelines,
@@ -320,7 +322,7 @@ class TestJobSubmissionValidation:
         config = {"confidence_threshold": 1.5}
         pipelines = "person_tracking"
 
-        files = {"video": ("test.mp4", sample_video_file, "video/mp4")}
+        files = {"video": ("test.avi", sample_video_file, "video/avi")}
         data = {
             "config": json.dumps(config),
             "selected_pipelines": pipelines,

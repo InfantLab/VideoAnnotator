@@ -8,22 +8,26 @@ tags:
   - machine learning
 authors:
   - name: Caspar Addyman
-    orcid: 0000-0000-0000-0000
+    orcid: https://orcid.org/0000-0003-0001-9548
+    affiliation: 1
+  - name: Jeremiah Ishaya
     affiliation: 1
   - name: Irene Uwerikowe
     affiliation: 1
-  - name: Jeremiah (Jerry) Ishaya
-    affiliation: 1
   - name: Daniel Stamate
     affiliation: 2
+  - name: Jamie Lachman
+    affiliation: 3
   - name: Mark Tomlinson
     affiliation: 1
 affiliations:
-  - name: Institute for Life Course Health Research, Department of Global Health, Stellenbosch University, South Africa
+  - name: Institute for Life Course Health Research (ILCHR), Stellenbosch University, South Africa
     index: 1
   - name: Department of Computing, Goldsmiths, University of London, United Kingdom
     index: 2
-date: 27 August 2025
+  - name: Department of Social Policy and Intervention (DISP), University of Oxford, United Kingdom
+    index: 3
+date: 18 December 2025
 bibliography: paper.bib
 ---
 
@@ -40,7 +44,7 @@ The toolkit targets researchers who need _auditable, explainable feature timelin
 
 # Statement of need
 
-Across behavioral sciences, observational methods remain the gold standard for assessing rich interpersonal phenomena, but manual coding is costly, subjective, and difficult to scale. Prior overviews of parenting–child interaction assessment, for example, highlight both the value of holistic constructs and the practical limits of human macro-coding (training burden, reliability drift, cultural variance) when datasets grow beyond small lab cohorts. :contentReference[oaicite:0]{index=0} These concerns generalize to many video-based fields (therapy sessions, classroom interactions, telehealth triage), where the _measurement gap_—lack of scalable, standardized, and transparent coding—constrains progress. :contentReference[oaicite:1]{index=1}
+Across behavioral sciences, observational methods remain the gold standard for assessing rich interpersonal phenomena, but manual coding is costly, subjective, and difficult to scale. Prior work on parenting–child interaction assessment, for example, highlights both the value of holistic constructs and the practical limits of human macro-coding (training burden, reliability drift, cultural variance) when datasets grow beyond small lab cohorts. These concerns generalize to many video-based fields (therapy sessions, classroom interactions, telehealth triage), where the measurement gap—lack of scalable, standardized, and transparent coding—constrains progress.
 
 **VideoAnnotator** addresses this need by (i) standardizing access to modern open models for faces, pose, and voice; (ii) emitting **timestamped micro-events** that are inspectable and auditable; and (iii) packaging the whole stack for reproducible, resource-constrained deployment (laptops, on-prem servers, or cloud GPUs). The library does _not_ prescribe a single theory of behavior; rather, it provides the _feature scaffolding_ upon which diverse constructs or downstream models can be built (e.g., sensitivity, synchrony, rapport), with outputs suitable for both qualitative review and quantitative ML.
 
@@ -78,7 +82,7 @@ We provide minimal smoke tests for pipeline execution, schema validation for out
 
 - The toolkit depends on upstream detectors; accuracy/cultural generalizability reflect those models and recording conditions (lighting, angle, mic).
 - Inference on long videos may require GPU resources for real-time/near real-time performance.
-- Ethical deployment (consent, data governance, redaction) remains the responsibility of adopters; the library offers hooks to implement these steps. :contentReference[oaicite:3]{index=3}
+- Ethical deployment (consent, data governance, redaction) remains the responsibility of adopters; the library offers hooks to implement these steps.
 
 # Acknowledgements
 

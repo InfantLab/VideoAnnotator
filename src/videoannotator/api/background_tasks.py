@@ -6,7 +6,7 @@ background tasks and asyncio for seamless operation.
 
 import asyncio
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime
 from typing import Any
 
@@ -39,6 +39,10 @@ class BackgroundJobManager:
             poll_interval: Seconds between database polls (default: env WORKER_POLL_INTERVAL or 5)
             max_concurrent_jobs: Maximum jobs to process simultaneously (default: env MAX_CONCURRENT_JOBS or 2)
         """
+        # NOTE: Avoid binding to a potentially stale cached backend at import/
+        # test-collection time. When storage_backend is not explicitly provided,
+        # we refresh from the current environment at start().
+        self._storage_backend_provided = storage_backend is not None
         self.storage = storage_backend or get_storage_backend()
         self.poll_interval = (
             poll_interval if poll_interval is not None else WORKER_POLL_INTERVAL
@@ -57,12 +61,18 @@ class BackgroundJobManager:
         self.running = False
         self.processing_jobs: set[str] = set()
         self.background_task: asyncio.Task | None = None
+        self._job_tasks: set[asyncio.Task[None]] = set()
 
     async def start(self) -> None:
         """Start the background job processing."""
         if self.running:
             logger.warning("Background job manager is already running")
             return
+
+        # If the manager was created before env vars/caches were finalized (a
+        # common pattern in test suites), refresh the storage backend now.
+        if not self._storage_backend_provided:
+            self.storage = get_storage_backend()
 
         self.running = True
         self.background_task = asyncio.create_task(self._job_processing_loop())
@@ -80,10 +90,8 @@ class BackgroundJobManager:
 
         if self.background_task:
             self.background_task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await self.background_task
-            except asyncio.CancelledError:
-                pass
 
         # Wait for any ongoing jobs to complete (with timeout)
         if self.processing_jobs:
@@ -167,7 +175,11 @@ class BackgroundJobManager:
 
             # Start processing selected jobs
             for job in jobs_to_process:
-                asyncio.create_task(self._process_job_async(job))
+                task: asyncio.Task[None] = asyncio.create_task(
+                    self._process_job_async(job)
+                )
+                self._job_tasks.add(task)
+                task.add_done_callback(self._job_tasks.discard)
                 logger.info(f"[START] Processing job {job.job_id} ({job.video_path})")
 
         except Exception as e:

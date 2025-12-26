@@ -48,14 +48,6 @@ COPY src/ ./src/
 COPY configs/ ./configs/
 COPY scripts/ ./scripts/
 
-# Convenience commands (avoid typing `uv run videoannotator ...`)
-COPY scripts/container/bin/server /usr/local/bin/server
-COPY scripts/container/bin/newtoken /usr/local/bin/newtoken
-COPY scripts/container/bin/va /usr/local/bin/va
-COPY scripts/container/bin/vatest /usr/local/bin/vatest
-COPY scripts/container/bin/setupdb /usr/local/bin/setupdb
-RUN chmod +x /usr/local/bin/server /usr/local/bin/newtoken /usr/local/bin/va /usr/local/bin/vatest /usr/local/bin/setupdb
-
 # Copy your local models and weights for fast offline-ish iteration
 COPY models/ /app/models/
 COPY weights/ /app/weights/
@@ -63,7 +55,7 @@ COPY weights/ /app/weights/
 # Install dependencies (torch/torchvision/torchaudio come from the configured
 # `pytorch-cu124` uv index in pyproject.toml).
 RUN uv sync --frozen --no-editable \
-    && HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh \
+    && bash scripts/install_hadolint.sh \
     && uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 
 # Verify GPU access and model cache (no model downloading needed!)

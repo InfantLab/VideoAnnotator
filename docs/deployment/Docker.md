@@ -1,6 +1,6 @@
 # VideoAnnotator Docker Deployment Guide
 
-VideoAnnotator includes modern Docker containers using `uv` for fast, reliable dependency management.
+VideoAnnotator v1.2.0 includes modern Docker containers using uv for fast, reliable dependency management.
 
 ## 🐳 Available Docker Images
 
@@ -74,7 +74,7 @@ Notes:
 
 ```bash
 # Start development service with pre-cached models
-docker compose --profile dev-gpu up --build videoannotator-dev-gpu
+docker compose --profile dev-gpu up videoannotator-dev-gpu
 
 # Access API at http://localhost:18011
 # Interactive docs at http://localhost:18011/docs
@@ -84,14 +84,14 @@ docker compose --profile dev-gpu up --build videoannotator-dev-gpu
 
 ```bash
 # Start production GPU service
-docker compose --profile gpu up --build videoannotator-gpu
+docker compose --profile gpu up videoannotator-gpu
 ```
 
 ### CPU-only Production
 
 ```bash
 # Start CPU service
-docker compose up --build
+docker compose --profile prod up videoannotator-prod
 ```
 
 ## Prerequisites

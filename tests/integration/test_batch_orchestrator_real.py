@@ -59,7 +59,7 @@ class TestBatchOrchestratorReal:
         assert len(self.orchestrator.jobs) == 1
 
         job = self.orchestrator.jobs[0]
-        assert job.job_id == job_id
+        assert job.job_id == _job_id
         assert job.video_path == self.test_video1
         assert job.status == JobStatus.PENDING
 
@@ -142,7 +142,7 @@ class TestBatchOrchestratorReal:
         job = self.orchestrator.jobs[0]
 
         # Test basic properties
-        assert job.job_id == job_id
+        assert job.job_id == _job_id
         assert job.video_path == self.test_video1
         assert job.status == JobStatus.PENDING
         assert job.retry_count == 0

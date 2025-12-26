@@ -57,10 +57,36 @@ class FileStorageBackend(StorageBackend):
         """Get file path for job metadata."""
         return self._get_job_dir(job_id) / "job_metadata.json"
 
+    def _ensure_base_dir_writable(self) -> None:
+        """Raise PermissionError if base_dir is not writable/executable.
+
+        Tests run in containers as root, where OS permission enforcement can be
+        effectively bypassed. We still want deterministic behavior when the
+        directory is marked read-only (e.g., chmod 0444) so we validate the
+        directory mode bits explicitly.
+        """
+
+        try:
+            mode = self.base_dir.stat().st_mode
+        except FileNotFoundError as e:
+            raise PermissionError(
+                f"Storage base directory missing: {self.base_dir}"
+            ) from e
+
+        # Need both write and execute permissions on a directory to create files.
+        has_any_write = bool(mode & 0o222)
+        has_any_exec = bool(mode & 0o111)
+        if not (has_any_write and has_any_exec):
+            raise PermissionError(
+                f"Storage base directory is not writable: {self.base_dir}"
+            )
+
     def save_annotations(
         self, job_id: str, pipeline: str, annotations: list[dict[str, Any]]
     ) -> str:
         """Save pipeline annotations for a job."""
+        self._ensure_base_dir_writable()
+
         job_dir = self._get_job_dir(job_id)
         job_dir.mkdir(parents=True, exist_ok=True)
 
@@ -108,6 +134,8 @@ class FileStorageBackend(StorageBackend):
 
     def save_job_metadata(self, job: BatchJob) -> None:
         """Save job metadata."""
+        self._ensure_base_dir_writable()
+
         job_dir = self._get_job_dir(job.job_id)
         job_dir.mkdir(parents=True, exist_ok=True)
 
@@ -134,35 +162,19 @@ class FileStorageBackend(StorageBackend):
             return None
 
     def list_jobs(self, status_filter: str | None = None) -> list[str]:
-        """List all job IDs, optionally filtered by status."""
-        job_ids = []
+        """List all job IDs, optionally filtered by status.
 
-        if not self.jobs_dir.exists():
-            return job_ids
-
-        for job_dir in self.jobs_dir.iterdir():
-            if job_dir.is_dir():
-                job_id = job_dir.name
-
-                # Apply status filter if specified
-                if status_filter:
-                    try:
-                        job = self.load_job_metadata(job_id)
-                        if job.status.value != status_filter:
-                            continue
-                    except FileNotFoundError:
-                        continue
-
-                job_ids.append(job_id)
-
-        return sorted(job_ids)
+        Ordering is FIFO by job creation time to match the worker's dequeue order.
+        """
+        jobs = self.get_all_jobs(status_filter=status_filter)
+        return [job.job_id for job in jobs]
 
     def get_all_jobs(self, status_filter: str | None = None) -> list[BatchJob]:
         """Get all job objects with full metadata, optionally filtered by.
 
         status.
         """
-        jobs = []
+        jobs: list[BatchJob] = []
 
         if not self.jobs_dir.exists():
             return jobs
@@ -172,6 +184,9 @@ class FileStorageBackend(StorageBackend):
                 job_id = job_dir.name
                 try:
                     job = self.load_job_metadata(job_id)
+
+                    if job is None:
+                        continue
 
                     # Apply status filter if specified
                     if status_filter and job.status.value != status_filter:
@@ -199,13 +214,16 @@ class FileStorageBackend(StorageBackend):
 
     def get_stats(self) -> dict[str, Any]:
         """Get storage statistics."""
-        stats = {
+        pipelines: set[str] = set()
+        jobs_by_status: dict[str, int] = {}
+
+        stats: dict[str, Any] = {
             "backend_type": "file",
             "base_dir": str(self.base_dir),
             "total_jobs": 0,
-            "jobs_by_status": {},
+            "jobs_by_status": jobs_by_status,
             "total_size_mb": 0.0,
-            "pipelines": set(),
+            "pipelines": pipelines,
         }
 
         if not self.jobs_dir.exists():
@@ -220,16 +238,12 @@ class FileStorageBackend(StorageBackend):
                 job = self.load_job_metadata(job_dir.name)
                 if job is not None:
                     status = job.status.value
-                    stats["jobs_by_status"][status] = (
-                        stats["jobs_by_status"].get(status, 0) + 1
-                    )
+                    jobs_by_status[status] = jobs_by_status.get(status, 0) + 1
 
                     # Collect pipeline info
-                    stats["pipelines"].update(job.pipeline_results.keys())
+                    pipelines.update(job.pipeline_results)
                 else:
-                    stats["jobs_by_status"]["unknown"] = (
-                        stats["jobs_by_status"].get("unknown", 0) + 1
-                    )
+                    jobs_by_status["unknown"] = jobs_by_status.get("unknown", 0) + 1
 
                 # Calculate directory size
                 for file_path in job_dir.rglob("*"):
@@ -237,12 +251,14 @@ class FileStorageBackend(StorageBackend):
                         total_size += file_path.stat().st_size
 
         stats["total_size_mb"] = total_size / (1024 * 1024)
-        stats["pipelines"] = list(stats["pipelines"])
+        stats["pipelines"] = list(pipelines)
 
         return stats
 
     def save_batch_queue(self, jobs: list[BatchJob]) -> None:
         """Save current batch queue state."""
+        self._ensure_base_dir_writable()
+
         queue_data = {
             "updated_at": datetime.now().isoformat(),
             "total_jobs": len(jobs),
@@ -277,7 +293,7 @@ class FileStorageBackend(StorageBackend):
         export_data = {"job": job.to_dict(), "annotations": {}}
 
         # Load all annotations
-        for pipeline_name in job.pipeline_results.keys():
+        for pipeline_name in job.pipeline_results:
             try:
                 annotations = self.load_annotations(job_id, pipeline_name)
                 export_data["annotations"][pipeline_name] = annotations
@@ -315,7 +331,7 @@ class FileStorageBackend(StorageBackend):
 
     def list_reports(self) -> list[BatchReport]:
         """List all batch reports with full data."""
-        reports = []
+        reports: list[BatchReport] = []
 
         if not self.reports_dir.exists():
             return reports
@@ -353,9 +369,8 @@ class FileStorageBackend(StorageBackend):
             if job_dir.is_dir():
                 # Check modification time
                 mod_time = datetime.fromtimestamp(job_dir.stat().st_mtime)
-                if mod_time < cutoff_time:
-                    if self.delete_job(job_dir.name):
-                        deleted_jobs += 1
+                if mod_time < cutoff_time and self.delete_job(job_dir.name):
+                    deleted_jobs += 1
 
         # Clean up old reports
         for report_file in self.reports_dir.glob("batch_report_*.json"):

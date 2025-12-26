@@ -1,27 +1,11 @@
 """Test integration of size-based analysis with person tracking pipeline."""
 
-# Mock cv2 and ultralytics before any imports to avoid dependency issues
-import sys
 import tempfile
 from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
 
-# Set up comprehensive mocks before any imports
-mock_cv2 = Mock()
-mock_cv2.__spec__ = Mock()
-mock_cv2.__spec__.name = "cv2"
-sys.modules["cv2"] = mock_cv2
-
-mock_ultralytics = Mock()
-sys.modules["ultralytics"] = mock_ultralytics
-
-# Mock transformers components
-mock_transformers = Mock()
-sys.modules["transformers"] = mock_transformers
-
-# Import after mocking
 from videoannotator.pipelines.person_tracking.person_pipeline import (
     PersonTrackingPipeline,
 )

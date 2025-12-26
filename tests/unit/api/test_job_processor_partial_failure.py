@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -15,11 +16,32 @@ class TestJobProcessorPartialFailure(unittest.TestCase):
             "pipeline2": MagicMock(),
         }
 
+        self._temp_dir = tempfile.TemporaryDirectory()
+        self._video_file = tempfile.NamedTemporaryFile(
+            suffix=".mp4", delete=False, dir=self._temp_dir.name
+        )
+        self._video_file.write(b"test")
+        self._video_file.flush()
+        self._video_file.close()
+
+        self.video_path = Path(self._video_file.name)
+        self.output_dir = Path(self._temp_dir.name) / "output"
+
+    def tearDown(self):
+        try:
+            self.video_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+        try:
+            self._temp_dir.cleanup()
+        except Exception:
+            pass
+
     def test_partial_failure(self):
         job = BatchJob(
             job_id="test_job",
-            video_path=Path("/tmp/test.mp4"),
-            output_dir=Path("/tmp/output"),
+            video_path=self.video_path,
+            output_dir=self.output_dir,
             selected_pipelines=["pipeline1", "pipeline2"],
         )
 
@@ -51,8 +73,8 @@ class TestJobProcessorPartialFailure(unittest.TestCase):
     def test_all_failure(self):
         job = BatchJob(
             job_id="test_job",
-            video_path=Path("/tmp/test.mp4"),
-            output_dir=Path("/tmp/output"),
+            video_path=self.video_path,
+            output_dir=self.output_dir,
             selected_pipelines=["pipeline1", "pipeline2"],
         )
 

@@ -11,6 +11,9 @@ license = "MIT"
 authors = [
     {name = "VideoAnnotator Team", email = "info@videoannotator.com"}
 ]
+maintainers = [
+    {name = "Caspar Addyman", email = "addyman@sun.ac.za"}
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

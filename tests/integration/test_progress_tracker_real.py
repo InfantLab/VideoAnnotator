@@ -187,7 +187,9 @@ class TestProgressTrackerReal:
         assert status.total_jobs == 3
         assert status.failed_jobs == 2
         assert status.completed_jobs == 1
-        assert status.success_rate == 50.0  # 1 success / 2 finished
+        # Success rate: 1 completed / (1 completed + 2 failed) = 33.33%
+        expected_success_rate = (1 / 3) * 100
+        assert abs(status.success_rate - expected_success_rate) < 0.01
 
     def test_get_status_edge_case_only_pending(self):
         """Test edge case with only pending jobs."""

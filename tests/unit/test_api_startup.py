@@ -1,8 +1,8 @@
 """Tests for API startup and auto-generation functionality."""
 
 import os
-from pathlib import Path
 from unittest.mock import MagicMock, patch
+import uuid
 
 import pytest
 
@@ -15,27 +15,14 @@ class TestAutoAPIKeyGeneration:
 
     def test_ensure_api_key_exists_with_existing_keys(self, tmp_path):
         """Test that no key is generated when keys already exist."""
-        # Setup token manager with existing key
-        tokens_dir = tmp_path / "tokens"
-        tokens_dir.mkdir()
-
         with patch("videoannotator.api.startup.get_token_manager") as mock_get_manager:
             mock_manager = MagicMock()
-            mock_manager._token_cache = {
-                "va_api_existing": MagicMock(
-                    token_type=TokenType.API_KEY, is_active=True
-                )
-            }
+            mock_manager.list_all_tokens.return_value = [
+                MagicMock(token_type=TokenType.API_KEY, is_active=True)
+            ]
             mock_get_manager.return_value = mock_manager
 
-            # Mock Path.exists to return True
-            with patch("videoannotator.api.startup.Path") as mock_path:
-                mock_file = MagicMock()
-                mock_file.exists.return_value = True
-                mock_file.stat.return_value = MagicMock(st_size=100)
-                mock_path.return_value = mock_file
-
-                api_key, is_new = ensure_api_key_exists()
+            api_key, is_new = ensure_api_key_exists()
 
         # Should not generate new key
         assert api_key is None
@@ -43,13 +30,9 @@ class TestAutoAPIKeyGeneration:
 
     def test_ensure_api_key_exists_generates_new_key(self, tmp_path):
         """Test that a new key is generated when none exist."""
-        # Setup empty token manager
-        tokens_dir = tmp_path / "tokens"
-        tokens_dir.mkdir()
-
         with patch("videoannotator.api.startup.get_token_manager") as mock_get_manager:
             mock_manager = MagicMock()
-            mock_manager._token_cache = {}
+            mock_manager.list_all_tokens.return_value = []
 
             # Mock generate_api_key to return a test key
             test_key = "va_api_test123456"
@@ -57,14 +40,8 @@ class TestAutoAPIKeyGeneration:
             mock_manager.generate_api_key.return_value = (test_key, test_token_info)
             mock_get_manager.return_value = mock_manager
 
-            # Mock Path to return empty/non-existent file
-            with patch("videoannotator.api.startup.Path") as mock_path:
-                mock_file = MagicMock()
-                mock_file.exists.return_value = False
-                mock_path.return_value = mock_file
-
-                with patch("builtins.print"):  # Suppress console output
-                    api_key, is_new = ensure_api_key_exists()
+            with patch("builtins.print"):  # Suppress console output
+                api_key, is_new = ensure_api_key_exists()
 
         # Should generate new key
         assert api_key == test_key
@@ -90,17 +67,12 @@ class TestAutoAPIKeyGeneration:
         """Test graceful handling of key generation failure."""
         with patch("videoannotator.api.startup.get_token_manager") as mock_get_manager:
             mock_manager = MagicMock()
-            mock_manager._token_cache = {}
+            mock_manager.list_all_tokens.return_value = []
             mock_manager.generate_api_key.side_effect = Exception("Database error")
             mock_get_manager.return_value = mock_manager
 
-            with patch("videoannotator.api.startup.Path") as mock_path:
-                mock_file = MagicMock()
-                mock_file.exists.return_value = False
-                mock_path.return_value = mock_file
-
-                with patch("builtins.print"):  # Suppress console output
-                    api_key, is_new = ensure_api_key_exists()
+            with patch("builtins.print"):  # Suppress console output
+                api_key, is_new = ensure_api_key_exists()
 
         # Should return None on failure
         assert api_key is None
@@ -140,6 +112,10 @@ class TestAutoAPIKeyGeneration:
     def test_generated_api_key_format(self):
         """Test that generated API keys have correct format."""
         from videoannotator.auth.token_manager import SecureTokenManager
+        from videoannotator.database.migrations import init_database
+
+        # Ensure SQLAlchemy schema exists for token manager DB operations.
+        init_database(force=True)
 
         manager = SecureTokenManager()
         api_key, token_info = manager.generate_api_key(
@@ -147,10 +123,10 @@ class TestAutoAPIKeyGeneration:
         )
 
         # Verify format
-        assert api_key.startswith("va_api_")
-        assert len(api_key) > 40  # va_api_ + 32 urlsafe chars = ~47 chars
+        assert api_key.startswith("va_")
+        assert len(api_key) > 40  # va_ + 32 urlsafe chars = typically ~46 chars
 
         # Verify token info
         assert token_info.token_type == TokenType.API_KEY
-        assert token_info.user_id == "test"
+        uuid.UUID(token_info.user_id)
         assert token_info.is_active is True

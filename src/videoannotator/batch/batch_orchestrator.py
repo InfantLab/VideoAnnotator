@@ -7,7 +7,7 @@ for robust large-scale video processing.
 import logging
 import time
 import uuid
-from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
@@ -39,6 +39,14 @@ class BatchOrchestrator:
         return await loop.run_in_executor(
             None, self.run_batch, max_workers, save_checkpoints
         )
+
+    async def stop(self) -> None:
+        """Request batch processing stop.
+
+        This is a lightweight async helper primarily for test compatibility.
+        """
+
+        self.should_stop = True
 
     # Alias for testing compatibility (so patch.object works in tests)
     def _process_job(self, job):
@@ -114,6 +122,9 @@ class BatchOrchestrator:
         Returns:
             Job ID for tracking
         """
+        if isinstance(video_path, str) and not video_path.strip():
+            raise FileNotFoundError("Video file not found: (empty path)")
+
         video_path = Path(video_path)
         if not video_path.exists():
             raise FileNotFoundError(f"Video file not found: {video_path}")
@@ -227,69 +238,90 @@ class BatchOrchestrator:
 
         # Process jobs with thread pool
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit all pending jobs
-            future_to_job: dict[Future, BatchJob] = {}
-            for job in self.jobs:
-                if job.status == JobStatus.PENDING:
-                    future = executor.submit(self._process_job_with_retry, job)
-                    future_to_job[future] = job
-                    job.status = JobStatus.RUNNING
-                    job.started_at = datetime.now()
-                    self.progress_tracker.start_job(job.job_id)
+            from concurrent.futures import FIRST_COMPLETED, wait
 
-            # Process completed jobs
+            future_to_job: dict[Future, BatchJob] = {}
+            submitted_job_ids: set[str] = set()
             completed_count = 0
-            for future in as_completed(future_to_job):
+
+            def submit_pending_jobs() -> None:
+                nonlocal report
+
+                for job in self.jobs:
+                    if (
+                        job.status == JobStatus.PENDING
+                        and job.job_id not in submitted_job_ids
+                    ):
+                        future = executor.submit(self._process_job_with_retry, job)
+                        future_to_job[future] = job
+                        submitted_job_ids.add(job.job_id)
+                        job.status = JobStatus.RUNNING
+                        job.started_at = datetime.now()
+                        self.progress_tracker.start_job(job.job_id)
+
+                # Keep report total_jobs in sync if jobs are added during run.
+                report.total_jobs = len(self.jobs)
+
+            submit_pending_jobs()
+
+            while future_to_job:
                 if self.should_stop:
                     self.logger.info("Batch processing stopped by user request")
                     break
 
-                job = future_to_job[future]
+                done, _pending = wait(
+                    future_to_job.keys(), timeout=0.1, return_when=FIRST_COMPLETED
+                )
 
-                try:
-                    # Get result and update job
-                    result_job = future.result()
-                    job.status = result_job.status
-                    job.pipeline_results = result_job.pipeline_results
-                    job.completed_at = datetime.now()
-                    job.error_message = result_job.error_message
+                # Pick up any jobs added while workers are running.
+                submit_pending_jobs()
 
-                    # Update progress tracking
-                    self.progress_tracker.complete_job(job)
+                if not done:
+                    continue
 
-                    # Update report counters
-                    if job.status == JobStatus.COMPLETED:
-                        report.completed_jobs += 1
-                    elif job.status == JobStatus.FAILED:
+                for future in done:
+                    job = future_to_job.pop(future)
+
+                    try:
+                        result_job = future.result()
+                        job.status = result_job.status
+                        job.pipeline_results = result_job.pipeline_results
+                        job.completed_at = datetime.now()
+                        job.error_message = result_job.error_message
+
+                        self.progress_tracker.complete_job(job)
+
+                        if job.status == JobStatus.COMPLETED:
+                            report.completed_jobs += 1
+                        elif job.status == JobStatus.FAILED:
+                            report.failed_jobs += 1
+                            if job.error_message:
+                                report.errors.append(
+                                    f"Job {job.job_id}: {job.error_message}"
+                                )
+
+                        completed_count += 1
+
+                        if (
+                            save_checkpoints
+                            and completed_count % self.checkpoint_interval == 0
+                        ):
+                            self._save_checkpoint()
+
+                        self.progress_tracker.log_progress(self.jobs)
+
+                    except Exception as e:
+                        self.logger.error(
+                            f"Unexpected error processing job {job.job_id}: {e}"
+                        )
+                        job.status = JobStatus.FAILED
+                        job.error_message = str(e)
                         report.failed_jobs += 1
-                        if job.error_message:
-                            report.errors.append(
-                                f"Job {job.job_id}: {job.error_message}"
-                            )
-
-                    completed_count += 1
-
-                    # Save checkpoint periodically
-                    if (
-                        save_checkpoints
-                        and completed_count % self.checkpoint_interval == 0
-                    ):
-                        self._save_checkpoint()
-
-                    # Log progress
-                    self.progress_tracker.log_progress(self.jobs)
-
-                except Exception as e:
-                    self.logger.error(
-                        f"Unexpected error processing job {job.job_id}: {e}"
-                    )
-                    job.status = JobStatus.FAILED
-                    job.error_message = str(e)
-                    report.failed_jobs += 1
-                    report.errors.append(f"Job {job.job_id}: {e!s}")
+                        report.errors.append(f"Job {job.job_id}: {e!s}")
 
         # Finalize report
         report.end_time = datetime.now()
+        report.total_jobs = len(self.jobs)
         report.jobs = self.jobs.copy()
         report.total_processing_time = self.progress_tracker.total_processing_time
 

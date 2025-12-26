@@ -47,7 +47,7 @@ def test_face_pipeline_personid_integration():
         video_path = "demovideos/babyjokes/2UWdXP.joke1.rep2.take1.Peekaboo_h265.mp4"
         if not Path(video_path).exists():
             print(f"❌ Test video not found: {video_path}")
-            return False
+            return
 
         # Check if person tracking data exists
         video_name = Path(video_path).stem
@@ -65,7 +65,7 @@ def test_face_pipeline_personid_integration():
 
         if not person_data_found:
             print("❌ No person tracking data found for face-person linking test")
-            return False
+            return
 
         # Process video with face analysis and person linking
         print("Processing video with face analysis and person linking...")
@@ -113,14 +113,14 @@ def test_face_pipeline_personid_integration():
                 print(
                     "ℹ️  Faces detected but no person linking (may be normal if no overlapping persons)"
                 )
-            return True
+            return
         else:
             print("❌ No faces detected - check video processing")
-            return False
+            return
 
     except Exception as e:
         print(f"❌ FaceAnalysisPipeline test failed: {e}")
-        return False
+        return
 
 
 def test_openface3_pipeline_personid_integration():
@@ -162,15 +162,15 @@ def test_openface3_pipeline_personid_integration():
                 print(f"✅ Schema includes {field}: {schema_annotation[field]}")
             else:
                 print(f"❌ Schema missing {field}")
-                return False
+                return
 
         print("✅ OpenFace3Pipeline PersonID integration configured correctly")
         print("   (Note: Full processing test skipped - requires OpenFace 3.0 models)")
-        return True
+        return
 
     except Exception as e:
         print(f"❌ OpenFace3Pipeline test failed: {e}")
-        return False
+        return
 
 
 def test_laion_face_pipeline_personid_integration():
@@ -209,11 +209,11 @@ def test_laion_face_pipeline_personid_integration():
 
         print("✅ LAIONFacePipeline PersonID helper methods present")
         print("   (Note: Full processing test skipped - requires LAION models)")
-        return True
+        return
 
     except Exception as e:
         print(f"❌ LAIONFacePipeline test failed: {e}")
-        return False
+        return
 
 
 def main():

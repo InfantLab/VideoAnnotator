@@ -9,14 +9,14 @@ Refactored to use SQLite database (via APIKeyCRUD) instead of flat files.
 import secrets
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
 import jwt
 
-from videoannotator.database.crud import APIKeyCRUD
-from videoannotator.database.database import SessionLocal
+from videoannotator.database import database as db_module
+from videoannotator.database.crud import APIKeyCRUD, UserCRUD
 from videoannotator.database.models import APIKey
 from videoannotator.utils.logging_config import get_logger
 
@@ -91,27 +91,23 @@ class SecureTokenManager:
         scopes = scopes or ["read", "write"]
         metadata = metadata or {}
 
-        # Generate secure API key
-        # Format: va_<random_chars>
-        token_string = f"va_{secrets.token_urlsafe(32)}"
+        with db_module.SessionLocal() as db:
+            user = UserCRUD.get_by_username(db, username)
+            if not user:
+                user = UserCRUD.create(db, email=email, username=username)
 
-        with SessionLocal() as db:
             api_key, token_string = APIKeyCRUD.create(
                 db=db,
-                user_id=user_id,
+                user_id=user.id,
                 key_name=f"API Key for {username}",
                 expires_days=expires_in_days,
             )
-            # Note: APIKeyCRUD.create generates its own token string.
-            # We should use that one.
-            # Wait, APIKeyCRUD.create returns (api_key_obj, raw_token_string)
 
-            # We need to construct TokenInfo from the DB object
             token_info = TokenInfo(
                 token_id=token_string,  # The raw token is the ID for the client
-                user_id=user_id,
-                username=username,
-                email=email,
+                user_id=str(user.id),
+                username=user.username,
+                email=user.email,
                 token_type=TokenType.API_KEY,
                 scopes=scopes,
                 created_at=api_key.created_at,
@@ -122,6 +118,7 @@ class SecureTokenManager:
                     **metadata,
                     "generated_by": "token_manager",
                     "db_id": api_key.id,
+                    "external_user_id": user_id,
                 },
             )
 
@@ -196,7 +193,7 @@ class SecureTokenManager:
                 return self._validate_jwt_token(token)
 
             # API key validation via DB
-            with SessionLocal() as db:
+            with db_module.SessionLocal() as db:
                 api_key = APIKeyCRUD.get_by_token(db, token)
 
                 if not api_key:
@@ -207,7 +204,8 @@ class SecureTokenManager:
                     logger.warning(f"Inactive token used: {token[:16]}...")
                     return None
 
-                if api_key.expires_at and datetime.utcnow() > api_key.expires_at:
+                now = datetime.now(UTC).replace(tzinfo=None)
+                if api_key.expires_at and now > api_key.expires_at:
                     logger.warning(f"Expired token used: {token[:16]}...")
                     return None
 
@@ -228,7 +226,7 @@ class SecureTokenManager:
 
                 token_info = TokenInfo(
                     token_id=token,
-                    user_id=api_key.user_id,
+                    user_id=str(api_key.user_id),
                     username=username,
                     email=email,
                     token_type=TokenType.API_KEY,
@@ -283,8 +281,11 @@ class SecureTokenManager:
         """Revoke a token."""
         try:
             if token.startswith("va_"):
-                with SessionLocal() as db:
-                    return APIKeyCRUD.revoke(db, token)
+                with db_module.SessionLocal() as db:
+                    api_key = APIKeyCRUD.get_by_token(db, token)
+                    if not api_key:
+                        return False
+                    return APIKeyCRUD.revoke(db, str(api_key.id))
 
             # JWT revocation not fully supported without a blacklist
             return False
@@ -295,7 +296,7 @@ class SecureTokenManager:
 
     def list_all_tokens(self) -> list[TokenInfo]:
         """List all active tokens (admin only)."""
-        with SessionLocal() as db:
+        with db_module.SessionLocal() as db:
             # Fix: Use APIKey.is_active without == True
             api_keys = db.query(APIKey).filter(APIKey.is_active).all()
             tokens = []
@@ -304,7 +305,7 @@ class SecureTokenManager:
                 tokens.append(
                     TokenInfo(
                         token_id="<hidden>",  # Don't expose raw tokens
-                        user_id=api_key.user_id,
+                        user_id=str(api_key.user_id),
                         username=user.username if user else "unknown",
                         email=user.email if user else "unknown",
                         token_type=TokenType.API_KEY,
@@ -323,8 +324,8 @@ class SecureTokenManager:
 
     def cleanup_expired_tokens(self) -> int:
         """Remove expired tokens from storage."""
-        with SessionLocal() as db:
-            now = datetime.utcnow()
+        with db_module.SessionLocal() as db:
+            now = datetime.now(UTC).replace(tzinfo=None)
             # Fix: Use APIKey.is_active without == True
             expired_keys = (
                 db.query(APIKey).filter(APIKey.expires_at < now, APIKey.is_active).all()
@@ -347,7 +348,7 @@ class SecureTokenManager:
 
     def get_token_stats(self) -> dict[str, Any]:
         """Get token usage statistics."""
-        with SessionLocal() as db:
+        with db_module.SessionLocal() as db:
             total = db.query(APIKey).count()
             # Fix: Use APIKey.is_active without == True
             active = db.query(APIKey).filter(APIKey.is_active).count()
