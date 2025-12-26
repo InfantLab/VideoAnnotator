@@ -44,6 +44,7 @@ COPY scripts/ ./scripts/
 # Install dependencies, then override with CPU-only PyTorch wheels.
 # Keep torch/torchvision/torchaudio versions compatible.
 RUN uv sync --frozen --no-editable \
+    && HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh \
     && uv pip install "torch==2.6.0+cpu" "torchvision==0.21.0+cpu" "torchaudio==2.6.0+cpu" --index-url https://download.pytorch.org/whl/cpu
 
 # Verify CPU setup (no GPU packages installed)

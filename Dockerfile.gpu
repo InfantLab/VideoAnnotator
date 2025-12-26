@@ -54,6 +54,9 @@ COPY src/ ./src/
 COPY configs/ ./configs/
 COPY scripts/ ./scripts/
 
+# Install hadolint into a system location so pre-commit can find it.
+RUN HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh
+
 # Verify GPU access (optional)
 # NOTE: Some builds may intentionally skip Torch installation/sync to speed up
 # devcontainer image builds. In that case, skip the Torch import check.

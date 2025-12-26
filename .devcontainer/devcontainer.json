@@ -35,7 +35,7 @@
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "uv sync && uv sync --extra dev && bash scripts/install_hadolint.sh && uv run pre-commit install",
+  "postCreateCommand": "uv sync && uv sync --extra dev && HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh && uv run pre-commit install",
   "containerEnv": {
     "UV_LINK_MODE": "copy"
   },
