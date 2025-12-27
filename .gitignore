@@ -112,6 +112,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# Legacy/optional local checkout (was previously a broken submodule)
+client-repo/
+
 # Spyder project settings
 .spyderproject
 .spyproject
