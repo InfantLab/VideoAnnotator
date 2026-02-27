@@ -1,12 +1,27 @@
-cff-version: 1.1.0
+cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
 - family-names: Addyman
   given-names: Caspar
   orcid: https://orcid.org/0000-0003-0001-9548
+- family-names: Uwerikowe
+  given-names: Irene
+  orcid: https://orcid.org/0000-0002-1293-7349
+- family-names: Ishaya
+  given-names: Jeremiah
+  orcid: https://orcid.org/0000-0002-9014-9372
+- family-names: Stamate
+  given-names: Daniel
+  orcid: https://orcid.org/0000-0001-8565-6890
+- family-names: Lachman
+  given-names: Jamie
+  orcid: https://orcid.org/0000-0001-9475-9218
+- family-names: Tomlinson
+  given-names: Mark
+  orcid: https://orcid.org/0000-0001-5846-3444
 title: "Video Annotation Viewer"
-version: 0.6.0
-date-released: 2025-12-15
+version: 0.6.1
+date-released: 2026-02-27
 repository-code: "https://github.com/InfantLab/video-annotation-viewer"
 url: "https://github.com/InfantLab/video-annotation-viewer"
 license: MIT
