@@ -109,7 +109,7 @@ class TestLAIONVoicePipelineBasics:
         # cuda_capability might be dynamic, so just check if accessible
         try:
             _ = getattr(pipeline, "cuda_capability", None)
-        except:
+        except Exception:
             pass  # Not critical if this attribute doesn't exist
 
 
@@ -237,7 +237,7 @@ class TestLAIONVoicePipelineGPUCompatibility:
                     major, minor = torch.cuda.get_device_capability()
                     return major + minor * 0.1
                 return 0.0
-            except:
+            except Exception:
                 return 0.0
 
         capability = get_cuda_capability()
@@ -268,7 +268,7 @@ class TestLAIONVoicePipelineGPUCompatibility:
                     import torch
 
                     return "cuda" if torch.cuda.is_available() else "cpu"
-                except:
+                except Exception:
                     return "cpu"
             return requested_device
 

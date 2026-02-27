@@ -6,9 +6,6 @@ the worker properly tracks running jobs vs available slots.
 v1.3.0: Phase 11 - T065-T067
 """
 
-import os
-from unittest.mock import MagicMock, patch
-
 import pytest
 
 from videoannotator.api.background_tasks import BackgroundJobManager

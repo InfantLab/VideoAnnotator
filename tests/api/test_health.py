@@ -6,7 +6,7 @@ and status code behavior.
 v1.3.0: Phase 11 - T069
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -202,7 +202,6 @@ class TestHealthStatusCodes:
         response = client.get("/api/v1/health?detailed=true")
 
         # Should still be healthy - GPU is optional
-        data = response.json()
         # Status might be ok if other systems are healthy
         assert response.status_code in [200, 503]
 

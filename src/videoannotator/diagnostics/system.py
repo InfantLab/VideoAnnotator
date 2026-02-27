@@ -68,15 +68,6 @@ def diagnose_system() -> dict[str, Any]:
         os_info = _check_os()
         result["os"] = os_info
 
-        # Check Python version compatibility
-        if sys.version_info < (3, 10):
-            result["warnings"].append(
-                f"Python {sys.version_info.major}.{sys.version_info.minor} "
-                "is below recommended version 3.10+"
-            )
-            if result["status"] == "ok":
-                result["status"] = "warning"
-
     except Exception as e:
         result["status"] = "error"
         result["errors"].append(f"System diagnostic failed: {e!s}")

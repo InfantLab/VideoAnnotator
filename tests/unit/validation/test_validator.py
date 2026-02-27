@@ -1,7 +1,5 @@
 """Unit tests for configuration validator."""
 
-import pytest
-
 from videoannotator.validation.models import FieldError, FieldWarning, ValidationResult
 from videoannotator.validation.validator import ConfigValidator
 

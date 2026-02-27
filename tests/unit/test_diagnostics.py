@@ -3,8 +3,6 @@
 v1.3.0: Phase 11 - T070-T074
 """
 
-import pytest
-
 
 class TestSystemDiagnostics:
     """Tests for system diagnostics."""

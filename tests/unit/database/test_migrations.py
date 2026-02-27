@@ -8,8 +8,6 @@ Note: These are smoke tests to verify migration logic integrity and
 that the new columns are present in the database models.
 """
 
-import pytest
-
 
 class TestDatabaseModelsV1_3_0:
     """Test that v1.3.0 database migration infrastructure is in place."""
@@ -42,10 +40,10 @@ class TestMigrationFunction:
 
     def test_migrate_to_v1_3_0_returns_bool(self):
         """Test that migrate_to_v1_3_0 has correct return type signature."""
-        from videoannotator.database.migrations import migrate_to_v1_3_0
-
         # Check function signature
         import inspect
+
+        from videoannotator.database.migrations import migrate_to_v1_3_0
 
         sig = inspect.signature(migrate_to_v1_3_0)
         # Should have no required parameters

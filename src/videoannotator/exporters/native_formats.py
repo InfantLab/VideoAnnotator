@@ -71,11 +71,12 @@ except ImportError:
     )
 
 try:
-    import praatio
+    from praatio import textgrid as praatio_textgrid
 
     PRAATIO_AVAILABLE = True
 except ImportError:
     PRAATIO_AVAILABLE = False
+    praatio_textgrid = None
     logger.warning("praatio not available. Install with: pip install praatio")
 
 
@@ -267,7 +268,7 @@ def export_webvtt_captions(
         end_time = _seconds_to_webvtt_time(segment["end"])
 
         caption = webvtt.Caption(start=start_time, end=end_time, text=segment["text"])
-        captions.append(caption)
+        captions.captions.append(caption)
 
     # Save using native library
     captions.save(output_path)
@@ -418,10 +419,10 @@ def export_textgrid_speech(
     )
 
     # Create TextGrid using native praatio
-    tg = praatio.textgrid.Textgrid()
+    tg = praatio_textgrid.Textgrid()
 
     # Create interval tier
-    tier = praatio.textgrid.IntervalTier(tier_name, [], 0, max_time)
+    tier = praatio_textgrid.IntervalTier(tier_name, [], 0, max_time)
 
     # Add speech intervals
     for segment in speech_segments:
@@ -431,7 +432,7 @@ def export_textgrid_speech(
     tg.addTier(tier)
 
     # Save using native method
-    tg.save(output_path)
+    tg.save(output_path, format="long_textgrid", includeBlankSpaces=True)
     logger.info(f"TextGrid exported: {output_path}")
 
 

@@ -6,8 +6,9 @@ Tests the complete workflow from authentication to job processing.
 import asyncio
 import json
 import tempfile
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
-from typing import Any, AsyncGenerator, Generator
+from typing import Any
 
 import httpx
 import pytest

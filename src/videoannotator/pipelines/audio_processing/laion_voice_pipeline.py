@@ -418,7 +418,7 @@ class LAIONVoicePipeline(WhisperBasePipeline):
 
         except Exception as e:
             self.logger.error(f"Error processing video: {e}")
-            raise RuntimeError(f"Failed to process video: {e}")
+            raise RuntimeError(f"Failed to process video: {e}") from e
 
     def _format_timestamp(self, seconds: float) -> str:
         """Format seconds as WebVTT timestamp (HH:MM:SS.mmm)."""
@@ -981,7 +981,7 @@ class LAIONVoicePipeline(WhisperBasePipeline):
                             self.logger.debug(
                                 f"Classifier dtype: {clf_param.dtype}, device: {clf_param.device}"
                             )
-                        except:
+                        except Exception:
                             pass
 
         # Apply softmax across all emotions to get proper probability distribution
@@ -1007,8 +1007,8 @@ class LAIONVoicePipeline(WhisperBasePipeline):
             )
 
             # Re-rank after sorting and limiting
-            for i, (label, data) in enumerate(sorted_emotions.items()):
-                data["rank"] = i + 1
+            for rank, (_label, data) in enumerate(sorted_emotions.items()):
+                data["rank"] = rank + 1
 
             return {
                 "emotions": sorted_emotions,
@@ -1041,7 +1041,7 @@ class LAIONVoicePipeline(WhisperBasePipeline):
             # Still call parent cleanup to ensure base resources are freed
             try:
                 super().cleanup()
-            except:
+            except Exception:
                 pass
 
     def get_pipeline_info(self) -> dict[str, Any]:

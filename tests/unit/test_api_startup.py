@@ -1,10 +1,8 @@
 """Tests for API startup and auto-generation functionality."""
 
 import os
-from unittest.mock import MagicMock, patch
 import uuid
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from videoannotator.api.startup import ensure_api_key_exists, initialize_security
 from videoannotator.auth.token_manager import SecureTokenManager, TokenType
@@ -83,11 +81,14 @@ class TestAutoAPIKeyGeneration:
         with patch("videoannotator.api.startup.ensure_api_key_exists") as mock_ensure:
             mock_ensure.return_value = ("va_api_test", True)
 
-            with patch(
-                "videoannotator.api.middleware.auth.is_auth_required", return_value=True
+            with (
+                patch(
+                    "videoannotator.api.middleware.auth.is_auth_required",
+                    return_value=True,
+                ),
+                patch.dict(os.environ, {"CORS_ORIGINS": "http://localhost:3000"}),
             ):
-                with patch.dict(os.environ, {"CORS_ORIGINS": "http://localhost:3000"}):
-                    initialize_security()
+                initialize_security()
 
         # Verify ensure_api_key_exists was called
         mock_ensure.assert_called_once()
@@ -97,21 +98,22 @@ class TestAutoAPIKeyGeneration:
         with patch("videoannotator.api.startup.ensure_api_key_exists") as mock_ensure:
             mock_ensure.return_value = (None, False)
 
-            with patch(
-                "videoannotator.api.middleware.auth.is_auth_required",
-                return_value=False,
+            with (
+                patch(
+                    "videoannotator.api.middleware.auth.is_auth_required",
+                    return_value=False,
+                ),
+                patch("videoannotator.api.startup.logger") as mock_logger,
             ):
-                with patch("videoannotator.api.startup.logger") as mock_logger:
-                    initialize_security()
+                initialize_security()
 
-                    # Verify warning logged
-                    mock_logger.warning.assert_called_once()
-                    warning_msg = mock_logger.warning.call_args[0][0]
-                    assert "Authentication DISABLED" in warning_msg
+                # Verify warning logged
+                mock_logger.warning.assert_called_once()
+                warning_msg = mock_logger.warning.call_args[0][0]
+                assert "Authentication DISABLED" in warning_msg
 
     def test_generated_api_key_format(self):
         """Test that generated API keys have correct format."""
-        from videoannotator.auth.token_manager import SecureTokenManager
         from videoannotator.database.migrations import init_database
 
         # Ensure SQLAlchemy schema exists for token manager DB operations.

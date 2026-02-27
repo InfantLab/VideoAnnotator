@@ -3,8 +3,6 @@
 import os
 from unittest.mock import patch
 
-import pytest
-
 
 class TestCORSConfiguration:
     """Test CORS middleware configuration and defaults."""

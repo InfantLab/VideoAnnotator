@@ -333,7 +333,7 @@ class TestBatchOrchestratorRealistic:
             Exception("Corrupted video file"),
         ]
 
-        for i, error in enumerate(errors):
+        for error in errors:
             should_retry = self.orchestrator.failure_recovery.should_retry(job, error)
 
             if should_retry:

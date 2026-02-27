@@ -149,7 +149,7 @@ class TestOpenFace3FeatureParsing:
         assert len(parsed) == 8  # 8 Action Units
 
         # Check first AU structure
-        first_au_key = list(parsed.keys())[0]
+        first_au_key = next(iter(parsed.keys()))
         first_au = parsed[first_au_key]
         assert "intensity" in first_au
         assert "presence" in first_au
@@ -281,7 +281,7 @@ class TestOpenFace3Integration:
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         out = cv2.VideoWriter(video_path, fourcc, 1.0, (640, 480))
 
-        for i in range(3):
+        for _frame_idx in range(3):
             frame = np.zeros((480, 640, 3), dtype=np.uint8)
             # Add a simple rectangular "face"
             cv2.rectangle(frame, (200, 150), (400, 350), (128, 128, 128), -1)

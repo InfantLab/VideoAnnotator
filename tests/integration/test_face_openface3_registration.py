@@ -42,7 +42,7 @@ def test_face_openface3_embedding():
             "[WARNING] Different pipeline classes in JobProcessor vs BatchOrchestrator"
         )
 
-    print(f"\n[SUCCESS] face_openface3_embedding is properly registered and available!")
+    print("\n[SUCCESS] face_openface3_embedding is properly registered and available!")
     return
 
 

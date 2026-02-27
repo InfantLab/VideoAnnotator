@@ -182,7 +182,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
-import cv2
 import numpy as np
 import pytest
 

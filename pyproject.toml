@@ -137,10 +137,10 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/VideoAnnotator"
-Documentation = "https://github.com/your-org/VideoAnnotator/wiki"
-Repository = "https://github.com/your-org/VideoAnnotator"
-Issues = "https://github.com/your-org/VideoAnnotator/issues"
+Homepage = "https://github.com/InfantLab/VideoAnnotator"
+Documentation = "https://github.com/InfantLab/VideoAnnotator/wiki"
+Repository = "https://github.com/InfantLab/VideoAnnotator"
+Issues = "https://github.com/InfantLab/VideoAnnotator/issues"
 
 [project.scripts]
 # Entry point for the CLI application
@@ -162,7 +162,21 @@ torchaudio = { index = "pytorch-cu124" }
 [tool.ruff]
 line-length = 88  # Keep existing Black line length for consistency
 lint.select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
-lint.ignore = ["E501"]
+lint.ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E402",   # module-import-not-at-top (common in conditional/ML imports)
+    "SIM102", # collapsible-if (stylistic)
+    "SIM105", # use contextlib.suppress (stylistic)
+    "SIM108", # if-else-block-instead-of-if-exp (stylistic)
+    "SIM115", # open-file-with-context-handler (stylistic)
+    "SIM117", # multiple-with-statements (stylistic)
+    "SIM118", # in-dict-keys (stylistic)
+    "RUF001", # ambiguous-unicode-character (false positives in strings)
+    "RUF005", # collection-literal-concatenation (stylistic)
+    "RUF013", # implicit-optional (common in ML code)
+    "RUF022", # unsorted-dunder-all (low value)
+    "RUF059", # unused-unpacked-variable (common in tuple unpacking)
+]
 target-version = "py312"
 
 # Per-file exceptions:

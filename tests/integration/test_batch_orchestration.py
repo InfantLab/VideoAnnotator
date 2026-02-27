@@ -438,8 +438,8 @@ class TestBatchAsyncIntegration:
         with patch.object(self.orchestrator, "_process_job_with_retry") as mock_process:
             # Configure mock to simulate successful processing
             def mock_job_processing(job):
-                from copy import copy
                 import time
+                from copy import copy
 
                 # Ensure the batch stays active long enough for additional jobs
                 # to be added and picked up.

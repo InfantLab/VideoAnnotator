@@ -151,13 +151,13 @@ class TestBatchOrchestratorJobExecution:
     def test_process_single_job_failure(self, mock_process):
         """Test job processing failure."""
         # Mock failed processing
-        mock_process.side_effect = Exception("Processing failed")
+        mock_process.side_effect = RuntimeError("Processing failed")
 
         job_id = self.orchestrator.add_job(str(self.test_video))
         job = next(j for j in self.orchestrator.jobs if j.job_id == job_id)
 
         # Simulate processing failure
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError):
             mock_process(job)
 
     def test_should_retry_job(self):

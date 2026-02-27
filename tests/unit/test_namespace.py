@@ -4,7 +4,6 @@ Tests that the __getattr__ mechanism in src/__init__.py correctly
 forwards module imports and provides proper AttributeError for invalid imports.
 """
 
-import sys
 import pytest
 
 

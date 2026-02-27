@@ -13,7 +13,7 @@ class TestWhisperBasePipelineStage1:
     def test_pipeline_module_exists(self):
         """Test that the WhisperBasePipeline module can be imported."""
         try:
-            from videoannotator.pipelines.audio_processing.whisper_base_pipeline import (
+            from videoannotator.pipelines.audio_processing.whisper_base_pipeline import (  # noqa: F401
                 WhisperBasePipeline,
             )
 

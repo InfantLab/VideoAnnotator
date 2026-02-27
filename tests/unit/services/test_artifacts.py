@@ -1,4 +1,5 @@
 from unittest.mock import Mock, patch
+
 from videoannotator.services.artifacts import get_annotation_artifacts
 from videoannotator.storage.providers.base import ArtifactType, JobArtifact
 

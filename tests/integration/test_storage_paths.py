@@ -8,10 +8,7 @@ Tests verify that:
 """
 
 import tempfile
-from datetime import datetime
 from pathlib import Path
-
-import pytest
 
 from videoannotator.batch.types import BatchJob, JobStatus
 from videoannotator.storage.config import ensure_job_storage_path, get_job_storage_path

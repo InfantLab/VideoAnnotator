@@ -176,8 +176,7 @@ class TestErrorEnvelopeFormat:
             assert "message" in error
             assert "timestamp" in error
 
-        # All errors should have the same keys
-        first_keys = set(errors[0].keys())
+        # All errors should have the same core keys
         for error in errors[1:]:
             # Core keys should be present
             assert "code" in error

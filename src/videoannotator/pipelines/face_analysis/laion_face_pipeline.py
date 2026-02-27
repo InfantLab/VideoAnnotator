@@ -591,16 +591,18 @@ class LAIONFacePipeline(BasePipeline):
                     state_dict = torch.load(local_path, map_location=self.device)
 
                     # Create MLP classifier model with named layers to match state dict
-                    embedding_dim = 1152  # SigLIP-so400m embedding dimension
+                    _embedding_dim = 1152  # SigLIP-so400m embedding dimension
 
                     # Create a custom module with named layers matching the state dict
                     class EmotionClassifier(torch.nn.Module):
+                        _dim = _embedding_dim  # bind loop-local value as class attr
+
                         def __init__(self):
                             super().__init__()
                             self.layers = torch.nn.ModuleDict(
                                 {
                                     "0": torch.nn.Linear(
-                                        embedding_dim, 128
+                                        self._dim, 128
                                     ),  # First layer: 1152 -> 128
                                     "1": torch.nn.ReLU(),
                                     "2": torch.nn.Dropout(0.1),

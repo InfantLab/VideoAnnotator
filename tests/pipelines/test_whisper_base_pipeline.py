@@ -101,7 +101,7 @@ class TestWhisperBasePipelineIntegrationAdvanced:
 
         try:
             pipeline.initialize()
-        except:
+        except Exception:
             pass  # Initialization might fail, that's OK
 
             # Cleanup should always work
