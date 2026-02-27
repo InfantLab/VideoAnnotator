@@ -24,6 +24,12 @@ export default defineConfig({
         '**/coverage/**',
         '**/dist/**'
       ],
+      thresholds: {
+        statements: 20,
+        branches: 15,
+        functions: 17,
+        lines: 20,
+      },
     },
   },
   resolve: {

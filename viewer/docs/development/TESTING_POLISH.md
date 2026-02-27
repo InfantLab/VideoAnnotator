@@ -57,20 +57,17 @@ Last updated: 2026-02-27
 
 ## 2. CI Workflow Hardening
 
-### 2A. Add build verification step
-- **Problem:** `vite build` is never run in CI — TypeScript and bundle errors aren't caught.
-- **Fix:** Add `bun run build` step after lint, before tests.
-- [ ] Add build step to `.github/workflows/tests.yml`
+### 2A. Add build verification step — DONE
+- **Fix:** Added `bun run build` step after lint, before tests in CI workflow.
+- [x] Add build step to `.github/workflows/tests.yml`
 
-### 2B. Remove `continue-on-error` from test coverage step
-- **Problem:** Failing tests silently pass CI.
-- **Fix:** Remove `continue-on-error: true` from the coverage step (keep it on e2e/lighthouse which are supplementary).
-- [ ] Update `.github/workflows/tests.yml`
+### 2B. Remove `continue-on-error` from test coverage step — DONE
+- **Fix:** Removed `continue-on-error: true` from coverage step. Merged `test:run` and `test:coverage` into single step. E2e/lighthouse keep `continue-on-error` (supplementary).
+- [x] Update `.github/workflows/tests.yml`
 
-### 2C. Add coverage threshold
-- **Problem:** No minimum coverage enforced — regressions go unnoticed.
-- **Fix:** Add `thresholds` to `vitest.config.ts` coverage config (e.g., 40% statements as a starting floor).
-- [ ] Configure coverage thresholds in `vitest.config.ts`
+### 2C. Add coverage threshold — DONE
+- **Fix:** Added thresholds to `vitest.config.ts`: 20% statements, 15% branches, 17% functions, 20% lines. Current coverage: 22/19/20/23 — thresholds act as regression guard.
+- [x] Configure coverage thresholds in `vitest.config.ts`
 
 ### 2D. Consider build matrix
 - **Nice-to-have:** Test on multiple Node/Bun versions for broader compatibility signaling.
@@ -134,10 +131,10 @@ Last updated: 2026-02-27
 ## Priority Order
 
 1. ~~**Fix 52 failing tests** (Sections 1A–1E) — reviewer will run tests~~ DONE
-2. **Add build step to CI** (Section 2A) — proves the app compiles
-3. **Remove continue-on-error from coverage** (Section 2B) — ensures green CI means green tests
+2. ~~**Add build step to CI** (Section 2A) — proves the app compiles~~ DONE
+3. ~~**Remove continue-on-error from coverage** (Section 2B) — ensures green CI means green tests~~ DONE
 4. **Add parser tests** (Section 3A) — core contribution of the project
 5. **Add utility tests** (Section 3B) — easy coverage wins
-6. **Coverage threshold** (Section 2C) — prevent regressions
+6. ~~**Coverage threshold** (Section 2C) — prevent regressions~~ DONE
 7. **E2E expansion** (Section 4A) — nice-to-have
 8. **Badges & docs** (Section 5) — nice-to-have
