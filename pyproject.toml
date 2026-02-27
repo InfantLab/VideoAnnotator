@@ -37,7 +37,7 @@ dependencies = [
     "openpyxl",
     "pandas>=2.2.2",
     "Pillow>=10.4.0",
-    "pytest>=8.3.2",
+    # Note: pytest moved to [dependency-groups] dev — not needed at runtime
     "python-dotenv>=1.0.1",
     # Pin NumPy below 2.0 until all binary deps (scipy, matplotlib, pyannote, etc.) ship compatible wheels
     "numpy>=1.24.0,<2.0",
@@ -98,8 +98,7 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
     "python-multipart>=0.0.9",
     "psutil>=5.9.0",
-    # Async test support (pytest 8 compatible)
-    "pytest-asyncio>=0.23.6",
+    # Note: pytest-asyncio moved to [dependency-groups] dev — not needed at runtime
     # Configuration and utilities
     "pyyaml>=6.0.0",
     "rich>=13.0.0",
@@ -305,8 +304,9 @@ dev = [
     "mypy>=1.5.0",
     "pre-commit>=4.3.0",
     "pydocstyle>=6.3.0",
-    "pytest-cov>=4.0.0",
+    "pytest>=8.3.2",
     "pytest-asyncio>=1.1.0",
+    "pytest-cov>=4.0.0",
     "ruff>=0.14.0",
 ]
 

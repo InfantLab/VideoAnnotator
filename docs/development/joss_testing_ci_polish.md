@@ -21,15 +21,15 @@ Created 2026-02-27 based on coverage analysis of v1.4.1.
 
 ### 1.3 Auth and data layer gaps (44–56% coverage)
 
-- [ ] **`auth/token_manager.py`** — 141 lines, 56% coverage. JWT create/verify/refresh logic. Estimated +40–60 lines covered.
-- [ ] **`database/crud.py`** — 166 lines, 44% coverage. CRUD operations, testable with in-memory SQLite. Estimated +50–80 lines covered.
+- [x] **`auth/token_manager.py`** — 141 lines, 56% -> 95.76%. Tests in `tests/unit/auth/test_token_manager.py` (30 tests). JWT generation/validation tested directly; API key paths tested with mocks.
+- [x] **`database/crud.py`** — 166 lines, 44% -> 98.50%. Tests in `tests/unit/database/test_crud.py` (53 tests). Full CRUD coverage using in-memory SQLite (UserCRUD, APIKeyCRUD, JobCRUD).
 
 ### 1.4 Other notable gaps
 
-- [ ] **`utils/automatic_labeling.py`** — 156 lines, 6% coverage.
-- [ ] **`utils/person_identity.py`** — 163 lines, 18% coverage.
-- [ ] **`pipelines/face_analysis/openface_compatibility.py`** — 69 lines, 0% coverage.
-- [ ] **`schemas/industry_standards.py`** + **`schemas/storage.py`** — 21 lines total, 0% coverage.
+- [x] **`utils/automatic_labeling.py`** — 156 lines, 6% -> 96.22%. Tests in `tests/unit/utils/test_automatic_labeling.py` (30 tests). Size-based, position-based, temporal consistency, and spatial analysis all covered.
+- [x] **`utils/person_identity.py`** — 163 lines, 18% -> 94.67%. Tests in `tests/unit/utils/test_person_identity.py` (35 tests). Full lifecycle: registration, labeling, IoU, face linking, save/load round-trip, label normalization.
+- [x] **`pipelines/face_analysis/openface_compatibility.py`** — 69 lines, 0% -> 94.37%. Tests in `tests/unit/pipelines/test_openface_compatibility.py` (24 tests). All 7 compatibility classes, scipy patching, model paths.
+- [x] **`schemas/industry_standards.py`** + **`schemas/storage.py`** — 21 lines total, 0% -> 100%. Tests in `tests/unit/schemas/test_schemas.py` (12 tests).
 
 ### 1.5 Lower priority (large modules, harder to unit-test)
 
@@ -73,14 +73,14 @@ All actions bumped in ci-cd.yml:
 
 ### 2.5 Dependency hygiene
 
-- [ ] **Move `pytest` and `pytest-asyncio` from `[project.dependencies]` to dev-only** — they are runtime test deps shipped to end users today.
+- [x] **Move `pytest` and `pytest-asyncio` from `[project.dependencies]` to dev-only** — removed from runtime deps, added `pytest>=8.3.2` to `[dependency-groups] dev`.
 
 ---
 
 ## 3. Metadata Fixes
 
 - [x] **Fix `project.urls`** in pyproject.toml — updated to `InfantLab/VideoAnnotator`.
-- [ ] **Add Codecov badge** to README.md.
+- [x] **Add Codecov badge** to README.md.
 
 ---
 
@@ -102,3 +102,7 @@ All actions bumped in ci-cd.yml:
 | 2026-02-27 | Fixed all 82 ruff lint errors (31 autofix + 51 manual) | — |
 | 2026-02-27 | CI: broadened ruff rules, un-gated mypy, un-gated integration tests, added coverage threshold, bumped all action versions | — |
 | 2026-02-27 | Fixed project.urls to point to InfantLab/VideoAnnotator | — |
+| 2026-02-27 | Added tests for token_manager, crud, schemas (3 new test files, 95 new tests) | 51.97% -> ~55% (est.) |
+| 2026-02-27 | Moved pytest/pytest-asyncio from runtime to dev-only deps | — |
+| 2026-02-27 | Added Codecov badge to README.md | — |
+| 2026-02-27 | Added tests for automatic_labeling, person_identity, openface_compatibility (3 new test files, 97 new tests) | ~55% -> ~58% (est.) |

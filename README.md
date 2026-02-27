@@ -6,6 +6,7 @@
 [![uv](https://img.shields.io/badge/uv-package%20manager-FF4B4B?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
 [![Docker](https://img.shields.io/badge/Docker-GPU%20Ready-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/)
 [![CI](https://github.com/InfantLab/VideoAnnotator/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/InfantLab/VideoAnnotator/actions/workflows/ci-cd.yml)
+[![codecov](https://codecov.io/gh/InfantLab/VideoAnnotator/branch/master/graph/badge.svg)](https://codecov.io/gh/InfantLab/VideoAnnotator)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/InfantLab/VideoAnnotator)
 
 **Automated video analysis toolkit for human interaction research** - Extract comprehensive behavioral annotations from videos using AI pipelines, with an intuitive web interface for visualization and analysis.
@@ -343,7 +344,13 @@ MIT License - Full terms in [LICENSE](LICENSE)
 
 ### **Research Team**
 
-- **Caspar Addyman** (infantologist@gmail.com) - Lead Developer & Research Director
+- **Caspar Addyman** - Stellenbosch University, South Africa [![ORCID](https://img.shields.io/badge/ORCID-0000--0003--0001--9548-green)](https://orcid.org/0000-0003-0001-9548) — Lead Developer & Corresponding Author
+- **Jeremiah Ishaya** - Stellenbosch University, South Africa [![ORCID](https://img.shields.io/badge/ORCID-0000--0002--9014--9372-green)](https://orcid.org/0000-0002-9014-9372)
+- **Irene Uwerikowe** - Stellenbosch University, South Africa [![ORCID](https://img.shields.io/badge/ORCID-0000--0002--1293--7349-green)](https://orcid.org/0000-0002-1293-7349)
+- **Daniel Stamate** - Department of Computing, Goldsmiths, University of London, UK [![ORCID](https://img.shields.io/badge/ORCID-0000--0001--8565--6890-green)](https://orcid.org/0000-0001-8565-6890)
+- **Jamie Lachman** - Department of Social Policy and Intervention, University of Oxford, UK [![ORCID](https://img.shields.io/badge/ORCID-0000--0001--9475--9218-green)](https://orcid.org/0000-0001-9475-9218)
+- **Mark Tomlinson** - Stellenbosch University, South Africa [![ORCID](https://img.shields.io/badge/ORCID-0000--0001--5846--3444-green)](https://orcid.org/0000-0001-5846-3444)
+
 
 ### **Open Source Dependencies**
 
