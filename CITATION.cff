@@ -9,18 +9,23 @@ authors:
   - family-names: Ishaya
     given-names: Jeremiah
     affiliation: "Institute for Life Course Health Research (ILCHR), Stellenbosch University"
+    orcid: "https://orcid.org/0000-0002-9014-9372"
   - family-names: Uwerikowe
     given-names: Irene
     affiliation: "Institute for Life Course Health Research (ILCHR), Stellenbosch University"
+    orcid: "https://orcid.org/0000-0002-1293-7349"
   - family-names: Stamate
     given-names: Daniel
     affiliation: "Department of Computing, Goldsmiths, University of London"
+    orcid: "https://orcid.org/0000-0001-8565-6890"
   - family-names: Lachman
     given-names: Jamie
     affiliation: "Department of Social Policy and Intervention (DISP), University of Oxford"
+    orcid: "https://orcid.org/0000-0001-9475-9218"
   - family-names: Tomlinson
     given-names: Mark
     affiliation: "Institute for Life Course Health Research (ILCHR), Stellenbosch University"
+    orcid: "https://orcid.org/0000-0001-5846-3444"
 license: "MIT"
 repository-code: "https://github.com/InfantLab/VideoAnnotator"
 version: "1.4.1"
