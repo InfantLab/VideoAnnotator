@@ -186,8 +186,11 @@ class JobProcessor:
                 if job_id not in self.processing_jobs:
                     try:
                         job = self.storage.load_job_metadata(job_id)
-                        jobs_to_process.append(job)
-                        self.processing_jobs.add(job_id)
+                        if job:
+                            jobs_to_process.append(job)
+                            self.processing_jobs.add(job_id)
+                        else:
+                            logger.error(f"Failed to load metadata for {job_id}")
                     except Exception as e:
                         # Include full traceback to aid debugging of import errors
                         logger.error(f"Failed to load job {job_id}: {e}", exc_info=True)
@@ -335,13 +338,16 @@ class JobProcessor:
             )
 
             # Check if processing was successful
-            if results and len(results.failed_jobs) == 0:
+            if results and results.failed_jobs == 0:
                 logger.info(f"Job {job.job_id} processed successfully")
                 return True
             else:
-                if results and results.failed_jobs:
-                    failed_job = results.failed_jobs[0]
-                    job.error_message = failed_job.error_message
+                if results and results.failed_jobs > 0:
+                    failed_job_list = [
+                        j for j in results.jobs if j.status.value == "failed"
+                    ]
+                    if failed_job_list:
+                        job.error_message = failed_job_list[0].error_message
                 logger.error(f"Job {job.job_id} processing failed")
                 return False
 

@@ -511,13 +511,13 @@ async def get_job_debug_info(
     """
     try:
         storage = get_storage_backend()
-        job = storage.get_job(job_id)
+        job = storage.load_job_metadata(job_id)
 
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
 
         # Mock debug information - replace with actual implementation
-        debug_info = {
+        debug_info: dict[str, Any] = {
             "job": {
                 "id": job.job_id,
                 "status": job.status.value,

@@ -198,7 +198,7 @@ class FileStorageBackend(StorageBackend):
 
         return sorted(jobs, key=lambda j: j.created_at)
 
-    def delete_job(self, job_id: str) -> bool:
+    def delete_job(self, job_id: str) -> None:
         """Delete all data for a job."""
         job_dir = self._get_job_dir(job_id)
 
@@ -207,10 +207,9 @@ class FileStorageBackend(StorageBackend):
 
             shutil.rmtree(job_dir)
             self.logger.info(f"Deleted job {job_id}")
-            return True
         else:
+            self.logger.warning(f"Job {job_id} not found for deletion")
             self.logger.warning(f"Job directory not found: {job_dir}")
-            return False
 
     def get_stats(self) -> dict[str, Any]:
         """Get storage statistics."""
@@ -369,7 +368,8 @@ class FileStorageBackend(StorageBackend):
             if job_dir.is_dir():
                 # Check modification time
                 mod_time = datetime.fromtimestamp(job_dir.stat().st_mtime)
-                if mod_time < cutoff_time and self.delete_job(job_dir.name):
+                if mod_time < cutoff_time:
+                    self.delete_job(job_dir.name)
                     deleted_jobs += 1
 
         # Clean up old reports

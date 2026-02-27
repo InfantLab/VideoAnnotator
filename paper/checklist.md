@@ -26,7 +26,7 @@ https://joss.readthedocs.io/en/latest/review_checklist.html (checked 2026-02-27)
 - [x] Correct entry types (`@inproceedings`, `@article`, `@software`, `@book`)
 - [x] DOIs present where available
 - [x] Full venue names (not abbreviated)
-- [x] 14 references covering all cited tools and upstream models
+- [x] 17 references covering all cited tools and upstream models
 - [x] Companion project (Video Annotation Viewer) cited
 
 ## Repository & Metadata
@@ -49,7 +49,7 @@ https://joss.readthedocs.io/en/latest/review_checklist.html (checked 2026-02-27)
 
 ## Testing & CI
 
-- [x] Automated tests (pytest, 64 test files, ~94% pass rate)
+- [x] Automated tests (pytest, 74 test files, ~94% pass rate)
 - [x] CI/CD pipeline (GitHub Actions: test matrix, lint, type check, security scan, build)
 
 ## Community Guidelines
@@ -65,7 +65,7 @@ https://joss.readthedocs.io/en/latest/review_checklist.html (checked 2026-02-27)
 - [x] v1.4.1 git tag created locally
 - [ ] Push tag to remote: `git push origin v1.4.1`
 - [ ] Create GitHub Release for v1.4.1
-- [ ] Improve git contributor attribution (only 1 contributor visible in history)
+- [x] Improve git contributor attribution (only 1 contributor visible in history)
 
 ## After acceptance
 

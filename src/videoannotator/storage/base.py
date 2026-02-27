@@ -1,5 +1,7 @@
 """Base storage backend interface for VideoAnnotator batch processing."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
@@ -56,7 +58,7 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
-    def save_job_metadata(self, job: "BatchJob") -> None:
+    def save_job_metadata(self, job: BatchJob) -> None:
         """Save job metadata.
 
         Args:
@@ -65,7 +67,7 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
-    def load_job_metadata(self, job_id: str) -> "BatchJob":
+    def load_job_metadata(self, job_id: str) -> BatchJob | None:
         """Load job metadata.
 
         Args:
@@ -110,7 +112,7 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
-    def save_report(self, report: "BatchReport") -> None:
+    def save_report(self, report: BatchReport) -> None:
         """Save batch report.
 
         Args:
@@ -119,7 +121,7 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
-    def load_report(self, batch_id: str) -> "BatchReport":
+    def load_report(self, batch_id: str) -> BatchReport | None:
         """Load batch report.
 
         Args:
@@ -134,7 +136,7 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
-    def list_reports(self) -> list[str]:
+    def list_reports(self) -> list[BatchReport]:
         """List all batch report IDs.
 
         Returns:

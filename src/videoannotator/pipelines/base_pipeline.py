@@ -19,7 +19,9 @@ class BasePipeline(ABC):
         self.name = self.__class__.__name__.lower()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_initialized = False
-        self._model_info = None  # Will be set by individual pipelines
+        self._model_info: dict[str, Any] | None = (
+            None  # Will be set by individual pipelines
+        )
 
     @abstractmethod
     def initialize(self) -> None:

@@ -507,16 +507,23 @@ class SQLiteStorageBackend(StorageBackend):
             self.logger.error(f"[ERROR] Failed to load batch report {batch_id}: {e}")
             raise
 
-    def list_reports(self) -> list[str]:
+    def list_reports(self) -> list["BatchReport"]:
         """List all batch report IDs."""
+
+        # Load the actual reports because list_reports in base.py returns list[BatchReport]
         try:
             with self.SessionLocal() as session:
-                return [
-                    row[0]
-                    for row in session.query(BatchReportModel.id)
+                reports = (
+                    session.query(BatchReportModel)
                     .order_by(BatchReportModel.start_time.desc())
                     .all()
-                ]
+                )
+                result = []
+                for report in reports:
+                    loaded = self.load_report(report.id)
+                    if loaded:
+                        result.append(loaded)
+                return result
 
         except SQLAlchemyError as e:
             self.logger.error(f"[ERROR] Failed to list batch reports: {e}")

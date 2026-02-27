@@ -214,7 +214,7 @@ class SceneDetectionPipeline(BasePipeline):
             return [{"start": start_time, "end": end_time or 0.0}]
 
     def _classify_scenes(
-        self, video_path: str, segments: list[dict[str, float]]
+        self, video_path: str, segments: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
         """Classify scenes using CLIP."""
         if not CLIP_AVAILABLE:
@@ -251,29 +251,39 @@ class SceneDetectionPipeline(BasePipeline):
                         image = Image.fromarray(frame_rgb)
 
                         # Process with CLIP
-                        image_input = (
-                            self.clip_preprocess(image).unsqueeze(0).to(self.device)
-                        )
-
-                        with torch.no_grad():
-                            logits_per_image, logits_per_text = self.clip_model(
-                                image_input, text
+                        if (
+                            self.clip_preprocess is not None
+                            and self.clip_model is not None
+                        ):
+                            image_input = (
+                                self.clip_preprocess(image).unsqueeze(0).to(self.device)
                             )
-                            probs = logits_per_image.softmax(dim=-1).cpu().numpy()[0]
 
-                        # Get best classification
-                        best_idx = np.argmax(probs)
-                        best_prob = probs[best_idx]
-                        best_class = self.config["scene_prompts"][best_idx]
+                            with torch.no_grad():
+                                logits_per_image, logits_per_text = self.clip_model(
+                                    image_input, text
+                                )
+                                probs = (
+                                    logits_per_image.softmax(dim=-1).cpu().numpy()[0]
+                                )
 
-                        segment["classification"] = best_class
-                        segment["confidence"] = float(best_prob)
-                        segment["all_scores"] = {
-                            prompt: float(prob)
-                            for prompt, prob in zip(
-                                self.config["scene_prompts"], probs, strict=False
-                            )
-                        }
+                            # Get best classification
+                            best_idx = np.argmax(probs)
+                            best_prob = probs[best_idx]
+                            best_class = self.config["scene_prompts"][best_idx]
+
+                            segment["classification"] = str(best_class)
+                            segment["confidence"] = float(best_prob)
+                            segment["all_scores"] = {
+                                prompt: float(prob)
+                                for prompt, prob in zip(
+                                    self.config["scene_prompts"], probs, strict=False
+                                )
+                            }
+                        else:
+                            segment["classification"] = "unknown"
+                            segment["confidence"] = 0.0
+                            segment["all_scores"] = {}
                     else:
                         # Default classification if frame extraction fails
                         segment["classification"] = "unknown"

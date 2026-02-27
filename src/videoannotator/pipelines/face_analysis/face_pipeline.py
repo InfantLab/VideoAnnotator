@@ -77,8 +77,8 @@ class FaceAnalysisPipeline(BasePipeline):
         if config:
             merged_config.update(config)
         super().__init__(merged_config)
-        self.face_cascade = None
-        self.identity_manager = None  # Will be initialized during processing
+        self.face_cascade: Any = None
+        self.identity_manager: Any = None  # Will be initialized during processing
         self.logger = logging.getLogger(__name__)
 
     def initialize(self) -> None:

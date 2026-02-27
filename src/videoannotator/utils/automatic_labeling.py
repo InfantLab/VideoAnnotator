@@ -92,7 +92,7 @@ class AutomaticPersonLabeler:
         self, frame_annotations: list[dict]
     ) -> dict[str, list[dict]]:
         """Group frame annotations by person_id."""
-        person_detections = {}
+        person_detections: dict[str, list[dict]] = {}
 
         for annotation in frame_annotations:
             person_id = annotation.get("person_id")
@@ -166,7 +166,7 @@ class AutomaticPersonLabeler:
         Logic: Person consistently in center is often the primary subject (child),
                persons at edges are often secondary participants (adults/caregivers).
         """
-        labels = {}
+        labels: dict[str, dict] = {}
         config = self.config["position_based"]
 
         # Calculate center bias for each person
@@ -288,7 +288,7 @@ class AutomaticPersonLabeler:
         Returns:
             Dict with spatial relationship analysis
         """
-        analysis = {
+        analysis: dict[str, Any] = {
             "person_count": len(person_detections),
             "spatial_patterns": {},
             "interaction_likelihood": {},
@@ -335,7 +335,7 @@ class AutomaticPersonLabeler:
                                 relative_positions.append(distance)
 
                 if relative_positions:
-                    avg_distance = np.mean(relative_positions)
+                    avg_distance = float(np.mean(relative_positions))
                     pair_key = f"{person_id_1}_{person_id_2}"
 
                     analysis["spatial_patterns"][pair_key] = {

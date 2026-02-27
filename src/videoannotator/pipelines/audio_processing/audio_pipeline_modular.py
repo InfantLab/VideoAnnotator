@@ -65,12 +65,12 @@ class AudioPipelineModular(BasePipeline):
             for key, value in config.items():
                 if key == "pipelines" and isinstance(value, dict):
                     for pipeline_name, pipeline_config in value.items():
-                        if pipeline_name in default_config["pipelines"]:
-                            default_config["pipelines"][pipeline_name].update(
+                        if pipeline_name in default_config["pipelines"]:  # type: ignore
+                            default_config["pipelines"][pipeline_name].update(  # type: ignore
                                 pipeline_config
                             )
                         else:
-                            default_config["pipelines"][pipeline_name] = pipeline_config
+                            default_config["pipelines"][pipeline_name] = pipeline_config  # type: ignore
                 else:
                     default_config[key] = value
 
@@ -78,7 +78,7 @@ class AudioPipelineModular(BasePipeline):
         self.logger = logging.getLogger(__name__)
 
         # Initialize pipeline instances
-        self.audio_pipelines = {}
+        self.audio_pipelines: dict[str, Any] = {}
         self._setup_pipelines()
 
     def _setup_pipelines(self) -> None:
@@ -106,7 +106,7 @@ class AudioPipelineModular(BasePipeline):
 
     def initialize(self) -> None:
         """Initialize all enabled audio pipelines."""
-        if self.is_initialized:
+        if getattr(self, "is_initialized", False):
             return
 
         self.logger.info("Initializing AudioPipeline coordinator...")
@@ -137,6 +137,7 @@ class AudioPipelineModular(BasePipeline):
         video_path: str,
         start_time: float = 0.0,
         end_time: float | None = None,
+        pps: float = 1.0,
         output_dir: str | None = None,
     ) -> list[dict[str, Any]]:
         """Process video through all enabled audio pipelines.

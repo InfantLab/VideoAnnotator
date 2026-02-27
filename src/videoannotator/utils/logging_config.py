@@ -358,14 +358,16 @@ def get_logger(name: str) -> logging.Logger:
     if _logging_config is None:
         setup_videoannotator_logging()
 
-    logger_map = {
-        "api": _logging_config.get_api_logger(),
-        "requests": _logging_config.get_request_logger(),
-        "pipelines": _logging_config.get_pipeline_logger(),
-        "database": _logging_config.get_database_logger(),
-    }
+    if _logging_config is not None:
+        logger_map = {
+            "api": _logging_config.get_api_logger(),
+            "requests": _logging_config.get_request_logger(),
+            "pipelines": _logging_config.get_pipeline_logger(),
+            "database": _logging_config.get_database_logger(),
+        }
+        return logger_map.get(name, logging.getLogger(f"videoannotator.{name}"))
 
-    return logger_map.get(name, logging.getLogger(f"videoannotator.{name}"))
+    return logging.getLogger(f"videoannotator.{name}")
 
 
 @contextmanager

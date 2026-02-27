@@ -47,7 +47,7 @@ class DiarizationPipeline(BasePipeline):
 
     def initialize(self) -> None:
         """Initialize PyAnnote diarization model."""
-        if self.is_initialized:
+        if getattr(self, "is_initialized", False):
             return
 
         if not PYANNOTE_AVAILABLE:
@@ -103,11 +103,14 @@ class DiarizationPipeline(BasePipeline):
         metadata = {"video_id": Path(video_path).stem, "filepath": video_path}
 
         # Apply diarization
-        diarization = self.diarization_model(
-            audio_path,
-            min_speakers=self.config["min_speakers"],
-            max_speakers=self.config["max_speakers"],
-        )
+        if self.diarization_model is not None:
+            diarization = self.diarization_model(
+                audio_path,
+                min_speakers=self.config["min_speakers"],
+                max_speakers=self.config["max_speakers"],
+            )
+        else:
+            raise RuntimeError("Diarization model not initialized")
 
         # Convert to RTTM format
         turns = []

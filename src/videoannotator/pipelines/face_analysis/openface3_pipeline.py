@@ -139,7 +139,7 @@ class OpenFace3Pipeline(BasePipeline):
         self.next_face_id = 0
 
         # Person identity management
-        self.identity_manager = None
+        self.identity_manager: Any = None
 
         # Performance metrics
         self.processing_times: list[float] = []
@@ -474,9 +474,9 @@ class OpenFace3Pipeline(BasePipeline):
         self.logger.info(f"Processing {len(frames_to_process)} frames at {pps} PPS")
 
         # COCO dataset structure
-        annotations = []
-        images = []
-        categories = self._get_face_categories()
+        annotations: list[dict[str, Any]] = []
+        images: list[dict[str, Any]] = []
+        categories: list[dict[str, Any]] = self._get_face_categories()
 
         annotation_id = 1
 
@@ -539,7 +539,7 @@ class OpenFace3Pipeline(BasePipeline):
         cap.release()
 
         # Create COCO dataset
-        coco_dataset = {
+        coco_dataset: dict[str, Any] = {
             "info": {
                 "description": "OpenFace 3.0 Face Analysis",
                 "version": __version__,

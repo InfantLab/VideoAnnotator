@@ -54,10 +54,12 @@ class PersonIdentityManager:
 
         self.video_id = video_id or "default_video"
         self.id_format = id_format
-        self.track_to_person_map = {}  # track_id -> person_id
-        self.person_labels = {}  # person_id -> PersonLabel
+        self.track_to_person_map: dict[int, str] = {}  # track_id -> person_id
+        self.person_labels: dict[str, PersonLabel] = {}  # person_id -> PersonLabel
         self.next_person_id = 1
-        self._person_tracks_cache = {}  # Cache for person track summaries
+        self._person_tracks_cache: dict[
+            str, dict
+        ] = {}  # Cache for person track summaries
 
     def register_track(self, track_id: int) -> str:
         """Register a new track and assign person_id.
@@ -326,7 +328,7 @@ class PersonIdentityManager:
 
             person_tracks_data.append(track_data)
 
-        output_data = {
+        output_data: dict[str, Any] = {
             "video_id": self.video_id,
             "person_tracks": person_tracks_data,
             "labeling_metadata": {

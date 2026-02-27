@@ -96,8 +96,8 @@ class PersonTrackingPipeline(BasePipeline):
         super().__init__(default_config)
 
         self.logger = logging.getLogger(__name__)
-        self.model = None
-        self.identity_manager = None  # Will be initialized per video
+        self.model: Any = None
+        self.identity_manager: Any = None  # Will be initialized per video
 
     def process(
         self,
@@ -139,7 +139,7 @@ class PersonTrackingPipeline(BasePipeline):
             self.initialize()
 
         # Process video
-        annotations = []
+        annotations: list[dict[str, Any]] = []
         cap = cv2.VideoCapture(video_path)
 
         if not cap.isOpened():
@@ -219,13 +219,21 @@ class PersonTrackingPipeline(BasePipeline):
 
                 # Update annotations with new labels
                 for annotation in annotations:
-                    person_id = annotation.get("person_id")
-                    if person_id:
-                        label_info = self.identity_manager.get_person_label(person_id)
+                    ann_person_id = annotation.get("person_id")
+                    if ann_person_id:
+                        label_info = self.identity_manager.get_person_label(
+                            ann_person_id
+                        )
                         if label_info:
-                            annotation["person_label"] = label_info["label"]
-                            annotation["label_confidence"] = label_info["confidence"]
-                            annotation["labeling_method"] = label_info["method"]
+                            annotation["person_label"] = str(
+                                label_info.get("label", "")
+                            )
+                            annotation["label_confidence"] = float(
+                                label_info.get("confidence", 0.0)
+                            )
+                            annotation["labeling_method"] = str(
+                                label_info.get("method", "")
+                            )
 
         # Size-based analysis pass (independent of identity manager labels)
         size_cfg = self.config.get("size_analysis", {})

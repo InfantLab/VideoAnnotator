@@ -213,8 +213,8 @@ def validate_coco_json(coco_path: str, context: str = "") -> ValidationResult:
     if not PYCOCOTOOLS_AVAILABLE:
         return ValidationResult(False, [], ["pycocotools not available"])
 
-    warnings = []
-    errors = []
+    warnings: list[str] = []
+    errors: list[str] = []
 
     try:
         # Load with official COCO API
@@ -472,9 +472,9 @@ def auto_export_annotations(
     Returns:
         Dictionary mapping format names to output file paths
     """
-    output_paths = {}
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_paths: dict[str, str] = {}
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     # Separate annotations by type
     person_annotations = []
@@ -524,24 +524,24 @@ def auto_export_annotations(
             for img_id in sorted(coco_images)
         ]
 
-        coco_path = output_dir / f"{base_name}.json"
+        coco_path = out_dir / f"{base_name}.json"
         export_coco_json(coco_annotations, images, str(coco_path))
         output_paths["coco"] = str(coco_path)
 
     # Export WebVTT for speech
     if speech_segments:
-        webvtt_path = output_dir / f"{base_name}.vtt"
+        webvtt_path = out_dir / f"{base_name}.vtt"
         export_webvtt_captions(speech_segments, str(webvtt_path))
         output_paths["webvtt"] = str(webvtt_path)
 
         # Also export TextGrid
-        textgrid_path = output_dir / f"{base_name}.TextGrid"
+        textgrid_path = out_dir / f"{base_name}.TextGrid"
         export_textgrid_speech(speech_segments, str(textgrid_path))
         output_paths["textgrid"] = str(textgrid_path)
 
     # Export RTTM for speaker diarization
     if speaker_segments:
-        rttm_path = output_dir / f"{base_name}.rttm"
+        rttm_path = out_dir / f"{base_name}.rttm"
         export_rttm_diarization(speaker_segments, str(rttm_path))
         output_paths["rttm"] = str(rttm_path)
 

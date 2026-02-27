@@ -505,6 +505,11 @@ async def get_job_status(
     try:
         # Load job from database
         job = storage.load_job_metadata(job_id)
+        if not job:
+            raise JobNotFoundException(
+                job_id=job_id,
+                hint="Check job ID or use GET /api/v1/jobs to list all jobs",
+            )
 
         queue_position: int | None = None
         if job.status == JobStatus.PENDING:
@@ -676,6 +681,8 @@ async def list_jobs(
         for job_id in page_job_ids:
             try:
                 job = storage.load_job_metadata(job_id)
+                if not job:
+                    continue
 
                 # Extract video metadata
                 (
@@ -846,6 +853,8 @@ async def cancel_job_endpoint(
         # Load job from database
         try:
             job_data = storage.load_job_metadata(job_id)
+            if not job_data:
+                raise FileNotFoundError()
         except FileNotFoundError as e:
             raise JobNotFoundException(
                 job_id=job_id,

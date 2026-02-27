@@ -132,7 +132,7 @@ class LAIONFacePipeline(BasePipeline):
         self.classifiers: dict[str, Any] = {}
 
         # Person identity management
-        self.identity_manager = None
+        self.identity_manager: Any = None
 
     def _load_person_tracks(self, video_path: str) -> list[dict[str, Any]] | None:
         """Load person tracking data for face-person linking."""
@@ -410,20 +410,28 @@ class LAIONFacePipeline(BasePipeline):
                         continue
                     # Feature extraction: preprocess and move to device
                     try:
-                        inputs = self.processor(images=face_crop, return_tensors="pt")
-                        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+                        if self.processor is not None:
+                            inputs = self.processor(
+                                images=face_crop, return_tensors="pt"
+                            )
+                            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+                        else:
+                            continue
                     except Exception as e:
                         self.logger.warning(f"Failed to process face crop: {e}")
                         continue
 
                     # Extract image embeddings: try CLIP-style get_image_features, fallback to encoder output
                     try:
-                        with torch.no_grad():
-                            try:
-                                embedding = self.model.get_image_features(**inputs)
-                            except Exception:
-                                outputs = self.model(**inputs)
-                                embedding = outputs.last_hidden_state[:, 0, :]
+                        if self.model is not None:
+                            with torch.no_grad():
+                                try:
+                                    embedding = self.model.get_image_features(**inputs)
+                                except Exception:
+                                    outputs = self.model(**inputs)
+                                    embedding = outputs.last_hidden_state[:, 0, :]
+                        else:
+                            continue
                     except Exception as e:
                         self.logger.warning(f"Failed to extract embeddings: {e}")
                         continue
@@ -484,7 +492,7 @@ class LAIONFacePipeline(BasePipeline):
                     # Get person annotations for this frame
                     frame_persons = (
                         self._get_frame_person_annotations(
-                            active_person_tracks, image_id, frame_num
+                            active_person_tracks, int(image_id), frame_num
                         )
                         if active_person_tracks
                         else []

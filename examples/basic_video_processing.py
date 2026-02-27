@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
 from src.pipelines.audio_processing import AudioPipeline, AudioPipelineConfig
 from src.pipelines.face_analysis import FacePipeline, FacePipelineConfig
 from src.pipelines.person_tracking import PersonPipeline, PersonPipelineConfig

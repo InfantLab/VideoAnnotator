@@ -33,13 +33,13 @@ affiliations:
     index: 2
   - name: Department of Social Policy and Intervention (DISP), University of Oxford, United Kingdom
     index: 3
-date: 18 December 2025
+date: 27 February 2026
 bibliography: paper.bib
 ---
 
 # Summary
 
-VideoAnnotator is an open-source Python toolkit for automated video annotation, designed for behavioral, social, and health research at scale. It ships ten declaratively configured pipelines spanning four modalities: person tracking via YOLOv11 with ByteTrack [@yolo11]; facial analysis using DeepFace, LAION CLIP face embeddings, and OpenFace 3 [@openface2]; scene detection with PySceneDetect and CLIP-based labelling [@pyscenedetect]; and audio processing comprising Whisper speech recognition [@whisper], pyannote speaker diarization [@pyannote], and LAION empathic voice emotion analysis. All pipelines share a uniform interface behind a local-first FastAPI service [@fastapi], with Docker images for consistent CPU and GPU execution. Outputs are standardized to established formats (COCO JSON, RTTM, WebVTT) and accompanied by provenance metadata suitable for downstream modeling and review.
+VideoAnnotator is an open-source Python toolkit for automated video annotation, designed for behavioral, social, and health research at scale. It ships ten declaratively configured pipelines spanning four modalities: person tracking via YOLOv11 with ByteTrack [@yolo11; @bytetrack]; facial analysis using DeepFace [@deepface], LAION CLIP face embeddings [@laion], and OpenFace 3 [@openface2]; scene detection with PySceneDetect and CLIP-based labelling [@pyscenedetect]; and audio processing comprising Whisper speech recognition [@whisper], pyannote speaker diarization [@pyannote], and LAION empathic voice emotion analysis. All pipelines share a uniform interface behind a local-first FastAPI service [@fastapi], with Docker images for consistent CPU and GPU execution. Outputs are standardized to established formats (COCO JSON, RTTM, WebVTT) and accompanied by provenance metadata suitable for downstream modeling and review.
 
 A companion web application, Video Annotation Viewer [@viewer], provides an interactive interface for overlaying annotations on source video — rendering pose skeletons, speaker timelines, subtitle tracks, and scene boundaries — so that researchers can visually inspect and validate pipeline outputs before downstream analysis.
 
@@ -77,7 +77,7 @@ VideoAnnotator was developed at Stellenbosch University to support large-scale a
 
 # Quality control
 
-The project maintains a pytest-based test suite covering unit, integration, and performance tests across 64 test files. Continuous integration via GitHub Actions runs tests on Ubuntu, Windows, and macOS with Python 3.12, alongside ruff linting, mypy type checking, and Trivy security scanning. Reproducibility is supported by recording pipeline configuration and model versions in output metadata, and Docker images provide consistent execution environments.
+The project maintains a pytest-based test suite covering unit, integration, and performance tests across 74 test files. Continuous integration via GitHub Actions runs tests on Ubuntu, Windows, and macOS with Python 3.12, alongside ruff linting, mypy type checking, and Trivy security scanning. Reproducibility is supported by recording pipeline configuration and model versions in output metadata, and Docker images provide consistent execution environments.
 
 # Statement of limitations
 

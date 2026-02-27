@@ -18,7 +18,7 @@ try:
     from .industry_standards import IndustryStandardsPlaceholder
 except ImportError:
     # Fallback if industry_standards is not available
-    IndustryStandardsPlaceholder = None
+    IndustryStandardsPlaceholder = None  # type: ignore
 
 
 # Legacy compatibility message

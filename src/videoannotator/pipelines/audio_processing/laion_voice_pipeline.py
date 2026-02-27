@@ -175,7 +175,7 @@ class LAIONVoicePipeline(WhisperBasePipeline):
         super().__init__(laion_config)
 
         self.logger = logging.getLogger(__name__)
-        self.classifiers = {}  # LAION emotion classifiers
+        self.classifiers: dict[str, Any] = {}  # LAION emotion classifiers
 
         # Set CUDA capability for GPU optimization decisions
         self.cuda_capability = self._get_cuda_capability()
@@ -304,18 +304,24 @@ class LAIONVoicePipeline(WhisperBasePipeline):
                     "include_transcription", False
                 ):
                     try:
-                        input_features = self.whisper_processor(
-                            segment_audio,
-                            sampling_rate=sample_rate,
-                            return_tensors="pt",
-                        ).input_features.to(self.device)
+                        if (
+                            self.whisper_processor is not None
+                            and self.whisper_model is not None
+                        ):
+                            input_features = self.whisper_processor(
+                                segment_audio,
+                                sampling_rate=sample_rate,
+                                return_tensors="pt",
+                            ).input_features.to(self.device)
 
-                        # Generate transcription
-                        with torch.no_grad():
-                            predicted_ids = self.whisper_model.generate(input_features)
-                            transcription = self.whisper_processor.batch_decode(
-                                predicted_ids, skip_special_tokens=True
-                            )[0].strip()
+                            # Generate transcription
+                            with torch.no_grad():
+                                predicted_ids = self.whisper_model.generate(
+                                    input_features
+                                )
+                                transcription = self.whisper_processor.batch_decode(
+                                    predicted_ids, skip_special_tokens=True
+                                )[0].strip()
                     except Exception as e:
                         self.logger.warning(f"Transcription failed: {e}")
 
@@ -530,8 +536,10 @@ class LAIONVoicePipeline(WhisperBasePipeline):
                             raise
 
                     # If parent Whisper model uses FP16, convert classifier to FP16 too
-                    if hasattr(self, "whisper_model") and hasattr(
-                        self.whisper_model, "dtype"
+                    if (
+                        hasattr(self, "whisper_model")
+                        and self.whisper_model is not None
+                        and hasattr(self.whisper_model, "dtype")
                     ):
                         if self.whisper_model.dtype == torch.float16:
                             model_instance = model_instance.half()
@@ -811,7 +819,7 @@ class LAIONVoicePipeline(WhisperBasePipeline):
 
             # Convert to time segments
             in_speech = False
-            speech_start = 0
+            speech_start: float = 0.0
             speech_segments = []
 
             for i, is_speech in enumerate(speech_frames):

@@ -1,0 +1,63 @@
+{
+  "name": "VideoAnnotator (GPU)",
+  "build": {
+    "dockerfile": "../Dockerfile.gpu",
+    "context": "..",
+    "args": {
+      "SKIP_IMAGE_UV_SYNC": "false",
+      "SKIP_TORCH_INSTALL": "false"
+    }
+  },
+  "runArgs": [
+    "--gpus",
+    "all"
+  ],
+  "features": {},
+  "forwardPorts": [
+    18011,
+    18012,
+    18013,
+    18014,
+    18015,
+    19011,
+    19012,
+    19013,
+    19014,
+    19015
+  ],
+  "portsAttributes": {
+    "18011": {
+      "label": "VideoAnnotator API (default)",
+      "onAutoForward": "notify"
+    },
+    "19011": {
+      "label": "Video Annotation Viewer",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "uv sync && uv sync --extra dev && HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh && uv run pre-commit install",
+  "containerEnv": {
+    "UV_LINK_MODE": "copy"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": ".venv/bin/python",
+        "python.formatting.provider": "none",
+        "[python]": {
+          "editor.defaultFormatter": "astral-sh.ruff",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+          }
+        }
+      },
+      "extensions": [
+        "astral-sh.ruff",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "GitHub.copilot-chat"
+      ]
+    }
+  }
+}

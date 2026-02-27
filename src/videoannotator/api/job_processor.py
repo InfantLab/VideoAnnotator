@@ -53,7 +53,7 @@ class JobProcessor:
             logger.info(f"Processing job {job.job_id}: {job.video_path}")
 
             # Ensure video file exists
-            if not job.video_path.exists():
+            if job.video_path is None or not job.video_path.exists():
                 error_msg = f"Video file not found: {job.video_path}"
                 logger.error(error_msg)
                 job.error_message = error_msg

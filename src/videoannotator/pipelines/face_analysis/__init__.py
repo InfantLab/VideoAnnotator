@@ -13,7 +13,7 @@ try:
 
     OPENFACE3_AVAILABLE = True
 except ImportError:
-    OpenFace3Pipeline = None
+    OpenFace3Pipeline = None  # type: ignore
     OPENFACE3_AVAILABLE = False
 
 __all__ = [

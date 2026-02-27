@@ -56,7 +56,7 @@ class BackgroundJobManager:
         # Constructing JobProcessor eagerly triggers imports of pipeline modules
         # (which may load heavy ML libraries or perform IO) and can block
         # FastAPI application startup. Create it lazily in _run_single_job_processing.
-        self.job_processor = None
+        self.job_processor: Any = None
 
         self.running = False
         self.processing_jobs: set[str] = set()
@@ -255,7 +255,7 @@ class BackgroundJobManager:
                     return False
 
             # Use JobProcessor to process the single job
-            success = self.job_processor.process_job(job)  # type: ignore[attr-defined]
+            success = self.job_processor.process_job(job)
 
             if success:
                 logger.info(f"Job {job.job_id} processed successfully")

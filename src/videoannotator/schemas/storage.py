@@ -1,6 +1,6 @@
 """Storage configuration schemas."""
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
@@ -17,7 +17,7 @@ class JobArtifact(BaseModel):
     artifact_type: ArtifactType
 
 
-class StorageProviderType(str, Enum):
+class StorageProviderType(StrEnum):
     """Supported storage provider types."""
 
     LOCAL = "local"

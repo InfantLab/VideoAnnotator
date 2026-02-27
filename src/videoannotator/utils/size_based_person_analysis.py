@@ -62,7 +62,7 @@ class SizeBasedPersonAnalyzer:
 
     def _group_by_person_id(self, annotations: list[dict]) -> dict[str, list[dict]]:
         """Group annotations by person_id."""
-        grouped = {}
+        grouped: dict[str, list[dict]] = {}
 
         for annotation in annotations:
             person_id = annotation.get("person_id")
@@ -77,7 +77,7 @@ class SizeBasedPersonAnalyzer:
         self, person_detections: dict[str, list[dict]]
     ) -> dict[str, float]:
         """Calculate average bounding box height for each person."""
-        person_heights = {}
+        person_heights: dict[str, float] = {}
 
         for person_id, detections in person_detections.items():
             heights = []
@@ -103,7 +103,7 @@ class SizeBasedPersonAnalyzer:
             infant (child) to satisfy expected dataset behavior where a
             normalized 0.5 secondary person is marked infant (tests).
         """
-        labels = {}
+        labels: dict[str, dict] = {}
 
         if not person_heights:
             return labels
