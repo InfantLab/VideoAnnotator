@@ -77,22 +77,14 @@ Last updated: 2026-02-27
 
 ## 3. Expand Test Coverage — High-Value Targets
 
-### 3A. Core parsers (easy unit tests, high impact)
-- `src/lib/parsers/coco.ts` — COCO JSON format parser
-- `src/lib/parsers/cocoOpenface3.ts` — OpenFace3 COCO variant
-- `src/lib/parsers/face.ts` — Face detection parser
-- `src/lib/parsers/openface3Parser.ts` — OpenFace3 CSV parser
-- [ ] Add `coco.test.ts`
-- [ ] Add `face.test.ts`
-- [ ] Add `openface3Parser.test.ts`
+### 3A. Core parsers — DONE (56 tests)
+- [x] Add `coco.test.ts` — 27 tests: parsing, grouping, keypoints, bounding boxes, validation, track statistics
+- [x] Add `face.test.ts` — 29 tests: parsing, metadata, emotions, timeline, validation
+- [ ] Add `openface3Parser.test.ts` (lower priority — OpenFace3 is less commonly used)
 
-### 3B. Pure utility functions (easy wins)
-- `src/lib/formatters.ts` — Display formatting helpers
-- `src/lib/validation.ts` — Input validation functions
-- `src/lib/toastHelpers.tsx` — Toast message formatting
-- `src/lib/utils.ts` — General utility functions
-- [ ] Add `formatters.test.ts`
-- [ ] Add `validation.test.ts`
+### 3B. Pure utility functions — DONE (56 tests)
+- [x] Add `formatters.test.ts` — 20 tests: uptime formatting, memory formatting, status colors
+- [x] Add `validation.test.ts` — 36 tests: COCO/WebVTT/RTTM/Scene validation, file types, VideoAnnotator format detection
 
 ### 3C. Key hooks
 - `src/hooks/useTokenStatus.ts` — Token status management
@@ -133,8 +125,8 @@ Last updated: 2026-02-27
 1. ~~**Fix 52 failing tests** (Sections 1A–1E) — reviewer will run tests~~ DONE
 2. ~~**Add build step to CI** (Section 2A) — proves the app compiles~~ DONE
 3. ~~**Remove continue-on-error from coverage** (Section 2B) — ensures green CI means green tests~~ DONE
-4. **Add parser tests** (Section 3A) — core contribution of the project
-5. **Add utility tests** (Section 3B) — easy coverage wins
+4. ~~**Add parser tests** (Section 3A) — core contribution of the project~~ DONE
+5. ~~**Add utility tests** (Section 3B) — easy coverage wins~~ DONE
 6. ~~**Coverage threshold** (Section 2C) — prevent regressions~~ DONE
 7. **E2E expansion** (Section 4A) — nice-to-have
 8. **Badges & docs** (Section 5) — nice-to-have
