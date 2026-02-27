@@ -19,7 +19,9 @@ vi.mock('@/api/client', () => ({
 
 // Mock test component for authentication flow
 const TestAuthenticationFlow = () => {
-    const [token, setToken] = React.useState('');
+    const [token, setToken] = React.useState(() => {
+        return localStorage.getItem('videoannotator_api_token') || '';
+    });
     const [status, setStatus] = React.useState<'idle' | 'checking' | 'success' | 'error'>('idle');
     const [error, setError] = React.useState<string | null>(null);
     const [serverVersion, setServerVersion] = React.useState<string | null>(null);
@@ -31,6 +33,7 @@ const TestAuthenticationFlow = () => {
         try {
             const healthResponse = await mockApiClient.checkHealth();
             mockApiClient.setToken(token);
+            localStorage.setItem('videoannotator_api_token', token);
             setStatus('success');
             setServerVersion(healthResponse.version || 'unknown');
         } catch (err: unknown) {
@@ -85,10 +88,13 @@ describe('Authentication Integration', () => {
 
     describe('token validation flow', () => {
         it('should validate token and display success with server version', async () => {
-            mockApiClient.checkHealth.mockResolvedValue({
-                status: 'healthy',
-                version: '1.3.0',
-            });
+            // Use controlled promise so we can observe the loading state
+            let resolveHealth!: (value: { status: string; version?: string }) => void;
+            mockApiClient.checkHealth.mockReturnValue(
+                new Promise<{ status: string; version?: string }>((resolve) => {
+                    resolveHealth = resolve;
+                })
+            );
 
             render(<TestAuthenticationFlow />);
 
@@ -102,8 +108,11 @@ describe('Authentication Integration', () => {
             // Validate token
             await user.click(validateButton);
 
-            // Should show loading state
+            // Should show loading state (promise still pending)
             expect(screen.getByText(/validating token/i)).toBeInTheDocument();
+
+            // Resolve the health check
+            resolveHealth({ status: 'healthy', version: '1.3.0' });
 
             // Wait for validation to complete
             await waitFor(() => {
@@ -192,7 +201,7 @@ describe('Authentication Integration', () => {
 
     describe('token persistence', () => {
         it('should persist token to localStorage on successful validation', async () => {
-            const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+            const setItemSpy = vi.spyOn(localStorage, 'setItem');
 
             mockApiClient.checkHealth.mockResolvedValue({
                 status: 'healthy',
@@ -209,20 +218,20 @@ describe('Authentication Integration', () => {
                 expect(screen.getByText(/connected successfully/i)).toBeInTheDocument();
             });
 
-            // Should store token (implementation may use specific key)
-            expect(setItemSpy).toHaveBeenCalled();
+            // Should store token via localStorage
+            expect(setItemSpy).toHaveBeenCalledWith('videoannotator_api_token', 'persistent-token');
 
             setItemSpy.mockRestore();
         });
 
         it('should load saved token on mount', () => {
-            const getItemSpy = vi.spyOn(Storage.prototype, 'getItem')
+            const getItemSpy = vi.spyOn(localStorage, 'getItem')
                 .mockReturnValue('saved-token-123');
 
             render(<TestAuthenticationFlow />);
 
-            // Implementation should load token from storage
-            expect(getItemSpy).toHaveBeenCalled();
+            // Component reads token from localStorage on mount
+            expect(getItemSpy).toHaveBeenCalledWith('videoannotator_api_token');
 
             getItemSpy.mockRestore();
         });

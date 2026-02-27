@@ -26,21 +26,45 @@ const mockApiClient = {
     },
 };
 
-// Mock component that fetches data and displays errors
+// Import parseApiError for the test component
+import { parseApiError } from '@/lib/errorHandling';
+
+// Mock component that fetches data, catches errors, and displays them
 function TestErrorHandlingComponent() {
+    const [error, setError] = React.useState<ParsedError | null>(null);
+
+    const handleClick = async (errorType: 'v1.3' | 'legacy' | 'network') => {
+        try {
+            await mockApiClient.fetchWithError(errorType);
+        } catch (err) {
+            setError(parseApiError(err));
+        }
+    };
+
     return (
         <div>
             <h1>Test Error Handling Integration</h1>
-            <button onClick={() => mockApiClient.fetchWithError('v1.3')}>
+            <button onClick={() => handleClick('v1.3')}>
                 Trigger v1.3 Error
             </button>
-            <button onClick={() => mockApiClient.fetchWithError('legacy')}>
+            <button onClick={() => handleClick('legacy')}>
                 Trigger Legacy Error
             </button>
-            <button onClick={() => mockApiClient.fetchWithError('network')}>
+            <button onClick={() => handleClick('network')}>
                 Trigger Network Error
             </button>
-            <div data-testid="error-display">Mock Error Display - Not Implemented</div>
+            {error ? (
+                <div data-testid="error-display" role="alert">
+                    <div>{error.message}</div>
+                    {error.hint && <div>{error.hint}</div>}
+                    {error.code && <div>{error.code}</div>}
+                    {error.message.toLowerCase().includes('fetch') || error.message.toLowerCase().includes('network') ? (
+                        <div>Check your connection</div>
+                    ) : null}
+                </div>
+            ) : (
+                <div data-testid="error-display">No errors</div>
+            )}
         </div>
     );
 }

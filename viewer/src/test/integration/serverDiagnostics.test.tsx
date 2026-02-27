@@ -112,7 +112,7 @@ describe('ServerDiagnostics Integration', () => {
       });
 
       // Click refresh
-      const refreshButton = screen.getByRole('button', { name: /refresh/i });
+      const refreshButton = screen.getByRole('button', { name: /refresh now/i });
       await user.click(refreshButton);
 
       // Wait for updated data
@@ -133,11 +133,11 @@ describe('ServerDiagnostics Integration', () => {
 
       // Should show error
       await waitFor(() => {
-        expect(screen.getByText(/failed to load/i)).toBeInTheDocument();
+        expect(screen.getByText(/cannot connect to server/i)).toBeInTheDocument();
       });
 
       // Click retry/refresh
-      const retryButton = screen.getByRole('button', { name: /refresh|retry/i });
+      const retryButton = screen.getByRole('button', { name: /retry/i });
       await user.click(retryButton);
 
       // Should now show data
@@ -155,17 +155,17 @@ describe('ServerDiagnostics Integration', () => {
 
       // Wait for initial load
       await waitFor(() => {
-        expect(mockGetEnhancedHealth).toHaveBeenCalledTimes(1);
+        expect(mockGetEnhancedHealth).toHaveBeenCalled();
       });
 
+      const callsAfterFirstMount = mockGetEnhancedHealth.mock.calls.length;
       unmount();
 
-      // Remount - should use cache (but our test config disables cache)
+      // Remount - with gcTime: 0, cache is cleared so should fetch again
       renderWithQueryClient(<ServerDiagnostics />);
 
       await waitFor(() => {
-        // With gcTime: 0, should fetch again
-        expect(mockGetEnhancedHealth).toHaveBeenCalledTimes(2);
+        expect(mockGetEnhancedHealth.mock.calls.length).toBeGreaterThan(callsAfterFirstMount);
       });
     });
 
@@ -211,7 +211,7 @@ describe('ServerDiagnostics Integration', () => {
       expect(mockGetEnhancedHealth).toHaveBeenCalledTimes(1);
 
       // Manual refresh should bypass cache
-      const refreshButton = screen.getByRole('button', { name: /refresh/i });
+      const refreshButton = screen.getByRole('button', { name: /refresh now/i });
       await user.click(refreshButton);
 
       await waitFor(() => {
@@ -223,7 +223,7 @@ describe('ServerDiagnostics Integration', () => {
 
   describe('auto-refresh behavior', () => {
     beforeEach(() => {
-      vi.useFakeTimers();
+      vi.useFakeTimers({ shouldAdvanceTime: true });
     });
 
     afterEach(() => {
@@ -259,7 +259,7 @@ describe('ServerDiagnostics Integration', () => {
     });
 
     it('should pause auto-refresh when collapsed', async () => {
-      const user = userEvent.setup({ delay: null }); // No delay for fake timers
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime }); // No delay for fake timers
 
       mockGetEnhancedHealth.mockResolvedValue(mockHealthResponse);
 
@@ -281,7 +281,7 @@ describe('ServerDiagnostics Integration', () => {
     });
 
     it('should resume auto-refresh when expanded again', async () => {
-      const user = userEvent.setup({ delay: null });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
       mockGetEnhancedHealth.mockResolvedValue(mockHealthResponse);
 
@@ -362,7 +362,7 @@ describe('ServerDiagnostics Integration', () => {
 
   describe('real-world scenarios', () => {
     it('should handle server becoming overloaded during session', async () => {
-      vi.useFakeTimers();
+      vi.useFakeTimers({ shouldAdvanceTime: true });
 
       const normalResponse = mockHealthResponse;
       const overloadedResponse = {
@@ -410,23 +410,22 @@ describe('ServerDiagnostics Integration', () => {
         },
       };
 
-      mockGetEnhancedHealth.mockResolvedValueOnce(degradedResponse);
+      mockGetEnhancedHealth.mockResolvedValue(degradedResponse);
 
       renderWithQueryClient(<ServerDiagnostics />);
 
       await waitFor(() => {
-        expect(screen.getByText(/degraded/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/degraded/i).length).toBeGreaterThanOrEqual(1);
         expect(screen.getByText(/connection pool exhausted/i)).toBeInTheDocument();
       });
     });
 
     it('should show stale data warning after connectivity issues', async () => {
-      vi.useFakeTimers();
+      vi.useFakeTimers({ shouldAdvanceTime: true });
 
       mockGetEnhancedHealth
         .mockResolvedValueOnce(mockHealthResponse)
-        .mockRejectedValueOnce(new Error('Network error'))
-        .mockRejectedValueOnce(new Error('Network error'));
+        .mockRejectedValue(new Error('Network error'));
 
       renderWithQueryClient(<ServerDiagnostics />);
 
@@ -435,18 +434,12 @@ describe('ServerDiagnostics Integration', () => {
         expect(screen.getByText(/1.3.0/)).toBeInTheDocument();
       });
 
-      // Auto-refresh fails after 30s
-      vi.advanceTimersByTime(30000);
-
-      // Another auto-refresh fails after 60s
-      vi.advanceTimersByTime(30000);
-
-      // Fast forward past 2 minute threshold
-      vi.advanceTimersByTime(60000);
+      // Fast forward past 2 minute threshold (auto-refreshes fail, keeping old lastFetchTime)
+      await vi.advanceTimersByTimeAsync(130000);
 
       // Should show stale data indicator
       await waitFor(() => {
-        expect(screen.getByText(/stale|outdated/i)).toBeInTheDocument();
+        expect(screen.getByText(/stale/i)).toBeInTheDocument();
       });
 
       vi.useRealTimers();

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { usePipelineData } from '@/hooks/usePipelineData';
 import { usePipelineContext } from '@/contexts/PipelineContext';
@@ -91,7 +91,7 @@ describe('Pipeline Data Hooks', () => {
         });
 
         expect(result.current).toBeDefined();
-        expect(result.current.isLoading).toBe(true); // Initially loading
+        expect(result.current.isLoading).toBe(false); // Not loading when enabled: false (lazy)
         expect(typeof result.current.isPipelineAvailable).toBe('function');
         expect(typeof result.current.getPipeline).toBe('function');
     });
@@ -121,15 +121,15 @@ describe('Pipeline Data Hooks', () => {
         vi.mocked(apiClient.getPipelineCatalog).mockResolvedValue(mockCatalogResponse);
         vi.mocked(apiClient.getServerInfo).mockResolvedValue(mockCatalogResponse.server);
 
-        const { result } = renderHook(() => usePipelineData(), {
+        const { result } = renderHook(() => usePipelineData({ enabled: true }), {
             wrapper: createWrapper(),
         });
 
-        // Wait for initial load to complete
-        await new Promise(resolve => setTimeout(resolve, 0));
-
-        expect(result.current.catalog?.pipelines).toHaveLength(1);
-        expect(result.current.catalog?.pipelines[0].id).toBe('face_analysis');
+        // Wait for query to complete
+        await waitFor(() => {
+            expect(result.current.catalog?.pipelines).toHaveLength(1);
+            expect(result.current.catalog?.pipelines[0].id).toBe('face_analysis');
+        });
     });
 });
 

@@ -49,22 +49,7 @@ export function parseApiError(error: unknown): ParsedError {
     // Try v1.3.0 ErrorEnvelope format with Zod (defensive)
     const envelopeResult = ErrorEnvelopeSchema.safeParse(error);
     if (envelopeResult.success) {
-      const env = envelopeResult.data;
-      // Extract primary message
-      let message = 'An error occurred';
-      if (typeof env.error === 'string') {
-        message = env.error;
-      } else if (Array.isArray(env.error) && env.error.length > 0) {
-        message = env.error[0].message;
-      }
-
-      return {
-        message,
-        code: env.error_code,
-        requestId: env.request_id,
-        hint: env.hint,
-        details: env.error // Keep full details
-      };
+      return parseErrorEnvelope(envelopeResult.data);
     }
 
     // Handle legacy/other object formats

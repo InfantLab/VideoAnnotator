@@ -4,22 +4,27 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { APIClient } from '@/api/client';
 
+const TEST_BASE_URL = 'http://127.0.0.1:18011';
+const TEST_TOKEN = 'va_test12345678';
+
 describe('APIClient v1.3.0 methods', () => {
   let client: APIClient;
   let mockFetch: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    // Mock localStorage.getItem to return null (triggers fallback to env vars)
-    if (globalThis.localStorage?.getItem) {
-      vi.spyOn(globalThis.localStorage, 'getItem').mockReturnValue(null);
-    }
+    // Mock localStorage to return our test values so request() re-reads stay consistent
+    vi.spyOn(globalThis.localStorage, 'getItem').mockImplementation((key: string) => {
+      if (key === 'videoannotator_api_url') return TEST_BASE_URL;
+      if (key === 'videoannotator_api_token') return TEST_TOKEN;
+      return null;
+    });
 
     // Reset mocks
     mockFetch = vi.fn();
     global.fetch = mockFetch as unknown as typeof fetch;
 
     // Create fresh client instance
-    client = new APIClient('http://localhost:18011', 'test-token');
+    client = new APIClient(TEST_BASE_URL, TEST_TOKEN);
   });
 
   describe('cancelJob', () => {
@@ -42,7 +47,7 @@ describe('APIClient v1.3.0 methods', () => {
 
       expect(result).toEqual(mockResponse);
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:18011/api/v1/jobs/job123/cancel',
+        `${TEST_BASE_URL}/api/v1/jobs/job123/cancel`,
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
@@ -70,7 +75,7 @@ describe('APIClient v1.3.0 methods', () => {
 
       expect(result).toEqual(mockResponse);
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:18011/api/v1/jobs/job456/cancel',
+        `${TEST_BASE_URL}/api/v1/jobs/job456/cancel`,
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ reason: 'User requested' }),
@@ -245,7 +250,7 @@ describe('APIClient v1.3.0 methods', () => {
 
       expect(result).toEqual(mockResponse);
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:18011/api/v1/pipelines/pose_detection/validate',
+        `${TEST_BASE_URL}/api/v1/pipelines/pose_detection/validate`,
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ config }),
@@ -337,12 +342,12 @@ describe('APIClient v1.3.0 methods', () => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(mockFetch).toHaveBeenNthCalledWith(
         1,
-        'http://localhost:18011/api/v1/system/health',
+        `${TEST_BASE_URL}/api/v1/system/health`,
         expect.anything()
       );
       expect(mockFetch).toHaveBeenNthCalledWith(
         2,
-        'http://localhost:18011/health',
+        `${TEST_BASE_URL}/health`,
         expect.anything()
       );
     });

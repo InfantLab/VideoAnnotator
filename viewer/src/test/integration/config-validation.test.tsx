@@ -109,9 +109,9 @@ describe('Configuration Validation Integration', () => {
                 mutations: { retry: false },
             },
         });
-        user = userEvent.setup();
         vi.clearAllMocks();
-        vi.useFakeTimers();
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     });
 
     afterEach(() => {

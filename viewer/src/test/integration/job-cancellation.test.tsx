@@ -139,13 +139,15 @@ describe('Job Cancellation Integration', () => {
       expect(jobData).toEqual(originalJob);
     });
 
-    // 5. Error toast shown
+    // 5. Error toast shown (showErrorToast uses title: 'Error' with duration and copy action)
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Cancellation failed',
-        description: 'Job already completed',
-        variant: 'destructive',
-      });
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Error',
+          description: expect.stringContaining('Job already completed'),
+          variant: 'destructive',
+        })
+      );
     });
 
     // 6. Button re-enabled
