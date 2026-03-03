@@ -39,9 +39,9 @@ bibliography: paper.bib
 
 # Summary
 
-**Video Annotation Viewer** (vav) is a lightweight web application for visualizing and auditing time-aligned annotations overlaid on video. It targets research workflows where teams need to inspect automated outputs (e.g., pose, speech, speakers, scenes), validate model behavior on real data, and communicate findings to collaborators.
+**Video Annotation Viewer** (VAV) is a lightweight web application for visualizing and auditing time-aligned annotations overlaid on video. It targets research workflows where teams need to inspect automated outputs (e.g., pose, speech, speakers, scenes), validate model behavior on real data, and communicate findings to collaborators.
 
-vav is designed to work directly with the outputs of the companion **VideoAnnotator** system [@videoannotator], while also supporting common, tool-agnostic file formats used in multimodal research (e.g., COCO keypoints [@coco2014], WebVTT captions [@webvtt], RTTM speaker segments).
+VAV is designed to work directly with the outputs of the companion **VideoAnnotator** system [@videoannotator], while also supporting common, tool-agnostic file formats used in multimodal research (e.g., COCO keypoints [@coco2014], WebVTT captions [@webvtt], RTTM speaker segments).
 
 # Statement of need
 
@@ -79,7 +79,7 @@ Video Annotation Viewer is implemented as a stateless React + TypeScript single-
 - **Viewer components.** A video player overlay layer and coordinated timeline components render time-aligned annotations.
 - **API client (optional).** An API client integrates with VideoAnnotator for pipeline discovery, job submission, job status updates, and results retrieval.
 
-This separation enables reproducible review workflows: given a video and a set of accompanying annotation files, the viewer deterministically reconstructs the same overlays and timeline presentation.
+This separation enables reproducible review workflows: given a video and a set of accompanying annotation files, the viewer deterministically reconstructs the same overlays and timeline presentation (\autoref{fig:interface}).
 
 ![Video Annotation Viewer interface showing synchronized multimodal annotations including pose detection, speech recognition, speaker diarization, and scene detection overlays on video.\label{fig:interface}](figure1.png)
 

@@ -94,7 +94,7 @@ export class OpenFace3Parser {
     const faces = record.faces as unknown[];
     if (faces.length > 0) {
       const firstFace = faces[0] as Record<string, unknown>;
-      if (!firstFace.bbox || !firstFace.features || !firstFace.timestamp) {
+      if (!firstFace.bbox || !firstFace.features || firstFace.timestamp === undefined) {
         return false;
       }
     }

@@ -2,7 +2,7 @@
 
 ## 🎯 **Overview**
 
-Video Annotation Viewer v0.2.0 now includes a comprehensive testing suite built with **Vitest** and **React Testing Library**. This guide shows you how to use the testing framework.
+Video Annotation Viewer v0.6.1 includes a comprehensive testing suite built with **Vitest**, **React Testing Library**, and **Playwright**. This guide shows you how to use the testing framework.
 
 ## 🚀 **Quick Start**
 
@@ -231,7 +231,7 @@ The testing suite ensures:
 
 ## 🎉 **Testing Success!**
 
-With this testing framework, Video Annotation Viewer v0.2.0 is now enterprise-ready with:
+With this testing framework, Video Annotation Viewer v0.6.1 is now enterprise-ready with:
 - **44 test cases** covering critical functionality
 - **Unit, integration, and component test coverage** 
 - **Automated regression prevention**
@@ -252,36 +252,36 @@ Happy testing! 🧪✨
   - Uploads `coverage/lcov.info` to Codecov
 - Badges in README: CI status and Codecov coverage
 
-## 🧪 End-to-End (E2E) Testing (Planned)
+## 🧪 End-to-End (E2E) Testing
 - Tool: Playwright (`@playwright/test`)
 - Scope: Smoke tests for critical flows
   - Load demo dataset
   - Toggle overlays
   - Seek on timeline
   - Open Job list / details
-- CI: Add a separate Playwright job with Chromium, Firefox, WebKit
-- Local: `npx playwright install` then run tests; record videos on failures for debugging
+- CI: Playwright job runs with Chromium, Firefox, WebKit
+- Local: `bun run e2e:install` then `bun run e2e`; record videos on failures for debugging
 
-## 🌟 Performance & Accessibility (Planned)
+## 🌟 Performance & Accessibility
 - Tool: Lighthouse CI (`@lhci/cli`)
-- Targets (at v0.4.0 RC): Performance ≥ 90, Accessibility ≥ 90, Best Practices ≥ 90
-- CI: Run against a preview build; upload reports as artifacts
+- Targets: Performance ≥ 90, Accessibility ≥ 90, Best Practices ≥ 90
+- CI: Runs against a preview build; uploads reports as artifacts
 
 ## 📦 Bundle Size Budgets (Planned)
 - Tool options: `size-limit` or `rollup-plugin-visualizer`/`vite-bundle-visualizer`
-- Targets (at v0.4.0 RC, example):
+- Targets (example):
   - App chunk < 300 KB gzip
   - Vendor < 500 KB gzip
 - CI: Add a size-limit step to warn/fail if budgets exceeded
 
-## 🔐 Branch Protection (Enable at RC)
+## 🔐 Branch Protection
 - Protect `main`
   - Require status checks: build, lint, typecheck, tests, coverage, e2e
   - Require PR review(s) and up-to-date with base branch
   - Enforce linear history (optional)
 
-## ✅ Pre-release Quality Gates (v0.4.0)
-Non-blocking during active development; enforced for v0.4.0 Release Candidate:
+## ✅ Pre-release Quality Gates
+Non-blocking during active development; enforced for Release Candidate:
 - Build/Types: Vite build, `tsc --noEmit`, ESLint pass
 - Tests: Vitest pass; Coverage thresholds met (Lines ≥ 80, Branches ≥ 70, Functions ≥ 80, Statements ≥ 80)
 - E2E: Playwright smoke tests pass in Chromium/Firefox/WebKit

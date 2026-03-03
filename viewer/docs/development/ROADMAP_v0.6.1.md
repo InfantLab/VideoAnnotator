@@ -41,30 +41,30 @@ This roadmap is a **full implementation plan**: it lists concrete deliverables, 
 **Goal:** Have a paper that compiles in the Open Journals toolchain and a repository that satisfies the JOSS reviewer checklist.
 
 #### 1.1 Paper files (blocking)
-- [ ] Create `paper/` folder
-- [ ] Move/rename `docs/joss.md` → `paper/paper.md`
-- [ ] Create `paper/paper.bib`
-- [ ] Remove compilation-breaking tokens (e.g., `:contentReference[...]`)
-- [ ] Replace placeholder references with real citations and in-text citekeys (e.g., `[@key]`)
-- [ ] Validate paper length stays within JOSS guidance (250–1000 words)
-- [ ] Document and run the local paper compilation step (see `docs/JOSS_BUILD.md`)
+- [x] Create `paper/` folder
+- [x] Move/rename `docs/joss.md` → `paper/paper.md`
+- [x] Create `paper/paper.bib`
+- [x] Remove compilation-breaking tokens (e.g., `:contentReference[...]`)
+- [x] Replace placeholder references with real citations and in-text citekeys (e.g., `[@key]`)
+- [x] Validate paper length stays within JOSS guidance (250–1000 words)
+- [x] Document and run the local paper compilation step (see `docs/JOSS_BUILD.md`)
 
 **Acceptance criteria:** `paper/paper.md` + `paper/paper.bib` compile successfully via the local JOSS build procedure in `docs/JOSS_BUILD.md`.
 
 #### 1.2 Repo metadata (blocking)
-- [ ] Update `CITATION.cff` (version, release date, title, author ORCIDs if available)
-- [ ] Ensure `LICENSE` is present and OSI-approved (already present; verify no contradictions)
-- [ ] Ensure `README.md` reflects current version and reviewer-facing quickstart (see Workstream 2)
+- [x] Update `CITATION.cff` (version, release date, title, author ORCIDs if available)
+- [x] Ensure `LICENSE` is present and OSI-approved (already present; verify no contradictions)
+- [x] Ensure `README.md` reflects current version and reviewer-facing quickstart (see Workstream 2)
 
 **Acceptance criteria:** JOSS reviewer can find how to cite, how to install/run, and what the software does within 5 minutes.
 
 #### 1.3 JOSS submission checklist mapping
 Add a short checklist mapping in this repo (either in this roadmap or a dedicated `docs/JOSS_CHECKLIST.md`) covering:
-- [ ] Paper present (`paper/paper.md`, `paper/paper.bib`)
-- [ ] License present (`LICENSE`)
-- [ ] Citation metadata present (`CITATION.cff`)
-- [ ] Installation instructions present (README)
-- [ ] Tests runnable locally (README + `docs/TESTING_GUIDE.md`)
+- [x] Paper present (`paper/paper.md`, `paper/paper.bib`)
+- [x] License present (`LICENSE`)
+- [x] Citation metadata present (`CITATION.cff`)
+- [x] Installation instructions present (README)
+- [x] Tests runnable locally (README + `docs/TESTING_GUIDE.md`)
 - [ ] Archive DOI minted for the tagged release (Zenodo)
 
 ---
@@ -73,16 +73,16 @@ Add a short checklist mapping in this repo (either in this roadmap or a dedicate
 
 **Goal:** A reviewer can clone, run, and verify core claims quickly.
 
-- [ ] Update `README.md` header/version references (currently stale)
-- [ ] Add a short **Local Run** section:
+- [x] Update `README.md` header/version references (currently stale)
+- [x] Add a short **Local Run** section:
   - install deps
   - run dev server
   - open the app
-- [ ] Add a short **Connect to VideoAnnotator** section:
+- [x] Add a short **Connect to VideoAnnotator** section:
   - required env vars (`VITE_API_BASE_URL`, `VITE_API_TOKEN`) and localStorage fallbacks
   - expected default server URL
-- [ ] Update `docs/CLIENT_SERVER_COLLABORATION_GUIDE.md` to the v1.4.2 contract (endpoints, auth, artifacts)
-- [ ] Update `docs/TESTING_GUIDE.md` to current scripts and CI expectations
+- [x] Update `docs/CLIENT_SERVER_COLLABORATION_GUIDE.md` to the v1.4.2 contract (endpoints, auth, artifacts)
+- [x] Update `docs/TESTING_GUIDE.md` to current scripts and CI expectations
 
 **Acceptance criteria:** Following docs, a reviewer can (a) run the UI locally, and (b) either load demo artifacts or connect to a running v1.4.2 server.
 
@@ -129,20 +129,20 @@ This section is intended to be shareable with the VideoAnnotator server team.
 ## 📋 Development Phases
 
 ### Phase 1: Paper packaging + server contract (Week 1)
-- [ ] Create `paper/` structure and bibliography
-- [ ] Remove paper compilation blockers
-- [ ] Draft server coordination asks and confirm v1.4.2 tag timeline
+- [x] Create `paper/` structure and bibliography
+- [x] Remove paper compilation blockers
+- [x] Draft server coordination asks and confirm v1.4.2 tag timeline
 
 **Milestone:** Paper compiles locally; server tag plan confirmed.
 
 ### Phase 2: Documentation refresh + CI stabilization (Weeks 2–3)
-- [ ] Refresh README + key docs for reviewer journey
+- [x] Refresh README + key docs for reviewer journey
 - [ ] Improve CI score for optional jobs (stability only)
 
 **Milestone:** Docs are reviewer-ready; CI optional jobs mostly green.
 
 ### Phase 3: Release + archive + submit (Week 4)
-- [ ] Bump version to v0.6.1 + update changelog
+- [x] Bump version to v0.6.1 + update changelog
 - [ ] Tag release + GitHub release notes
 - [ ] Archive tagged release via Zenodo and obtain archive DOI
 - [ ] Submit to JOSS and start review

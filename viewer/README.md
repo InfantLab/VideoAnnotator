@@ -243,6 +243,18 @@ src/
 Your Video Files → [VideoAnnotator Processing] → Annotation Files → [This Viewer] → Interactive Analysis
 ```
 
+### Connect to VideoAnnotator API
+To use the job creation and management features, you need to connect the viewer to a running VideoAnnotator server.
+
+1. **Environment Variables**: Create a `.env` file in the project root:
+   ```env
+   VITE_API_BASE_URL=http://localhost:18011
+   VITE_API_TOKEN=your-secret-token
+   ```
+2. **In-App Settings**: Alternatively, you can configure the connection directly in the app via the **Settings** page. This saves the configuration to your browser's `localStorage` (`videoannotator_api_url` and `videoannotator_api_token`).
+
+The default local development server URL is `http://localhost:18011`.
+
 ### Related Projects
 Video Annotation Viewer integrates seamlessly with:
 - **[VideoAnnotator](https://github.com/InfantLab/VideoAnnotator)**: Primary annotation processing pipeline

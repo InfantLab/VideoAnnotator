@@ -8,9 +8,22 @@
 
 This guide provides client-side developers with tools and protocols for effective collaboration with the VideoAnnotator server team during API integration and testing.
 
-**Target Server**: VideoAnnotator v1.2.x / v1.3.x API Server  
+**Target Server**: VideoAnnotator v1.2.x / v1.3.x / v1.4.x API Server  
 **Client Application**: Video Annotation Viewer (React + TypeScript)  
-**Latest Supported Version**: v1.3.0
+**Latest Supported Version**: v1.4.2
+
+---
+
+## 🆕 VideoAnnotator v1.4.2 Features
+
+### **Artifacts ZIP Download**
+```http
+GET /api/v1/jobs/{job_id}/artifacts
+Authorization: Bearer {token}
+```
+
+**Response**:
+`application/zip` binary stream containing all job output files (COCO, WebVTT, RTTM, etc.).
 
 ---
 
@@ -489,5 +502,5 @@ jobs:
 
 **Document Version**: v2.0  
 **Last Updated**: October 2025  
-**VideoAnnotator Compatibility**: v1.2.0+ (Full backward compatibility, v1.3.0+ for enhanced features)  
+**VideoAnnotator Compatibility**: v1.2.0+ (Full backward compatibility, v1.4.2+ for enhanced features like artifacts ZIP)  
 **Status**: Active development collaboration tool

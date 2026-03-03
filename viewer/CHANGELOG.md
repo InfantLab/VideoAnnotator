@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-02-27
+
+### ✨ Added
+- **JOSS Submission**: Added paper draft, checklist, and updated metadata for Journal of Open Source Software submission.
+
 ## [0.6.0] - 2025-12-15
 
 ### ✨ Added

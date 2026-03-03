@@ -10,6 +10,7 @@ Last updated: 2026-02-27
 
 ## Pending — Requires user action
 
+- [ ] **New Figure 1** — Capture a new screenshot of the current interface to replace `paper/figure1.png`
 - [x] **Co-author ORCIDs** — All 6 authors now have ORCIDs in `paper/paper.md` and `CITATION.cff`
 - [ ] **Tagged release + Zenodo archive** — Tag `v0.6.1`, push, confirm Zenodo archive is current
 

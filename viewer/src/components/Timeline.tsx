@@ -15,11 +15,6 @@ export const Timeline = ({ annotationData, currentTime, duration, settings, onSe
   const [isDragging, setIsDragging] = useState(false);
 
   // Handle click and drag on timeline
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    setIsDragging(true);
-    handleMouseMove(e);
-  }, [handleMouseMove]);
-
   const handleMouseMove = useCallback((e: React.MouseEvent | MouseEvent) => {
     if (!containerRef.current) return;
 
@@ -30,6 +25,11 @@ export const Timeline = ({ annotationData, currentTime, duration, settings, onSe
 
     onSeek(newTime);
   }, [duration, onSeek]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    setIsDragging(true);
+    handleMouseMove(e);
+  }, [handleMouseMove]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
