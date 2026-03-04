@@ -7,28 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.6.2] - 2026-03-04
+## [0.6.2] - 2026-03-04 — JOSS Review Version
 
 ### ✨ Added
 - **Getting Started Page** (`/getting-started`): New visual onboarding guide with two-workflow explanation (local files vs server), demo dataset installation, supported annotation types reference, and help links
 - **Shared Navigation Bar**: Persistent top nav across all pages with Library, Jobs, View Files links and Settings gear icon with server status indicator
 - **AppLayout Component**: Unified layout wrapper providing consistent navigation, connection error banners, and footer across all non-fullscreen pages
+- **Library Datasets in Viewer**: The `/viewer` file-upload page now shows a "Your Library" card listing locally saved datasets for quick access
+- **JOSS Cover Letter**: Added `paper/cover-letter.md` for Journal of Open Source Software submission
 
 ### 🎨 Improved
 - **Home Page Redesign** (`/`): Replaced utilitarian dashboard with an appealing hero section, feature highlights (Multimodal Overlays, Synchronized Timeline, JSON Annotations), quick-status cards for server/library/getting-started, and recent jobs widget
 - **Navigation Restructure**: All routes promoted to top level — `/jobs` (was `/create/jobs`), `/settings` (was `/create/settings`), `/jobs/new` (was `/create/new`), `/datasets` (was `/create/datasets`)
 - **Library Page**: Prominent folder display with large icon, bold folder name, legacy subdirectory badge; improved empty state with link to Getting Started guide; navigation now provided by shared nav bar
-- **Viewer Page** (`/viewer`): Removed WelcomeScreen gate — goes directly to file upload interface with demo button, Library and Jobs links
+- **Viewer Page** (`/viewer`): Simplified to a focused file-upload interface with links to Library and Jobs pages; removed demo dataset buttons in favour of library dataset list
+- **Viewer Header**: Prominent video filename as page title, "Load Different Files" button, configurable back-button label and destination
+- **Context-Aware Navigation**: JobResultsViewer now links back to Library for demo datasets and to Jobs for server-created results
 - **Naming**: "Control Panel" renamed to "Jobs" / "Annotation Jobs" throughout the application
+
+### 🐛 Fixed
+- **Demo Loading from Library**: Switched from incomplete `loadDemoFromAssets` to full merger pipeline (`loadDemoVideo` + `loadDemoAnnotations`) so all annotation types (WebVTT, RTTM, OpenFace3) load correctly
+- **Demo Asset Paths**: Changed all demo data paths from relative to absolute (leading `/`) so `fetch()` resolves correctly from any route depth
 
 ### 🔧 Changed
 - **Route Structure**: `/create/*` hierarchy eliminated in favour of flat top-level routes (`/jobs`, `/settings`, `/datasets`)
 - **Page File Renames**: `CreateJobs.tsx` → `Jobs.tsx`, `CreateJobDetail.tsx` → `JobDetail.tsx`, `CreateNewJob.tsx` → `NewJob.tsx`, `CreateSettings.tsx` → `Settings.tsx`, `CreateDatasets.tsx` → `Datasets.tsx`, `Dashboard.tsx` → `Home.tsx`
 - **Shared Utilities**: Extracted duplicated `isCorsOrNetworkError` function into `src/lib/connectionUtils.ts`
+- **Bibliography**: Updated `paper.bib` VideoAnnotator entry to proper `@software` type
 
 ### 🗑️ Removed
 - **Create Layout Wrapper** (`Create.tsx`): Replaced by shared `AppLayout` component
 - **WelcomeScreen Gate**: No longer blocks access to the viewer; hero content moved to Home page
+- **Demo Buttons in FileUploader**: Removed confusing demo dataset grid from the file upload interface
 
 ## [0.6.1] - 2026-02-27
 
