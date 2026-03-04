@@ -102,7 +102,7 @@ const CreateJobDetail = () => {
     const videoFilename = getString(record.video_filename) ?? getString(record.filename) ?? getString(record.video_name);
 
     // Navigate to create new job with pre-filled settings
-    navigate('/create/new', {
+    navigate('/jobs/new', {
       state: {
         retryJobId: job.id,
         retryJobConfig: job.config,
@@ -134,16 +134,18 @@ const CreateJobDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="container mx-auto px-6 py-8 max-w-5xl">
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
       </div>
     );
   }
 
   if (error || !job) {
     return (
-      <div className="space-y-4">
-        <Link to="/create/jobs">
+      <div className="container mx-auto px-6 py-8 max-w-5xl space-y-4">
+        <Link to="/jobs">
           <Button variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Jobs
@@ -179,11 +181,11 @@ const CreateJobDetail = () => {
     "N/A";
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-6 py-8 max-w-5xl space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to="/create/jobs">
+          <Link to="/jobs">
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Jobs
@@ -219,7 +221,7 @@ const CreateJobDetail = () => {
               jobId={job.id}
               jobStatus={job.status as JobStatus}
               size="sm"
-              onDeleted={() => navigate('/create/jobs')}
+              onDeleted={() => navigate('/jobs')}
             />
           )}
 

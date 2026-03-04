@@ -11,9 +11,10 @@ import { toast as toastFn } from '@/hooks/use-toast';
 export type ToastFunction = typeof toastFn;
 
 /**
- * Creates a copy button action for toasts
+ * Creates a copy button action for toasts.
+ * Exported so any caller can add a Copy button to arbitrary toasts.
  */
-function createCopyAction(textToCopy: string) {
+export function createCopyAction(textToCopy: string) {
     return (
         <button
             onClick={() => {

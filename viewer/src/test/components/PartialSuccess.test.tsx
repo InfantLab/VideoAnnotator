@@ -1,7 +1,7 @@
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import CreateJobDetail from '../../pages/CreateJobDetail';
+import CreateJobDetail from '../../pages/JobDetail';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { JobResponse } from '@/api/client';
@@ -34,9 +34,9 @@ const queryClient = new QueryClient({
 const renderWithProviders = (ui: React.ReactNode) => {
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/create/jobs/job_123']}>
+      <MemoryRouter initialEntries={['/jobs/job_123']}>
         <Routes>
-          <Route path="/create/jobs/:jobId" element={ui} />
+          <Route path="/jobs/:jobId" element={ui} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>

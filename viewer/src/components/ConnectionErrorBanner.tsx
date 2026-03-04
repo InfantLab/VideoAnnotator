@@ -101,7 +101,7 @@ export function ConnectionErrorBanner({
                                 <strong>Still having trouble?</strong> Check the browser console (press F12, click Console tab) for more detailed error information.
                             </p>
                         </div>                        <div className="flex gap-2 pt-2">
-                            <Link to="/create/settings">
+                            <Link to="/settings">
                                 <Button variant="outline" size="sm">
                                     <Settings className="h-4 w-4 mr-2" />
                                     Check API Settings
@@ -128,7 +128,7 @@ export function ConnectionErrorBanner({
                     <>
                         <p className="text-sm">{error.message || 'An unexpected error occurred'}</p>
                         <div className="flex gap-2 pt-2">
-                            <Link to="/create/settings">
+                            <Link to="/settings">
                                 <Button variant="outline" size="sm">
                                     <Settings className="h-4 w-4 mr-2" />
                                     Check Settings

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-03-04
+
+### ✨ Added
+- **Getting Started Page** (`/getting-started`): New visual onboarding guide with two-workflow explanation (local files vs server), demo dataset installation, supported annotation types reference, and help links
+- **Shared Navigation Bar**: Persistent top nav across all pages with Library, Jobs, View Files links and Settings gear icon with server status indicator
+- **AppLayout Component**: Unified layout wrapper providing consistent navigation, connection error banners, and footer across all non-fullscreen pages
+
+### 🎨 Improved
+- **Home Page Redesign** (`/`): Replaced utilitarian dashboard with an appealing hero section, feature highlights (Multimodal Overlays, Synchronized Timeline, JSON Annotations), quick-status cards for server/library/getting-started, and recent jobs widget
+- **Navigation Restructure**: All routes promoted to top level — `/jobs` (was `/create/jobs`), `/settings` (was `/create/settings`), `/jobs/new` (was `/create/new`), `/datasets` (was `/create/datasets`)
+- **Library Page**: Prominent folder display with large icon, bold folder name, legacy subdirectory badge; improved empty state with link to Getting Started guide; navigation now provided by shared nav bar
+- **Viewer Page** (`/viewer`): Removed WelcomeScreen gate — goes directly to file upload interface with demo button, Library and Jobs links
+- **Naming**: "Control Panel" renamed to "Jobs" / "Annotation Jobs" throughout the application
+
+### 🔧 Changed
+- **Route Structure**: `/create/*` hierarchy eliminated in favour of flat top-level routes (`/jobs`, `/settings`, `/datasets`)
+- **Page File Renames**: `CreateJobs.tsx` → `Jobs.tsx`, `CreateJobDetail.tsx` → `JobDetail.tsx`, `CreateNewJob.tsx` → `NewJob.tsx`, `CreateSettings.tsx` → `Settings.tsx`, `CreateDatasets.tsx` → `Datasets.tsx`, `Dashboard.tsx` → `Home.tsx`
+- **Shared Utilities**: Extracted duplicated `isCorsOrNetworkError` function into `src/lib/connectionUtils.ts`
+
+### 🗑️ Removed
+- **Create Layout Wrapper** (`Create.tsx`): Replaced by shared `AppLayout` component
+- **WelcomeScreen Gate**: No longer blocks access to the viewer; hero content moved to Home page
+
 ## [0.6.1] - 2026-02-27
 
 ### ✨ Added

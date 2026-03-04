@@ -1,20 +1,20 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { DEMO_DATA_SETS, loadDemoAnnotations, loadDemoVideo } from '../utils/debugUtils';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { VideoPlayer } from './VideoPlayer';
 import { Timeline } from './Timeline';
 import { UnifiedControls } from './UnifiedControls';
 import { VideoControls } from './VideoControls';
 import { FileViewer } from './FileViewer';
 import { FileUploader } from './FileUploader';
-import { WelcomeScreen } from './WelcomeScreen';
 import { Footer } from './Footer';
 import { DebugPanel } from './DebugPanel';
 import { OpenFace3Controls } from './OpenFace3Controls';
 import { defaultOpenFace3Settings, type OpenFace3Settings } from './openface3Settings';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { StandardAnnotationData, OverlaySettings, TimelineSettings } from '@/types/annotations';
 import { Link, useNavigate } from 'react-router-dom';
+import { getJobDatasetIndex, type JobDatasetIndexEntry } from '@/lib/localLibrary/libraryStore';
+import { getDemoLabel, DEMO_JOB_ID_PREFIX } from '@/lib/localLibrary/installDemoDataset';
 
 interface VideoAnnotationViewerProps {
   /** Pipeline IDs that were used to generate the current annotation data */
@@ -23,15 +23,20 @@ interface VideoAnnotationViewerProps {
   initialVideoFile?: File | null;
   /** Pre-loaded annotation data (optional) */
   initialAnnotationData?: StandardAnnotationData | null;
+  /** Label for the back button (default: "Home") */
+  backLabel?: string;
+  /** Path for the back button (default: "/") */
+  backPath?: string;
 }
 
 export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   jobPipelines = [],
   initialVideoFile = null,
-  initialAnnotationData = null
+  initialAnnotationData = null,
+  backLabel = 'Home',
+  backPath = '/',
 }) => {
   const navigate = useNavigate();
-  const [showWelcome, setShowWelcome] = useState(!initialVideoFile);
   const [videoFile, setVideoFile] = useState<File | null>(initialVideoFile);
   const [annotationData, setAnnotationData] = useState<StandardAnnotationData | null>(initialAnnotationData);
   const [currentTime, setCurrentTime] = useState(0);
@@ -60,34 +65,29 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   const [openface3Settings, setOpenface3Settings] = useState<OpenFace3Settings>(defaultOpenFace3Settings);
 
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [libraryDatasets, setLibraryDatasets] = useState<Array<{ jobId: string; entry: JobDatasetIndexEntry }>>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const handleGetStarted = useCallback(() => {
-    setShowWelcome(false);
-  }, []);
-
-  const handleViewDemo = useCallback(async () => {
-    try {
-      const demoKey = Object.keys(DEMO_DATA_SETS)[0] as keyof typeof DEMO_DATA_SETS;
-
-      // Load video and annotations in parallel
-      const [videoFile, annotation] = await Promise.all([
-        loadDemoVideo(demoKey),
-        loadDemoAnnotations(demoKey)
-      ]);
-
-      if (videoFile && annotation) {
-        setVideoFile(videoFile);
-        setAnnotationData(annotation);
-        setShowWelcome(false);
-      } else {
-        throw new Error('Failed to load demo video or annotations');
-      }
-    } catch (error) {
-      console.error('Failed to load demo:', error);
-      alert('Failed to load demo data. Please check the console for details.');
+  // Fetch library datasets when in file-upload mode
+  useEffect(() => {
+    if (!videoFile || !annotationData) {
+      getJobDatasetIndex().then(index => {
+        const rows = Object.entries(index)
+          .map(([jobId, entry]) => ({ jobId, entry }))
+          .sort((a, b) => b.entry.createdAt.localeCompare(a.entry.createdAt));
+        setLibraryDatasets(rows);
+      }).catch(() => setLibraryDatasets([]));
     }
+  }, [videoFile, annotationData]);
+
+  const handleLoadNewFiles = useCallback(() => {
+    setVideoFile(null);
+    setAnnotationData(null);
+    setCurrentTime(0);
+    setIsPlaying(false);
+    setDuration(0);
+    setPlaybackRate(1);
   }, []);
 
   const handleVideoLoad = useCallback((file: File) => {
@@ -96,7 +96,6 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
 
   const handleAnnotationLoad = useCallback((data: StandardAnnotationData) => {
     setAnnotationData(data);
-    setShowWelcome(false);
   }, []);
 
   const handleTimeUpdate = useCallback((time: number) => {
@@ -140,10 +139,9 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
     }
   }, []);
 
-  const handleBackToHome = useCallback(() => {
-    // "Home" is the dashboard route.
-    navigate('/');
-  }, [navigate]);
+  const handleBack = useCallback(() => {
+    navigate(backPath);
+  }, [navigate, backPath]);
 
   // Debug panel keyboard shortcut
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
@@ -159,20 +157,6 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Show welcome screen first
-  if (showWelcome) {
-    return (
-      <>
-        <WelcomeScreen onGetStarted={handleGetStarted} onViewDemo={handleViewDemo} />
-        {/* Debug Panel - Available on all pages */}
-        <DebugPanel
-          isOpen={showDebugPanel}
-          onClose={() => setShowDebugPanel(false)}
-        />
-      </>
-    );
-  }
-
   // Show file uploader if no files loaded
   if (!videoFile || !annotationData) {
     return (
@@ -180,33 +164,61 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
         <div className="min-h-screen bg-background p-6">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold mb-2">Video Annotation Viewer</h1>
+              <h1 className="text-3xl font-bold mb-2">View Local Files</h1>
               <p className="text-muted-foreground">
-                Load a video file and its corresponding annotation data to begin analysis
+                Drop or select a video file and annotation data (JSON, VTT, RTTM) to view them together.
               </p>
-              <div className="mt-4 flex items-center justify-center gap-2">
-                <Link to="/library">
-                  <Button variant="outline" size="sm">Local Library</Button>
-                </Link>
-                <Link to="/create/jobs">
-                  <Button variant="outline" size="sm">Control Panel</Button>
-                </Link>
-              </div>
-            </div>
-            <div className="flex flex-col items-center gap-4 mb-6">
-              <button
-                className="px-6 py-2 rounded bg-primary text-primary-foreground font-semibold shadow hover:bg-primary/90 transition"
-                onClick={handleViewDemo}
-                type="button"
-              >
-                ▶️ View Demo
-              </button>
-              <span className="text-xs text-muted-foreground">Loads sample video and annotations from demo folder</span>
+              <p className="text-sm text-muted-foreground mt-2">
+                Looking for demo datasets or server jobs? Visit the{' '}
+                <Link to="/library" className="text-primary underline underline-offset-2 hover:text-primary/80">Library</Link>
+                {' '}or{' '}
+                <Link to="/jobs" className="text-primary underline underline-offset-2 hover:text-primary/80">Jobs</Link>
+                {' '}page.
+              </p>
             </div>
             <FileUploader
               onVideoLoad={handleVideoLoad}
               onAnnotationLoad={handleAnnotationLoad}
             />
+
+            {/* Library Datasets */}
+            {libraryDatasets.length > 0 && (
+              <Card className="p-5 mt-6">
+                <h3 className="font-semibold mb-1">Your Library</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Open a previously saved dataset.
+                </p>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {libraryDatasets.map(({ jobId, entry }) => {
+                    const label = getDemoLabel(jobId);
+                    return (
+                      <div
+                        key={jobId}
+                        className="flex items-center justify-between gap-3 border rounded-md p-3 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-medium truncate text-sm">
+                            {label ? `Demo: ${label}` : entry.videoFileName || `Job ${jobId}`}
+                          </div>
+                          {entry.createdAt && (
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(entry.createdAt).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/view/${jobId}`)}
+                        >
+                          Open
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
 
             {/* Debug button for file uploader page */}
             <div className="fixed bottom-4 right-4">
@@ -217,7 +229,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                 className="text-xs bg-background border"
                 title="Debug Panel (Ctrl+Shift+D)"
               >
-                🐛
+                Debug
               </Button>
             </div>
           </div>
@@ -236,43 +248,49 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
     <div className="min-h-screen bg-background">
       <div className="flex flex-col h-screen">
         {/* Header */}
-        <div className="flex-shrink-0 p-4 border-b border-border">
+        <div className="flex-shrink-0 px-4 py-2 border-b border-border">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleBackToHome}
-                className="flex items-center gap-2"
-                title="Back to Dashboard"
+                onClick={handleBack}
+                className="flex items-center gap-2 flex-shrink-0"
+                title={`Back to ${backLabel}`}
               >
-                ← Dashboard
+                ← {backLabel}
               </Button>
-              <h1 className="text-xl font-semibold">Video Annotation Viewer</h1>
+              <div className="min-w-0">
+                <h1 className="text-lg font-semibold truncate">
+                  {annotationData.video_info?.filename || videoFile.name}
+                </h1>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-sm text-muted-foreground">
-                {annotationData.video_info?.filename || videoFile.name}
-              </div>
-              <div className="flex gap-2">
-                <FileViewer
-                  annotationData={annotationData}
-                  trigger={
-                    <Button variant="outline" size="sm" className="flex items-center gap-2">
-                      📄 View Data
-                    </Button>
-                  }
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowDebugPanel(true)}
-                  className="text-xs"
-                  title="Debug Panel (Ctrl+Shift+D)"
-                >
-                  🐛
-                </Button>
-              </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLoadNewFiles}
+              >
+                Load Different Files
+              </Button>
+              <FileViewer
+                annotationData={annotationData}
+                trigger={
+                  <Button variant="outline" size="sm">
+                    View Data
+                  </Button>
+                }
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDebugPanel(true)}
+                className="text-xs"
+                title="Debug Panel (Ctrl+Shift+D)"
+              >
+                Debug
+              </Button>
             </div>
           </div>
         </div>

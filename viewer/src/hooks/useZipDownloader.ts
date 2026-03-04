@@ -12,6 +12,8 @@ import {
   setDatasetForJob,
   setRootDirHandle
 } from '@/lib/localLibrary/libraryStore';
+import { isDemoJobId, getDemoKey } from '@/lib/localLibrary/installDemoDataset';
+import { loadDemoVideo, loadDemoAnnotations } from '@/utils/debugUtils';
 
 export type DownloadState = 'idle' | 'selecting_dir' | 'downloading' | 'unzipping' | 'ready' | 'error';
 
@@ -198,7 +200,36 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
     setError(null);
     setProgress(0);
 
-    // 0) Fast path: open local dataset if already ingested
+    // 0a) Demo fast path: load from bundled assets (no FS needed)
+    if (isDemoJobId(jobId)) {
+      try {
+        setState('downloading');
+        const demoKey = getDemoKey(jobId);
+        if (!demoKey) throw new Error(`Unknown demo key in "${jobId}".`);
+
+        const [video, annotations] = await Promise.all([
+          loadDemoVideo(demoKey),
+          loadDemoAnnotations(demoKey),
+        ]);
+
+        if (!video || !annotations) {
+          throw new Error('Failed to load demo video or annotations.');
+        }
+
+        setState('ready');
+        setVideoFile(video);
+        setAnnotationData(annotations);
+        return;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('Failed to load demo from assets:', err);
+        setError(`Failed to load demo: ${msg}`);
+        setState('error');
+        return;
+      }
+    }
+
+    // 0b) Fast path: open local dataset if already ingested
     try {
       const local = await tryOpenLocalDataset(jobId);
       if (local) {

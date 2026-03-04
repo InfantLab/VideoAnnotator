@@ -269,57 +269,6 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
     }
   }, []);
 
-  type DemoDatasetKey = keyof typeof import('../utils/debugUtils').DEMO_DATA_SETS;
-
-  const handleDemoLoad = useCallback(async (datasetKey: DemoDatasetKey) => {
-    try {
-      setIsProcessing(true);
-      setProcessingStage(`Loading ${datasetKey} demo dataset...`);
-      setProcessingProgress(10);
-
-      // Import the demo loading utilities
-      const { loadDemoAnnotations, loadDemoVideo } = await import('../utils/debugUtils');
-
-      setProcessingStage('Fetching demo files...');
-      setProcessingProgress(30);
-
-      // Load video and annotations in parallel
-      const [videoFile, annotation] = await Promise.all([
-        loadDemoVideo(datasetKey),
-        loadDemoAnnotations(datasetKey)
-      ]);
-
-      setProcessingProgress(80);
-
-      if (videoFile && annotation) {
-        setProcessingStage('Loading demo data...');
-        setProcessingProgress(90);
-
-        onVideoLoad(videoFile);
-        onAnnotationLoad(annotation);
-
-        setProcessingProgress(100);
-
-        toast({
-          title: "Demo dataset loaded",
-          description: `Successfully loaded ${datasetKey} with ${annotation.metadata?.pipelines?.length || 0} pipelines.`,
-        });
-      } else {
-        throw new Error('Failed to load demo video or annotations');
-      }
-    } catch (error: unknown) {
-      toast({
-        title: "Error loading demo dataset",
-        description: error instanceof Error ? error.message : "Failed to load demo data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-      setProcessingStage('');
-      setProcessingProgress(0);
-    }
-  }, [onVideoLoad, onAnnotationLoad, toast]);
-
   const hasFiles = fileStatuses.length > 0;
   const hasVideoFile = fileStatuses.some(f => f.detected.type === 'video');
   const hasPipelineData = fileStatuses.some(f =>
@@ -478,58 +427,6 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
             </Button>
           )}
 
-          <div className="text-center">
-            <span className="text-sm text-muted-foreground">or choose a demo dataset</span>
-          </div>
-
-          {/* Demo Dataset Selection */}
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              onClick={() => handleDemoLoad('peekaboo-rep3-v1.1.1')}
-              disabled={isProcessing}
-              className="text-left flex-col h-auto p-4"
-            >
-              <div className="font-medium">🍼 Peekaboo Rep3</div>
-              <div className="text-xs text-muted-foreground">Parent-child + OpenFace3</div>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleDemoLoad('peekaboo-rep2-v1.1.1')}
-              disabled={isProcessing}
-              className="text-left flex-col h-auto p-4"
-            >
-              <div className="font-medium">🍼 Peekaboo Rep2</div>
-              <div className="text-xs text-muted-foreground">Alternative + OpenFace3</div>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleDemoLoad('tearingpaper-rep1-v1.1.1')}
-              disabled={isProcessing}
-              className="text-left flex-col h-auto p-4"
-            >
-              <div className="font-medium">📄 Tearing Paper</div>
-              <div className="text-xs text-muted-foreground">Object + OpenFace3</div>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleDemoLoad('thatsnotahat-rep1-v1.1.1')}
-              disabled={isProcessing}
-              className="text-left flex-col h-auto p-4"
-            >
-              <div className="font-medium">🎩 That's Not A Hat</div>
-              <div className="text-xs text-muted-foreground">Social + OpenFace3</div>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleDemoLoad('veatic-3-silent')}
-              disabled={isProcessing}
-              className="text-left flex-col h-auto p-4 col-span-2"
-            >
-              <div className="font-medium">🔇 VEATIC Silent Video</div>
-              <div className="text-xs text-muted-foreground">Longer duration, no speech/audio - ideal for pose tracking</div>
-            </Button>
-          </div>
         </div>
 
         {/* Format Information */}

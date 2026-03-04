@@ -171,7 +171,7 @@ export function TokenStatusIndicator({
           )}
 
           <div className="flex items-center gap-2 pt-2 border-t">
-            <Link to="/create/settings">
+            <Link to="/settings">
               <Button
                 variant="outline"
                 size="sm"

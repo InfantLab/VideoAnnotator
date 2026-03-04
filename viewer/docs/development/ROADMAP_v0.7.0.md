@@ -25,27 +25,39 @@ v0.7.0 delivers all the professional UI/UX polish, advanced job management, and 
 **Priority:** 🟠 HIGH  
 **Effort:** Large (8-10 weeks)
 
-#### 1.1 Landing Page Redesign
-- [ ] **Homepage Overhaul**
-  - Showcase dual functionality (viewer + runner)
-  - Clear navigation to "View Annotations" and "Create Annotations"
-  - Feature showcase with screenshots/demos
-  - Getting started guide and onboarding flow
-  
-- [ ] **Visual Identity**
-  - VideoAnnotator icon integration
-  - Consistent color scheme
-  - Typography system with readable contrast
-  - Component library standardization
-  
-- [ ] **Marketing Content**
-  - Value proposition messaging
-  - Key features highlights
-  - Use case examples
-  - Call-to-action buttons
+#### 1.1 Landing Page Redesign ✅ (Completed in v0.6.2)
+- [x] **Homepage Overhaul** — Hero section with feature highlights, status cards, recent jobs
+- [x] **Visual Identity** — Shared AppLayout with persistent navigation bar, VAV icon
+- [x] **Getting Started Page** — Dedicated `/getting-started` with two-workflow guide, demo install, annotation types
+- [x] **Navigation Restructure** — Flat top-level routes (`/jobs`, `/settings`), "Control Panel" → "Jobs"
 
-**Deferred from:** v0.4.0, v0.6.0  
-**Estimated Effort:** Medium (3-4 weeks)
+**Completed in:** v0.6.2 (March 2026)
+
+#### 1.1b Onboarding & Contextual Help (Follow-up to v0.6.2)
+- [ ] **Tooltips & Contextual Help**
+  - Tooltips on navigation items explaining each section
+  - Contextual help icons (?) next to complex settings and configuration options
+  - Inline explanations for pipeline parameters in the New Job wizard
+  - Help popovers on status badges explaining what each status means
+
+- [ ] **Onboarding Hints**
+  - First-visit detection (localStorage flag) with guided highlights
+  - Pulsing indicators on key actions for new users (e.g. "Choose Folder", "Install Demos")
+  - Dismissible hint banners on each page for first visit
+  - "Show me around" tour option accessible from Getting Started page
+
+- [ ] **Smart Empty States**
+  - All empty states link to relevant next action or Getting Started page
+  - Contextual suggestions based on what the user has/hasn't configured
+  - Progress indicators for onboarding steps (e.g. "2 of 3 setup steps complete")
+
+- [ ] **Contextual Documentation Links**
+  - Deep links from Settings tabs to relevant docs sections
+  - "Learn more" links on feature cards
+  - Error messages with links to troubleshooting guides
+
+**Priority:** 🟠 HIGH
+**Estimated Effort:** Medium (2-3 weeks)
 
 #### 1.2 Visual Configuration Builder
 - [ ] **Form-Based Configuration**
@@ -377,7 +389,8 @@ v0.7.0 delivers all the professional UI/UX polish, advanced job management, and 
 ## 📋 **DEVELOPMENT PHASES**
 
 ### **Phase 1: UI/UX Foundation (Weeks 1-5)**
-- Landing page redesign
+- ~~Landing page redesign~~ ✅ Done in v0.6.2
+- Onboarding hints, tooltips & contextual help (new, from v0.6.2 follow-up)
 - Visual config builder MVP
 - User preference persistence
 - Full accessibility compliance

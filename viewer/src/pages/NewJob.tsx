@@ -219,7 +219,7 @@ const CreateNewJob = () => {
         // If all jobs succeeded, navigate to jobs list after a delay
         if (errors.length === 0) {
           setTimeout(() => {
-            navigate('/create/jobs');
+            navigate('/jobs');
           }, 2000);
         }
       }
@@ -316,10 +316,10 @@ const CreateNewJob = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-6 py-8 max-w-5xl space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link to="/create/jobs">
+        <Link to="/jobs">
           <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Jobs

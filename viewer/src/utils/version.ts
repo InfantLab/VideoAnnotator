@@ -1,11 +1,14 @@
 /**
  * Version information utilities
+ *
+ * VERSION is read from package.json at build time via Vite's JSON import,
+ * so there is only one source of truth.
  */
 
-// For production builds, this would read from package.json
-// For now, we'll export the version as a constant
-export const VERSION = '0.6.0';
-// NOTE: Keep in sync with package.json until we inject this at build time.
+// Vite resolves this JSON import at build time — no runtime fs access needed.
+import pkg from '../../package.json';
+
+export const VERSION: string = pkg.version;
 export const GITHUB_URL = 'https://github.com/InfantLab/video-annotation-viewer';
 export const APP_NAME = 'Video Annotation Viewer';
 
@@ -43,6 +46,7 @@ if (typeof window !== 'undefined') {
     logVersionInfo
   };
 
-  // Auto-log version on startup
+  // Auto-log version on startup and set document title
   logVersionInfo();
+  document.title = `${APP_NAME} v${VERSION}`;
 }

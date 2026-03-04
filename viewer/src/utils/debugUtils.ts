@@ -20,50 +20,51 @@ export interface DemoDataPaths {
 }
 
 // VideoAnnotator v1.1.1 Demo Datasets (from demo/videos_out)
+// Paths are absolute (leading /) so they resolve correctly from any route.
 export const DEMO_DATA_SETS = {
   'peekaboo-rep3-v1.1.1': {
-    video: 'demo/videos/2UWdXP.joke1.rep3.take1.Peekaboo_h265.mp4',
-    complete_results: 'demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/complete_results.json',
-    webvtt: 'demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/2UWdXP.joke1.rep3.take1.Peekaboo_h265_speech_recognition.vtt',
-    rttm: 'demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/2UWdXP.joke1.rep3.take1.Peekaboo_h265_speaker_diarization.rttm',
-    audio: 'demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/2UWdXP.joke1.rep3.take1.Peekaboo_h265_audio.wav',
-    openface3: 'demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/2UWdXP.joke1.rep3.take1.Peekaboo_h265_openface3_analysis.json'
+    video: '/demo/videos/2UWdXP.joke1.rep3.take1.Peekaboo_h265.mp4',
+    complete_results: '/demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/complete_results.json',
+    webvtt: '/demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/2UWdXP.joke1.rep3.take1.Peekaboo_h265_speech_recognition.vtt',
+    rttm: '/demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/2UWdXP.joke1.rep3.take1.Peekaboo_h265_speaker_diarization.rttm',
+    audio: '/demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/2UWdXP.joke1.rep3.take1.Peekaboo_h265_audio.wav',
+    openface3: '/demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/2UWdXP.joke1.rep3.take1.Peekaboo_h265_openface3_analysis.json'
   },
   'peekaboo-rep2-v1.1.1': {
-    video: 'demo/videos/2UWdXP.joke1.rep2.take1.Peekaboo_h265.mp4',
-    complete_results: 'demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/complete_results.json',
-    webvtt: 'demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/2UWdXP.joke1.rep2.take1.Peekaboo_h265_speech_recognition.vtt',
-    rttm: 'demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/2UWdXP.joke1.rep2.take1.Peekaboo_h265_speaker_diarization.rttm',
-    audio: 'demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/2UWdXP.joke1.rep2.take1.Peekaboo_h265_audio.wav',
-    openface3: 'demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/2UWdXP.joke1.rep2.take1.Peekaboo_h265_openface3_analysis.json'
+    video: '/demo/videos/2UWdXP.joke1.rep2.take1.Peekaboo_h265.mp4',
+    complete_results: '/demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/complete_results.json',
+    webvtt: '/demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/2UWdXP.joke1.rep2.take1.Peekaboo_h265_speech_recognition.vtt',
+    rttm: '/demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/2UWdXP.joke1.rep2.take1.Peekaboo_h265_speaker_diarization.rttm',
+    audio: '/demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/2UWdXP.joke1.rep2.take1.Peekaboo_h265_audio.wav',
+    openface3: '/demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/2UWdXP.joke1.rep2.take1.Peekaboo_h265_openface3_analysis.json'
   },
   'tearingpaper-rep1-v1.1.1': {
-    video: 'demo/videos/3dC3SQ.joke1.rep1.take1.TearingPaper_h265.mp4',
-    complete_results: 'demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/complete_results.json',
-    webvtt: 'demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/3dC3SQ.joke1.rep1.take1.TearingPaper_h265_speech_recognition.vtt',
-    rttm: 'demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/3dC3SQ.joke1.rep1.take1.TearingPaper_h265_speaker_diarization.rttm',
-    audio: 'demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/3dC3SQ.joke1.rep1.take1.TearingPaper_h265_audio.wav',
-    openface3: 'demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/3dC3SQ.joke1.rep1.take1.TearingPaper_h265_openface3_analysis.json'
+    video: '/demo/videos/3dC3SQ.joke1.rep1.take1.TearingPaper_h265.mp4',
+    complete_results: '/demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/complete_results.json',
+    webvtt: '/demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/3dC3SQ.joke1.rep1.take1.TearingPaper_h265_speech_recognition.vtt',
+    rttm: '/demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/3dC3SQ.joke1.rep1.take1.TearingPaper_h265_speaker_diarization.rttm',
+    audio: '/demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/3dC3SQ.joke1.rep1.take1.TearingPaper_h265_audio.wav',
+    openface3: '/demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/3dC3SQ.joke1.rep1.take1.TearingPaper_h265_openface3_analysis.json'
   },
   'thatsnotahat-rep1-v1.1.1': {
-    video: 'demo/videos/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265.mp4',
-    complete_results: 'demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/complete_results.json',
-    webvtt: 'demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_speech_recognition.vtt',
-    rttm: 'demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_speaker_diarization.rttm',
-    audio: 'demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_audio.wav',
-    openface3: 'demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_openface3_analysis.json'
+    video: '/demo/videos/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265.mp4',
+    complete_results: '/demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/complete_results.json',
+    webvtt: '/demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_speech_recognition.vtt',
+    rttm: '/demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_speaker_diarization.rttm',
+    audio: '/demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_audio.wav',
+    openface3: '/demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_openface3_analysis.json'
   },
   'veatic-3-silent': {
-    video: 'demo/videos/3.mp4',
-    complete_results: 'demo/videos_out/3/complete_results.json',
-    webvtt: 'demo/videos_out/3/3_speech_recognition.vtt',
-    rttm: 'demo/videos_out/3/3_speaker_diarization.rttm',
-    audio: 'demo/videos_out/3/3_audio.wav',
+    video: '/demo/videos/3.mp4',
+    complete_results: '/demo/videos_out/3/complete_results.json',
+    webvtt: '/demo/videos_out/3/3_speech_recognition.vtt',
+    rttm: '/demo/videos_out/3/3_speaker_diarization.rttm',
+    audio: '/demo/videos_out/3/3_audio.wav',
     // Note: No OpenFace3 data available for this demo
     // Additional individual files for manual testing
-    person_tracking: 'demo/videos_out/3/3_person_tracking.json',
-    scene_detection: 'demo/videos_out/3/3_scene_detection.json',
-    scene_results: 'demo/videos_out/3/scene_results.json'
+    person_tracking: '/demo/videos_out/3/3_person_tracking.json',
+    scene_detection: '/demo/videos_out/3/3_scene_detection.json',
+    scene_results: '/demo/videos_out/3/scene_results.json'
   }
 } as const
 

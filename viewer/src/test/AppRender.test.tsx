@@ -25,10 +25,10 @@ vi.mock('@/api/client', () => ({
 }));
 
 describe('App Rendering', () => {
-  it('renders the welcome screen by default', async () => {
+  it('renders the home page by default', async () => {
     render(<App />);
-    
-    // Check if "Video Annotation Viewer" text is present (from WelcomeScreen)
+
+    // Check if "Video Annotation Viewer" text is present (from Home page)
     await waitFor(() => {
       expect(screen.getAllByText(/Video Annotation Viewer/i).length).toBeGreaterThan(0);
     });

@@ -7,15 +7,16 @@ import { SSEProvider } from "@/contexts/SSEContext";
 import { PipelineProvider } from "@/contexts/PipelineProvider";
 import { ServerCapabilitiesProvider } from "@/contexts/ServerCapabilitiesProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AppLayout } from "@/components/AppLayout";
 import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
+import Home from "./pages/Home";
+import GettingStarted from "./pages/GettingStarted";
 import NotFound from "./pages/NotFound";
-import Create from "./pages/Create";
-import CreateJobs from "./pages/CreateJobs";
-import CreateJobDetail from "./pages/CreateJobDetail";
-import CreateNewJob from "./pages/CreateNewJob";
-import CreateDatasets from "./pages/CreateDatasets";
-import CreateSettings from "./pages/CreateSettings";
+import Jobs from "./pages/Jobs";
+import JobDetail from "./pages/JobDetail";
+import NewJob from "./pages/NewJob";
+import Datasets from "./pages/Datasets";
+import Settings from "./pages/Settings";
 import JobResultsViewer from "./pages/JobResultsViewer";
 import Library from "./pages/Library";
 
@@ -32,18 +33,22 @@ const App = () => (
               <Sonner />
               <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
+                  {/* Full-screen routes (no shared nav) */}
                   <Route path="/viewer" element={<Index />} />
-                  <Route path="/library" element={<Library />} />
                   <Route path="/view/:jobId" element={<JobResultsViewer />} />
-                  <Route path="/create" element={<Create />}>
-                    <Route path="jobs" element={<CreateJobs />} />
-                    <Route path="jobs/:jobId" element={<CreateJobDetail />} />
-                    <Route path="new" element={<CreateNewJob />} />
-                    <Route path="datasets" element={<CreateDatasets />} />
-                    <Route path="settings" element={<CreateSettings />} />
-                    <Route index element={<CreateJobs />} />
+
+                  {/* Routes with shared AppLayout navigation */}
+                  <Route element={<AppLayout />}>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/getting-started" element={<GettingStarted />} />
+                    <Route path="/library" element={<Library />} />
+                    <Route path="/jobs" element={<Jobs />} />
+                    <Route path="/jobs/:jobId" element={<JobDetail />} />
+                    <Route path="/jobs/new" element={<NewJob />} />
+                    <Route path="/datasets" element={<Datasets />} />
+                    <Route path="/settings" element={<Settings />} />
                   </Route>
+
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

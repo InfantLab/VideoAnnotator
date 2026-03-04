@@ -5,7 +5,7 @@ import { Database, Plus, Folder, Info } from "lucide-react";
 
 const CreateDatasets = () => {
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-6 py-8 max-w-5xl space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

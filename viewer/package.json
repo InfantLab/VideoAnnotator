@@ -1,7 +1,7 @@
 {
   "name": "video-annotation-viewer",
   "private": true,
-  "version": "0.6.1",
+  "version": "0.6.2",
   "type": "module",
   "repository": {
     "type": "git",
@@ -77,6 +77,9 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.3",
     "zod": "^3.23.8"
+  },
+  "resolutions": {
+    "caniuse-lite": "^1.0.30001776"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

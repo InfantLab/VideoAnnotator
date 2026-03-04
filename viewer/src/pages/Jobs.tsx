@@ -165,7 +165,7 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
   }, [error, toast]);
 
   const handleRetryJob = (job: JobResponse) => {
-    navigate('/create/new', {
+    navigate('/jobs/new', {
       state: {
         retryJobId: job.id,
         retryJobConfig: job.config,
@@ -251,7 +251,7 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
         <ErrorDisplay error={enhancedError} />
         <div className="flex gap-2 justify-center">
           {isAuthError && (
-            <Link to="/create/settings">
+            <Link to="/settings">
               <Button variant="default">
                 Configure API Token
               </Button>
@@ -309,7 +309,7 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
     : '💤 Auto-refreshing every 30s';
 
   return (
-    <div className={embedded ? "space-y-4" : "space-y-6"}>
+    <div className={embedded ? "space-y-4" : "container mx-auto px-6 py-8 max-w-6xl space-y-6"}>
       {/* Header */}
       {!embedded && (
         <div className="flex justify-between items-center">
@@ -326,7 +326,7 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <Link to="/create/new">
+              <Link to="/jobs/new">
                 <Button>
                   <Play className="h-4 w-4 mr-2" />
                   New Job
@@ -379,7 +379,7 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
                           Go to First Page
                         </Button>
                       ) : (
-                        <Link to="/create/new">
+                        <Link to="/jobs/new">
                           <Button>Create your first job</Button>
                         </Link>
                       )}
@@ -420,7 +420,7 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
                   return (
                     <TableRow
                       key={job.id}
-                      onDoubleClick={() => navigate(`/create/jobs/${job.id}`)}
+                      onDoubleClick={() => navigate(`/jobs/${job.id}`)}
                       className="cursor-pointer hover:bg-muted/50"
                     >
                       <TableCell className="font-mono text-sm">
