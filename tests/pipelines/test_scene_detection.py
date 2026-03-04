@@ -35,7 +35,7 @@ class TestSceneDetectionPipeline:
         # Verify current default configuration
         assert pipeline.config["threshold"] == 30.0
         assert pipeline.config["min_scene_length"] == 2.0
-        assert pipeline.config["clip_model"] == "ViT-B/32"
+        assert pipeline.config["clip_model"] == "ViT-B-32"
         assert pipeline.config["use_gpu"]
 
     def test_initialization_lifecycle(self):

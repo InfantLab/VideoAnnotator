@@ -15,6 +15,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Benchmark results and performance validation
 - Additional contributor documentation improvements
 
+## [1.4.2] - 2026-03-04
+
+### JOSS Review Version
+
+This release accompanies the JOSS submission of VideoAnnotator and its companion project Video Annotation Viewer.
+
+#### Changed
+
+- **CLIP migration**: Migrated scene-classification pipeline from `clip` to `open_clip`, using the LAION-2B pretrained `ViT-B-32` model for improved availability and reproducibility.
+- **HuggingFace auth**: Updated diarization and Whisper pipelines to use the current `token` parameter instead of the deprecated `use_auth_token`.
+- **Devcontainer**: Simplified forwarded-port list to the single default API port (18011).
+
+#### Fixed
+
+- **Database GUID handling**: Added defensive `try/except` in the `GUID` type decorator to gracefully handle malformed UUID values.
+- **Diarization init**: Wrapped model loading in explicit error handling with a clear log message on failure.
+
+#### Removed
+
+- **Voice emotion baseline**: Removed `voice_emotion_baseline` pipeline metadata and associated tests (superseded by LAION EmoNet voice pipeline).
+
+#### Documentation
+
+- Added JOSS cover letter (`paper/cover_letter.md`).
+- Updated paper bibliography version to v1.4.2.
+
 ## [1.4.1] - 2025-12-26
 
 ### Release Quality, Docs, and Developer Experience

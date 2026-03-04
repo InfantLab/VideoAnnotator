@@ -29,7 +29,7 @@ except ImportError:
     SCENEDETECT_AVAILABLE = False
 
 try:
-    import clip
+    import open_clip
     import torch
 
     CLIP_AVAILABLE = True
@@ -59,7 +59,7 @@ class SceneDetectionPipeline(BasePipeline):
                 "office",
                 "playground",
             ],
-            "clip_model": "ViT-B/32",
+            "clip_model": "ViT-B-32",
             "use_gpu": True,
             "keyframe_extraction": "middle",  # Extract keyframe from middle of scene
         }
@@ -70,6 +70,7 @@ class SceneDetectionPipeline(BasePipeline):
         self.logger = logging.getLogger(__name__)
         self.clip_model = None
         self.clip_preprocess = None
+        self.clip_tokenizer = None
         self.device = None
 
     def process(
@@ -230,7 +231,7 @@ class SceneDetectionPipeline(BasePipeline):
 
             # Prepare text prompts
             text_prompts = [f"a {prompt}" for prompt in self.config["scene_prompts"]]
-            text = clip.tokenize(text_prompts).to(self.device)
+            text = self.clip_tokenizer(text_prompts).to(self.device)
 
             classified_segments = []
             cap = cv2.VideoCapture(video_path)
@@ -312,9 +313,14 @@ class SceneDetectionPipeline(BasePipeline):
         self.device = (
             "cuda" if self.config["use_gpu"] and torch.cuda.is_available() else "cpu"
         )
-        self.clip_model, self.clip_preprocess = clip.load(
-            self.config["clip_model"], device=self.device
+        self.clip_model, _, self.clip_preprocess = (
+            open_clip.create_model_and_transforms(
+                self.config["clip_model"],
+                pretrained="laion2b_s34b_b79k",
+                device=self.device,
+            )
         )
+        self.clip_tokenizer = open_clip.get_tokenizer(self.config["clip_model"])
         self.logger.info(
             f"CLIP model loaded: {self.config['clip_model']} on {self.device}"
         )
@@ -417,6 +423,7 @@ class SceneDetectionPipeline(BasePipeline):
 
         self.clip_model = None
         self.clip_preprocess = None
+        self.clip_tokenizer = None
         self.device = None
         self.is_initialized = False
         self.logger.info("Scene Detection Pipeline cleaned up")

@@ -10,10 +10,10 @@ from typing import Any
 from videoannotator.utils.logging_config import get_logger
 
 logger = get_logger("videoannotator.version")
-__version__ = "1.4.1"
-__version_info__ = (1, 4, 1, "final")
-# Release version for v1.4.1
-__release_date__ = "2025-12-18"
+__version__ = "1.4.2"
+__version_info__ = (1, 4, 2, "final")
+# Release version for v1.4.2
+__release_date__ = "2026-03-04"
 __author__ = "VideoAnnotator Team"
 __license__ = "MIT"
 

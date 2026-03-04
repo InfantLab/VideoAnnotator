@@ -65,14 +65,18 @@ class DiarizationPipeline(BasePipeline):
 
         self.logger.info(f"Loading diarization model: {self.config['model']}")
 
-        if hf_token:
-            self.diarization_model = PyAnnotePipeline.from_pretrained(
-                self.config["model"], use_auth_token=hf_token
-            )
-        else:
-            self.diarization_model = PyAnnotePipeline.from_pretrained(
-                self.config["model"]
-            )
+        try:
+            if hf_token:
+                self.diarization_model = PyAnnotePipeline.from_pretrained(
+                    self.config["model"], token=hf_token
+                )
+            else:
+                self.diarization_model = PyAnnotePipeline.from_pretrained(
+                    self.config["model"]
+                )
+        except Exception as e:
+            self.logger.error(f"Failed to load diarization model: {e}")
+            raise
 
         self.is_initialized = True
         self.logger.info("DiarizationPipeline initialized")

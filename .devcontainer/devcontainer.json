@@ -16,24 +16,11 @@
 
                  },
     "forwardPorts":  [
-                         18011,
-                         18012,
-                         18013,
-                         18014,
-                         18015,
-                         19011,
-                         19012,
-                         19013,
-                         19014,
-                         19015
+                         18011
                      ],
     "portsAttributes":  {
                             "18011":  {
-                                          "label":  "VideoAnnotator API (default)",
-                                          "onAutoForward":  "notify"
-                                      },
-                            "19011":  {
-                                          "label":  "Video Annotation Viewer",
+                                          "label":  "VideoAnnotator API",
                                           "onAutoForward":  "notify"
                                       }
                         },

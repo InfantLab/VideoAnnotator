@@ -53,9 +53,11 @@ class GUID(TypeDecorator):
         """Convert database values back into UUID instances."""
         if value is None:
             return value
-        else:
-            if not isinstance(value, uuid.UUID):
-                return uuid.UUID(value)
+        if isinstance(value, uuid.UUID):
+            return value
+        try:
+            return uuid.UUID(value)
+        except (ValueError, AttributeError):
             return value
 
 

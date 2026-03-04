@@ -255,7 +255,7 @@ class WhisperBasePipeline(BasePipeline):
             # Load processor
             processor_kwargs = {"cache_dir": cache_dir}
             if auth_token:
-                processor_kwargs["use_auth_token"] = auth_token
+                processor_kwargs["token"] = auth_token
 
             self.whisper_processor = WhisperProcessor.from_pretrained(
                 model_id, **processor_kwargs
@@ -264,7 +264,7 @@ class WhisperBasePipeline(BasePipeline):
             # Load model
             model_kwargs = {"cache_dir": cache_dir}
             if auth_token:
-                model_kwargs["use_auth_token"] = auth_token
+                model_kwargs["token"] = auth_token
 
             # Add FP16 if requested and on GPU
             if self.config.get("use_fp16", True) and self.device.type == "cuda":
