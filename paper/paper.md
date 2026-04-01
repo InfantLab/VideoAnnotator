@@ -8,23 +8,23 @@ tags:
   - machine learning
 authors:
   - name: Caspar Addyman
-    orcid: https://orcid.org/0000-0003-0001-9548
+    orcid: 0000-0003-0001-9548
     corresponding: true
     affiliation: 1
   - name: Jeremiah Ishaya
-    orcid: https://orcid.org/0000-0002-9014-9372
+    orcid: 0000-0002-9014-9372
     affiliation: 1
   - name: Irene Uwerikowe
-    orcid: https://orcid.org/0000-0002-1293-7349
+    orcid: 0000-0002-1293-7349
     affiliation: 1
   - name: Daniel Stamate
-    orcid: https://orcid.org/0000-0001-8565-6890
+    orcid: 0000-0001-8565-6890
     affiliation: 2
   - name: Jamie Lachman
-    orcid: https://orcid.org/0000-0001-9475-9218
+    orcid: 0000-0001-9475-9218
     affiliation: 3
   - name: Mark Tomlinson
-    orcid: https://orcid.org/0000-0001-5846-3444
+    orcid: 0000-0001-5846-3444
     affiliation: 1
 affiliations:
   - name: Institute for Life Course Health Research (ILCHR), Stellenbosch University, South Africa
