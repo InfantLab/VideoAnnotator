@@ -71,7 +71,7 @@ Key capabilities include:
 - **Job management (optional).** When configured with a VideoAnnotator API endpoint and token, users can create jobs, monitor progress (including server-sent events where available), and open completed results.
 - **Result loading.** Users can load local files via drag-and-drop or open results downloaded from VideoAnnotator.
 
-# Design and architecture
+# Software design
 
 Video Annotation Viewer is implemented as a stateless React + TypeScript single-page application. It separates concerns into:
 
