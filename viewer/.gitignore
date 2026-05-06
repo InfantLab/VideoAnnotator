@@ -39,3 +39,8 @@ test-results/
 __pycache__/
 **/__pycache__/
 *.pyc
+
+# Claude Code (per spec-kit init recommendation; keep skills/ and project settings.json shared)
+.claude/settings.local.json
+.claude/.credentials.json
+.claude/state/
