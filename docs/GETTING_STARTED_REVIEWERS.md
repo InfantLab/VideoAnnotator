@@ -41,7 +41,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync
 
 # 4. Verify installation
-uv run python scripts/verify_installation.py
+uv run videoannotator diagnose
 ```
 
 **Expected output**: All checks pass ✅ (GPU optional)

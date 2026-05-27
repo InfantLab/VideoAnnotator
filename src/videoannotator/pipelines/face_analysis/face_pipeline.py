@@ -463,8 +463,9 @@ class FaceAnalysisPipeline(BasePipeline):
     ) -> list[dict[str, Any]]:
         """Detect faces using OpenCV Haar cascades."""
         # Load cascade classifier
+        haarcascades_dir = cv2.data.haarcascades  # type: ignore[attr-defined]
         face_cascade = cv2.CascadeClassifier(
-            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+            haarcascades_dir + "haarcascade_frontalface_default.xml"
         )
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

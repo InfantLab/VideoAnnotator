@@ -31,8 +31,8 @@ dependencies = [
     "librosa>=0.10.0",
     "matplotlib>=3.9.2",
     "moviepy>=1.0.3",
-    # Pin to a stable earlier version to avoid installation metadata issues in CI
-    "openai-whisper==20240930",
+    # sdist-only release; built from source at install (see tool.uv.extra-build-dependencies)
+    "openai-whisper>=20250625",
     "numba>=0.60.0", # Ensure Python 3.12 compatibility
     "openpyxl",
     "pandas>=2.2.2",
@@ -149,7 +149,7 @@ videoannotator = "videoannotator.cli:app"
 # uv-native config - empty is fine for now
 
 [tool.uv.extra-build-dependencies]
-openai-whisper = ["setuptools==69.0.3", "wheel"]
+openai-whisper = ["setuptools", "wheel"]
 
 [[tool.uv.index]]
 name = "pytorch-cu124"
@@ -311,6 +311,8 @@ dev = [
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=4.0.0",
     "ruff>=0.14.0",
+    "types-PyYAML>=6.0.0",
+    "types-requests>=2.31.0",
 ]
 
 [[tool.mypy.overrides]]

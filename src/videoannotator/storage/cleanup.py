@@ -8,10 +8,9 @@ v1.3.0: Added automatic storage cleanup with retention policy.
 
 import shutil
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Any
 
-from videoannotator.config_env import STORAGE_RETENTION_DAYS, STORAGE_BASE_DIR
+from videoannotator.config_env import STORAGE_BASE_DIR, STORAGE_RETENTION_DAYS
 from videoannotator.database.models import Job, JobStatus
 from videoannotator.storage.file_backend import FileStorageBackend
 from videoannotator.utils.logging_config import get_logger
@@ -107,9 +106,7 @@ def find_old_jobs(retention_days: int | None = None) -> list[Job]:
     days = retention_days if retention_days is not None else STORAGE_RETENTION_DAYS
 
     if days is None or days <= 0:
-        raise ValueError(
-            "Cleanup is disabled (STORAGE_RETENTION_DAYS not set or <= 0)"
-        )
+        raise ValueError("Cleanup is disabled (STORAGE_RETENTION_DAYS not set or <= 0)")
 
     cutoff_date = datetime.now() - timedelta(days=days)
 
@@ -150,7 +147,11 @@ def verify_job_safe_to_delete(job: Job) -> tuple[bool, str]:
         return False, "Job has no completion timestamp"
 
     # Check 3: Completion must be in the past (naive comparison for test compatibility)
-    completed_at = job.completed_at.replace(tzinfo=None) if hasattr(job.completed_at, 'replace') else job.completed_at
+    completed_at = (
+        job.completed_at.replace(tzinfo=None)
+        if hasattr(job.completed_at, "replace")
+        else job.completed_at
+    )
     if completed_at > datetime.now():
         return False, "Job completion timestamp is in the future"
 

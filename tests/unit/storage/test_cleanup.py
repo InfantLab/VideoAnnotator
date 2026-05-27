@@ -9,7 +9,6 @@ Tests cover:
 """
 
 from datetime import datetime, timedelta
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -342,12 +341,8 @@ class TestCleanupOldJobs:
         storage = FileStorageBackend(base_dir=tmp_path)
 
         # Mock find_old_jobs to return empty list
-        with patch(
-            "videoannotator.storage.cleanup.find_old_jobs", return_value=[]
-        ):
-            result = cleanup_old_jobs(
-                retention_days=30, dry_run=True, storage=storage
-            )
+        with patch("videoannotator.storage.cleanup.find_old_jobs", return_value=[]):
+            result = cleanup_old_jobs(retention_days=30, dry_run=True, storage=storage)
 
             assert result.jobs_found == 0
             assert len(result.errors) == 0
@@ -394,9 +389,7 @@ class TestCleanupOldJobs:
         with patch(
             "videoannotator.storage.cleanup.find_old_jobs", return_value=[mock_job]
         ):
-            result = cleanup_old_jobs(
-                retention_days=30, dry_run=False, storage=storage
-            )
+            result = cleanup_old_jobs(retention_days=30, dry_run=False, storage=storage)
 
             # Directory should be deleted
             assert not job_dir.exists()
@@ -417,9 +410,7 @@ class TestCleanupOldJobs:
         with patch(
             "videoannotator.storage.cleanup.find_old_jobs", return_value=[mock_job]
         ):
-            result = cleanup_old_jobs(
-                retention_days=30, dry_run=False, storage=storage
-            )
+            result = cleanup_old_jobs(retention_days=30, dry_run=False, storage=storage)
 
             assert result.jobs_found == 1
             assert result.jobs_deleted == 0

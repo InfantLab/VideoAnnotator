@@ -231,6 +231,7 @@ class SceneDetectionPipeline(BasePipeline):
 
             # Prepare text prompts
             text_prompts = [f"a {prompt}" for prompt in self.config["scene_prompts"]]
+            assert self.clip_tokenizer is not None
             text = self.clip_tokenizer(text_prompts).to(self.device)
 
             classified_segments = []
