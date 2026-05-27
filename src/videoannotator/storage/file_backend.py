@@ -198,8 +198,12 @@ class FileStorageBackend(StorageBackend):
 
         return sorted(jobs, key=lambda j: j.created_at)
 
-    def delete_job(self, job_id: str) -> None:
-        """Delete all data for a job."""
+    def delete_job(self, job_id: str) -> bool:
+        """Delete all data for a job.
+
+        Returns:
+            True if the job existed and was deleted, False if it was not found.
+        """
         job_dir = self._get_job_dir(job_id)
 
         if job_dir.exists():
@@ -207,9 +211,11 @@ class FileStorageBackend(StorageBackend):
 
             shutil.rmtree(job_dir)
             self.logger.info(f"Deleted job {job_id}")
-        else:
-            self.logger.warning(f"Job {job_id} not found for deletion")
-            self.logger.warning(f"Job directory not found: {job_dir}")
+            return True
+
+        self.logger.warning(f"Job {job_id} not found for deletion")
+        self.logger.warning(f"Job directory not found: {job_dir}")
+        return False
 
     def get_stats(self) -> dict[str, Any]:
         """Get storage statistics."""

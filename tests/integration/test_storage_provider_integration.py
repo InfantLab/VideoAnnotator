@@ -107,9 +107,9 @@ def test_job_submission_creates_files_in_storage(client, temp_storage_root):
     assert video_path.exists()
     assert video_path.read_bytes() == video_content
 
-    # Check response paths
-    assert data["storage_path"] == str(job_dir)
-    assert data["video_path"] == str(video_path)
+    # Check response paths (resolve to handle symlinked temp dirs, e.g. /tmp on macOS)
+    assert Path(data["storage_path"]) == job_dir.resolve()
+    assert Path(data["video_path"]) == video_path.resolve()
 
 
 def test_download_artifacts(client, temp_storage_root):

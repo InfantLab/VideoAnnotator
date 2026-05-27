@@ -11,7 +11,7 @@ Environment Variables:
 import os
 from pathlib import Path
 
-import yaml  # type: ignore
+import yaml
 
 
 def get_storage_root() -> Path:

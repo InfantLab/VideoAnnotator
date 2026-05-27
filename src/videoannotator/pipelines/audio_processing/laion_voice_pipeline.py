@@ -995,7 +995,7 @@ class LAIONVoicePipeline(WhisperBasePipeline):
         # Apply softmax across all emotions to get proper probability distribution
         if raw_scores:
             scores_array = np.array(list(raw_scores.values()))
-            max_score = np.max(scores_array)
+            max_score = float(np.max(scores_array))
             exp_scores = np.exp(scores_array - max_score)
             softmax_scores = exp_scores / np.sum(exp_scores)
 

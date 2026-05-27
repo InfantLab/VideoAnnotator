@@ -237,13 +237,13 @@ chmod -R u+rw logs/
 ### Installation Verification Fails
 
 **Symptoms**:
-- `scripts/verify_installation.py` reports failures
+- `videoannotator diagnose` reports failures
 
 **Solution**:
 
 Run with verbose output to see specific issues:
 ```bash
-uv run python scripts/verify_installation.py --verbose
+uv run videoannotator diagnose
 ```
 
 Common fixes:
@@ -652,7 +652,7 @@ vm_stat  # macOS
 uv run python -c "import videoannotator; print(videoannotator.__version__)"
 
 # Installation verification
-uv run python scripts/verify_installation.py --verbose
+uv run videoannotator diagnose
 
 # Check imports
 uv run python -c "
@@ -781,7 +781,7 @@ If you can't resolve the issue:
 2. **Gather diagnostic information**:
    ```bash
    # Run full diagnostic
-   uv run python scripts/verify_installation.py --verbose > diagnostic.txt 2>&1
+   uv run videoannotator diagnose > diagnostic.txt 2>&1
 
    # Include system info
    uname -a >> diagnostic.txt

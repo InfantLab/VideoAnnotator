@@ -89,7 +89,7 @@ class SizeBasedPersonAnalyzer:
                     heights.append(height)
 
             if heights:
-                avg_height = np.mean(heights)
+                avg_height = float(np.mean(heights))
                 person_heights[person_id] = avg_height
                 logger.debug("Person %s: average height = %.1f", person_id, avg_height)
 
