@@ -156,10 +156,12 @@ name = "pytorch-cu124"
 url = "https://download.pytorch.org/whl/cu124"
 explicit = true
 
+# CUDA wheels only exist for Linux/Windows; restrict the cu124 index to Linux
+# so macOS and other platforms resolve torch from PyPI (CPU build).
 [tool.uv.sources]
-torch = { index = "pytorch-cu124" }
-torchvision = { index = "pytorch-cu124" }
-torchaudio = { index = "pytorch-cu124" }
+torch = [{ index = "pytorch-cu124", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cu124", marker = "sys_platform == 'linux'" }]
+torchaudio = [{ index = "pytorch-cu124", marker = "sys_platform == 'linux'" }]
 
 [tool.ruff]
 line-length = 88  # Keep existing Black line length for consistency
