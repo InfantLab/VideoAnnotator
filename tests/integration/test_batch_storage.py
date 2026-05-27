@@ -5,6 +5,7 @@ management, and data serialization for batch processing.
 """
 
 import json
+import os
 import tempfile
 from pathlib import Path
 from unittest.mock import mock_open, patch
@@ -283,6 +284,10 @@ class TestFileStorageBackendErrorHandling:
             # Expected for invalid data
             pass
 
+    @pytest.mark.skipif(
+        os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0),
+        reason="read-only directory enforcement is unreliable on Windows and bypassed by root",
+    )
     def test_readonly_directory(self):
         """Test behavior with read-only directory."""
         # Create storage in temp directory
@@ -293,14 +298,13 @@ class TestFileStorageBackendErrorHandling:
             # Make directory read-only
             readonly_dir.chmod(0o444)
 
-            # Try to create storage backend
-            # This should handle the permission issue gracefully
-            storage = FileStorageBackend(readonly_dir)
-
-            # Basic operations should fail gracefully
+            # Operating on a read-only directory should raise PermissionError,
+            # whether it surfaces while creating the backend's subdirectories or
+            # while writing job metadata.
             job = BatchJob(video_path=Path("test_video.mp4"))
 
             with pytest.raises(PermissionError):
+                storage = FileStorageBackend(readonly_dir)
                 storage.save_job_metadata(job)
 
         finally:

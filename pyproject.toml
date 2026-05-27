@@ -46,8 +46,11 @@ dependencies = [
     "ultralytics>=8.3.0",
     "supervision>=0.16.0",
     # Note: PyTorch with CUDA - Use UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124 for CUDA builds
-    "torch>=2.0.0",
-    "torchvision>=0.15.0",
+    # Pin the torch trio to a matched, tested release. cu124 build on Linux
+    # (via tool.uv.sources); CPU build from PyPI on macOS/Windows. Newer
+    # torchaudio (>=2.9) removed AudioMetaData, which the pipelines rely on.
+    "torch==2.6.0",
+    "torchvision==0.21.0",
     "timm>=0.9.0",
     # Audio processing - Core packages that should work
     "pyannote.audio>=3.3.2",
@@ -55,7 +58,7 @@ dependencies = [
     "pyannote.database>=5.1.0",
     "pyannote.metrics>=3.2.1",
     "pyannote.pipeline>=3.0.1",
-    "torchaudio>=2.0.0",
+    "torchaudio==2.6.0",
     # Scene detection and video understanding
     "scenedetect[opencv]>=0.6.3",
     "transformers>=4.40.0",
