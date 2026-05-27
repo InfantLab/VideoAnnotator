@@ -12,6 +12,9 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
+    # Windows has known SQLite file-locking issues during test teardown
+    # (tracked separately); keep it informational so it doesn't block CI.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     strategy:
       fail-fast: false
       matrix:

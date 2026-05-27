@@ -35,7 +35,8 @@ class TestGetStorageRoot:
 
         assert isinstance(root, Path)
         assert root.is_absolute()
-        assert str(root) == custom_path
+        # get_storage_root() resolves symlinks (e.g. /tmp -> /private/tmp on macOS)
+        assert root == Path(custom_path).resolve()
 
     def test_storage_root_resolves_relative_paths(self, monkeypatch):
         """Test that relative paths are resolved to absolute."""
@@ -70,7 +71,7 @@ class TestGetJobStoragePath:
 
         assert isinstance(path, Path)
         assert path.is_absolute()
-        assert path.parent == Path(storage_root)
+        assert path.parent == Path(storage_root).resolve()
         assert path.name == job_id
 
     def test_job_storage_path_consistency(self):
@@ -156,7 +157,7 @@ class TestEnsureJobStoragePath:
                 # Directory should now exist
                 assert path.exists()
                 assert path.is_dir()
-                assert path.parent == Path(tmpdir)
+                assert path.parent == Path(tmpdir).resolve()
                 assert path.name == job_id
             finally:
                 if original_env:
@@ -293,7 +294,7 @@ class TestStoragePathIntegration:
 
                 # Get root
                 root = gsr()
-                assert root == Path(tmpdir)
+                assert root == Path(tmpdir).resolve()
 
                 # Get job path (doesn't create)
                 job_id = "workflow-job"
