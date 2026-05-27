@@ -47,8 +47,16 @@ class TestAudioPipeline:
         assert pipeline.config["pipelines"]["speech_recognition"]["enabled"]
         assert pipeline.config["pipelines"]["speaker_diarization"]["enabled"]
 
-    def test_modular_pipeline_initialization(self):
+    @patch(
+        "videoannotator.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE",
+        True,
+    )
+    @patch(
+        "videoannotator.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline"
+    )
+    def test_modular_pipeline_initialization(self, mock_pyannote):
         """Test that modular pipeline components are properly initialized."""
+        mock_pyannote.from_pretrained.return_value = Mock()
         config = {
             "pipelines": {
                 "speech_recognition": {"enabled": True, "model": "base"},
@@ -121,8 +129,16 @@ class TestAudioPipeline:
         except Exception as e:
             pytest.skip(f"Speech recognition test failed: {e}")
 
-    def test_speaker_diarization_component(self, temp_audio_file):
+    @patch(
+        "videoannotator.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE",
+        True,
+    )
+    @patch(
+        "videoannotator.pipelines.audio_processing.diarization_pipeline.PyAnnotePipeline"
+    )
+    def test_speaker_diarization_component(self, mock_pyannote, temp_audio_file):
         """Test speaker diarization component within modular pipeline."""
+        mock_pyannote.from_pretrained.return_value = Mock()
         config = {
             "pipelines": {
                 "speech_recognition": {

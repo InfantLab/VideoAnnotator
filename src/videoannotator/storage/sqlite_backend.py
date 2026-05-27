@@ -363,8 +363,12 @@ class SQLiteStorageBackend(StorageBackend):
             self.logger.error(f"[ERROR] Failed to list jobs: {e}")
             return []
 
-    def delete_job(self, job_id: str) -> None:
-        """Delete all data for a job including persistent storage."""
+    def delete_job(self, job_id: str) -> bool:
+        """Delete all data for a job including persistent storage.
+
+        Returns:
+            True if the job existed and was deleted, False if it was not found.
+        """
         import shutil
 
         from ..storage.config import get_job_storage_path
@@ -396,6 +400,8 @@ class SQLiteStorageBackend(StorageBackend):
                 self.logger.warning(
                     f"[WARNING] Failed to delete storage for job {job_id}: {storage_error}"
                 )
+
+            return deleted_count > 0
 
         except SQLAlchemyError as e:
             self.logger.error(f"[ERROR] Failed to delete job {job_id}: {e}")

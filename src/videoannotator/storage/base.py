@@ -94,11 +94,14 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
-    def delete_job(self, job_id: str) -> None:
+    def delete_job(self, job_id: str) -> bool:
         """Delete all data for a job.
 
         Args:
             job_id: Unique job identifier
+
+        Returns:
+            True if the job existed and was deleted, False if it was not found.
         """
         pass
 
