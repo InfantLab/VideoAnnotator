@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-07-08 — Embedding Support & Demo Slimdown
+
+### ✨ Added
+- **Sub-path Mount Support**: New `npm run build:embedded` script (`vite build --base=/viewer/`) so VideoAnnotator (or any consumer) can `cp -r dist/* <static-dir>` and serve this app same-origin under a sub-path with no HTML/JS rewriting. `index.html` icon/favicon links use `%BASE_URL%`, and the router now sets `basename={import.meta.env.BASE_URL}` so in-app navigation matches once mounted under a prefix.
+
+### 🎨 Improved
+- **Demo Footprint**: Cut the bundled demo from ~47MB (five videos + full output bundles) to a single curated clip (~2MB, peekaboo-rep3), now fetched at runtime from `raw.githubusercontent.com` instead of shipping in `dist/`. Production build size drops from ~51MB to ~4.6MB. Network failures now surface a "Demo requires an internet connection" message instead of a raw fetch error.
+- **README**: Clarified that this project and VideoAnnotator are submitted to JOSS as a single combined paper hosted in the VideoAnnotator repo; added the zero-config "embedded mode" connection path alongside the existing `.env`/Settings options; removed historic per-feature version tags (`v0.4.0`, `v1.3.0`, etc.) from the Job Creation & Management feature list; fixed two stale documentation links (`v0.4.0 Roadmap`, `QA Testing v0.3.0`) that pointed at archived/nonexistent files.
+
+### 🔧 Changed
+- **Version**: Bumped to 0.6.3 across `package.json`, `README.md`, and `CITATION.cff` for consistency (previously out of sync at 0.6.1/0.6.2).
+
+### 🗑️ Removed
+- **Dev Scratch Pages**: Moved `test.html` and `test_strict_connection.html` out of `public/` (which shipped them in every production build) into `scripts/`.
+- **JOSS Paper Artifacts**: Archived `paper/` to `docs/archive/paper/` and removed the `draft-pdf` CI workflow — this repo's standalone JOSS submission was superseded by a single combined paper hosted in the VideoAnnotator repo (see `docs/joss.md`).
+
+### 📚 Documentation
+- Archived `ROADMAP_v0.6.0.md` and `ROADMAP_v0.6.1.md` to `docs/archive/` with notes on how their JOSS workstreams actually concluded (superseded by the combined-paper decision); carried the still-open CI stabilization items (Playwright flakiness, Lighthouse CI stability, CI score tracking) forward into `ROADMAP_v0.7.0.md`.
+
 ## [0.6.2] - 2026-03-04 — JOSS Review Version
 
 ### ✨ Added

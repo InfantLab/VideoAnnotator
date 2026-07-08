@@ -1,8 +1,26 @@
-# Video Annotation Viewer v0.6.1 Roadmap (JOSS Submission Release)
+# Video Annotation Viewer v0.6.1 Roadmap (Archived)
+
+> **Archived 2026-07-08.** v0.6.1 shipped 2026-02-27. This roadmap's JOSS-submission workstreams
+> (§1 paper & submission artifacts, §4 server-team coordination) assumed a **standalone** vav
+> paper with its own Zenodo DOI. That plan was superseded during JOSS pre-review: following
+> discussion with the editor, vav and [VideoAnnotator](https://github.com/InfantLab/VideoAnnotator)
+> are now evaluated jointly as one combined paper hosted in the VideoAnnotator repository — see
+> [joss-reviews#10182](https://github.com/openjournals/joss-reviews/issues/10182) (combined
+> submission) and [joss-reviews#10183](https://github.com/openjournals/joss-reviews/issues/10183)
+> (vav's original submission, kept open only as a pointer). As a result:
+> - The standalone Zenodo DOI / "submit to JOSS" checklist items below are **obsolete**, not done.
+> - The `paper/` files this roadmap references are archived at
+>   [`docs/archive/paper/`](./paper/); see [`docs/joss.md`](../joss.md) for current status.
+> - §4's VideoAnnotator v1.4.2 coordination asks were overtaken by much closer integration than
+>   originally scoped — VideoAnnotator now vendors and same-origin-mounts a vav build at `/viewer`
+>   (see `CHANGELOG.md` v0.6.3 and the sub-path-mount work in `vite.config.ts`/`src/App.tsx`).
+> - §3's still-open CI stabilization items (Playwright flakiness, Lighthouse CI stability, CI score
+>   tracking) were genuinely unfinished and have been carried forward into
+>   [ROADMAP_v0.7.0.md](../development/ROADMAP_v0.7.0.md) §4.3.
 
 **Theme:** JOSS Paper + Release Readiness (No New Features)
 
-**Status:** 📋 PLANNED
+**Status:** ✅ COMPLETED (v0.6.1 released), JOSS workstreams superseded (see archive note above)
 
 **Target Window:** As soon as VideoAnnotator **v1.4.2** is tagged/released (Dec 2025–Jan 2026)
 

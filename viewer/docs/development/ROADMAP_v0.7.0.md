@@ -3,7 +3,7 @@
 **Theme:** Professional Polish & Enterprise Features  
 **Status:** 📋 PLANNED  
 **Target Date:** Q3-Q4 2026  
-**Previous Version:** v0.6.0 (JOSS Paper & Public Release - Q2 2026)
+**Previous Version:** v0.6.3 (Sub-path mount / embedding support, curated demo hosting — 2026-07-08)
 
 ---
 
@@ -381,7 +381,13 @@ v0.7.0 delivers all the professional UI/UX polish, advanced job management, and 
   - Automated testing (BrowserStack)
   - Compatibility matrix
 
-**Deferred from:** v0.4.0, v0.6.0  
+- [ ] **CI Stability** *(carried over from v0.6.1 — see [ROADMAP_v0.6.1.md](../archive/ROADMAP_v0.6.1.md))*
+  - Reduce flakiness in existing Playwright smoke tests
+  - Stabilize Lighthouse CI runs (reduce transient failures)
+  - Document a simple "CI score" metric (e.g., % green over last N runs); target optional jobs
+    (`e2e`, `lighthouse`, `coverage`) green in ≥80% of the last 10 runs on `main`
+
+**Deferred from:** v0.4.0, v0.6.0, v0.6.1  
 **Estimated Effort:** Medium (2-3 weeks, ongoing)
 
 ---
