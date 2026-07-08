@@ -983,10 +983,6 @@ def storage_cleanup(
         raise typer.Exit(1)
 
 
-if __name__ == "__main__":
-    app()
-
-
 @app.command("validate-emotion")
 def validate_emotion(
     file: Path = typer.Argument(..., help="Path to .emotion.json file"),
@@ -1236,3 +1232,7 @@ Save this key now; it will not be shown again.
             "[INFO] Admin already existed; no new API key generated. "
             "Use generate-token for additional keys."
         )
+
+
+if __name__ == "__main__":
+    app()
