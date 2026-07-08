@@ -11,12 +11,8 @@ describe('debugUtils', () => {
   })
 
   describe('DEMO_DATA_SETS', () => {
-    it('should contain expected demo datasets', () => {
+    it('should contain the curated demo dataset', () => {
       expect(DEMO_DATA_SETS).toHaveProperty('peekaboo-rep3-v1.1.1')
-      expect(DEMO_DATA_SETS).toHaveProperty('peekaboo-rep2-v1.1.1')
-      expect(DEMO_DATA_SETS).toHaveProperty('tearingpaper-rep1-v1.1.1')
-      expect(DEMO_DATA_SETS).toHaveProperty('thatsnotahat-rep1-v1.1.1')
-      expect(DEMO_DATA_SETS).toHaveProperty('veatic-3-silent')
     })
 
     it('should have required properties for each dataset', () => {
@@ -28,11 +24,10 @@ describe('debugUtils', () => {
       })
     })
 
-    it('should have VEATIC dataset with additional files', () => {
-      const veatic = DEMO_DATA_SETS['veatic-3-silent']
-      expect(veatic).toHaveProperty('person_tracking')
-      expect(veatic).toHaveProperty('scene_detection')
-      expect(veatic).toHaveProperty('scene_results')
+    it('should serve demo assets from raw.githubusercontent.com (CORS-enabled)', () => {
+      const dataset = DEMO_DATA_SETS['peekaboo-rep3-v1.1.1']
+      expect(dataset.video).toMatch(/^https:\/\/raw\.githubusercontent\.com\//)
+      expect(dataset.complete_results).toMatch(/^https:\/\/raw\.githubusercontent\.com\//)
     })
   })
 

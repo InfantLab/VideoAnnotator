@@ -1,4 +1,4 @@
-import { DEMO_DATA_SETS } from '@/utils/debugUtils';
+import { DEMO_DATA_SETS, getDemoFetchErrorMessage } from '@/utils/debugUtils';
 import type { StandardAnnotationData, VideoAnnotatorCompleteResults } from '@/types/annotations';
 import {
   getJobDatasetIndex,
@@ -15,11 +15,7 @@ export type InstallDemoDatasetResult = {
 
 /** Human-readable labels for demo datasets. */
 export const DEMO_LABELS: Record<string, string> = {
-  'peekaboo-rep3-v1.1.1': 'Peekaboo (rep 3)',
-  'peekaboo-rep2-v1.1.1': 'Peekaboo (rep 2)',
-  'tearingpaper-rep1-v1.1.1': 'Tearing Paper',
-  'thatsnotahat-rep1-v1.1.1': "That's Not a Hat",
-  'veatic-3-silent': 'VEATIC Silent Video',
+  'peekaboo-rep3-v1.1.1': 'Peekaboo',
 };
 
 export function getDemoLabel(jobId: string): string | null {
@@ -107,10 +103,16 @@ export async function loadDemoFromAssets(jobId: string): Promise<{
   const paths = DEMO_DATA_SETS[demoKey];
 
   // Fetch video and complete_results.json in parallel.
-  const [videoRes, annotRes] = await Promise.all([
-    fetch(paths.video),
-    paths.complete_results ? fetch(paths.complete_results) : null,
-  ]);
+  let videoRes: Response;
+  let annotRes: Response | null;
+  try {
+    [videoRes, annotRes] = await Promise.all([
+      fetch(paths.video),
+      paths.complete_results ? fetch(paths.complete_results) : null,
+    ]);
+  } catch (error) {
+    throw new Error(getDemoFetchErrorMessage(error));
+  }
 
   if (!videoRes.ok) throw new Error(`Failed to fetch demo video (${videoRes.status}).`);
 

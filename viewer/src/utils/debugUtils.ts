@@ -19,56 +19,35 @@ export interface DemoDataPaths {
   openface3?: string
 }
 
-// VideoAnnotator v1.1.1 Demo Datasets (from demo/videos_out)
-// Paths are absolute (leading /) so they resolve correctly from any route.
+// A single curated VideoAnnotator v1.1.1 demo clip, hosted outside the app bundle
+// (see demo-assets/ at the repo root) and fetched at runtime via raw.githubusercontent.com,
+// which serves Access-Control-Allow-Origin: * — unlike GitHub Release assets, which don't
+// support cross-origin fetch(). This keeps demo content out of dist/ entirely, so build size
+// and embedding don't depend on how much demo content exists.
+const DEMO_ASSETS_BASE_URL = 'https://raw.githubusercontent.com/InfantLab/video-annotation-viewer/main/demo-assets'
+
 export const DEMO_DATA_SETS = {
   'peekaboo-rep3-v1.1.1': {
-    video: '/demo/videos/2UWdXP.joke1.rep3.take1.Peekaboo_h265.mp4',
-    complete_results: '/demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/complete_results.json',
-    webvtt: '/demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/2UWdXP.joke1.rep3.take1.Peekaboo_h265_speech_recognition.vtt',
-    rttm: '/demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/2UWdXP.joke1.rep3.take1.Peekaboo_h265_speaker_diarization.rttm',
-    audio: '/demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/2UWdXP.joke1.rep3.take1.Peekaboo_h265_audio.wav',
-    openface3: '/demo/videos_out/2UWdXP.joke1.rep3.take1.Peekaboo_h265/2UWdXP.joke1.rep3.take1.Peekaboo_h265_openface3_analysis.json'
-  },
-  'peekaboo-rep2-v1.1.1': {
-    video: '/demo/videos/2UWdXP.joke1.rep2.take1.Peekaboo_h265.mp4',
-    complete_results: '/demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/complete_results.json',
-    webvtt: '/demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/2UWdXP.joke1.rep2.take1.Peekaboo_h265_speech_recognition.vtt',
-    rttm: '/demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/2UWdXP.joke1.rep2.take1.Peekaboo_h265_speaker_diarization.rttm',
-    audio: '/demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/2UWdXP.joke1.rep2.take1.Peekaboo_h265_audio.wav',
-    openface3: '/demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/2UWdXP.joke1.rep2.take1.Peekaboo_h265_openface3_analysis.json'
-  },
-  'tearingpaper-rep1-v1.1.1': {
-    video: '/demo/videos/3dC3SQ.joke1.rep1.take1.TearingPaper_h265.mp4',
-    complete_results: '/demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/complete_results.json',
-    webvtt: '/demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/3dC3SQ.joke1.rep1.take1.TearingPaper_h265_speech_recognition.vtt',
-    rttm: '/demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/3dC3SQ.joke1.rep1.take1.TearingPaper_h265_speaker_diarization.rttm',
-    audio: '/demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/3dC3SQ.joke1.rep1.take1.TearingPaper_h265_audio.wav',
-    openface3: '/demo/videos_out/3dC3SQ.joke1.rep1.take1.TearingPaper_h265/3dC3SQ.joke1.rep1.take1.TearingPaper_h265_openface3_analysis.json'
-  },
-  'thatsnotahat-rep1-v1.1.1': {
-    video: '/demo/videos/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265.mp4',
-    complete_results: '/demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/complete_results.json',
-    webvtt: '/demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_speech_recognition.vtt',
-    rttm: '/demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_speaker_diarization.rttm',
-    audio: '/demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_audio.wav',
-    openface3: '/demo/videos_out/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265/6c6MZQ.joke1.rep1.take1.ThatsNotAHat_h265_openface3_analysis.json'
-  },
-  'veatic-3-silent': {
-    video: '/demo/videos/3.mp4',
-    complete_results: '/demo/videos_out/3/complete_results.json',
-    webvtt: '/demo/videos_out/3/3_speech_recognition.vtt',
-    rttm: '/demo/videos_out/3/3_speaker_diarization.rttm',
-    audio: '/demo/videos_out/3/3_audio.wav',
-    // Note: No OpenFace3 data available for this demo
-    // Additional individual files for manual testing
-    person_tracking: '/demo/videos_out/3/3_person_tracking.json',
-    scene_detection: '/demo/videos_out/3/3_scene_detection.json',
-    scene_results: '/demo/videos_out/3/scene_results.json'
+    video: `${DEMO_ASSETS_BASE_URL}/2UWdXP.joke1.rep3.take1.Peekaboo_h265.mp4`,
+    complete_results: `${DEMO_ASSETS_BASE_URL}/complete_results.json`,
+    webvtt: `${DEMO_ASSETS_BASE_URL}/2UWdXP.joke1.rep3.take1.Peekaboo_h265_speech_recognition.vtt`,
+    rttm: `${DEMO_ASSETS_BASE_URL}/2UWdXP.joke1.rep3.take1.Peekaboo_h265_speaker_diarization.rttm`,
+    audio: `${DEMO_ASSETS_BASE_URL}/2UWdXP.joke1.rep3.take1.Peekaboo_h265_audio.wav`,
+    openface3: `${DEMO_ASSETS_BASE_URL}/2UWdXP.joke1.rep3.take1.Peekaboo_h265_openface3_analysis.json`
   }
 } as const
 
-export async function loadDemoAnnotations(datasetName: keyof typeof DEMO_DATA_SETS): Promise<StandardAnnotationData | null> {
+// Demo files are fetched over the network; a plain fetch() rejects with a TypeError
+// (not an HTTP error) when there's no connectivity at all, so that case gets a
+// message a user can act on instead of a raw "Failed to fetch".
+export function getDemoFetchErrorMessage(error: unknown): string {
+  if (error instanceof TypeError) {
+    return 'Demo requires an internet connection. Please check your network and try again.'
+  }
+  return error instanceof Error ? error.message : String(error)
+}
+
+export async function loadDemoAnnotations(datasetName: keyof typeof DEMO_DATA_SETS): Promise<StandardAnnotationData> {
   const paths = DEMO_DATA_SETS[datasetName]
 
   try {
@@ -143,14 +122,14 @@ export async function loadDemoAnnotations(datasetName: keyof typeof DEMO_DATA_SE
 
   } catch (error) {
     console.error('❌ Error loading VideoAnnotator v1.1.1 demo data:', error)
-    return null
+    throw new Error(getDemoFetchErrorMessage(error))
   }
 }
 
 /**
  * Load demo video file separately for use in VideoAnnotationViewer
  */
-export async function loadDemoVideo(datasetName: keyof typeof DEMO_DATA_SETS): Promise<File | null> {
+export async function loadDemoVideo(datasetName: keyof typeof DEMO_DATA_SETS): Promise<File> {
   const paths = DEMO_DATA_SETS[datasetName]
 
   try {
@@ -166,7 +145,7 @@ export async function loadDemoVideo(datasetName: keyof typeof DEMO_DATA_SETS): P
 
   } catch (error) {
     console.error('❌ Error loading demo video:', error)
-    return null
+    throw new Error(getDemoFetchErrorMessage(error))
   }
 }
 
@@ -427,8 +406,5 @@ if (typeof window !== 'undefined') {
    VideoAnnotatorDebug.checkAuth() - Test authentication
 
 Available datasets: ${Object.keys(DEMO_DATA_SETS).join(', ')}
-
-⚠️  Known Issue: peekaboo-rep2-v1.1.1 has malformed complete_results.json
-🔇 New: veatic-3-silent - longer duration video without speech/audio data
 `)
 }
