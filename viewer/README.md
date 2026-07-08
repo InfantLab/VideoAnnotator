@@ -1,6 +1,6 @@
 <div align="center">
   <img src="public/icon-64x64.png" alt="Video Annotation Viewer Icon" width="64" height="64">
-  <h1>Video Annotation Viewer v0.6.1</h1>
+  <h1>Video Annotation Viewer v0.6.3</h1>
 </div>
 
 [![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -21,11 +21,9 @@
 
 Advanced multimodal video annotation analysis tool for both **reviewing VideoAnnotator pipeline outputs** and **creating new annotation jobs**. Features synchronized pose detection, speech recognition, speaker diarization, and scene detection visualization with integrated job management.
 
-JOSS submission prep (targeting v0.6.1) lives in:
-- `paper/paper.md`
-- `docs/development/ROADMAP_v0.6.1.md`
+This project and [VideoAnnotator](https://github.com/InfantLab/VideoAnnotator) are submitted to JOSS as a single combined paper, hosted in the VideoAnnotator repository. See [joss-reviews#10182](https://github.com/openjournals/joss-reviews/issues/10182) for the combined submission and review history.
 
-> Companion processing pipeline: [VideoAnnotator](https://github.com/InfantLab/VideoAnnotator)
+> Companion processing pipeline: [VideoAnnotator](https://github.com/InfantLab/VideoAnnotator) — installing it also gets you this viewer, bundled and ready at `/viewer`, no separate setup required.
 
 ## Overview
 
@@ -42,19 +40,19 @@ Video Annotation Viewer is a sophisticated web-based application designed for re
 - **Multi-file Loading**: Drag-and-drop interface for video + annotation files
 - **Automatic Detection**: Intelligent file type recognition and validation
 
-### 🎬 **Job Creation & Management** *(Enhanced in v0.4.0/v0.5.0)*
+### 🎬 **Job Creation & Management**
 - **Create Annotation Jobs**: Submit videos for processing through VideoAnnotator API
-- **Pipeline Selection**: Choose from scene detection, person tracking, face analysis, and audio processing with styled badges *(v0.4.0)*
-- **Advanced Configuration**: Collapsible JSON editor with examples, live validation, and copy-to-clipboard *(v0.4.0)*
+- **Pipeline Selection**: Choose from scene detection, person tracking, face analysis, and audio processing with styled badges
+- **Advanced Configuration**: Collapsible JSON editor with examples, live validation, and copy-to-clipboard
 - **Batch Processing**: Handle multiple videos simultaneously
 - **Real-time Monitoring**: Track job progress with live status updates (SSE)
-- **Job Management**: View, monitor, retry, and delete annotation jobs *(v0.4.0)*
-- **Job Cancellation**: Cancel running jobs with confirmation dialog *(v1.3.0)*
-- **Retry Failed Jobs**: One-click retry with pre-filled configuration *(v0.4.0)*
-- **Error Display**: Clear error messages with copy-to-clipboard support *(v0.4.0)*
-- **Configuration Validation**: Pre-submission validation with helpful error messages *(v1.3.0)*
-- **Enhanced Authentication**: Improved token setup wizard with status indicator *(v1.3.0)*
-- **Server Diagnostics**: Monitor GPU status, worker queue, and system health in real-time *(v0.4.0/v1.3.0)*
+- **Job Management**: View, monitor, retry, and delete annotation jobs
+- **Job Cancellation**: Cancel running jobs with confirmation dialog
+- **Retry Failed Jobs**: One-click retry with pre-filled configuration
+- **Error Display**: Clear error messages with copy-to-clipboard support
+- **Configuration Validation**: Pre-submission validation with helpful error messages
+- **Enhanced Authentication**: Improved token setup wizard with status indicator
+- **Server Diagnostics**: Monitor GPU status, worker queue, and system health in real-time
 
 ### 🎥 **Multimodal Visualization**
 - **Pose Detection**: COCO-format human pose keypoints with 17-point skeleton rendering
@@ -109,7 +107,7 @@ Video Annotation Viewer is a sophisticated web-based application designed for re
 3. The system automatically detects and validates file formats
 4. Click **"Start Viewing"** to begin analysis
 
-### Create New Annotation Jobs *(New in v0.3.0)*
+### Create New Annotation Jobs
 1. Click **"Create Annotations"** from the main interface
 2. Navigate to **"New Job"** in the job management panel
 3. Upload your video files (supports batch processing)
@@ -246,12 +244,13 @@ Your Video Files → [VideoAnnotator Processing] → Annotation Files → [This 
 ### Connect to VideoAnnotator API
 To use the job creation and management features, you need to connect the viewer to a running VideoAnnotator server.
 
-1. **Environment Variables**: Create a `.env` file in the project root:
+1. **Embedded mode (zero config)**: If you're using the copy of this app bundled with VideoAnnotator — served at `http://localhost:18011/viewer` (or wherever your VideoAnnotator server runs) — no configuration is needed. It's served same-origin and already talks to that server's `/api/v1` routes. This is what you get by default from `pip install videoannotator[all]` followed by `videoannotator serve`.
+2. **Environment Variables**: Running this app separately (e.g. for development, or pointed at a remote server)? Create a `.env` file in the project root:
    ```env
    VITE_API_BASE_URL=http://localhost:18011
    VITE_API_TOKEN=your-secret-token
    ```
-2. **In-App Settings**: Alternatively, you can configure the connection directly in the app via the **Settings** page. This saves the configuration to your browser's `localStorage` (`videoannotator_api_url` and `videoannotator_api_token`).
+3. **In-App Settings**: Alternatively, you can configure the connection directly in the app via the **Settings** page. This saves the configuration to your browser's `localStorage` (`videoannotator_api_url` and `videoannotator_api_token`).
 
 The default local development server URL is `http://localhost:18011`.
 
@@ -265,25 +264,6 @@ Video Annotation Viewer integrates seamlessly with:
 
 For detailed release notes and changes, see [CHANGELOG.md](CHANGELOG.md).
 
-- **v0.3.0**: VideoAnnotator Job Creation & Management (August 2025)
-  - **Job Creation Wizard**: Create new annotation jobs through VideoAnnotator API
-  - **Pipeline Management**: Select and configure scene detection, person tracking, face analysis, and audio processing
-  - **Batch Processing**: Submit multiple videos simultaneously
-  - **Real-time Monitoring**: Live job status updates and progress tracking
-  - **Professional Interface**: Enhanced UI with consistent branding and improved user experience
-  - **API Integration**: Full VideoAnnotator server integration with authentication and error handling
-  
-- **v0.2.0**: Enhanced interface and improved functionality (August 2025)
-  - Updated project branding to "Video Annotation Viewer" 
-  - Consistent GitHub repository naming (`video-annotation-viewer`)
-  - New interface screenshot and social media integration
-  - Improved documentation and developer experience
-  
-- **v0.1.0**: Initial release with full VideoAnnotator integration
-  - COCO, WebVTT, RTTM, and Scene detection support
-  - Multi-file upload and automatic format detection
-  - Interactive timeline with synchronized playback
-  - Demo dataset integration
 
 ## 📚 Documentation
 
@@ -295,10 +275,10 @@ Comprehensive documentation is available in the [`docs/`](./docs/) directory:
 - **[Agents Guide](./AGENTS.md)** - Instructions for AI coding agents working in this repo
 - **[File Formats](./docs/FILE_FORMATS.md)** - VideoAnnotator format specifications  
 - **[Debug Utils](./docs/DEBUGUTILS_GUIDE.md)** - Console debugging and testing tools
-- **[Client-Server Guide](./docs/CLIENT_SERVER_COLLABORATION_GUIDE.md)** - VideoAnnotator API integration *(New in v0.3.0)*
-- **[QA Testing v0.3.0](./docs/testing/QA_Checklist_v0.3.0.md)** - Current quality assurance procedures
+- **[Client-Server Guide](./docs/CLIENT_SERVER_COLLABORATION_GUIDE.md)** - VideoAnnotator API integration 
+- **[Testing Guide](./docs/TESTING_GUIDE.md)** - Current quality assurance procedures
 - **[Implementation History](./docs/development/)** - Development tracking and historical records
-- **[v0.4.0 Roadmap](./docs/development/ROADMAP_v0.4.0.md)** - Future feature planning
+- **[v0.7.0 Roadmap](./docs/development/ROADMAP_v0.7.0.md)** - Future feature planning
 
 ## 🤝 Contributing
 

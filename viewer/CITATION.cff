@@ -20,7 +20,7 @@ authors:
   given-names: Mark
   orcid: https://orcid.org/0000-0001-5846-3444
 title: "Video Annotation Viewer"
-version: 0.6.1
+version: 0.6.3
 date-released: 2026-02-27
 repository-code: "https://github.com/InfantLab/video-annotation-viewer"
 url: "https://github.com/InfantLab/video-annotation-viewer"
