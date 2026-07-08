@@ -116,6 +116,11 @@ def create_admin_user(
         existing_user = UserCRUD.get_by_username(db, username)
         if existing_user:
             logger.info(f"Admin user '{username}' already exists")
+            # Force attributes to load before the session closes below — the
+            # caller reads user.username/user.email after this function
+            # returns, and a closed session raises DetachedInstanceError on
+            # any attribute that isn't already loaded.
+            db.refresh(existing_user)
             return existing_user, None  # type: ignore[return-value]
 
         # Create admin user
@@ -139,6 +144,9 @@ def create_admin_user(
         logger.info(f"API Key: {raw_key}")
         logger.warning("Save this API key securely - it won't be shown again!")
 
+        # Force attributes to load before the session closes below (see the
+        # matching comment on the existing-user branch above for why).
+        db.refresh(user)
         return user, raw_key
 
     except Exception as e:
