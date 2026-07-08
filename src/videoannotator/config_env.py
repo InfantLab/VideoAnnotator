@@ -145,6 +145,10 @@ API_HOST = get_str_env("API_HOST", "0.0.0.0")
 # Port to listen on
 API_PORT = get_int_env("API_PORT", 18011)
 
+# Serve the bundled Video Annotation Viewer static build at /viewer.
+# Disable if you don't want the companion review UI exposed on this server.
+ENABLE_VIEWER = get_bool_env("VIDEOANNOTATOR_ENABLE_VIEWER", True)
+
 # Enable CORS credentials support
 CORS_ALLOW_CREDENTIALS = get_bool_env("CORS_ALLOW_CREDENTIALS", True)
 
@@ -210,6 +214,7 @@ def print_config() -> None:
     print("\nAPI Server:")
     print(f"  API_HOST: {API_HOST}")
     print(f"  API_PORT: {API_PORT}")
+    print(f"  ENABLE_VIEWER: {ENABLE_VIEWER}")
     print(f"  CORS_ORIGINS: {CORS_ORIGINS}")
     print("\nDatabase:")
     print(f"  DATABASE_URL: {DATABASE_URL}")

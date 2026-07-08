@@ -55,7 +55,9 @@ For more copy-pasteable CLI workflows, see `usage/demo_commands.md`.
 
 - **[Roadmap Overview (Archived)](archive/development/roadmap_overview.md)** - Historical release strategy notes
 - [v1.4.0 Roadmap](development/roadmap_v1.4.0.md) - Roadmap for the v1.4.0 cycle
-- [v1.5.0 Roadmap](development/roadmap_v1.5.0.md) - Roadmap for the v1.5.0 cycle
+- [v1.5.0 Roadmap](development/roadmap_v1.5.0.md) - Modularity & integration release (JOSS resubmission response)
+- [v1.6.0 Roadmap](development/roadmap_v1.6.0.md) - Plugin ecosystem & local LLM (Ollama/llama.cpp) backends
+- [Modular Pipeline Architecture Spec](../specs/003-modular-pipeline-architecture/spec.md) - Full design spec underlying v1.5.0/v1.6.0
 - [Examples CLI Update Plan](development/EXAMPLES_CLI_UPDATE_CHECKLIST.md) - CLI modernization checklist
 
 ## 🧪 Testing & QA

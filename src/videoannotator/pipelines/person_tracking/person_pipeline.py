@@ -480,21 +480,28 @@ class PersonTrackingPipeline(BasePipeline):
                                 frame_number=frame_number,
                             )
 
-                        # Add person identity information if enabled
+                        # Person identity fields are always present, even without an
+                        # identity_manager or a resolved label. Video Annotation Viewer's
+                        # COCOPersonAnnotationSchema treats these as required, non-nullable
+                        # fields (see tests/contract/test_viewer_contract.py); omitting them
+                        # breaks the viewer for any job run without identity labeling.
+                        person_id = None
+                        label_info = None
                         if self.identity_manager is not None:
                             person_id = self.identity_manager.register_track(track_id)
-                            annotation["person_id"] = person_id
-
-                            # Add person labeling fields if available
                             label_info = self.identity_manager.get_person_label(
                                 person_id
                             )
-                            if label_info:
-                                annotation["person_label"] = label_info["label"]
-                                annotation["label_confidence"] = label_info[
-                                    "confidence"
-                                ]
-                                annotation["labeling_method"] = label_info["method"]
+
+                        annotation["person_id"] = person_id or f"track_{track_id}"
+                        if label_info:
+                            annotation["person_label"] = label_info["label"]
+                            annotation["label_confidence"] = label_info["confidence"]
+                            annotation["labeling_method"] = label_info["method"]
+                        else:
+                            annotation["person_label"] = "unknown"
+                            annotation["label_confidence"] = 0.0
+                            annotation["labeling_method"] = "none"
 
                         annotations.append(annotation)
 
@@ -636,7 +643,10 @@ class PersonTrackingPipeline(BasePipeline):
                 "description": "COCO annotation for person detection/tracking",
                 "properties": {
                     "id": {"type": "integer", "description": "Unique annotation ID"},
-                    "image_id": {"type": "integer", "description": "Image/frame ID"},
+                    "image_id": {
+                        "type": "string",
+                        "description": "Image/frame ID (e.g. '<video_id>_frame_<n>')",
+                    },
                     "category_id": {
                         "type": "integer",
                         "description": "COCO category ID (1 for person)",
@@ -667,21 +677,23 @@ class PersonTrackingPipeline(BasePipeline):
                         "type": ["integer", "null"],
                         "description": "Tracking ID across frames",
                     },
-                    # Person identity extensions
+                    # Person identity extensions — always present. Falls back to
+                    # "track_<id>"/"unknown"/0.0/"none" when identity labeling is
+                    # disabled or a track has no resolved label yet.
                     "person_id": {
-                        "type": ["string", "null"],
+                        "type": "string",
                         "description": "Consistent person identifier",
                     },
                     "person_label": {
-                        "type": ["string", "null"],
+                        "type": "string",
                         "description": "Semantic person label",
                     },
                     "label_confidence": {
-                        "type": ["number", "null"],
+                        "type": "number",
                         "description": "Person label confidence",
                     },
                     "labeling_method": {
-                        "type": ["string", "null"],
+                        "type": "string",
                         "description": "How the label was assigned",
                     },
                     # VideoAnnotator extensions
@@ -701,6 +713,10 @@ class PersonTrackingPipeline(BasePipeline):
                     "bbox",
                     "area",
                     "iscrowd",
+                    "person_id",
+                    "person_label",
+                    "label_confidence",
+                    "labeling_method",
                 ],
             },
         }

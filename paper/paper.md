@@ -1,7 +1,8 @@
 ---
-title: "VideoAnnotator: an extensible, reproducible toolkit for automated video annotation in behavioral research"
+title: "VideoAnnotator and Video Annotation Viewer: an open toolkit for automated multi-modal video annotation and cross-modal audit in behavioral research"
 tags:
   - Python
+  - TypeScript
   - video analysis
   - behavioral science
   - reproducibility
@@ -33,63 +34,77 @@ affiliations:
     index: 2
   - name: Department of Social Policy and Intervention (DISP), University of Oxford, United Kingdom
     index: 3
-date: 27 February 2026
+date: 2 July 2026
 bibliography: paper.bib
 ---
 
 # Summary
 
-VideoAnnotator is an open-source Python toolkit for automated video annotation, designed for behavioral, social, and health research at scale. It ships ten declaratively configured pipelines spanning four modalities: person tracking via YOLOv11 with ByteTrack [@yolo11; @bytetrack]; facial analysis using DeepFace [@deepface], LAION EmoNet face emotion analysis [@emonet_face], and OpenFace 3 [@openface3]; scene detection with PySceneDetect and CLIP-based labelling [@pyscenedetect; @clip]; and audio processing comprising Whisper speech recognition [@whisper], pyannote speaker diarization [@pyannote], and LAION EmoNet voice emotion analysis [@emonet_voice]. All pipelines share a uniform interface behind a local-first FastAPI service [@fastapi], with Docker images for consistent CPU and GPU execution. Outputs are standardized to established formats (COCO JSON, RTTM, WebVTT) and accompanied by provenance metadata suitable for downstream modeling and review.
+We present two companion open-source tools for reproducible video-based behavioral research: **VideoAnnotator**, a Python pipeline toolkit, and **Video Annotation Viewer** (VAV), a browser-based audit interface. Together they cover the full analysis loop — from raw video to cross-modal inspection of automated outputs — while keeping all processing local to meet data-governance requirements common in research involving children or other vulnerable populations.
 
-A companion web application, Video Annotation Viewer [@viewer], provides an interactive interface for overlaying annotations on source video — rendering pose skeletons, speaker timelines, subtitle tracks, and scene boundaries — so that researchers can visually inspect and validate pipeline outputs before downstream analysis.
+**VideoAnnotator** ships ten declaratively configured pipelines spanning four modalities: person tracking via YOLOv11 with ByteTrack [@yolo11; @bytetrack]; facial analysis using DeepFace [@deepface], LAION EmoNet face emotion [@emonet_face], and OpenFace 3 [@openface3]; scene detection with PySceneDetect and CLIP-based labelling [@pyscenedetect; @clip]; and audio processing comprising Whisper speech recognition [@whisper], pyannote speaker diarization [@pyannote], and LAION EmoNet voice emotion [@emonet_voice]. Pipelines share a uniform interface behind a local-first FastAPI service [@fastapi] with Docker images for reproducible CPU and GPU execution. Outputs are standardized to established formats — COCO JSON, RTTM, WebVTT — and wrapped with provenance metadata recording the pipeline version and configuration.
 
-The toolkit targets researchers who need auditable, inspectable feature timelines (e.g., facial action units, gaze-related signals, diarized speech activity) while remaining domain-agnostic for use in psychology, HCI, education research, clinical observation, and related settings.
+**Video Annotation Viewer** is a React/TypeScript single-page application that renders those outputs as a synchronized, multi-track timeline beneath the source video. Each annotation stream (pose skeletons, speech captions, speaker diarization, scene boundaries) appears as a parallel, time-aligned lane, allowing researchers to audit cross-modal relationships at a glance: where a speaker label disagrees with who is on screen, where pose tracking drops out, or where turn-taking patterns emerge in caregiver–child interaction. The viewer reads standard files directly (COCO JSON, WebVTT, RTTM) and can also connect to a running VideoAnnotator service for job submission and results retrieval, though standalone use requires no server.
 
 # Statement of need
 
-Behavioral and interaction research depends heavily on observational video coding, yet human annotation is costly to train, slow to scale, and difficult to reproduce across sites and studies [@observer]. Automated tools can assist, but researchers face a fragmented landscape: each upstream model has its own installation procedure, input expectations, and output format. Integrating several models into a single analysis workflow requires substantial engineering effort that is typically duplicated across labs.
+Behavioral and interaction research depends on observational video, yet human annotation is costly, slow, and difficult to reproduce across sites [@observer]. Automated pipelines can scale, but they introduce a new problem: researchers must be able to *inspect and trust* what each detector produced before drawing scientific conclusions, especially when constructs are subjective, context-dependent, or concern vulnerable populations.
 
-VideoAnnotator addresses this gap by providing a maintainable software layer that standardizes access to widely used open models for face, pose, audio, and scene analysis. It produces inspectable, timestamped events and tracks with per-stage provenance, allowing researchers to audit exactly which detector version produced each annotation. Critically, all processing runs locally, supporting the data-privacy requirements common in research involving children, patients, or other vulnerable populations.
+The current landscape makes this harder than it should be. Each upstream model — face detectors, speech recognizers, pose estimators — has its own installation procedure, input expectations, and output format, so building a multi-modal analysis workflow requires substantial per-lab engineering. Once outputs exist, there is no lightweight tool for reviewing heterogeneous annotation streams together in time: seeing whether the transcribed speech matches the on-screen speaker, or whether turn-taking pauses align with detected gaze changes, requires stitching together tools that were not designed to interoperate.
+
+VideoAnnotator addresses the pipeline integration gap; Video Annotation Viewer addresses the cross-modal inspection gap. Critically, both run entirely locally, supporting the data-privacy requirements of research involving children, patients, and recordings collected in low- and middle-income settings.
 
 # State of the field
 
-Existing tools for behavioral video analysis fall into two broad categories. Manual annotation platforms such as ELAN [@elan] and Datavyu [@datavyu] provide flexible coding interfaces but require trained human coders and do not scale to large corpora. At the other end, specialized computer-vision libraries such as DeepLabCut [@deeplabcut] and YOLO [@yolo11] offer powerful pose estimation and object detection but target a single modality and leave integration, output standardization, and batch orchestration to the user.
+**Manual annotation platforms** such as ELAN [@elan], Datavyu [@datavyu], and BORIS [@boris] provide rich time-aligned coding environments but require trained human coders and do not scale to large video corpora. They are built around the assumption that a human is the annotation source, not a consumer of machine output.
 
-For facial affect, toolkits such as Py-Feat [@pyfeat] and OpenFace [@openface3] extract action units, landmarks, and emotion labels from video frames. On the audio side, openSMILE [@opensmile] remains widely cited for acoustic feature extraction but has seen limited maintenance, and no current open-source toolkit offers end-to-end speech emotion analysis integrated with video. These tools all run locally but each addresses a single modality and produces its own output schema. Scene-detection libraries such as PySceneDetect [@pyscenedetect] and speaker-diarization toolkits like pyannote [@pyannote] similarly solve one piece of the puzzle. A researcher studying parent–child interaction, for example, may need person tracking, facial expression analysis, speech segmentation, and scene detection applied to the same set of videos — currently requiring ad-hoc glue code across four or more libraries with no shared output format or batch orchestration.
+**Specialized computer-vision libraries** such as DeepLabCut [@deeplabcut] and YOLO [@yolo11] offer state-of-the-art pose estimation and detection but address a single modality and leave output standardization and batch orchestration to the user. For facial affect, Py-Feat [@pyfeat] and OpenFace [@openface3] extract action units and emotion labels; for audio, openSMILE [@opensmile] provides acoustic feature extraction. These are powerful tools, but each produces its own schema and none orchestrates across modalities.
 
-VideoAnnotator was built rather than contributed to an existing project because no single package offered the combination of multi-modal pipeline composition, declarative configuration, standardized output formats (COCO, RTTM, WebVTT), and local-first batch orchestration that our research workflows required. The closest comparable systems are either commercial, cloud-dependent, or tightly coupled to a single detector.
+**General scientific visualization environments** such as napari [@napari] and FIJI/ImageJ [@imagej] support extensible, multi-channel display of time-series data and are widely used in bio-imaging. They are capable tools, but their plugin ecosystems are built for image and microscopy data: they do not natively parse speech-specific formats (WebVTT, RTTM) and require Python or Java installation that adds friction for behavioral scientists who are not software developers. Their design assumes an interactive editing workflow rather than a read-only audit of machine-generated output.
+
+**Dataset curation platforms** such as FiftyOne [@fiftyone] and Label Studio [@labelstudio] are powerful for managing datasets and producing annotations at scale, but they are optimized for labeling pipelines rather than lightweight time-synchronized review of heterogeneous outputs.
+
+A researcher studying parent–child interaction who needs person tracking, facial expression analysis, speech segmentation, and speaker diarization on the same set of videos currently requires ad-hoc glue code across four or more libraries with no shared output format, no batch orchestration, and no unified review surface. VideoAnnotator and Video Annotation Viewer were built to close that gap.
 
 # Software design
 
-VideoAnnotator is organized around four architectural layers chosen to balance extensibility with operational simplicity.
+## VideoAnnotator
 
-**Pipeline registry and detector layer.** Pipelines are registered via declarative YAML metadata files rather than code, so new detectors can be added by providing a metadata file and a Python class that inherits from `BasePipeline`. The base class enforces a uniform interface — `initialize()`, `process()`, `cleanup()`, and `get_schema()` — enabling plug-and-play composition without modifying application code. This metadata-driven approach trades a small amount of configuration overhead for the ability to extend the system without touching existing pipelines.
+VideoAnnotator is organized around four layers.
 
-**Standardized output and provenance.** All pipeline outputs map to established data standards: COCO JSON for spatial annotations, RTTM for speaker diarization segments, and WebVTT for timed text. Each result is wrapped with provenance metadata recording the pipeline name, version, configuration parameters, and processing timestamps. This design sacrifices some pipeline-specific richness in favour of cross-tool interoperability and auditable reproducibility.
+**Pipeline registry.** Pipelines are registered via declarative YAML metadata files. Adding a new detector requires only a metadata file and a Python class inheriting from `BasePipeline`, which enforces a uniform interface (`initialize()`, `process()`, `cleanup()`, `get_schema()`). This metadata-driven approach allows plug-and-play composition without modifying existing pipelines.
 
-**Batch orchestration.** A thread-pool-based orchestrator manages concurrent job execution with configurable retry strategies (fixed, linear, or exponential backoff) and transient-versus-permanent error classification. Jobs are persisted to the local filesystem after each stage, providing checkpoint recovery without requiring an external message queue. This single-machine design keeps deployment simple for lab settings, at the cost of not supporting distributed multi-node processing.
+**Standardized output and provenance.** All outputs map to established formats: COCO JSON for spatial annotations, RTTM for diarization, WebVTT for timed text. Each result is wrapped with provenance metadata — pipeline name, version, configuration parameters, processing timestamps — supporting reproducible re-analysis.
 
-**Service and CLI layer.** A FastAPI service exposes endpoints for job submission, status polling, pipeline discovery, and results retrieval, while a Typer-based CLI provides equivalent local-execution commands. Both interfaces share the same orchestrator and storage backend, ensuring consistent behavior. Token-based authentication is enabled by default and can be relaxed for development use. The companion Video Annotation Viewer [@viewer] connects to the same API, allowing researchers to submit jobs, monitor progress, and review results with synchronized video playback and annotation overlays in a single browser-based workflow.
+**Batch orchestration.** A thread-pool orchestrator manages concurrent job execution with configurable retry strategies (fixed, linear, or exponential backoff) and transient-versus-permanent error classification. Jobs are checkpointed to the local filesystem after each stage, providing recovery without an external message queue.
+
+**Service and CLI.** A FastAPI service exposes endpoints for job submission, status polling, pipeline discovery, and results retrieval; a Typer-based CLI provides equivalent local-execution commands. Both share the same orchestrator and storage backend.
+
+## Video Annotation Viewer
+
+VAV is a stateless React/TypeScript single-page application organized around three concerns. **Format parsers** validate and normalize COCO JSON, WebVTT, and RTTM files into internal typed representations. **Viewer components** render a video player with overlay layer and a coordinated multi-track timeline beneath it, with each annotation stream displayed as a parallel lane synchronized to playback. **An optional API client** connects to a VideoAnnotator service for job management and result retrieval, but is not required for standalone use. Because VAV is stateless, a given video and set of annotation files deterministically produce the same display, supporting reproducible review (\autoref{fig:viewer}).
+
+![Video Annotation Viewer displaying a caregiver–child interaction clip with synchronized person tracking, face detection, emotion recognition, speech recognition, speaker diarization, and scene detection overlays, alongside the multi-track timeline that enables cross-modal audit.\label{fig:viewer}](figure1.png)
 
 # Research impact statement
 
-VideoAnnotator was developed at Stellenbosch University to support large-scale analysis of caregiver–child interaction videos collected across multiple sites in sub-Saharan Africa as part of the Global Parenting Initiative. It is currently used by research teams at Stellenbosch University and the University of Oxford to process observational video data in developmental psychology and parenting-intervention studies. The toolkit's local-first design was specifically motivated by the ethical and governance requirements of working with video recordings of children in low- and middle-income settings. Pilot analyses have been conducted on corpora of over 500 sessions, and the software is being prepared for use in upcoming multi-site trials.
+Both tools were developed at Stellenbosch University to support analysis of caregiver–child interaction videos collected across multiple sites in sub-Saharan Africa as part of the Global Parenting Initiative. Research teams at Stellenbosch University and the University of Oxford use the full pipeline — VideoAnnotator for processing and VAV for review — in developmental psychology and parenting-intervention studies. The local-first design was motivated by the ethical and governance requirements of working with video recordings of children in low- and middle-income settings. Pilot analyses have been conducted on corpora of over 500 sessions, and the software is being prepared for use in upcoming multi-site trials. A practical motivating example: VAV's synchronized multi-track timeline makes turn-taking patterns in caregiver–child interaction visible at a glance, a cue to reciprocity that is important for developmental assessment but difficult to judge from tabular outputs alone.
 
 # Quality control
 
-The project maintains a pytest-based test suite covering unit, integration, and performance tests across 74 test files. Continuous integration via GitHub Actions runs tests on Ubuntu, Windows, and macOS with Python 3.12, alongside ruff linting, mypy type checking, and Trivy security scanning. Reproducibility is supported by recording pipeline configuration and model versions in output metadata, and Docker images provide consistent execution environments.
+VideoAnnotator maintains a pytest-based test suite covering unit, integration, and performance tests across 74 test files. Continuous integration via GitHub Actions runs tests on Ubuntu, Windows, and macOS with Python 3.12, alongside ruff linting, mypy type checking, and Trivy security scanning. Docker images provide consistent execution environments. Video Annotation Viewer is tested with Vitest and React Testing Library and built via a typed TypeScript compilation step that catches interface errors at build time.
 
 # Statement of limitations
 
-VideoAnnotator depends on the accuracy of upstream detectors, and annotation quality is bounded by their performance on a given domain. Processing speed depends on hardware; a GPU is recommended for long videos. The batch orchestrator is designed for single-machine execution and does not currently support distributed scheduling. Ethical deployment — including consent, data governance, and redaction — remains the responsibility of adopters; the toolkit provides hooks and documentation to support these steps but does not enforce them.
+Annotation quality is bounded by the accuracy of upstream detectors and their generalization to a given domain, population, and recording context. VideoAnnotator is designed for single-machine execution and does not currently support distributed scheduling; a GPU is recommended for long videos. Ethical deployment — consent, data governance, and redaction — remains the responsibility of adopters. Video Annotation Viewer is a review tool and does not support editing or export of corrected annotations.
 
 # AI usage disclosure
 
-Generative AI tools (GitHub Copilot and Claude, Anthropic) were used during development for code scaffolding, test generation, and documentation drafting. All AI-assisted outputs were reviewed, edited, and validated by the human authors, who made all core design decisions. No AI tools were used to generate the scientific content or analysis reported in this manuscript. All authors take full responsibility for the software and this paper.
+Generative AI tools (GitHub Copilot and Claude, Anthropic) were used during development for code scaffolding, test generation, and documentation drafting. All AI-assisted outputs were reviewed, edited, and validated by the human authors, who made all core design decisions. Architectural decisions — including the pipeline registry design, the provenance-metadata format, and the modularity plan described in this paper's Software design section — were specified by the human authors as versioned, dated design documents *before* implementation (e.g. `specs/003-modular-pipeline-architecture/spec.md` and the `docs/development/roadmap_*.md` series in the repository), giving reviewers a reviewable record of design intent that is separate from, and predates, any AI-assisted code generation. No AI tools were used to generate the scientific content or analysis reported in this manuscript. All authors take full responsibility for the software and this paper.
 
 # Acknowledgements
 
-We acknowledge the open-source communities behind the upstream models and libraries integrated by VideoAnnotator, in particular OpenFace, Whisper, pyannote, Ultralytics YOLO, LAION and PySceneDetect.
+We acknowledge the open-source communities behind the upstream models integrated by VideoAnnotator, in particular OpenFace, Whisper, pyannote, Ultralytics YOLO, LAION, and PySceneDetect.
 
 This project was supported by the Global Parenting Initiative and funded by The LEGO Foundation.
 

@@ -23,7 +23,10 @@ docker compose up --build
 docker compose --profile gpu up --build videoannotator-gpu
 ```
 
-Open http://localhost:18011/docs for the interactive API documentation.
+Open http://localhost:18011/docs for the interactive API documentation, or
+http://localhost:18011/viewer to review annotated output in the bundled
+[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer) — no separate
+install required (disable with `VIDEOANNOTATOR_ENABLE_VIEWER=false` if you don't want it).
 
 To initialize the database and create an admin API key explicitly:
 
@@ -87,10 +90,17 @@ uv run videoannotator server --host 0.0.0.0 --port 18011
 uv run videoannotator --dev
 
 # View interactive API documentation at http://localhost:18011/docs
+# Review annotated output at http://localhost:18011/viewer
 # Server includes integrated background job processing - no separate worker needed!
 ```
 
-**CORS Note**: The official web client (video-annotation-viewer on port 19011) is automatically allowed. For custom clients, use `--dev` mode or set `CORS_ORIGINS` environment variable.
+**Viewer**: `/viewer` serves a bundled build of Video Annotation Viewer, pre-configured to talk to
+this server (same-origin, no setup needed). It's independently installable/runnable too — see its
+[own repo](https://github.com/InfantLab/video-annotation-viewer) if you want the standalone client
+(e.g. for reviewing output from other tools, or a different VideoAnnotator instance).
+
+**CORS Note**: The official standalone web client (video-annotation-viewer on port 19011) is
+automatically allowed. For custom clients, use `--dev` mode or set `CORS_ORIGINS` environment variable.
 
 ### 📹 Process Videos via CLI
 

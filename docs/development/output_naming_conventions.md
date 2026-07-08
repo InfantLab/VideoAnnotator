@@ -1,6 +1,6 @@
-# Output Naming Conventions (v1.2.x)
+# Output Naming Conventions
 
-Status: Stable (subject to extension, not breaking renames in v1.2.x)
+Status: Stable since v1.2.x (subject to extension, no breaking renames)
 Scope: File names emitted by pipelines or batch jobs placed under job result directories.
 
 ## Goals

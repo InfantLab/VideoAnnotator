@@ -94,6 +94,14 @@ def server(
     typer.echo(f"[START] Starting VideoAnnotator API server on http://{host}:{port}")
     typer.echo(f"[INFO] API documentation available at http://{host}:{port}/docs")
 
+    from .config_env import ENABLE_VIEWER
+
+    if ENABLE_VIEWER:
+        display_host = "localhost" if host == "0.0.0.0" else host
+        typer.echo(
+            f"[INFO] Video Annotation Viewer available at http://{display_host}:{port}/viewer"
+        )
+
     # Configure development mode if requested
     if dev:
         os.environ["CORS_ORIGINS"] = "*"

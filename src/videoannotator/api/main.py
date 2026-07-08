@@ -5,9 +5,11 @@ FastAPI-based REST API for video annotation processing.
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from ..utils.logging_config import get_logger
 from ..version import __version__ as videoannotator_version
@@ -221,7 +223,39 @@ def create_app() -> FastAPI:
             "database": db_status,
         }
 
+    _mount_viewer(app)
+
     return app
+
+
+def _mount_viewer(app: FastAPI) -> None:
+    """Serve the bundled Video Annotation Viewer at /viewer, if enabled and present.
+
+    The viewer's static build is vendored into videoannotator/viewer_static at release
+    time (see docs/development/roadmap_v1.5.0.md). It calls the API via root-relative
+    /api/v1/... paths, so mounting it same-origin needs no CORS or API-URL configuration.
+    Absent in editable/dev installs unless the vendoring step has been run locally.
+    """
+    from ..config_env import ENABLE_VIEWER
+
+    if not ENABLE_VIEWER:
+        logger.info(
+            "Video Annotation Viewer disabled (VIDEOANNOTATOR_ENABLE_VIEWER=false)"
+        )
+        return
+
+    viewer_dir = Path(__file__).resolve().parent.parent / "viewer_static"
+    if not (viewer_dir / "index.html").exists():
+        logger.info(
+            "Video Annotation Viewer assets not found at %s; /viewer not mounted",
+            viewer_dir,
+        )
+        return
+
+    app.mount("/viewer", StaticFiles(directory=viewer_dir, html=True), name="viewer")
+    logger.info(
+        "Video Annotation Viewer mounted at /viewer", extra={"path": str(viewer_dir)}
+    )
 
 
 # Create app instance

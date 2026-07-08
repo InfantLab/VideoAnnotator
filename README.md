@@ -24,7 +24,7 @@ VideoAnnotator automatically analyzes videos of human interactions and extracts 
 
 ## 🖥️ Complete Solution: Processing + Visualization
 
-VideoAnnotator provides both **automated processing** and **interactive visualization**:
+VideoAnnotator provides both **automated processing** and **interactive visualization** — and installing this repository gets you both, no separate setup required.
 
 ### 📹 **VideoAnnotator** (this repository)
 
@@ -34,8 +34,9 @@ VideoAnnotator provides both **automated processing** and **interactive visualiz
 - REST API for integration with research workflows
 - Supports batch processing and custom configurations
 - Outputs standardized JSON data
+- Bundles **[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)**, served at `/viewer`
 
-### 🌐 **[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)** (paired repository)
+### 🌐 **[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)** (companion project, bundled here)
 
 **Interactive web-based visualization tool**
 
@@ -43,8 +44,9 @@ VideoAnnotator provides both **automated processing** and **interactive visualiz
 - Synchronized video playback with annotation overlays
 - Timeline scrubbing with pose, face, and audio data
 - Export tools for further analysis
+- Also fully independent: usable standalone with output from any tool that produces COCO/WebVTT/RTTM/scene-JSON files, no VideoAnnotator install required
 
-**Complete workflow**: `Your Videos → [VideoAnnotator Processing] → Annotation Data → [Video Annotation Viewer] → Interactive Analysis`
+**Complete workflow**: `Your Videos → [VideoAnnotator Processing] → Annotation Data → [Video Annotation Viewer, at /viewer] → Interactive Analysis`
 
 ## 🚀 Get Started in 60 Seconds
 
@@ -82,19 +84,34 @@ curl -X POST "http://localhost:18011/api/v1/jobs/" \
 
 ### 3. Visualize Results
 
+No extra install needed — VideoAnnotator bundles [Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer) and serves it directly:
+
+```
+Open http://localhost:18011/viewer
+```
+
+It's pre-configured to talk to this server, so your job results are one click away. Set `VIDEOANNOTATOR_ENABLE_VIEWER=false` if you'd rather not serve it.
+
+**🎉 That's it!** You now have both automated video processing and interactive visualization.
+
+<details>
+<summary>Running Video Annotation Viewer standalone instead</summary>
+
+Video Annotation Viewer also works as an independent tool — useful if you want to review output from
+other pipelines, or run the viewer without VideoAnnotator at all:
+
 ```bash
-# Install the companion web viewer
 git clone https://github.com/InfantLab/video-annotation-viewer.git
 cd video-annotation-viewer
 npm install
 npm run dev
 ```
 
-Note: Ensure Node and NPM are installed. On macOS with Homebrew: `brew install node`
+Note: Ensure Node and NPM are installed. On macOS with Homebrew: `brew install node`. Open
+http://localhost:3000 and load your files, or connect it to a VideoAnnotator server via `.env` or
+the in-app Settings page — see that repo's README for details.
 
-Open http://localhost:3000 and load your VideoAnnotator results.
-
-**🎉 That's it!** You now have both automated video processing and interactive visualization.
+</details>
 
 ## 🧠 AI Pipelines & Capabilities
 
@@ -223,7 +240,7 @@ VideoAnnotator produces machine-readable outputs (primarily JSON files and API r
 
 - **Python**: Load JSON into pandas / numpy for analysis (see [examples/](examples/))
 - **R / MATLAB**: Not currently supported with official helper packages, but the JSON outputs can be consumed using standard JSON readers
-- **Visualization**: Use the companion [Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer) for interactive playback + overlays
+- **Visualization**: Bundled [Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer) at `/viewer` for interactive playback + overlays; also runs standalone against output from other tools
 
 ## 🛠️ Installation Options
 
