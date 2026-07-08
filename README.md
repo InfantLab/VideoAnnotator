@@ -46,6 +46,22 @@ VideoAnnotator provides both **automated processing** and **interactive visualiz
 - Export tools for further analysis
 - Also fully independent: usable standalone with output from any tool that produces COCO/WebVTT/RTTM/scene-JSON files, no VideoAnnotator install required
 
+  <details>
+  <summary>Running Video Annotation Viewer standalone (without VideoAnnotator)</summary>
+
+  ```bash
+  git clone https://github.com/InfantLab/video-annotation-viewer.git
+  cd video-annotation-viewer
+  npm install
+  npm run dev
+  ```
+
+  Note: Ensure Node and NPM are installed. On macOS with Homebrew: `brew install node`. Open
+  http://localhost:3000 and load your files, or connect it to a VideoAnnotator server via `.env` or
+  the in-app Settings page — see that repo's README for details.
+
+  </details>
+
 **Complete workflow**: `Your Videos → [VideoAnnotator Processing] → Annotation Data → [Video Annotation Viewer, at /viewer] → Interactive Analysis`
 
 ## 🚀 Get Started in 60 Seconds
@@ -94,24 +110,8 @@ It's pre-configured to talk to this server, so your job results are one click aw
 
 **🎉 That's it!** You now have both automated video processing and interactive visualization.
 
-<details>
-<summary>Running Video Annotation Viewer standalone instead</summary>
-
-Video Annotation Viewer also works as an independent tool — useful if you want to review output from
-other pipelines, or run the viewer without VideoAnnotator at all:
-
-```bash
-git clone https://github.com/InfantLab/video-annotation-viewer.git
-cd video-annotation-viewer
-npm install
-npm run dev
-```
-
-Note: Ensure Node and NPM are installed. On macOS with Homebrew: `brew install node`. Open
-http://localhost:3000 and load your files, or connect it to a VideoAnnotator server via `.env` or
-the in-app Settings page — see that repo's README for details.
-
-</details>
+(Want to run Video Annotation Viewer on its own, without VideoAnnotator? See the standalone option
+in the "Complete Solution: Processing + Visualization" section above.)
 
 ## 🧠 AI Pipelines & Capabilities
 
