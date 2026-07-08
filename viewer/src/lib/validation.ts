@@ -27,7 +27,7 @@ export const COCOPersonAnnotationSchema = z.object({
     area: z.number().nonnegative(),
     iscrowd: z.union([z.literal(0), z.literal(1)]),
     score: z.number().min(0).max(1),
-    track_id: z.number().optional(),
+    track_id: z.number().nullable().optional(),
     timestamp: z.number().nonnegative(),
     frame_number: z.number().nonnegative(),
     // NEW v1.1.1 fields
