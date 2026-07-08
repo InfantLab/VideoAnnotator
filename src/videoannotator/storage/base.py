@@ -147,6 +147,14 @@ class StorageBackend(ABC):
         """
         pass
 
+    def close(self) -> None:  # noqa: B027 — intentional no-op default hook
+        """Release any held database connections or file handles.
+
+        Subclasses that own a connection pool (e.g. SQLAlchemy engine) must
+        override this and call engine.dispose() so that the underlying file
+        can be deleted on Windows without a WinError 32.
+        """
+
     def cleanup_old_files(self, max_age_days: int) -> tuple[int, int]:
         """Clean up old files (optional implementation).
 

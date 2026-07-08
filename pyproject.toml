@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "videoannotator"
-version = "1.4.3"
+version = "1.4.4"
 description = "A modern, modular toolkit for analyzing, processing, and visualizing human interaction videos"
 readme = "README.md"
 license = "MIT"
@@ -137,6 +137,9 @@ annotation = [
 all = [
     "videoannotator[dev,annotation]"
 ]
+
+[tool.setuptools.package-data]
+videoannotator = ["viewer_static/**/*"]
 
 [project.urls]
 Homepage = "https://github.com/InfantLab/VideoAnnotator"

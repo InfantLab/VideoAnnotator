@@ -162,19 +162,28 @@ def test_storage_env(tmp_path_factory):
 
     yield
 
-    # Cleanup is handled by tmp_path fixture, but we should clear caches again
+    # Dispose engines before temp dir cleanup — Windows holds files open until
+    # all SQLAlchemy connection pools are explicitly released (WinError 32).
+    try:
+        import videoannotator.database.database as _db_module
+
+        if hasattr(_db_module, "engine"):
+            _db_module.engine.dispose()
+    except Exception:
+        pass
+
     try:
         from videoannotator.api.database import reset_storage_backend
 
-        reset_storage_backend()
-    except ImportError:
+        reset_storage_backend()  # now calls backend.close() before clearing
+    except Exception:
         pass
 
     try:
         from videoannotator.storage.manager import get_storage_provider
 
         get_storage_provider.cache_clear()
-    except ImportError:
+    except Exception:
         pass
 
 

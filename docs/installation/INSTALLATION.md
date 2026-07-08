@@ -1,4 +1,4 @@
-# VideoAnnotator v1.2.0 Installation Guide
+# VideoAnnotator Installation Guide
 
 > 📖 **Navigation**: [Getting Started](../usage/GETTING_STARTED.md) | [Demo Commands](../usage/demo_commands.md) | [Pipeline Specs](../usage/pipeline_specs.md) | [Main Documentation](../README.md)
 
@@ -42,7 +42,7 @@ These tips address the most common macOS installation issues.
   ```
   - libomp: fixes OpenMP errors and segfaults in some audio models.
   - ffmpeg: required by whisper/librosa/audio pipelines.
-  - node: needed if you use the companion web viewer.
+  - node: only needed if you run Video Annotation Viewer standalone (outside this install) for development. The bundled copy at `/viewer` needs no Node/npm.
 - uv in PATH:
   ```bash
   # If 'uv' is not found after install
@@ -55,7 +55,8 @@ These tips address the most common macOS installation issues.
   # If .zshrc is missing, write PATH to ~/.zprofile instead for login shells
   ```
 - Hugging Face token (for speaker diarization): set `HF_AUTH_TOKEN` in a `.env` file or your shell. See Environment Setup guide.
-- Viewer start command: inside the viewer repo, use `npm run dev` (not `npm start`).
+- Viewer: available at `/viewer` on the running VideoAnnotator server, no separate setup. For
+  standalone development of the viewer repo itself, use `npm run dev` (not `npm start`).
 
 ## Quick Start (Recommended)
 
@@ -275,7 +276,7 @@ Open the project in VS Code and use "Reopen in Container" for a complete GPU-ena
 
 ## Modern Architecture
 
-VideoAnnotator v1.2.0 uses:
+VideoAnnotator uses:
 
 - **uv** - Fast, reliable Python package management
 - **Ruff** - Unified linting and formatting (replaces Black, isort, flake8)

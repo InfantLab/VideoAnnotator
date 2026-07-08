@@ -112,12 +112,15 @@ def get_database_info() -> dict:
 
 
 def reset_storage_backend():
-    """Clear the cached storage backend.
+    """Close and clear the cached storage backend.
 
-    This forces get_storage_backend() to create a new instance on the next
-    call. Useful for testing or when configuration changes.
+    Disposes any held database connections before clearing the reference so
+    that the underlying file can be released on Windows (WinError 32).
+    Forces get_storage_backend() to create a new instance on the next call.
     """
     global _storage_backend, _storage_backend_config
+    if _storage_backend is not None:
+        _storage_backend.close()
     _storage_backend = None
     _storage_backend_config = None
 

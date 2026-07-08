@@ -1,6 +1,6 @@
 # VideoAnnotator Docker Deployment Guide
 
-VideoAnnotator v1.2.0 includes modern Docker containers using uv for fast, reliable dependency management.
+VideoAnnotator includes modern Docker containers using uv for fast, reliable dependency management.
 
 ## 🐳 Available Docker Images
 
@@ -25,6 +25,10 @@ docker run -p 18011:18011 --rm -v "${PWD}/data:/app/data" -v "${PWD}/output:/app
 - **Use case**: Production deployment with GPU acceleration
 - **Features**: CUDA PyTorch, models download on first use
 - **Build time**: ~15-20 minutes
+
+> These images bundle every pipeline's dependencies today. A slim, per-pipeline install (targeting
+> an 80%+ size reduction for the default image) is planned in
+> [`roadmap_v1.5.0.md`](../development/roadmap_v1.5.0.md).
 
 ```bash
 # Build GPU image

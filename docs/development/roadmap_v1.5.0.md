@@ -2,479 +2,148 @@
 
 ## Release Overview
 
-VideoAnnotator v1.5.0 is the **Feature Enhancement Release** - bringing all the wishlist items that were intentionally deferred from v1.4.0 to keep the JOSS release focused. This release adds usability improvements, advanced features, and quality enhancements that make VideoAnnotator more powerful and easier to use.
+VideoAnnotator v1.5.0 is the **Modularity & Integration Release**. It is a direct response to the JOSS
+pre-review of VideoAnnotator ([openjournals/joss-reviews#10182](https://github.com/openjournals/joss-reviews/issues/10182))
+and Video Annotation Viewer ([#10183](https://github.com/openjournals/joss-reviews/issues/10183)),
+where the editor flagged the monolithic install footprint (~30 GB Docker image, every pipeline's
+dependencies mandatory) and asked for a clearer, demonstrable relationship between the two projects.
 
-**Target Release**: Q3 2026 (3-4 months after v1.4.0)
+This release scopes down the full modular-pipeline-architecture design in
+[`specs/003-modular-pipeline-architecture/spec.md`](../../specs/003-modular-pipeline-architecture/spec.md)
+to the subset that matters for the resubmission: a slim, extras-based install, and a runtime
+integration between VideoAnnotator and Video Annotation Viewer. The plugin-discovery and
+remote-dispatch seams from that spec are real and worth building, but they are not blocking a
+resubmission — they move to [`roadmap_v1.6.0.md`](roadmap_v1.6.0.md).
+
+**Target Release**: Alongside/ahead of the JOSS resubmission (v1.4.4 is the current release; the
+Phase 2 work below — /viewer integration — shipped in v1.4.4, ahead of the Phase 1 extras-based
+install work still to come)
 **Current Status**: Planning Phase
-**Main Goal**: Enhanced usability and advanced capabilities
-**Duration**: 12-14 weeks
+**Main Goal**: Slim, per-pipeline install; LAION demoted from the default install; VideoAnnotator can
+optionally serve Video Annotation Viewer directly
+**Constitution Principle in play**: Principle V (Backward Compatibility by Default) — v1.4.x
+configs and CLI invocations must keep working unchanged
 
-**Prerequisites**: v1.4.0 delivered JOSS publication foundation:
-- ✅ JOSS paper submitted/accepted
-- ✅ PyPI package published
-- ✅ 4 research workflow examples
-- ✅ Docker images (CPU/GPU)
-- ✅ Core documentation complete
-- ✅ Multi-platform testing
+**Prerequisites**: v1.4.3 fixed the reviewer-blocking installability bugs (missing `storage/manager.py`
+source files, CUDA-only torch pin, stale `openai-whisper` pin) — see commits `f3a9676`..`d55bc56`.
 
 ---
 
 ## 🎯 Core Principles
 
-This release focuses on enhancing the user experience and adding advanced capabilities:
+- ✅ **Slim by default** — `pip install videoannotator` with no extras must not pull in torch,
+  transformers, pyannote, ultralytics, or whisper.
+- ✅ **Additive, not breaking** — `pip install videoannotator[all]` reproduces v1.4.3 behaviour
+  exactly; existing config files and CLI invocations are untouched.
+- ✅ **One integrated onboarding path** — a user can go from `pip install` to reviewing annotated
+  output in a browser without standing up a second project by hand.
+- ✅ **LAION is opt-in, not default** — LAION Empathic-Insight (face and voice emotion) is an
+  actively-changing external project with a narrow user base; it should not tax every install.
 
-- ✅ **Usability First** - Progress indicators, wizards, intuitive workflows
-- ✅ **Quality & Performance** - Assessment pipelines, batch optimization
-- ✅ **Integration** - FiftyOne, Label Studio, flexible exports
-- ✅ **Developer Experience** - Better logging, debugging, analysis tools
-- ✅ **Advanced Features** - Quality metrics, comparison tools, smart scheduling
+**Out of scope for v1.5.0** (moved to v1.6.0 — see below):
+- ❌ Third-party plugin discovery via `importlib.metadata.entry_points`
+- ❌ Dispatcher ABC / HTTPDispatcher / SlurmDispatcher seam
+- ❌ Cross-cutting utilities split into a sibling `videoannotator-utils` package
+- ❌ Ollama / llama.cpp local LLM pipeline backend
 
-**Still OUT OF SCOPE** (deferred to v1.6.0+):
-- ❌ Enterprise features (SSO, RBAC, multi-tenancy)
-- ❌ Plugin system architecture
-- ❌ Real-time streaming
-- ❌ GraphQL API
-- ❌ Cloud provider integration
-- ❌ Microservice architecture
-
----
-
-## 📋 Feature Categories
-
-All items in v1.5.0 were deferred from v1.4.0 to maintain JOSS focus. They are organized into logical feature groups:
-
-### Category A: Installation & Setup
-- Model auto-download with progress
-- Setup wizard for first-run
-- Enhanced health metrics
-
-### Category B: Progress & Feedback
-- Real-time progress indicators
-- Resource usage monitoring
-- Job notifications
-
-### Category C: Configuration
-- Interactive config wizard
-- Config templates library
-- YAML validation improvements
-
-### Category D: Logging & Debugging
-- Structured logging (JSON)
-- Log analysis tools
-- Enhanced version info
-
-### Category E: Export & Integration
-- FiftyOne integration
-- Label Studio integration
-- Custom CSV templates
-
-### Category F: Quality & Performance
-- Quality assessment pipeline
-- Batch processing optimization
-- Pipeline comparison tools
+**Deferred, unscheduled** (the original v1.5.0 UX wishlist — setup wizard, progress indicators,
+FiftyOne/Label Studio export, quality-assessment tooling, etc.) has been archived to
+[`docs/archive/development/roadmap_v1.5.0_ux_wishlist.md`](../archive/development/roadmap_v1.5.0_ux_wishlist.md).
+None of it shipped; it has no committed release slot and should be re-triaged into v1.7.0+ once this
+release lands.
 
 ---
 
 ## 📋 v1.5.0 Deliverables
 
-### Phase 1: Installation & Setup Improvements (Weeks 1-2)
+### Phase 1: Extras-Based Install (User Stories 1 & 2 of spec 003)
 
-#### 1.1 Model Auto-Download System
-
-**Problem**: Users must manually download large model files before first use.
-
-**Solution**:
-- [ ] Automatic model download on first use (not during pip install)
-- [ ] Progress bar with download speed and ETA
-- [ ] Configurable cache directory (`VIDEOANNOTATOR_MODEL_CACHE`)
-- [ ] Offline mode (use cached models only)
-- [ ] Manual download script for air-gapped systems
-
-**Deliverables**:
-- `src/videoannotator/models/downloader.py` - Auto-download logic
-- Progress indicators using `tqdm`
-- Offline mode flag and detection
-- Documentation in `docs/installation/models.md`
-
-**Effort**: 16 hours
-
-#### 1.2 First-Run Setup Wizard
-
-**Problem**: New users don't know what to configure.
+**Problem**: Every pipeline's dependencies (torch, ultralytics, pyannote, whisper, transformers,
+open-clip, LAION's stack) are hard dependencies in `pyproject.toml`. A user who only wants scene
+labelling still downloads everything.
 
 **Solution**:
-- [ ] `videoannotator setup` command for first-run configuration
-- [ ] Interactive prompts:
-  - Detect GPU availability (CUDA/ROCm)
-  - Set storage directory
-  - Generate API token
-  - Select common pipelines to cache
-  - Test installation with sample video
-- [ ] Non-interactive mode with flags
-- [ ] Skip wizard option (for CI/automated deployments)
+- [ ] Move heavy ML deps from `[project.dependencies]` into named `[project.optional-dependencies]`
+      groups: `face`, `audio`, `scene`, `person`, `embedding`.
+- [ ] Give LAION its own extras (e.g. `face-laion`, `voice-laion`) separate from the base `face`/`audio`
+      groups, so standard face/audio pipelines don't pull in LAION's dependencies. LAION stays fully
+      supported, just not mandatory.
+- [ ] Add an `all` meta-extra that reproduces v1.4.3's install footprint exactly.
+- [ ] Replace the hardcoded `LEGACY_MAPPINGS` path in
+      [`registry/pipeline_loader.py`](../../src/videoannotator/registry/pipeline_loader.py) with
+      fully metadata-driven loading — per-pipeline YAML already carries `module_path`; add
+      `requires_extras`.
+- [ ] Registry omits pipelines whose extras aren't installed rather than crashing; CLI/API error
+      messages include the exact `pip install videoannotator[...]` command needed.
+- [ ] Migration message for v1.4.x users whose config references a pipeline (e.g. LAION) that is no
+      longer in the default install.
+- [ ] Drop the `numpy<2.0` pin (`pyproject.toml:43`) once the pipeline suite is verified against
+      NumPy 2.x.
+- [ ] Slim `Dockerfile.cpu`/`Dockerfile.gpu` base image (no extras); document the `[all]` image
+      separately.
 
-**Deliverables**:
-- `src/videoannotator/cli/setup.py` - Setup wizard
-- ASCII-safe prompts for Windows compatibility
-- Documentation in `docs/usage/setup_wizard.md`
+**Acceptance**: v1.4.3 acceptance-test fixtures pass byte-identically (or within documented tolerance)
+against a v1.5 `[all]` install with zero config-file changes. See spec 003 User Story 2 for the full
+backward-compatibility test plan.
 
-**Effort**: 12 hours
+**Reference**: [`specs/003-modular-pipeline-architecture/spec.md`](../../specs/003-modular-pipeline-architecture/spec.md)
+FR-001 through FR-005, FR-009, FR-011, FR-014, FR-015; SC-001, SC-002, SC-003, SC-005, SC-008, SC-009.
 
-#### 1.3 Enhanced Health & Version Endpoints
+---
 
-**Problem**: Limited diagnostic information available via API.
+### Phase 2: FastAPI Serves Video Annotation Viewer
+
+**Problem**: The two JOSS submissions are architecturally separate by design (server vs. review UI),
+but that separation currently reads as two disconnected projects. A reviewer or new user has to stand
+up both independently to see the full workflow, and the pre-review discussion showed the editor
+struggling to understand how they relate.
 
 **Solution**:
-- [ ] `/api/v1/system/version` endpoint
-- [ ] Enhanced health endpoint with GPU memory, storage, uptime
-- [ ] `videoannotator version --detailed` CLI command
-
-**Deliverables**:
-- New version endpoint
-- Enhanced health metrics
-- CLI version command
-
-**Effort**: 12 hours
-
-**Checkpoint**: Installation experience improved (40 hours total)
-
----
-
-### Phase 2: Progress & Feedback (Weeks 3-4)
-
-#### 2.1 Real-Time Progress Indicators
-
-- [ ] Progress tracking (percentage, stage, ETA, frames processed)
-- [ ] CLI progress bar using `rich` library
-- [ ] API progress endpoint: `GET /api/v1/jobs/{id}/progress`
-- [ ] WebSocket support for real-time updates (optional)
-
-**Effort**: 20 hours
-
-#### 2.2 Resource Usage Monitoring
-
-- [ ] Real-time CPU, GPU, RAM, disk I/O monitoring
-- [ ] Include in health endpoint
-- [ ] `videoannotator monitor` CLI command
-- [ ] Configurable warning thresholds
-
-**Effort**: 16 hours
-
-#### 2.3 Job Completion Notifications
-
-- [ ] Pluggable notification system:
-  - Email (SMTP)
-  - Webhook (HTTP POST)
-  - Desktop notification (CLI mode)
-  - Slack integration
-  - Discord integration
-- [ ] Per-job notification preferences
-- [ ] Notification templates
-
-**Effort**: 20 hours
-
-**Checkpoint**: Progress and feedback complete (56 hours total)
-
----
-
-### Phase 3: Configuration & Validation (Weeks 5-6)
-
-#### 3.1 Interactive Config Wizard
-
-- [ ] `videoannotator config init --interactive` command
-- [ ] Step-by-step prompts for common scenarios
-- [ ] Hardware detection (GPU, memory, storage)
-- [ ] Scenario selection (fast/balanced/high-quality)
-- [ ] Validation and preview before saving
-
-**Effort**: 16 hours
-
-#### 3.2 Config Templates Library
-
-- [ ] Pre-built configuration templates:
-  - `templates/fast.yaml` - Quick processing (lower accuracy)
-  - `templates/balanced.yaml` - Default settings
-  - `templates/high-quality.yaml` - Best accuracy (slower)
-  - `templates/cpu-only.yaml` - No GPU required
-  - `templates/classroom.yaml` - Multi-person + audio
-  - `templates/clinical.yaml` - Face + emotion focus
-- [ ] `videoannotator config list-templates` command
-- [ ] `videoannotator config use <template>` command
-
-**Effort**: 12 hours
-
-#### 3.3 Enhanced YAML Validation
-
-- [ ] Comprehensive edge case testing:
-  - Malformed YAML handling
-  - Missing required fields
-  - Type mismatches
-  - Circular references
-  - Unknown pipeline names
-- [ ] Better error messages with line numbers
-- [ ] Schema validation using JSON Schema
-
-**Effort**: 12 hours
-
-**Checkpoint**: Configuration improvements complete (40 hours total)
-
----
-
-### Phase 4: Logging & Debugging (Week 7)
-
-#### 4.1 Structured Logging
-
-- [ ] JSON log format option (`--log-format json`)
-- [ ] Consistent log levels and categories
-- [ ] Request ID tracking across components
-- [ ] Performance timing instrumentation
-- [ ] Correlation IDs for distributed tracing
-
-**Effort**: 12 hours
-
-#### 4.2 Log Analysis Tools
-
-- [ ] `videoannotator logs analyze` command
-- [ ] Parse and summarize log files
-- [ ] Extract and group errors
-- [ ] Identify performance bottlenecks
-- [ ] Detect common issues
-- [ ] Generate diagnostic reports
-
-**Effort**: 12 hours
-
-#### 4.3 Legacy Example Cleanup
-
-- [ ] Mark deprecated examples with clear notices
-- [ ] Provide migration path to new examples
-- [ ] Standardize example format (README, deps, outputs)
-- [ ] Remove after one minor version (v1.6.0)
-
-**Effort**: 8 hours
-
-**Checkpoint**: Logging and debugging improved (32 hours total)
-
----
-
-### Phase 5: Export & Integration (Weeks 8-9)
-
-#### 5.1 FiftyOne Integration
-
-- [ ] Direct export to FiftyOne dataset format
-- [ ] Metadata preservation (video properties, pipeline info)
-- [ ] Sample-level and frame-level annotations
-- [ ] Visualization in FiftyOne App
-- [ ] `videoannotator export fiftyone` command
-
-**Effort**: 20 hours
-
-#### 5.2 Label Studio Integration
-
-- [ ] Export annotations for review/correction
-- [ ] Import corrected annotations back
-- [ ] Active learning workflow support
-- [ ] Task creation from jobs
-- [ ] `videoannotator export label-studio` command
-- [ ] `videoannotator import label-studio` command
-
-**Effort**: 24 hours
-
-#### 5.3 Custom CSV Templates
-
-- [ ] Flexible tabular export system
-- [ ] User-defined CSV column mapping
-- [ ] Template library for common formats
-- [ ] Direct Pandas DataFrame export (Python API)
-- [ ] Excel format support (optional)
-
-**Effort**: 16 hours
-
-**Checkpoint**: Integration features complete (60 hours total)
-
----
-
-### Phase 6: Quality & Performance (Weeks 10-12)
-
-#### 6.1 Quality Assessment Pipeline
-
-- [ ] Per-annotation quality metrics:
-  - Model confidence scores
-  - Bounding box quality assessment
-  - Temporal consistency checks
-  - Outlier detection
-- [ ] Quality report generation
-- [ ] Frame-level quality scores
-- [ ] Recommendations for re-processing
-- [ ] Quality visualization over time
-
-**Effort**: 24 hours
-
-#### 6.2 Batch Processing Optimization
-
-- [ ] Smart job scheduling:
-  - Priority queue (user-defined priorities)
-  - Resource-aware scheduling (GPU vs CPU)
-  - Parallel processing (multiple videos simultaneously)
-  - Load balancing across workers
-- [ ] Progress aggregation for batches
-- [ ] Retry mechanism for failed jobs
-- [ ] Batch status API endpoints
-
-**Effort**: 24 hours
-
-#### 6.3 Pipeline Comparison Tools
-
-- [ ] Side-by-side model comparison:
-  - Run multiple pipelines on same video
-  - Compare accuracy metrics
-  - Compare processing time
-  - Visual diff of annotations
-- [ ] Parameter optimization:
-  - Grid search over parameters
-  - Performance vs accuracy tradeoffs
-  - Recommendation engine
-- [ ] Comparison visualization and reports
-
-**Effort**: 24 hours
-
-**Checkpoint**: Quality and performance enhancements complete (72 hours total)
-
----
-
-### Phase 7: Testing & Release (Weeks 13-14)
-
-#### 7.1 Comprehensive Testing
-
-- [ ] Unit tests for all new features
-- [ ] Integration tests for workflows
-- [ ] Performance regression tests
-- [ ] Multi-platform verification
-
-**Effort**: 24 hours
-
-#### 7.2 Documentation Updates
-
-- [ ] Update all documentation for new features
-- [ ] Tutorial for progress indicators
-- [ ] Tutorial for FiftyOne/Label Studio integration
-- [ ] Configuration wizard guide
-- [ ] Quality assessment guide
-
-**Effort**: 16 hours
-
-#### 7.3 Release Preparation
-
-- [ ] Release notes with complete feature list
-- [ ] Migration guide from v1.4.0
-- [ ] Update roadmap overview
-- [ ] Tag and publish v1.5.0
-
-**Effort**: 8 hours
-
-**Checkpoint**: v1.5.0 released (48 hours total)
+- [x] Video Annotation Viewer's static production build is vendored into VideoAnnotator's package
+      data (`src/videoannotator/viewer_static/`). VAV now builds with a configurable `--base=/viewer/`
+      and reads `basename` from `import.meta.env.BASE_URL`, so vendoring is a straight copy — no
+      path rewriting needed on the VideoAnnotator side. A JS bundle is a few MB — nowhere near the
+      multi-GB ML-dependency problem this release is otherwise about — so it ships in the core wheel;
+      no pip extra needed to gate it.
+- [x] FastAPI app mounts the viewer's static assets at `/viewer` by default, pre-configured to talk
+      to the local API (same-origin, so no CORS/base-URL configuration needed at runtime); the
+      `VIDEOANNOTATOR_ENABLE_VIEWER` env var disables it for anyone who doesn't want it.
+- [x] `videoannotator server` prints the viewer URL when it's mounted.
+- [x] Video Annotation Viewer remains fully independent: standalone use (drag in a video + any
+      COCO/WebVTT/RTTM/scene-JSON file, no server required) is unaffected and stays the primary
+      documented use case. Demo content is now fetched at runtime from VAV's own repo rather than
+      bundled, so this holds for the embedded copy too.
+- [x] Python-side half: `tests/contract/test_viewer_contract.py` generates real fixtures via
+      VideoAnnotator's own exporters and validates them against VAV's actual Zod schemas (modeled in
+      Python, sourced from `video-annotation-viewer`'s `src/lib/validation.ts`). Runs automatically in
+      the existing CI test job — no workflow changes needed. This already found two real contract
+      gaps (see below).
+- [ ] TypeScript-side half (deferred): a CI job that checks out VAV and runs its actual parsers
+      against these fixtures. Needs Node/bun tooling to build and verify — out of scope for this
+      environment; do this as a follow-up once the Python-side gaps below are resolved.
+- [x] Single quickstart doc covering install → process a sample video → open the viewer
+      ([`docs/usage/GETTING_STARTED.md`](../usage/GETTING_STARTED.md)).
+
+**Why this matters for JOSS**: this is a runnable artifact that answers "how do these relate" more
+convincingly than paper prose alone, and it's the lowest-effort, highest-signal change available
+before resubmission.
 
 ---
 
 ## ✅ Success Criteria
 
-### Must-Have for Release
-
-- [ ] All 6 phase checkpoints completed
-- [ ] Test coverage maintained ≥ 80%
-- [ ] No breaking changes from v1.4.0 API
-- [ ] Documentation complete for all features
-- [ ] Multi-platform testing passed
-
-### Quality Targets
-
-- [ ] Installation wizard success rate ≥ 95%
-- [ ] Progress indicators working on all platforms
-- [ ] FiftyOne/Label Studio exports validated
-- [ ] Quality assessment provides useful insights
-- [ ] Performance: No regression from v1.4.0
-
-### User Experience
-
-- [ ] Setup wizard reduces initial configuration time by 50%
-- [ ] Progress indicators reduce support questions
-- [ ] Notifications improve workflow efficiency
-- [ ] Export integrations enable new workflows
+- [ ] `pip install videoannotator` (no extras) installs without torch/transformers/pyannote/ultralytics/whisper.
+- [ ] `pip install videoannotator[all]` reproduces v1.4.3 behaviour exactly; no config/CLI changes needed.
+- [ ] Default Docker image size reduced by ≥ 80% vs. the v1.4.3 baseline.
+- [ ] A user with no extras installed gets an actionable install command, not a traceback, when
+      requesting an unavailable pipeline.
+- [ ] `pip install videoannotator[all]` + `videoannotator serve` gets a user from install to a
+      reviewable annotated video in one command, without cloning a second repository.
+- [ ] Full test suite passes on NumPy 2.x, Linux/macOS/Windows.
+- [ ] Cross-repo contract test between VideoAnnotator and Video Annotation Viewer is running in CI.
 
 ---
 
-## 📊 Effort Summary
-
-| Phase | Duration | Effort (hours) | Key Deliverables |
-|-------|----------|----------------|------------------|
-| Phase 1: Installation & Setup | Weeks 1-2 | 40 | Auto-download, wizard, health metrics |
-| Phase 2: Progress & Feedback | Weeks 3-4 | 56 | Progress bars, monitoring, notifications |
-| Phase 3: Configuration | Weeks 5-6 | 40 | Config wizard, templates, validation |
-| Phase 4: Logging & Debugging | Week 7 | 32 | Structured logs, analysis tools |
-| Phase 5: Export & Integration | Weeks 8-9 | 60 | FiftyOne, Label Studio, CSV |
-| Phase 6: Quality & Performance | Weeks 10-12 | 72 | Quality metrics, batch optimization |
-| Phase 7: Testing & Release | Weeks 13-14 | 48 | Testing, docs, release |
-| **TOTAL** | **14 weeks** | **348 hours** | **Feature-rich release** |
-
----
-
-## 🚫 Still Out of Scope (v1.6.0+)
-
-The following remain deferred to future releases:
-
-### Enterprise Features (v1.6.0+)
-- SSO integration (OAuth, SAML, LDAP)
-- Role-based access control (RBAC)
-- Multi-tenancy support
-- Audit logging for compliance
-- API rate limiting and quotas
-
-### Advanced Architecture (v1.6.0+)
-- Plugin system with sandboxing
-- Real-time streaming (WebRTC)
-- GraphQL API
-- Microservice decomposition
-- Cloud provider integration (AWS, Azure, GCP)
-
-### Advanced ML (v1.7.0+)
-- Active learning workflows
-- Multi-modal correlation analysis
-- Custom model training interface
-- Model ensemble optimization
-- Federated learning support
-
----
-
-## 🎯 Summary
-
-v1.5.0 delivers all the "nice-to-have" features that make VideoAnnotator easier to use and more powerful:
-
-**User Experience Wins**:
-- ✅ No more manual model downloads
-- ✅ Guided setup for new users
-- ✅ Real-time progress feedback
-- ✅ Flexible notifications
-- ✅ Interactive configuration
-
-**Integration Wins**:
-- ✅ FiftyOne for visualization
-- ✅ Label Studio for correction/review
-- ✅ Custom export formats
-
-**Quality Wins**:
-- ✅ Quality assessment metrics
-- ✅ Batch optimization
-- ✅ Pipeline comparison tools
-
-**Developer Wins**:
-- ✅ Structured logging
-- ✅ Log analysis tools
-- ✅ Better debugging experience
-
-This positions VideoAnnotator as a mature, user-friendly platform ready for widespread adoption while maintaining the research focus from v1.4.0.
-
----
-
-**Last Updated**: October 30, 2025
-**Target Release**: Q3 2026 (3-4 months after v1.4.0)
-**Duration**: 12-14 weeks
-**Status**: Planning Phase - Feature Enhancement Focus
+**Last Updated**: 2026-07-08
+**Target Release**: Ahead of / alongside JOSS resubmission
+**Status**: Planning Phase — Modularity & Integration Focus

@@ -89,6 +89,13 @@ class SQLiteStorageBackend(StorageBackend):
         # Initialize database (create tables if they don't exist)
         self._initialize_database()
 
+    def close(self) -> None:
+        """Dispose the SQLAlchemy engine, releasing all file handles.
+
+        Must be called before the database file is deleted (required on Windows).
+        """
+        self.engine.dispose()
+
     def _initialize_database(self):
         """Initialize database schema and handle migrations."""
         try:
