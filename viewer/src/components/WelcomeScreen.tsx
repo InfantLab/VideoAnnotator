@@ -38,7 +38,7 @@ export const WelcomeScreen = ({ onGetStarted, onViewDemo }: WelcomeScreenProps) 
         <div className="container mx-auto px-6 py-16 relative">
           <div className="text-center max-w-4xl mx-auto mb-12">
             <div className="flex items-center justify-center gap-4 mb-6">
-              <img src="/icon-32x32.png" alt="Video Annotation Viewer" className="w-12 h-12" />
+              <img src={`${import.meta.env.BASE_URL}icon-32x32.png`} alt="Video Annotation Viewer" className="w-12 h-12" />
               <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 Video Annotation Viewer
               </h1>
