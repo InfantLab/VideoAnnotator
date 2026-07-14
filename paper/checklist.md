@@ -62,9 +62,9 @@ https://joss.readthedocs.io/en/latest/review_checklist.html (checked 2026-02-27)
 
 ## Before submission
 
-- [x] v1.4.1 git tag created locally
-- [ ] Push tag to remote: `git push origin v1.4.1`
-- [ ] Create GitHub Release for v1.4.1
+- [x] v1.4.4 git tag created locally
+- [ ] Push tag to remote: `git push origin v1.4.4`
+- [ ] Create GitHub Release for v1.4.4
 - [x] Improve git contributor attribution (only 1 contributor visible in history)
 
 ## After acceptance
