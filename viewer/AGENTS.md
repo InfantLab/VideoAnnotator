@@ -15,7 +15,7 @@ Key docs to review before changes:
 - `README.md` (feature overview, usage)
 - `docs/DEVELOPER_GUIDE.md` (architecture and structure)
 - `docs/CLIENT_SERVER_COLLABORATION_GUIDE.md` (API integration/testing)
-- `docs/development/ROADMAP_v0.4.0.md` (upcoming work; includes VideoAnnotator v1.2.x plan)
+- `docs/development/ROADMAP_v0.7.0.md` (upcoming work)
 - `src/test/README.md` (testing guidance)
 
 ## Local Environment

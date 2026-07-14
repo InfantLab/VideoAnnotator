@@ -246,8 +246,8 @@ demo/
 
 ## 🔗 **RELATED DOCUMENTS**
 
-- [v0.5.0 Roadmap](./ROADMAP_v0.5.0.md)
-- [QA Checklist v0.4.0](../testing/QA_Checklist_v0.4.0.md)
+- [v0.5.0 Roadmap](../archive/ROADMAP_v0.5.0.md)
+- [QA Checklist v0.4.0](../archive/QA_Checklist_v0.4.0.md)
 - [File Formats Guide](../FILE_FORMATS.md)
 - [Client-Server Collaboration Guide](../CLIENT_SERVER_COLLABORATION_GUIDE.md)
 
