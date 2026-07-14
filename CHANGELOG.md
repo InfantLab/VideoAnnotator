@@ -15,6 +15,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Benchmark results and performance validation
 - Additional contributor documentation improvements
 
+## [1.4.4] - 2026-07-08
+
+### Modularity, Viewer Integration, and JOSS Resubmission
+
+This release responds to JOSS pre-review feedback (openjournals/joss-reviews#10182, #10183) on install footprint and the relationship between VideoAnnotator and Video Annotation Viewer.
+
+#### Added
+
+- **Bundled viewer**: The FastAPI service now serves Video Annotation Viewer's static build at `/viewer`, same-origin and zero-config (`VIDEOANNOTATOR_ENABLE_VIEWER` to disable). VAV remains fully usable standalone.
+- **Contract test**: Added `tests/contract/test_viewer_contract.py`, which validates VideoAnnotator's exporter output against VAV's actual Zod schemas.
+- **Roadmap docs**: Added `docs/development/roadmap_v1.6.0.md` (plugin ecosystem, local LLM/Ollama backend) and rewrote `roadmap_v1.5.0.md` around the modularity spec (`specs/003-modular-pipeline-architecture`).
+
+#### Fixed
+
+- **Person-tracking contract gap**: COCO output was missing `person_id`/`person_label`/`label_confidence`/`labeling_method` when identity labeling was disabled, which VAV requires as non-optional; added sensible fallback defaults and corrected the pipeline's self-declared schema for `image_id`.
+- **`setup-db` DetachedInstanceError**: `create_admin_user()` returned a detached SQLAlchemy ORM object after closing its session, raising `DetachedInstanceError` on the first command in the README quickstart; fixed with an explicit `db.refresh()`.
+- **Hidden CLI commands**: The `if __name__ == "__main__"` guard sat before `validate-emotion`, `generate-token`, and `setup-db` were registered, hiding them from `python -m videoannotator.cli --help`; moved the guard to the end of the file.
+
+#### Documentation
+
+- Fixed several stale version pins (`INSTALLATION.md` still titled "v1.2.0", `Docker.md`, `output_naming_conventions.md`).
+- Added the interface figure to the combined JOSS paper and documented the `/viewer` integration and contract test as evidence of coordinated maintenance between VideoAnnotator and VAV.
+- Corrected `CITATION.cff`, which was still stale at 1.4.2.
+
+## [1.4.3] - 2026-05-27
+
+### Installability and CI Green (JOSS #10182)
+
+#### Fixed
+
+- **Missing storage modules**: An unanchored `storage/` rule in `.gitignore` silently excluded `manager.py` and the `providers/` subpackage from the published package, breaking fresh-clone installs with `No module named videoannotator.storage.manager`.
+- **CI matrix**: Restricted the CUDA torch index to Linux so `uv sync` succeeds on macOS/Windows; pinned torch/torchvision/torchaudio to the matched 2.6.0 release; fixed macOS storage-path test assertions (symlink resolution); marked the Windows CI leg non-blocking pending a known SQLite teardown locking issue.
+- **Security scan**: Repaired the CI security-scan job (updated Trivy action, added SARIF write permission).
+- **Tests**: Cleared pre-existing storage and audio-diarization test failures — `delete_job` now returns a bool found/not-found signal, and diarization tests updated to pyannote's current `token=` kwarg.
+
+#### Changed
+
+- Bumped `openai-whisper` to `>=20250625` (sdist-only).
+- Repointed reviewer docs from the removed `scripts/verify_installation.py` to `videoannotator diagnose`.
+
+#### Documentation
+
+- Fixed ORCID format (bare 16-digit IDs) and added ByteTrack/CLIP DOIs for JOSS metadata checks.
+
 ## [1.4.2] - 2026-03-04
 
 ### JOSS Review Version

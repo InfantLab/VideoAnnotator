@@ -195,7 +195,7 @@ target-version = "py312"
 [tool.ruff.lint.per-file-ignores]
 "src/videoannotator/api/**/*.py" = ["B008"]
 "src/videoannotator/cli.py" = ["B008", "B904"]
-"src/batch/batch_orchestrator.py" = ["RUF013"]
+"src/videoannotator/batch/batch_orchestrator.py" = ["RUF013"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -212,16 +212,15 @@ no_implicit_optional = false
 
 # Exclude files/patterns from mypy checking (reduces noise from ML/storage modules)
 exclude = [
-    "src/pipelines/",
-    "src/storage/models.py",
-    "src/storage/file_backend.py",
-    "src/utils/person_identity.py",
-    "src/utils/automatic_labeling.py",
-    "src/utils/size_based_person_analysis.py",
-    "src/utils/logging_config.py",
-    "src/version.py",
-    "src/exporters/native_formats.py",
-    "src/schemas/",
+    "src/videoannotator/pipelines/",
+    "src/videoannotator/storage/models.py",
+    "src/videoannotator/storage/file_backend.py",
+    "src/videoannotator/utils/person_identity.py",
+    "src/videoannotator/utils/automatic_labeling.py",
+    "src/videoannotator/utils/size_based_person_analysis.py",
+    "src/videoannotator/utils/logging_config.py",
+    "src/videoannotator/exporters/native_formats.py",
+    "src/videoannotator/schemas/",
     "examples/",
     "scripts/",
 ]
@@ -360,27 +359,27 @@ ignore_missing_imports = true
 # speech pipeline interacts with heavy third-party speech libraries (whisper, torch) that
 # produce large, environment-dependent typing noise. Relax checks for this module while
 # keeping API modules strict.
-module = ["pipelines.audio_processing.speech_pipeline"]
+module = ["videoannotator.pipelines.audio_processing.speech_pipeline"]
 ignore_errors = true
 
 [[tool.mypy.overrides]]
 # Storage modules use SQLAlchemy models and runtime-mapped attributes
-module = "storage.*"
+module = "videoannotator.storage.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
 # Pipeline modules interact with heavy ML libraries (incomplete/dynamic typing)
-module = "pipelines.*"
+module = "videoannotator.pipelines.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
 # Utility modules with complex dynamic typing patterns
-module = "utils.*"
+module = "videoannotator.utils.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
 # Version module has dynamic git-based logic
-module = "version"
+module = "videoannotator.version"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
@@ -395,10 +394,10 @@ ignore_errors = true
 
 [[tool.mypy.overrides]]
 # Exporters work with dynamic data structures
-module = "exporters.*"
+module = "videoannotator.exporters.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
 # Schemas module has placeholder types
-module = "schemas"
+module = "videoannotator.schemas"
 ignore_errors = true

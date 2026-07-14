@@ -13,7 +13,7 @@ This guide helps JOSS reviewers quickly evaluate VideoAnnotator's functionality,
 - 🔌 Modular pipeline architecture
 - 🚀 REST API + CLI interfaces
 - 📊 Standard output formats (COCO, WebVTT, RTTM)
-- 🧪 Comprehensive test coverage (195+ tests, >80%)
+- 🧪 Comprehensive test coverage (1000+ tests, >80%)
 - 🔒 Secure by default (API key authentication)
 
 **Repository**: [github.com/InfantLab/VideoAnnotator](https://github.com/InfantLab/VideoAnnotator)
@@ -103,7 +103,7 @@ Submit job:
 curl -X POST "http://localhost:18011/api/v1/jobs/" \
   -H "X-API-Key: $API_KEY" \
   -F "video=@sample.mp4" \
-  -F "selected_pipelines=openface3_identity"
+  -F "selected_pipelines=person,face,scene,audio"
 ```
 
 **Expected output**: Job created with `job_id`
@@ -181,14 +181,14 @@ ls -l reports/$JOB_ID/
 
 | Component | Purpose | Location |
 |-----------|---------|----------|
-| **API** | REST endpoints, authentication, CORS | `src/api/` |
-| **Pipelines** | Video processing implementations | `src/pipelines/` |
-| **Registry** | Pipeline discovery and metadata | `src/registry/` |
-| **Worker** | Job execution, cancellation, retries | `src/worker/` |
-| **Database** | Job state, metadata persistence | `src/database/` |
-| **Storage** | File management, results organization | `src/storage/` |
-| **Validation** | Config and input validation | `src/validation/` |
-| **Exporters** | Output format converters | `src/exporters/` |
+| **API** | REST endpoints, authentication, CORS | `src/videoannotator/api/` |
+| **Pipelines** | Video processing implementations | `src/videoannotator/pipelines/` |
+| **Registry** | Pipeline discovery and metadata | `src/videoannotator/registry/` |
+| **Worker** | Job execution, cancellation, retries | `src/videoannotator/worker/` |
+| **Database** | Job state, metadata persistence | `src/videoannotator/database/` |
+| **Storage** | File management, results organization | `src/videoannotator/storage/` |
+| **Validation** | Config and input validation | `src/videoannotator/validation/` |
+| **Exporters** | Output format converters | `src/videoannotator/exporters/` |
 
 ### Data Flow
 
@@ -207,14 +207,17 @@ ls -l reports/$JOB_ID/
 Pipelines are discovered via YAML metadata:
 
 ```yaml
-# src/registry/metadata/openface3_identity.yaml
-name: openface3_identity
-display_name: "OpenFace 3 - Identity"
-tasks: [face_detection, face_tracking, face_recognition]
-modalities: [video]
+# src/videoannotator/registry/metadata/face_openface3_embedding.yaml
+name: face_openface3_embedding
+display_name: OpenFace3 Face Embedding
+tasks:
+  - face-embedding
+modalities:
+  - image
+  - video
 outputs:
-  - format: COCO
-    types: [detection, tracking, recognition]
+  - format: JSON
+    types: [embeddings]
 ```
 
 ---
@@ -223,22 +226,22 @@ outputs:
 
 ### Where to Start Reading
 
-**1. API Endpoints** (`src/api/v1/jobs.py`) - 5 min
+**1. API Endpoints** (`src/videoannotator/api/v1/jobs.py`) - 5 min
 - REST API implementation
 - Job submission, status, results retrieval
 - Well-documented with examples
 
-**2. Pipeline Interface** (`src/pipelines/base.py`) - 3 min
+**2. Pipeline Interface** (`src/videoannotator/pipelines/base_pipeline.py`) - 3 min
 - Abstract base class for all pipelines
 - `initialize()`, `process()`, `cleanup()` methods
 - Standard interface contract
 
-**3. Registry System** (`src/registry/pipeline_registry.py`) - 3 min
+**3. Registry System** (`src/videoannotator/registry/pipeline_registry.py`) - 3 min
 - Dynamic pipeline discovery
 - Metadata loading and validation
 - Singleton pattern
 
-**4. Worker Execution** (`src/worker/executor.py`) - 5 min
+**4. Worker Execution** (`src/videoannotator/worker/job_processor.py`) - 5 min
 - Job execution logic
 - Error handling and retries
 - Cancellation support
@@ -247,14 +250,14 @@ outputs:
 - Unit tests: `tests/unit/`
 - Integration tests: `tests/integration/`
 - Pipeline tests: `tests/pipelines/`
-- 195+ tests with >80% coverage
+- 1000+ tests across 74 test files
 
 ### Code Quality Indicators
 
 ✅ **Type Hints**: Comprehensive type annotations
 ✅ **Docstrings**: All public APIs documented
 ✅ **Error Handling**: Consistent error envelope
-✅ **Testing**: 195+ tests, >80% coverage
+✅ **Testing**: 1000+ tests across 74 test files
 ✅ **Logging**: Structured logging throughout
 ✅ **Configuration**: Environment-based config
 ✅ **Security**: Secure-by-default (API keys, CORS)
@@ -269,7 +272,7 @@ uv run pytest -q
 uv run python scripts/validate_coverage.py --html
 
 # Run specific test file
-uv run pytest tests/unit/test_api_jobs.py -v
+uv run pytest tests/api/test_api_server.py -v
 
 # Run integration tests
 uv run pytest tests/integration/ -v
@@ -297,7 +300,7 @@ uv run pytest tests/integration/ -v
 ✅ **Example usage**: Multiple examples with expected outputs
 ✅ **API documentation**: Interactive Swagger UI + docstrings
 ✅ **Community guidelines**: CODE_OF_CONDUCT.md, CONTRIBUTING.md
-✅ **Tests**: 195+ tests, automated CI
+✅ **Tests**: 1000+ tests, automated CI
 ✅ **License**: MIT (open source)
 ✅ **Repository**: Clean, organized, active
 
@@ -309,8 +312,8 @@ uv run pytest tests/integration/ -v
 
 **A**: Three steps:
 
-1. Implement `BasePipeline` in `src/pipelines/your_pipeline/`
-2. Create YAML metadata in `src/registry/metadata/`
+1. Implement `BasePipeline` in `src/videoannotator/pipelines/your_pipeline/`
+2. Create YAML metadata in `src/videoannotator/registry/metadata/`
 3. Add tests in `tests/pipelines/`
 
 See [Pipeline Specifications](usage/pipeline_specs.md)

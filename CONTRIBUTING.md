@@ -430,7 +430,7 @@ Contributors are recognized in:
 
 ```bash
 # Run with debug logging
-python main.py --log-level DEBUG
+uv run videoannotator --log-level DEBUG
 
 # Debug specific pipeline
 python -m pdb examples/test_individual_pipelines.py
@@ -440,7 +440,7 @@ python -m pdb examples/test_individual_pipelines.py
 
 ```bash
 # Profile performance
-python -m cProfile -o profile.stats main.py
+python -m cProfile -o profile.stats -m videoannotator.cli
 
 # Analyze with snakeviz
 snakeviz profile.stats
@@ -450,7 +450,7 @@ snakeviz profile.stats
 
 ### Adding a New Pipeline
 
-1. Create pipeline class in `src/pipelines/`
+1. Create pipeline class in `src/videoannotator/pipelines/`
 2. Implement `BasePipeline` interface
 3. Add configuration schema
 4. Create unit tests
@@ -461,7 +461,7 @@ snakeviz profile.stats
 ### Adding Dependencies
 
 1. Add to `pyproject.toml`
-2. Update `requirements.txt`
+2. Run `uv lock` to update `uv.lock`
 3. Test installation
 4. Update documentation
 
