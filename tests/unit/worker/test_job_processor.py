@@ -41,6 +41,7 @@ class TestJobProcessor:
         import shutil
 
         self.processor.stop()
+        self.storage.close()
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
 

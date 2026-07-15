@@ -263,6 +263,10 @@ class TestOpenFace3Integration:
     def setup_method(self):
         """Set up test pipeline and mock video."""
         self.pipeline = OpenFace3Pipeline({"device": "cpu"})
+        # These tests mock model internals directly and don't need real
+        # weights, but process() now fails fast when is_initialized is
+        # False (see openface3_pipeline.py), so mark it initialized here.
+        self.pipeline.is_initialized = True
         self.temp_dir = tempfile.mkdtemp()
         self.video_path = self._create_test_video()
 
@@ -492,6 +496,11 @@ class TestOpenFace3ErrorHandling:
     def setup_method(self):
         """Set up test pipeline."""
         self.pipeline = OpenFace3Pipeline({"device": "cpu"})
+        # test_invalid_video_path exercises the video-open check in process(),
+        # not model inference, but process() now fails fast when
+        # is_initialized is False (see openface3_pipeline.py), so mark it
+        # initialized here.
+        self.pipeline.is_initialized = True
 
     def test_invalid_video_path(self):
         """Test handling of invalid video paths."""
