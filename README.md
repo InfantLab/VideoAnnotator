@@ -100,13 +100,20 @@ curl -X POST "http://localhost:18011/api/v1/jobs/" \
 
 ### 3. Visualize Results
 
-No extra install needed — VideoAnnotator bundles [Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer) and serves it directly:
+No extra install needed — VideoAnnotator bundles [Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer) and serves it directly. `setup-db` (and `generate-token`) print a one-click link that logs the viewer in for you:
 
 ```
-Open http://localhost:18011/viewer
+Connect the viewer with one click: http://localhost:18011/viewer-connect?token=...
 ```
 
-It's pre-configured to talk to this server, so your job results are one click away. Set `VIDEOANNOTATOR_ENABLE_VIEWER=false` if you'd rather not serve it.
+Open that link (not `/viewer` directly) the first time — it stores your API key where the viewer expects it and
+redirects you there. After that, `http://localhost:18011/viewer` remembers you.
+
+Without it, the viewer falls back to a built-in demo token that won't authenticate against your server, and the
+job list will show 401s — if that happens, open the viewer's **Settings** panel and paste in the key printed by
+`setup-db`/`generate-token` by hand instead.
+
+Set `VIDEOANNOTATOR_ENABLE_VIEWER=false` if you'd rather not serve it.
 
 **🎉 That's it!** You now have both automated video processing and interactive visualization.
 

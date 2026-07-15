@@ -29,6 +29,10 @@ class PipelineLoader:
         """
         self._registry.load()
         pipeline_classes = {}
+        # (stability_rank, name, class) candidates per family, used to pick which
+        # pipeline the short family alias (e.g. 'face') should resolve to.
+        stability_rank = {"stable": 0, "beta": 1, "experimental": 2}
+        family_candidates: dict[str, list[tuple[int, str, type]]] = {}
 
         for meta in self._registry.list():
             pipeline_class = self._load_pipeline_class(meta)
@@ -36,17 +40,34 @@ class PipelineLoader:
                 # Add primary name
                 pipeline_classes[meta.name] = pipeline_class
 
-                # Add common aliases based on pipeline_family
                 if meta.pipeline_family:
-                    # Short family name (e.g., 'face' for 'face_analysis')
-                    if meta.pipeline_family not in pipeline_classes:
-                        pipeline_classes[meta.pipeline_family] = pipeline_class
+                    family_candidates.setdefault(meta.pipeline_family, []).append(
+                        (
+                            stability_rank.get(meta.stability or "", 3),
+                            meta.name,
+                            pipeline_class,
+                        )
+                    )
 
                     # Add variant-based alias if applicable
                     if meta.variant:
                         variant_name = f"{meta.pipeline_family}_{meta.variant}"
                         if variant_name != meta.name:
                             pipeline_classes[variant_name] = pipeline_class
+
+        # Assign each family's short alias (e.g. 'face') to its most-stable
+        # loadable pipeline, rather than whichever happened to load first —
+        # otherwise an experimental variant can silently shadow a stable one
+        # just because metadata files are read in alphabetical order.
+        for family, candidates in family_candidates.items():
+            candidates.sort(key=lambda c: c[0])
+            best_rank, best_name, best_class = candidates[0]
+            pipeline_classes[family] = best_class
+            if len(candidates) > 1:
+                LOGGER.debug(
+                    f"Family alias '{family}' -> '{best_name}' "
+                    f"(candidates: {[c[1] for c in candidates]})"
+                )
 
         LOGGER.info(
             f"Loaded {len(set(pipeline_classes.values()))} unique pipeline classes "

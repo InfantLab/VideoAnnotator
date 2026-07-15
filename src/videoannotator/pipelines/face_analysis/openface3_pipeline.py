@@ -429,6 +429,18 @@ class OpenFace3Pipeline(BasePipeline):
         """
         if not self.is_initialized:
             self.initialize()
+        if not self.is_initialized:
+            reason = (
+                self._model_info.get(
+                    "unavailable_reason", "unknown initialization failure"
+                )
+                if self._model_info
+                else "unknown initialization failure"
+            )
+            raise RuntimeError(
+                f"OpenFace 3.0 is not available ({reason}); see "
+                "docs/installation/INSTALLATION.md for manual setup. Skipping this pipeline."
+            )
 
         self.logger.info(f"Processing video: {video_path}")
         start_processing_time = time.time()
