@@ -4,12 +4,34 @@ Handles first-run initialization including automatic API key generation.
 """
 
 import os
+import time
 
 from videoannotator.utils.logging_config import get_logger
 
 from ..auth.token_manager import get_token_manager
 
 logger = get_logger("api")
+
+
+def warm_up_torch() -> None:
+    """Import torch and probe CUDA once, ahead of the first client request.
+
+    ``/api/v1/system/health`` lazily imports torch to report GPU info. On a
+    fresh process that import (plus CUDA context init) can take tens of
+    seconds, which the health endpoint would otherwise charge to whichever
+    client happens to call it first (typically the viewer, right after
+    startup). Doing it here, in a startup background thread, moves that cost
+    off the request path.
+    """
+    start = time.time()
+    try:
+        import torch
+
+        torch.cuda.is_available()
+    except Exception as e:
+        logger.debug(f"Torch warmup skipped: {e}")
+        return
+    logger.info(f"Torch warmup completed in {time.time() - start:.1f}s")
 
 
 def ensure_api_key_exists() -> tuple[str | None, bool]:

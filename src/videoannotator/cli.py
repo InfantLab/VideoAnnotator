@@ -6,7 +6,7 @@ from pathlib import Path
 import typer
 import uvicorn
 
-from .config_env import MAX_CONCURRENT_JOBS, WORKER_POLL_INTERVAL
+from .config_env import API_PORT, MAX_CONCURRENT_JOBS, WORKER_POLL_INTERVAL
 from .validation.emotion_validator import validate_emotion_file
 from .version import __version__
 
@@ -1002,6 +1002,18 @@ def validate_emotion(
         typer.echo(f"[OK] Emotion file valid: {file}")
 
 
+def _viewer_connect_url(token: str, port: int = API_PORT) -> str:
+    """Build a one-click link that logs the bundled viewer into this server.
+
+    Opening it stores `token` under the localStorage key the viewer reads and
+    redirects to /viewer/, so users don't have to paste the key into the
+    viewer's Settings page by hand. See the `/viewer-connect` route.
+    """
+    from urllib.parse import quote
+
+    return f"http://localhost:{port}/viewer-connect?token={quote(token)}"
+
+
 @app.command("generate-token")
 def generate_token(
     user: str = typer.Option(None, "--user", help="User email address"),
@@ -1122,6 +1134,8 @@ def generate_token(
             '  curl -H "Authorization: Bearer $API_KEY" http://localhost:18011/api/v1/jobs'
         )
         typer.echo("")
+        typer.echo(f"Connect the viewer with one click: {_viewer_connect_url(raw_key)}")
+        typer.echo("")
 
         # Save to file if requested
         if output_file:
@@ -1225,12 +1239,15 @@ def setup_db(
 {key}
 ================================================
 Save this key now; it will not be shown again.
-""".strip().format(key=raw_key)
+
+Connect the viewer with one click: {url}
+""".strip().format(key=raw_key, url=_viewer_connect_url(raw_key))
         )
     else:
         typer.echo(
-            "[INFO] Admin already existed; no new API key generated. "
-            "Use generate-token for additional keys."
+            "[INFO] Admin already existed; no new API key generated (existing keys "
+            "cannot be displayed again). Run `uv run videoannotator generate-token` "
+            "to create a new one — it will also print a one-click viewer-connect link."
         )
 
 

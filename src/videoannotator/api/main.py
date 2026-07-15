@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from ..utils.logging_config import get_logger
@@ -110,6 +111,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(
         "Background job processing started", extra={"component": "background_tasks"}
     )
+
+    # Warm up torch/CUDA in the background so the first client request to
+    # /api/v1/system/health (typically the viewer, right after startup)
+    # doesn't pay the one-time import cost itself.
+    import asyncio
+
+    from .startup import warm_up_torch
+
+    asyncio.get_running_loop().run_in_executor(None, warm_up_torch)
 
     # TODO: Initialize pipeline cache
 
@@ -222,6 +232,29 @@ def create_app() -> FastAPI:
             "memory_percent": memory_percent,  # backward-compatible alias expected by some tests
             "database": db_status,
         }
+
+    # One-click bridge for onboarding: stores an API token (from `setup-db` /
+    # `generate-token`) into the browser's localStorage under the keys the
+    # bundled viewer reads, then redirects to /viewer/. Avoids asking users to
+    # manually copy the token into the viewer's Settings page.
+    @app.get("/viewer-connect", response_class=HTMLResponse, include_in_schema=False)
+    async def viewer_connect(token: str = "", url: str = ""):
+        import json
+
+        html = f"""<!doctype html>
+<html><head><meta charset="utf-8"><title>Connecting Video Annotation Viewer…</title></head>
+<body style="font-family: system-ui, sans-serif; max-width: 32rem; margin: 4rem auto; text-align: center;">
+<p>Connecting the viewer to your VideoAnnotator server…</p>
+<p><a href="/viewer/">Click here</a> if you are not redirected automatically.</p>
+<script>
+  var token = {json.dumps(token)};
+  var url = {json.dumps(url)};
+  if (token) {{ localStorage.setItem('videoannotator_api_token', token); }}
+  if (url) {{ localStorage.setItem('videoannotator_api_url', url); }}
+  window.location.replace('/viewer/');
+</script>
+</body></html>"""
+        return HTMLResponse(content=html)
 
     _mount_viewer(app)
 
