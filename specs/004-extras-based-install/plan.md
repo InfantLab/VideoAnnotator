@@ -33,8 +33,10 @@ default Docker image ≥80% smaller than v1.4.4 baseline (SC-002)
 **Constraints**: v1.5.0 `[all]` output byte-identical to v1.4.4 for deterministic pipelines,
 documented tolerance for non-deterministic ones (FR-009); NumPy 2.x must pass full suite (FR-007);
 zero config/CLI changes for existing users (User Story 2)
-**Scale/Scope**: 8 existing pipeline metadata YAML files across 4 families (`face` ×3 variants,
-`audio` ×4 variants, `scene` ×1, `person` ×1); `pyproject.toml` dependency block (~95 lines);
+**Scale/Scope**: 9 existing pipeline metadata YAML files across 4 families (`face` ×3 variants,
+`audio` ×4 variants, `scene` ×1, `person` ×1); none currently declare `module_path` or
+`requires_extras` — all 9 resolve today purely through `pipeline_loader.py`'s `LEGACY_MAPPINGS`
+fallback, so every file needs both fields added; `pyproject.toml` dependency block (~95 lines);
 `registry/pipeline_loader.py` (LEGACY_MAPPINGS removal); 2 Dockerfiles (`Dockerfile.cpu`,
 `Dockerfile.gpu`) plus `Dockerfile.dev`
 
