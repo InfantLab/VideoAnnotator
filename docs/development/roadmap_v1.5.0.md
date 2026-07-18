@@ -88,6 +88,7 @@ backward-compatibility test plan.
 
 **Reference**: [`specs/003-modular-pipeline-architecture/spec.md`](../../specs/003-modular-pipeline-architecture/spec.md)
 FR-001 through FR-005, FR-009, FR-011, FR-014, FR-015; SC-001, SC-002, SC-003, SC-005, SC-008, SC-009.
+Implementation-ready slice: [`specs/004-extras-based-install/spec.md`](../../specs/004-extras-based-install/spec.md).
 
 ---
 
