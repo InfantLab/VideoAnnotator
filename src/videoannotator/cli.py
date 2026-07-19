@@ -277,6 +277,26 @@ def submit_job(
             typer.echo(
                 f"[INFO] Track progress with: videoannotator job status {job_data['id']}"
             )
+        elif response.status_code in (404, 422):
+            # Pipeline-not-found / pipeline-unavailable
+            # (contracts/unavailable-pipeline-error.md): show the actionable
+            # message, not a raw JSON blob or traceback.
+            try:
+                body = response.json()
+            except ValueError:
+                body = {}
+            message = body.get("detail") or body.get("error", {}).get(
+                "message", response.text
+            )
+            typer.echo(f"Error: {message}", err=True)
+            install_cmd = body.get("install_hint")
+            if install_cmd:
+                typer.echo(f"Install it with: {install_cmd}", err=True)
+            else:
+                hint = body.get("error", {}).get("hint")
+                if hint:
+                    typer.echo(f"Hint: {hint}", err=True)
+            raise typer.Exit(code=1)
         else:
             typer.echo(f"[ERROR] Job submission failed: {response.status_code}")
             typer.echo(f"Response: {response.text}")
@@ -482,6 +502,14 @@ def pipelines(
     detailed: bool = typer.Option(False, help="Show extended pipeline information"),
     json: bool = typer.Option(False, "--json", help="Output JSON for scripting"),
     format: str | None = typer.Option(None, help="Alternate output format (markdown)"),
+    all: bool = typer.Option(
+        False,
+        "--all",
+        help=(
+            "Include pipelines whose required extras aren't installed "
+            "(shown with an install hint instead of being omitted)."
+        ),
+    ),
 ):
     """List available processing pipelines retrieved from the registry."""
     import json as jsonlib
@@ -489,7 +517,11 @@ def pipelines(
     import requests
 
     try:
-        response = requests.get(f"{server}/api/v1/pipelines", timeout=10)
+        response = requests.get(
+            f"{server}/api/v1/pipelines",
+            params={"include_unavailable": "true"} if all else None,
+            timeout=10,
+        )
         if response.status_code != 200:
             typer.echo(f"[ERROR] Failed to get pipelines: {response.status_code}")
             raise typer.Exit(code=1)
@@ -538,7 +570,11 @@ def pipelines(
 
         typer.echo(f"[OK] Pipelines: {len(pipelines)} found")
         for p in pipelines:
-            typer.echo(f"- {p['name']}")
+            if p.get("available") is False:
+                typer.echo(f"- {p['name']} [unavailable]")
+                typer.echo(f"  Install with: {p.get('install_hint', '')}")
+            else:
+                typer.echo(f"- {p['name']}")
             if detailed:
                 typer.echo(f"  Display: {p.get('display_name', p['name'])}")
                 if p.get("pipeline_family"):

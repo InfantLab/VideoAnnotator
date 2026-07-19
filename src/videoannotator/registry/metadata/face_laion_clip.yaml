@@ -3,6 +3,8 @@ display_name: LAION CLIP Face Semantic Embedding
 description: Produce semantic face embeddings using a CLIP-derived model; supports zero-shot attribute and emotion tagging.
 pipeline_family: face
 variant: laion-clip-face
+module_path: videoannotator.pipelines.face_analysis.laion_face_pipeline:LAIONFacePipeline
+requires_extras: [face-laion]
 tasks:
   - face-embedding
   - face-recognition

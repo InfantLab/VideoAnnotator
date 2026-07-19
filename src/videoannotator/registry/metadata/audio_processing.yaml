@@ -3,6 +3,8 @@ display_name: Audio Processing (Speech + Diarization)
 description: Transcribe speech with Whisper and perform speaker diarization using pyannote.audio producing WebVTT + RTTM outputs.
 pipeline_family: audio
 variant: whisper-pyannote
+module_path: videoannotator.pipelines.audio_processing:AudioPipeline
+requires_extras: [audio]
 tasks:
   - speech-transcription
   - speaker-diarization

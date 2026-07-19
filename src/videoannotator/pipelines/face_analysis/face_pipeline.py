@@ -7,6 +7,7 @@ representation and export.
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,40 @@ from videoannotator.exporters.native_formats import (
 from videoannotator.pipelines.base_pipeline import BasePipeline
 from videoannotator.utils.person_identity import PersonIdentityManager
 from videoannotator.version import __version__
+
+
+def _disable_tensorflow_gpu() -> None:
+    """Force TensorFlow onto CPU before deepface (which pulls it in) touches the GPU.
+
+    torch hard-pins `nvidia-cudnn-cu12==9.1.0.70`; deepface's own `tensorflow`
+    dependency wants cuDNN>=9.3.0.75 for GPU use (via its `[and-cuda]` extra,
+    which nothing here installs — it just borrows whatever cuDNN is already in
+    the venv). These two pins can never both be satisfied in one venv, so
+    TensorFlow's GPU ops fail at runtime (`No DNN in stream executor`) instead
+    of erroring at install time. Forcing TF onto CPU sidesteps that entirely;
+    torch itself (scene/person/face-laion's CLIP/YOLO models) is untouched —
+    this only calls TensorFlow's own device-visibility API, not the
+    `CUDA_VISIBLE_DEVICES` env var, which both frameworks would otherwise read.
+    Set `VIDEOANNOTATOR_DEEPFACE_GPU=1` to skip this if you've resolved the
+    cuDNN mismatch yourself (e.g. a matching system-wide CUDA/cuDNN install).
+    """
+    if os.environ.get("VIDEOANNOTATOR_DEEPFACE_GPU") == "1":
+        return
+    try:
+        import tensorflow as tf
+
+        if tf.config.list_physical_devices("GPU"):
+            tf.config.set_visible_devices([], "GPU")
+    except ImportError:
+        pass
+    except Exception as e:
+        logging.getLogger(__name__).warning(
+            f"Failed to force TensorFlow onto CPU (deepface may hit cuDNN "
+            f"version-mismatch errors on GPU installs): {e}"
+        )
+
+
+_disable_tensorflow_gpu()
 
 # Optional import for enhanced face analysis
 try:

@@ -75,6 +75,13 @@ class PipelineMetadata:
     backends: list[str] = field(default_factory=list)
     stability: str | None = None
     examples: list[dict[str, Any]] = field(default_factory=list)
+    # pip extras-group name(s) needed for this pipeline to import successfully;
+    # [] is valid (e.g. a future non-ML/HTTP-only pipeline). See
+    # specs/004-extras-based-install/contracts/pipeline-metadata-schema.md
+    requires_extras: list[str] = field(default_factory=list)
+    # "module.path:ClassName" — required; a file missing it is skipped with a
+    # warning at load time rather than falling back to a hardcoded table.
+    module_path: str | None = None
 
 
 class PipelineRegistry:
@@ -164,6 +171,14 @@ class PipelineRegistry:
             LOGGER.warning("Metadata %s examples not a list", source.name)
             examples = []
 
+        module_path = raw.get("module_path")
+        if not module_path or not isinstance(module_path, str):
+            LOGGER.warning(
+                "Metadata %s missing required field 'module_path'; skipping",
+                source.name,
+            )
+            return None
+
         # Optional extended fields (ignored if wrong types)
         def _list_field(key: str) -> list[str]:
             val = raw.get(key)
@@ -188,6 +203,8 @@ class PipelineRegistry:
             backends=_list_field("backends"),
             stability=str(raw.get("stability")) if raw.get("stability") else None,
             examples=examples,
+            requires_extras=_list_field("requires_extras"),
+            module_path=module_path,
         )
 
     def list(self) -> builtins.list[PipelineMetadata]:

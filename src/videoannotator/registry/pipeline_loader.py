@@ -4,12 +4,97 @@ This module provides centralized pipeline class loading to eliminate
 hardcoded pipeline mappings in JobProcessor and BatchOrchestrator.
 """
 
+import functools
 import importlib
+import importlib.metadata
 import logging
+
+from packaging.requirements import Requirement
 
 from .pipeline_registry import PipelineMetadata, get_registry
 
 LOGGER = logging.getLogger("videoannotator.registry")
+
+_DISTRIBUTION_NAME = "videoannotator"
+
+
+@functools.cache
+def _packages_for_extra(extra: str) -> tuple[str, ...]:
+    """Return the pip distribution names declared under `[extra]`.
+
+    Read from this package's own installed metadata (Requires-Dist entries
+    with an `extra == "<name>"` marker) rather than a hand-maintained
+    mapping, so it can't drift from `pyproject.toml`
+    (specs/004-extras-based-install/research.md §3).
+    """
+    try:
+        dist = importlib.metadata.distribution(_DISTRIBUTION_NAME)
+    except importlib.metadata.PackageNotFoundError:
+        return ()
+    packages: list[str] = []
+    for req_str in dist.requires or []:
+        req = Requirement(req_str)
+        if req.marker and req.marker.evaluate({"extra": extra}):
+            packages.append(req.name)
+    return tuple(packages)
+
+
+@functools.cache
+def _is_distribution_installed(name: str) -> bool:
+    try:
+        importlib.metadata.distribution(name)
+        return True
+    except importlib.metadata.PackageNotFoundError:
+        return False
+
+
+def extras_available(requires_extras: list[str]) -> bool:
+    """Return whether every package declared under `requires_extras` is
+    installed. An empty list is vacuously available (research.md §2) — it
+    means "no extra needed", not "unknown"."""
+    for extra in requires_extras:
+        for package in _packages_for_extra(extra):
+            if not _is_distribution_installed(package):
+                return False
+    return True
+
+
+def missing_extras(requires_extras: list[str]) -> list[str]:
+    """Return the subset of `requires_extras` that have at least one
+    package not currently installed."""
+    return [extra for extra in requires_extras if not extras_available([extra])]
+
+
+def install_hint(requires_extras: list[str]) -> str:
+    """Return the exact `pip install videoannotator[...]` command for the
+    given extras groups (contracts/unavailable-pipeline-error.md)."""
+    groups = ",".join(requires_extras) if requires_extras else ""
+    return f"pip install {_DISTRIBUTION_NAME}[{groups}]"
+
+
+# Pipelines that were installed by default in v1.4.4 but were demoted to a
+# non-default extras group in v1.5.0 (data-model.md's migration message
+# record). Requesting one of these without its extras gets a distinct
+# "no longer installed by default" message instead of the generic
+# unavailable-pipeline text (research.md §4).
+_V144_DEMOTED_PIPELINES: dict[str, str] = {
+    "face_laion_clip": "face-laion",
+    "laion_voice": "audio-laion",
+    "face_openface3_embedding": "face-openface3",
+}
+
+
+def migration_note(pipeline_name: str) -> str | None:
+    """Return the v1.4.4->v1.5.0 migration note for a pipeline demoted out
+    of the default install, or None if it was never in the default install.
+    """
+    extra = _V144_DEMOTED_PIPELINES.get(pipeline_name)
+    if extra is None:
+        return None
+    return (
+        f"As of v1.5.0, pipelines requiring the '{extra}' extras group are "
+        "no longer installed by default."
+    )
 
 
 class PipelineLoader:
@@ -89,11 +174,21 @@ class PipelineLoader:
         if meta.name in self._class_cache:
             return self._class_cache[meta.name]
 
-        # Get module path from metadata
-        module_path = self._infer_module_path(meta)
+        module_path = meta.module_path
         if not module_path:
+            # The registry itself already skips YAML files missing
+            # module_path (pipeline_registry.py._parse_metadata), so this is
+            # defence-in-depth rather than the expected path.
             LOGGER.warning(
                 f"Cannot load pipeline '{meta.name}': no module_path in metadata"
+            )
+            return None
+
+        if not extras_available(meta.requires_extras):
+            LOGGER.info(
+                f"Skipping pipeline '{meta.name}': requires extras "
+                f"{meta.requires_extras} not installed "
+                f"({install_hint(meta.requires_extras)})"
             )
             return None
 
@@ -133,33 +228,6 @@ class PipelineLoader:
             )
             return None
 
-    def _infer_module_path(self, meta: PipelineMetadata) -> str | None:
-        """Infer module path from metadata if not explicitly provided.
-
-        This provides backward compatibility for metadata files that don't
-        yet have the module_path field.
-
-        Args:
-            meta: Pipeline metadata
-
-        Returns:
-            Inferred module path or None
-        """
-        # Mapping of pipeline names to their module paths (temporary fallback)
-        LEGACY_MAPPINGS = {
-            "scene_detection": "videoannotator.pipelines.scene_detection:SceneDetectionPipeline",
-            "person_tracking": "videoannotator.pipelines.person_tracking:PersonTrackingPipeline",
-            "face_analysis": "videoannotator.pipelines.face_analysis:FaceAnalysisPipeline",
-            "audio_processing": "videoannotator.pipelines.audio_processing:AudioPipeline",
-            "speech_recognition": "videoannotator.pipelines.audio_processing:SpeechPipeline",
-            "speaker_diarization": "videoannotator.pipelines.audio_processing:DiarizationPipeline",
-            "face_laion_clip": "videoannotator.pipelines.face_analysis.laion_face_pipeline:LAIONFacePipeline",
-            "laion_voice": "videoannotator.pipelines.audio_processing.laion_voice_pipeline:LAIONVoicePipeline",
-            "face_openface3_embedding": "videoannotator.pipelines.face_analysis.openface3_pipeline:OpenFace3Pipeline",
-        }
-
-        return LEGACY_MAPPINGS.get(meta.name)
-
 
 # Singleton instance
 _loader_instance: PipelineLoader | None = None
@@ -173,4 +241,11 @@ def get_pipeline_loader() -> PipelineLoader:
     return _loader_instance
 
 
-__all__ = ["PipelineLoader", "get_pipeline_loader"]
+__all__ = [
+    "PipelineLoader",
+    "get_pipeline_loader",
+    "extras_available",
+    "missing_extras",
+    "install_hint",
+    "migration_note",
+]

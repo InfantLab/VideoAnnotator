@@ -1,0 +1,23 @@
+name: stub_pipeline
+display_name: Stub Forward-Compatibility Pipeline
+description: >-
+  Throwaway pipeline metadata proving PipelineMetadata/the registry loader
+  need no schema changes for a future non-local pipeline (spec 004 User
+  Story 3, SC-007) — e.g. v1.6.0's Ollama-backed `llm` group or v1.7.0+'s
+  HTTP/Slurm-dispatched pipelines.
+pipeline_family: stub
+variant: forward-compat-stub
+module_path: tests.fixtures.stub_pipeline_module:StubPipeline
+requires_extras: []
+backends:
+  - http
+outputs:
+  - format: JSON
+    types: [stub]
+config_schema:
+  enabled:
+    type: boolean
+    default: true
+    description: Stub config field, unused.
+version: 1
+stability: experimental

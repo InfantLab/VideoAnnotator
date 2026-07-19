@@ -3,6 +3,8 @@ display_name: LAION Empathic Voice Analysis
 description: Advanced audio emotion analysis using LAION's Empathic Insight model with Whisper embeddings for nuanced emotional understanding.
 pipeline_family: audio
 variant: laion-empathic-whisper
+module_path: videoannotator.pipelines.audio_processing.laion_voice_pipeline:LAIONVoicePipeline
+requires_extras: [audio-laion]
 tasks:
   - emotion-recognition
   - audio-analysis

@@ -3,6 +3,8 @@ display_name: Face Analysis (DeepFace)
 description: Standards-only face detection and analysis using DeepFace with emotion recognition, age, and gender prediction, producing COCO format output.
 pipeline_family: face
 variant: deepface
+module_path: videoannotator.pipelines.face_analysis:FaceAnalysisPipeline
+requires_extras: [face]
 tasks:
   - face-detection
   - emotion-recognition

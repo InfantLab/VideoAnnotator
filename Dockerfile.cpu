@@ -1,8 +1,15 @@
 # VideoAnnotator Production Docker Image - CPU Version
 # This image does NOT include models/weights - they download automatically on first use
 #
+# By default this builds a SLIM image with no pipeline extras (no torch, no
+# ML pipelines) — 004-extras-based-install / SC-002. Pass --build-arg
+# EXTRAS=<group[,group...]> to include one or more pipeline families, or
+# EXTRAS=all to reproduce the pre-v1.5.0 "everything installed" image.
+#
 # Usage:
-#   docker build -f Dockerfile.cpu -t videoannotator:cpu .
+#   docker build -f Dockerfile.cpu -t videoannotator:cpu .                        # slim (no extras)
+#   docker build -f Dockerfile.cpu --build-arg EXTRAS=scene -t videoannotator:cpu-scene .
+#   docker build -f Dockerfile.cpu --build-arg EXTRAS=all -t videoannotator:cpu-all .
 #   docker run --rm -p 8000:8000 -v ${PWD}/data:/app/data videoannotator:cpu
 
 FROM ubuntu:24.04
@@ -34,6 +41,10 @@ ENV PATH="/root/.local/bin:${PATH}"
 
 WORKDIR /app
 
+# Extras group(s) to install, e.g. "scene" or "scene,person" or "all".
+# Empty (default) = slim image, core dependencies only, no torch.
+ARG EXTRAS=""
+
 # Copy source code explicitly (exclude models/weights)
 COPY pyproject.toml uv.lock ./
 COPY api_server.py ./
@@ -41,18 +52,34 @@ COPY src/ ./src/
 COPY configs/ ./configs/
 COPY scripts/ ./scripts/
 
-# Install dependencies, then override with CPU-only PyTorch wheels.
-# Keep torch/torchvision/torchaudio versions compatible.
-RUN uv sync --frozen --no-editable \
+# Install dependencies (extras opt-in via $EXTRAS), then, only if any extras
+# were requested, override with CPU-only PyTorch wheels (matched versions).
+# hadolint ignore=SC2086
+RUN set -eu; \
+    if [ -n "$EXTRAS" ]; then \
+        FLAGS=""; \
+        for e in $(echo "$EXTRAS" | tr ',' ' '); do FLAGS="$FLAGS --extra $e"; done; \
+        uv sync --frozen --no-editable $FLAGS; \
+    else \
+        uv sync --frozen --no-editable; \
+    fi \
     && HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh \
-    && uv pip install "torch==2.6.0+cpu" "torchvision==0.21.0+cpu" "torchaudio==2.6.0+cpu" --index-url https://download.pytorch.org/whl/cpu
+    && if [ -n "$EXTRAS" ]; then \
+        uv pip install "torch==2.6.0+cpu" "torchvision==0.21.0+cpu" "torchaudio==2.6.0+cpu" --index-url https://download.pytorch.org/whl/cpu; \
+    else \
+        echo "[BUILD] EXTRAS not set — slim image, skipping CPU torch install"; \
+    fi
 
-# Verify CPU setup (no GPU packages installed)
-RUN uv run python3 -c "\
+# Verify CPU setup (only meaningful when extras/torch were installed)
+RUN if [ -n "$EXTRAS" ]; then \
+        uv run python3 -c "\
 import torch; \
 print(f'[CPU BUILD] CUDA available: {torch.cuda.is_available()}'); \
 print(f'[CPU BUILD] PyTorch version: {torch.__version__}'); \
-print('[CPU BUILD] Production image ready - models will download on first use');"
+print('[CPU BUILD] Production image ready - models will download on first use');"; \
+    else \
+        echo "[BUILD] Slim image (no extras) — skipping Torch verification"; \
+    fi
 
 # Set environment for production
 ENV PYTHONUNBUFFERED=1

@@ -3,6 +3,8 @@ display_name: Person Tracking & Pose
 description: Track persons with YOLO11 + ByteTrack producing COCO person + keypoint annotations.
 pipeline_family: person
 variant: yolov11n-pose-bytetrack
+module_path: videoannotator.pipelines.person_tracking:PersonTrackingPipeline
+requires_extras: [person]
 tasks:
   - object-tracking
   - pose-estimation

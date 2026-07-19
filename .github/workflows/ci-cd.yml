@@ -53,7 +53,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --dev
+          uv sync --dev --all-extras
 
       - name: Lint with ruff
         run: |
@@ -69,6 +69,14 @@ jobs:
           uv run mypy src/videoannotator
 
       - name: Test with pytest
+        env:
+          # macOS ARM64: numpy 2.x + pyarrow (via datasets/pandas) each bundle their
+          # own OpenMP runtime, which can double-initialize alongside TensorFlow's
+          # and abort the process (Fatal Python error: Aborted) on import, not on
+          # any actual test failure. Same class of issue already documented for
+          # audio pipelines in docs/installation/INSTALLATION.md's macOS libomp
+          # note. No-op on Linux/Windows.
+          KMP_DUPLICATE_LIB_OK: "TRUE"
         run: |
           uv run pytest -q --cov=src/videoannotator --cov-report=xml --cov-report=term-missing --cov-fail-under=45
 
@@ -106,7 +114,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --dev
+          uv sync --dev --all-extras
 
       - name: Run integration tests
         run: |
@@ -143,7 +151,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --dev
+          uv sync --dev --all-extras
 
       - name: Run performance tests
         run: |
