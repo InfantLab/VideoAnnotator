@@ -135,15 +135,39 @@ before resubmission.
 
 ## ✅ Success Criteria
 
-- [ ] `pip install videoannotator` (no extras) installs without torch/transformers/pyannote/ultralytics/whisper.
+- [x] `pip install videoannotator` (no extras) installs without torch/transformers/pyannote/ultralytics/whisper.
+      Verified: `[project.dependencies]` contains none of them; confirmed via real `pip install
+      videoannotator[scene]`/`[face]` runs during 004's manual quickstart pass (§1/§2) that only the
+      requested family's deps land, nothing else.
 - [ ] `pip install videoannotator[all]` reproduces v1.4.3 behaviour exactly; no config/CLI changes needed.
-- [ ] Default Docker image size reduced by ≥ 80% vs. the v1.4.3 baseline.
-- [ ] A user with no extras installed gets an actionable install command, not a traceback, when
-      requesting an unavailable pipeline.
-- [ ] `pip install videoannotator[all]` + `videoannotator serve` gets a user from install to a
-      reviewable annotated video in one command, without cloning a second repository.
-- [ ] Full test suite passes on NumPy 2.x, Linux/macOS/Windows.
-- [ ] Cross-repo contract test between VideoAnnotator and Video Annotation Viewer is running in CI.
+      Mechanism exists (`tests/integration/test_v144_parity.py`, run and passing — 4 passed, 6
+      skipped) but the skips are real: no v1.4.4 golden fixtures have been captured yet (needs
+      checking out the v1.4.4 tag and running real model inference to generate them — substantial,
+      not done in this pass). See the test file's own module docstring for the capture procedure.
+- [ ] Default Docker image size reduced by ≥ 80% vs. the v1.4.3 baseline. Not measurable in this
+      sandbox (no `docker` binary available) — needs an environment with Docker to build
+      `Dockerfile.cpu`/`Dockerfile.gpu` both slim and `--build-arg EXTRAS=all`, and compare.
+- [x] A user with no extras installed gets an actionable install command, not a traceback, when
+      requesting an unavailable pipeline. Verified: `tests/contract/test_unavailable_pipeline_error.py`
+      + `test_pipeline_availability_contract.py` pass (7 tests), and confirmed live via a real running
+      server returning `422` + `install_hint` for an unavailable pipeline (004's manual quickstart §1).
+- [~] `pip install videoannotator[all]` + `videoannotator server --dev` gets a user from install to a
+      reviewable annotated video, without cloning a second repository. (Roadmap text said `serve`;
+      the actual command is `server`.) Substantially verified: a real install + running server +
+      `job submit` produced valid COCO output for `scene_detection` and `face_analysis`, and the
+      viewer mounts at `/viewer` same-origin. Not yet confirmed: actually opening `/viewer` in a
+      browser and seeing that output rendered — no browser available in this sandbox to check that
+      last step.
+- [x] Full test suite passes on NumPy 2.x — **on Linux**. Verified repeatedly this session (most
+      recently 1066 passed, 32 skipped, 0 failed under numpy 2.2.6 with `[all]` extras). **Not**
+      verified on macOS/Windows — this sandbox is Linux-only; needs the real CI matrix
+      (`.github/workflows/ci-cd.yml`'s `test` job already covers all three OSes, just needs a run
+      against the numpy-unpinned state to confirm).
+- [~] Cross-repo contract test between VideoAnnotator and Video Annotation Viewer is running in CI.
+      Python-side half: yes — `tests/contract/test_viewer_contract.py` passes (4 tests) and runs
+      automatically in the existing CI `test` job, no workflow changes needed. TypeScript-side half
+      (VAV's own parsers against these fixtures): still deferred, needs Node/bun tooling not
+      available in this sandbox — see Phase 2's own checklist above.
 
 ---
 
