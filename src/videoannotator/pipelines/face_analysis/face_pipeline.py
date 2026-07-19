@@ -45,7 +45,8 @@ def _disable_tensorflow_gpu() -> None:
     try:
         import tensorflow as tf
 
-        tf.config.set_visible_devices([], "GPU")
+        if tf.config.list_physical_devices("GPU"):
+            tf.config.set_visible_devices([], "GPU")
     except ImportError:
         pass
     except Exception as e:
