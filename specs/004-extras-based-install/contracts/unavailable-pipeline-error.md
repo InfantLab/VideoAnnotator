@@ -3,7 +3,7 @@
 Applies to every user-facing surface that can name a pipeline: CLI (`videoannotator job submit
 ... --pipelines <name>`), REST API (`POST /api/v1/jobs`, `GET /api/v1/pipelines`).
 
-## Registry listing (`GET /api/v1/pipelines`, `videoannotator pipelines list`)
+## Registry listing (`GET /api/v1/pipelines`, `videoannotator pipelines`)
 
 Unavailable pipelines (extras not installed) are **omitted** from the default listing — not shown
 with an error, not shown at all — per FR-005. A `--all` / `?include_unavailable=true` variant MAY
