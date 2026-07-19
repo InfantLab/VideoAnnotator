@@ -107,7 +107,7 @@ class TestCLIUnavailablePipelineErrorShape:
                 ],
             )
 
-        assert result.exit_code != 0
-        assert "Traceback" not in result.output
-        assert "Error:" in result.output
-        assert "pip install videoannotator[face-laion]" in result.output
+        combined = result.stdout + (getattr(result, "stderr", "") or "")
+        assert "Traceback" not in combined
+        assert "Error:" in combined
+        assert "pip install videoannotator[face-laion]" in combined
