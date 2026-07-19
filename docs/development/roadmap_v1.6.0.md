@@ -83,6 +83,31 @@ plugin/backend seam from Phase 1 is real, not aspirational.
 
 ---
 
+### Phase 3: Server-Side Timeseries Post-Processing (pandas)
+
+**Problem**: Per-frame annotations (person bounding boxes/keypoints) ship as static per-frame COCO
+records; anything temporal — e.g. how far a tracked person moved between frames — is currently left
+to Video Annotation Viewer to compute client-side, where compute is more constrained than the
+VideoAnnotator server.
+
+**Solution**:
+- [ ] A `person_tracking` post-processing step that computes frame-to-frame movement deltas
+      (bbox-center or keypoint-centroid displacement) per `person_id`/`track_id`, using `pandas` —
+      already a core, no-extras dependency (confirmed unused in any active pipeline code as of
+      v1.5.0, so this adds zero new dependency weight, just a new use of an existing one).
+- [ ] Additive-only export fields (e.g. `movement_delta_x`, `movement_delta_y`, `movement_speed`)
+      alongside the existing COCO annotation, not replacing anything — v1.5.x consumers unaware of
+      the new fields are unaffected (Principle V, Backward Compatibility by Default).
+- [ ] Scope to person-tracking first (clearest "movement" semantics); revisit whether
+      face/gaze/other keypoint-bearing pipelines want the same treatment once the pattern is
+      proven.
+
+**Reference**: raised in v1.5.0's merge follow-up discussion, not part of spec 003/004 — no
+existing FR/SC coverage. Write a proper spec before implementing if this grows beyond a small,
+additive post-processing step.
+
+---
+
 ## ✅ Success Criteria
 
 - [ ] A third-party plugin package (≤ 50 lines) is installable and runnable through the standard
@@ -91,6 +116,8 @@ plugin/backend seam from Phase 1 is real, not aspirational.
 - [ ] A local-LLM pipeline runs end-to-end against a user-provided `ollama serve` instance with no
       bundled model weights and no torch/transformers pulled in by the `llm` extra.
 - [ ] Provenance metadata for local-LLM pipeline runs records backend, base URL, and model identity.
+- [ ] `person_tracking` output includes frame-to-frame movement-delta fields via a pandas-based
+      post-processing step, additive-only (no v1.5.x output field ever removed or renamed).
 
 ---
 

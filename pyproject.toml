@@ -125,8 +125,15 @@ face-laion = [
     "videoannotator[face]",
     "torch==2.6.0",
     "torchvision==0.21.0",
-    "transformers>=4.40.0",
-    "huggingface-hub>=0.20.0",
+    # Defensive upper bounds, not deliberate feature pins: both majors are
+    # unreleased-at-write-time-adjacent (transformers 5.x, huggingface-hub
+    # 1.x exist on PyPI now but untested here) — an unqualified `uv lock
+    # --upgrade` could otherwise silently jump onto one, the same class of
+    # break this project already hit this phase with open-clip-torch 3.1.0
+    # and opencv-python 5.0 (see CHANGELOG). Bump deliberately, with testing,
+    # not by omission.
+    "transformers>=4.40.0,<5.0",
+    "huggingface-hub>=0.20.0,<1.0",
 ]
 face-openface3 = [
     "openface-test>=0.1.13",
@@ -143,16 +150,23 @@ audio = [
     "librosa>=0.10.0",
     # sdist-only release; built from source at install (see tool.uv.extra-build-dependencies)
     "openai-whisper>=20250625",
-    "pyannote.audio>=3.3.2",
-    "pyannote.core>=5.0.0",
-    "pyannote.database>=5.1.0",
-    "pyannote.metrics>=3.2.1",
-    "pyannote.pipeline>=3.0.1",
+    # Defensive upper bounds on the whole pyannote.* family: pyannote.audio
+    # 3.3.2 itself declares its own pyannote.core/database/metrics/pipeline
+    # deps unbounded too, so pinning only pyannote.audio wouldn't stop e.g.
+    # pyannote.core alone drifting to its own next major. See the
+    # transformers/huggingface-hub comment in the face-laion group above for
+    # why this project pins majors explicitly now rather than trusting
+    # unqualified `uv lock --upgrade` to stay safe.
+    "pyannote.audio>=3.3.2,<4.0",
+    "pyannote.core>=5.0.0,<6.0",
+    "pyannote.database>=5.1.0,<6.0",
+    "pyannote.metrics>=3.2.1,<4.0",
+    "pyannote.pipeline>=3.0.1,<4.0",
 ]
 audio-laion = [
     "torch==2.6.0",
-    "transformers>=4.40.0",
-    "huggingface-hub>=0.20.0",
+    "transformers>=4.40.0,<5.0",
+    "huggingface-hub>=0.20.0,<1.0",
     "librosa>=0.10.0",
 ]
 scene = [
