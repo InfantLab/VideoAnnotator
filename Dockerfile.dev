@@ -52,9 +52,12 @@ COPY scripts/ ./scripts/
 COPY models/ /app/models/
 COPY weights/ /app/weights/
 
-# Install dependencies (torch/torchvision/torchaudio come from the configured
-# `pytorch-cu124` uv index in pyproject.toml).
-RUN uv sync --frozen --no-editable \
+# Install dependencies. As of 004-extras-based-install, torch/pipeline deps
+# are opt-in extras rather than core dependencies, so the dev image (which
+# is meant to exercise every pipeline against the mounted model cache)
+# installs the `all` extras group explicitly. torch/torchvision/torchaudio
+# come from the configured `pytorch-cu124` uv index in pyproject.toml.
+RUN uv sync --frozen --no-editable --extra all \
     && HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh \
     && uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 

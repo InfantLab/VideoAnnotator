@@ -3,6 +3,8 @@ display_name: Scene Detection
 description: Detect hard cuts and scene boundaries using PySceneDetect with semantic labeling via CLIP.
 pipeline_family: scene
 variant: pyscenedetect-clip
+module_path: videoannotator.pipelines.scene_detection:SceneDetectionPipeline
+requires_extras: [scene]
 tasks:
   - scene-detection
   - scene-segmentation

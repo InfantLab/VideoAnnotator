@@ -3,6 +3,8 @@ display_name: OpenFace3 Face Embedding
 description: Generate 512-D face embeddings for recognition or clustering using OpenFace3.
 pipeline_family: face
 variant: openface3-embedding
+module_path: videoannotator.pipelines.face_analysis.openface3_pipeline:OpenFace3Pipeline
+requires_extras: [face-openface3]
 tasks:
   - face-embedding
 modalities:

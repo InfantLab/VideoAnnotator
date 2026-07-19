@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "videoannotator"
-version = "1.4.4"
+version = "1.5.0"
 description = "A modern, modular toolkit for analyzing, processing, and visualizing human interaction videos"
 readme = "README.md"
 license = "MIT"
@@ -25,64 +25,29 @@ classifiers = [
 ]
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    # Core dependencies - Python 3.12 Compatible
+    # Core dependencies - Python 3.12 Compatible (no ML/pipeline extras required)
     "fastapi>=0.115.0",
     "ipython>=8.12.3",
-    "librosa>=0.10.0",
     "matplotlib>=3.9.2",
     "moviepy>=1.0.3",
-    # sdist-only release; built from source at install (see tool.uv.extra-build-dependencies)
-    "openai-whisper>=20250625",
     "numba>=0.60.0", # Ensure Python 3.12 compatibility
     "openpyxl",
     "pandas>=2.2.2",
     "Pillow>=10.4.0",
     # Note: pytest moved to [dependency-groups] dev — not needed at runtime
     "python-dotenv>=1.0.1",
-    # Pin NumPy below 2.0 until all binary deps (scipy, matplotlib, pyannote, etc.) ship compatible wheels
-    "numpy>=1.24.0,<2.0",
+    # numba (below) declares its own numpy upper bound; leaving numpy unpinned here
+    # lets the resolver pick the newest numpy numba actually supports rather than
+    # us hand-tracking that ceiling. See 004-extras-based-install T030/research.md §5.
+    "numpy>=1.24.0",
     "tqdm>=4.65.0",
-    # Video and computer vision - YOLO11 and detection
-    "ultralytics>=8.3.0",
-    "supervision>=0.16.0",
-    # Note: PyTorch with CUDA - Use UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124 for CUDA builds
-    # Pin the torch trio to a matched, tested release. cu124 build on Linux
-    # (via tool.uv.sources); CPU build from PyPI on macOS/Windows. Newer
-    # torchaudio (>=2.9) removed AudioMetaData, which the pipelines rely on.
-    "torch==2.6.0",
-    "torchvision==0.21.0",
-    "timm>=0.9.0",
-    # Audio processing - Core packages that should work
-    "pyannote.audio>=3.3.2",
-    "pyannote.core>=5.0.0",
-    "pyannote.database>=5.1.0",
-    "pyannote.metrics>=3.2.1",
-    "pyannote.pipeline>=3.0.1",
-    "torchaudio==2.6.0",
-    # Scene detection and video understanding
-    "scenedetect[opencv]>=0.6.3",
-    "transformers>=4.40.0",
-    # clip-by-openai - Not compatible with Python 3.12 and modern PyTorch
-    "sentence-transformers>=2.2.0",
-    # Face analysis - Limited set for Python 3.12
-    # deepface>=0.0.91 - Not compatible with Python 3.12 due to TensorFlow dependency
-    # face-recognition>=1.3.0 - Has compatibility issues
-    # mediapipe>=0.10.0 - Removed due to compatibility issues and slow Google updates (use DeepFace instead)
-    # fer>=22.5.0 - Has compatibility issues
-    # insightface>=0.7.3 - Has compatibility issues
-    # "dlib>=19.24.0",  # Requires cmake - install separately with conda
-    "imutils>=0.5.4",
-    # Note: cmake>=3.22.0 and dlib are installed via conda
     # Additional ML/AI tools
     "openai>=1.0.0",
-    "huggingface-hub>=0.20.0",
     "accelerate>=0.20.0",
     "datasets>=2.16.0",
-    # langchain packages removed due to compatibility issues
     # Data processing and visualization
     "seaborn>=0.12.0",
     "plotly>=5.17.0",
-    "scipy>=1.11.0",
     "scikit-learn>=1.3.0",
     "networkx>=3.1",
     "pydantic>=2.0.0",
@@ -91,9 +56,6 @@ dependencies = [
     "imageio>=2.31.0",
     "imageio-ffmpeg>=0.4.8",
     "av>=10.0.0",
-    # Multimodal and advanced AI
-    "open-clip-torch>=2.24.0",
-    # clip-interrogator removed due to compatibility issues
     # Database and storage
     "sqlalchemy>=2.0.0",
     "alembic>=1.12.0",
@@ -113,13 +75,112 @@ dependencies = [
     "praatio>=6.2.0",
     "pyjwt>=2.10.1",
     "cryptography>=45.0.6",
-    "openface-test>=0.1.13",
     "scikit-image>=0.25.2",
     "ruff==0.14.0",
-    "opencv-python-headless>=4.11.0.86",
+    # No cv2 here: every extras group that actually uses OpenCV either forces
+    # plain `opencv-python` transitively (deepface/retina-face for `face`,
+    # ultralytics/supervision for `person`) or declares it directly (`scene`,
+    # `face-openface3`, below). Core code itself doesn't touch cv2. Standardizing
+    # on the one variant those transitive deps force avoids ever having both
+    # `opencv-python` and `opencv-python-headless` installed together — they
+    # share the same `cv2` import namespace, and coexistence is a documented
+    # upstream footgun (github.com/opencv/opencv-python#note-1) that silently
+    # corrupts the compiled module (e.g. `cv2.CascadeClassifier` going missing)
+    # depending on install order — which core previously forced on every `face`
+    # or `person` install by declaring opencv-python-headless unconditionally.
 ]
 
 [project.optional-dependencies]
+# Per-pipeline-family extras (004-extras-based-install). Core install (no extras)
+# pulls in none of these; a pipeline whose extras group isn't installed is
+# omitted from registry listings with an actionable install hint rather than
+# crashing (see src/videoannotator/registry/pipeline_loader.py).
+#
+# `torch`/`torchvision`/`torchaudio` are pinned identically (==2.6.0/==0.21.0)
+# across every group below so combining extras (e.g. `[scene,person]` or
+# `[all]`) resolves to one consistent install rather than conflicting pins.
+face = [
+    # DeepFace-only variant — the one face extras group with no torch dependency.
+    # cv2 comes transitively via deepface/retina-face's own unconditional
+    # `opencv-python` dependency, but neither pins an upper bound, so we do:
+    # opencv-python 5.0 removed cv2.CascadeClassifier and all Haar-cascade data
+    # entirely (replaced by the DNN-based FaceDetectorYN) — face_pipeline.py's
+    # "opencv" backend still uses the legacy API, so an unpinned install breaks
+    # at runtime with `AttributeError: module 'cv2' has no attribute
+    # 'CascadeClassifier'`, not at install time. Migrating to FaceDetectorYN is
+    # real follow-up work, not a pyproject fix.
+    "opencv-python>=4.11.0.86,<5.0",
+    "deepface>=0.0.91",
+    "imutils>=0.5.4",
+    # deepface's retinaface detector backend requires tf-keras alongside
+    # Keras-3-era tensorflow (tensorflow itself is deepface's transitive dep,
+    # not declared here directly); without it, importing face_pipeline raises
+    # ValueError at import time, not just at inference time.
+    "tf-keras>=2.15.0",
+]
+face-laion = [
+    # LAIONFacePipeline composes FaceAnalysisPipeline as its face-detector
+    # backend (face_analysis/laion_face_pipeline.py), so it needs `face`'s
+    # deepface stack too — this isn't just a CLIP/embedding extra on its own.
+    "videoannotator[face]",
+    "torch==2.6.0",
+    "torchvision==0.21.0",
+    "transformers>=4.40.0",
+    "huggingface-hub>=0.20.0",
+]
+face-openface3 = [
+    "openface-test>=0.1.13",
+    "scipy>=1.11.0",
+    # openface3_pipeline.py imports cv2 directly and openface-test itself
+    # declares no opencv dependency of its own — unlike `face`/`person`,
+    # nothing here pulls it in transitively. <5.0: see `face` group's comment
+    # re: opencv-python 5.0 dropping cv2.CascadeClassifier.
+    "opencv-python>=4.11.0.86,<5.0",
+]
+audio = [
+    "torch==2.6.0",
+    "torchaudio==2.6.0",
+    "librosa>=0.10.0",
+    # sdist-only release; built from source at install (see tool.uv.extra-build-dependencies)
+    "openai-whisper>=20250625",
+    "pyannote.audio>=3.3.2",
+    "pyannote.core>=5.0.0",
+    "pyannote.database>=5.1.0",
+    "pyannote.metrics>=3.2.1",
+    "pyannote.pipeline>=3.0.1",
+]
+audio-laion = [
+    "torch==2.6.0",
+    "transformers>=4.40.0",
+    "huggingface-hub>=0.20.0",
+    "librosa>=0.10.0",
+]
+scene = [
+    "torch==2.6.0",
+    "open-clip-torch>=2.24.0",
+    # scenedetect itself has no unconditional opencv dependency (only via its
+    # own `[opencv]`/`[opencv-headless]` extras, which we don't use — see
+    # research.md §1/T030 history), but scene_pipeline.py calls cv2.VideoCapture
+    # directly, so this group needs its own cv2. Not headless: standardizing on
+    # plain opencv-python project-wide, since `face`/`person` force it
+    # transitively anyway and mixing variants corrupts the shared `cv2`
+    # namespace (see core dependencies comment).
+    "scenedetect>=0.6.3",
+    # <5.0: see `face` group's comment re: opencv-python 5.0 dropping
+    # cv2.CascadeClassifier (scene_pipeline.py doesn't use it, but pinning
+    # keeps every group on the same resolved opencv-python version).
+    "opencv-python>=4.11.0.86,<5.0",
+]
+person = [
+    "torch==2.6.0",
+    "torchvision==0.21.0",
+    # cv2 comes transitively via ultralytics/supervision's own unconditional
+    # `opencv-python` dependency, uncapped by either — pin the ceiling
+    # explicitly here too; see `face` group's comment re: opencv-python 5.0.
+    "opencv-python>=4.11.0.86,<5.0",
+    "ultralytics>=8.3.0",
+    "supervision>=0.16.0",
+]
 dev = [
     "ruff>=0.8.0",
     "pre-commit>=3.0.0",
@@ -135,11 +196,15 @@ annotation = [
     # "roboflow>=1.1.0",
 ]
 all = [
-    "videoannotator[dev,annotation]"
+    "videoannotator[face,face-laion,face-openface3,audio,audio-laion,scene,person,dev,annotation]"
 ]
 
 [tool.setuptools.package-data]
-videoannotator = ["viewer_static/**/*"]
+# registry/metadata/*.yaml: the pipeline registry is fully metadata-driven as of
+# 004-extras-based-install (LEGACY_MAPPINGS/_infer_module_path removed in T013) —
+# without these YAMLs bundled, a real (non-editable) install resolves zero
+# pipelines regardless of which extras are installed.
+videoannotator = ["viewer_static/**/*", "registry/metadata/*.yaml"]
 
 [project.urls]
 Homepage = "https://github.com/InfantLab/VideoAnnotator"

@@ -262,8 +262,17 @@ class SceneDetectionPipeline(BasePipeline):
                             )
 
                             with torch.no_grad():
-                                logits_per_image, logits_per_text = self.clip_model(
-                                    image_input, text
+                                # open_clip's model(image, text) returns raw
+                                # (image_features, text_features, logit_scale) —
+                                # not (logits_per_image, logits_per_text) like the
+                                # legacy CLIP API this was originally written
+                                # against. Compute the similarity logits
+                                # ourselves (see open_clip's own usage examples).
+                                image_features, text_features, logit_scale = (
+                                    self.clip_model(image_input, text)
+                                )
+                                logits_per_image = (
+                                    logit_scale * image_features @ text_features.T
                                 )
                                 probs = (
                                     logits_per_image.softmax(dim=-1).cpu().numpy()[0]

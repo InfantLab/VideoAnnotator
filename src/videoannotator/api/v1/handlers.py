@@ -79,6 +79,12 @@ async def videoannotator_exception_handler(
     # Include top-level "detail" key for backward compatibility
     content = error_envelope.model_dump(mode="json", exclude_none=True)
     content["detail"] = exc.message  # Legacy field for older clients
+    if isinstance(exc.detail, dict):
+        # Also promote structured detail keys (e.g. "install_hint", "pipeline")
+        # to the top level for contract consumers that don't want to reach
+        # into error.detail (contracts/unavailable-pipeline-error.md).
+        for key, value in exc.detail.items():
+            content.setdefault(key, value)
     return JSONResponse(
         status_code=exc.status_code,
         content=content,

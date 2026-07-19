@@ -3,6 +3,8 @@ display_name: Speech Recognition
 description: Speech transcription using OpenAI Whisper with word-level timestamps, producing WebVTT format output for subtitles and captions.
 pipeline_family: audio
 variant: whisper
+module_path: videoannotator.pipelines.audio_processing:SpeechPipeline
+requires_extras: [audio]
 tasks:
   - speech-transcription
   - automatic-speech-recognition

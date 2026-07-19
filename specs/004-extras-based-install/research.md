@@ -105,3 +105,35 @@ no `[all]`); a documented `--build-arg EXTRAS=all` (or a separate `Dockerfile.cp
 mechanism is a `/speckit-tasks` implementation choice) reproduces the current image for users who
 want everything. SC-002's ≥80% reduction target is measured against the current `[all]`-equivalent
 baseline image size recorded at v1.4.4 release.
+
+## 7. SC-007 design-review confirmation (post-implementation)
+
+**Question**: Does the schema actually implemented in Phase 2/3 hold up the forward-compatibility
+promise User Story 3 was added for — can v1.6.0's Ollama `llm` extras group be added without
+touching `PipelineMetadata`, the registry loader, or the extras-naming scheme again?
+
+**Confirmation**: Yes. The implemented mechanism is:
+
+- `PipelineMetadata.requires_extras: list[str]` (additive dataclass field, default `[]`) and
+  `PipelineMetadata.module_path: str | None` (`pipeline_registry.py`) — both generic, with no
+  pipeline-family-specific logic anywhere in their parsing (`_parse_metadata`).
+- `pipeline_loader.py`'s availability check (`extras_available`/`_packages_for_extra`) reads the
+  extras→package mapping from this package's own installed metadata
+  (`importlib.metadata.distribution("videoannotator").requires`, filtered by each
+  `Requires-Dist ...; extra == "<name>"` marker) — it does not hardcode any extras-group name, so a
+  brand-new group is picked up automatically the moment it exists in `pyproject.toml`.
+- Adding v1.6.0's Ollama pipeline therefore requires exactly two additive changes and nothing else:
+  1. A new `llm = ["httpx>=..."]` (or similar, non-torch) entry under
+     `[project.optional-dependencies]` in `pyproject.toml`.
+  2. A new pipeline metadata YAML with `module_path: videoannotator.pipelines.llm...:OllamaPipeline`
+     and `requires_extras: [llm]` (plus `backends: [ollama]`, orthogonal per research.md §2).
+- `tests/unit/registry/test_forward_compat_stub.py` proves this mechanically: a throwaway pipeline
+  YAML with `requires_extras: []` and a `module_path` pointing at a `NotImplementedError` stub class
+  loads through both `PipelineRegistry` and `PipelineLoader` with zero changes to either module —
+  the same code path a real `llm` entry would exercise.
+
+**Not yet needed, and correctly out of scope for this phase**: no changes to
+`api/job_processor.py` or `batch/batch_orchestrator.py`'s dispatch logic were required to prove
+this — those consolidate onto a shared dispatcher ABC in v1.6.0/v1.7.0 per
+`roadmap_v1.6.0.md`/`roadmap_v1.7_to_v2.0.md`, which is a separate (larger) piece of work than the
+metadata/loader schema this phase locks in.

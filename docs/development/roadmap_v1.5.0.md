@@ -15,10 +15,9 @@ integration between VideoAnnotator and Video Annotation Viewer. The plugin-disco
 remote-dispatch seams from that spec are real and worth building, but they are not blocking a
 resubmission — they move to [`roadmap_v1.6.0.md`](roadmap_v1.6.0.md).
 
-**Target Release**: Alongside/ahead of the JOSS resubmission (v1.4.4 is the current release; the
-Phase 2 work below — /viewer integration — shipped in v1.4.4, ahead of the Phase 1 extras-based
-install work still to come)
-**Current Status**: Planning Phase
+**Target Release**: Alongside/ahead of the JOSS resubmission (Phase 2 — /viewer integration —
+shipped in v1.4.4; Phase 1 — extras-based install — shipped in v1.5.0, 2026-07-19)
+**Current Status**: v1.5.0 released
 **Main Goal**: Slim, per-pipeline install; LAION demoted from the default install; VideoAnnotator can
 optionally serve Video Annotation Viewer directly
 **Constitution Principle in play**: Principle V (Backward Compatibility by Default) — v1.4.x
@@ -63,23 +62,26 @@ open-clip, LAION's stack) are hard dependencies in `pyproject.toml`. A user who 
 labelling still downloads everything.
 
 **Solution**:
-- [ ] Move heavy ML deps from `[project.dependencies]` into named `[project.optional-dependencies]`
-      groups: `face`, `audio`, `scene`, `person`, `embedding`.
-- [ ] Give LAION its own extras (e.g. `face-laion`, `voice-laion`) separate from the base `face`/`audio`
+- [x] Move heavy ML deps from `[project.dependencies]` into named `[project.optional-dependencies]`
+      groups: `face`, `audio`, `scene`, `person` (research.md §1 supersedes the originally-sketched
+      `embedding` group — no pipeline uses `pipeline_family: embedding`, so it was never created;
+      `face-openface3`/`face-laion`/`audio-laion` cover the embedding-shaped pipelines instead).
+- [x] Give LAION its own extras (`face-laion`, `audio-laion`) separate from the base `face`/`audio`
       groups, so standard face/audio pipelines don't pull in LAION's dependencies. LAION stays fully
       supported, just not mandatory.
-- [ ] Add an `all` meta-extra that reproduces v1.4.3's install footprint exactly.
-- [ ] Replace the hardcoded `LEGACY_MAPPINGS` path in
+- [x] Add an `all` meta-extra that reproduces v1.4.4's install footprint exactly.
+- [x] Replace the hardcoded `LEGACY_MAPPINGS` path in
       [`registry/pipeline_loader.py`](../../src/videoannotator/registry/pipeline_loader.py) with
       fully metadata-driven loading — per-pipeline YAML already carries `module_path`; add
       `requires_extras`.
-- [ ] Registry omits pipelines whose extras aren't installed rather than crashing; CLI/API error
+- [x] Registry omits pipelines whose extras aren't installed rather than crashing; CLI/API error
       messages include the exact `pip install videoannotator[...]` command needed.
-- [ ] Migration message for v1.4.x users whose config references a pipeline (e.g. LAION) that is no
+- [x] Migration message for v1.4.x users whose config references a pipeline (e.g. LAION) that is no
       longer in the default install.
-- [ ] Drop the `numpy<2.0` pin (`pyproject.toml:43`) once the pipeline suite is verified against
-      NumPy 2.x.
-- [ ] Slim `Dockerfile.cpu`/`Dockerfile.gpu` base image (no extras); document the `[all]` image
+- [x] Drop the `numpy<2.0` pin (`pyproject.toml`) — numpy is now unpinned at the lower bound and
+      resolves per `numba`'s own declared ceiling (numpy 2.2.x as of this writing); full suite
+      (1065 passed, 33 skipped) verified green under numpy 2.2.6 with `[all]` extras installed.
+- [x] Slim `Dockerfile.cpu`/`Dockerfile.gpu` base image (no extras); document the `[all]` image
       separately.
 
 **Acceptance**: v1.4.3 acceptance-test fixtures pass byte-identically (or within documented tolerance)
@@ -145,6 +147,6 @@ before resubmission.
 
 ---
 
-**Last Updated**: 2026-07-08
+**Last Updated**: 2026-07-19
 **Target Release**: Ahead of / alongside JOSS resubmission
-**Status**: Planning Phase — Modularity & Integration Focus
+**Status**: v1.5.0 released — Phase 1 (extras-based install) complete

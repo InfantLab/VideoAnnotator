@@ -15,6 +15,8 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from ...batch.types import BatchJob, JobStatus
+from ...registry.pipeline_loader import extras_available
+from ...registry.pipeline_registry import get_registry
 from ...storage.base import StorageBackend
 from ...storage.manager import get_storage_provider
 from ...validation.validator import ConfigValidator
@@ -26,6 +28,7 @@ from .exceptions import (
     InvalidRequestException,
     JobAlreadyCompletedException,
     JobNotFoundException,
+    PipelineUnavailableException,
 )
 
 router = APIRouter()
@@ -284,6 +287,21 @@ async def submit_job(
                 p.strip() for p in selected_pipelines.split(",") if p.strip()
             ]
 
+        # Reject a recognized-but-unavailable pipeline (extras not installed)
+        # before doing any file I/O: 422 + install_hint
+        # (contracts/unavailable-pipeline-error.md). A name the registry
+        # doesn't recognize at all is left to the existing ConfigValidator
+        # "unknown pipeline" path below, unchanged by this feature.
+        if parsed_pipelines:
+            registry = get_registry()
+            registry.load()
+            for pipeline_name in parsed_pipelines:
+                meta = registry.get(pipeline_name)
+                if meta is not None and not extras_available(meta.requires_extras):
+                    raise PipelineUnavailableException(
+                        pipeline_name, meta.requires_extras
+                    )
+
         # Validate configuration if pipelines are specified (v1.3.0)
         if parsed_pipelines and parsed_config:
             validator = ConfigValidator()
@@ -402,7 +420,12 @@ async def submit_job(
             queue_position=queue_position,
         )
 
-    except (InvalidRequestException, InvalidConfigException, APIError):
+    except (
+        InvalidRequestException,
+        InvalidConfigException,
+        APIError,
+        PipelineUnavailableException,
+    ):
         # Let validation errors and other custom exceptions propagate
         raise
     except Exception as e:

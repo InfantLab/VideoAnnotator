@@ -3,6 +3,8 @@ display_name: Speaker Diarization
 description: Speaker diarization using PyAnnote.audio to segment and identify different speakers with timestamps, producing RTTM format output.
 pipeline_family: audio
 variant: pyannote
+module_path: videoannotator.pipelines.audio_processing:DiarizationPipeline
+requires_extras: [audio]
 tasks:
   - speaker-diarization
   - speaker-segmentation

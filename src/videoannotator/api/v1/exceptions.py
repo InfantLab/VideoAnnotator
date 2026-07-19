@@ -5,6 +5,8 @@ and error responses. All exceptions inherit from VideoAnnotatorException and are
 automatically converted to ErrorEnvelope responses by FastAPI exception handlers.
 """
 
+from videoannotator.registry.pipeline_loader import install_hint, migration_note
+
 
 class VideoAnnotatorException(Exception):
     """Base exception for all VideoAnnotator errors.
@@ -96,6 +98,42 @@ class PipelineNotFoundException(VideoAnnotatorException):
             detail=detail,
         )
         self.status_code = 404
+
+
+# 422 Unprocessable Entity Exceptions
+
+
+class PipelineUnavailableException(VideoAnnotatorException):
+    """Exception raised when a recognized pipeline's required extras aren't
+    installed (contracts/unavailable-pipeline-error.md). Distinct from
+    PipelineNotFoundException: the pipeline exists in the registry, it's
+    just not importable in this install.
+    """
+
+    def __init__(self, pipeline_name: str, requires_extras: list[str]):
+        """Initialize PipelineUnavailableException.
+
+        Args:
+            pipeline_name: The pipeline name that was requested
+            requires_extras: The extras groups it needs that aren't installed
+        """
+        hint = install_hint(requires_extras)
+        note = migration_note(pipeline_name)
+        message = f"Pipeline '{pipeline_name}' is not available in this install."
+        if note:
+            message = f"{message} {note}"
+
+        super().__init__(
+            message=message,
+            code="PIPELINE_UNAVAILABLE",
+            hint=f"Install it with: {hint}",
+            detail={
+                "pipeline": pipeline_name,
+                "install_hint": hint,
+                "requires_extras": requires_extras,
+            },
+        )
+        self.status_code = 422
 
 
 # 400 Bad Request Exceptions

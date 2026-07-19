@@ -3,9 +3,10 @@
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Path
+from fastapi import APIRouter, Path, Query
 from pydantic import BaseModel
 
+from ...registry.pipeline_loader import extras_available, install_hint
 from ...registry.pipeline_registry import get_registry
 from ..errors import APIError
 
@@ -35,6 +36,8 @@ class PipelineInfo(BaseModel):
     outputs: list[dict[str, Any]]
     config_schema: dict[str, Any]
     examples: list[dict[str, Any]] = []
+    available: bool = True
+    install_hint: str | None = None
 
 
 class PipelineListResponse(BaseModel):
@@ -119,8 +122,26 @@ registered pipelines are discoverable. Use this endpoint to explore available
 pipelines before submitting jobs.
 """,
 )
-async def list_pipelines():
-    """List all available pipelines."""
+async def list_pipelines(
+    include_unavailable: bool = Query(
+        False,
+        description=(
+            "Include pipelines whose required extras aren't installed. "
+            "Each such entry has available=false and an install_hint."
+        ),
+    ),
+):
+    """List available pipelines.
+
+    By default, pipelines whose `requires_extras` aren't installed are
+    omitted entirely (FR-005). Pass `?include_unavailable=true` to see them
+    too, each flagged with `available: false` and an `install_hint`.
+
+    The availability check is a metadata-only lookup (`importlib.metadata`),
+    not an actual import of torch/etc., so it stays cheap even though the
+    old version of this endpoint deliberately skipped availability checks
+    to avoid blocking on heavy imports.
+    """
     try:
         reg = get_registry()
         reg.load()  # idempotent
@@ -128,35 +149,37 @@ async def list_pipelines():
         if not metas:
             logger.warning("Registry returned no pipelines; falling back to empty list")
 
-        # Convert registry metadata to API response models
-        # Note: We do NOT filter by available implementations here to avoid
-        # heavy imports (torch, etc.) that would block the API for seconds/minutes.
-        # The registry is the source of truth.
-        pipeline_models: list[PipelineInfo] = [
-            PipelineInfo(
-                name=m.name,
-                display_name=m.display_name,
-                description=m.description,
-                pipeline_family=m.pipeline_family,
-                variant=m.variant,
-                tasks=m.tasks,
-                modalities=m.modalities,
-                capabilities=m.capabilities,
-                backends=m.backends,
-                stability=m.stability,
-                outputs=[{"format": o.format, "types": o.types} for o in m.outputs],
-                config_schema={
-                    k: {
-                        "type": v.type,
-                        "default": v.default,
-                        "description": v.description,
-                    }
-                    for k, v in m.config_schema.items()
-                },
-                examples=m.examples,
+        pipeline_models: list[PipelineInfo] = []
+        for m in metas:
+            available = extras_available(m.requires_extras)
+            if not available and not include_unavailable:
+                continue
+            pipeline_models.append(
+                PipelineInfo(
+                    name=m.name,
+                    display_name=m.display_name,
+                    description=m.description,
+                    pipeline_family=m.pipeline_family,
+                    variant=m.variant,
+                    tasks=m.tasks,
+                    modalities=m.modalities,
+                    capabilities=m.capabilities,
+                    backends=m.backends,
+                    stability=m.stability,
+                    outputs=[{"format": o.format, "types": o.types} for o in m.outputs],
+                    config_schema={
+                        k: {
+                            "type": v.type,
+                            "default": v.default,
+                            "description": v.description,
+                        }
+                        for k, v in m.config_schema.items()
+                    },
+                    examples=m.examples,
+                    available=available,
+                    install_hint=None if available else install_hint(m.requires_extras),
+                )
             )
-            for m in metas
-        ]
         return PipelineListResponse(
             pipelines=pipeline_models, total=len(pipeline_models)
         )
@@ -281,6 +304,7 @@ async def get_pipeline_info(
                 message=f"Pipeline '{pipeline_name}' not found",
                 hint="Run 'videoannotator pipelines --detailed'",
             )
+        available = extras_available(meta.requires_extras)
         return PipelineInfo(
             name=meta.name,
             display_name=meta.display_name,
@@ -298,6 +322,8 @@ async def get_pipeline_info(
                 for k, v in meta.config_schema.items()
             },
             examples=meta.examples,
+            available=available,
+            install_hint=None if available else install_hint(meta.requires_extras),
         )
     except APIError:
         raise

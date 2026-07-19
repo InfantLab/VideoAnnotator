@@ -7,13 +7,143 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for v1.5.0
+### Planned
 
 - Queue position display for pending jobs
 - Deterministic test fixtures with synthetic video generation
 - Research workflow examples for JOSS paper
 - Benchmark results and performance validation
 - Additional contributor documentation improvements
+
+## [1.5.0] - 2026-07-19
+
+### Extras-Based Modular Install & Registry Refactor
+
+Implements `specs/004-extras-based-install/` — moves heavy ML pipeline dependencies out of the
+core install and into opt-in `pip` extras, and replaces the registry's hardcoded pipeline↔module
+mapping with metadata-driven resolution.
+
+#### Added
+
+- **Per-pipeline-family extras**: `pip install videoannotator[scene]` (or `face`, `person`,
+  `audio`, `face-laion`, `face-openface3`, `audio-laion`) now pulls in only that family's
+  dependencies; a plain `pip install videoannotator` installs no torch, no ML pipelines at all.
+  `videoannotator[all]` reproduces the pre-v1.5.0 "everything installed" behaviour.
+- **`PipelineMetadata.requires_extras`**: new field (`list[str]`, default `[]`) read from each
+  pipeline's YAML metadata; `module_path` is now a required field with no hardcoded fallback.
+- **Graceful degradation**: pipelines whose extras aren't installed are omitted from
+  `GET /api/v1/pipelines`/`videoannotator pipelines` by default (`?include_unavailable=true` /
+  `--all` shows them with an `install_hint`); submitting a job for an unavailable pipeline returns
+  `422` with the exact `pip install videoannotator[...]` command instead of a crash.
+- **Migration message**: a v1.4.x config referencing a pipeline demoted out of the default install
+  (`face_laion_clip`, `laion_voice`, `face_openface3_embedding`) gets a message naming the extras
+  group and explaining it's "no longer installed by default as of v1.5.0", distinct from the
+  generic unavailable-pipeline error.
+- Install-matrix documentation in `docs/installation/INSTALLATION.md` covering per-use-case
+  installs ("I want only scene labelling", "I want everything", "I want a slim API server").
+
+#### Changed
+
+- `registry/pipeline_loader.py`: removed `LEGACY_MAPPINGS`/`_infer_module_path`; pipeline classes
+  now resolve purely from metadata (`module_path`), gated by a cheap
+  `importlib.metadata`-based extras-availability check (no heavy imports at registry-load time).
+- `Dockerfile.cpu`/`Dockerfile.gpu`/`Dockerfile.dev`: CPU/GPU production images build slim (no
+  extras) by default; pass `--build-arg EXTRAS=<group[,group...]>` (or `EXTRAS=all`) for a
+  pipeline-enabled image. The dev image installs `--extra all` by default (unchanged behaviour).
+- Dropped the `numpy<2.0` pin; `numpy` now resolves per `numba`'s own declared ceiling (currently
+  numpy 2.2.x) instead of a hand-maintained upper bound. Retired the now-redundant `numpy2-test`
+  CI job — the default `test` job exercises numpy 2.x directly now that the pin is gone.
+
+#### Fixed
+
+- `face` extras group was missing `tf-keras`, which `deepface`'s `retinaface` backend requires
+  alongside Keras-3-era `tensorflow`; without it, importing `face_pipeline` raised `ValueError`
+  before any face-analysis code could run. Added `tf-keras>=2.15.0` to the `face` extras group.
+- `videoannotator/utils/audio.py` did a module-level `import librosa`, and `librosa` is an
+  `audio`/`audio-laion` extra, not a core dependency. Because `utils/__init__.py` re-exports
+  `find_f0` from that module, and `cli.py`/`version.py` import `utils` at startup, **the entire
+  CLI crashed with `ModuleNotFoundError: No module named 'librosa'` on any install without audio
+  extras** — including `[scene]`-only installs, defeating the whole point of this feature. Caught
+  via a real `pip install videoannotator[scene]` + `videoannotator pipelines list` run (quickstart
+  §1). Made the `librosa` import lazy (moved inside `find_f0`, the only caller) since `find_f0`
+  itself is unused elsewhere in the codebase.
+- **`[tool.setuptools.package-data]` never declared `registry/metadata/*.yaml`** — only
+  `viewer_static/**/*` was listed. Every pipeline's YAML metadata (`module_path`,
+  `requires_extras`, etc.) was silently absent from any real (non-editable) install; the registry
+  found **zero pipelines regardless of which extras were installed**. This was likely always true,
+  but harmless before this phase because `LEGACY_MAPPINGS` gave the loader a hardcoded fallback
+  `module_path` to fall back on. T013 removed that fallback, making the YAMLs a hard runtime
+  dependency — so this became a full-outage regression the moment the registry went
+  metadata-only. Caught via a real `pip install .[scene]` + `videoannotator pipelines` run
+  reporting `[OK] Pipelines: 0 found`. Added `"registry/metadata/*.yaml"` to `package-data`;
+  verified with `uv build --wheel` that all 9 metadata YAMLs are now present in the built wheel.
+- `scene` extras group declared `scenedetect[opencv]`, pulling in `opencv-python` (the full/GUI
+  build) redundantly alongside the `opencv-python-headless` already required at core — the exact
+  duplicate-`cv2`-distribution problem the `face` extras group's own comment says to avoid. Also
+  version-fragile: scenedetect 0.7 dropped the `opencv` extra name entirely, producing `WARNING:
+  scenedetect 0.7 does not provide the extra 'opencv'` on install. scenedetect has no unconditional
+  cv2 dependency of its own (only via that extra), so dropped it — core's `opencv-python-headless`
+  already satisfies it at runtime. Caught during a real `pip install videoannotator[scene]` run.
+- **The single biggest bug of this phase**: `videoannotator/pipelines/__init__.py` unconditionally
+  imported every pipeline family at package-init time (`AudioPipeline`, `FaceAnalysisPipeline`,
+  `LAIONFacePipeline`, `PersonTrackingPipeline`, `SceneDetectionPipeline`). Since Python always
+  runs a parent package's `__init__.py` before any of its submodules, loading *any single*
+  pipeline through the registry (`importlib.import_module("videoannotator.pipelines.scene_detection")`,
+  etc.) forced every other family's heavy deps to import too — regardless of which extras were
+  actually installed. In practice this meant **no pipeline could ever load successfully unless
+  every extras group was installed simultaneously**, silently defeating this entire phase's reason
+  for existing. `audio_processing/__init__.py` and `face_analysis/__init__.py` had the same bug one
+  level down: eagerly importing `LAIONVoicePipeline` (needs `audio-laion`, not a subset of `audio`'s
+  deps) and `LAIONFacePipeline` (needs `face-laion`'s torch/transformers, absent from plain `face`)
+  alongside their same-extras-group siblings. Caught live: a real `[scene]` install's `job submit
+  --pipelines scene_detection` failed server-side with `No module named 'librosa'` — from
+  `scene_detection`, which has nothing to do with audio. Fixed all three `__init__.py` files with
+  PEP 562 lazy (`__getattr__`-based) attribute resolution instead of eager imports, so importing one
+  pipeline no longer drags in siblings from other extras groups. Also surfaced a genuine (not just
+  packaging-level) coupling while fixing this: `LAIONFacePipeline` composes `FaceAnalysisPipeline`
+  as its internal face-detector backend, so `face-laion` alone was never actually functional without
+  `face`'s deepface stack — `pyproject.toml`'s `face-laion` group now depends on
+  `videoannotator[face]`. Verified with a mocked-import harness simulating five slim-install
+  scenarios (`scene`, `person`, `face`, `audio`, `face-openface3` — each with every *other* family's
+  heavy deps blocked at `__import__` level) — all five now import cleanly. Full suite still green
+  post-fix (1065 passed, 33 skipped) and noticeably faster (~4 min vs ~13 min) since test collection
+  no longer forces every pipeline family's imports for every test file.
+- Core declared `opencv-python-headless` unconditionally, while `face` (deepface/retina-face) and
+  `person` (ultralytics/supervision) transitively force plain `opencv-python`, uncapped, from their
+  own dependency declarations — so any `face`/`person` install ended up with both variants sharing
+  the same `cv2` install path, a documented upstream footgun
+  (github.com/opencv/opencv-python#note-1) that corrupts the compiled module. A real
+  `face_laion_clip` job hit it live: `AttributeError: module 'cv2' has no attribute
+  'CascadeClassifier'`. Worse, **removing one variant afterwards doesn't repair an
+  already-corrupted venv** — the leftover `cv2/` directory stays broken (confirmed hitting the same
+  corruption in this project's own dev venv mid-fix) until manually removed and reinstalled clean.
+  Fixed by never declaring `opencv-python-headless` anywhere and standardizing on plain
+  `opencv-python` project-wide. A second, independent bug surfaced immediately after: `opencv-python`
+  5.0 (newer than this project's original unbounded `>=4.11.0.86` pin) **removed
+  `cv2.CascadeClassifier` and all Haar-cascade data entirely**, replaced by the DNN-based
+  `FaceDetectorYN` — `face_pipeline.py`'s "opencv" backend still uses the legacy API. Pinned
+  `opencv-python<5.0` everywhere it's declared (`face`, `person`, `scene`, `face-openface3`);
+  migrating to `FaceDetectorYN` is real follow-up work, not a dependency-pin fix.
+- `scene_detection`'s CLIP-based scene classification failed with `too many values to unpack
+  (expected 2)`: `scene_pipeline.py` called `open_clip`'s `model(image, text)` expecting the legacy
+  2-tuple `(logits_per_image, logits_per_text)`; `open-clip-torch` 3.1.0 (unpinned upper bound)
+  returns `(image_features, text_features, logit_scale)` instead — a real open_clip API drift, not
+  a packaging issue. Fixed by computing the similarity logits directly
+  (`logit_scale * image_features @ text_features.T`), matching open_clip's current usage pattern.
+- `face_analysis`'s DeepFace "emotion" action logged repeated `No DNN in stream executor` warnings
+  on GPU installs. Root cause: torch hard-pins `nvidia-cudnn-cu12==9.1.0.70` (no version range);
+  `tensorflow` (deepface's transitive dependency) wants cuDNN `>=9.3.0.75` for GPU use via its own
+  `[and-cuda]` extra — which nothing here installs, so it just borrows torch's older cuDNN instead
+  and fails at runtime. These two pins can never both be satisfied in one venv (confirmed: no
+  tensorflow release targets the exact patch torch pins), so "find a compatible tensorflow build"
+  wasn't actually viable. Fixed by forcing TensorFlow onto CPU before `deepface` touches the GPU
+  (`tf.config.set_visible_devices([], "GPU")`, called from `face_pipeline.py` before importing
+  `deepface`) — this uses TensorFlow's own device-visibility API, not the `CUDA_VISIBLE_DEVICES` env
+  var, so torch's own GPU usage (scene/person/face-laion's CLIP/YOLO models) is untouched. Verified:
+  `torch.cuda.is_available()` still `True` post-fix; `DeepFace.analyze(..., actions=["emotion"])`
+  completes cleanly with zero cuDNN warnings. Escape hatch:
+  `VIDEOANNOTATOR_DEEPFACE_GPU=1` skips the forced-CPU behavior for anyone who's resolved the
+  mismatch themselves (e.g. a matching system-wide CUDA/cuDNN install).
 
 ## [1.4.4] - 2026-07-08
 

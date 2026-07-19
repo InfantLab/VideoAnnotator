@@ -1,8 +1,17 @@
 # VideoAnnotator Production Docker Image - GPU Version
 # This image does NOT include models/weights - they download automatically on first use
 #
+# By default this builds a SLIM image with no pipeline extras (no torch, no
+# ML pipelines) — 004-extras-based-install / SC-002. Pass --build-arg
+# EXTRAS=<group[,group...]> (with SKIP_IMAGE_UV_SYNC=false) to include one or
+# more pipeline families, or EXTRAS=all to reproduce the pre-v1.5.0 image.
+# torch for these groups resolves against the cu124 index configured in
+# pyproject.toml's [tool.uv.sources] — no separate GPU torch install step
+# needed here (unlike Dockerfile.cpu's CPU-wheel override).
+#
 # Usage:
-#   docker build -f Dockerfile.gpu -t videoannotator:gpu .
+#   docker build -f Dockerfile.gpu --build-arg SKIP_IMAGE_UV_SYNC=false -t videoannotator:gpu .
+#   docker build -f Dockerfile.gpu --build-arg SKIP_IMAGE_UV_SYNC=false --build-arg EXTRAS=all -t videoannotator:gpu-all .
 #   docker run --gpus all --rm -p 8000:8000 -v ${PWD}/data:/app/data videoannotator:gpu
 
 FROM nvidia/cuda:12.6.0-runtime-ubuntu24.04
@@ -38,15 +47,30 @@ WORKDIR /app
 # For production image builds set these to "false" to perform installs in image.
 ARG SKIP_IMAGE_UV_SYNC=true
 ARG SKIP_TORCH_INSTALL=true
+# Extras group(s) to install, e.g. "scene" or "scene,person" or "all".
+# Empty (default) = slim image, core dependencies only, no torch.
+ARG EXTRAS=""
 
 # Copy project definition and lock file first to leverage Docker cache
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies (including torch from configured index)
+# Install dependencies (including torch, via extras opt-in with $EXTRAS)
 # These steps can be skipped at build time for dev containers by setting
 # build args SKIP_IMAGE_UV_SYNC=true. Post-create commands will run `uv sync`
 # inside the running container where network is usually available.
-RUN if [ "${SKIP_IMAGE_UV_SYNC}" != "true" ]; then uv sync --frozen --no-install-project --no-editable; else echo "[BUILD] Skipping uv sync at image build (SKIP_IMAGE_UV_SYNC=true)"; fi
+# hadolint ignore=SC2086
+RUN set -eu; \
+    if [ "${SKIP_IMAGE_UV_SYNC}" != "true" ]; then \
+        if [ -n "$EXTRAS" ]; then \
+            FLAGS=""; \
+            for e in $(echo "$EXTRAS" | tr ',' ' '); do FLAGS="$FLAGS --extra $e"; done; \
+            uv sync --frozen --no-install-project --no-editable $FLAGS; \
+        else \
+            uv sync --frozen --no-install-project --no-editable; \
+        fi; \
+    else \
+        echo "[BUILD] Skipping uv sync at image build (SKIP_IMAGE_UV_SYNC=true)"; \
+    fi
 
 # Copy the rest of the source code (explicitly exclude models/weights)
 COPY api_server.py ./
