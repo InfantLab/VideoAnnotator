@@ -23,10 +23,35 @@ ported from — see "Architecture" below for the mapping.
 |---|---|---|
 | 1 | Pipeline itself (this doc) | **Done** — merged into `v1.5.0` |
 | 2 | End-to-end validation | **Done** — see "Step-by-step: test it yourself" |
-| 3 | Job-creation UX (prompt textarea, sampling-mode picker) | Planned — lives in the `video-annotation-viewer` repo |
+| 3 | Job-creation UX (prompt textarea, sampling-mode picker) | **Done** — see below |
 | 4 | Full research-review UI (ELAN ground truth, cross-prompt comparison, failure-mode buckets) | Planned — lives in the `video-annotation-viewer` repo |
 
-Phases 3 and 4 are tracked in this document's "Full plan" section below for
+Phase 3 landed in two repos:
+
+- **This repo**: a new `GET /api/v1/pipelines/{name}/schema` endpoint, plus
+  two additive `PipelineConfigField` YAML hints (`widget: textarea`,
+  `enum: [...]`) that `vlm_annotation.yaml` now uses for its `prompt` and
+  `sampling_mode` fields. Turned out to be a broader fix than just this
+  pipeline: the viewer's job-creation form was already coded to call this
+  exact endpoint and only fell back to a blank parameter list on 404 —
+  since the endpoint never existed, **every** pipeline's Configure step
+  showed "No configurable parameters," not just this one. Every pipeline
+  now gets a real form for free.
+- **`video-annotation-viewer` repo**: a `'text'` parameter type +
+  `Textarea` case (`DynamicPipelineParameters.tsx`), and wiring
+  `usePipelineSchema`/`pipelineSchemaQueryOptions` (already written,
+  previously unused) into `NewJob.tsx`'s Configure step so it actually
+  fetches and merges each selected pipeline's real schema. Multi-video
+  batch submission with one shared config — the other thing this phase
+  needed — already existed (`NewJob.tsx`'s file input already takes
+  multiple files and loops `submitJob` per file with the same config).
+
+Verified live in a browser against a real server: `vlm_annotation`'s
+Configure step renders `prompt` as a pre-filled multi-line textarea and
+`sampling_mode` as a dropdown, with no console errors and no regression for
+pipelines without either hint.
+
+Phase 4 is tracked in this document's "Full plan" section below for
 continuity, but the actual work happens in the `video-annotation-viewer`
 repo, not here.
 
