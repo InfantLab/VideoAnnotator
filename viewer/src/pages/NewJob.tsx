@@ -1,4 +1,5 @@
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
+import { useQueries } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import vavIcon from "@/assets/v-a-v.icon.png";
-import { usePipelineCatalog, useRefreshPipelineCatalog } from "@/hooks/usePipelineCatalog";
+import {
+  usePipelineCatalog,
+  useRefreshPipelineCatalog,
+  pipelineSchemaQueryOptions,
+} from "@/hooks/usePipelineCatalog";
 import { DynamicPipelineParameters } from "@/components/DynamicPipelineParameters";
 import type { PipelineDescriptor } from "@/types/pipelines";
 import { useConfigValidation } from "@/hooks/useConfigValidation";
@@ -83,6 +88,33 @@ const CreateNewJob = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedPipelines, setSelectedPipelines] = useState<string[]>([]);
+
+  // The catalog (`pipelines` above) never carries per-field parameters —
+  // apiClient.getPipelineCatalog()'s mapLegacyPipelineResponse always sets
+  // `parameters: []`, since the plain pipeline-list endpoint doesn't have
+  // per-field type/enum/widget info. That detail lives behind the separate
+  // per-pipeline GET /pipelines/{id}/schema endpoint (apiClient.getPipelineSchema),
+  // fetched here only for the pipelines the user actually selected and merged
+  // into the descriptors passed to the Configure step, so its form can render
+  // real fields instead of "No configurable parameters for this pipeline."
+  const schemaQueries = useQueries({
+    queries: selectedPipelines.map((id) => pipelineSchemaQueryOptions(id)),
+  });
+
+  const pipelinesWithSchema = useMemo(() => {
+    if (selectedPipelines.length === 0) return pipelines;
+    const parametersById = new Map(
+      selectedPipelines
+        .map((id, index) => [id, schemaQueries[index]?.data?.parameters] as const)
+        .filter((entry): entry is [string, NonNullable<(typeof entry)[1]>] => !!entry[1])
+    );
+    if (parametersById.size === 0) return pipelines;
+    return pipelines.map((pipeline) =>
+      parametersById.has(pipeline.id)
+        ? { ...pipeline, parameters: parametersById.get(pipeline.id)! }
+        : pipeline
+    );
+  }, [pipelines, selectedPipelines, schemaQueries]);
   const [config, setConfig] = useState<Record<string, unknown>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<ParsedError | null>(null);
@@ -275,7 +307,7 @@ const CreateNewJob = () => {
             config={config}
             setConfig={setConfig}
             selectedPipelines={selectedPipelines}
-            pipelines={pipelines}
+            pipelines={pipelinesWithSchema}
             validationResult={validationResult}
             isValidating={isValidating}
           />
@@ -290,7 +322,7 @@ const CreateNewJob = () => {
             isSubmitting={isSubmitting}
             submitError={submitError}
             submitSuccess={submitSuccess}
-            pipelines={pipelines}
+            pipelines={pipelinesWithSchema}
           />
         );
       default:

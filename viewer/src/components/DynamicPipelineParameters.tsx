@@ -192,6 +192,31 @@ export const DynamicPipelineParameters = ({
                         </div>
                       );
 
+                    case 'text':
+                      return (
+                        <div key={parameter.name} className="space-y-1">
+                          <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
+                            {parameter.label || parameter.name}
+                          </Label>
+                          <Textarea
+                            id={`${pipeline.id}-${parameter.name}`}
+                            value={typeof currentValue === 'string' ? currentValue : ''}
+                            rows={6}
+                            onChange={(event) =>
+                              handleValueChange(pipeline.id, parameter, event.target.value)
+                            }
+                          />
+                          {parameter.description && (
+                            <p className="text-xs text-muted-foreground">
+                              {parameter.description}
+                            </p>
+                          )}
+                          {fieldHint && (
+                            <p className="text-[11px] text-muted-foreground/80">{fieldHint}</p>
+                          )}
+                        </div>
+                      );
+
                     case 'integer':
                     case 'number':
                       return (

@@ -6,6 +6,7 @@
 export type PipelineParameterType =
   | 'boolean'
   | 'string'
+  | 'text'
   | 'integer'
   | 'number'
   | 'enum'
