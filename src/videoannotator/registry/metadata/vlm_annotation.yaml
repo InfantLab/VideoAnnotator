@@ -1,0 +1,82 @@
+name: vlm_annotation
+display_name: VLM Frame Annotation
+description: >
+  Classify or describe sampled video frames using a locally-hosted
+  vision-language model served by Ollama, driven by a user-supplied prompt.
+  Each sample point is one independent, stateless model call — no
+  conversation history is carried between frames or bursts.
+pipeline_family: vlm
+variant: ollama
+module_path: videoannotator.pipelines.vlm_annotation:VLMAnnotationPipeline
+requires_extras: [llm]
+tasks:
+  - frame-classification
+  - vlm-captioning
+modalities:
+  - video
+capabilities:
+  - batch
+outputs:
+  - format: JSON
+    types: [vlm_label, vlm_reasoning]
+config_schema:
+  prompt:
+    type: string
+    default: |
+      Classify as TOUCH only if:
+      The mother's hand or arm is actually in physical contact with the infant's body.
+
+      Classify as NO_TOUCH if:
+      The mother's hand or arm visually overlaps the infant in the image, but one is clearly in front of or behind the other (the apparent contact is camera perspective, not real contact).
+      The mother's hand or arm is near but not actually touching the infant.
+
+      Return ONLY: TOUCH or NO_TOUCH.
+    description: >
+      The text prompt sent with every sampled frame/burst. Applied
+      identically and independently to every sample point in the video.
+  base_url:
+    type: string
+    default: "http://127.0.0.1:11434"
+    description: Base URL of the local Ollama server.
+  model:
+    type: string
+    default: "qwen3.5:9b"
+    description: Ollama model name/tag to use (must already be pulled).
+  sampling_mode:
+    type: string
+    default: "single_frame"
+    description: >
+      "single_frame" sends one image per sample point. "frame_burst" sends a
+      window of several frames (see burst_offsets) together in one call, for
+      comparing single-static-frame vs short-burst-context predictions.
+  frame_interval_sec:
+    type: float
+    default: 5.0
+    description: Seconds between sample points.
+  burst_offsets:
+    type: list
+    default: [-2, -1, 0, 1, 2]
+    description: >
+      Sampling-interval offsets around each anchor point (multiples of
+      frame_interval_sec), used only when sampling_mode is "frame_burst".
+  think:
+    type: boolean
+    default: false
+    description: >
+      Request the model's internal-monologue/thinking mode. Much slower
+      (~50x); diagnostic use only, not for production sweeps.
+  request_timeout_sec:
+    type: integer
+    default: 240
+    description: Per-request timeout in seconds.
+  keep_alive:
+    type: string
+    default: "2h"
+    description: Ollama keep_alive duration for the loaded model.
+examples:
+  - cli: videoannotator job submit video.mp4 --pipelines vlm_annotation
+    description: Run the default touch-detection prompt at the default 5s cadence, single-frame mode
+version: 1
+stability: experimental
+backends:
+  - ollama

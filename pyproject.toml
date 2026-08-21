@@ -195,6 +195,14 @@ person = [
     "ultralytics>=8.3.0",
     "supervision>=0.16.0",
 ]
+llm = [
+    # vlm_annotation pipeline talks to a locally-hosted Ollama server. httpx
+    # is already a core dependency (used for the ollama package's own HTTP
+    # transport); this group needs nothing beyond the `ollama` client itself.
+    "ollama>=0.4",
+    # cv2 is used for frame sampling (cv2.VideoCapture), same as `scene`.
+    "opencv-python>=4.11.0.86,<5.0",
+]
 dev = [
     "ruff>=0.8.0",
     "pre-commit>=3.0.0",
@@ -210,7 +218,7 @@ annotation = [
     # "roboflow>=1.1.0",
 ]
 all = [
-    "videoannotator[face,face-laion,face-openface3,audio,audio-laion,scene,person,dev,annotation]"
+    "videoannotator[face,face-laion,face-openface3,audio,audio-laion,scene,person,llm,dev,annotation]"
 ]
 
 [tool.setuptools.package-data]

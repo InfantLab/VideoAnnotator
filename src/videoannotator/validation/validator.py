@@ -93,6 +93,20 @@ class ConfigValidator:
                 "audio_classification",
             ],
         },
+        "vlm_annotation": {
+            "required": [],  # every field has a default
+            "optional": [
+                "prompt",
+                "base_url",
+                "model",
+                "sampling_mode",
+                "frame_interval_sec",
+                "burst_offsets",
+                "think",
+                "request_timeout_sec",
+                "keep_alive",
+            ],
+        },
     }
 
     def __init__(self):

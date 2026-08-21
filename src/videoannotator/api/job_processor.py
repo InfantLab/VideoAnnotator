@@ -130,8 +130,12 @@ class JobProcessor:
             pipeline_class = self.pipeline_classes[pipeline_name]
             logger.info(f"Running {pipeline_name} pipeline for job {job.job_id}")
 
-            # Initialize pipeline
-            pipeline = pipeline_class()
+            # Initialize pipeline with this job's per-pipeline config (job.config
+            # is keyed by pipeline name — see BatchOrchestrator._process_single_job,
+            # which this path must match or a submitted config silently gets
+            # ignored in favour of the pipeline's hardcoded defaults).
+            pipeline_config = job.config.get(pipeline_name, {}) if job.config else {}
+            pipeline = pipeline_class(pipeline_config)
             pipeline.initialize()
 
             try:
