@@ -337,6 +337,125 @@ async def get_pipeline_info(
         ) from e
 
 
+class PipelineParameterOption(BaseModel):
+    """One valid choice for an enum/multiselect parameter."""
+
+    value: str
+    label: str | None = None
+
+
+class PipelineParameterSchema(BaseModel):
+    """One config field, shaped for the viewer's dynamic job-creation form
+    (video-annotation-viewer's `PipelineParameterSchema`, `src/types/pipelines.ts`).
+    """
+
+    name: str
+    type: str
+    label: str | None = None
+    description: str | None = None
+    default: Any = None
+    enum: list[PipelineParameterOption] | None = None
+
+
+class PipelineSchemaDescriptor(BaseModel):
+    id: str
+    name: str
+    description: str | None = None
+    group: str | None = None
+
+
+class PipelineSchemaResponse(BaseModel):
+    """Response for `GET /{pipeline_name}/schema`."""
+
+    pipeline: PipelineSchemaDescriptor
+    parameters: list[PipelineParameterSchema]
+
+
+# Registry `config_schema` field `type` strings -> the viewer's
+# `PipelineParameterType` union (src/types/pipelines.ts). Anything not
+# listed here (e.g. "list") falls back to "object", rendered as a raw-JSON
+# textarea in DynamicPipelineParameters.tsx — a safe fallback rather than a
+# crash for a config-schema type the viewer doesn't have a dedicated widget
+# for yet.
+_PARAM_TYPE_MAP: dict[str, str] = {
+    "string": "string",
+    "boolean": "boolean",
+    "integer": "integer",
+    "float": "number",
+}
+
+
+def _to_parameter_schema(name: str, field: Any) -> "PipelineParameterSchema":
+    """Map one registry `PipelineConfigField` to the viewer's parameter shape."""
+    if field.enum:
+        param_type = "enum"
+    elif field.widget == "textarea":
+        param_type = "text"
+    else:
+        param_type = _PARAM_TYPE_MAP.get(field.type, "object")
+    return PipelineParameterSchema(
+        name=name,
+        type=param_type,
+        label=name.replace("_", " ").title(),
+        description=field.description or None,
+        default=field.default,
+        enum=(
+            [PipelineParameterOption(value=v, label=v) for v in field.enum]
+            if field.enum
+            else None
+        ),
+    )
+
+
+@router.get("/{pipeline_name}/schema/", include_in_schema=False)
+@router.get(
+    "/{pipeline_name}/schema",
+    response_model=PipelineSchemaResponse,
+    summary="Get a pipeline's config schema as job-creation form parameters",
+    description=(
+        "Same underlying data as `config_schema` on `GET /{pipeline_name}`, "
+        "reshaped into the form the video-annotation-viewer's dynamic "
+        "job-creation UI expects (typed parameters with optional enum "
+        "choices), rather than the raw type/default/description dict."
+    ),
+)
+async def get_pipeline_schema(
+    pipeline_name: str = Path(..., description="The pipeline's unique name"),
+) -> PipelineSchemaResponse:
+    """Get a pipeline's config schema, shaped for the job-creation form."""
+    try:
+        reg = get_registry()
+        meta = reg.get(pipeline_name)
+        if not meta:
+            raise APIError(
+                status_code=404,
+                code="PIPELINE_NOT_FOUND",
+                message=f"Pipeline '{pipeline_name}' not found",
+                hint="Run 'videoannotator pipelines --detailed'",
+            )
+        return PipelineSchemaResponse(
+            pipeline=PipelineSchemaDescriptor(
+                id=meta.name,
+                name=meta.display_name,
+                description=meta.description,
+                group=meta.pipeline_family,
+            ),
+            parameters=[
+                _to_parameter_schema(k, v) for k, v in meta.config_schema.items()
+            ],
+        )
+    except APIError:
+        raise
+    except Exception as e:
+        logger.error("Failed to get pipeline schema '%s': %s", pipeline_name, e)
+        raise APIError(
+            status_code=500,
+            code="PIPELINE_SCHEMA_FAILED",
+            message="Failed to get pipeline schema",
+            hint="Check server logs",
+        ) from e
+
+
 class ConfigValidationRequest(BaseModel):
     """Request for config validation."""
 

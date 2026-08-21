@@ -54,6 +54,11 @@ class PipelineConfigField:
     type: str
     default: Any = None
     description: str = ""
+    # Optional UI hints, both additive/backward-compatible: a bare `type:
+    # string` field with neither set still renders as a plain one-line
+    # input, same as before either field existed.
+    widget: str | None = None  # e.g. "textarea" for a long free-text field
+    enum: list[str] | None = None  # fixed set of valid string values
 
 
 @dataclass
@@ -159,10 +164,19 @@ class PipelineRegistry:
                     "Metadata %s field '%s' invalid config entry", source.name, key
                 )
                 continue
+            raw_enum = val.get("enum")
+            enum_values = (
+                [str(x) for x in raw_enum]
+                if isinstance(raw_enum, list)
+                and all(isinstance(x, str) for x in raw_enum)
+                else None
+            )
             config_schema[key] = PipelineConfigField(
                 type=str(val.get("type")),
                 default=val.get("default"),
                 description=str(val.get("description", "")),
+                widget=str(val.get("widget")) if val.get("widget") else None,
+                enum=enum_values,
             )
         if not config_schema:
             LOGGER.warning("Metadata %s has empty config_schema", source.name)

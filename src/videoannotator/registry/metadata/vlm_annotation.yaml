@@ -34,6 +34,7 @@ config_schema:
     description: >
       The text prompt sent with every sampled frame/burst. Applied
       identically and independently to every sample point in the video.
+    widget: textarea
   base_url:
     type: string
     default: "http://127.0.0.1:11434"
@@ -49,6 +50,7 @@ config_schema:
       "single_frame" sends one image per sample point. "frame_burst" sends a
       window of several frames (see burst_offsets) together in one call, for
       comparing single-static-frame vs short-burst-context predictions.
+    enum: [single_frame, frame_burst]
   frame_interval_sec:
     type: float
     default: 5.0
