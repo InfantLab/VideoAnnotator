@@ -50,6 +50,12 @@ person-tracking into its own plugin package.
 
 ### Phase 2: Local LLM/VLM Backend (Ollama / llama.cpp)
 
+**Status**: mostly done — the `vlm_annotation` pipeline landed on `v1.5.0` ahead of the rest of this
+release, driven by a real user (a PhD researcher's touch-detection study). See
+[`vlm_annotation_pipeline.md`](vlm_annotation_pipeline.md) for the full writeup, config reference, and
+a step-by-step testing guide. Checklist below updated to reflect what actually shipped vs. what's
+still open.
+
 **Problem**: VideoAnnotator's current model-loading pattern is in-process — pipelines call
 `transformers.AutoModel.from_pretrained(...)` directly (e.g.
 [`laion_face_pipeline.py`](../../src/videoannotator/pipelines/face_analysis/laion_face_pipeline.py)),
@@ -58,24 +64,36 @@ capable open local models (e.g. the Qwen3 family) are now practically runnable o
 machine via `ollama serve` or a `llama.cpp` server, without VideoAnnotator vendoring any weights.
 
 **Solution**:
-- [ ] New pipeline family (e.g. `scene_description` / VLM captioning, exact scope TBD) that talks to
-      a local model server over HTTP instead of loading a model in-process.
-- [ ] One connector, not two: both Ollama and `llama.cpp`'s server mode expose an
-      OpenAI-compatible `/v1/chat/completions` endpoint — implement a single client against that
-      contract rather than bespoke integrations per backend.
-- [ ] Gate this pipeline behind a new lightweight `llm` extras group that pulls in only an HTTP
-      client (e.g. `httpx`), not torch/transformers — consistent with v1.5.0's slim-install goal.
-- [ ] Use the `backends: list[str]` field already present in
-      [`PipelineMetadata`](../../src/videoannotator/registry/pipeline_registry.py) to mark
-      backend type (`ollama`, `llamacpp`) and let the registry surface it.
-- [ ] Configurable base URL and model name (default `http://localhost:11434` for Ollama); no default
-      model is bundled or auto-pulled.
-- [ ] Extend `videoannotator diagnose` to detect a reachable local model server, the way it currently
-      detects GPU availability.
-- [ ] Document the tradeoff plainly: local-LLM pipelines depend on a server the user runs themselves
-      and are not deterministic/reproducible in the same sense as the bundled, versioned pipelines —
-      output provenance metadata should record the backend, base URL, and reported model name/version
-      so runs stay traceable.
+- [x] New pipeline family — landed as `vlm_annotation` (generic per-frame VLM classification/
+      captioning driven by a user-supplied prompt, not scoped to a single task), not
+      `scene_description` as originally sketched here.
+- [ ] One connector, not two: **deviation, not done as originally scoped.** `vlm_annotation` calls the
+      `ollama` Python package's `Client.chat()` directly rather than a hand-rolled OpenAI-compatible
+      `/v1/chat/completions` client — reusing the already-proven client de-risked landing a working
+      pipeline quickly. `backends: [ollama]` in the metadata leaves room for an `openai_compatible`
+      backend (covering both Ollama's and `llama.cpp`'s compatible endpoint) alongside it later
+      without a pipeline redesign, but that second connector is still unbuilt.
+- [x] Gated behind a new `llm` extras group (`ollama` client + `cv2`; `httpx` was already core, so
+      needed no new declaration).
+- [x] Uses `backends: list[str]` (`backends: [ollama]`) in the pipeline's metadata YAML.
+- [x] Configurable base URL and model name (defaults `http://127.0.0.1:11434` / `qwen3.5:9b`); no
+      model weights are bundled or auto-pulled — `model` is just a default config value the user can
+      override, same as any other field.
+- [ ] `videoannotator diagnose` does **not** yet detect a reachable Ollama server — still open.
+- [x] Provenance: every annotation record carries `model`, `backend`, `base_url`, and `prompt`
+      directly (per-record, not just job-level metadata) — see Principle III in the constitution.
+
+**Also fixed along the way (not originally scoped here)**: `api/job_processor.py` was silently
+dropping per-pipeline job config (`pipeline_class()` with no config, vs.
+`batch/batch_orchestrator.py`'s correct `pipeline_class(pipeline_config)`) — jobs submitted via the
+API would have ignored `vlm_annotation`'s prompt/model/sampling-mode config entirely. Fixed as part of
+landing this pipeline; see `vlm_annotation_pipeline.md`'s "Known gaps" section for the broader
+dual-job-execution-engine issue this points at, which Phase 1's job-execution-path consolidation
+(above) should resolve properly.
+
+**Still not built**: the job-creation UX and review UI in `video-annotation-viewer` (prompt textarea,
+sampling-mode picker, ELAN ground-truth comparison, cross-prompt disagreement view) — tracked as
+Phases 3–4 in `vlm_annotation_pipeline.md`, not in this repo.
 
 **Why this matters for JOSS**: it's a genuine, defensible "why does this exist now" story — this
 capability wasn't practical for most researchers' hardware a year ago — and it demonstrates the

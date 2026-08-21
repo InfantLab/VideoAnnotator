@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`vlm_annotation` pipeline**: per-frame classification/captioning via a locally-hosted
+  vision-language model served by Ollama, driven by a user-supplied prompt. Every sample point is one
+  independent, stateless model call. Supports `single_frame` and `frame_burst` (multi-image window)
+  sampling modes. Gated behind a new `llm` extras group (`pip install videoannotator[llm]`). See
+  `docs/development/vlm_annotation_pipeline.md` for the full writeup, config reference, and a
+  step-by-step testing guide. Implements the `roadmap_v1.6.0.md` Phase 2 "Local LLM/VLM Backend" item.
+
+### Fixed
+
+- `api/job_processor.py` (the job-execution path used by the API server's automatic background
+  processor) instantiated pipeline classes with no config at all, silently ignoring any per-pipeline
+  `config` submitted with a job — unlike `batch/batch_orchestrator.py`, which already passed it
+  correctly. Any pipeline relying on non-default config submitted through the API (not just
+  `vlm_annotation`) was affected.
+
 ### Planned
 
 - Queue position display for pending jobs
