@@ -24,7 +24,7 @@ ported from — see "Architecture" below for the mapping.
 | 1 | Pipeline itself (this doc) | **Done** — merged into `v1.5.0` |
 | 2 | End-to-end validation | **Done** — see "Step-by-step: test it yourself" |
 | 3 | Job-creation UX (prompt textarea, sampling-mode picker) | **Done** — see below |
-| 4 | Full research-review UI (ELAN ground truth, cross-prompt comparison, failure-mode buckets) | Planned — lives in the `video-annotation-viewer` repo |
+| 4 | Full research-review UI (ELAN ground truth, cross-prompt comparison, failure-mode buckets) | **Foundation done**, rest planned — lives in the `video-annotation-viewer` repo |
 
 Phase 3 landed in two repos:
 
@@ -225,6 +225,32 @@ Both paths were run against a live `ollama serve` + `qwen3.5:9b` as part of
 landing this pipeline, in both `single_frame` and `frame_burst` modes —
 Option B additionally confirmed the job-config-passing fix (see "Known gaps")
 actually takes effect end-to-end through the API.
+
+## Phase 4 progress
+
+The foundation landed: a `VLMFrameAnnotation` type, a parser
+(`src/lib/parsers/vlm.ts`), detection wired into `merger.ts` (placed ahead
+of the generic COCO-format checks, since this pipeline's export uses the
+same COCO info/annotations envelope as person_tracking/scene_detection — a
+`"reasoning"`+`"sampling_mode"` signature check claims it first), a
+point-marker Timeline track, and a `VlmAnnotationPanel` showing the current
+label + expandable reasoning synced to playback time. Verified in a real
+browser against real pipeline output — labels render correctly, timeline
+markers are clickable, and the panel updates correctly on scrub.
+
+Building this surfaced a real, separate bug: the viewer has **four**
+independent places that each re-derive a file's pipeline type from its
+JSON content (`merger.ts`, `fileUtils.ts`, and two hardcoded arrays inside
+`FileUploader.tsx`), not one. All four needed a `vlm_annotation` case
+added; `fileUtils.ts`'s version turned out not to even handle the
+COCO-wrapped `scene_detection` export correctly either (pre-existing, left
+alone — out of scope here, but worth knowing about before trusting any one
+of those four in isolation).
+
+Still not built: ELAN ground-truth `.eaf` parsing/comparison, lap-state
+stratification, a cross-job "compare prompts" view, client-side
+failure-mode bucketing, and the human-in-the-loop agree/disagree review
+flow — see "Full plan" below for what each of those involves.
 
 ## Full plan
 
