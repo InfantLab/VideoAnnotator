@@ -7,6 +7,7 @@ import { FileViewer } from './FileViewer';
 import { FileUploader } from './FileUploader';
 import { Footer } from './Footer';
 import { DebugPanel } from './DebugPanel';
+import { VlmAnnotationPanel } from './VlmAnnotationPanel';
 import { OpenFace3Controls } from './OpenFace3Controls';
 import { defaultOpenFace3Settings, type OpenFace3Settings } from './openface3Settings';
 import { Button } from '@/components/ui/button';
@@ -60,6 +61,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
     showMotion: true,
     showFaces: true,
     showEmotions: true,
+    showVlm: true,
   });
 
   const [openface3Settings, setOpenface3Settings] = useState<OpenFace3Settings>(defaultOpenFace3Settings);
@@ -341,6 +343,16 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                   onSeek={handleSeek}
                 />
               </div>
+
+              {/* VLM Frame Annotation Panel - label + expandable reasoning at current time */}
+              {annotationData?.vlm_annotations && annotationData.vlm_annotations.length > 0 && (
+                <div className="flex-shrink-0 p-2 border-b border-border">
+                  <VlmAnnotationPanel
+                    annotations={annotationData.vlm_annotations}
+                    currentTime={currentTime}
+                  />
+                </div>
+              )}
 
               {/* Footer - compact version */}
               <div className="flex-shrink-0">

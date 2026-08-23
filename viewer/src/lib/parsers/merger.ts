@@ -8,6 +8,7 @@ import type {
     WebVTTCue,
     RTTMSegment,
     SceneAnnotation,
+    VLMFrameAnnotation,
     LAIONFaceAnnotation,
     StandardFaceAnnotation,
     VideoAnnotatorCompleteResults
@@ -17,6 +18,7 @@ import { parseWebVTT } from './webvtt';
 import { parseRTTM } from './rttm';
 import { parseCOCOPersonData } from './coco';
 import { parseSceneDetection } from './scene';
+import { parseVlmAnnotations, isValidVlmAnnotations } from './vlm';
 import { parseCOCOOpenFace3Data } from './cocoOpenface3';
 // import { parseFaceAnalysis } from './face'; // Using local implementation
 
@@ -25,7 +27,7 @@ import { parseCOCOOpenFace3Data } from './cocoOpenface3';
  */
 export interface DetectedFile {
     file: File;
-    type: 'video' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'face_analysis' | 'openface3_faces' | 'complete_results' | 'audio' | 'unknown';
+    type: 'video' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'vlm_annotation' | 'face_analysis' | 'openface3_faces' | 'complete_results' | 'audio' | 'unknown';
     pipeline?: string;
     confidence: number;
 }
@@ -118,6 +120,23 @@ async function detectJSONType(file: File): Promise<DetectedFile> {
         // Use larger sample for better detection of complex structures
         const sampleSize = Math.min(10000, file.size);
         const sample = await file.slice(0, sampleSize).text();
+
+        // Check for VLM frame annotations FIRST — its signature ("reasoning"
+        // + "sampling_mode") is unambiguous, but its export uses the same
+        // COCO info/annotations envelope as person_tracking/scene_detection,
+        // so it must be claimed before those more generic COCO-format checks
+        // run (isValidCOCOPersonData in particular treats any
+        // info.description containing "COCO" as a positive signal).
+        console.log('🔍 Checking VLM annotation format...');
+        if (await isValidVlmAnnotations(file)) {
+            console.log('✅ Detected as vlm_annotation');
+            return {
+                file,
+                type: 'vlm_annotation',
+                pipeline: 'vlm_annotation',
+                confidence: 0.9
+            };
+        }
 
         // Check for face analysis (LAION format)
         console.log('🔍 Checking face analysis format...');
@@ -626,6 +645,7 @@ export async function mergeAnnotationData(
     let speechRecognition: WebVTTCue[] = [];
     let speakerDiarization: RTTMSegment[] = [];
     let sceneDetection: SceneAnnotation[] = [];
+    let vlmAnnotations: VLMFrameAnnotation[] = [];
     let faceAnalysis: LAIONFaceAnnotation[] = [];
     let openface3Faces: StandardFaceAnnotation[] = []; // OpenFace3 faces data
 
@@ -737,6 +757,13 @@ export async function mergeAnnotationData(
                     }
                     break;
 
+                case 'vlm_annotation':
+                    if (vlmAnnotations.length === 0) {
+                        vlmAnnotations = await parseVlmAnnotations(detectedFile.file);
+                        pipelinesFound.push('vlm_annotation');
+                    }
+                    break;
+
                 case 'unknown':
                     warnings.push(`Could not determine type of file: ${detectedFile.file.name}`);
                     break;
@@ -786,6 +813,10 @@ export async function mergeAnnotationData(
 
     if (sceneDetection.length > 0) {
         data.scene_detection = sceneDetection;
+    }
+
+    if (vlmAnnotations.length > 0) {
+        data.vlm_annotations = vlmAnnotations;
     }
 
     if (faceAnalysis.length > 0) {
@@ -848,6 +879,7 @@ export function validateFileSet(detectedFiles: DetectedFile[]): {
         types.has('speech_recognition') ||
         types.has('speaker_diarization') ||
         types.has('scene_detection') ||
+        types.has('vlm_annotation') ||
         types.has('face_analysis') ||
         types.has('complete_results');
 
@@ -894,6 +926,7 @@ export function getFilesSummary(detectedFiles: DetectedFile[]): {
             case 'speech_recognition':
             case 'speaker_diarization':
             case 'scene_detection':
+            case 'vlm_annotation':
             case 'face_analysis':
             case 'openface3_faces':
             case 'complete_results':

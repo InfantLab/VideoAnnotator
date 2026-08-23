@@ -40,6 +40,7 @@ const FileTypeIcon = ({ type }: { type: FileTypeInfo['type'] }) => {
     case 'speech_recognition': return <FileText className="w-4 h-4" />;
     case 'speaker_diarization': return <Users className="w-4 h-4" />;
     case 'scene_detection': return <Eye className="w-4 h-4" />;
+    case 'vlm_annotation': return <Eye className="w-4 h-4" />;
     case 'face_analysis': return <Eye className="w-4 h-4" />;
     case 'openface3_faces': return <Eye className="w-4 h-4" />;
     case 'complete_results': return <CheckCircle2 className="w-4 h-4" />;
@@ -272,7 +273,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
   const hasFiles = fileStatuses.length > 0;
   const hasVideoFile = fileStatuses.some(f => f.detected.type === 'video');
   const hasPipelineData = fileStatuses.some(f =>
-    ['person_tracking', 'speech_recognition', 'speaker_diarization', 'scene_detection', 'face_analysis', 'openface3_faces', 'complete_results'].includes(f.detected.type)
+    ['person_tracking', 'speech_recognition', 'speaker_diarization', 'scene_detection', 'vlm_annotation', 'face_analysis', 'openface3_faces', 'complete_results'].includes(f.detected.type)
   );
   const canProcess = hasVideoFile && hasPipelineData && !isProcessing;
 

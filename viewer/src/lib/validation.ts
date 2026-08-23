@@ -8,6 +8,7 @@ import type {
     WebVTTCue,
     RTTMSegment,
     SceneAnnotation,
+    VLMFrameAnnotation,
     StandardAnnotationData,
     PipelineResult,
     SupportedFileType
@@ -88,6 +89,41 @@ export const SceneAnnotationSchema = z.object({
 });
 
 // =============================================================================
+// VLM FRAME ANNOTATION VALIDATION
+// =============================================================================
+
+export const VLMFrameAnnotationSchema = z.object({
+    id: z.number().optional(),
+    image_id: z.string().optional(),
+    category_id: z.number().optional(),
+    bbox: z.tuple([z.number(), z.number(), z.number(), z.number()]).optional(),
+    area: z.number().nonnegative().optional(),
+    iscrowd: z.union([z.literal(0), z.literal(1)]).optional(),
+    video_id: z.string().optional(),
+    timestamp_sec: z.number().nonnegative(),
+    frame_number: z.number().nonnegative().optional(),
+    sampling_mode: z.string().optional(),
+    context_frame_offsets: z.array(z.number()).nullable().optional(),
+    context_frame_numbers: z.array(z.number()).optional(),
+    label: z.string(),
+    reasoning: z.string().optional(),
+    raw_response: z.string().optional(),
+    model: z.string().optional(),
+    backend: z.string().optional(),
+    base_url: z.string().optional(),
+    prompt: z.string().optional(),
+    total_time: z.number().optional(),
+    load_time: z.number().optional(),
+    prompt_tokens: z.number().optional(),
+    resp_tokens: z.number().optional(),
+    tokens_per_sec: z.number().optional()
+});
+
+export function validateVlmAnnotationData(data: unknown[]): VLMFrameAnnotation[] {
+    return z.array(VLMFrameAnnotationSchema).parse(data) as VLMFrameAnnotation[];
+}
+
+// =============================================================================
 // PIPELINE RESULT VALIDATION
 // =============================================================================
 
@@ -118,6 +154,7 @@ export const StandardAnnotationDataSchema = z.object({
     speech_recognition: z.array(WebVTTCueSchema).optional(),
     speaker_diarization: z.array(RTTMSegmentSchema).optional(),
     scene_detection: z.array(SceneAnnotationSchema).optional(),
+    vlm_annotations: z.array(VLMFrameAnnotationSchema).optional(),
     audio_file: z.instanceof(File).optional(),
     metadata: z.object({
         created: z.string(),
