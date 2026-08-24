@@ -41,6 +41,7 @@ const FileTypeIcon = ({ type }: { type: FileTypeInfo['type'] }) => {
     case 'speaker_diarization': return <Users className="w-4 h-4" />;
     case 'scene_detection': return <Eye className="w-4 h-4" />;
     case 'vlm_annotation': return <Eye className="w-4 h-4" />;
+    case 'elan_ground_truth': return <CheckCircle2 className="w-4 h-4" />;
     case 'face_analysis': return <Eye className="w-4 h-4" />;
     case 'openface3_faces': return <Eye className="w-4 h-4" />;
     case 'complete_results': return <CheckCircle2 className="w-4 h-4" />;
@@ -303,7 +304,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".mp4,.webm,.avi,.mov,.json,.vtt,.rttm,.wav,.mp3"
+            accept=".mp4,.webm,.avi,.mov,.json,.vtt,.rttm,.eaf,.wav,.mp3"
             onChange={handleFileInputChange}
             className="hidden"
             disabled={isProcessing}

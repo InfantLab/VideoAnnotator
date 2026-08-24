@@ -263,6 +263,30 @@ export const Timeline = ({ annotationData, currentTime, duration, settings, onSe
             </div>
           )}
 
+          {/* ELAN Ground Truth Track (raw tier segments, colored by tier name) */}
+          {settings.showElan !== false && annotationData.elan_ground_truth && (
+            <div className="absolute top-[4.5rem] left-0 right-0 h-4">
+              {annotationData.elan_ground_truth.map((annotation, index) => {
+                const left = (annotation.startSec / duration) * 100;
+                const width = ((annotation.endSec - annotation.startSec) / duration) * 100;
+                const hue = (annotation.tier.charCodeAt(0) * 137.508) % 360;
+                return (
+                  <div
+                    key={index}
+                    className="absolute h-3 rounded opacity-80 hover:opacity-100"
+                    style={{
+                      left: `${left}%`,
+                      width: `${width}%`,
+                      top: '0px',
+                      backgroundColor: `hsl(${hue}, 70%, 50%)`
+                    }}
+                    title={`${annotation.tier}${annotation.value ? `: ${annotation.value}` : ''}`}
+                  />
+                );
+              })}
+            </div>
+          )}
+
           {/* Motion Graph */}
           {settings.showMotion && (
             <canvas

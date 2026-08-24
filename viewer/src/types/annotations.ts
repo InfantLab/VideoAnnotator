@@ -295,6 +295,19 @@ export interface VLMFrameAnnotation {
   tokens_per_sec?: number;
 }
 
+// ELAN ground-truth annotation (parsed from a .eaf file — Crucianelli et al.
+// 2019 mother-infant touch coding scheme, or any other ELAN tier scheme).
+// One entry per ELAN ALIGNABLE_ANNOTATION, unresolved to any particular
+// category — category collapsing (e.g. four-way touch classification)
+// happens at lookup time via elanTiersToFourway(), since the tier-to-
+// category mapping is scheme-specific, not part of the raw parsed data.
+export interface ElanTierAnnotation {
+  tier: string;
+  value: string;
+  startSec: number;
+  endSec: number;
+}
+
 // Pipeline Result Wrappers (VideoAnnotator v1.1.1)
 export interface PipelineResult<T> {
   results: T[];
@@ -358,6 +371,7 @@ export interface StandardAnnotationData {
   speaker_diarization?: RTTMSegment[];
   scene_detection?: SceneAnnotation[];
   vlm_annotations?: VLMFrameAnnotation[]; // Local VLM frame classification/captioning
+  elan_ground_truth?: ElanTierAnnotation[]; // Human-coded ELAN ground truth (.eaf)
   face_analysis?: LAIONFaceAnnotation[]; // Legacy face analysis support
   openface3_faces?: StandardFaceAnnotation[]; // NEW: OpenFace3 face analysis support
   audio_file?: File; // Separate WAV file
@@ -499,6 +513,7 @@ export interface TimelineSettings {
   showFaces: boolean;        // NEW: Face analysis timeline
   showEmotions: boolean;     // NEW: Emotion analysis timeline
   showVlm?: boolean;         // NEW: VLM frame annotation markers (defaults shown; not yet wired into UnifiedControls' lock-sync)
+  showElan?: boolean;        // NEW: ELAN ground-truth tier segments (defaults shown; not yet wired into UnifiedControls' lock-sync)
 
   // Legacy fields for backward compatibility (deprecated)
   showEvents?: boolean;

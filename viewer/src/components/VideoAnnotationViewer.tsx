@@ -62,6 +62,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
     showFaces: true,
     showEmotions: true,
     showVlm: true,
+    showElan: true,
   });
 
   const [openface3Settings, setOpenface3Settings] = useState<OpenFace3Settings>(defaultOpenFace3Settings);
@@ -350,6 +351,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                   <VlmAnnotationPanel
                     annotations={annotationData.vlm_annotations}
                     currentTime={currentTime}
+                    elanGroundTruth={annotationData.elan_ground_truth}
                   />
                 </div>
               )}

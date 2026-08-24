@@ -9,6 +9,7 @@ import type {
     RTTMSegment,
     SceneAnnotation,
     VLMFrameAnnotation,
+    ElanTierAnnotation,
     LAIONFaceAnnotation,
     StandardFaceAnnotation,
     VideoAnnotatorCompleteResults
@@ -19,6 +20,7 @@ import { parseRTTM } from './rttm';
 import { parseCOCOPersonData } from './coco';
 import { parseSceneDetection } from './scene';
 import { parseVlmAnnotations, isValidVlmAnnotations } from './vlm';
+import { parseElanFile, isValidElanFile } from './elan';
 import { parseCOCOOpenFace3Data } from './cocoOpenface3';
 // import { parseFaceAnalysis } from './face'; // Using local implementation
 
@@ -27,7 +29,7 @@ import { parseCOCOOpenFace3Data } from './cocoOpenface3';
  */
 export interface DetectedFile {
     file: File;
-    type: 'video' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'vlm_annotation' | 'face_analysis' | 'openface3_faces' | 'complete_results' | 'audio' | 'unknown';
+    type: 'video' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'vlm_annotation' | 'elan_ground_truth' | 'face_analysis' | 'openface3_faces' | 'complete_results' | 'audio' | 'unknown';
     pipeline?: string;
     confidence: number;
 }
@@ -84,6 +86,16 @@ export async function detectFileType(file: File): Promise<DetectedFile> {
             file,
             type: 'speaker_diarization',
             pipeline: 'speaker_diarization',
+            confidence: isValid ? 0.9 : 0.3
+        };
+    }
+
+    if (extension === 'eaf') {
+        const isValid = await isValidElanFile(file);
+        return {
+            file,
+            type: 'elan_ground_truth',
+            pipeline: 'elan_ground_truth',
             confidence: isValid ? 0.9 : 0.3
         };
     }
@@ -646,6 +658,7 @@ export async function mergeAnnotationData(
     let speakerDiarization: RTTMSegment[] = [];
     let sceneDetection: SceneAnnotation[] = [];
     let vlmAnnotations: VLMFrameAnnotation[] = [];
+    let elanGroundTruth: ElanTierAnnotation[] = [];
     let faceAnalysis: LAIONFaceAnnotation[] = [];
     let openface3Faces: StandardFaceAnnotation[] = []; // OpenFace3 faces data
 
@@ -764,6 +777,13 @@ export async function mergeAnnotationData(
                     }
                     break;
 
+                case 'elan_ground_truth':
+                    if (elanGroundTruth.length === 0) {
+                        elanGroundTruth = await parseElanFile(detectedFile.file);
+                        pipelinesFound.push('elan_ground_truth');
+                    }
+                    break;
+
                 case 'unknown':
                     warnings.push(`Could not determine type of file: ${detectedFile.file.name}`);
                     break;
@@ -817,6 +837,10 @@ export async function mergeAnnotationData(
 
     if (vlmAnnotations.length > 0) {
         data.vlm_annotations = vlmAnnotations;
+    }
+
+    if (elanGroundTruth.length > 0) {
+        data.elan_ground_truth = elanGroundTruth;
     }
 
     if (faceAnalysis.length > 0) {
@@ -927,6 +951,7 @@ export function getFilesSummary(detectedFiles: DetectedFile[]): {
             case 'speaker_diarization':
             case 'scene_detection':
             case 'vlm_annotation':
+            case 'elan_ground_truth':
             case 'face_analysis':
             case 'openface3_faces':
             case 'complete_results':

@@ -3,7 +3,7 @@
  */
 
 export interface FileTypeInfo {
-    type: 'video' | 'audio' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'vlm_annotation' | 'face_analysis' | 'openface3_faces' | 'complete_results' | 'unknown';
+    type: 'video' | 'audio' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'vlm_annotation' | 'elan_ground_truth' | 'face_analysis' | 'openface3_faces' | 'complete_results' | 'unknown';
     extension: string;
     mimeType?: string;
     confidence: 'high' | 'medium' | 'low';
@@ -59,6 +59,17 @@ export function detectFileType(file: File): FileTypeInfo {
             mimeType,
             confidence: 'high',
             reason: 'RTTM format'
+        };
+    }
+
+    // ELAN ground-truth files
+    if (extension === 'eaf') {
+        return {
+            type: 'elan_ground_truth',
+            extension,
+            mimeType,
+            confidence: 'high',
+            reason: 'ELAN annotation format'
         };
     }
 
@@ -214,6 +225,7 @@ export function getFileTypeDescription(type: FileTypeInfo['type']): string {
         case 'speaker_diarization': return 'Speaker Diarization (RTTM)';
         case 'scene_detection': return 'Scene Detection (JSON)';
         case 'vlm_annotation': return 'VLM Frame Annotation (JSON)';
+        case 'elan_ground_truth': return 'ELAN Ground Truth (.eaf)';
         case 'face_analysis': return 'Face Analysis (COCO)';
         case 'openface3_faces': return 'OpenFace3 Analysis (JSON)';
         case 'complete_results': return 'Complete Results (VideoAnnotator)';

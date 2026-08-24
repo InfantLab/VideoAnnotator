@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, X as XIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import type { VLMFrameAnnotation } from '@/types/annotations';
+import type { ElanTierAnnotation, VLMFrameAnnotation } from '@/types/annotations';
 import { getVlmAnnotationAtTime } from '@/lib/parsers/vlm';
+import { getElanFourwayAtTime } from '@/lib/parsers/elan';
 
 interface VlmAnnotationPanelProps {
   annotations: VLMFrameAnnotation[];
   currentTime: number;
+  elanGroundTruth?: ElanTierAnnotation[];
 }
 
 const labelVariant = (label: string): 'default' | 'secondary' | 'destructive' => {
@@ -16,12 +18,32 @@ const labelVariant = (label: string): 'default' | 'secondary' | 'destructive' =>
   return 'default';
 };
 
-export const VlmAnnotationPanel = ({ annotations, currentTime }: VlmAnnotationPanelProps) => {
+// Generic binary "is this a touch/positive label" check, used only to
+// compare a VLM prediction against the ELAN four-way ground truth category
+// at the same instant — not a general-purpose label parser. Works for the
+// touch-detection vocabulary (TOUCH/NO_TOUCH/MATERNAL_TOUCH/etc, YES/NO);
+// a differently-worded prompt's labels won't binarize meaningfully here.
+const isPositiveLabel = (label: string): boolean =>
+  !label.startsWith('ERROR') && label !== 'NO_TOUCH' && label !== 'NO' && label !== 'EMPTY';
+
+export const VlmAnnotationPanel = ({
+  annotations,
+  currentTime,
+  elanGroundTruth
+}: VlmAnnotationPanelProps) => {
   const [expanded, setExpanded] = useState(false);
 
   const current = useMemo(
     () => getVlmAnnotationAtTime(annotations, currentTime),
     [annotations, currentTime]
+  );
+
+  const elan = useMemo(
+    () =>
+      elanGroundTruth && elanGroundTruth.length > 0
+        ? getElanFourwayAtTime(elanGroundTruth, currentTime)
+        : null,
+    [elanGroundTruth, currentTime]
   );
 
   if (annotations.length === 0) {
@@ -55,6 +77,24 @@ export const VlmAnnotationPanel = ({ annotations, currentTime }: VlmAnnotationPa
           {current.model}
         </span>
       </div>
+
+      {elan && (
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Ground truth (ELAN):</span>
+          <Badge variant={elan.category === 'NO_TOUCH' ? 'secondary' : 'default'}>
+            {elan.category}
+          </Badge>
+          {isPositiveLabel(current.label) === (elan.category !== 'NO_TOUCH') ? (
+            <span className="flex items-center gap-1 text-green-500">
+              <Check className="h-3 w-3" /> agree
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-destructive">
+              <XIcon className="h-3 w-3" /> disagree
+            </span>
+          )}
+        </div>
+      )}
 
       {hasReasoning && (
         <div>
