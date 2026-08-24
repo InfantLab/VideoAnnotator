@@ -22,7 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `/viewer`) refreshed from the July 2026 v0.6.3 build to v0.7.0, picking up `vlm_annotation`
   pipeline display support, ELAN ground-truth comparison, and job-config form fixes. Also fixed a
   previously-unverified deep-linking bug this surfaced: direct navigation to any `/viewer/*` SPA
-  route (not just the root) now correctly renders the app instead of a raw 404.
+  route (not just the root) now correctly returns 200 and renders the app, via a proper
+  `SPAStaticFiles` fallback (`api/main.py`) rather than a 404-with-app-shell-content workaround.
 
 ### Fixed
 
