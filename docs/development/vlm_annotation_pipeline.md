@@ -247,10 +247,18 @@ COCO-wrapped `scene_detection` export correctly either (pre-existing, left
 alone — out of scope here, but worth knowing about before trusting any one
 of those four in isolation).
 
-Still not built: ELAN ground-truth `.eaf` parsing/comparison, lap-state
-stratification, a cross-job "compare prompts" view, client-side
-failure-mode bucketing, and the human-in-the-loop agree/disagree review
-flow — see "Full plan" below for what each of those involves.
+ELAN ground-truth comparison also now landed (`video-annotation-viewer`
+commit `09991c1`, branch `feature/vlm-annotation-support`): `.eaf` parsing
+(ported from `00_preprocessing/parse_eaf_to_timeline.py`), a timeline
+segment track colored by tier, and a live agree/disagree indicator
+comparing the VLM prediction against the ELAN four-way category at the
+current time. Verified with a synthetic `.eaf` file covering both the
+agree and disagree cases against real pipeline output.
+
+Still not built: lap-state stratification, a cross-job "compare prompts"
+view, client-side failure-mode bucketing, and the human-in-the-loop
+agree/disagree review flow — see "Full plan" below for what each of those
+involves.
 
 ## Full plan
 
