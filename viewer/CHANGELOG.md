@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-24 — VLM Frame Annotation Support
+
+### ✨ Added
+- **`vlm_annotation` pipeline support**: full display support for VideoAnnotator's new local-VLM
+  frame classification pipeline (per-frame classification/captioning via a locally-hosted
+  vision-language model through Ollama). New `VLMFrameAnnotation` type + Zod schema, a parser
+  (`src/lib/parsers/vlm.ts`), detection wired into the merge pipeline, a Timeline point-marker
+  track, and a `VlmAnnotationPanel` showing the current label plus expandable model reasoning,
+  synced to playback time.
+- **ELAN ground-truth comparison**: `.eaf` file parsing (`src/lib/parsers/elan.ts`, ported from
+  the touch-detection research repo's own preprocessing script) with a four-way category
+  collapse (configurable tier-to-side mapping, defaulting to the Crucianelli et al. 2019
+  mother-infant touch coding scheme), a Timeline segment track for the raw tiers, and a live
+  agree/disagree indicator comparing VLM predictions against ground truth at the current time.
+- **Job-creation form now renders real per-pipeline parameters**: fixed a `GET /pipelines/{name}/schema`
+  404 (the endpoint the form already tried to call) that meant every pipeline's Configure step
+  showed "No configurable parameters," not just the new one — now wired end-to-end via
+  `usePipelineSchema`. New `'text'` parameter type renders a proper multi-line textarea (e.g. for
+  a long prompt) instead of a one-line input.
+
+### 🐛 Fixed
+- File-type detection for `vlm_annotation.json` and `.eaf` files across all four places the app
+  independently re-derives a file's pipeline type from its content (`merger.ts`, `fileUtils.ts`,
+  and two hardcoded arrays in `FileUploader.tsx`) — previously only `merger.ts` needed to know
+  about a new type; missing it in the other three meant a valid file showed "Unknown File Type"
+  in the upload preview and could leave the Process-Files button disabled even though the actual
+  parse would have worked.
+
 ## [0.6.3] - 2026-07-08 — Embedding Support & Demo Slimdown
 
 ### ✨ Added

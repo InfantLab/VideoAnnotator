@@ -1,6 +1,6 @@
 <div align="center">
   <img src="public/icon-64x64.png" alt="Video Annotation Viewer Icon" width="64" height="64">
-  <h1>Video Annotation Viewer v0.6.3</h1>
+  <h1>Video Annotation Viewer v0.7.0</h1>
 </div>
 
 [![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
