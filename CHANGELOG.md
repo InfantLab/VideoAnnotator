@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/development/vlm_annotation_pipeline.md` for the full writeup, config reference, and a
   step-by-step testing guide. Implements the `roadmap_v1.6.0.md` Phase 2 "Local LLM/VLM Backend" item.
 
+### Changed
+
+- `src/videoannotator/viewer_static/` (the vendored Video Annotation Viewer build served at
+  `/viewer`) refreshed from the July 2026 v0.6.3 build to v0.7.0, picking up `vlm_annotation`
+  pipeline display support, ELAN ground-truth comparison, and job-config form fixes. Also fixed a
+  previously-unverified deep-linking bug this surfaced: direct navigation to any `/viewer/*` SPA
+  route (not just the root) now correctly renders the app instead of a raw 404.
+
 ### Fixed
 
 - `api/job_processor.py` (the job-execution path used by the API server's automatic background
