@@ -9,8 +9,10 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.types import Scope
 
 from ..utils.logging_config import get_logger
 from ..version import __version__ as videoannotator_version
@@ -261,6 +263,27 @@ def create_app() -> FastAPI:
     return app
 
 
+class SPAStaticFiles(StaticFiles):
+    """StaticFiles that falls back to index.html (status 200) for any GET/HEAD
+    path that doesn't match a real file, instead of Starlette's built-in
+    html=True behaviour of returning a plain 404 (or a 404.html's content,
+    still with a 404 status). A client-side-routed SPA needs this: without
+    it, direct navigation or a refresh on any route other than the mount
+    root (e.g. /viewer/jobs) never reaches the app shell at all.
+    """
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        try:
+            response = await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code != 404 or scope["method"] not in ("GET", "HEAD"):
+                raise
+            return await super().get_response("index.html", scope)
+        if response.status_code == 404:
+            return await super().get_response("index.html", scope)
+        return response
+
+
 def _mount_viewer(app: FastAPI) -> None:
     """Serve the bundled Video Annotation Viewer at /viewer, if enabled and present.
 
@@ -285,7 +308,7 @@ def _mount_viewer(app: FastAPI) -> None:
         )
         return
 
-    app.mount("/viewer", StaticFiles(directory=viewer_dir, html=True), name="viewer")
+    app.mount("/viewer", SPAStaticFiles(directory=viewer_dir, html=True), name="viewer")
     logger.info(
         "Video Annotation Viewer mounted at /viewer", extra={"path": str(viewer_dir)}
     )
