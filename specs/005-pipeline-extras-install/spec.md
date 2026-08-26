@@ -192,6 +192,9 @@ set; confirm all three are rejected before any subprocess runs.
 
 This section is the interface the `video-annotation-viewer` project's own spec should build
 against. It intentionally describes shapes and behavior, not this repo's internal implementation.
+See [`viewer-handoff.md`](viewer-handoff.md) for the full handoff document (functional
+requirements, UX considerations, explicit non-goals) written to be pasted directly into that
+repo's own `/speckit-specify`.
 
 - **Trigger install**: an authenticated, admin-only action that accepts one target extras-group name
   and returns a job identifier immediately. Naming an invalid/undeclared group is rejected
