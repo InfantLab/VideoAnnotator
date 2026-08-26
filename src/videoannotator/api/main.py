@@ -5,6 +5,7 @@ FastAPI-based REST API for video annotation processing.
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -90,6 +91,46 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         logger.error(f"Database migration failed: {e}")
         # Don't fail startup if migration fails, but log prominently
+
+    # Resolve any extras-install jobs orphaned by an unclean shutdown/crash of
+    # a previous process (specs/005-pipeline-extras-install) -- a job stuck
+    # in pending/running from a process that no longer exists must not be
+    # reported as silently running forever.
+    try:
+        from ..database.database import SessionLocal
+        from ..database.models import ExtrasInstallJob, ExtrasInstallJobStatus
+
+        db = SessionLocal()
+        try:
+            orphaned = (
+                db.query(ExtrasInstallJob)
+                .filter(
+                    ExtrasInstallJob.status.in_(
+                        ExtrasInstallJobStatus.ORPHANABLE_STATUSES
+                    )
+                )
+                .all()
+            )
+            for job in orphaned:
+                job.status = ExtrasInstallJobStatus.FAILED
+                job.command_output = (
+                    (job.command_output or "")
+                    + "\n[interrupted] Server process restarted while this "
+                    "install was in progress; result is unknown. Retry the "
+                    "install if the extras group is still unavailable."
+                ).strip()
+                job.finished_at = datetime.now()
+            if orphaned:
+                db.commit()
+                logger.warning(
+                    f"[STARTUP] Marked {len(orphaned)} orphaned extras-install "
+                    "job(s) as failed"
+                )
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"Extras-install orphaned-job cleanup failed: {e}")
+        # Don't fail startup if this cleanup fails, but log prominently
 
     # Log server configuration
     from ..config_env import CORS_ORIGINS

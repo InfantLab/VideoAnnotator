@@ -50,6 +50,12 @@ The detail here is intentionally lighter than [v1.5](roadmap_v1.5.0.md) and [v1.
 - HPC dispatcher (deferred to v1.8 unless someone needs it sooner).
 - New specialist pipelines (pose, hand, motion) — deferred to v1.8.
 - Splitting face/scene/person plugins — that's v2.0.
+- **Auto-restart after in-app extras install.** [`specs/005-pipeline-extras-install/spec.md`](../../specs/005-pipeline-extras-install/spec.md)
+  (self-service `pip install videoannotator[<extra>]` triggered from the API/viewer) ships with a
+  manual-restart requirement — the server never restarts itself. Once this phase's process-
+  supervision/`Dispatcher` seams exist, revisit having the server safely restart itself after a
+  completed install (without interrupting in-flight annotation jobs) so the manual-restart step can
+  be dropped.
 
 ---
 

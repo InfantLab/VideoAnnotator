@@ -1,11 +1,14 @@
 # VideoAnnotator Development Guidelines
 
-Auto-generated from feature plans by `.specify/scripts/bash/update-agent-context.sh`. Last updated: 2026-07-18
+Auto-generated from feature plans by `.specify/scripts/bash/update-agent-context.sh`. Last updated: 2026-08-26
 
 ## Active Technologies
 - Python 3.12 (`requires-python = ">=3.12,<3.13"`), FastAPI, SQLAlchemy, Pydantic, Typer/Click (core — stays required with no extras installed)
 - Per-pipeline extras (torch, ultralytics, pyannote.audio, transformers, deepface, open-clip-torch, openai-whisper, etc.) — being moved from required dependencies to `[project.optional-dependencies]` groups (`face`, `face-laion`, `face-openface3`, `audio`, `audio-laion`, `scene`, `person`, `all`) as of 004-extras-based-install
 - SQLite/SQLAlchemy for job/pipeline state; local filesystem model cache (HF/torch cache dirs)
+- New `extras_install_jobs` table (005-pipeline-extras-install) tracks admin-triggered, in-app
+  installs of a named extras group (`pending`/`running`/`completed`/`failed`); no new dependency —
+  reuses FastAPI/SQLAlchemy already listed above
 
 ## Project Structure
 ```
@@ -46,6 +49,10 @@ Backward Compatibility by Default). `/speckit-plan`'s Constitution Check gate ev
 against it.
 
 ## Recent Changes
+- 005-pipeline-extras-install: self-service, admin-only install of an extras group triggered via the
+  API (`POST /api/v1/pipelines/extras/{extra}/install`), tracked as a background job, plus a
+  `restart_required` signal — the write-side counterpart to 004's read-only `available`/
+  `install_hint` fields. Backend-only; viewer UI is a separate spec in `video-annotation-viewer`.
 - 004-extras-based-install: extras-based modular install + metadata-driven registry loading
   (removes `LEGACY_MAPPINGS`, adds `requires_extras` to `PipelineMetadata`), scoped to leave room
   for v1.6.0's Ollama backend and v1.7+'s remote/HPC dispatch without another schema migration.

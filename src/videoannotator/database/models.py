@@ -261,3 +261,45 @@ class JobStatus:
     ]
     ACTIVE_STATUSES: ClassVar[list[str]] = [PENDING, QUEUED, RUNNING]
     FINAL_STATUSES: ClassVar[list[str]] = [COMPLETED, FAILED, CANCELLED]
+
+
+class ExtrasInstallJob(Base):
+    """Tracks one attempt to install a named pip/uv extras group.
+
+    See specs/005-pipeline-extras-install/data-model.md. Deliberately a
+    smaller state machine than Job/JobStatus above (no queued/cancelled) --
+    installs are triggered synchronously and run once, not queued or
+    cancellable.
+    """
+
+    __tablename__ = "extras_install_jobs"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    extra_name = Column(String(100), nullable=False, index=True)
+    requested_by_user_id = Column(GUID(), ForeignKey("users.id"), nullable=True)
+    status = Column(String(20), nullable=False, default="pending", index=True)
+    command_output = Column(Text, nullable=True)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+
+    def __repr__(self):
+        """Return a concise representation of the ExtrasInstallJob."""
+        return (
+            f"<ExtrasInstallJob(id={self.id}, extra={self.extra_name}, "
+            f"status={self.status})>"
+        )
+
+
+class ExtrasInstallJobStatus:
+    """Status constants for ExtrasInstallJob."""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+    ALL_STATUSES: ClassVar[list[str]] = [PENDING, RUNNING, COMPLETED, FAILED]
+    ORPHANABLE_STATUSES: ClassVar[list[str]] = [PENDING, RUNNING]

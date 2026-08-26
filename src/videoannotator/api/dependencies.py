@@ -97,6 +97,7 @@ def _validate_api_key_header(raw: str, db: Session) -> dict[str, Any] | None:
         "username": user.username,
         "email": user.email,
         "is_active": True,
+        "is_admin": user.is_admin,
         "scopes": ["read", "write"],
         "token_type": "api_key",
     }

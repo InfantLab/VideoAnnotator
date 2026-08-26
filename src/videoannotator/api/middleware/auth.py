@@ -132,8 +132,39 @@ async def validate_required_api_key(
     return user
 
 
+async def require_admin(
+    user: dict[str, Any] = Depends(validate_required_api_key),
+) -> dict[str, Any]:
+    """Require the caller to be authenticated as an administrator.
+
+    Builds on `validate_required_api_key` (always requires a valid key) and
+    additionally rejects any authenticated caller whose account isn't flagged
+    as admin. Only the database-backed API key path (`va_`-prefixed keys, see
+    `dependencies._validate_api_key_header`) carries an `is_admin` flag; other
+    auth paths (e.g. TokenManager dev/test tokens) have no admin concept and
+    are therefore never treated as admin.
+
+    Args:
+        user: Authenticated user dictionary (already validated).
+
+    Returns:
+        The same user dictionary, unchanged.
+
+    Raises:
+        HTTPException: 401 (via `validate_required_api_key`) if unauthenticated;
+            403 if authenticated but not an administrator.
+    """
+    if not user.get("is_admin", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator privileges required for this action.",
+        )
+    return user
+
+
 __all__ = [
     "is_auth_required",
     "validate_api_key",
     "validate_required_api_key",
+    "require_admin",
 ]

@@ -72,6 +72,22 @@ def install_hint(requires_extras: list[str]) -> str:
     return f"pip install {_DISTRIBUTION_NAME}[{groups}]"
 
 
+def known_extras() -> list[str]:
+    """Return the extras-group names the running install actually declares.
+
+    Read from this package's own installed metadata (`Provides-Extra`
+    entries) rather than a hand-maintained list, so it can't drift from
+    `pyproject.toml` and always reflects the running code version
+    (specs/005-pipeline-extras-install/research.md §1, mirroring
+    `_packages_for_extra`'s same "read from installed metadata" approach).
+    """
+    try:
+        dist = importlib.metadata.distribution(_DISTRIBUTION_NAME)
+    except importlib.metadata.PackageNotFoundError:
+        return []
+    return sorted(dist.metadata.get_all("Provides-Extra") or [])
+
+
 # Pipelines that were installed by default in v1.4.4 but were demoted to a
 # non-default extras group in v1.5.0 (data-model.md's migration message
 # record). Requesting one of these without its extras gets a distinct

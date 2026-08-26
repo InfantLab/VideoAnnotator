@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Self-service extras install API**: admins can now install a named pipeline extras group
+  (`face`, `audio`, `scene`, `person`, `all`, ...) directly through the API —
+  `POST /api/v1/pipelines/extras/{extra}/install` triggers it as a trackable background job
+  (`GET /api/v1/pipelines/extras/install-jobs/{job_id}`), no terminal access required. A completed
+  install needs a server restart to activate its pipeline(s); `GET /api/v1/pipelines` gained a
+  top-level `restart_required` flag so a client can tell "installed, pending restart" apart from
+  "still unavailable." Admin-only (`require_admin`, new — surfaces the `User.is_admin` column
+  through the API auth layer for the first time), and the extras-group name is always validated
+  against the running install's actual declared groups before anything runs. This is the write-side
+  counterpart to `004-extras-based-install`'s existing read-only `available`/`install_hint` fields.
+  See `specs/005-pipeline-extras-install/`. Backend-only — a `video-annotation-viewer` UI for this
+  (locked pipeline cards, an Install action, a restart banner) is a separate, future spec in that
+  project.
+
 - **`vlm_annotation` pipeline**: per-frame classification/captioning via a locally-hosted
   vision-language model served by Ollama, driven by a user-supplied prompt. Every sample point is one
   independent, stateless model call. Supports `single_frame` and `frame_burst` (multi-image window)
@@ -32,6 +46,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `config` submitted with a job — unlike `batch/batch_orchestrator.py`, which already passed it
   correctly. Any pipeline relying on non-default config submitted through the API (not just
   `vlm_annotation`) was affected.
+- `scripts/start_server.sh` asked for an admin email/username on every restart, even when a
+  database (and its admin account) already existed from a previous run — it now only prompts on a
+  genuine first-time setup (no `videoannotator.db` yet), matching `setup-db`'s own idempotency.
+- `scripts/start_server.sh`'s dependency sync used a bare `uv sync`, which defaults to an *exact*
+  sync — every restart silently uninstalled any extras group (e.g. `face`, `audio`) that hadn't
+  been named in that exact invocation's `--extra`/`SYNC_EXTRAS`, including one installed via the
+  new self-service extras-install API above. Now runs with `--inexact` (additive-only), matching
+  what a "restart to activate a newly-installed pipeline" workflow actually needs.
 
 ### Planned
 

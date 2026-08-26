@@ -73,45 +73,89 @@ VideoAnnotator provides both **automated processing** and **interactive visualiz
 curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/Mac
 # powershell -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
 
-# Clone and install
+# Clone
 git clone https://github.com/InfantLab/VideoAnnotator.git
 cd VideoAnnotator
-uv sync  # Fast dependency installation (30 seconds)
-
-# Initialize the local database (creates tables + admin user/token)
-uv run videoannotator setup-db --admin-email you@example.com --admin-username you
 ```
 
-### 2. Start Processing Videos
+### 2. Start the Server
 
 ```bash
-# Start the API server
-uv run videoannotator server --host 0.0.0.0 --port 18011
-# Use the API key printed by `setup-db` (or the server's first-start output)
+scripts/start_server.sh
+```
 
-# Process your first video (in another terminal)
+This syncs dependencies, sets up the local database and an admin API key (prompting for an admin email
+the first time), starts the API server, and — since [Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)
+is bundled and served by this same process, not a separate frontend to start — prints a one-click viewer
+login link once the server is actually up. Safe to re-run any time (e.g. after a container/VS Code
+restart). Pass `--background` to keep it running after this terminal closes, or `--help` for all options
+(custom port, non-interactive mode, extras to sync, etc).
+
+The default (core) install runs the server and viewer with no pipeline installed yet — each pipeline
+family lives behind a named extras group (e.g. `face`, `audio`, `scene`, `person`, `all`; see
+[pyproject.toml](pyproject.toml)'s `[project.optional-dependencies]`), so the install stays small until
+you ask for a specific pipeline. `GET /api/v1/pipelines?include_unavailable=true` lists every pipeline
+with `available`/`install_hint` fields showing exactly what's missing. As an admin, you can trigger an
+install directly through the API instead of dropping to a terminal:
+
+```bash
+curl -X POST "http://localhost:18011/api/v1/pipelines/extras/face/install" \
+  -H "Authorization: Bearer YOUR_ADMIN_API_KEY"
+# poll for completion:
+curl "http://localhost:18011/api/v1/pipelines/extras/install-jobs/<job_id>" \
+  -H "Authorization: Bearer YOUR_ADMIN_API_KEY"
+```
+
+A completed install needs a server restart to activate — `GET /api/v1/pipelines`'s top-level
+`restart_required` field tells you when one's pending. Restarting via this script (or with
+`--skip-sync`) preserves whatever you've installed; see `scripts/start_server.sh --help`.
+
+<details>
+<summary>Prefer the manual, step-by-step equivalent?</summary>
+
+```bash
+uv sync
+uv run videoannotator setup-db --admin-email you@example.com --admin-username you
+uv run videoannotator server --host 0.0.0.0 --port 18011
+```
+
+</details>
+
+### 3. Process Your First Video
+
+**Recommended — the viewer's GUI:** open the viewer login link `scripts/start_server.sh` printed in
+Step 2 (not `/viewer` directly — that link is what logs you in the first time). Then go to
+**New Job** (`/jobs/new`), upload a video, pick pipelines, and submit — no `curl`, no API key to copy
+by hand.
+
+<details>
+<summary>Or process it manually, e.g. for scripting/automation</summary>
+
+```bash
 curl -X POST "http://localhost:18011/api/v1/jobs/" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -F "video=@your_video.mp4" \
   -F "selected_pipelines=person,face,scene,audio"
 
 # Check results at http://localhost:18011/docs
+```ca
+
+</details>
+
+### 4. Visualize Results
+
+If you submitted through the viewer's GUI in Step 3, you're already there — the job shows up in its list
+as it processes. Otherwise, open the same viewer login link from Step 2 to get in.
+
+Script said "no fresh API key this run" (admin already existed), or you lost the link? Mint a fresh one:
+
+```bash
+uv run videoannotator generate-token --port 18011
 ```
 
-### 3. Visualize Results
-
-No extra install needed — VideoAnnotator bundles [Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer) and serves it directly. `setup-db` (and `generate-token`) print a one-click link that logs the viewer in for you:
-
-```
-Connect the viewer with one click: http://localhost:18011/viewer-connect?token=...
-```
-
-Open that link (not `/viewer` directly) the first time — it stores your API key where the viewer expects it and
-redirects you there. After that, `http://localhost:18011/viewer` remembers you.
-
-Without it, the viewer falls back to a built-in demo token that won't authenticate against your server, and the
-job list will show 401s — if that happens, open the viewer's **Settings** panel and paste in the key printed by
-`setup-db`/`generate-token` by hand instead.
+If you never open a viewer-connect link, the viewer falls back to a built-in demo token that won't
+authenticate against your server, and the job list will show 401s — open the viewer's **Settings** panel
+and paste in the key by hand to fix that.
 
 Set `VIDEOANNOTATOR_ENABLE_VIEWER=false` if you'd rather not serve it.
 

@@ -1,14 +1,21 @@
 """Pipeline information endpoints for VideoAnnotator API."""
 
 import logging
+import uuid
+from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Path, Query
+from fastapi import APIRouter, Depends, Path, Query
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
-from ...registry.pipeline_loader import extras_available, install_hint
+from ...database.database import get_db
+from ...database.models import ExtrasInstallJob, ExtrasInstallJobStatus
+from ...registry.pipeline_loader import extras_available, install_hint, known_extras
 from ...registry.pipeline_registry import get_registry
+from .. import extras_install
 from ..errors import APIError
+from ..middleware.auth import require_admin
 
 logger = logging.getLogger("videoannotator.api")
 
@@ -45,6 +52,7 @@ class PipelineListResponse(BaseModel):
 
     pipelines: list[PipelineInfo]
     total: int
+    restart_required: bool = False
 
 
 @router.get("", include_in_schema=False)
@@ -181,7 +189,9 @@ async def list_pipelines(
                 )
             )
         return PipelineListResponse(
-            pipelines=pipeline_models, total=len(pipeline_models)
+            pipelines=pipeline_models,
+            total=len(pipeline_models),
+            restart_required=extras_install.restart_required(),
         )
     except APIError:
         raise
@@ -335,6 +345,160 @@ async def get_pipeline_info(
             message="Failed to get pipeline info",
             hint="Check server logs",
         ) from e
+
+
+class ExtrasInstallTriggerResponse(BaseModel):
+    """Response for `POST /extras/{extra}/install`."""
+
+    job_id: str
+    extra_name: str
+    status: str
+
+
+class ExtrasInstallJobResponse(BaseModel):
+    """Response for `GET /extras/install-jobs/{job_id}`."""
+
+    job_id: str
+    extra_name: str
+    status: str
+    created_at: datetime
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    command_output: str | None = None
+    restart_required: bool = False
+
+
+@router.post(
+    "/extras/{extra}/install",
+    response_model=ExtrasInstallTriggerResponse,
+    status_code=202,
+    summary="Trigger installation of a pipeline extras group",
+    description="""
+Admin-only. Triggers installing one named `[project.optional-dependencies]` extras group
+(e.g. `face`, `audio`, `scene`, `all`) so its pipeline(s) become available, without needing
+terminal/shell access (specs/005-pipeline-extras-install).
+
+Returns immediately with a trackable job id rather than waiting for the (potentially
+multi-minute) install to finish -- poll `GET /extras/install-jobs/{job_id}` for progress.
+A newly-completed install requires a server restart to activate; see the top-level
+`restart_required` field on `GET /api/v1/pipelines`.
+""",
+)
+async def install_extra(
+    extra: str = Path(
+        ..., description="The extras-group name to install, e.g. 'face', 'audio', 'all'"
+    ),
+    user: dict[str, Any] = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> ExtrasInstallTriggerResponse:
+    """Trigger installation of a named extras group."""
+    known = known_extras()
+    if extra not in known:
+        raise APIError(
+            status_code=422,
+            code="UNKNOWN_EXTRAS_GROUP",
+            message=f"Unknown extras group '{extra}'.",
+            hint=f"Known extras groups: {', '.join(known)}",
+        )
+
+    # Already satisfied (FR-011): resolve immediately, no subprocess.
+    if extras_available([extra]):
+        job = ExtrasInstallJob(
+            extra_name=extra,
+            requested_by_user_id=user.get("id"),
+            status=ExtrasInstallJobStatus.COMPLETED,
+            command_output=f"Extras group '{extra}' is already installed; nothing to do.",
+            started_at=datetime.now(),
+            finished_at=datetime.now(),
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        return ExtrasInstallTriggerResponse(
+            job_id=str(job.id), extra_name=job.extra_name, status=job.status
+        )
+
+    # Dedup (FR-010): reserve this extra_name before creating anything. If
+    # another install for the same extra is already in flight, its row may
+    # not be committed yet -- report "pending" rather than treating a
+    # not-yet-visible row as a stale dedup entry (avoids a race where a
+    # losing request clears the winner's reservation).
+    provisional_job_id = str(uuid.uuid4())
+    existing_job_id = extras_install.try_begin_install(extra, provisional_job_id)
+    if existing_job_id is not None:
+        existing = (
+            db.query(ExtrasInstallJob)
+            .filter(ExtrasInstallJob.id == existing_job_id)
+            .first()
+        )
+        status_value = (
+            existing.status if existing is not None else ExtrasInstallJobStatus.PENDING
+        )
+        return ExtrasInstallTriggerResponse(
+            job_id=existing_job_id, extra_name=extra, status=status_value
+        )
+
+    try:
+        job = ExtrasInstallJob(
+            id=provisional_job_id,
+            extra_name=extra,
+            requested_by_user_id=user.get("id"),
+            status=ExtrasInstallJobStatus.PENDING,
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        extras_install.start_install(str(job.id), extra)
+    except Exception as e:
+        extras_install._end_install(extra)
+        logger.error("Failed to start install for extras group '%s': %s", extra, e)
+        raise APIError(
+            status_code=500,
+            code="EXTRAS_INSTALL_START_FAILED",
+            message=f"Failed to start install for extras group '{extra}'",
+            hint="Check server logs",
+        ) from e
+
+    return ExtrasInstallTriggerResponse(
+        job_id=str(job.id), extra_name=job.extra_name, status=job.status
+    )
+
+
+@router.get(
+    "/extras/install-jobs/{job_id}",
+    response_model=ExtrasInstallJobResponse,
+    summary="Check the status of an extras-group install job",
+    description="""
+Admin-only. Returns the current state of an install job created by
+`POST /extras/{extra}/install`: `pending`, `running`, `completed`, or `failed`. On
+`failed`, `command_output` carries the captured error output for diagnosis.
+""",
+)
+async def get_extras_install_job(
+    job_id: str = Path(
+        ..., description="The install job identifier returned by the trigger endpoint"
+    ),
+    user: dict[str, Any] = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> ExtrasInstallJobResponse:
+    """Check the status of an extras-group install job."""
+    job = db.query(ExtrasInstallJob).filter(ExtrasInstallJob.id == job_id).first()
+    if job is None:
+        raise APIError(
+            status_code=404,
+            code="EXTRAS_INSTALL_JOB_NOT_FOUND",
+            message=f"Install job '{job_id}' not found",
+        )
+    return ExtrasInstallJobResponse(
+        job_id=str(job.id),
+        extra_name=job.extra_name,
+        status=job.status,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        finished_at=job.finished_at,
+        command_output=job.command_output,
+        restart_required=extras_install.restart_required(),
+    )
 
 
 class PipelineParameterOption(BaseModel):
