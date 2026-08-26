@@ -82,7 +82,11 @@ source "$SCRIPT_DIR/common.sh"
 _paths_output=$(get_feature_paths) || { echo "ERROR: Failed to resolve feature paths" >&2; exit 1; }
 eval "$_paths_output"
 unset _paths_output
-check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
+
+# If feature.json pins an existing feature directory, branch naming is not required.
+if ! feature_json_matches_feature_dir "$REPO_ROOT" "$FEATURE_DIR"; then
+    check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
+fi
 
 # If paths-only mode, output paths and exit (support JSON + paths-only combined)
 if $PATHS_ONLY; then
