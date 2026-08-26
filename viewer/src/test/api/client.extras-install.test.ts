@@ -221,4 +221,57 @@ describe('APIClient pipeline extras install', () => {
       await expect(client.getExtrasInstallJob('stale-job')).rejects.toMatchObject({ status: 404 });
     });
   });
+
+  describe('getCurrentUser', () => {
+    it('GETs /api/v1/auth/me and maps is_admin to isAdmin', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ id: 1, username: 'alice', email: 'alice@example.com', is_admin: true })
+      });
+
+      const user = await client.getCurrentUser();
+
+      expect(user).toEqual({ id: 1, username: 'alice', email: 'alice@example.com', isAdmin: true });
+      expect(mockFetch).toHaveBeenCalledWith(`${TEST_BASE_URL}/api/v1/auth/me`, expect.anything());
+    });
+
+    it('maps a non-admin identity to isAdmin: false', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ id: 2, username: 'bob', email: 'bob@example.com', is_admin: false })
+      });
+
+      const user = await client.getCurrentUser();
+
+      expect(user.isAdmin).toBe(false);
+    });
+
+    it('throws with status 401 when unauthenticated', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ detail: 'Not authenticated' })
+      });
+
+      await expect(client.getCurrentUser()).rejects.toMatchObject({ status: 401 });
+    });
+
+    it('throws with status 404 on a server that predates this endpoint', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ detail: 'Not found' })
+      });
+
+      await expect(client.getCurrentUser()).rejects.toMatchObject({ status: 404 });
+    });
+  });
 });

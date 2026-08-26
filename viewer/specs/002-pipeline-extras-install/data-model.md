@@ -57,12 +57,27 @@ Not a separate interface — represented by `PipelineCatalogResponse.restartRequ
 Not a server entity — client-only bookkeeping to satisfy the reload-survival requirement (spec FR-006).
 
 **`localStorage` key**: `videoannotator_extras_install_jobs`
-**Shape**: `Record<extraName, { jobId: string; startedAt: string }>` — a JSON object map, one entry per extras group with a known in-flight or recently-triggered job.
+**Shape**: `Record<extraName, { jobId: string; startedAt: string; pipelineIds: string[] }>` — a JSON object map, one entry per extras group with a known in-flight or recently-triggered job. `pipelineIds` (added during implementation, not in the original design sketch) records which locked pipelines this extras group was unlocking at trigger time, so the entry can be auto-cleared once all of them are observed `available` again (see Lifecycle below) without needing a separate lookup back into the catalog by extras-group name.
 
 **Lifecycle**:
 - Written when `POST /extras/{extra}/install` succeeds.
 - Read on `useExtrasInstall` mount to resume polling for any entries present.
-- Removed for a given `extraName` once its job reaches a terminal status (`completed` or `failed`) **and** the user has seen that terminal state at least once (i.e. not removed the instant the poll returns `completed`, so a `completed`+`restartRequired` or a `failed` state persists across a reload until acknowledged, per spec edge cases — "closes the wizard... returns later" must still show the result, not silently forget it).
+- Removed for a given `extraName` once every pipeline in its `pipelineIds` is observed `available !== false` on a subsequent catalog fetch (i.e. the server restarted and the group is confirmed active) — this is checked continuously, not just once at terminal status, so it also fires for an entry the user never revisits.
+- Also removed immediately if the server returns `404` for the job id (stale/expired job, e.g. after a server restart that lost in-memory job state) — treated as terminal-failed locally, allowing the Install action to be re-offered.
+- Until one of the above clears it, a terminal (`completed`/`failed`) entry persists across a reload so the result isn't silently lost (per spec edge case — "closes the wizard... returns later" must still show the result).
 - Never written to for pipelines that are already `available` — only ever tracks extras the user actually triggered an install for in this browser.
 
 This is a client-side convenience cache only; the server's job record (queryable by `job_id` indefinitely per the brief) remains the source of truth. Losing this `localStorage` entry (private browsing, cleared storage) degrades to "install still runs server-side, but this browser stops showing its progress" — acceptable per spec (no requirement that install progress survive storage clearing, only ordinary reload/navigation).
+
+## CurrentUser *(Addendum)*
+
+Represents the authenticated session's own identity, from `GET /api/v1/auth/me`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | `string \| number` | Server-assigned identity; opaque to the viewer. |
+| `username` | `string` | Displayed in Settings/`TokenSetup` alongside admin status. |
+| `email` | `string` | Not currently rendered anywhere in the UI; kept for completeness/future use. |
+| `isAdmin` | `boolean` | The signal that gates the Install action. |
+
+**Not a cached/persisted entity** the way install jobs are — fetched via React Query with a 5-minute `staleTime` (`useCurrentUser`), no `localStorage` involvement. Distinct from the boolean `isAdmin` is the *tri-state* the hook actually exposes to callers: `true` / `false` / `'unknown'` — `'unknown'` covers "no token configured," "request in flight," and "endpoint unsupported (404)" uniformly, since all three cases call for the same UI treatment (don't claim a status we don't have, fall back to reactive `403` handling for the install action itself).

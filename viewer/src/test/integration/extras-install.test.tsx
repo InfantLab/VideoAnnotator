@@ -19,7 +19,8 @@ vi.mock('@/api/client', async () => {
     hasConfiguredApiToken: vi.fn(() => true),
     apiClient: {
       installPipelineExtras: vi.fn(),
-      getExtrasInstallJob: vi.fn()
+      getExtrasInstallJob: vi.fn(),
+      getCurrentUser: vi.fn()
     }
   };
 });
@@ -75,6 +76,14 @@ describe('PipelineSelectionStep - Pipeline Extras Install UI', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', new MemoryStorage());
     vi.clearAllMocks();
+    // Default: an admin session, so existing tests exercise the "can install" path
+    // unless a test explicitly overrides this to cover the not-admin/unknown paths.
+    vi.mocked(apiClient.getCurrentUser).mockResolvedValue({
+      id: 1,
+      username: 'admin',
+      email: 'admin@example.com',
+      isAdmin: true
+    });
   });
 
   describe('locked pipeline visibility (US1)', () => {
@@ -245,6 +254,81 @@ describe('PipelineSelectionStep - Pipeline Extras Install UI', () => {
         expect(screen.getByText(/Installing… this can take several minutes/)).toBeInTheDocument();
       });
       expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('admin status detection (GET /api/v1/auth/me)', () => {
+    it('disables Install and explains why up front when the session is known not to be admin', async () => {
+      vi.mocked(apiClient.getCurrentUser).mockResolvedValue({
+        id: 2,
+        username: 'viewer',
+        email: 'viewer@example.com',
+        isAdmin: false
+      });
+
+      renderWithProviders(
+        <PipelineSelectionStep
+          pipelines={[stubPipeline, facePipeline]}
+          selectedPipelines={['stub']}
+          setSelectedPipelines={vi.fn()}
+          isLoading={false}
+          error={null}
+          onRetry={vi.fn()}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Install' })).toBeDisabled();
+      });
+      expect(
+        screen.getByText(/Requires an administrator API key, which yours doesn't have/)
+      ).toBeInTheDocument();
+      expect(screen.getByText(/generate-token --admin/)).toBeInTheDocument();
+
+      // The proactive hint above the list must also reflect the known non-admin status.
+      expect(screen.getByText(/API key to install, which yours doesn't have/)).toBeInTheDocument();
+
+      expect(apiClient.installPipelineExtras).not.toHaveBeenCalled();
+    });
+
+    it('falls back to offering Install when admin status is unknown (server predates GET /api/v1/auth/me)', async () => {
+      const { APIError } = await import('@/api/handleError');
+      vi.mocked(apiClient.getCurrentUser).mockRejectedValue(new APIError('Not found', 404));
+      vi.mocked(apiClient.installPipelineExtras).mockResolvedValueOnce({
+        jobId: 'job-5',
+        extraName: 'face',
+        status: 'pending'
+      });
+      vi.mocked(apiClient.getExtrasInstallJob).mockResolvedValue({
+        jobId: 'job-5',
+        extraName: 'face',
+        status: 'pending',
+        createdAt: '2026-08-26T10:00:00Z',
+        startedAt: null,
+        finishedAt: null,
+        commandOutput: null,
+        restartRequired: false
+      });
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <PipelineSelectionStep
+          pipelines={[stubPipeline, facePipeline]}
+          selectedPipelines={['stub']}
+          setSelectedPipelines={vi.fn()}
+          isLoading={false}
+          error={null}
+          onRetry={vi.fn()}
+        />
+      );
+
+      const installButton = await screen.findByRole('button', { name: 'Install' });
+      expect(installButton).not.toBeDisabled();
+
+      await user.click(installButton);
+      await waitFor(() => {
+        expect(apiClient.installPipelineExtras).toHaveBeenCalledWith('face');
+      });
     });
   });
 

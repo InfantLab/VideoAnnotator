@@ -50,6 +50,14 @@ interface ExtrasInstallStatusProps {
   /** Set when the most recent trigger attempt for this extras group failed (e.g. 401/403/422/network). */
   triggerError?: { status?: number; message: string } | null;
   onInstall: () => void;
+  /**
+   * The current session's admin status, from GET /api/v1/auth/me
+   * (useCurrentUser). `false` disables the Install action up front with an
+   * explanation, instead of letting the user click through to a bare 403.
+   * `'unknown'` (no token, endpoint unsupported by an older server, or still
+   * loading) falls back to offering the action and handling its own 403.
+   */
+  adminStatus: boolean | 'unknown';
 }
 
 /**
@@ -58,7 +66,35 @@ interface ExtrasInstallStatusProps {
  * a "ready to use" state on completion - that's gated on a server restart
  * (see RestartRequiredBanner), not on this job reaching `completed`.
  */
-export const ExtrasInstallStatus = ({ job, isTriggering, triggerError, onInstall }: ExtrasInstallStatusProps) => {
+export const ExtrasInstallStatus = ({
+  job,
+  isTriggering,
+  triggerError,
+  onInstall,
+  adminStatus
+}: ExtrasInstallStatusProps) => {
+  if (adminStatus === false) {
+    return (
+      <div className="mt-1 space-y-1">
+        <Button type="button" size="sm" variant="secondary" className="h-7 w-fit px-2 text-xs" disabled>
+          Install
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          Requires an administrator API key, which yours doesn't have. See the "Getting Help" tab
+          on the{" "}
+          <Link to="/settings" className="underline">
+            Settings
+          </Link>{" "}
+          page, or ask whoever runs your server to grant one with{" "}
+          <code className="rounded bg-muted px-1 py-0.5 font-mono">
+            uv run videoannotator generate-token --admin
+          </code>
+          .
+        </p>
+      </div>
+    );
+  }
+
   if (triggerError?.status === 403) {
     return (
       <div className="mt-1 space-y-1">

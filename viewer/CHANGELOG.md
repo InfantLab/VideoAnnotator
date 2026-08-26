@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   generates on first server start), rather than just stating the requirement with no path
   forward. Settings' "Getting Help" tab and the Select Pipelines step now also explain token
   scopes up front, before a user hits the error.
+- **Real admin-status detection**: the viewer now calls VideoAnnotator's new
+  `GET /api/v1/auth/me` (v1.5.1+) to know in advance whether the current session has admin
+  access, instead of only finding out via a `403`. The Install action is disabled with an
+  inline explanation (and the exact `generate-token --admin` command to fix it) when the
+  session is known not to be admin; Settings and `TokenSetup` now show real admin status
+  instead of the previously-always-empty "Permissions" field. Servers that predate this
+  endpoint fall back to the original attempt-then-403 behavior unchanged.
 
 ## [0.7.0] - 2026-08-24 — VLM Frame Annotation Support
 

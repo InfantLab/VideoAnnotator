@@ -5,6 +5,15 @@
 **Status**: Draft
 **Input**: User description: "Extras Install UI: Let users install missing VideoAnnotator pipeline extras (face, audio, scene, person, etc.) directly from the viewer instead of needing shell access." Full handoff brief from VideoAnnotator core team (spec 005-pipeline-extras-install, backend v1.5.0) describing two new endpoints — pipeline discoverability with `available`/`install_hint`, and an admin-only self-service extras-install job — and the UX constraints around them (slow installs, restart-required-before-usable, admin-only action).
 
+> **Addendum (2026-08-26, post-initial-implementation)**: a manual walkthrough of the initial
+> implementation surfaced a real procedural gap: a `403` from the install action told the user
+> nothing about *why* or what to do next, and the viewer had no way to check its own admin status
+> in advance — see the original Assumptions entry below on admin detection, which this addendum
+> supersedes. The backend team's response added **`GET /api/v1/auth/me`** (`{ id, username, email,
+> is_admin }`, any authenticated caller, never `403`) specifically to close this gap. This is
+> reflected in **FR-012** and **US2 Acceptance Scenario 2** below, plus the updated Assumptions
+> entry. Everything else in this spec (FR-001 through FR-011, US1/US3) is unchanged.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - See what pipelines exist, even if not installed (Priority: P1)
@@ -34,7 +43,7 @@ An admin-authenticated user sees a locked pipeline they want to use (e.g. "face"
 **Acceptance Scenarios**:
 
 1. **Given** an admin-authenticated session, **When** the user clicks Install on a locked pipeline, **Then** an install job is triggered and the UI immediately reflects that an install is now in progress for that specific pipeline (not implying other pipelines are installing too).
-2. **Given** a non-admin or unauthenticated session, **When** the user views a locked pipeline, **Then** no Install action is offered, or if attempted, the user is clearly told administrator privileges are required — never a silent no-op.
+2. **Given** a non-admin or unauthenticated session, **When** the user views a locked pipeline, **Then** no Install action is offered, or if attempted, the user is clearly told administrator privileges are required — never a silent no-op. *(Addendum: when the session's admin status is known in advance via `GET /api/v1/auth/me`, the Install action is disabled up front with an explanation, rather than letting the user click through to a bare `403`.)*
 3. **Given** an install is already in progress for a pipeline, **When** the user views that pipeline again (including after a page reload), **Then** the in-progress state is still shown, not reset to plain "locked."
 
 ---
@@ -79,12 +88,14 @@ While an install runs (which can take several minutes), the user needs to know i
 - **FR-009**: The system MUST periodically re-check install job status while a job is in progress, at an interval appropriate for a multi-minute operation (not sub-second polling).
 - **FR-010**: Once a previously-locked pipeline becomes available (server restart completed), the system MUST treat it identically to any other available pipeline on the next catalog refresh, with no leftover locked/installing visual state.
 - **FR-011**: The system MUST NOT offer any control implying the app can restart the server itself, cancel an in-progress install, or retry with alternate install mechanisms — none of these are supported by the server today.
+- **FR-012** *(Addendum)*: The system MUST determine the current session's admin status via the server's own identity check rather than only inferring it reactively from a failed install attempt, and MUST surface that status somewhere the user can find it (at minimum, in Settings) along with guidance for the common single-admin-by-default case and for how a non-admin session can obtain admin access. On a server that doesn't yet support this check, the system MUST fall back to the reactive `403`-handling behavior in FR-004 rather than blocking the action.
 
 ### Key Entities
 
 - **Pipeline (catalog entry)**: A named annotation capability the server knows about. Has a display name/description, an availability flag, and — when unavailable — a human-readable install hint identifying which extras group provides it.
 - **Extras Install Job**: A trackable background operation representing "install this extras group." Has an identity that persists across a page reload, a lifecycle status (queued → in progress → finished successfully or failed), and, on failure, diagnostic output. Associated with exactly one extras group, which may unlock more than one pipeline.
 - **Restart-Required Signal**: A system-wide flag indicating that at least one successfully-installed extras group is not yet active because the server process hasn't restarted since the install completed.
+- **Current User Identity** *(Addendum)*: The authenticated session's own identity as reported by the server (id, username, email) plus whether it carries admin scope. Readable by any authenticated caller about themselves; absent (not merely "false") on a server that predates this check.
 
 ## Success Criteria *(mandatory)*
 
@@ -95,10 +106,11 @@ While an install runs (which can take several minutes), the user needs to know i
 - **SC-003**: At any point during a multi-minute install, a user checking the page can correctly state whether it's still in progress, failed, or done-pending-restart — measured by the UI never showing a state that contradicts the actual job status within one polling interval.
 - **SC-004**: Zero users mistake a completed-but-not-restarted install for either "ready to use" or "broken" — the restart-required state is read correctly on first encounter in usability review.
 - **SC-005**: A user who reloads the page mid-install does not lose visibility into that install's progress.
+- **SC-006** *(Addendum)*: A user whose token lacks admin access can tell why the Install action is unavailable, and what to do about it, without needing to click it first or ask someone else what "administrator privileges" means in this system.
 
 ## Assumptions
 
-- **Admin detection has no dedicated check**: the viewer has no existing concept of "is this session admin" (no role/scope field anywhere in current auth state). Rather than requiring a new capability-check endpoint, the Install action is offered whenever a session is authenticated at all, and a `403` from the install endpoint is treated as the definitive "not admin" signal, shown as a clear message. This matches the backend brief's explicit allowance for either approach.
+- **Admin detection** *(superseded by the 2026-08-26 addendum — kept here for history)*: originally, the viewer had no dedicated admin-status check (no role/scope field anywhere in auth state), so the Install action was offered whenever a session was authenticated at all, and a `403` from the install endpoint was treated as the definitive "not admin" signal. This is now the *fallback* path (FR-012) for servers that don't support `GET /api/v1/auth/me`; where that endpoint is available, admin status is known in advance and used to disable the action proactively with an explanation (see FR-004's addendum note and FR-012).
 - **Polling interval**: "a few seconds" from the backend brief is treated as a default of 5 seconds while a job is `pending`/`running`, stopping once it reaches a terminal status (`completed`/`failed`).
 - **Job persistence mechanism**: `job_id` (and which pipeline/extras group it belongs to) is persisted in browser local storage rather than the URL, since install-triggering can happen from a multi-step wizard step where URL-based state would be awkward. This satisfies the reload-survival requirement without dictating a specific storage key/schema (implementation detail).
 - **Scope of "everywhere pipelines are listed"**: today this is exactly one surface — the Select Pipelines step of the job-creation wizard (`src/pages/NewJob.tsx`). The Settings page's pipeline catalog view is a diagnostics display, not a selection surface, and is not required to gain the same locked/install treatment, though it MAY also show the restart-required signal since it already surfaces server diagnostics.

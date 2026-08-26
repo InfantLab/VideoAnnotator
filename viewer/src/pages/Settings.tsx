@@ -27,6 +27,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { useTokenStatus } from '@/hooks/useTokenStatus';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
   usePipelineCatalog,
   useRefreshPipelineCatalog,
@@ -55,6 +56,7 @@ const CreateSettings = () => {
   const [isClearingCache, setIsClearingCache] = useState(false);
 
   const tokenStatus = useTokenStatus();
+  const { currentUser, isAdmin, isLoading: currentUserLoading } = useCurrentUser();
   const { data: serverInfoData, isLoading: serverInfoLoading, error: serverInfoError } = useVideoAnnotatorServerInfo();
   // Don't fetch catalog on settings page - not needed, only manual refresh button
   const { data: catalogData, isLoading: catalogLoading, error: catalogError } = usePipelineCatalog({ enabled: false });
@@ -240,6 +242,21 @@ const CreateSettings = () => {
                       <span className="text-xs text-muted-foreground">{tokenStatus.user}</span>
                     )}
                   </div>
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Admin Access</p>
+                  {currentUserLoading ? (
+                    <Skeleton className="mt-1 h-4 w-20" />
+                  ) : (
+                    <div className="mt-1 flex items-center gap-2">
+                      <Badge variant={isAdmin === true ? 'secondary' : 'outline'}>
+                        {isAdmin === true ? 'Admin' : isAdmin === false ? 'Not admin' : 'Unknown'}
+                      </Badge>
+                      {currentUser?.username && (
+                        <span className="text-xs text-muted-foreground">{currentUser.username}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <p className="font-medium text-sm">Server Version</p>
@@ -445,15 +462,24 @@ const CreateSettings = () => {
                     works with any valid token, but a few actions — notably installing a missing
                     pipeline from the Select Pipelines step — require an <strong>admin</strong>-scoped
                     token, and will show "Administrator privileges are required" if yours doesn't
-                    have it.
+                    have it. The <strong>Admin Access</strong> field in the Connection tab above
+                    shows whether your current token has it.
                   </p>
                   <p className="text-sm text-muted-foreground mt-2">
                     Running your own single-user server? The token VideoAnnotator generates the
                     first time the server starts (or via{' '}
                     <code className="bg-muted px-1 rounded">videoannotator setup-db</code>) is
                     normally admin-scoped already, so most solo setups already have everything
-                    they need — no extra step required. If you're on a shared/multi-user server,
-                    ask whoever manages it for a token with admin scope.
+                    they need — no extra step required.
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    If Admin Access shows "Not admin," grant it on the machine hosting your
+                    server:{' '}
+                    <code className="bg-muted px-1 rounded">
+                      uv run videoannotator generate-token --user you@example.com --admin
+                    </code>
+                    . This is a server-operator action the viewer can't trigger remotely — on a
+                    shared/multi-user server, ask whoever manages it to run this for you.
                   </p>
                 </div>
 

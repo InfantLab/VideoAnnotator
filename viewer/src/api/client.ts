@@ -13,6 +13,7 @@ import type {
   ExtrasInstallTriggerResponse
 } from '@/types/pipelines';
 import type { SystemHealthResponse } from '@/types/system';
+import type { CurrentUser } from '@/types/api';
 import { APIError } from './handleError';
 
 // API configuration with localStorage fallback
@@ -559,6 +560,29 @@ class APIClient {
       console.warn('Unexpected pipeline response format:', response);
       return { pipelines: [], restartRequired: false };
     }
+  }
+
+  /**
+   * The authenticated caller's own identity, including admin scope.
+   * GET /api/v1/auth/me - any authenticated caller can read this about
+   * themselves (401 unauthenticated, never 403) - it's how the viewer knows
+   * in advance whether an admin-gated action will succeed, instead of only
+   * finding out via a bare 403. Absent on pre-v1.5.1 servers (404).
+   */
+  async getCurrentUser(): Promise<CurrentUser> {
+    const response = await this.request<{
+      id: string | number;
+      username: string;
+      email: string;
+      is_admin: boolean;
+    }>('/api/v1/auth/me');
+
+    return {
+      id: response.id,
+      username: response.username,
+      email: response.email,
+      isAdmin: response.is_admin === true
+    };
   }
 
   /**

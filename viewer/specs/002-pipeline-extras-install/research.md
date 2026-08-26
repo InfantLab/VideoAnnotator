@@ -52,6 +52,19 @@ No open `NEEDS CLARIFICATION` markers remained after specification (see spec.md 
 - Hide the Install button entirely for non-admins by inferring admin status from `permissions` — rejected: that field is never populated in the current codebase, so building UI logic on it would be speculative and untestable.
 - Add a new "am I admin" probe (e.g. calling the install endpoint with a dry-run) — rejected: not part of the documented contract; inventing a probe endpoint violates Constitution Principle II (pin to documented endpoints only).
 
+**Status: superseded (2026-08-26 addendum)** — see the next decision. Kept for history; the reasoning above ("no reliable pre-check available") was correct *at the time* and remains the fallback path today for servers that don't support the new endpoint.
+
+## Decision (Addendum): Use `GET /api/v1/auth/me` as the primary admin signal; keep attempt-then-403 as the fallback
+
+**Decision**: Add `apiClient.getCurrentUser()` and a `useCurrentUser()` hook wrapping `GET /api/v1/auth/me`. Gate the Install action on its `isAdmin` result (`true` → enabled, `false` → disabled with an inline explanation and the `generate-token --admin` remediation command, `'unknown'` → fall back to the pre-addendum attempt-then-403 behavior). Also surface `isAdmin`/identity in Settings (both the Connection tab's status grid and `TokenSetup`'s validation result) so a user can check their own status without touching a locked pipeline at all.
+
+**Rationale**: A manual walkthrough of the initial (pre-addendum) implementation found the exact "no reliable pre-check" gap called out in the superseded decision above was a real, reported problem: users hit a bare `403` with no explanation and no way to check their status in advance. The backend team's fix was precisely a pre-check endpoint — `GET /api/v1/auth/me`, explicitly designed to never itself return `403` (any authenticated caller can read their own identity), which is what makes it safe to gate UI on. Root cause on the backend side (per the addendum) was that `generate-token` had no admin concept at all, so this also closes a real correctness gap, not just a messaging one.
+
+**Alternatives considered**:
+- Keep attempt-then-403 only, improve just the copy — this is what the first response to the reported gap did (see CHANGELOG "explain admin-token requirement" entry), and it helped, but it's strictly worse than knowing in advance: a user still has to click a button that's guaranteed to fail to find out, and the copy has to hedge ("usually admin already") instead of stating their actual status.
+- Treat any non-`true` result (including `'unknown'`) as `false` (i.e. always disable when not positively confirmed admin) — rejected: would regress servers that predate this endpoint from "can attempt install, may hit 403" to "can never install," breaking the graceful-degradation requirement (Constitution Principle II) for no benefit, since attempt-then-403 already handles that case correctly.
+- Cache `isAdmin` indefinitely / no re-fetch — rejected: admin grants happen out-of-band (a server operator runs `generate-token --admin`) and the user may re-check without reloading the whole app; a 5-minute `staleTime` (matching the pattern used elsewhere, e.g. `usePipelineCatalog`) balances freshness against not hammering the endpoint.
+
 ## Follow-up (non-blocking)
 
 - Regenerate `src/api/schema.d.ts` from a live VideoAnnotator v1.5.0 server's OpenAPI spec once available, and migrate the hand-written types in `src/types/pipelines.ts` back onto generated `paths[...]` types where they now duplicate them. Tracked as a follow-up, not part of this feature's acceptance criteria.

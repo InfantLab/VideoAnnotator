@@ -54,6 +54,24 @@ export interface ServerCapabilities {
 }
 
 // =============================================================================
+// CURRENT USER / AUTH (v1.5.1 - GET /api/v1/auth/me)
+// =============================================================================
+
+/**
+ * The authenticated caller's own identity, including whether their token has
+ * admin scope. Any authenticated caller can read this about themselves (never
+ * a 403) - it's how the viewer knows in advance whether an admin-gated action
+ * (like a pipeline extras install) will succeed, instead of finding out via a
+ * bare 403 with no explanation. See specs/002-pipeline-extras-install.
+ */
+export interface CurrentUser {
+  id: string | number;
+  username: string;
+  email: string;
+  isAdmin: boolean;
+}
+
+// =============================================================================
 // JOB CANCELLATION (v1.3.0)
 // =============================================================================
 
@@ -248,6 +266,7 @@ export const QueryKeys = {
   job: (jobId: string) => ['jobs', jobId] as const,
   configValidation: (configHash: string) => ['config', 'validation', configHash] as const,
   pipelines: ['pipelines'] as const,
+  currentUser: ['auth', 'me'] as const,
 } as const;
 
 // =============================================================================

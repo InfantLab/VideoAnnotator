@@ -1,8 +1,8 @@
 # Contract: Viewer ↔ VideoAnnotator Extras-Install Endpoints
 
-This documents the viewer's consumption contract for the three server endpoints this feature depends on. It is derived from the VideoAnnotator core team's handoff brief (spec 005-pipeline-extras-install, backend v1.5.0); the authoritative backend contracts (`contracts/extras-install-endpoints.md`, `contracts/restart-required-signal.md`) live in the VideoAnnotator repo and are not duplicated here beyond what the viewer needs to code against. If the two ever disagree, the VideoAnnotator repo's contracts win — this file should be updated to match, not the other way around.
+This documents the viewer's consumption contract for the four server endpoints this feature depends on (three from the original handoff, plus `GET /api/v1/auth/me` added by the 2026-08-26 addendum). It is derived from the VideoAnnotator core team's handoff brief (spec 005-pipeline-extras-install, backend v1.5.0/v1.5.1); the authoritative backend contracts (`contracts/extras-install-endpoints.md`, `contracts/restart-required-signal.md`) live in the VideoAnnotator repo and are not duplicated here beyond what the viewer needs to code against. If the two ever disagree, the VideoAnnotator repo's contracts win — this file should be updated to match, not the other way around.
 
-The viewer treats all three endpoints as **optional capabilities**: a pre-v1.5.0 server that 404s any of them, or returns responses without the new fields, must not break existing pipeline-selection/job-creation behavior (Constitution Principle II).
+The viewer treats all four endpoints as **optional capabilities**: a pre-v1.5.0 (or, for `/auth/me`, pre-v1.5.1) server that 404s any of them, or returns responses without the new fields, must not break existing pipeline-selection/job-creation behavior (Constitution Principle II).
 
 ## 1. `GET /api/v1/pipelines?include_unavailable=true`
 
@@ -77,3 +77,18 @@ The viewer treats all three endpoints as **optional capabilities**: a pre-v1.5.0
 - On `failed`: render `commandOutput` in a truncated/expandable block (reusing the existing `<details>`/expandable pattern already used for the raw-JSON config editor in `NewJob.tsx`).
 - On `completed` with `restartRequired: true`: render the restart-required banner; do not remove the `localStorage` entry until the user has seen this state (see data-model.md lifecycle) and, separately, don't clear it just because a *later* catalog refresh shows `available: true` for a *different* pipeline in the same group — only clear once the pipeline this job unlocks is itself observed `available: true`, or the user explicitly dismisses it.
 - Not found (404, e.g. server restarted and lost in-memory job state, or an invalid stale `localStorage` entry): treated as terminal-failed for local UI purposes (stop polling, drop the `localStorage` entry, allow re-triggering install) rather than retried indefinitely.
+
+## 4. `GET /api/v1/auth/me` *(Addendum)*
+
+**Client method**: `apiClient.getCurrentUser()` via `useCurrentUser()`
+
+**Request**: No body. Requires the current session's Authorization header.
+
+**Responses**:
+| Status | Body | Viewer behavior |
+|---|---|---|
+| `200` | `{ id, username, email, is_admin }` | Mapped to `CurrentUser` (`isAdmin` from `is_admin`), cached 5 min via React Query. Drives the Install button's enabled/disabled state and the Settings "Admin Access" field. |
+| `401` | error body | Unauthenticated — `isAdmin` resolves to `'unknown'`, not `false`; the caller shouldn't have offered an admin-gated action to an unauthenticated session in the first place (the pre-existing token-configured gate handles that). |
+| `404` | — | Server predates this endpoint. `isAdmin` resolves to `'unknown'` and `endpointUnsupported: true` is set; the UI falls back to the pre-addendum attempt-then-403 behavior for the install action itself, per FR-012's fallback requirement. |
+
+**Key property this contract relies on**: per the backend brief, this endpoint is *never* `403` for any authenticated caller — it's how the viewer finds out whether it *would* get a `403` elsewhere, so it can't itself be admin-gated. If a future server version ever returned `403` here, the viewer would (incorrectly) treat it the same as any other error → `isAdmin: 'unknown'`, falling back to reactive detection rather than crashing — a safe degradation, but worth knowing this contract's guarantee is what makes the proactive UI possible at all.

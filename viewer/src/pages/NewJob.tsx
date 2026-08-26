@@ -36,6 +36,7 @@ import type { PipelineDescriptor } from "@/types/pipelines";
 import { useConfigValidation } from "@/hooks/useConfigValidation";
 import { ConfigValidationPanel } from "@/components/ConfigValidationPanel";
 import { useExtrasInstall } from "@/hooks/useExtrasInstall";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { extraNameFromInstallHint } from "@/lib/pipelineExtras";
 import { hasConfiguredApiToken } from "@/api/client";
 import { APIError } from "@/api/handleError";
@@ -616,6 +617,7 @@ export const PipelineSelectionStep = ({
   };
 
   const canInstallExtras = hasConfiguredApiToken();
+  const { isAdmin } = useCurrentUser();
   const { jobsByExtra, install, isInstalling, installError, installErrorExtraName } =
     useExtrasInstall(pipelines);
 
@@ -679,13 +681,30 @@ export const PipelineSelectionStep = ({
 
       {pipelines.some((pipeline) => pipeline.available === false) && (
         <p className="text-xs text-muted-foreground">
-          Pipelines marked "Not installed" below can be installed from here, but only with an{" "}
-          <strong>admin-scoped</strong> API token. If you're running your own single-user server,
-          your token is usually admin already — see the "Getting Help" tab on the{" "}
-          <Link to="/settings" className="underline">
-            Settings
-          </Link>{" "}
-          page for details.
+          {isAdmin === true && (
+            <>Pipelines marked "Not installed" below can be installed from here — your API key has admin access.</>
+          )}
+          {isAdmin === false && (
+            <>
+              Pipelines marked "Not installed" below require an <strong>admin-scoped</strong> API
+              key to install, which yours doesn't have. See the "Getting Help" tab on the{" "}
+              <Link to="/settings" className="underline">
+                Settings
+              </Link>{" "}
+              page for how to get one.
+            </>
+          )}
+          {isAdmin === 'unknown' && (
+            <>
+              Pipelines marked "Not installed" below can be installed from here, but only with an{" "}
+              <strong>admin-scoped</strong> API key. If you're running your own single-user
+              server, your token is usually admin already — see the "Getting Help" tab on the{" "}
+              <Link to="/settings" className="underline">
+                Settings
+              </Link>{" "}
+              page for details.
+            </>
+          )}
         </p>
       )}
 
@@ -718,6 +737,7 @@ export const PipelineSelectionStep = ({
                           job={job}
                           isTriggering={triggering}
                           triggerError={triggerError}
+                          adminStatus={isAdmin}
                           onInstall={() => {
                             // Errors are surfaced via `installError`/`installErrorExtraName`
                             // state (rendered above) - swallow the rejection here so it

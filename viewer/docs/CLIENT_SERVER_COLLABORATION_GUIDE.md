@@ -10,7 +10,38 @@ This guide provides client-side developers with tools and protocols for effectiv
 
 **Target Server**: VideoAnnotator v1.2.x / v1.3.x / v1.4.x / v1.5.x API Server  
 **Client Application**: Video Annotation Viewer (React + TypeScript)  
-**Latest Supported Version**: v1.5.0
+**Latest Supported Version**: v1.5.1
+
+---
+
+## 🆕 VideoAnnotator v1.5.1 — Admin Status Detection (Addendum)
+
+A manual walkthrough of the v1.5.0 extras-install UI (above) found a real procedural gap: a
+`403` from the install action told the user nothing about *why*, and the viewer had no way to
+check its own admin status in advance. Root cause was partly backend (`generate-token` had no
+admin concept at all, so re-issuing a key could silently produce a non-admin identity) and
+partly frontend (no visibility into the result). v1.5.1 adds:
+
+```http
+GET /api/v1/auth/me
+Authorization: Bearer {token}
+```
+`200 { id, username, email, is_admin }` for any authenticated caller - **never `403`**, since
+this is how a client finds out in advance whether it *would* get a `403` elsewhere. `401`
+unauthenticated. Absent (`404`) on servers that predate v1.5.1.
+
+**Client implementation**: `apiClient.getCurrentUser()` / `useCurrentUser()`
+(`src/hooks/useCurrentUser.ts`) - a tri-state `isAdmin: boolean | 'unknown'` (`'unknown'` covers
+no token configured, request in flight, or a 404-unsupported endpoint, uniformly). The Install
+action in `LockedPipelineCard`/`ExtrasInstallStatus` is now disabled with an inline explanation
+(and the exact `uv run videoannotator generate-token --admin` remediation command) when
+`isAdmin === false`; `true` or `'unknown'` falls back to the original enabled-button /
+attempt-then-403 behavior, so a pre-v1.5.1 server degrades gracefully rather than losing the
+install action entirely. Admin status is also now shown in Settings (Connection tab) and
+`TokenSetup`, replacing a `permissions` field that was always empty in practice.
+
+See `specs/002-pipeline-extras-install/spec.md`'s Addendum section, and
+`contracts/extras-install-viewer-contract.md` §4, for the full design.
 
 ---
 

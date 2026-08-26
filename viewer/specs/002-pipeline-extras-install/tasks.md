@@ -119,6 +119,23 @@ Single project (existing Vite/React SPA). All paths under `src/`, tests under `s
 
 ---
 
+## Phase 7: Addendum — Admin Status Detection (`GET /api/v1/auth/me`)
+
+**Purpose**: Close the reported UX gap where a `403` on the install action gave no explanation and the viewer had no way to check its own admin status in advance (FR-012, spec.md Addendum). Triggered by a manual walkthrough finding this gap, followed by the backend team shipping a fix (`GET /api/v1/auth/me`).
+
+- [X] T025 [P] Add `CurrentUser` type (`src/types/api.ts`) and `apiClient.getCurrentUser()` (`src/api/client.ts`), mapping `is_admin` → `isAdmin`.
+- [X] T026 [P] Unit tests for `getCurrentUser` (200/401/404) in `src/test/api/client.extras-install.test.ts`. Depends on: T025.
+- [X] T027 Create `useCurrentUser()` hook (`src/hooks/useCurrentUser.ts`): tri-state `isAdmin: boolean | 'unknown'` (`'unknown'` covers no-token / loading / 404-unsupported-endpoint uniformly), 5-minute `staleTime`, `endpointUnsupported` flag. Depends on: T025.
+- [X] T028 [P] Unit tests for `useCurrentUser` (admin/non-admin/no-token/404/401 cases) in `src/test/hooks/useCurrentUser.test.tsx`. Depends on: T027.
+- [X] T029 Gate the Install action on `isAdmin` in `ExtrasInstallStatus`/`LockedPipelineCard` (`src/components/LockedPipelineCard.tsx`): `false` → disabled button + inline explanation + `generate-token --admin` remediation command; `true`/`'unknown'` → existing enabled-button/attempt-then-403 behavior unchanged. Wire `useCurrentUser()` into `PipelineSelectionStep` (`src/pages/NewJob.tsx`) and make the proactive locked-pipelines hint dynamic on admin status. Depends on: T027.
+- [X] T030 Show real admin status (replacing the previously-dead `permissions` display) in `TokenSetup.tsx`, and add an "Admin Access" field to the Connection tab in `Settings.tsx`; update the Getting Help copy with the exact `generate-token --admin` command. Depends on: T027.
+- [X] T031 [P] Integration tests: Install disabled + explained when `isAdmin: false`; Install still offered (fallback) when `isAdmin: 'unknown'` (404); proactive hint text reflects each state, in `src/test/integration/extras-install.test.tsx`. Depends on: T029.
+- [X] T032 [P] Update spec.md (Addendum + FR-012 + SC-006), research.md (superseded-decision note + new decision), data-model.md (`CurrentUser` entity, corrected `localStorage` shape), and the endpoint contract (`contracts/extras-install-viewer-contract.md` §4) to reflect this addendum.
+
+**Checkpoint**: A user whose token lacks admin access can tell why, and what to do about it, without clicking a doomed-to-fail button first (SC-006). A server that predates this endpoint degrades to the original attempt-then-403 behavior, unchanged.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
