@@ -12,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ..storage.base import StorageBackend
+from .job_execution import run_job_pipelines
 from .progress_tracker import ProgressTracker
 from .recovery import FailureRecovery, RetryStrategy
 from .types import (
@@ -20,7 +21,6 @@ from .types import (
     BatchStatus,
     ConfigDict,
     JobStatus,
-    PipelineResult,
     VideoPath,
 )
 
@@ -439,7 +439,17 @@ class BatchOrchestrator:
         return job.retry_count < max_retries
 
     def _process_job_with_retry(self, job: BatchJob) -> BatchJob:
-        """Process a single job with retry logic.
+        """Process a single job, automatically retrying a transient failure
+        with backoff (distinct from spec 006's user-triggered retry of an
+        already-terminal job — this is in-flight, same orchestrator run).
+
+        `_process_single_job` (via the shared `run_job_pipelines` path)
+        never raises — it always returns a job with a settled status — so
+        retry-worthiness is decided from `job.status`/`job.error_message`,
+        not a caught exception. `should_retry`/`prepare_retry` only inspect
+        the error's string content, not its type, so synthesizing an
+        exception from the stored message here is behaviourally identical
+        to the original exception-based flow.
 
         Args:
             job: Job to process
@@ -450,34 +460,38 @@ class BatchOrchestrator:
         max_attempts = self.failure_recovery.max_retries + 1
 
         for attempt in range(max_attempts):
-            try:
-                return self._process_single_job(job)
-            except Exception as e:
-                self.logger.error(
-                    f"Job {job.job_id} failed (attempt {attempt + 1}/{max_attempts}): {e}"
-                )
-                # Check if we should retry
-                if attempt < max_attempts - 1 and self.failure_recovery.should_retry(
-                    job, e
-                ):
-                    # Prepare for retry
-                    job = self.failure_recovery.prepare_retry(job, e)
-                    # Wait before retry
-                    delay = self.failure_recovery.calculate_retry_delay(job)
-                    if delay > 0:
-                        self.logger.info(
-                            f"Waiting {delay:.1f}s before retrying job {job.job_id}"
-                        )
-                        time.sleep(delay)
-                else:
-                    # Final failure
-                    job.status = JobStatus.FAILED
-                    job.error_message = str(e)
-                    break
+            job = self._process_single_job(job)
+            if job.status != JobStatus.FAILED:
+                return job
+
+            error = RuntimeError(job.error_message or "Job processing failed")
+            self.logger.error(
+                f"Job {job.job_id} failed (attempt {attempt + 1}/{max_attempts}): {error}"
+            )
+            if attempt < max_attempts - 1 and self.failure_recovery.should_retry(
+                job, error
+            ):
+                job = self.failure_recovery.prepare_retry(job, error)
+                delay = self.failure_recovery.calculate_retry_delay(job)
+                if delay > 0:
+                    self.logger.info(
+                        f"Waiting {delay:.1f}s before retrying job {job.job_id}"
+                    )
+                    time.sleep(delay)
+            else:
+                break
         return job
 
     def _process_single_job(self, job: BatchJob) -> BatchJob:
         """Process a single job through selected pipelines.
+
+        Delegates to the shared `run_job_pipelines` execution path (spec
+        006) — the same one `api/job_processor.py` uses. `should_stop` is a
+        batch-wide graceful-shutdown flag scoped to this orchestrator
+        instance (distinct from per-job cancellation, which the shared path
+        checks by re-reading the job's own persisted status); checked once
+        here since a stopped batch shouldn't start a new job's pipelines at
+        all.
 
         Args:
             job: Job to process
@@ -485,124 +499,12 @@ class BatchOrchestrator:
         Returns:
             Updated job with results
         """
+        if self.should_stop:
+            job.status = JobStatus.CANCELLED
+            return job
+
         self.logger.info(f"Processing job {job.job_id}: {job.video_path}")
-
-        # v1.3.0: Use storage_path if output_dir is not set
-        if job.output_dir is None and job.storage_path:
-            job.output_dir = job.storage_path
-
-        # Ensure output directory exists
-        if job.output_dir:
-            job.output_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            self.logger.warning(f"Job {job.job_id} has no output_dir or storage_path")
-
-        # Save job metadata
-        self.storage_backend.save_job_metadata(job)
-
-        # Determine pipelines to run
-        if job.selected_pipelines:
-            # If the job explicitly requested pipelines, filter out unavailable ones
-            requested = job.selected_pipelines
-            available = list(self.pipeline_classes.keys())
-            missing = [p for p in requested if p not in available]
-            if missing:
-                self.logger.warning(
-                    f"Requested pipelines missing or unavailable: {missing}. Proceeding with available pipelines."
-                )
-            pipelines_to_run = [p for p in requested if p in available]
-            if not pipelines_to_run:
-                # No requested pipelines are available — fail fast with helpful message
-                raise ValueError(f"No requested pipelines are available: {requested}")
-        else:
-            pipelines_to_run = list(self.pipeline_classes.keys())
-
-        # Ensure pipeline_results dict exists
-        if job.pipeline_results is None:
-            job.pipeline_results = {}
-
-        # Process each pipeline
-        for pipeline_name in pipelines_to_run:
-            if self.should_stop:
-                job.status = JobStatus.CANCELLED
-                return job
-
-            try:
-                # Skip if already processed (resume case)
-                if self.storage_backend.annotation_exists(job.job_id, pipeline_name):
-                    self.logger.info(
-                        f"Skipping {pipeline_name} for job {job.job_id} (already exists)"
-                    )
-                    continue
-
-                # Initialize and run pipeline
-                if pipeline_name not in self.pipeline_classes:
-                    raise ValueError(
-                        f"Unknown pipeline: {pipeline_name}. Available: {list(self.pipeline_classes.keys())}"
-                    )
-
-                pipeline_class = self.pipeline_classes[pipeline_name]
-                pipeline_config = job.config.get(pipeline_name, {})
-                pipeline = pipeline_class(pipeline_config)
-
-                self.logger.info(f"Running {pipeline_name} for job {job.job_id}")
-                start_time = datetime.now()
-
-                # Run pipeline
-                annotations = pipeline.process(
-                    video_path=str(job.video_path), output_dir=str(job.output_dir)
-                )
-
-                end_time = datetime.now()
-                processing_time = (end_time - start_time).total_seconds()
-
-                # Save annotations
-                output_file = self.storage_backend.save_annotations(
-                    job.job_id, pipeline_name, annotations
-                )
-
-                # Record success
-                job.pipeline_results[pipeline_name] = PipelineResult(
-                    pipeline_name=pipeline_name,
-                    status=JobStatus.COMPLETED,
-                    start_time=start_time,
-                    end_time=end_time,
-                    processing_time=processing_time,
-                    annotation_count=len(annotations),
-                    output_file=Path(output_file),
-                )
-
-                self.logger.info(
-                    f"Completed {pipeline_name} for job {job.job_id} "
-                    f"in {processing_time:.2f}s ({len(annotations)} annotations)"
-                )
-
-            except Exception as e:
-                # Handle partial failure
-                if self.failure_recovery.handle_partial_failure(job, pipeline_name, e):
-                    # Continue with other pipelines
-                    continue
-                else:
-                    # Fail entire job
-                    raise e
-
-        # Update job status
-        failed_pipelines = [
-            result.pipeline_name
-            for _name, result in job.pipeline_results.items()
-            if result.status == JobStatus.FAILED
-        ]
-
-        if failed_pipelines and len(failed_pipelines) == len(pipelines_to_run):
-            job.status = JobStatus.FAILED
-            job.error_message = f"All pipelines failed: {', '.join(failed_pipelines)}"
-        else:
-            job.status = JobStatus.COMPLETED
-
-        # Save final job metadata
-        self.storage_backend.save_job_metadata(job)
-
-        return job
+        return run_job_pipelines(job, self.storage_backend, self.pipeline_classes)
 
     def _save_checkpoint(self) -> None:
         """Save current batch state as checkpoint."""

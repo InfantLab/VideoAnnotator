@@ -242,6 +242,24 @@ class JobAlreadyCompletedException(VideoAnnotatorException):
         self.status_code = 409
 
 
+class JobNotRetryableException(VideoAnnotatorException):
+    """Exception raised when trying to retry a job that isn't in a
+    failed/cancelled terminal state (spec 006 FR-005), or whose original
+    video file is no longer in storage (spec 006 FR-006)."""
+
+    def __init__(self, job_id: str, reason: str, status: str | None = None):
+        detail: dict[str, str] = {"job_id": job_id}
+        if status is not None:
+            detail["status"] = status
+        super().__init__(
+            message=f"Cannot retry job {job_id}: {reason}",
+            code="JOB_NOT_RETRYABLE",
+            hint=reason,
+            detail=detail,
+        )
+        self.status_code = 409
+
+
 # 507 Insufficient Storage Exceptions
 
 

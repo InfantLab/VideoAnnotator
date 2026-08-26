@@ -1,16 +1,23 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from videoannotator.api.job_processor import JobProcessor
-from videoannotator.batch.types import BatchJob, JobStatus, PipelineResult
+from videoannotator.batch.types import BatchJob, JobStatus
+from videoannotator.storage.base import StorageBackend
 
 
 class TestJobProcessorPartialFailure(unittest.TestCase):
+    """Exercises partial/total pipeline-failure aggregation end-to-end
+    through the real shared execution path (batch.job_execution), rather
+    than mocking an internal method — that internal seam (JobProcessor.
+    _process_pipeline) no longer exists post-006-consolidation; both
+    api/job_processor.py and batch/batch_orchestrator.py now delegate to
+    the same batch.job_execution.run_job_pipelines()."""
+
     def setUp(self):
         self.processor = JobProcessor()
-        # Mock pipeline classes
         self.processor.pipeline_classes = {
             "pipeline1": MagicMock(),
             "pipeline2": MagicMock(),
@@ -27,6 +34,14 @@ class TestJobProcessorPartialFailure(unittest.TestCase):
         self.video_path = Path(self._video_file.name)
         self.output_dir = Path(self._temp_dir.name) / "output"
 
+        # Minimal fake storage: no annotations pre-exist, saves are no-ops,
+        # and re-reading the job for the cancellation checkpoint just
+        # returns whatever the in-memory job currently looks like (never
+        # cancelled in these tests).
+        self.storage = MagicMock(spec=StorageBackend)
+        self.storage.annotation_exists.return_value = False
+        self.storage.save_annotations.return_value = "fake://annotations"
+
     def tearDown(self):
         try:
             self.video_path.unlink(missing_ok=True)
@@ -37,65 +52,50 @@ class TestJobProcessorPartialFailure(unittest.TestCase):
         except Exception:
             pass
 
-    def test_partial_failure(self):
+    def _make_job(self) -> BatchJob:
         job = BatchJob(
             job_id="test_job",
             video_path=self.video_path,
             output_dir=self.output_dir,
             selected_pipelines=["pipeline1", "pipeline2"],
         )
+        # The execution path re-reads job status via storage.load_job_metadata
+        # to check for cancellation between pipelines; return the same job.
+        self.storage.load_job_metadata.side_effect = lambda job_id: job
+        return job
 
-        # Mock _process_pipeline to succeed for pipeline1 and fail for pipeline2
-        def side_effect(job, pipeline_name):
-            if pipeline_name == "pipeline1":
-                return True
-            else:
-                # Simulate failure behavior of _process_pipeline
-                # It creates a PipelineResult with FAILED status
-                if not hasattr(job, "pipeline_results"):
-                    job.pipeline_results = {}
-                job.pipeline_results[pipeline_name] = PipelineResult(
-                    pipeline_name=pipeline_name,
-                    status=JobStatus.FAILED,
-                    error_message="Simulated failure",
-                )
-                return False
+    def test_partial_failure(self):
+        job = self._make_job()
 
-        with patch.object(self.processor, "_process_pipeline", side_effect=side_effect):
-            success = self.processor.process_job(job)
+        self.processor.pipeline_classes[
+            "pipeline1"
+        ].return_value.process.return_value = [{"annotation": "ok"}]
+        self.processor.pipeline_classes[
+            "pipeline2"
+        ].return_value.process.side_effect = RuntimeError("Simulated failure")
 
-        self.assertTrue(
-            success, "Job should be considered successful (partial success)"
+        result = self.processor.process_job(job, self.storage)
+
+        self.assertEqual(result.status, JobStatus.COMPLETED)
+        self.assertIn("Completed with errors", result.error_message)
+        self.assertIn("pipeline2", result.error_message)
+        self.assertEqual(
+            result.pipeline_results["pipeline1"].status, JobStatus.COMPLETED
         )
-        self.assertIn("Completed with errors", job.error_message)
-        self.assertIn("pipeline2", job.error_message)
+        self.assertEqual(result.pipeline_results["pipeline2"].status, JobStatus.FAILED)
 
     def test_all_failure(self):
-        job = BatchJob(
-            job_id="test_job",
-            video_path=self.video_path,
-            output_dir=self.output_dir,
-            selected_pipelines=["pipeline1", "pipeline2"],
-        )
+        job = self._make_job()
 
-        # Mock _process_pipeline to fail for all
-        def side_effect(job, pipeline_name):
-            if not hasattr(job, "pipeline_results"):
-                job.pipeline_results = {}
-            job.pipeline_results[pipeline_name] = PipelineResult(
-                pipeline_name=pipeline_name,
-                status=JobStatus.FAILED,
-                error_message="Simulated failure",
-            )
-            return False
+        for name in ("pipeline1", "pipeline2"):
+            self.processor.pipeline_classes[
+                name
+            ].return_value.process.side_effect = RuntimeError("Simulated failure")
 
-        with patch.object(self.processor, "_process_pipeline", side_effect=side_effect):
-            success = self.processor.process_job(job)
+        result = self.processor.process_job(job, self.storage)
 
-        self.assertFalse(
-            success, "Job should be considered failed if all pipelines fail"
-        )
-        self.assertIn("All pipelines failed", job.error_message)
+        self.assertEqual(result.status, JobStatus.FAILED)
+        self.assertIn("All pipelines failed", result.error_message)
 
 
 if __name__ == "__main__":

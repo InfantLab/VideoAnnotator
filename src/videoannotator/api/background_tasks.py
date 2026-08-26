@@ -74,11 +74,43 @@ class BackgroundJobManager:
         if not self._storage_backend_provided:
             self.storage = get_storage_backend()
 
+        self._resolve_orphaned_running_jobs()
+
         self.running = True
         self.background_task = asyncio.create_task(self._job_processing_loop())
         logger.info(
             f"[START] Background job processing started (poll: {self.poll_interval}s, max concurrent: {self.max_concurrent_jobs})"
         )
+
+    def _resolve_orphaned_running_jobs(self) -> None:
+        """FR-008: a job left RUNNING when the server process previously
+        stopped (crash, kill, deliberate restart) has no process still
+        advancing it — nothing will ever move it out of RUNNING on its own.
+        Resolve any such jobs to FAILED on startup so they're discoverable
+        rather than reported as running forever."""
+        try:
+            orphaned_ids = self.storage.list_jobs(status_filter="running")
+        except Exception as e:
+            logger.warning(f"Could not check for orphaned running jobs: {e}")
+            return
+
+        for job_id in orphaned_ids:
+            try:
+                job = self.storage.load_job_metadata(job_id)
+                if job is None:
+                    continue
+                job.status = JobStatus.FAILED
+                job.error_message = (
+                    "Job was still running when the server process stopped "
+                    "(crash or restart); marked failed on next startup."
+                )
+                job.completed_at = datetime.fromtimestamp(time.time())
+                self.storage.save_job_metadata(job)
+                logger.warning(
+                    f"[STARTUP] Resolved orphaned running job {job_id} to failed"
+                )
+            except Exception as e:
+                logger.error(f"Failed to resolve orphaned job {job_id}: {e}")
 
     async def stop(self) -> None:
         """Stop the background job processing gracefully."""
@@ -186,37 +218,33 @@ class BackgroundJobManager:
             logger.error(f"Error in processing cycle: {e}", exc_info=True)
 
     async def _process_job_async(self, job):
-        """Process a single job asynchronously."""
+        """Process a single job asynchronously.
+
+        `_run_single_job_processing` (via the shared `run_job_pipelines`
+        execution path, spec 006) already settles and persists the job's
+        final status — COMPLETED/FAILED/CANCELLED — before returning, so
+        this only logs based on that outcome rather than re-deciding or
+        re-saving it. Overwriting it here would risk clobbering a CANCELLED
+        result with COMPLETED if a `/cancel` request landed while this job
+        was mid-run.
+        """
         job_id = job.job_id
 
         try:
-            # Update job status to running
-            job.status = JobStatus.RUNNING
-            job.started_at = datetime.fromtimestamp(time.time())
-            self.storage.save_job_metadata(job)
-
             logger.info(f"[PROCESS] Starting job {job_id}")
 
-            # Process the job using BatchOrchestrator in thread pool
+            # Process the job using the shared execution path in a thread pool
             loop = asyncio.get_event_loop()
-            success = await loop.run_in_executor(
-                None, self._run_single_job_processing, job
-            )
+            job = await loop.run_in_executor(None, self._run_single_job_processing, job)
 
-            if success:
-                job.status = JobStatus.COMPLETED
-                job.completed_at = datetime.fromtimestamp(time.time())
+            if job.status == JobStatus.COMPLETED:
                 logger.info(f"[SUCCESS] Completed job {job_id}")
+            elif job.status == JobStatus.CANCELLED:
+                logger.info(f"[CANCELLED] Job {job_id} cancelled during processing")
             else:
-                job.status = JobStatus.FAILED
-                job.error_message = (
-                    job.error_message or "Processing failed - check logs"
+                logger.error(
+                    f"[FAILED] Job {job_id} processing failed: {job.error_message}"
                 )
-                job.completed_at = datetime.fromtimestamp(time.time())
-                logger.error(f"[FAILED] Job {job_id} processing failed")
-
-            # Save final status
-            self.storage.save_job_metadata(job)
 
         except Exception as e:
             # Handle job failure
@@ -235,10 +263,11 @@ class BackgroundJobManager:
             # Remove from processing set
             self.processing_jobs.discard(job_id)
 
-    def _run_single_job_processing(self, job: Any) -> bool:
+    def _run_single_job_processing(self, job: Any) -> Any:
         """Run the actual job processing using JobProcessor.
 
-        This is a synchronous method that runs in a thread executor.
+        This is a synchronous method that runs in a thread executor. Returns
+        the job with its final status already settled and persisted.
         """
         try:
             logger.info(f"Starting pipeline processing for job {job.job_id}")
@@ -251,23 +280,21 @@ class BackgroundJobManager:
                     self.job_processor = JobProcessor()
                 except Exception as e:
                     logger.error(f"Failed to initialize JobProcessor: {e}")
+                    job.status = JobStatus.FAILED
                     job.error_message = f"JobProcessor initialization failed: {e}"
-                    return False
+                    job.completed_at = datetime.fromtimestamp(time.time())
+                    self.storage.save_job_metadata(job)
+                    return job
 
-            # Use JobProcessor to process the single job
-            success = self.job_processor.process_job(job)
-
-            if success:
-                logger.info(f"Job {job.job_id} processed successfully")
-                return True
-            else:
-                logger.error(f"Job {job.job_id} failed: {job.error_message}")
-                return False
+            return self.job_processor.process_job(job, self.storage)
 
         except Exception as e:
             logger.error(f"Exception during job processing: {e}", exc_info=True)
+            job.status = JobStatus.FAILED
             job.error_message = str(e)
-            return False
+            job.completed_at = datetime.fromtimestamp(time.time())
+            self.storage.save_job_metadata(job)
+            return job
 
     def get_status(self) -> dict:
         """Get current status of the background job manager."""

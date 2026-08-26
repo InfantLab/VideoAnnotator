@@ -145,6 +145,7 @@ class SQLiteStorageBackend(StorageBackend):
             storage_path=str(batch_job.storage_path)
             if batch_job.storage_path
             else None,  # v1.3.0: Persistent job storage
+            progress_percentage=round(batch_job.progress_percentage),
         )
 
     def _db_job_to_batch_job(self, db_job: Job) -> "BatchJob":
@@ -167,6 +168,7 @@ class SQLiteStorageBackend(StorageBackend):
             storage_path=Path(db_job.storage_path)
             if db_job.storage_path
             else None,  # v1.3.0: Persistent job storage
+            progress_percentage=float(db_job.progress_percentage or 0),
         )
 
         # Load pipeline results
@@ -203,6 +205,7 @@ class SQLiteStorageBackend(StorageBackend):
                     existing.error_message = job.error_message
                     existing.selected_pipelines = job.selected_pipelines
                     existing.config = job.config
+                    existing.progress_percentage = round(job.progress_percentage)
                     # v1.3.0: Update storage_path if present
                     if job.storage_path:
                         existing.storage_path = str(job.storage_path)

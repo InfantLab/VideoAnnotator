@@ -57,6 +57,9 @@ class BatchJob:
     error_message: str | None = None
     selected_pipelines: list[str] | None = None
     storage_path: Path | None = None  # v1.3.0: Persistent job storage directory
+    progress_percentage: float = (
+        0.0  # 006: completed/total selected pipelines, not per-frame
+    )
 
     @property
     def video_id(self) -> str:
@@ -115,6 +118,7 @@ class BatchJob:
             "error_message": self.error_message,
             "selected_pipelines": self.selected_pipelines,
             "storage_path": str(self.storage_path) if self.storage_path else None,
+            "progress_percentage": self.progress_percentage,
         }
 
     @classmethod
@@ -160,6 +164,7 @@ class BatchJob:
             storage_path=Path(data["storage_path"])
             if data.get("storage_path")
             else None,
+            progress_percentage=data.get("progress_percentage", 0.0),
         )
 
 

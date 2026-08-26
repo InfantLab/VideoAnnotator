@@ -28,6 +28,7 @@ from .exceptions import (
     InvalidRequestException,
     JobAlreadyCompletedException,
     JobNotFoundException,
+    JobNotRetryableException,
     PipelineUnavailableException,
 )
 
@@ -969,6 +970,107 @@ async def cancel_job_endpoint(
             status_code=500,
             code="JOB_CANCEL_FAILED",
             message=f"Failed to cancel job: {e!s}",
+            hint="Check server logs for details",
+        ) from e
+
+
+@router.post(
+    "/{job_id}/retry",
+    response_model=JobResponse,
+    summary="Retry Job",
+    description="""
+Retry a job that is in a failed or cancelled terminal state (spec 006 FR-004).
+
+Reuses the job's originally stored video file and configuration — no re-upload needed.
+Resets the job to `pending`; the server's background job processor picks it up on its
+next poll cycle, same as a freshly submitted job.
+
+**Retry Behavior**:
+- `failed`/`cancelled` jobs: reset to `pending`, retry_count incremented, reprocessed
+- `pending`/`running` jobs: rejected (409) — not yet in a retryable terminal state
+- `completed` jobs: rejected (409) — nothing to retry
+- Job whose original video file no longer exists in storage: rejected (409)
+
+**curl Example**:
+```bash
+curl -X POST "http://localhost:18011/api/v1/jobs/abc123-def456/retry" \\
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+""",
+)
+async def retry_job_endpoint(
+    job_id: str,
+    storage: StorageBackend = Depends(get_storage),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> JobResponse:
+    """Retry a failed or cancelled job using its stored video and config."""
+    try:
+        try:
+            job_data = storage.load_job_metadata(job_id)
+            if not job_data:
+                raise FileNotFoundError()
+        except FileNotFoundError as e:
+            raise JobNotFoundException(
+                job_id=job_id,
+                hint="Check job ID or use GET /api/v1/jobs to list all jobs",
+            ) from e
+
+        if job_data.status not in (JobStatus.FAILED, JobStatus.CANCELLED):
+            raise JobNotRetryableException(
+                job_id=job_id,
+                reason=f"job is in '{job_data.status.value}' state, not a retryable "
+                "terminal state (failed/cancelled)",
+                status=job_data.status.value,
+            )
+
+        if job_data.video_path is None or not job_data.video_path.exists():
+            raise JobNotRetryableException(
+                job_id=job_id,
+                reason="the job's original video file is no longer available in storage",
+            )
+
+        logger.info(
+            f"[RETRY] Retrying job {job_id} (previous status: {job_data.status})"
+        )
+
+        job_data.status = JobStatus.PENDING
+        job_data.retry_count += 1
+        job_data.error_message = None
+        job_data.started_at = None
+        job_data.completed_at = None
+        job_data.progress_percentage = 0.0
+        job_data.pipeline_results = {}
+
+        storage.save_job_metadata(job_data)
+
+        video_filename, video_size_bytes, video_duration_seconds = (
+            extract_video_metadata(job_data.video_path)
+        )
+
+        return JobResponse(
+            id=str(job_id),
+            status=JobStatus.PENDING.value,
+            video_path=str(job_data.video_path) if job_data.video_path else None,
+            video_filename=video_filename,
+            video_size_bytes=video_size_bytes,
+            video_duration_seconds=video_duration_seconds,
+            config=job_data.config,
+            selected_pipelines=job_data.selected_pipelines,
+            created_at=job_data.created_at if job_data.created_at else None,
+            completed_at=None,
+            error_message=None,
+            result_path=None,
+            storage_path=str(job_data.storage_path) if job_data.storage_path else None,
+        )
+
+    except (JobNotFoundException, JobNotRetryableException, APIError):
+        raise
+    except Exception as e:
+        logger.error(f"[ERROR] Failed to retry job {job_id}: {e}", exc_info=True)
+        raise APIError(
+            status_code=500,
+            code="JOB_RETRY_FAILED",
+            message=f"Failed to retry job: {e!s}",
             hint="Check server logs for details",
         ) from e
 
