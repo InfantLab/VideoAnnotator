@@ -54,6 +54,10 @@ export interface PipelineDescriptor {
   defaultEnabled?: boolean;
   capabilities?: PipelineCapability[];
   parameters?: PipelineParameterSchema[]; // Optional inline schema
+  /** False when the pipeline's extras group isn't installed on the server. Absent (pre-v1.5.0 server) is treated as available. */
+  available?: boolean;
+  /** Human-readable install command (e.g. "pip install videoannotator[face]"), present only when available === false. */
+  installHint?: string;
 }
 
 export interface PipelineCatalog {
@@ -84,6 +88,8 @@ export interface VideoAnnotatorServerInfo {
 export interface PipelineCatalogResponse {
   catalog: PipelineCatalog;
   server: VideoAnnotatorServerInfo;
+  /** True when at least one extras group has finished installing but the server hasn't restarted to activate it yet. Absent (pre-v1.5.0 server) is treated as false. */
+  restartRequired: boolean;
 }
 
 export interface PipelineSchemaResponse {
@@ -94,6 +100,32 @@ export interface PipelineSchemaResponse {
 export interface PipelineCatalogCacheEntry {
   catalog: PipelineCatalog;
   server: VideoAnnotatorServerInfo;
+  restartRequired: boolean;
   fetchedAt: number;
+}
+
+/**
+ * Lifecycle status of a pipeline-extras install job.
+ * See specs/002-pipeline-extras-install/data-model.md#extrasinstalljob-new
+ */
+export type ExtrasInstallJobStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+/** Response from POST /api/v1/pipelines/extras/{extra}/install */
+export interface ExtrasInstallTriggerResponse {
+  jobId: string;
+  extraName: string;
+  status: ExtrasInstallJobStatus;
+}
+
+/** Response from GET /api/v1/pipelines/extras/install-jobs/{job_id} */
+export interface ExtrasInstallJob {
+  jobId: string;
+  extraName: string;
+  status: ExtrasInstallJobStatus;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  commandOutput: string | null;
+  restartRequired: boolean;
 }
 

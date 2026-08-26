@@ -18,7 +18,8 @@ export const pipelineCatalogQueryOptions = (
   options: { forceRefresh?: boolean } = {}
 ): UseQueryOptions<PipelineCatalogResponse> => ({
   queryKey: PIPELINE_CATALOG_QUERY_KEY,
-  queryFn: () => apiClient.getPipelineCatalog({ forceRefresh: options.forceRefresh }),
+  queryFn: () =>
+    apiClient.getPipelineCatalog({ forceRefresh: options.forceRefresh, includeUnavailable: true }),
   staleTime: DEFAULT_STALE_TIME
 });
 
@@ -67,7 +68,7 @@ export function useRefreshPipelineCatalog() {
       if (forceServerRefresh) {
         apiClient.clearPipelineCache();
         apiClient.clearServerInfoCache();
-        const freshCatalog = await apiClient.getPipelineCatalog({ forceRefresh: true });
+        const freshCatalog = await apiClient.getPipelineCatalog({ forceRefresh: true, includeUnavailable: true });
         await queryClient.setQueryData(PIPELINE_CATALOG_QUERY_KEY, freshCatalog);
         await queryClient.invalidateQueries({ queryKey: SERVER_INFO_QUERY_KEY });
         return freshCatalog;

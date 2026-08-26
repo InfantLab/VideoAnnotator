@@ -8,7 +8,9 @@ import type {
   PipelineParameterSchema,
   VideoAnnotatorFeatureFlags,
   VideoAnnotatorServerInfo,
-  PipelineCapability
+  PipelineCapability,
+  ExtrasInstallJob,
+  ExtrasInstallTriggerResponse
 } from '@/types/pipelines';
 import type { SystemHealthResponse } from '@/types/system';
 import { APIError } from './handleError';
@@ -43,6 +45,14 @@ const getApiToken = () => {
 
   return import.meta.env.VITE_API_TOKEN || '';
 };
+
+/**
+ * Whether any API token is configured (localStorage or env). Does not verify
+ * the token is valid/admin — used only to decide whether to offer actions
+ * that require auth (e.g. the extras-install button), which then handle a
+ * 401/403 from the server as the definitive answer.
+ */
+export const hasConfiguredApiToken = (): boolean => getApiToken().trim() !== '';
 
 /**
  * Validates if a token looks like a valid API key or JWT token
@@ -299,6 +309,8 @@ class APIClient {
       const outputs = record.outputs;
       const defaultEnabled = record.default_enabled;
       const enabled = record.enabled;
+      const available = record.available;
+      const installHint = record.install_hint;
 
       const formatsFromOutputs = Array.isArray(outputs)
         ? outputs
@@ -342,7 +354,9 @@ class APIClient {
         capabilities: Array.isArray(record.capabilities)
           ? (record.capabilities as PipelineCapability[])
           : undefined,
-        parameters: []
+        parameters: [],
+        available: typeof available === 'boolean' ? available : undefined,
+        installHint: typeof installHint === 'string' ? installHint : undefined
       };
     });
 
@@ -354,7 +368,8 @@ class APIClient {
 
   private buildCatalogResponse(
     catalog: PipelineCatalog,
-    server: VideoAnnotatorServerInfo | null
+    server: VideoAnnotatorServerInfo | null,
+    restartRequired: boolean
   ): PipelineCatalogResponse {
     const fallbackServer: VideoAnnotatorServerInfo =
       server ?? this.serverInfoCache ?? {
@@ -364,12 +379,15 @@ class APIClient {
 
     return {
       catalog,
-      server: fallbackServer
+      server: fallbackServer,
+      restartRequired
     };
   }
 
-  async getPipelineCatalog(options: { forceRefresh?: boolean } = {}): Promise<PipelineCatalogResponse> {
-    const { forceRefresh = false } = options;
+  async getPipelineCatalog(
+    options: { forceRefresh?: boolean; includeUnavailable?: boolean } = {}
+  ): Promise<PipelineCatalogResponse> {
+    const { forceRefresh = false, includeUnavailable = false } = options;
     const now = Date.now();
 
     // Check cache first
@@ -378,13 +396,14 @@ class APIClient {
       if (age < this.pipelineCatalogTTL) {
         return this.buildCatalogResponse(
           this.pipelineCatalogCache.catalog,
-          this.pipelineCatalogCache.server
+          this.pipelineCatalogCache.server,
+          this.pipelineCatalogCache.restartRequired
         );
       }
     }
 
     // Simple: just fetch pipelines, no server info needed
-    const pipelineData = await this.getPipelines();
+    const { pipelines: pipelineData, restartRequired } = await this.fetchPipelinesEnvelope(includeUnavailable);
     const catalog = this.mapLegacyPipelineResponse(pipelineData);
 
     // Use cached or default server info
@@ -396,10 +415,11 @@ class APIClient {
     this.pipelineCatalogCache = {
       catalog,
       server: serverInfo,
+      restartRequired,
       fetchedAt: now
     };
 
-    return this.buildCatalogResponse(catalog, serverInfo);
+    return this.buildCatalogResponse(catalog, serverInfo, restartRequired);
   }
 
   async getPipelineSchema(pipelineId: string): Promise<PipelineSchemaResponse> {
@@ -517,17 +537,73 @@ class APIClient {
 
   // Pipeline endpoints
   async getPipelines(): Promise<PipelineResponse[]> {
-    const response = await this.request<{ pipelines: PipelineResponse[]; total?: number }>('/api/v1/pipelines');
+    return (await this.fetchPipelinesEnvelope()).pipelines;
+  }
+
+  private async fetchPipelinesEnvelope(
+    includeUnavailable = false
+  ): Promise<{ pipelines: PipelineResponse[]; restartRequired: boolean }> {
+    const endpoint = includeUnavailable
+      ? '/api/v1/pipelines?include_unavailable=true'
+      : '/api/v1/pipelines';
+    const response = await this.request<
+      { pipelines: PipelineResponse[]; total?: number; restart_required?: boolean } | PipelineResponse[]
+    >(endpoint);
 
     // Handle both legacy format (direct array) and new format (object with pipelines key)
     if (Array.isArray(response)) {
-      return response;
+      return { pipelines: response, restartRequired: false };
     } else if (response && Array.isArray(response.pipelines)) {
-      return response.pipelines;
+      return { pipelines: response.pipelines, restartRequired: response.restart_required === true };
     } else {
       console.warn('Unexpected pipeline response format:', response);
-      return [];
+      return { pipelines: [], restartRequired: false };
     }
+  }
+
+  /**
+   * Trigger a self-service install of a pipeline extras group.
+   * POST /api/v1/pipelines/extras/{extra}/install (admin-only; 401/403/422 propagate as APIError)
+   */
+  async installPipelineExtras(extraName: string): Promise<ExtrasInstallTriggerResponse> {
+    const response = await this.request<{ job_id: string; extra_name: string; status: string }>(
+      `/api/v1/pipelines/extras/${encodeURIComponent(extraName)}/install`,
+      { method: 'POST' }
+    );
+
+    return {
+      jobId: response.job_id,
+      extraName: response.extra_name,
+      status: response.status as ExtrasInstallTriggerResponse['status']
+    };
+  }
+
+  /**
+   * Poll the status of an extras-install job.
+   * GET /api/v1/pipelines/extras/install-jobs/{job_id} (404 once the job is unknown/expired)
+   */
+  async getExtrasInstallJob(jobId: string): Promise<ExtrasInstallJob> {
+    const response = await this.request<{
+      job_id: string;
+      extra_name: string;
+      status: string;
+      created_at: string;
+      started_at: string | null;
+      finished_at: string | null;
+      command_output: string | null;
+      restart_required?: boolean;
+    }>(`/api/v1/pipelines/extras/install-jobs/${encodeURIComponent(jobId)}`);
+
+    return {
+      jobId: response.job_id,
+      extraName: response.extra_name,
+      status: response.status as ExtrasInstallJob['status'],
+      createdAt: response.created_at,
+      startedAt: response.started_at,
+      finishedAt: response.finished_at,
+      commandOutput: response.command_output,
+      restartRequired: response.restart_required === true
+    };
   }
 
   // Server-Sent Events connection

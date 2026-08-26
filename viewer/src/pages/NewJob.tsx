@@ -30,9 +30,15 @@ import {
   pipelineSchemaQueryOptions,
 } from "@/hooks/usePipelineCatalog";
 import { DynamicPipelineParameters } from "@/components/DynamicPipelineParameters";
+import { LockedPipelineCard, ExtrasInstallStatus } from "@/components/LockedPipelineCard";
+import { RestartRequiredBanner } from "@/components/RestartRequiredBanner";
 import type { PipelineDescriptor } from "@/types/pipelines";
 import { useConfigValidation } from "@/hooks/useConfigValidation";
 import { ConfigValidationPanel } from "@/components/ConfigValidationPanel";
+import { useExtrasInstall } from "@/hooks/useExtrasInstall";
+import { extraNameFromInstallHint } from "@/lib/pipelineExtras";
+import { hasConfiguredApiToken } from "@/api/client";
+import { APIError } from "@/api/handleError";
 
 // Wizard steps
 const STEPS = [
@@ -125,7 +131,10 @@ const CreateNewJob = () => {
   const { validationResult, isValidating, validateConfig } = useConfigValidation();
 
   const defaultSelectedPipelines = useMemo(
-    () => pipelines.filter((pipeline) => pipeline.defaultEnabled !== false).map((pipeline) => pipeline.id),
+    () =>
+      pipelines
+        .filter((pipeline) => pipeline.defaultEnabled !== false && pipeline.available !== false)
+        .map((pipeline) => pipeline.id),
     [pipelines]
   );
 
@@ -299,6 +308,7 @@ const CreateNewJob = () => {
             isLoading={catalogLoading}
             error={catalogError}
             onRetry={() => refreshPipelineCatalog({ forceServerRefresh: true })}
+            restartRequired={catalogData?.restartRequired ?? false}
           />
         );
       case 3:
@@ -563,13 +573,14 @@ const VideoUploadStep = ({
   );
 };
 
-const PipelineSelectionStep = ({
+export const PipelineSelectionStep = ({
   pipelines,
   selectedPipelines,
   setSelectedPipelines,
   isLoading,
   error,
-  onRetry
+  onRetry,
+  restartRequired = false
 }: {
   pipelines: PipelineDescriptor[];
   selectedPipelines: string[];
@@ -577,6 +588,7 @@ const PipelineSelectionStep = ({
   isLoading: boolean;
   error: unknown;
   onRetry: () => void;
+  restartRequired?: boolean;
 }) => {
   const groupedPipelines = useMemo(() => {
     const groups = new Map<string, PipelineDescriptor[]>();
@@ -602,6 +614,25 @@ const PipelineSelectionStep = ({
       setSelectedPipelines([...selectedPipelines, pipelineId]);
     }
   };
+
+  const canInstallExtras = hasConfiguredApiToken();
+  const { jobsByExtra, install, isInstalling, installError, installErrorExtraName } =
+    useExtrasInstall(pipelines);
+
+  // Pipelines sharing one extras group (e.g. two locked pipelines both unlocked by
+  // `face`) must be triggered/tracked together, not treated as independent installs.
+  const lockedPipelineIdsByExtra = useMemo(() => {
+    const map = new Map<string, string[]>();
+    pipelines.forEach((pipeline) => {
+      if (pipeline.available === false) {
+        const extraName = extraNameFromInstallHint(pipeline.installHint);
+        if (extraName) {
+          map.set(extraName, [...(map.get(extraName) ?? []), pipeline.id]);
+        }
+      }
+    });
+    return map;
+  }, [pipelines]);
 
   if (isLoading) {
     return (
@@ -639,6 +670,8 @@ const PipelineSelectionStep = ({
 
   return (
     <div className="space-y-6">
+      <RestartRequiredBanner restartRequired={restartRequired} />
+
       <p className="text-foreground">
         Select the annotation pipelines reported by your VideoAnnotator server. Feature availability reflects
         the live API catalog.
@@ -653,6 +686,40 @@ const PipelineSelectionStep = ({
             </div>
             <div className="space-y-3">
               {list.map((pipeline) => {
+                if (pipeline.available === false) {
+                  const extraName = extraNameFromInstallHint(pipeline.installHint);
+                  const job = extraName ? jobsByExtra[extraName] : undefined;
+                  const triggering = extraName ? isInstalling(extraName) : false;
+                  const rawError =
+                    extraName && installErrorExtraName === extraName ? installError : null;
+                  const triggerError = rawError
+                    ? {
+                        status: rawError instanceof APIError ? rawError.status : undefined,
+                        message: rawError.message
+                      }
+                    : null;
+
+                  return (
+                    <LockedPipelineCard key={pipeline.id} pipeline={pipeline}>
+                      {canInstallExtras && extraName && (
+                        <ExtrasInstallStatus
+                          job={job}
+                          isTriggering={triggering}
+                          triggerError={triggerError}
+                          onInstall={() => {
+                            // Errors are surfaced via `installError`/`installErrorExtraName`
+                            // state (rendered above) - swallow the rejection here so it
+                            // doesn't also surface as an unhandled promise rejection.
+                            install(extraName, lockedPipelineIdsByExtra.get(extraName) ?? [pipeline.id]).catch(
+                              () => {}
+                            );
+                          }}
+                        />
+                      )}
+                    </LockedPipelineCard>
+                  );
+                }
+
                 const checked = selectedPipelines.includes(pipeline.id);
                 const description = pipeline.description ?? 'No description provided.';
                 return (

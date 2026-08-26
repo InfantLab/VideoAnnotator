@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Added
+- **Pipeline extras install UI**: the job-creation wizard's Select Pipelines step now shows
+  every pipeline a VideoAnnotator v1.5.0+ server knows about, not just installed ones —
+  locked pipelines display their install hint instead of silently disappearing. An
+  admin-authenticated session can trigger a self-service install directly from the app,
+  track its progress (polled every 5s, survives a page reload via `localStorage`), see
+  failure output on a failed install, and get a clear "server restart needed" banner once
+  an install finishes but isn't active yet — instead of the previous options of hiding the
+  pipeline or requiring shell access to the server. See `specs/002-pipeline-extras-install/`.
+
 ## [0.7.0] - 2026-08-24 — VLM Frame Annotation Support
 
 ### ✨ Added

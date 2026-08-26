@@ -34,6 +34,8 @@ import {
   useVideoAnnotatorServerInfo
 } from '@/hooks/usePipelineCatalog';
 
+import { RestartRequiredBanner } from '@/components/RestartRequiredBanner';
+
 import vavIcon from '@/assets/v-a-v.icon.png';
 
 const TOKEN_KEY = 'videoannotator_api_token';
@@ -220,6 +222,7 @@ const CreateSettings = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              <RestartRequiredBanner restartRequired={catalogData?.restartRequired ?? false} />
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <p className="font-medium text-sm">Server URL</p>
