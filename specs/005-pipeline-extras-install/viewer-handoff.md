@@ -6,6 +6,16 @@
 It describes a UI feature, not an implementation — the viewer team/spec should make its own
 technical decisions about components, state management, and styling.
 
+> **Addendum (post-initial-handoff)**: real usage against this doc's v1 surfaced a procedural gap
+> — users hit `403 Administrator privileges required` from the install action with **nothing in
+> the frontend explaining why**, and no way to check their own admin status. Root cause was on the
+> backend (documented and fixed in the same change as this addendum): `generate-token` had no
+> concept of admin at all, so re-issuing a viewer key under a slightly different email than the
+> original setup silently produced a non-admin identity. A new endpoint,
+> **`GET /api/v1/auth/me`**, now exists specifically to close the frontend-visibility half of this
+> gap — see the new requirement 7 below. If your spec/implementation already covered requirements
+> 1-6, this addendum (7, and the note added to requirement 2) is the only new scope.
+
 ## Why this exists
 
 VideoAnnotator ships as a slim "core" install by default — no pipeline actually runs until its
@@ -53,6 +63,10 @@ enough to scope the UI work; read those two files before writing the actual spec
   created_at, started_at, finished_at, command_output, restart_required }`. `status` is one of
   `pending`, `running`, `completed`, `failed`. `command_output` is populated (and worth surfacing)
   on `failed`.
+- `GET /api/v1/auth/me` → `200 { id, username, email, is_admin }`. Any authenticated caller — `401`
+  unauthenticated, never `403` (this endpoint is how you find out whether you *would* get a `403`
+  elsewhere, so it can't itself require admin). This is new since the initial handoff — see the
+  addendum at the top of this document and requirement 7 below.
 
 ### Things worth knowing before designing the UI
 
@@ -70,7 +84,9 @@ enough to scope the UI work; read those two files before writing the actual spec
   VideoAnnotator's own roadmap, not assumed here).
 - **Auth**: this requires an *admin* API key specifically, not just any authenticated user. If the
   viewer's current session isn't admin-privileged, the install action shouldn't be offered at all
-  (or should fail clearly with the `403` case handled), rather than silently doing nothing.
+  (or should fail clearly with the `403` case handled), rather than silently doing nothing. Check
+  via `GET /api/v1/auth/me` (requirement 7) — don't guess from whether other, non-admin-gated
+  requests succeed.
 - **Job identity persists across a page reload**: `job_id` is a normal server-side record: the
   viewer can poll it after a refresh/reconnect without losing progress, as long as it persisted the
   `job_id` somewhere (e.g. the URL, or its own local state) before the reload.
@@ -89,7 +105,9 @@ that repo's own call.
    discover them by reading external docs.
 2. **An Install action on each locked pipeline**, visible only to an admin-privileged session.
    Clicking it calls the trigger endpoint for that pipeline's extras group and begins tracking the
-   returned job.
+   returned job. Determine "admin-privileged" by calling `GET /api/v1/auth/me` (requirement 7) —
+   don't infer it from the mere presence of an API key, since a non-admin key authenticates fine
+   but will `403` on the install action specifically.
 3. **Progress feedback for an in-flight install.** While a job is `pending`/`running`, the locked
    pipeline (or a dedicated install-progress area — designer's call) shows that an install is
    underway, ideally per-pipeline so unrelated pipelines aren't implied to be installing too. Poll
@@ -109,6 +127,24 @@ that repo's own call.
    — there's no push notification for "the server just restarted"), it should look and behave
    exactly like any other pipeline that was available from the start. No special-casing needed here
    beyond the existing available-pipeline rendering path.
+7. **Surface admin status somewhere the user can actually find it — most likely Settings.** Call
+   `GET /api/v1/auth/me` (no special privilege needed — any authenticated caller can read its own
+   identity) and show at least `is_admin`, ideally alongside the connected server/user identity
+   info that already lives there. This is the fix for the reported gap: today a user sees a bare
+   `403 Administrator privileges required` with no way to tell *why* — was their key wrong, is
+   admin even a concept here, do they need to ask someone? Two concrete things this unblocks:
+   - **Explain the 403 inline, not just at Settings.** If `is_admin` is known to be `false` when
+     the user reaches a locked pipeline, either hide/disable the Install action with a tooltip
+     ("Requires an administrator API key — check Settings") rather than letting them click through
+     to a bare 403, or if they do click through, surface a message that actually names the cause
+     (non-admin key) instead of just relaying the raw error string.
+   - **Point them at the fix.** For the common single-user case, the fix is usually one CLI command
+     run on the machine hosting the server: `uv run videoannotator generate-token --user
+     you@example.com --admin`. The viewer can't run this itself (it's a CLI action on the server
+     host, deliberately not exposed over HTTP — granting admin is a server-operator action, not a
+     remote one), but the Settings panel or the inline message can *say* this, the same way the
+     current "no fresh API key this run" messaging already points users at `generate-token` for a
+     lost key.
 
 ## Explicit non-goals for this piece of work
 

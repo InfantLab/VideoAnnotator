@@ -49,6 +49,12 @@ Backward Compatibility by Default). `/speckit-plan`'s Constitution Check gate ev
 against it.
 
 ## Recent Changes
+- Post-005 follow-up: added `GET /api/v1/auth/me` (any authenticated caller can check its own
+  `is_admin` — closes the gap where a 403 from an admin-only endpoint was undiagnosable from the
+  frontend) and made `generate-token` grant admin by default to a brand-new user while the
+  deployment is still single-user (0-1 existing users), with an explicit `--admin`/`--no-admin`
+  override. Root cause: `generate-token` had no admin concept at all, so re-issuing a viewer key
+  under a slightly different email silently produced a non-admin identity with no way to tell.
 - 005-pipeline-extras-install: self-service, admin-only install of an extras group triggered via the
   API (`POST /api/v1/pipelines/extras/{extra}/install`), tracked as a background job, plus a
   `restart_required` signal — the write-side counterpart to 004's read-only `available`/

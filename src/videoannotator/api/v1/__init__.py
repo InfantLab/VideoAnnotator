@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from .auth import router as auth_router
 from .config import router as config_router
 from .debug import router as debug_router
 from .endpoints.artifacts import router as artifacts_router
@@ -18,6 +19,7 @@ api_router = APIRouter()
 api_router.include_router(
     health_router, tags=["health"]
 )  # No prefix - at /api/v1/health
+api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
 api_router.include_router(jobs_router, prefix="/jobs", tags=["jobs"])
 api_router.include_router(artifacts_router, prefix="/jobs", tags=["artifacts"])
 api_router.include_router(pipelines_router, prefix="/pipelines", tags=["pipelines"])

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`GET /api/v1/auth/me`**: any authenticated caller can now check its own identity, including
+  `is_admin` — the direct explanation for a `403 Administrator privileges required` from an
+  admin-only endpoint (e.g. the extras-install API below), which previously had no way to be
+  self-diagnosed from the frontend.
 - **Self-service extras install API**: admins can now install a named pipeline extras group
   (`face`, `audio`, `scene`, `person`, `all`, ...) directly through the API —
   `POST /api/v1/pipelines/extras/{extra}/install` triggers it as a trackable background job
@@ -54,6 +58,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   been named in that exact invocation's `--extra`/`SYNC_EXTRAS`, including one installed via the
   new self-service extras-install API above. Now runs with `--inexact` (additive-only), matching
   what a "restart to activate a newly-installed pipeline" workflow actually needs.
+- `videoannotator generate-token` had no concept of admin at all — a brand-new user it created
+  (e.g. re-issuing a viewer key with an email that didn't exactly match the original `setup-db`
+  admin) was always non-admin, with no flag to change that and no way for the resulting client to
+  find out why admin-only actions then failed. It now grants admin by default to a new user while
+  the deployment is still single-user (0 or 1 existing users before this one — the common case of
+  one person re-connecting the viewer to their own server), accepts an explicit `--admin`/
+  `--no-admin` override in either direction (including promoting/demoting an existing user), and
+  always prints the resulting admin status.
 
 ### Planned
 

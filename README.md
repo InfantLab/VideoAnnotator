@@ -110,6 +110,19 @@ A completed install needs a server restart to activate — `GET /api/v1/pipeline
 `restart_required` field tells you when one's pending. Restarting via this script (or with
 `--skip-sync`) preserves whatever you've installed; see `scripts/start_server.sh --help`.
 
+This action needs an *admin* API key specifically — not just any authenticated one.
+`uv run videoannotator generate-token` grants admin automatically while your deployment is still
+single-user (the common case: it's your own server), but if you've re-issued a key under a
+different email than your original `setup-db` admin, or you're not sure, check with:
+
+```bash
+curl "http://localhost:18011/api/v1/auth/me" -H "Authorization: Bearer YOUR_API_KEY"
+# {"id": "...", "username": "...", "email": "...", "is_admin": false}
+```
+
+If `is_admin` is `false` and you expect it to be `true`, grant it explicitly:
+`uv run videoannotator generate-token --user you@example.com --admin`.
+
 <details>
 <summary>Prefer the manual, step-by-step equivalent?</summary>
 

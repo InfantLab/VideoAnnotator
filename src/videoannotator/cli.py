@@ -1065,6 +1065,18 @@ def generate_token(
     output_file: Path = typer.Option(
         None, "--output", "-o", help="Save token to JSON file"
     ),
+    admin: bool = typer.Option(
+        None,
+        "--admin/--no-admin",
+        help=(
+            "Grant (or deny) administrator privileges explicitly. If omitted: a "
+            "brand-new user is made admin automatically while this is still a "
+            "single-user deployment (0-1 existing users before this one) -- the "
+            "common case of re-issuing a key for what is still practically one "
+            "person's own server; an existing user's admin status is left "
+            "unchanged."
+        ),
+    ),
 ):
     """Generate a new API token for authentication (stored in database).
 
@@ -1077,6 +1089,9 @@ def generate_token(
 
         # No expiration
         uv run videoannotator generate-token --user john@example.com --expires-days 0
+
+        # Explicitly grant admin (e.g. promoting a second lab member)
+        uv run videoannotator generate-token --user jane@example.com --admin
     """
     import json
 
@@ -1130,8 +1145,25 @@ def generate_token(
         # Get or create user
         db_user = UserCRUD.get_by_email(db, user)
         if not db_user:
+            existing_user_count = UserCRUD.count(db)
+            grant_admin = admin if admin is not None else existing_user_count <= 1
             typer.echo(f"[INFO] Creating new user: {username} ({user})")
             db_user = UserCRUD.create(db, email=user, username=username)
+            if grant_admin:
+                db_user = UserCRUD.update(db, str(db_user.id), is_admin=True)
+                reason = (
+                    "explicit --admin"
+                    if admin is not None
+                    else "single-user deployment default"
+                )
+                typer.echo(f"[INFO] Granted administrator privileges ({reason})")
+        elif admin is not None:
+            db_user = UserCRUD.update(db, str(db_user.id), is_admin=admin)
+            verb = "Granted" if admin else "Revoked"
+            typer.echo(
+                f"[INFO] {verb} administrator privileges for existing user "
+                "(explicit --admin/--no-admin)"
+            )
 
         # Create API key
         api_key_obj, raw_key = APIKeyCRUD.create(
@@ -1148,6 +1180,7 @@ def generate_token(
         typer.echo("=" * 80)
         typer.echo(f"Token:      {raw_key}")
         typer.echo(f"User:       {username} ({user})")
+        typer.echo(f"Admin:      {'Yes' if db_user.is_admin else 'No'}")
         typer.echo(f"Key Name:   {key_name}")
         typer.echo(f"Key ID:     {api_key_obj.id}")
         typer.echo(

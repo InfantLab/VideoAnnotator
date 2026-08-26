@@ -42,6 +42,11 @@ class UserCRUD:
         return user
 
     @staticmethod
+    def count(db: Session) -> int:
+        """Return the total number of users."""
+        return db.query(User).count()
+
+    @staticmethod
     def update(db: Session, user_id: str, **kwargs) -> User | None:
         """Update user by ID."""
         user = UserCRUD.get_by_id(db, user_id)
