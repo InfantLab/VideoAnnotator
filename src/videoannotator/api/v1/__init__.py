@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from .auth import router as auth_router
+from .batches import router as batches_router
 from .config import router as config_router
 from .datasets import router as datasets_router
 from .debug import router as debug_router
@@ -23,6 +24,7 @@ api_router.include_router(
 )  # No prefix - at /api/v1/health
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
 api_router.include_router(jobs_router, prefix="/jobs", tags=["jobs"])
+api_router.include_router(batches_router, prefix="/batches", tags=["batches"])
 api_router.include_router(artifacts_router, prefix="/jobs", tags=["artifacts"])
 api_router.include_router(pipelines_router, prefix="/pipelines", tags=["pipelines"])
 api_router.include_router(datasets_router, prefix="/datasets", tags=["datasets"])

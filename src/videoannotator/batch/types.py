@@ -60,6 +60,8 @@ class BatchJob:
     progress_percentage: float = (
         0.0  # 006: completed/total selected pipelines, not per-frame
     )
+    batch_id: str | None = None  # 008: client-supplied submission-batch tag
+    dataset_id: str | None = None  # 008: saved dataset (007) this job came from
 
     @property
     def video_id(self) -> str:
@@ -119,6 +121,8 @@ class BatchJob:
             "selected_pipelines": self.selected_pipelines,
             "storage_path": str(self.storage_path) if self.storage_path else None,
             "progress_percentage": self.progress_percentage,
+            "batch_id": self.batch_id,
+            "dataset_id": self.dataset_id,
         }
 
     @classmethod
@@ -165,6 +169,8 @@ class BatchJob:
             if data.get("storage_path")
             else None,
             progress_percentage=data.get("progress_percentage", 0.0),
+            batch_id=data.get("batch_id"),
+            dataset_id=data.get("dataset_id"),
         )
 
 

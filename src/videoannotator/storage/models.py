@@ -47,6 +47,13 @@ class Job(Base):
     # Progress tracking (keep in sync with database.models.Job)
     progress_percentage = Column(Integer, nullable=False, default=0)
 
+    # Submission grouping (008: client-supplied batch tag; 007: originating
+    # saved dataset, if any). Both are loose references, not foreign keys --
+    # a batch is just "whatever jobs currently carry this identifier," and a
+    # dataset may be deleted without affecting jobs previously tagged with it.
+    batch_id = Column(String, index=True)
+    dataset_id = Column(String)
+
     # Timestamps
     created_at = Column(DateTime, nullable=False, default=_utcnow_naive)
     started_at = Column(DateTime)

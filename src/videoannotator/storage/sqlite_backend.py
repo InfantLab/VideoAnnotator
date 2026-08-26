@@ -102,6 +102,11 @@ class SQLiteStorageBackend(StorageBackend):
             # Create all tables
             initialize_database(self.engine)
 
+            # 008: add batch_id/dataset_id to an already-existing jobs table --
+            # create_all() above only creates missing tables, not missing
+            # columns on ones that already exist.
+            self._ensure_batch_columns()
+
             # Check/update schema version
             with self.SessionLocal() as session:
                 schema_version = session.query(SchemaVersion).first()
@@ -128,6 +133,26 @@ class SQLiteStorageBackend(StorageBackend):
             self.logger.error(f"[ERROR] Failed to initialize database: {e}")
             raise
 
+    def _ensure_batch_columns(self) -> None:
+        """Add jobs.batch_id/jobs.dataset_id if this is a pre-008 database."""
+        from sqlalchemy import text
+
+        with self.engine.connect() as conn:
+            result = conn.execute(text("PRAGMA table_info('jobs')"))
+            existing_cols = {row[1] for row in result}
+            for column, ddl in (
+                ("batch_id", "VARCHAR"),
+                ("dataset_id", "VARCHAR"),
+            ):
+                if column in existing_cols:
+                    continue
+                self.logger.info(f"[MIGRATION] Adding jobs.{column} column")
+                conn.execute(text(f"ALTER TABLE jobs ADD COLUMN {column} {ddl}"))
+            conn.execute(
+                text("CREATE INDEX IF NOT EXISTS ix_jobs_batch_id ON jobs (batch_id)")
+            )
+            conn.commit()
+
     def _batch_job_to_db_job(self, batch_job: "BatchJob") -> Job:
         """Convert BatchJob to database Job model."""
         return Job(
@@ -146,6 +171,8 @@ class SQLiteStorageBackend(StorageBackend):
             if batch_job.storage_path
             else None,  # v1.3.0: Persistent job storage
             progress_percentage=round(batch_job.progress_percentage),
+            batch_id=batch_job.batch_id,
+            dataset_id=batch_job.dataset_id,
         )
 
     def _db_job_to_batch_job(self, db_job: Job) -> "BatchJob":
@@ -169,6 +196,8 @@ class SQLiteStorageBackend(StorageBackend):
             if db_job.storage_path
             else None,  # v1.3.0: Persistent job storage
             progress_percentage=float(db_job.progress_percentage or 0),
+            batch_id=db_job.batch_id,
+            dataset_id=db_job.dataset_id,
         )
 
         # Load pipeline results
@@ -206,6 +235,8 @@ class SQLiteStorageBackend(StorageBackend):
                     existing.selected_pipelines = job.selected_pipelines
                     existing.config = job.config
                     existing.progress_percentage = round(job.progress_percentage)
+                    existing.batch_id = job.batch_id
+                    existing.dataset_id = job.dataset_id
                     # v1.3.0: Update storage_path if present
                     if job.storage_path:
                         existing.storage_path = str(job.storage_path)
@@ -371,6 +402,16 @@ class SQLiteStorageBackend(StorageBackend):
 
         except SQLAlchemyError as e:
             self.logger.error(f"[ERROR] Failed to list jobs: {e}")
+            return []
+
+    def list_jobs_by_batch(self, batch_id: str) -> list[str]:
+        """List job IDs sharing a given batch identifier (spec 008)."""
+        try:
+            with self.SessionLocal() as session:
+                query = session.query(Job.id).filter(Job.batch_id == batch_id)
+                return [row[0] for row in query.order_by(Job.created_at.asc()).all()]
+        except SQLAlchemyError as e:
+            self.logger.error(f"[ERROR] Failed to list jobs for batch {batch_id}: {e}")
             return []
 
     def delete_job(self, job_id: str) -> bool:

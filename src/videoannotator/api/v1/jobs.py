@@ -13,8 +13,11 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from ...batch.types import BatchJob, JobStatus
+from ...database.crud import SavedDatasetCRUD
+from ...database.database import get_db
 from ...registry.pipeline_loader import extras_available
 from ...registry.pipeline_registry import get_registry
 from ...storage.base import StorageBackend
@@ -130,6 +133,18 @@ class JobResponse(BaseModel):
     queue_position: int | None = Field(
         default=None,
         description="1-based position in the pending queue (only set when status is 'pending')",
+    )
+    progress_percentage: float = Field(
+        default=0.0,
+        description="Completed/total selected pipelines, as a percentage (spec 006)",
+    )
+    batch_id: str | None = Field(
+        default=None,
+        description="Client-supplied identifier grouping jobs submitted together (spec 008)",
+    )
+    dataset_id: str | None = Field(
+        default=None,
+        description="Saved dataset (spec 007) this job was submitted from, if any",
     )
 
 
@@ -265,7 +280,18 @@ async def submit_job(
         "Example: 'person_tracking,face_recognition'. "
         "Use GET /api/v1/pipelines to list available pipelines.",
     ),
+    batch_id: str | None = Form(
+        None,
+        description="Client-generated identifier grouping this job with others "
+        "submitted in the same wizard pass (spec 008). Omit for a standalone job.",
+    ),
+    dataset_id: str | None = Form(
+        None,
+        description="Saved dataset (spec 007) this job was submitted from, if any. "
+        "Purely informational -- not validated against /api/v1/datasets.",
+    ),
     storage: StorageBackend = Depends(get_storage),
+    db: Session = Depends(get_db),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobResponse:
     """Submit a video processing job (see endpoint description for details)."""
@@ -360,6 +386,8 @@ async def submit_job(
                 config=parsed_config or {},
                 status=JobStatus.PENDING,
                 selected_pipelines=parsed_pipelines,
+                batch_id=batch_id,
+                dataset_id=dataset_id,
             )
 
             # Use StorageProvider to save the file
@@ -385,6 +413,17 @@ async def submit_job(
 
         # Save job to database
         storage.save_job_metadata(batch_job)
+
+        # Spec 007 FR-010: record that this dataset was just used. Best-effort
+        # and non-blocking -- an unknown/stale dataset_id is silently a no-op
+        # (dataset_id is informational metadata, not a validated reference).
+        if dataset_id:
+            try:
+                SavedDatasetCRUD.touch_last_used(db, dataset_id)
+            except Exception as e:
+                logger.debug(
+                    f"Could not touch last_used_at for dataset {dataset_id}: {e}"
+                )
 
         queue_position: int | None = None
         if batch_job.status == JobStatus.PENDING:
@@ -419,6 +458,9 @@ async def submit_job(
             if batch_job.storage_path
             else None,
             queue_position=queue_position,
+            progress_percentage=batch_job.progress_percentage,
+            batch_id=batch_job.batch_id,
+            dataset_id=batch_job.dataset_id,
         )
 
     except (
@@ -570,6 +612,9 @@ async def get_job_status(
             result_path=getattr(job, "result_path", None),
             storage_path=str(job.storage_path) if job.storage_path else None,
             queue_position=queue_position,
+            progress_percentage=job.progress_percentage,
+            batch_id=job.batch_id,
+            dataset_id=job.dataset_id,
         )
 
     except FileNotFoundError as e:
@@ -735,6 +780,9 @@ async def list_jobs(
                         queue_position=pending_positions.get(job.job_id)
                         if job.status == JobStatus.PENDING
                         else None,
+                        progress_percentage=job.progress_percentage,
+                        batch_id=job.batch_id,
+                        dataset_id=job.dataset_id,
                     )
                 )
             except FileNotFoundError:
@@ -913,6 +961,9 @@ async def cancel_job_endpoint(
                 storage_path=str(job_data.storage_path)
                 if job_data.storage_path
                 else None,
+                progress_percentage=job_data.progress_percentage,
+                batch_id=job_data.batch_id,
+                dataset_id=job_data.dataset_id,
             )
 
         # If already in a final state (completed/failed), return error
@@ -960,6 +1011,9 @@ async def cancel_job_endpoint(
             error_message=job_data.error_message,
             result_path=None,  # BatchJob doesn't have result_path
             storage_path=str(job_data.storage_path) if job_data.storage_path else None,
+            progress_percentage=job_data.progress_percentage,
+            batch_id=job_data.batch_id,
+            dataset_id=job_data.dataset_id,
         )
 
     except (JobNotFoundException, JobAlreadyCompletedException, APIError):
@@ -972,6 +1026,56 @@ async def cancel_job_endpoint(
             message=f"Failed to cancel job: {e!s}",
             hint="Check server logs for details",
         ) from e
+
+
+def retry_job(job_id: str, storage: StorageBackend) -> BatchJob:
+    """Reset one job back to PENDING for retry (spec 006 semantics).
+
+    Shared by the single-job retry endpoint below and spec 008's batch-retry
+    (`api/v1/batches.py`), which catches `JobNotRetryableException` per job
+    to record a skip reason rather than aborting the whole batch (FR-005).
+
+    Raises:
+        JobNotFoundException: no job with this id.
+        JobNotRetryableException: job isn't in a retryable terminal state, or
+            its original video is no longer available in storage.
+    """
+    try:
+        job_data = storage.load_job_metadata(job_id)
+        if not job_data:
+            raise FileNotFoundError()
+    except FileNotFoundError as e:
+        raise JobNotFoundException(
+            job_id=job_id,
+            hint="Check job ID or use GET /api/v1/jobs to list all jobs",
+        ) from e
+
+    if job_data.status not in (JobStatus.FAILED, JobStatus.CANCELLED):
+        raise JobNotRetryableException(
+            job_id=job_id,
+            reason=f"job is in '{job_data.status.value}' state, not a retryable "
+            "terminal state (failed/cancelled)",
+            status=job_data.status.value,
+        )
+
+    if job_data.video_path is None or not job_data.video_path.exists():
+        raise JobNotRetryableException(
+            job_id=job_id,
+            reason="the job's original video file is no longer available in storage",
+        )
+
+    logger.info(f"[RETRY] Retrying job {job_id} (previous status: {job_data.status})")
+
+    job_data.status = JobStatus.PENDING
+    job_data.retry_count += 1
+    job_data.error_message = None
+    job_data.started_at = None
+    job_data.completed_at = None
+    job_data.progress_percentage = 0.0
+    job_data.pipeline_results = {}
+
+    storage.save_job_metadata(job_data)
+    return job_data
 
 
 @router.post(
@@ -1005,43 +1109,7 @@ async def retry_job_endpoint(
 ) -> JobResponse:
     """Retry a failed or cancelled job using its stored video and config."""
     try:
-        try:
-            job_data = storage.load_job_metadata(job_id)
-            if not job_data:
-                raise FileNotFoundError()
-        except FileNotFoundError as e:
-            raise JobNotFoundException(
-                job_id=job_id,
-                hint="Check job ID or use GET /api/v1/jobs to list all jobs",
-            ) from e
-
-        if job_data.status not in (JobStatus.FAILED, JobStatus.CANCELLED):
-            raise JobNotRetryableException(
-                job_id=job_id,
-                reason=f"job is in '{job_data.status.value}' state, not a retryable "
-                "terminal state (failed/cancelled)",
-                status=job_data.status.value,
-            )
-
-        if job_data.video_path is None or not job_data.video_path.exists():
-            raise JobNotRetryableException(
-                job_id=job_id,
-                reason="the job's original video file is no longer available in storage",
-            )
-
-        logger.info(
-            f"[RETRY] Retrying job {job_id} (previous status: {job_data.status})"
-        )
-
-        job_data.status = JobStatus.PENDING
-        job_data.retry_count += 1
-        job_data.error_message = None
-        job_data.started_at = None
-        job_data.completed_at = None
-        job_data.progress_percentage = 0.0
-        job_data.pipeline_results = {}
-
-        storage.save_job_metadata(job_data)
+        job_data = retry_job(job_id, storage)
 
         video_filename, video_size_bytes, video_duration_seconds = (
             extract_video_metadata(job_data.video_path)
@@ -1061,6 +1129,9 @@ async def retry_job_endpoint(
             error_message=None,
             result_path=None,
             storage_path=str(job_data.storage_path) if job_data.storage_path else None,
+            progress_percentage=job_data.progress_percentage,
+            batch_id=job_data.batch_id,
+            dataset_id=job_data.dataset_id,
         )
 
     except (JobNotFoundException, JobNotRetryableException, APIError):

@@ -169,6 +169,10 @@ class FileStorageBackend(StorageBackend):
         jobs = self.get_all_jobs(status_filter=status_filter)
         return [job.job_id for job in jobs]
 
+    def list_jobs_by_batch(self, batch_id: str) -> list[str]:
+        """List job IDs sharing a given batch identifier (spec 008)."""
+        return [job.job_id for job in self.get_all_jobs() if job.batch_id == batch_id]
+
     def get_all_jobs(self, status_filter: str | None = None) -> list[BatchJob]:
         """Get all job objects with full metadata, optionally filtered by.
 

@@ -94,6 +94,19 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
+    def list_jobs_by_batch(self, batch_id: str) -> list[str]:
+        """List job IDs sharing a given batch identifier (spec 008).
+
+        Args:
+            batch_id: The client-supplied batch identifier jobs were
+                submitted with.
+
+        Returns:
+            List of job IDs currently tagged with this batch_id.
+        """
+        pass
+
+    @abstractmethod
     def delete_job(self, job_id: str) -> bool:
         """Delete all data for a job.
 
