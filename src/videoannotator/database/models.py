@@ -12,6 +12,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
@@ -291,6 +292,66 @@ class ExtrasInstallJob(Base):
             f"<ExtrasInstallJob(id={self.id}, extra={self.extra_name}, "
             f"status={self.status})>"
         )
+
+
+class SavedDataset(Base):
+    """A named, owned collection of remembered video identities (spec 007).
+
+    Metadata-only: `video_manifest` records filename+size per video, not the
+    files themselves, so a client can detect drift in a locally re-picked
+    folder rather than silently proceeding as if nothing changed.
+    """
+
+    __tablename__ = "saved_datasets"
+    __table_args__ = (
+        UniqueConstraint("owner_user_id", "name", name="uq_saved_dataset_owner_name"),
+    )
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    owner_user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    video_manifest = Column(JSON, nullable=False, default=list)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+
+    def __repr__(self):
+        """Return a concise representation of the SavedDataset."""
+        return f"<SavedDataset(id={self.id}, name={self.name!r})>"
+
+
+class SavedPipelinePreset(Base):
+    """A named, owned pipeline selection + configuration (spec 007).
+
+    `selected_pipelines`/`config` mirror a job submission's own fields
+    exactly, so applying a preset is a direct copy into a new job
+    submission with no translation needed.
+    """
+
+    __tablename__ = "saved_pipeline_presets"
+    __table_args__ = (
+        UniqueConstraint("owner_user_id", "name", name="uq_saved_preset_owner_name"),
+    )
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    owner_user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    selected_pipelines = Column(JSON, nullable=False, default=list)
+    config = Column(JSON, nullable=False, default=dict)
+    tags = Column(JSON, nullable=True, default=dict)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+
+    def __repr__(self):
+        """Return a concise representation of the SavedPipelinePreset."""
+        return f"<SavedPipelinePreset(id={self.id}, name={self.name!r})>"
 
 
 class ExtrasInstallJobStatus:

@@ -6,10 +6,10 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import and_, desc
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from .models import APIKey, Job, JobStatus, User
+from .models import APIKey, Job, JobStatus, SavedDataset, SavedPipelinePreset, User
 
 
 class UserCRUD:
@@ -357,3 +357,208 @@ class JobCRUD:
 
         db.commit()
         return count
+
+
+class SavedDatasetCRUD:
+    """CRUD operations for SavedDataset (spec 007). Visibility is shared-read
+    (any authenticated user may list/get); mutation is owner-or-admin,
+    enforced by the caller (route layer), not here."""
+
+    @staticmethod
+    def get_by_id(db: Session, dataset_id: str) -> SavedDataset | None:
+        """Get a saved dataset by ID."""
+        return db.query(SavedDataset).filter(SavedDataset.id == dataset_id).first()
+
+    @staticmethod
+    def list_all(db: Session, limit: int = 100, offset: int = 0) -> list[SavedDataset]:
+        """List all saved datasets, newest first (shared-read visibility)."""
+        return (
+            db.query(SavedDataset)
+            .order_by(desc(SavedDataset.created_at))
+            .limit(limit)
+            .offset(offset)
+            .all()
+        )
+
+    @staticmethod
+    def create(
+        db: Session,
+        owner_user_id: str,
+        name: str,
+        video_manifest: list[dict[str, Any]],
+        description: str | None = None,
+    ) -> SavedDataset | None:
+        """Create a saved dataset. Returns None on a name collision for this
+        owner (FR-007) rather than raising, so the route can turn that into
+        a clean 409."""
+        dataset = SavedDataset(
+            owner_user_id=owner_user_id,
+            name=name,
+            description=description,
+            video_manifest=video_manifest,
+        )
+        db.add(dataset)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            return None
+        db.refresh(dataset)
+        return dataset
+
+    @staticmethod
+    def update(
+        db: Session,
+        dataset_id: str,
+        name: str | None = None,
+        description: str | None = None,
+        video_manifest: list[dict[str, Any]] | None = None,
+    ) -> SavedDataset | None:
+        """Update a saved dataset's fields (only those provided). Returns
+        None if not found, or if a rename collides with an existing name
+        for the same owner (FR-007)."""
+        dataset = SavedDatasetCRUD.get_by_id(db, dataset_id)
+        if not dataset:
+            return None
+        if name is not None:
+            dataset.name = name
+        if description is not None:
+            dataset.description = description
+        if video_manifest is not None:
+            dataset.video_manifest = video_manifest
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            return None
+        db.refresh(dataset)
+        return dataset
+
+    @staticmethod
+    def delete(db: Session, dataset_id: str) -> bool:
+        """Delete a saved dataset by ID. Does not touch any job that
+        referenced it (FR-008) since jobs don't carry a foreign key to it."""
+        dataset = SavedDatasetCRUD.get_by_id(db, dataset_id)
+        if dataset:
+            db.delete(dataset)
+            db.commit()
+            return True
+        return False
+
+    @staticmethod
+    def touch_last_used(db: Session, dataset_id: str) -> None:
+        """Record that a dataset was just applied to a job submission."""
+        dataset = SavedDatasetCRUD.get_by_id(db, dataset_id)
+        if dataset:
+            dataset.last_used_at = datetime.now(UTC).replace(tzinfo=None)
+            db.commit()
+
+
+class SavedPipelinePresetCRUD:
+    """CRUD operations for SavedPipelinePreset (spec 007). Same shared-read /
+    owner-or-admin-mutation visibility model as SavedDatasetCRUD."""
+
+    @staticmethod
+    def get_by_id(db: Session, preset_id: str) -> SavedPipelinePreset | None:
+        """Get a saved preset by ID."""
+        return (
+            db.query(SavedPipelinePreset)
+            .filter(SavedPipelinePreset.id == preset_id)
+            .first()
+        )
+
+    @staticmethod
+    def list_all(
+        db: Session, limit: int = 100, offset: int = 0
+    ) -> list[SavedPipelinePreset]:
+        """List all saved presets, newest first (shared-read visibility)."""
+        return (
+            db.query(SavedPipelinePreset)
+            .order_by(desc(SavedPipelinePreset.created_at))
+            .limit(limit)
+            .offset(offset)
+            .all()
+        )
+
+    @staticmethod
+    def create(
+        db: Session,
+        owner_user_id: str,
+        name: str,
+        selected_pipelines: list[str],
+        config: dict[str, Any],
+        description: str | None = None,
+        tags: dict[str, Any] | None = None,
+    ) -> SavedPipelinePreset | None:
+        """Create a saved preset. Returns None on a name collision for this
+        owner (FR-007) rather than raising, so the route can turn that into
+        a clean 409."""
+        preset = SavedPipelinePreset(
+            owner_user_id=owner_user_id,
+            name=name,
+            description=description,
+            selected_pipelines=selected_pipelines,
+            config=config,
+            tags=tags or {},
+        )
+        db.add(preset)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            return None
+        db.refresh(preset)
+        return preset
+
+    @staticmethod
+    def update(
+        db: Session,
+        preset_id: str,
+        name: str | None = None,
+        description: str | None = None,
+        selected_pipelines: list[str] | None = None,
+        config: dict[str, Any] | None = None,
+        tags: dict[str, Any] | None = None,
+    ) -> SavedPipelinePreset | None:
+        """Update a saved preset's fields (only those provided). Returns
+        None if not found, or if a rename collides with an existing name
+        for the same owner (FR-007)."""
+        preset = SavedPipelinePresetCRUD.get_by_id(db, preset_id)
+        if not preset:
+            return None
+        if name is not None:
+            preset.name = name
+        if description is not None:
+            preset.description = description
+        if selected_pipelines is not None:
+            preset.selected_pipelines = selected_pipelines
+        if config is not None:
+            preset.config = config
+        if tags is not None:
+            preset.tags = tags
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            return None
+        db.refresh(preset)
+        return preset
+
+    @staticmethod
+    def delete(db: Session, preset_id: str) -> bool:
+        """Delete a saved preset by ID. Does not touch any job that
+        referenced it (FR-008) since jobs don't carry a foreign key to it."""
+        preset = SavedPipelinePresetCRUD.get_by_id(db, preset_id)
+        if preset:
+            db.delete(preset)
+            db.commit()
+            return True
+        return False
+
+    @staticmethod
+    def touch_last_used(db: Session, preset_id: str) -> None:
+        """Record that a preset was just applied to a job submission."""
+        preset = SavedPipelinePresetCRUD.get_by_id(db, preset_id)
+        if preset:
+            preset.last_used_at = datetime.now(UTC).replace(tzinfo=None)
+            db.commit()

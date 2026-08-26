@@ -78,6 +78,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error(f"Security initialization failed: {e}")
         # Continue startup but log error
 
+    # Create any tables not yet present (e.g. saved_datasets/saved_pipeline_presets
+    # added by 007-datasets-and-presets) -- idempotent, skips existing tables.
+    # ALTER-TABLE-style column migrations for already-existing tables are
+    # handled separately by migrate_to_v1_3_0() below.
+    try:
+        from ..database.database import create_tables
+
+        create_tables()
+    except Exception as e:
+        logger.error(f"Database table creation failed: {e}")
+        # Don't fail startup if this fails, but log prominently
+
     # Run database migrations (v1.3.0)
     try:
         from ..database.migrations import migrate_to_v1_3_0
