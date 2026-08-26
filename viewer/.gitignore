@@ -40,6 +40,9 @@ __pycache__/
 **/__pycache__/
 *.pyc
 
+# Agents files not meant to be committe
+.agents/
+
 # Claude Code (per spec-kit init recommendation; keep skills/ and project settings.json shared)
 .claude/settings.local.json
 .claude/.credentials.json

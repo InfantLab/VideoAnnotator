@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   failure output on a failed install, and get a clear "server restart needed" banner once
   an install finishes but isn't active yet — instead of the previous options of hiding the
   pipeline or requiring shell access to the server. See `specs/002-pipeline-extras-install/`.
+- **Admin-token guidance**: a 403 from the install action now explains that single-user
+  deployments usually already have an admin-scoped token by default (the one VideoAnnotator
+  generates on first server start), rather than just stating the requirement with no path
+  forward. Settings' "Getting Help" tab and the Select Pipelines step now also explain token
+  scopes up front, before a user hits the error.
 
 ## [0.7.0] - 2026-08-24 — VLM Frame Annotation Support
 

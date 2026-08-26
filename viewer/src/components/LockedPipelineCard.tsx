@@ -1,4 +1,5 @@
 import { AlertTriangle, Lock, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ExtrasInstallJob, PipelineDescriptor } from "@/types/pipelines";
@@ -60,9 +61,19 @@ interface ExtrasInstallStatusProps {
 export const ExtrasInstallStatus = ({ job, isTriggering, triggerError, onInstall }: ExtrasInstallStatusProps) => {
   if (triggerError?.status === 403) {
     return (
-      <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-500">
-        Administrator privileges are required to install pipeline extras.
-      </p>
+      <div className="mt-1 space-y-1">
+        <p className="text-xs font-medium text-amber-700 dark:text-amber-500">
+          Administrator privileges are required to install pipeline extras.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Running your own single-user server? The token it generated on first startup is usually
+          admin already. See the "Getting Help" tab on the{" "}
+          <Link to="/settings" className="underline">
+            Settings
+          </Link>{" "}
+          page for how to check or get an admin-scoped token.
+        </p>
+      </div>
     );
   }
 

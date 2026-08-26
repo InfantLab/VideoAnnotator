@@ -438,6 +438,25 @@ const CreateSettings = () => {
                   </ol>
                 </div>
 
+                <div>
+                  <h4 className="font-medium">Token Scopes &amp; Admin Access</h4>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    VideoAnnotator tokens carry scopes (read / write / admin). Most of this app
+                    works with any valid token, but a few actions — notably installing a missing
+                    pipeline from the Select Pipelines step — require an <strong>admin</strong>-scoped
+                    token, and will show "Administrator privileges are required" if yours doesn't
+                    have it.
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Running your own single-user server? The token VideoAnnotator generates the
+                    first time the server starts (or via{' '}
+                    <code className="bg-muted px-1 rounded">videoannotator setup-db</code>) is
+                    normally admin-scoped already, so most solo setups already have everything
+                    they need — no extra step required. If you're on a shared/multi-user server,
+                    ask whoever manages it for a token with admin scope.
+                  </p>
+                </div>
+
                 <div className="pt-4 border-t">
                   <Button variant="link" className="pl-0" asChild>
                     <a

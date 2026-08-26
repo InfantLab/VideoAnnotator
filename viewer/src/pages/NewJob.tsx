@@ -677,6 +677,18 @@ export const PipelineSelectionStep = ({
         the live API catalog.
       </p>
 
+      {pipelines.some((pipeline) => pipeline.available === false) && (
+        <p className="text-xs text-muted-foreground">
+          Pipelines marked "Not installed" below can be installed from here, but only with an{" "}
+          <strong>admin-scoped</strong> API token. If you're running your own single-user server,
+          your token is usually admin already — see the "Getting Help" tab on the{" "}
+          <Link to="/settings" className="underline">
+            Settings
+          </Link>{" "}
+          page for details.
+        </p>
+      )}
+
       <div className="space-y-6">
         {groupedPipelines.map(({ groupName, list }) => (
           <div key={groupName} className="space-y-2">
