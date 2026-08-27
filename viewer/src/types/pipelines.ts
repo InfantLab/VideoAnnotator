@@ -129,3 +129,43 @@ export interface ExtrasInstallJob {
   restartRequired: boolean;
 }
 
+/**
+ * Response from GET /api/v1/vlm/models. An unreachable Ollama server is a
+ * thrown APIError (503), not a value in this type — see
+ * specs/009-vlm-prompt-workflow (VideoAnnotator repo) FR-005: reachable vs.
+ * unreachable are distinguished at the HTTP-status level, not folded into
+ * this shape.
+ */
+export interface VlmModelsResponse {
+  baseUrl: string;
+  models: string[];
+}
+
+/** Request for POST /api/v1/vlm/preview — test a prompt against one frame
+ * (or burst) without creating a job. Exactly one of `image` or
+ * (`videoPath` + `timestampSec`) must be provided. */
+export interface VlmPreviewRequest {
+  image?: Blob;
+  videoPath?: string;
+  timestampSec?: number;
+  prompt: string;
+  model: string;
+  samplingMode?: 'single_frame' | 'frame_burst';
+  frameIntervalSec?: number;
+  burstOffsets?: number[];
+  think?: boolean;
+  baseUrl?: string;
+}
+
+/** Response from POST /api/v1/vlm/preview. */
+export interface VlmPreviewResponse {
+  label: string;
+  reasoning: string;
+  rawResponse: string;
+  totalTime: number;
+  loadTime: number;
+  promptTokens: number;
+  respTokens: number;
+  tokensPerSec: number;
+}
+

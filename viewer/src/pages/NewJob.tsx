@@ -321,6 +321,7 @@ const CreateNewJob = () => {
             pipelines={pipelinesWithSchema}
             validationResult={validationResult}
             isValidating={isValidating}
+            previewVideoFile={selectedFiles[0]}
           />
         );
       case 4:
@@ -815,7 +816,8 @@ const ConfigurationStep = ({
   selectedPipelines,
   pipelines,
   validationResult,
-  isValidating
+  isValidating,
+  previewVideoFile
 }: {
   config: Record<string, unknown>;
   setConfig: Dispatch<SetStateAction<Record<string, unknown>>>;
@@ -823,6 +825,9 @@ const ConfigurationStep = ({
   pipelines: PipelineDescriptor[];
   validationResult: ReturnType<typeof useConfigValidation>['validationResult'];
   isValidating: boolean;
+  /** First selected video, used only by vlm_annotation's "test this prompt"
+   * slot (spec 009) to extract a preview frame client-side. */
+  previewVideoFile?: File;
 }) => {
   const activePipelines = useMemo(
     () => pipelines.filter((pipeline) => selectedPipelines.includes(pipeline.id)),
@@ -850,6 +855,7 @@ const ConfigurationStep = ({
         selectedPipelineIds={selectedPipelines}
         config={config}
         onConfigChange={setConfig}
+        previewVideoFile={previewVideoFile}
       />
 
       <details className="p-4 bg-blue-50 rounded-lg">

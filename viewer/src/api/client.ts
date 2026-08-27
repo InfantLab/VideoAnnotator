@@ -10,7 +10,10 @@ import type {
   VideoAnnotatorServerInfo,
   PipelineCapability,
   ExtrasInstallJob,
-  ExtrasInstallTriggerResponse
+  ExtrasInstallTriggerResponse,
+  VlmModelsResponse,
+  VlmPreviewRequest,
+  VlmPreviewResponse
 } from '@/types/pipelines';
 import type { SystemHealthResponse } from '@/types/system';
 import type { CurrentUser } from '@/types/api';
@@ -627,6 +630,85 @@ class APIClient {
       finishedAt: response.finished_at,
       commandOutput: response.command_output,
       restartRequired: response.restart_required === true
+    };
+  }
+
+  /**
+   * List vision-language models pulled on the configured Ollama server.
+   * GET /api/v1/vlm/models — throws APIError(503, OLLAMA_UNREACHABLE) when
+   * the server can't be reached at all; a reachable server with zero models
+   * pulled returns normally with an empty `models` array (these are
+   * deliberately distinct states — VideoAnnotator spec 009 FR-005).
+   */
+  async getVlmModels(): Promise<VlmModelsResponse> {
+    const response = await this.request<{ base_url: string; models: string[] }>(
+      '/api/v1/vlm/models'
+    );
+    return { baseUrl: response.base_url, models: response.models };
+  }
+
+  /**
+   * Test a vlm_annotation prompt against a single frame (or burst)
+   * synchronously — no job or annotation record is created.
+   * POST /api/v1/vlm/preview
+   */
+  async previewVlmPrompt(request: VlmPreviewRequest): Promise<VlmPreviewResponse> {
+    const formData = new FormData();
+    if (request.image) {
+      formData.append('image', request.image, 'preview-frame.jpg');
+    }
+    if (request.videoPath !== undefined) {
+      formData.append('video_path', request.videoPath);
+    }
+    if (request.timestampSec !== undefined) {
+      formData.append('timestamp_sec', String(request.timestampSec));
+    }
+    formData.append('prompt', request.prompt);
+    formData.append('model', request.model);
+    if (request.samplingMode) {
+      formData.append('sampling_mode', request.samplingMode);
+    }
+    if (request.frameIntervalSec !== undefined) {
+      formData.append('frame_interval_sec', String(request.frameIntervalSec));
+    }
+    if (request.burstOffsets) {
+      formData.append('burst_offsets', JSON.stringify(request.burstOffsets));
+    }
+    if (request.think !== undefined) {
+      formData.append('think', String(request.think));
+    }
+    if (request.baseUrl) {
+      formData.append('base_url', request.baseUrl);
+    }
+
+    const response = await this.request<{
+      label: string;
+      reasoning: string;
+      raw_response: string;
+      total_time: number;
+      load_time: number;
+      prompt_tokens: number;
+      resp_tokens: number;
+      tokens_per_sec: number;
+    }>(
+      '/api/v1/vlm/preview',
+      { method: 'POST', body: formData },
+      // Preview can be slow on a cold model — the pipeline's own docs note
+      // first-call load time can dominate; match its own generous timeout
+      // rather than the default 30s (VideoAnnotator ollama_client.py /
+      // viewer-handoff.md).
+      245000
+    );
+
+    return {
+      label: response.label,
+      reasoning: response.reasoning,
+      rawResponse: response.raw_response,
+      totalTime: response.total_time,
+      loadTime: response.load_time,
+      promptTokens: response.prompt_tokens,
+      respTokens: response.resp_tokens,
+      tokensPerSec: response.tokens_per_sec
     };
   }
 
