@@ -758,7 +758,7 @@ def version():
 def diagnose(
     component: str = typer.Argument(
         "all",
-        help="Component to diagnose: system, gpu, storage, database, or all",
+        help="Component to diagnose: system, gpu, storage, database, ollama, or all",
     ),
     json_output: bool = typer.Option(
         False, "--json", help="Output results as JSON for scripting"
@@ -776,6 +776,7 @@ def diagnose(
     from videoannotator.diagnostics import (
         diagnose_database,
         diagnose_gpu,
+        diagnose_ollama,
         diagnose_storage,
         diagnose_system,
     )
@@ -786,6 +787,7 @@ def diagnose(
         "gpu": ("GPU", diagnose_gpu),
         "storage": ("Storage", diagnose_storage),
         "database": ("Database", diagnose_database),
+        "ollama": ("Ollama", diagnose_ollama),
     }
 
     # Determine which components to check

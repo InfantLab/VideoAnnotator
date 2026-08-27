@@ -43,11 +43,17 @@ class OllamaVLMClient:
         self.base_url = base_url
         self._client = Client(host=base_url, timeout=timeout)
 
-    def preflight(self, model_name: str) -> None:
-        """Raise OllamaUnavailableError if the server is down or the model
-        isn't pulled. Call once before processing any video."""
+    def list_models(self) -> list[str]:
+        """Return the names of models currently pulled on this server.
+
+        Raises:
+            OllamaUnavailableError: the server isn't reachable at all --
+                distinct from a reachable server that simply has zero
+                models pulled (which returns an empty list, not an error;
+                spec 009 FR-005).
+        """
         try:
-            names = [
+            return [
                 m.get("model", m.get("name", ""))
                 for m in self._client.list().get("models", [])
             ]
@@ -56,6 +62,11 @@ class OllamaVLMClient:
                 f"Cannot reach ollama server at {self.base_url} ({exc}). "
                 "Start it with 'ollama serve' and retry."
             ) from exc
+
+    def preflight(self, model_name: str) -> None:
+        """Raise OllamaUnavailableError if the server is down or the model
+        isn't pulled. Call once before processing any video."""
+        names = self.list_models()
         if model_name not in names:
             raise OllamaUnavailableError(
                 f"Model {model_name!r} not found in ollama. Available: {names}. "

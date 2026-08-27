@@ -153,6 +153,75 @@ class TestDatabaseDiagnostics:
         assert "database_path" in result
 
 
+class TestOllamaDiagnostics:
+    """Spec 009 US3: reports Ollama reachability without hanging or
+    crashing, distinguishing reachable/unreachable/no-models-pulled."""
+
+    def test_reachable_server_reports_reachable_and_models(self):
+        from unittest.mock import patch
+
+        from videoannotator.diagnostics import diagnose_ollama
+
+        with patch(
+            "videoannotator.pipelines.vlm_annotation.ollama_client.OllamaVLMClient.list_models",
+            return_value=["qwen3.5:9b", "llava:7b"],
+        ):
+            result = diagnose_ollama()
+
+        assert result["ollama_reachable"] is True
+        assert result["status"] == "ok"
+        assert result["models"] == ["qwen3.5:9b", "llava:7b"]
+        assert result["errors"] == []
+
+    def test_unreachable_server_reports_unreachable_not_a_crash(self):
+        """US3 acceptance scenario 2."""
+        from unittest.mock import patch
+
+        from videoannotator.diagnostics import diagnose_ollama
+        from videoannotator.pipelines.vlm_annotation.ollama_client import (
+            OllamaUnavailableError,
+        )
+
+        with patch(
+            "videoannotator.pipelines.vlm_annotation.ollama_client.OllamaVLMClient.list_models",
+            side_effect=OllamaUnavailableError("Cannot reach ollama server"),
+        ):
+            result = diagnose_ollama()
+
+        assert result["ollama_reachable"] is False
+        assert result["status"] == "warning"
+        assert result["models"] == []
+        assert any("Cannot reach" in w for w in result["warnings"])
+
+    def test_reachable_with_zero_models_is_distinct_from_unreachable(self):
+        """Edge case: empty model list vs. connection error must be
+        distinguishable, not one generic failure."""
+        from unittest.mock import patch
+
+        from videoannotator.diagnostics import diagnose_ollama
+
+        with patch(
+            "videoannotator.pipelines.vlm_annotation.ollama_client.OllamaVLMClient.list_models",
+            return_value=[],
+        ):
+            result = diagnose_ollama()
+
+        assert result["ollama_reachable"] is True
+        assert result["models"] == []
+        assert result["status"] == "warning"
+        assert any("no models pulled" in w for w in result["warnings"])
+
+    def test_never_raises(self):
+        """US3 acceptance scenario 2: the diagnostic command itself must
+        never fail or hang regardless of server state."""
+        from videoannotator.diagnostics import diagnose_ollama
+
+        # Points at a port nothing is listening on -- exercises the real
+        # connection-failure path, not a mock.
+        result = diagnose_ollama(base_url="http://127.0.0.1:1")
+        assert result["ollama_reachable"] is False
+
+
 class TestDiagnosticsIntegration:
     """Integration tests for diagnostics."""
 
@@ -161,6 +230,7 @@ class TestDiagnosticsIntegration:
         from videoannotator.diagnostics import (
             diagnose_database,
             diagnose_gpu,
+            diagnose_ollama,
             diagnose_storage,
             diagnose_system,
         )
@@ -170,6 +240,7 @@ class TestDiagnosticsIntegration:
             diagnose_gpu,
             diagnose_storage,
             diagnose_database,
+            diagnose_ollama,
         ]:
             result = diag_func()
             assert "errors" in result
@@ -182,6 +253,7 @@ class TestDiagnosticsIntegration:
         from videoannotator.diagnostics import (
             diagnose_database,
             diagnose_gpu,
+            diagnose_ollama,
             diagnose_storage,
             diagnose_system,
         )
@@ -191,6 +263,7 @@ class TestDiagnosticsIntegration:
             diagnose_gpu,
             diagnose_storage,
             diagnose_database,
+            diagnose_ollama,
         ]:
             result = diag_func()
             if result["errors"]:

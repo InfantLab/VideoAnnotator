@@ -11,12 +11,14 @@ v1.3.0: Phase 11 - T070-T073
 
 from .database import diagnose_database
 from .gpu import diagnose_gpu
+from .ollama import diagnose_ollama
 from .storage import diagnose_storage
 from .system import diagnose_system
 
 __all__ = [
     "diagnose_database",
     "diagnose_gpu",
+    "diagnose_ollama",
     "diagnose_storage",
     "diagnose_system",
 ]

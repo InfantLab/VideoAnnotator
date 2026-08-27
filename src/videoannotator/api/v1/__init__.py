@@ -14,6 +14,7 @@ from .jobs import router as jobs_router
 from .pipelines import router as pipelines_router
 from .presets import router as presets_router
 from .system import router as system_router
+from .vlm import router as vlm_router
 
 # Create main API router
 api_router = APIRouter()
@@ -29,6 +30,7 @@ api_router.include_router(artifacts_router, prefix="/jobs", tags=["artifacts"])
 api_router.include_router(pipelines_router, prefix="/pipelines", tags=["pipelines"])
 api_router.include_router(datasets_router, prefix="/datasets", tags=["datasets"])
 api_router.include_router(presets_router, prefix="/presets", tags=["presets"])
+api_router.include_router(vlm_router, prefix="/vlm", tags=["vlm"])
 api_router.include_router(config_router, prefix="/config", tags=["config"])
 api_router.include_router(system_router, prefix="/system", tags=["system"])
 api_router.include_router(debug_router, prefix="/debug", tags=["debug"])
