@@ -738,6 +738,7 @@ async def list_jobs(
     per_page: int = 10,
     status_filter: str | None = None,
     batch_id: str | None = None,
+    unbatched_only: bool = False,
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobListResponse:
@@ -754,13 +755,18 @@ async def list_jobs(
         # Get job IDs from storage
         all_job_ids = storage.list_jobs(status_filter=status_filter)
 
-        # Narrow to one submission batch (spec 008) if asked. Intersecting the
-        # two lists rather than pushing batch_id into list_jobs() keeps the
-        # status filter and the FIFO ordering it already applies intact, and
-        # works identically on both storage backends.
+        # Narrow to one submission batch (spec 008) if asked, or to jobs in no
+        # batch at all. Intersecting id lists rather than pushing the filter
+        # into list_jobs() keeps the status filter and the FIFO ordering it
+        # already applies intact, and works identically on both storage
+        # backends. `batch_id` wins if both are somehow given: asking for a
+        # named batch is more specific than asking for none.
         if batch_id is not None:
             in_batch = set(storage.list_jobs_by_batch(batch_id))
             all_job_ids = [job_id for job_id in all_job_ids if job_id in in_batch]
+        elif unbatched_only:
+            unbatched = set(storage.list_unbatched_jobs())
+            all_job_ids = [job_id for job_id in all_job_ids if job_id in unbatched]
 
         # Apply pagination
         total = len(all_job_ids)

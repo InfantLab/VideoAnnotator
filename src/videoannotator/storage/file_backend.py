@@ -173,6 +173,10 @@ class FileStorageBackend(StorageBackend):
         """List job IDs sharing a given batch identifier (spec 008)."""
         return [job.job_id for job in self.get_all_jobs() if job.batch_id == batch_id]
 
+    def list_unbatched_jobs(self) -> list[str]:
+        """List job IDs carrying no batch identifier."""
+        return [job.job_id for job in self.get_all_jobs() if not job.batch_id]
+
     def list_batches(self) -> list[str]:
         """List distinct batch identifiers, most recently submitted first."""
         newest_by_batch: dict[str, datetime] = {}

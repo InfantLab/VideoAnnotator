@@ -18,7 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   longer has to remember client-side which jobs it submitted together to show them as one thing:
   submitting 12 videos is one batch that survives a reload, a different browser, and a different
   machine — where before it was 12 unrelated job rows and no way to ask the server which of them
-  belonged together. Extends `specs/008-batch-group-workflow/`.
+  belonged together. `GET /api/v1/jobs?unbatched_only=true` completes the picture by returning
+  only jobs that belong to no batch (CLI submissions, and anything predating batch tagging), so a
+  client showing "batches, plus anything ungrouped" doesn't have to filter a paginated list
+  client-side — which silently hid ungrouped jobs whenever batched ones filled the page.
+  Extends `specs/008-batch-group-workflow/`.
 
 - **`GET /api/v1/auth/me`**: any authenticated caller can now check its own identity, including
   `is_admin` — the direct explanation for a `403 Administrator privileges required` from an

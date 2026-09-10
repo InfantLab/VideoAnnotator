@@ -165,7 +165,10 @@ cancellation or completion); confirm a corresponding event is received without a
   together — the grouping survives a reload, another browser, or another machine.
 - **Jobs filtered by batch**: `GET /api/v1/jobs` accepts an optional `batch_id` query parameter,
   composable with the existing `status_filter` and pagination, for drilling from a batch into its
-  member jobs.
+  member jobs. It also accepts `unbatched_only=true`, returning only jobs that belong to no batch —
+  the complement of the batch listing, so a client can render "every batch, plus anything
+  ungrouped" without client-side filtering of a paginated list (which hides ungrouped jobs whenever
+  batched ones fill a page). `batch_id` wins if both are given.
 - **Batch retry**: `POST /api/v1/batches/{batch_id}/retry` → reports how many jobs were retried and
   how many were skipped (with why — e.g. "still running," "already succeeded").
 - **Batch cancel**: `POST /api/v1/batches/{batch_id}/cancel` → `{ batch_id, cancelled: string[],

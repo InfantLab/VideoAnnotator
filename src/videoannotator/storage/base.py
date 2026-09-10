@@ -107,6 +107,19 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
+    def list_unbatched_jobs(self) -> list[str]:
+        """List job IDs carrying no batch identifier.
+
+        These are standalone submissions -- from the CLI, or from a client that
+        predates batch tagging. They belong to no batch, so a batch listing
+        never surfaces them.
+
+        Returns:
+            Job IDs with no batch_id.
+        """
+        pass
+
+    @abstractmethod
     def list_batches(self) -> list[str]:
         """List every distinct batch identifier currently carried by a job.
 

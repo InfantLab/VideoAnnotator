@@ -418,6 +418,16 @@ class SQLiteStorageBackend(StorageBackend):
             self.logger.error(f"[ERROR] Failed to list jobs for batch {batch_id}: {e}")
             return []
 
+    def list_unbatched_jobs(self) -> list[str]:
+        """List job IDs carrying no batch identifier."""
+        try:
+            with self.SessionLocal() as session:
+                query = session.query(Job.id).filter(Job.batch_id.is_(None))
+                return [row[0] for row in query.order_by(Job.created_at.asc()).all()]
+        except SQLAlchemyError as e:
+            self.logger.error(f"[ERROR] Failed to list unbatched jobs: {e}")
+            return []
+
     def list_batches(self) -> list[str]:
         """List distinct batch identifiers, most recently submitted first."""
         try:

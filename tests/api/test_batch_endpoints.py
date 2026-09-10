@@ -364,6 +364,56 @@ class TestJobsFilteredByBatch:
         assert client.get("/api/v1/jobs/").json()["total"] == before + 2
 
 
+class TestUnbatchedJobsFilter:
+    def test_returns_only_jobs_belonging_to_no_batch(self):
+        _submit_job(batch_id=str(uuid.uuid4()))
+        standalone = _submit_job()
+
+        body = client.get("/api/v1/jobs/?unbatched_only=true&per_page=100").json()
+        ids = {job["id"] for job in body["jobs"]}
+        assert standalone["id"] in ids
+        assert all(job["batch_id"] is None for job in body["jobs"])
+
+    def test_survives_a_page_full_of_batched_jobs(self):
+        """The reason this filter exists: filtering a paginated list
+        client-side hides ungrouped jobs whenever batched ones fill the page."""
+        batch_id = str(uuid.uuid4())
+        for _ in range(12):
+            _submit_job(batch_id=batch_id)
+        standalone = _submit_job()
+
+        body = client.get("/api/v1/jobs/?unbatched_only=true&per_page=10").json()
+        assert standalone["id"] in {job["id"] for job in body["jobs"]}
+
+    def test_batch_id_takes_precedence_when_both_are_given(self):
+        batch_id = str(uuid.uuid4())
+        job = _submit_job(batch_id=batch_id)
+        _submit_job()
+
+        body = client.get(
+            f"/api/v1/jobs/?batch_id={batch_id}&unbatched_only=true&per_page=100"
+        ).json()
+        assert [j["id"] for j in body["jobs"]] == [job["id"]]
+
+    def test_composes_with_status_filter(self):
+        pending = _submit_job()
+        done = _submit_job()
+        _set_job_status(done["id"], JobStatus.COMPLETED)
+
+        body = client.get(
+            "/api/v1/jobs/?unbatched_only=true&status_filter=pending&per_page=100"
+        ).json()
+        ids = {job["id"] for job in body["jobs"]}
+        assert pending["id"] in ids
+        assert done["id"] not in ids
+
+    def test_off_by_default(self):
+        batch_id = str(uuid.uuid4())
+        job = _submit_job(batch_id=batch_id)
+        body = client.get("/api/v1/jobs/?per_page=100").json()
+        assert job["id"] in {j["id"] for j in body["jobs"]}
+
+
 class TestBatchCancel:
     def test_cancels_every_pending_job_in_the_batch(self):
         batch_id = str(uuid.uuid4())
