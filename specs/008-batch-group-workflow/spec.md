@@ -146,15 +146,32 @@ cancellation or completion); confirm a corresponding event is received without a
 
 ## API Contract for Downstream Consumers
 
-- **Submission**: `POST /api/v1/jobs` accepts optional `batch_id` and `dataset_id` form fields
-  alongside its existing fields. Omitting `batch_id` behaves exactly as today (a fully standalone
-  job).
-- **Batch summary**: `GET /api/v1/batches/{batch_id}` → `{ batch_id, total, by_status: { pending,
-  running, completed, failed, cancelled }, completion_percentage, estimated_seconds_remaining: number
-  | null }`. `estimated_seconds_remaining` is `null` until at least one job in the batch has
-  completed.
+- **Submission**: `POST /api/v1/jobs` accepts optional `batch_id`, `batch_name` and `dataset_id`
+  form fields alongside its existing fields. Omitting `batch_id` behaves exactly as today (a fully
+  standalone job); `batch_name` is a human label sent with every job in the batch (it is stored
+  per-job and read back off whichever job carries it, since a batch has no record of its own), and
+  is ignored without a `batch_id`.
+- **Batch summary**: `GET /api/v1/batches/{batch_id}` → `{ batch_id, batch_name: string | null,
+  dataset_id: string | null, created_at, total, by_status: { pending, running, completed, failed,
+  cancelled }, completion_percentage, estimated_seconds_remaining: number | null }`.
+  `estimated_seconds_remaining` is `null` until at least one job in the batch has completed.
+  `created_at` is the batch's *earliest* job's creation time, so retrying a job doesn't move the
+  batch's apparent submission time.
+- **Batch listing**: `GET /api/v1/batches` → `{ batches: BatchSummary[], total, page, per_page }`,
+  most recently submitted first, paginated (`page`, `per_page`). Derived by grouping over jobs, so a
+  batch appears as soon as one job carries its id and disappears when its last member job is
+  deleted. Jobs with no `batch_id` are not represented here at all. This is what lets a client group
+  N videos submitted together *without* having to remember client-side which jobs it submitted
+  together — the grouping survives a reload, another browser, or another machine.
+- **Jobs filtered by batch**: `GET /api/v1/jobs` accepts an optional `batch_id` query parameter,
+  composable with the existing `status_filter` and pagination, for drilling from a batch into its
+  member jobs.
 - **Batch retry**: `POST /api/v1/batches/{batch_id}/retry` → reports how many jobs were retried and
   how many were skipped (with why — e.g. "still running," "already succeeded").
+- **Batch cancel**: `POST /api/v1/batches/{batch_id}/cancel` → `{ batch_id, cancelled: string[],
+  skipped: [{ job_id, reason }] }`. Cancels every still-pending/running job in the batch; jobs
+  already finished are reported in `skipped` with why rather than failing the request, since
+  cancelling a half-finished batch is a normal thing to want. Idempotent per job.
 - **Events**: the existing `/api/v1/events/stream` now also emits `job_status_changed` events shaped
   `{ job_id, batch_id: string | null, status, progress_percentage }`, in addition to its current
   heartbeat events (unchanged, still sent).

@@ -12,6 +12,7 @@ started_at/completed_at -- the single source of truth per FR-002.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from .types import BatchJob, JobStatus
 
@@ -27,11 +28,17 @@ class BatchSummary:
     by_status: dict[str, int]
     completion_percentage: float
     estimated_seconds_remaining: float | None
+    batch_name: str | None = None
+    dataset_id: str | None = None
+    created_at: datetime | None = None
 
     def to_dict(self) -> dict:
         """Convert to the API contract's exact response shape."""
         return {
             "batch_id": self.batch_id,
+            "batch_name": self.batch_name,
+            "dataset_id": self.dataset_id,
+            "created_at": self.created_at,
             "total": self.total,
             "by_status": self.by_status,
             "completion_percentage": self.completion_percentage,
@@ -79,10 +86,26 @@ def compute_batch_summary(batch_id: str, jobs: list[BatchJob]) -> BatchSummary:
         avg_duration = sum(completed_durations) / len(completed_durations)
         estimated_seconds_remaining = avg_duration * remaining
 
+    # A batch's own identity is denormalized across its member jobs (there is
+    # no batches table), so read it back off whichever job carries it. Jobs in
+    # one batch are submitted with the same values; take the first non-null
+    # rather than assuming every job has it, so a partially-tagged batch still
+    # reports a name instead of none.
+    batch_name = next((job.batch_name for job in jobs if job.batch_name), None)
+    dataset_id = next((job.dataset_id for job in jobs if job.dataset_id), None)
+    # Submission time = when the batch's earliest job was created, not its
+    # latest, so a batch's position in a submitted-recently list doesn't shift
+    # when one of its jobs is retried.
+    created_ats = [job.created_at for job in jobs if job.created_at is not None]
+    created_at = min(created_ats) if created_ats else None
+
     return BatchSummary(
         batch_id=batch_id,
         total=total,
         by_status=by_status,
         completion_percentage=completion_percentage,
         estimated_seconds_remaining=estimated_seconds_remaining,
+        batch_name=batch_name,
+        dataset_id=dataset_id,
+        created_at=created_at,
     )

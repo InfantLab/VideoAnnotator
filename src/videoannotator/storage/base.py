@@ -107,6 +107,18 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
+    def list_batches(self) -> list[str]:
+        """List every distinct batch identifier currently carried by a job.
+
+        A batch has no independent existence -- this is a group-by over jobs,
+        so a batch disappears once its last member job is deleted.
+
+        Returns:
+            Batch identifiers, most recently submitted first.
+        """
+        pass
+
+    @abstractmethod
     def delete_job(self, job_id: str) -> bool:
         """Delete all data for a job.
 

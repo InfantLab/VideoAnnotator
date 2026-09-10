@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Batches are addressable as a unit**: `GET /api/v1/batches` lists every batch the server knows
+  about (newest first, paginated) with the same aggregate `GET /api/v1/batches/{id}` returns for
+  one, `GET /api/v1/jobs?batch_id=...` drills into a batch's member jobs, and
+  `POST /api/v1/batches/{id}/cancel` cancels a whole batch in one call (reporting already-finished
+  jobs as skipped rather than failing, mirroring batch-retry). Job submission also accepts a
+  `batch_name`, surfaced on the job and on every batch summary. Together these mean a client no
+  longer has to remember client-side which jobs it submitted together to show them as one thing:
+  submitting 12 videos is one batch that survives a reload, a different browser, and a different
+  machine — where before it was 12 unrelated job rows and no way to ask the server which of them
+  belonged together. Extends `specs/008-batch-group-workflow/`.
+
 - **`GET /api/v1/auth/me`**: any authenticated caller can now check its own identity, including
   `is_admin` — the direct explanation for a `403 Administrator privileges required` from an
   admin-only endpoint (e.g. the extras-install API below), which previously had no way to be

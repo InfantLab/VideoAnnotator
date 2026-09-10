@@ -61,6 +61,7 @@ class BatchJob:
         0.0  # 006: completed/total selected pipelines, not per-frame
     )
     batch_id: str | None = None  # 008: client-supplied submission-batch tag
+    batch_name: str | None = None  # 008: human label for that batch, if given
     dataset_id: str | None = None  # 008: saved dataset (007) this job came from
 
     @property
@@ -122,6 +123,7 @@ class BatchJob:
             "storage_path": str(self.storage_path) if self.storage_path else None,
             "progress_percentage": self.progress_percentage,
             "batch_id": self.batch_id,
+            "batch_name": self.batch_name,
             "dataset_id": self.dataset_id,
         }
 
@@ -170,6 +172,7 @@ class BatchJob:
             else None,
             progress_percentage=data.get("progress_percentage", 0.0),
             batch_id=data.get("batch_id"),
+            batch_name=data.get("batch_name"),
             dataset_id=data.get("dataset_id"),
         )
 

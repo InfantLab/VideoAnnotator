@@ -33,12 +33,18 @@ def reset_db():
     reset_storage_backend()
 
 
-def _submit_job(batch_id: str | None = None, dataset_id: str | None = None) -> dict:
+def _submit_job(
+    batch_id: str | None = None,
+    dataset_id: str | None = None,
+    batch_name: str | None = None,
+) -> dict:
     data = {}
     if batch_id is not None:
         data["batch_id"] = batch_id
     if dataset_id is not None:
         data["dataset_id"] = dataset_id
+    if batch_name is not None:
+        data["batch_name"] = batch_name
     response = client.post(
         "/api/v1/jobs/",
         files={"video": ("test.mp4", io.BytesIO(b"fake video content"), "video/mp4")},
@@ -221,6 +227,204 @@ class TestBatchRetry:
         body = resp.json()
         assert body["retried"] == []
         assert len(body["skipped"]) == 1
+
+
+def _list_batches(per_page: int = 100) -> list[dict]:
+    """All batch summaries. Storage is shared across this file's tests, so
+    callers must assert on the batches they created, not on the whole list."""
+    response = client.get(f"/api/v1/batches/?per_page={per_page}")
+    assert response.status_code == 200, response.text
+    return response.json()["batches"]
+
+
+def _batch_ids() -> list[str]:
+    return [batch["batch_id"] for batch in _list_batches()]
+
+
+class TestBatchNaming:
+    def test_batch_name_is_reported_on_the_job_and_the_batch(self):
+        batch_id = str(uuid.uuid4())
+        job = _submit_job(batch_id=batch_id, batch_name="Irene corpus run 3")
+        assert job["batch_name"] == "Irene corpus run 3"
+
+        summary = client.get(f"/api/v1/batches/{batch_id}").json()
+        assert summary["batch_name"] == "Irene corpus run 3"
+
+    def test_batch_name_without_batch_id_is_ignored(self):
+        """A name only means something as a label for a batch."""
+        job = _submit_job(batch_name="orphan label")
+        assert job["batch_id"] is None
+        assert job["batch_name"] is None
+
+    def test_unnamed_batch_reports_a_null_name_not_an_error(self):
+        batch_id = str(uuid.uuid4())
+        _submit_job(batch_id=batch_id)
+        summary = client.get(f"/api/v1/batches/{batch_id}").json()
+        assert summary["batch_name"] is None
+
+    def test_name_survives_when_only_some_member_jobs_carry_it(self):
+        """Partially-tagged batch still reports its name rather than none."""
+        batch_id = str(uuid.uuid4())
+        _submit_job(batch_id=batch_id)
+        _submit_job(batch_id=batch_id, batch_name="named later")
+        summary = client.get(f"/api/v1/batches/{batch_id}").json()
+        assert summary["batch_name"] == "named later"
+
+
+class TestBatchListing:
+    def test_lists_every_batch_with_its_aggregate(self):
+        first = str(uuid.uuid4())
+        second = str(uuid.uuid4())
+        _submit_job(batch_id=first, batch_name="first batch")
+        _submit_job(batch_id=second, batch_name="second batch")
+        _submit_job(batch_id=second, batch_name="second batch")
+
+        by_id = {batch["batch_id"]: batch for batch in _list_batches()}
+        assert by_id[first]["total"] == 1
+        assert by_id[second]["total"] == 2
+        assert by_id[second]["batch_name"] == "second batch"
+        assert by_id[second]["by_status"]["pending"] == 2
+
+    def test_standalone_jobs_are_not_listed_as_batches(self):
+        before = set(_batch_ids())
+        _submit_job()
+        _submit_job()
+        assert set(_batch_ids()) == before
+
+    def test_listing_is_always_a_list_never_an_error(self):
+        response = client.get("/api/v1/batches/")
+        assert response.status_code == 200
+        assert isinstance(response.json()["batches"], list)
+
+    def test_newest_batch_is_listed_before_an_older_one(self):
+        older = str(uuid.uuid4())
+        newer = str(uuid.uuid4())
+        _submit_job(batch_id=older)
+        _submit_job(batch_id=newer)
+        listed = _batch_ids()
+        assert listed.index(newer) < listed.index(older)
+
+    def test_pagination_splits_the_listing_without_losing_batches(self):
+        for _ in range(3):
+            _submit_job(batch_id=str(uuid.uuid4()))
+
+        body = client.get("/api/v1/batches/?page=1&per_page=2").json()
+        assert body["page"] == 1
+        assert body["per_page"] == 2
+        assert len(body["batches"]) == 2
+        assert body["total"] == len(_batch_ids())
+
+        page_two = client.get("/api/v1/batches/?page=2&per_page=2").json()
+        first_ids = {batch["batch_id"] for batch in body["batches"]}
+        second_ids = {batch["batch_id"] for batch in page_two["batches"]}
+        assert first_ids.isdisjoint(second_ids)
+
+    def test_summary_carries_dataset_and_submission_time(self):
+        batch_id = str(uuid.uuid4())
+        _submit_job(batch_id=batch_id, dataset_id="ds-42")
+        batch = next(b for b in _list_batches() if b["batch_id"] == batch_id)
+        assert batch["dataset_id"] == "ds-42"
+        assert batch["created_at"] is not None
+
+
+class TestJobsFilteredByBatch:
+    def test_batch_id_filter_returns_only_that_batch(self):
+        mine = str(uuid.uuid4())
+        theirs = str(uuid.uuid4())
+        a = _submit_job(batch_id=mine)
+        b = _submit_job(batch_id=mine)
+        _submit_job(batch_id=theirs)
+        _submit_job()
+
+        body = client.get(f"/api/v1/jobs/?batch_id={mine}").json()
+        assert body["total"] == 2
+        assert {job["id"] for job in body["jobs"]} == {a["id"], b["id"]}
+
+    def test_filter_composes_with_status_filter(self):
+        batch_id = str(uuid.uuid4())
+        pending = _submit_job(batch_id=batch_id)
+        done = _submit_job(batch_id=batch_id)
+        _set_job_status(done["id"], JobStatus.COMPLETED)
+
+        body = client.get(
+            f"/api/v1/jobs/?batch_id={batch_id}&status_filter=pending"
+        ).json()
+        assert [job["id"] for job in body["jobs"]] == [pending["id"]]
+
+    def test_unknown_batch_id_returns_no_jobs_not_an_error(self):
+        _submit_job(batch_id=str(uuid.uuid4()))
+        body = client.get(f"/api/v1/jobs/?batch_id={uuid.uuid4()}").json()
+        assert body["total"] == 0
+        assert body["jobs"] == []
+
+    def test_omitting_the_filter_still_returns_everything(self):
+        before = client.get("/api/v1/jobs/").json()["total"]
+        _submit_job(batch_id=str(uuid.uuid4()))
+        _submit_job()
+        assert client.get("/api/v1/jobs/").json()["total"] == before + 2
+
+
+class TestBatchCancel:
+    def test_cancels_every_pending_job_in_the_batch(self):
+        batch_id = str(uuid.uuid4())
+        a = _submit_job(batch_id=batch_id)
+        b = _submit_job(batch_id=batch_id)
+
+        body = client.post(f"/api/v1/batches/{batch_id}/cancel").json()
+        assert set(body["cancelled"]) == {a["id"], b["id"]}
+        assert body["skipped"] == []
+
+        summary = client.get(f"/api/v1/batches/{batch_id}").json()
+        assert summary["by_status"]["cancelled"] == 2
+
+    def test_completed_job_is_skipped_with_a_reason_not_errored(self):
+        batch_id = str(uuid.uuid4())
+        running = _submit_job(batch_id=batch_id)
+        finished = _submit_job(batch_id=batch_id)
+        _set_job_status(finished["id"], JobStatus.COMPLETED)
+
+        resp = client.post(f"/api/v1/batches/{batch_id}/cancel")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["cancelled"] == [running["id"]]
+        assert [s["job_id"] for s in body["skipped"]] == [finished["id"]]
+        assert "completed" in body["skipped"][0]["reason"]
+
+    def test_running_job_is_cancelled(self):
+        batch_id = str(uuid.uuid4())
+        job = _submit_job(batch_id=batch_id)
+        _set_job_status(job["id"], JobStatus.RUNNING)
+
+        body = client.post(f"/api/v1/batches/{batch_id}/cancel").json()
+        assert body["cancelled"] == [job["id"]]
+
+    def test_cancelling_twice_is_idempotent(self):
+        batch_id = str(uuid.uuid4())
+        job = _submit_job(batch_id=batch_id)
+
+        client.post(f"/api/v1/batches/{batch_id}/cancel")
+        second = client.post(f"/api/v1/batches/{batch_id}/cancel")
+        assert second.status_code == 200
+        assert second.json()["cancelled"] == [job["id"]]
+        assert second.json()["skipped"] == []
+
+    def test_unknown_batch_cancels_nothing_without_erroring(self):
+        resp = client.post(f"/api/v1/batches/{uuid.uuid4()}/cancel")
+        assert resp.status_code == 200
+        assert resp.json()["cancelled"] == []
+
+    def test_cancelled_batch_is_then_retryable(self):
+        """Cancel-all then retry-all is the 'stop, fix, rerun' loop."""
+        batch_id = str(uuid.uuid4())
+        _submit_job(batch_id=batch_id)
+        _submit_job(batch_id=batch_id)
+
+        client.post(f"/api/v1/batches/{batch_id}/cancel")
+        retried = client.post(f"/api/v1/batches/{batch_id}/retry").json()
+        assert len(retried["retried"]) == 2
+
+        summary = client.get(f"/api/v1/batches/{batch_id}").json()
+        assert summary["by_status"]["pending"] == 2
 
 
 class TestSSEJobStatusChanged:

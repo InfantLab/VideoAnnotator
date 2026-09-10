@@ -47,11 +47,14 @@ class Job(Base):
     # Progress tracking (keep in sync with database.models.Job)
     progress_percentage = Column(Integer, nullable=False, default=0)
 
-    # Submission grouping (008: client-supplied batch tag; 007: originating
-    # saved dataset, if any). Both are loose references, not foreign keys --
-    # a batch is just "whatever jobs currently carry this identifier," and a
-    # dataset may be deleted without affecting jobs previously tagged with it.
+    # Submission grouping (008: client-supplied batch tag and its optional
+    # human label; 007: originating saved dataset, if any). All loose
+    # references, not foreign keys -- a batch is just "whatever jobs currently
+    # carry this identifier," and a dataset may be deleted without affecting
+    # jobs previously tagged with it. batch_name is denormalized onto every
+    # member job for the same reason: there is no batches table to hold it.
     batch_id = Column(String, index=True)
+    batch_name = Column(String)
     dataset_id = Column(String)
 
     # Timestamps

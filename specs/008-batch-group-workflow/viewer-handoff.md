@@ -19,15 +19,24 @@ time from the Jobs list with no way to step to "the next video in this batch."
 
 Full contract in [`spec.md`](spec.md)'s API section. Summary:
 
-- `POST /api/v1/jobs` now accepts an optional `batch_id` (and optional `dataset_id`) form field.
-  Generate one UUID client-side per wizard submission and send it with every per-video call in that
-  submission — this is the entire mechanism; there's no separate "create a batch" call.
-- `GET /api/v1/batches/{batch_id}` → `{ batch_id, total, by_status: {...}, completion_percentage,
-  estimated_seconds_remaining }` — a real, computed-on-read aggregate. `estimated_seconds_remaining`
-  is `null` until the batch has at least one completed job (don't render a time estimate before
-  then).
+- `POST /api/v1/jobs` now accepts an optional `batch_id`, `batch_name` and `dataset_id` form
+  field. Generate one UUID client-side per wizard submission and send it with every per-video call
+  in that submission — this is the entire mechanism; there's no separate "create a batch" call.
+  Send the same `batch_name` on every call too, so the batch has something human to be called.
+- `GET /api/v1/batches` → `{ batches: [...], total, page, per_page }`, newest submission first.
+  **This is new since this handoff was first written, and it changes the recommended design** — see
+  "Things worth knowing" below. The viewer no longer has to remember client-side which jobs it
+  submitted together.
+- `GET /api/v1/batches/{batch_id}` → `{ batch_id, batch_name, dataset_id, created_at, total,
+  by_status: {...}, completion_percentage, estimated_seconds_remaining }` — a real, computed-on-read
+  aggregate. `estimated_seconds_remaining` is `null` until the batch has at least one completed job
+  (don't render a time estimate before then).
+- `GET /api/v1/jobs?batch_id=...` → the member jobs of one batch, composable with `status_filter`
+  and pagination.
 - `POST /api/v1/batches/{batch_id}/retry` → retries every currently-retryable (failed/cancelled) job
   in the batch, reports how many were retried vs. skipped and why.
+- `POST /api/v1/batches/{batch_id}/cancel` → cancels every still-cancellable job in the batch,
+  reporting jobs already finished in `skipped` rather than failing.
 - The existing `/api/v1/events/stream` now emits real `job_status_changed` events (`{ job_id,
   batch_id, status, progress_percentage }`) alongside its existing heartbeat — `src/hooks/useSSE.ts`
   (`useJobSSE`/`useGlobalSSE`) is already fully built in this repo and currently unused anywhere;
@@ -39,11 +48,15 @@ Full contract in [`spec.md`](spec.md)'s API section. Summary:
   UI on polling first (mirroring `useExtrasInstall.ts`'s proven pattern: `useQueries` over N tracked
   items, `localStorage` persistence so state survives a reload) and adopt SSE as an optimization
   pass, rather than blocking on wiring `useSSE.ts` in before shipping anything.
-- **A batch is not a separately-fetchable list of job ids from one call** — `GET /batches/{id}` gives
-  you the aggregate, not the member job list. To show per-video status within a batch, either track
-  the job ids returned from each of the N submission calls client-side (simplest — you already made
-  those calls), or filter the existing jobs-list endpoint by whatever field it exposes for batch
-  membership once implemented — confirm the exact shape against the live contract before assuming.
+- **Batch membership is now server-queryable** — this supersedes the original advice here to track
+  submitted job ids client-side. `GET /batches` enumerates batches and `GET /jobs?batch_id=...`
+  returns one batch's member jobs, so batch identity survives a reload, a different browser, and a
+  different machine. Client-side tracking of submitted ids is no longer necessary and shouldn't be
+  the source of truth. `GET /batches/{id}` still returns the aggregate only, not the member list —
+  use the filtered jobs endpoint for per-video detail.
+- **Cancel-all is one call now** — the original advice here was to loop the single-job cancel hook
+  over the batch's job ids. `POST /batches/{id}/cancel` does it server-side and reports per-job skip
+  reasons, matching batch-retry's shape.
 - **`estimated_seconds_remaining` can be `null`.** Don't render "0:00 remaining" or similar before the
   batch has at least one completed job — show an honest "estimating..." or nothing at all instead.
 - **Retry-in-a-batch reuses spec 006's single-job retry semantics per job** — no new file upload,
@@ -58,8 +71,8 @@ Full contract in [`spec.md`](spec.md)'s API section. Summary:
 2. **Real in-process messaging** — surface which pipeline/stage is currently running for a job
    (`progress_percentage` combined with `selected_pipelines` ordering) instead of the current
    4-value stepped bar.
-3. **Bulk actions on a batch**: cancel-all (loop the existing single-job cancel hook across the
-   batch's job ids) and retry-all (call the new batch-retry endpoint once).
+3. **Bulk actions on a batch**: cancel-all and retry-all, each a single call to the corresponding
+   batch endpoint.
 4. **Batch review navigation**: when opening a job's results from within a batch context, carry the
    batch's ordered job-id list and current index into the results viewer
    (`VideoAnnotationViewer.tsx`/`JobResultsViewer.tsx`, currently strictly one-job-at-a-time with no

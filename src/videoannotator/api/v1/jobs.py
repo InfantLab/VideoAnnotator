@@ -142,6 +142,10 @@ class JobResponse(BaseModel):
         default=None,
         description="Client-supplied identifier grouping jobs submitted together (spec 008)",
     )
+    batch_name: str | None = Field(
+        default=None,
+        description="Human-readable label for that batch, if one was supplied (spec 008)",
+    )
     dataset_id: str | None = Field(
         default=None,
         description="Saved dataset (spec 007) this job was submitted from, if any",
@@ -285,6 +289,13 @@ async def submit_job(
         description="Client-generated identifier grouping this job with others "
         "submitted in the same wizard pass (spec 008). Omit for a standalone job.",
     ),
+    batch_name: str | None = Form(
+        None,
+        description="Human-readable label for this batch (spec 008), e.g. the "
+        "folder the videos came from. Send the same value with every job in the "
+        "batch; it is stored per-job and read back off whichever job carries it. "
+        "Ignored when batch_id is omitted.",
+    ),
     dataset_id: str | None = Form(
         None,
         description="Saved dataset (spec 007) this job was submitted from, if any. "
@@ -387,6 +398,7 @@ async def submit_job(
                 status=JobStatus.PENDING,
                 selected_pipelines=parsed_pipelines,
                 batch_id=batch_id,
+                batch_name=batch_name if batch_id else None,
                 dataset_id=dataset_id,
             )
 
@@ -460,6 +472,7 @@ async def submit_job(
             queue_position=queue_position,
             progress_percentage=batch_job.progress_percentage,
             batch_id=batch_job.batch_id,
+            batch_name=batch_job.batch_name,
             dataset_id=batch_job.dataset_id,
         )
 
@@ -614,6 +627,7 @@ async def get_job_status(
             queue_position=queue_position,
             progress_percentage=job.progress_percentage,
             batch_id=job.batch_id,
+            batch_name=job.batch_name,
             dataset_id=job.dataset_id,
         )
 
@@ -723,6 +737,7 @@ async def list_jobs(
     page: int = 1,
     per_page: int = 10,
     status_filter: str | None = None,
+    batch_id: str | None = None,
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobListResponse:
@@ -738,6 +753,14 @@ async def list_jobs(
 
         # Get job IDs from storage
         all_job_ids = storage.list_jobs(status_filter=status_filter)
+
+        # Narrow to one submission batch (spec 008) if asked. Intersecting the
+        # two lists rather than pushing batch_id into list_jobs() keeps the
+        # status filter and the FIFO ordering it already applies intact, and
+        # works identically on both storage backends.
+        if batch_id is not None:
+            in_batch = set(storage.list_jobs_by_batch(batch_id))
+            all_job_ids = [job_id for job_id in all_job_ids if job_id in in_batch]
 
         # Apply pagination
         total = len(all_job_ids)
@@ -782,6 +805,7 @@ async def list_jobs(
                         else None,
                         progress_percentage=job.progress_percentage,
                         batch_id=job.batch_id,
+                        batch_name=job.batch_name,
                         dataset_id=job.dataset_id,
                     )
                 )
@@ -922,81 +946,12 @@ async def cancel_job_endpoint(
 ) -> JobResponse:
     """Cancel a running or pending job (see endpoint description for details)."""
     try:
-        # Load job from database
-        try:
-            job_data = storage.load_job_metadata(job_id)
-            if not job_data:
-                raise FileNotFoundError()
-        except FileNotFoundError as e:
-            raise JobNotFoundException(
-                job_id=job_id,
-                hint="Check job ID or use GET /api/v1/jobs to list all jobs",
-            ) from e
+        job_data = cancel_job_by_id(job_id, storage)
 
-        # Check current status
-        current_status = job_data.status
-
-        # If already cancelled, return current state (idempotent)
-        if current_status == JobStatus.CANCELLED:
-            logger.info(f"[CANCEL] Job {job_id} already cancelled (idempotent)")
-
-            # Extract video metadata
-            video_filename, video_size_bytes, video_duration_seconds = (
-                extract_video_metadata(job_data.video_path)
-            )
-
-            return JobResponse(
-                id=str(job_id),
-                status=JobStatus.CANCELLED.value,
-                video_path=str(job_data.video_path) if job_data.video_path else None,
-                video_filename=video_filename,
-                video_size_bytes=video_size_bytes,
-                video_duration_seconds=video_duration_seconds,
-                config=job_data.config,
-                selected_pipelines=job_data.selected_pipelines,
-                created_at=job_data.created_at if job_data.created_at else None,
-                completed_at=job_data.completed_at if job_data.completed_at else None,
-                error_message=job_data.error_message,
-                result_path=None,  # BatchJob doesn't have result_path
-                storage_path=str(job_data.storage_path)
-                if job_data.storage_path
-                else None,
-                progress_percentage=job_data.progress_percentage,
-                batch_id=job_data.batch_id,
-                dataset_id=job_data.dataset_id,
-            )
-
-        # If already in a final state (completed/failed), return error
-        if current_status in [JobStatus.COMPLETED, JobStatus.FAILED]:
-            raise JobAlreadyCompletedException(
-                job_id=job_id,
-                status=current_status.value,
-            )
-
-        # Cancel the job
-        logger.info(
-            f"[CANCEL] Cancelling job {job_id} (current status: {current_status})"
-        )
-
-        # Update job status to CANCELLED
-        job_data.status = JobStatus.CANCELLED
-        job_data.error_message = "Job cancelled by user request"
-
-        # Set completed_at if not already set
-        if job_data.completed_at is None:
-            job_data.completed_at = datetime.now()
-
-        # Save updated job
-        storage.save_job_metadata(job_data)
-
-        logger.info(f"[OK] Job {job_id} cancelled successfully")
-
-        # Extract video metadata
         video_filename, video_size_bytes, video_duration_seconds = (
             extract_video_metadata(job_data.video_path)
         )
 
-        # Return updated job response
         return JobResponse(
             id=str(job_id),
             status=JobStatus.CANCELLED.value,
@@ -1013,6 +968,7 @@ async def cancel_job_endpoint(
             storage_path=str(job_data.storage_path) if job_data.storage_path else None,
             progress_percentage=job_data.progress_percentage,
             batch_id=job_data.batch_id,
+            batch_name=job_data.batch_name,
             dataset_id=job_data.dataset_id,
         )
 
@@ -1026,6 +982,62 @@ async def cancel_job_endpoint(
             message=f"Failed to cancel job: {e!s}",
             hint="Check server logs for details",
         ) from e
+
+
+def cancel_job_by_id(job_id: str, storage: StorageBackend) -> BatchJob:
+    """Move one job to CANCELLED, idempotently.
+
+    Named for the job id rather than matching `retry_job` below because the
+    DELETE handler above already holds the name `cancel_job`, and its
+    generated operationId is baked into published API types -- renaming that
+    one to free up the name would churn every client generated from the spec.
+
+    Shared by the single-job cancel endpoint above and spec 008's batch-cancel
+    (`api/v1/batches.py`), which catches `JobAlreadyCompletedException` per job
+    to record a skip reason rather than aborting the whole batch -- mirroring
+    how `retry_job` below is shared with batch-retry.
+
+    A job already in CANCELLED is returned unchanged rather than raising, so a
+    repeated cancel (or a cancel-all over a batch that is already partly
+    cancelled) is a no-op rather than an error.
+
+    Raises:
+        JobNotFoundException: no job with this id.
+        JobAlreadyCompletedException: job already finished (completed/failed),
+            so there is nothing left to cancel.
+    """
+    try:
+        job_data = storage.load_job_metadata(job_id)
+        if not job_data:
+            raise FileNotFoundError()
+    except FileNotFoundError as e:
+        raise JobNotFoundException(
+            job_id=job_id,
+            hint="Check job ID or use GET /api/v1/jobs to list all jobs",
+        ) from e
+
+    current_status = job_data.status
+
+    if current_status == JobStatus.CANCELLED:
+        logger.info(f"[CANCEL] Job {job_id} already cancelled (idempotent)")
+        return job_data
+
+    if current_status in (JobStatus.COMPLETED, JobStatus.FAILED):
+        raise JobAlreadyCompletedException(
+            job_id=job_id,
+            status=current_status.value,
+        )
+
+    logger.info(f"[CANCEL] Cancelling job {job_id} (current status: {current_status})")
+
+    job_data.status = JobStatus.CANCELLED
+    job_data.error_message = "Job cancelled by user request"
+    if job_data.completed_at is None:
+        job_data.completed_at = datetime.now()
+
+    storage.save_job_metadata(job_data)
+    logger.info(f"[OK] Job {job_id} cancelled successfully")
+    return job_data
 
 
 def retry_job(job_id: str, storage: StorageBackend) -> BatchJob:
@@ -1131,6 +1143,7 @@ async def retry_job_endpoint(
             storage_path=str(job_data.storage_path) if job_data.storage_path else None,
             progress_percentage=job_data.progress_percentage,
             batch_id=job_data.batch_id,
+            batch_name=job_data.batch_name,
             dataset_id=job_data.dataset_id,
         )
 

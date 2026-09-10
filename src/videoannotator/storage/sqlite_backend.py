@@ -16,6 +16,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from sqlalchemy import desc, func
 from sqlalchemy.exc import SQLAlchemyError
 
 from .base import StorageBackend
@@ -134,7 +135,7 @@ class SQLiteStorageBackend(StorageBackend):
             raise
 
     def _ensure_batch_columns(self) -> None:
-        """Add jobs.batch_id/jobs.dataset_id if this is a pre-008 database."""
+        """Add jobs.batch_id/batch_name/dataset_id if this is an older database."""
         from sqlalchemy import text
 
         with self.engine.connect() as conn:
@@ -142,6 +143,7 @@ class SQLiteStorageBackend(StorageBackend):
             existing_cols = {row[1] for row in result}
             for column, ddl in (
                 ("batch_id", "VARCHAR"),
+                ("batch_name", "VARCHAR"),
                 ("dataset_id", "VARCHAR"),
             ):
                 if column in existing_cols:
@@ -172,6 +174,7 @@ class SQLiteStorageBackend(StorageBackend):
             else None,  # v1.3.0: Persistent job storage
             progress_percentage=round(batch_job.progress_percentage),
             batch_id=batch_job.batch_id,
+            batch_name=batch_job.batch_name,
             dataset_id=batch_job.dataset_id,
         )
 
@@ -197,6 +200,7 @@ class SQLiteStorageBackend(StorageBackend):
             else None,  # v1.3.0: Persistent job storage
             progress_percentage=float(db_job.progress_percentage or 0),
             batch_id=db_job.batch_id,
+            batch_name=db_job.batch_name,
             dataset_id=db_job.dataset_id,
         )
 
@@ -412,6 +416,24 @@ class SQLiteStorageBackend(StorageBackend):
                 return [row[0] for row in query.order_by(Job.created_at.asc()).all()]
         except SQLAlchemyError as e:
             self.logger.error(f"[ERROR] Failed to list jobs for batch {batch_id}: {e}")
+            return []
+
+    def list_batches(self) -> list[str]:
+        """List distinct batch identifiers, most recently submitted first."""
+        try:
+            with self.SessionLocal() as session:
+                rows = (
+                    session.query(
+                        Job.batch_id, func.max(Job.created_at).label("newest")
+                    )
+                    .filter(Job.batch_id.isnot(None))
+                    .group_by(Job.batch_id)
+                    .order_by(desc("newest"))
+                    .all()
+                )
+                return [row[0] for row in rows]
+        except SQLAlchemyError as e:
+            self.logger.error(f"[ERROR] Failed to list batches: {e}")
             return []
 
     def delete_job(self, job_id: str) -> bool:
