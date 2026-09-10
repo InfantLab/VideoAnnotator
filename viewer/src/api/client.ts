@@ -16,6 +16,12 @@ import type {
   VlmPreviewResponse
 } from '@/types/pipelines';
 import type { SystemHealthResponse } from '@/types/system';
+import type {
+  BatchCancelResponse,
+  BatchListResponse,
+  BatchRetryResponse,
+  BatchSummary,
+} from '@/types/batches';
 import type { CurrentUser } from '@/types/api';
 import { APIError } from './handleError';
 
@@ -502,8 +508,18 @@ class APIClient {
   }
 
   // Job management endpoints
-  async getJobs(page: number = 1, perPage: number = 20): Promise<JobListResponse> {
-    return this.request(`/api/v1/jobs?page=${page}&per_page=${perPage}`);
+  async getJobs(
+    page: number = 1,
+    perPage: number = 20,
+    options?: { batchId?: string; unbatchedOnly?: boolean }
+  ): Promise<JobListResponse> {
+    const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+    if (options?.batchId) params.set('batch_id', options.batchId);
+    // Asking the server for "jobs in no batch" rather than filtering a page of
+    // results client-side: otherwise a page filled with batched jobs hides
+    // every ungrouped one behind it.
+    if (options?.unbatchedOnly) params.set('unbatched_only', 'true');
+    return this.request(`/api/v1/jobs?${params.toString()}`);
   }
 
   async getJob(jobId: string): Promise<JobResponse> {
@@ -519,7 +535,8 @@ class APIClient {
   async submitJob(
     video: File,
     selectedPipelines?: string[],
-    config?: Record<string, unknown>
+    config?: Record<string, unknown>,
+    batch?: { id: string; name?: string; datasetId?: string }
   ): Promise<JobResponse> {
     const formData = new FormData();
     formData.append('video', video);
@@ -533,10 +550,41 @@ class APIClient {
       formData.append('config', JSON.stringify(config));
     }
 
+    // Spec 008: the batch id is the entire grouping mechanism — there is no
+    // "create a batch" call. Every video in one submission carries the same id
+    // (and name), and the server groups by it on read. Servers older than
+    // v1.5.0 ignore these fields, so sending them is always safe.
+    if (batch) {
+      formData.append('batch_id', batch.id);
+      if (batch.name) formData.append('batch_name', batch.name);
+      if (batch.datasetId) formData.append('dataset_id', batch.datasetId);
+    }
+
     return this.request('/api/v1/jobs', {
       method: 'POST',
       body: formData,
     });
+  }
+
+  // ==========================================================================
+  // Batches (spec 008) — see src/types/batches.ts for why these are
+  // hand-typed rather than derived from the generated schema.
+  // ==========================================================================
+
+  async getBatches(page: number = 1, perPage: number = 20): Promise<BatchListResponse> {
+    return this.request(`/api/v1/batches?page=${page}&per_page=${perPage}`);
+  }
+
+  async getBatch(batchId: string): Promise<BatchSummary> {
+    return this.request(`/api/v1/batches/${batchId}`);
+  }
+
+  async cancelBatch(batchId: string): Promise<BatchCancelResponse> {
+    return this.request(`/api/v1/batches/${batchId}/cancel`, { method: 'POST' });
+  }
+
+  async retryBatch(batchId: string): Promise<BatchRetryResponse> {
+    return this.request(`/api/v1/batches/${batchId}/retry`, { method: 'POST' });
   }
 
   // Pipeline endpoints

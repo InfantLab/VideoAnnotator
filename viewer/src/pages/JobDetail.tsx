@@ -56,16 +56,22 @@ const CreateJobDetail = () => {
     return statusMap[status as keyof typeof statusMap] || "bg-gray-100 text-gray-800 border-gray-200";
   };
 
-  const getProgressValue = (status: string) => {
-    const progressMap = {
-      pending: 0,
-      running: 50,
-      completed: 100,
-      failed: 0,
-      cancelled: 0,
-      cancelling: 25,
-    };
-    return progressMap[status as keyof typeof progressMap] || 0;
+  /**
+   * Real progress, reported by the server as completed/total selected pipelines
+   * (spec 006). This used to be a fixed status-to-number map — every running
+   * job showed exactly 50% regardless of how much work was actually done.
+   *
+   * Only the terminal states are still derived: a job that finished is 100%
+   * whatever its last reported figure was, and one that failed or was cancelled
+   * keeps the progress it had reached, which is more informative than zero.
+   */
+  const getProgressValue = (job: { status: string; progress_percentage?: number }) => {
+    const reported =
+      typeof job.progress_percentage === 'number' && Number.isFinite(job.progress_percentage)
+        ? job.progress_percentage
+        : 0;
+    if (job.status === 'completed') return 100;
+    return Math.max(0, Math.min(100, Math.round(reported)));
   };
 
   // Button handlers
@@ -262,9 +268,9 @@ const CreateJobDetail = () => {
             <div>
               <div className="flex justify-between text-sm mb-2">
                 <span>Progress</span>
-                <span>{getProgressValue(job.status)}%</span>
+                <span>{getProgressValue(job)}%</span>
               </div>
-              <Progress value={getProgressValue(job.status)} className="h-2" />
+              <Progress value={getProgressValue(job)} className="h-2" />
             </div>
 
             {job.status === "running" && (

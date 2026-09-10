@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### ✨ Added
+- **Runs, not scattered jobs**: videos submitted together are now tracked and shown as one
+  run. The wizard tags every submission with a shared batch id (and a name you can set on
+  the Review step, defaulting to the folder the videos came from), and the Jobs page leads
+  with one card per run — real aggregate progress, a real time estimate, per-state counts,
+  and Cancel-all / Retry-all in a single call each. A new run detail page at
+  `/batches/:batchId` shows that run's headline numbers and every video in it. Submitting 12
+  videos previously produced 12 unrelated rows split across two pages of a paginated table,
+  with no way to see the run as a whole or act on it as a whole; jobs belonging to no batch
+  (CLI submissions, older work) still appear, in their own section. Requires VideoAnnotator
+  v1.5.0+ for grouping; against an older server the page falls back to listing jobs
+  individually and says so. See VideoAnnotator's `specs/008-batch-group-workflow/`.
+
+### 🐛 Fixed
+- **Progress bars show real progress.** The job detail page derived progress from status
+  alone — every running job read exactly 50%, whatever it was actually doing. It now uses
+  the server's real completed/total-pipelines figure, as does the per-video progress column
+  in the new run views.
+- **No more invented time estimates.** The wizard's "estimated processing time" was
+  `number of files × 7 minutes`, unrelated to video length or the pipelines selected. A run
+  now reports time remaining computed by the server from how long that run's own finished
+  videos actually took, and honestly says it is still estimating until the first one
+  finishes.
 - **Pipeline extras install UI**: the job-creation wizard's Select Pipelines step now shows
   every pipeline a VideoAnnotator v1.5.0+ server knows about, not just installed ones —
   locked pipelines display their install hint instead of silently disappearing. An

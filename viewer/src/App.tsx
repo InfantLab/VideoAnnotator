@@ -13,6 +13,7 @@ import Home from "./pages/Home";
 import GettingStarted from "./pages/GettingStarted";
 import NotFound from "./pages/NotFound";
 import Jobs from "./pages/Jobs";
+import BatchDetail from "./pages/BatchDetail";
 import JobDetail from "./pages/JobDetail";
 import NewJob from "./pages/NewJob";
 import Datasets from "./pages/Datasets";
@@ -48,6 +49,7 @@ const App = () => (
                     <Route path="/jobs" element={<Jobs />} />
                     <Route path="/jobs/:jobId" element={<JobDetail />} />
                     <Route path="/jobs/new" element={<NewJob />} />
+                    <Route path="/batches/:batchId" element={<BatchDetail />} />
                     <Route path="/datasets" element={<Datasets />} />
                     <Route path="/settings" element={<Settings />} />
                   </Route>

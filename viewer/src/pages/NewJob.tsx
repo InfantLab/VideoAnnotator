@@ -3,6 +3,7 @@ import { useQueries } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw } from "lucide-react";
@@ -75,6 +76,29 @@ const buildDefaultConfig = (pipelines: PipelineDescriptor[]) => {
   }, {});
 };
 
+/**
+ * A name for a run when the user doesn't type one.
+ *
+ * Prefers the folder the videos came from — `webkitRelativePath` is populated
+ * when files are picked with a directory picker, which is exactly the "I
+ * selected a folder" case — and otherwise describes the selection, because a
+ * raw uuid tells a researcher nothing when they come back to it tomorrow.
+ */
+const defaultBatchName = (files: File[]): string => {
+  const relativePath = (files[0] as File & { webkitRelativePath?: string })
+    ?.webkitRelativePath;
+  const folder = relativePath?.split('/')[0];
+  if (folder) return folder;
+
+  const stamp = new Date().toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+  });
+  return files.length === 1
+    ? `${files[0]?.name ?? '1 video'} — ${stamp}`
+    : `${files.length} videos — ${stamp}`;
+};
+
 // Type for retry state passed via React Router
 interface RetryJobState {
   retryJobId: string;
@@ -95,6 +119,7 @@ const CreateNewJob = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedPipelines, setSelectedPipelines] = useState<string[]>([]);
+  const [batchName, setBatchName] = useState("");
 
   // The catalog (`pipelines` above) never carries per-field parameters —
   // apiClient.getPipelineCatalog()'s mapLegacyPipelineResponse always sets
@@ -234,8 +259,17 @@ const CreateNewJob = () => {
     );
     const effectiveConfig = effectiveConfigEntries.length > 0 ? Object.fromEntries(effectiveConfigEntries) : undefined;
 
+    // One batch identifier for this whole submission (spec 008). Uploads stay
+    // one request per video — the shared id is the only thing that's new, and
+    // it's what lets these N jobs be tracked, shown and controlled as one run
+    // instead of N unrelated rows. Minted for every submission including a
+    // single-video one: a threshold would mean two code paths and a UI that
+    // changes shape without the user asking it to.
+    const batchId = crypto.randomUUID();
+    const effectiveBatchName = batchName.trim() || defaultBatchName(selectedFiles);
+
     try {
-      console.log(`📤 Submitting ${selectedFiles.length} job(s) to VideoAnnotator API...`);
+      console.log(`📤 Submitting ${selectedFiles.length} job(s) as batch ${batchId}...`);
 
       // Submit each video as a separate job
       for (const file of selectedFiles) {
@@ -244,7 +278,8 @@ const CreateNewJob = () => {
           const response = await apiClient.submitJob(
             file,
             selectedPipelines,
-            effectiveConfig
+            effectiveConfig,
+            { id: batchId, name: effectiveBatchName }
           );
           console.log(`✅ Job created successfully: ${response.id}`);
           jobIds.push(response.id);
@@ -258,10 +293,11 @@ const CreateNewJob = () => {
       if (jobIds.length > 0) {
         setSubmitSuccess(jobIds);
 
-        // If all jobs succeeded, navigate to jobs list after a delay
+        // Land on the run itself rather than the full list — the thing the
+        // user just created is the thing they want to watch.
         if (errors.length === 0) {
           setTimeout(() => {
-            navigate('/jobs');
+            navigate(`/batches/${batchId}`);
           }, 2000);
         }
       }
@@ -335,6 +371,8 @@ const CreateNewJob = () => {
             submitError={submitError}
             submitSuccess={submitSuccess}
             pipelines={pipelinesWithSchema}
+            batchName={batchName}
+            setBatchName={setBatchName}
           />
         );
       default:
@@ -984,7 +1022,9 @@ const ReviewStep = ({
   isSubmitting,
   submitError,
   submitSuccess,
-  pipelines
+  pipelines,
+  batchName,
+  setBatchName
 }: {
   selectedFiles: File[];
   selectedPipelines: string[];
@@ -994,6 +1034,8 @@ const ReviewStep = ({
   submitError: ParsedError | null;
   submitSuccess: string[];
   pipelines: PipelineDescriptor[];
+  batchName: string;
+  setBatchName: Dispatch<SetStateAction<string>>;
 }) => {
   const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
   const pipelineNames = selectedPipelines
@@ -1043,8 +1085,27 @@ const ReviewStep = ({
         </div>
 
         <div className="p-4 border rounded-lg">
-          <h4 className="font-medium mb-2">Estimated Processing Time</h4>
-          <p>~{Math.ceil(selectedFiles.length * 7)} minutes (depending on video lengths and selected pipelines)</p>
+          <h4 className="font-medium mb-2">Name this run</h4>
+          <Input
+            value={batchName}
+            onChange={(event) => setBatchName(event.target.value)}
+            placeholder={defaultBatchName(selectedFiles)}
+            aria-label="Run name"
+          />
+          <p className="text-xs text-muted-foreground mt-2">
+            These {selectedFiles.length} video{selectedFiles.length === 1 ? '' : 's'} are
+            submitted together and tracked as one run, so you can watch their progress and
+            cancel or retry them as a group. Leave blank to use
+            &ldquo;{defaultBatchName(selectedFiles)}&rdquo;.
+          </p>
+        </div>
+
+        <div className="p-4 border rounded-lg">
+          <h4 className="font-medium mb-2">Processing Time</h4>
+          <p className="text-muted-foreground">
+            Estimated once the first video finishes — the run&apos;s page shows time remaining
+            based on how long these videos actually take, rather than a guess made up front.
+          </p>
         </div>
 
         <div className="p-4 border rounded-lg">

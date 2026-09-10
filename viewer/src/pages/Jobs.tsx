@@ -1,35 +1,19 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { apiClient, type JobListResponse, type JobResponse } from "@/api/client";
+import { apiClient, type JobResponse } from "@/api/client";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Loader2, RefreshCw, Play, Settings, AlertCircle, RotateCcw, Eye } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2, RefreshCw, Play, Layers } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import vavIcon from "@/assets/v-a-v.icon.png";
-import { JobCancelButton } from "@/components/JobCancelButton";
-import { JobDeleteButton } from "@/components/JobDeleteButton";
-import { canCancelJob } from "@/hooks/useJobCancellation";
-import { canDeleteJob } from "@/hooks/useJobDeletion";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { parseApiError } from "@/lib/errorHandling";
-import type { JobStatus } from "@/types/api";
+import { JobsTable } from "@/components/JobsTable";
+import { BatchCard } from "@/components/BatchCard";
+import { useBatches } from "@/hooks/useBatches";
 
 /**
  * Enhances authentication error messages with actionable guidance
@@ -80,11 +64,70 @@ type CreateJobsProps = {
   embedded?: boolean;
 };
 
+/**
+ * Page control for one list. The runs list and the ungrouped-jobs list have
+ * unrelated totals, so each gets its own — one shared control would page a
+ * list that has nothing more to show.
+ */
+const ListPagination = ({
+  page,
+  total,
+  perPage,
+  onChange,
+}: {
+  page: number;
+  total: number;
+  perPage: number;
+  onChange: (next: number) => void;
+}) => {
+  const lastPage = Math.ceil(total / perPage);
+  if (lastPage <= 1) return null;
+
+  return (
+    <div className="flex justify-center gap-2">
+      <Button
+        variant="outline"
+        onClick={() => onChange(Math.max(1, page - 1))}
+        disabled={page === 1}
+      >
+        Previous
+      </Button>
+      <span className="px-4 py-2 text-sm">
+        Page {page} of {lastPage}
+      </span>
+      <Button variant="outline" onClick={() => onChange(page + 1)} disabled={page >= lastPage}>
+        Next
+      </Button>
+    </div>
+  );
+};
+
+/**
+ * The work list, organised by submission run rather than by individual job.
+ *
+ * Videos submitted together arrive as one batch (spec 008) and are shown as one
+ * card with real aggregate progress — submitting 12 videos used to produce 12
+ * unrelated rows spread across two pages of this table, which is unusable as
+ * soon as a corpus is bigger than a handful of files.
+ *
+ * Jobs with no batch — submitted by the CLI, or by a viewer/server predating
+ * batch tagging — still need somewhere to live, so they get their own section
+ * below rather than being hidden.
+ */
 const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
-  const navigate = useNavigate();
-  const [page, setPage] = useState(1);
+  // The two lists page independently: they have unrelated totals, and one
+  // shared control would page a list that has nothing more to show.
+  const [batchPage, setBatchPage] = useState(1);
+  const [jobPage, setJobPage] = useState(1);
   const perPage = 10;
   const { toast } = useToast();
+
+  const {
+    data: batchesData,
+    isLoading: batchesLoading,
+    error: batchesError,
+    refetch: refetchBatches,
+  } = useBatches(batchPage, perPage);
 
   const {
     data: jobsData,
@@ -93,24 +136,20 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
     refetch,
     dataUpdatedAt,
   } = useQuery({
-    queryKey: ["jobs", page],
+    queryKey: ["jobs", "unbatched", jobPage],
     queryFn: async () => {
-      console.log('🔍 Fetching jobs...', { page, perPage });
-      const response = await apiClient.getJobs(page, perPage);
-      console.log('📦 Jobs API response:', response);
+      // Only jobs belonging to no batch — everything else is represented by a
+      // batch card above, and showing it twice would double-count the work.
+      const response = await apiClient.getJobs(jobPage, perPage, { unbatchedOnly: true });
 
-      // Validate response structure
       if (!response) {
-        console.error('❌ Jobs API returned null/undefined');
         throw new Error('Jobs API returned empty response');
       }
 
       if (!Array.isArray(response.jobs)) {
-        console.error('❌ Jobs API response missing jobs array:', response);
         throw new Error('Invalid jobs API response format');
       }
 
-      console.log(`✅ Found ${response.jobs.length} jobs (total: ${response.total})`);
       return response;
     },
     refetchInterval: (query) => {
@@ -122,16 +161,11 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
         (job: JobResponse) => job.status === 'pending' || job.status === 'running' || job.status === 'cancelling'
       );
 
-      if (hasActiveJobs) {
-        // Fast polling when jobs are active
-        return 5000; // 5 seconds
-      }
-
-      // Exponential backoff when idle: 30s initially, then 60s
-      return 30000; // 30 seconds when all jobs complete/cancelled/failed
+      // Fast while work is in flight, backed off once everything is terminal.
+      return hasActiveJobs ? 5000 : 30000;
     },
-    refetchOnMount: false, // Don't refetch when component remounts
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   // Show error toast when error occurs
@@ -164,82 +198,9 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
     }
   }, [error, toast]);
 
-  const handleRetryJob = (job: JobResponse) => {
-    navigate('/jobs/new', {
-      state: {
-        retryJobId: job.id,
-        retryJobConfig: job.config,
-        retryJobPipelines: job.selected_pipelines,
-        retryJobVideoFilename: job.video_filename,
-      }
-    });
-  };
-
-  const getStatusBadge = (status: string, errorMessage?: string | null) => {
-    // Use specific color combinations for better contrast
-    // Using 'secondary' variant as base (usually light gray) and overriding bg/text
-    const statusMap = {
-      pending: { className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200" },
-      running: { className: "bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200" },
-      completed: { className: "bg-green-100 text-green-800 hover:bg-green-100 border-green-200" },
-      failed: { className: "bg-red-100 text-red-800 hover:bg-red-100 border-red-200" },
-      cancelled: { className: "bg-gray-100 text-gray-800 hover:bg-gray-100 border-gray-200" },
-      cancelling: { className: "bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200" },
-    };
-
-    // Handle partial success (completed with errors)
-    const isPartialSuccess = status === 'completed' && errorMessage;
-    
-    let config = statusMap[status as keyof typeof statusMap] || statusMap.pending;
-    
-    // Override for partial success
-    if (isPartialSuccess) {
-      config = { className: "bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200" };
-    }
-
-    const badge = (
-      <Badge variant="outline" className={config.className}>
-        {status.toUpperCase()}
-        {isPartialSuccess && (
-          <AlertCircle className="ml-1 h-3 w-3 inline" />
-        )}
-        {status === 'failed' && errorMessage && (
-          <AlertCircle className="ml-1 h-3 w-3 inline" />
-        )}
-      </Badge>
-    );
-
-    // Show tooltip with error message for failed or partial success jobs
-    if ((status === 'failed' || isPartialSuccess) && errorMessage) {
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {badge}
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              <p className="font-semibold">{isPartialSuccess ? 'Partial Success:' : 'Error:'}</p>
-              <p>{errorMessage}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-
-    return badge;
-  };
-
-  const formatDuration = (seconds: number | null) => {
-    if (!seconds) return "N/A";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const formatFileSize = (bytes: number | null) => {
-    if (!bytes) return "N/A";
-    const mb = bytes / (1024 * 1024);
-    return `${mb.toFixed(1)} MB`;
+  const refreshAll = () => {
+    refetch();
+    refetchBatches();
   };
 
   if (error) {
@@ -257,7 +218,7 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
               </Button>
             </Link>
           )}
-          <Button onClick={() => refetch()} variant="outline">
+          <Button onClick={() => refreshAll()} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Retry
           </Button>
@@ -300,36 +261,52 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
     ? `Last checked ${formatDistanceToNow(lastChecked, { addSuffix: true })}`
     : 'Never checked';
 
-  // Determine polling status
-  const hasActiveJobs = jobsData?.jobs?.some(
-    (job: JobResponse) => job.status === 'pending' || job.status === 'running' || job.status === 'cancelling'
-  );
-  const pollingStatus = hasActiveJobs
+  const batches = batchesData?.batches ?? [];
+  const hasActiveWork =
+    batches.some((b) => b.by_status.pending + b.by_status.running > 0) ||
+    jobsData?.jobs?.some(
+      (job: JobResponse) =>
+        job.status === 'pending' || job.status === 'running' || job.status === 'cancelling'
+    );
+  const pollingStatus = hasActiveWork
     ? '⚡ Auto-refreshing every 5s'
     : '💤 Auto-refreshing every 30s';
 
+  // Anything the server didn't group into a batch. On a current server every
+  // submission from this viewer is batched, so this is legacy and CLI work.
+  // A server too old to know about `unbatched_only` ignores it and returns
+  // everything, so filter defensively here too rather than showing batched
+  // jobs twice.
+  const ungroupedJobs = (jobsData?.jobs ?? []).filter(
+    (job) => !(job as JobResponse & { batch_id?: string | null }).batch_id
+  );
+
+  const totalBatches = batchesData?.total ?? 0;
+  const totalUngrouped = jobsData?.total ?? 0;
+  const nothingAtAll = !batchesLoading && !isLoading && totalBatches === 0 && ungroupedJobs.length === 0;
+
   return (
-    <div className={embedded ? "space-y-4" : "container mx-auto px-6 py-8 max-w-6xl space-y-6"}>
+    <div className={embedded ? "space-y-6" : "container mx-auto px-6 py-8 max-w-6xl space-y-6"}>
       {/* Header */}
       {!embedded && (
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <img src={vavIcon} alt="VideoAnnotator" className="h-8 w-8" />
             <div>
-              <h2 className="text-2xl font-bold">Annotation Jobs</h2>
-              <p className="text-gray-600">Monitor and manage your annotation jobs</p>
+              <h2 className="text-2xl font-bold text-gray-900">Annotation Runs</h2>
+              <p className="text-gray-600">Monitor and manage your annotation work</p>
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
             <div className="flex gap-2">
-              <Button onClick={() => refetch()} variant="outline" size="sm">
+              <Button onClick={() => refreshAll()} variant="outline" size="sm">
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
               <Link to="/jobs/new">
                 <Button>
                   <Play className="h-4 w-4 mr-2" />
-                  New Job
+                  New Run
                 </Button>
               </Link>
             </div>
@@ -340,203 +317,77 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
         </div>
       )}
 
-      {/* Jobs Table */}
-      {isLoading && !jobsData ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      ) : (
+      {nothingAtAll && (
         <Card>
-          <div className="px-6 pt-4 pb-2">
-            <p className="text-xs text-muted-foreground">
-              💡 Tip: Double-click any row to view job details
-            </p>
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Job ID</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Video</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Pipelines</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {jobsData?.jobs?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <p className="text-gray-500 mb-4">
-                      {jobsData?.total > 0
-                        ? `No jobs on this page (${jobsData.total} total jobs found)`
-                        : "No jobs found"}
-                    </p>
-                    <div className="flex gap-2 justify-center">
-                      {jobsData?.total > 0 && page > 1 ? (
-                        <Button onClick={() => setPage(1)} variant="outline">
-                          Go to First Page
-                        </Button>
-                      ) : (
-                        <Link to="/jobs/new">
-                          <Button>Create your first job</Button>
-                        </Link>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                jobsData?.jobs?.map((job) => {
-                  const record = job as JobResponse & Record<string, unknown>;
-                  const getString = (value: unknown): string | undefined =>
-                    typeof value === 'string' ? value : undefined;
-
-                  const getNumber = (value: unknown): number | null =>
-                    typeof value === 'number' && Number.isFinite(value) ? value : null;
-
-                  // Defensive field access - server may use different field names
-                  let videoName =
-                    getString(record.video_filename) ??
-                    getString(record.filename) ??
-                    getString(record.video_name);
-
-                  // If no direct filename field, extract from video_path
-                  const videoPath = getString(record.video_path);
-                  if (!videoName && videoPath) {
-                    videoName = videoPath.split('/').pop() || videoPath;
-                  }
-
-                  videoName = videoName || "N/A";
-
-                  const videoDuration =
-                    getNumber(record.video_duration_seconds) ??
-                    getNumber(record.duration_seconds);
-
-                  const videoSize =
-                    getNumber(record.video_size_bytes) ??
-                    getNumber(record.file_size_bytes);
-
-                  return (
-                    <TableRow
-                      key={job.id}
-                      onDoubleClick={() => navigate(`/jobs/${job.id}`)}
-                      className="cursor-pointer hover:bg-muted/50"
-                    >
-                      <TableCell className="font-mono text-sm">
-                        {job.id.slice(0, 8)}...
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(job.status, job.error_message)}
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        {videoName}
-                      </TableCell>
-                      <TableCell>
-                        {formatDuration(videoDuration)}
-                      </TableCell>
-                      <TableCell>
-                        {formatFileSize(videoSize)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {job.selected_pipelines?.slice(0, 2).map((pipeline) => (
-                            <Badge key={pipeline} variant="outline" className="text-xs">
-                              {pipeline}
-                            </Badge>
-                          ))}
-                          {job.selected_pipelines && job.selected_pipelines.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{job.selected_pipelines.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {canCancelJob(job.status as JobStatus) && (
-                            <JobCancelButton
-                              jobId={job.id}
-                              jobStatus={job.status as JobStatus}
-                              size="sm"
-                              variant="outline"
-                            />
-                          )}
-                          {job.status === 'failed' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRetryJob(job);
-                              }}
-                            >
-                              <RotateCcw className="h-4 w-4 mr-1" />
-                              Retry
-                            </Button>
-                          )}
-                          {canDeleteJob(job.status as JobStatus) && (
-                            <JobDeleteButton
-                              jobId={job.id}
-                              jobStatus={job.status as JobStatus}
-                              size="sm"
-                              variant="outline"
-                              onDeleted={() => refetch()}
-                            />
-                          )}
-                          {job.status === 'completed' && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(`/view/${job.id}`);
-                                    }}
-                                  >
-                                    <Eye className="h-4 w-4 mr-1" />
-                                    View
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>View Results</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+          <CardContent className="pt-6 text-center py-12 space-y-4">
+            <Layers className="h-10 w-10 mx-auto text-muted-foreground" />
+            <p className="text-muted-foreground">No annotation runs yet</p>
+            <Link to="/jobs/new">
+              <Button>Create your first run</Button>
+            </Link>
+          </CardContent>
         </Card>
       )}
 
-      {/* Pagination */}
-      {jobsData && jobsData.total > perPage && (
-        <div className="flex justify-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            Previous
-          </Button>
-          <span className="px-4 py-2 text-sm">
-            Page {page} of {Math.ceil(jobsData.total / perPage)}
-          </span>
-          <Button
-            variant="outline"
-            onClick={() => setPage(p => p + 1)}
-            disabled={page >= Math.ceil(jobsData.total / perPage)}
-          >
-            Next
-          </Button>
+      {/* Batches — the primary unit of work */}
+      {batchesLoading && batches.length === 0 && !nothingAtAll ? (
+        <div className="space-y-3">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      ) : (
+        batches.length > 0 && (
+          <div className="space-y-3">
+            {batches.map((batch) => (
+              <BatchCard key={batch.batch_id} batch={batch} />
+            ))}
+          </div>
+        )
+      )}
+
+      <ListPagination
+        page={batchPage}
+        total={totalBatches}
+        perPage={perPage}
+        onChange={setBatchPage}
+      />
+
+      {/* A server too old to know about batches can't group anything; say so
+          rather than showing an empty page next to a populated jobs table. */}
+      {batchesError && ungroupedJobs.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          This server doesn&apos;t report submission batches, so jobs are listed individually below.
+          Batch grouping needs VideoAnnotator v1.5.0 or newer.
+        </p>
+      )}
+
+      {/* Jobs that aren't part of any batch */}
+      {(ungroupedJobs.length > 0 || (isLoading && !jobsData)) && (
+        <div className="space-y-2">
+          {batches.length > 0 && (
+            <h3 className="text-sm font-semibold text-muted-foreground pt-2">
+              Individual jobs
+            </h3>
+          )}
+          <Card>
+            {isLoading && !jobsData ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <JobsTable
+                jobs={ungroupedJobs}
+                onChanged={() => refreshAll()}
+                emptyState={<p className="text-muted-foreground">No individual jobs</p>}
+              />
+            )}
+          </Card>
+          <ListPagination
+            page={jobPage}
+            total={totalUngrouped}
+            perPage={perPage}
+            onChange={setJobPage}
+          />
         </div>
       )}
     </div>
