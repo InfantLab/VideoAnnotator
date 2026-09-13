@@ -10,6 +10,7 @@ from .debug import router as debug_router
 from .endpoints.artifacts import router as artifacts_router
 from .events import router as events_router
 from .health import router as health_router
+from .ingest import router as ingest_router
 from .jobs import router as jobs_router
 from .pipelines import router as pipelines_router
 from .presets import router as presets_router
@@ -26,6 +27,7 @@ api_router.include_router(
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
 api_router.include_router(jobs_router, prefix="/jobs", tags=["jobs"])
 api_router.include_router(batches_router, prefix="/batches", tags=["batches"])
+api_router.include_router(ingest_router, prefix="/ingest", tags=["ingest"])
 api_router.include_router(artifacts_router, prefix="/jobs", tags=["artifacts"])
 api_router.include_router(pipelines_router, prefix="/pipelines", tags=["pipelines"])
 api_router.include_router(datasets_router, prefix="/datasets", tags=["datasets"])

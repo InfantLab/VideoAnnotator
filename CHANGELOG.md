@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Create jobs from videos already on the server — `POST /api/v1/ingest`**: one request turns a
+  server-side folder into a whole batch of jobs, with no upload. `POST /api/v1/jobs` takes one
+  video per multipart request, which for a forty-video corpus means forty uploads streaming
+  gigabytes through a browser to land somewhere else on the same disk. Ingested jobs *reference*
+  the videos where they already are — nothing is copied — and are ordinary jobs in every other
+  respect: they queue, report progress, cancel, retry, and share a `batch_id`. Deleting one
+  removes its results and never the original video. Unusable files (empty, unreadable) are
+  reported per file rather than failing the batch. `GET /api/v1/ingest/browse` lists the folders
+  the server will read, so a client can offer a folder picker — a browser cannot discover a real
+  filesystem path on its own. Gated three independent ways: admin-only (matching the
+  extras-install precedent), loopback callers only, and confined to `VIDEOANNOTATOR_INGEST_ROOTS`
+  (default: the server user's home directory), with paths fully resolved before the check so
+  neither `..` nor a symlink can escape.
+
 - **Batches are addressable as a unit**: `GET /api/v1/batches` lists every batch the server knows
   about (newest first, paginated) with the same aggregate `GET /api/v1/batches/{id}` returns for
   one, `GET /api/v1/jobs?batch_id=...` drills into a batch's member jobs, and

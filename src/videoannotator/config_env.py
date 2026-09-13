@@ -152,6 +152,13 @@ ENABLE_VIEWER = get_bool_env("VIDEOANNOTATOR_ENABLE_VIEWER", True)
 # Enable CORS credentials support
 CORS_ALLOW_CREDENTIALS = get_bool_env("CORS_ALLOW_CREDENTIALS", True)
 
+# Directories the ingest API (POST /api/v1/ingest) may read videos from, as an
+# os.pathsep-separated list. Empty means "the server user's home directory",
+# which is where a single-user research install keeps its data. Ingest never
+# copies these files -- jobs reference them where they are -- so this is the
+# boundary of what an admin on this machine can turn into a job.
+INGEST_ROOTS = get_str_env("VIDEOANNOTATOR_INGEST_ROOTS", "")
+
 
 # =============================================================================
 # Database Configuration

@@ -408,10 +408,17 @@ class TestUnbatchedJobsFilter:
         assert done["id"] not in ids
 
     def test_off_by_default(self):
+        """Without the flag, batched jobs are included -- asserted on totals
+        rather than page contents, since storage is shared across this file's
+        tests and a specific job may not be on the first page."""
         batch_id = str(uuid.uuid4())
-        job = _submit_job(batch_id=batch_id)
-        body = client.get("/api/v1/jobs/?per_page=100").json()
-        assert job["id"] in {j["id"] for j in body["jobs"]}
+        _submit_job(batch_id=batch_id)
+
+        everything = client.get("/api/v1/jobs/?per_page=1").json()["total"]
+        unbatched = client.get("/api/v1/jobs/?unbatched_only=true&per_page=1").json()[
+            "total"
+        ]
+        assert everything > unbatched
 
 
 class TestBatchCancel:

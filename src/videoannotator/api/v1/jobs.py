@@ -187,6 +187,67 @@ class JobResultsResponse(BaseModel):
     error_message: str | None = None  # Job-level error message for failed jobs
 
 
+def validate_pipeline_selection(
+    selected_pipelines: list[str] | None,
+    config: dict[str, Any] | None,
+) -> None:
+    """Reject an unusable pipeline selection or configuration.
+
+    Shared by job submission and spec 008's folder ingest (`api/v1/ingest.py`)
+    so both reject the same things for the same reasons -- an ingest that
+    created forty jobs and only then discovered the pipeline isn't installed
+    would be worse than useless.
+
+    Raises:
+        PipelineUnavailableException: a recognized pipeline whose extras aren't
+            installed (422 + install_hint, per
+            contracts/unavailable-pipeline-error.md). A name the registry
+            doesn't recognize at all is left to ConfigValidator's "unknown
+            pipeline" path below.
+        InvalidConfigException: config that fails validation for a selected
+            pipeline.
+    """
+    if not selected_pipelines:
+        return
+
+    registry = get_registry()
+    registry.load()
+    for pipeline_name in selected_pipelines:
+        meta = registry.get(pipeline_name)
+        if meta is not None and not extras_available(meta.requires_extras):
+            raise PipelineUnavailableException(pipeline_name, meta.requires_extras)
+
+    # Validate configuration if pipelines are specified (v1.3.0)
+    if not config:
+        return
+
+    validator = ConfigValidator()
+    validation_results = validator.validate_batch(
+        {pipeline: config for pipeline in selected_pipelines}
+    )
+
+    failed = {
+        pipeline: result
+        for pipeline, result in validation_results.items()
+        if not result.valid
+    }
+    if not failed:
+        return
+
+    error_messages = []
+    for pipeline, result in failed.items():
+        for error in result.errors:
+            msg = f"{pipeline}: {error.message}"
+            if error.hint:
+                msg += f" ({error.hint})"
+            error_messages.append(msg)
+
+    raise InvalidConfigException(
+        message=f"Configuration validation failed: {'; '.join(error_messages)}",
+        hint="Fix the validation errors and resubmit",
+    )
+
+
 @router.post("", include_in_schema=False)
 @router.post(
     "/",
@@ -325,49 +386,7 @@ async def submit_job(
                 p.strip() for p in selected_pipelines.split(",") if p.strip()
             ]
 
-        # Reject a recognized-but-unavailable pipeline (extras not installed)
-        # before doing any file I/O: 422 + install_hint
-        # (contracts/unavailable-pipeline-error.md). A name the registry
-        # doesn't recognize at all is left to the existing ConfigValidator
-        # "unknown pipeline" path below, unchanged by this feature.
-        if parsed_pipelines:
-            registry = get_registry()
-            registry.load()
-            for pipeline_name in parsed_pipelines:
-                meta = registry.get(pipeline_name)
-                if meta is not None and not extras_available(meta.requires_extras):
-                    raise PipelineUnavailableException(
-                        pipeline_name, meta.requires_extras
-                    )
-
-        # Validate configuration if pipelines are specified (v1.3.0)
-        if parsed_pipelines and parsed_config:
-            validator = ConfigValidator()
-            validation_results = validator.validate_batch(
-                {pipeline: parsed_config for pipeline in parsed_pipelines}
-            )
-
-            # Check if any pipeline validation failed
-            failed = {
-                pipeline: result
-                for pipeline, result in validation_results.items()
-                if not result.valid
-            }
-
-            if failed:
-                # Build comprehensive error response
-                error_messages = []
-                for pipeline, result in failed.items():
-                    for error in result.errors:
-                        msg = f"{pipeline}: {error.message}"
-                        if error.hint:
-                            msg += f" ({error.hint})"
-                        error_messages.append(msg)
-
-                raise InvalidConfigException(
-                    message=f"Configuration validation failed: {'; '.join(error_messages)}",
-                    hint="Fix the validation errors and resubmit",
-                )
+        validate_pipeline_selection(parsed_pipelines, parsed_config)
 
         # Save uploaded video to temporary file first.
         # NOTE: In some ASGI stacks the underlying UploadFile file pointer may be
