@@ -121,7 +121,7 @@ const BatchDetail = () => {
               Back to runs
             </Button>
           </Link>
-          <h2 className="text-2xl font-bold text-gray-900 truncate">{batchDisplayName(batch)}</h2>
+          <h2 className="text-2xl font-bold text-foreground truncate">{batchDisplayName(batch)}</h2>
           <p className="text-muted-foreground">
             {batch.total} video{batch.total === 1 ? '' : 's'}
             {batch.created_at && (

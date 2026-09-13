@@ -237,10 +237,10 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
           <h3 className="text-lg font-semibold text-yellow-700 mb-2">
             ⚠️ Unexpected API Response
           </h3>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             The jobs API returned data in an unexpected format. This might indicate a server issue.
           </p>
-          <details className="text-xs bg-gray-50 p-3 rounded">
+          <details className="text-xs bg-muted p-3 rounded">
             <summary className="cursor-pointer font-semibold">View raw response</summary>
             <pre className="mt-2 overflow-auto">{JSON.stringify(jobsData, null, 2)}</pre>
           </details>
@@ -293,8 +293,8 @@ const CreateJobs = ({ embedded = false }: CreateJobsProps) => {
           <div className="flex items-center gap-3">
             <img src={vavIcon} alt="VideoAnnotator" className="h-8 w-8" />
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Annotation Runs</h2>
-              <p className="text-gray-600">Monitor and manage your annotation work</p>
+              <h2 className="text-2xl font-bold text-foreground">Annotation Runs</h2>
+              <p className="text-muted-foreground">Monitor and manage your annotation work</p>
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">

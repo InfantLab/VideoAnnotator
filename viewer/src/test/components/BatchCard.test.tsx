@@ -36,16 +36,18 @@ function makeBatch(overrides: Partial<BatchSummary> = {}): BatchSummary {
     overrides.total ??
     by_status.pending + by_status.running + by_status.completed + by_status.failed + by_status.cancelled;
 
+  // by_status is applied after the spread deliberately: it is already merged
+  // from the overrides above, and a raw spread would replace the merged value
+  // with a partial one.
   return {
     batch_id: 'batch-1',
     batch_name: 'Irene corpus',
     dataset_id: null,
     created_at: new Date().toISOString(),
-    total,
-    by_status,
     completion_percentage: 0,
     estimated_seconds_remaining: null,
     ...overrides,
+    total,
     by_status,
   };
 }

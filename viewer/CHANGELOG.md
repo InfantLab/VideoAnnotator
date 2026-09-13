@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### ✨ Added
+- **Run a folder that's already on the server — no uploading.** The job wizard's first step now
+  offers "Folder on the server" alongside uploading from this computer: browse the folders the
+  VideoAnnotator server can see, pick one, and every video in it becomes a run in a single
+  request. Nothing is uploaded or copied — the jobs read the videos where they already sit — so a
+  40-video corpus starts immediately instead of after 40 multipart uploads with the tab held open.
+  Optionally includes subfolders. A browser can't discover a real path (neither the file input nor
+  the File System Access API exposes one), so the server lists its own readable folders and the
+  picker walks them. Needs VideoAnnotator with the ingest API, an admin token, and the viewer
+  running on the server's own machine; where any of that isn't true the picker explains why and
+  uploading still works. The upload tab also now points this out once a selection passes 8 files.
 - **Runs, not scattered jobs**: videos submitted together are now tracked and shown as one
   run. The wizard tags every submission with a shared batch id (and a name you can set on
   the Review step, defaulting to the folder the videos came from), and the Jobs page leads
@@ -21,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   individually and says so. See VideoAnnotator's `specs/008-batch-group-workflow/`.
 
 ### 🐛 Fixed
+- **The app shell no longer fights its own theme.** `AppLayout` wrapped every page in a hardcoded
+  light `bg-gray-50` while the theme tokens are dark, so cards rendered dark on a light page and
+  any text using the theme's own `text-foreground` was light-on-light — page headings were
+  literally invisible across the app. The shell now uses `bg-background`, and the page-level text
+  that had been written to assume a light page behind it uses theme tokens. Self-contained colour
+  chips (status badges, icon tiles) and the light "note" panels are deliberately unchanged.
 - **Progress bars show real progress.** The job detail page derived progress from status
   alone — every running job read exactly 50%, whatever it was actually doing. It now uses
   the server's real completed/total-pipelines figure, as does the per-video progress column

@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ServerFolderPicker, type ServerFolderSelection } from "@/components/ServerFolderPicker";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw, FolderOpen, HardDrive } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { apiClient } from "@/api/client";
 import { handleAPIError } from "@/api/handleError";
@@ -44,7 +46,7 @@ import { APIError } from "@/api/handleError";
 
 // Wizard steps
 const STEPS = [
-  { id: 1, title: "Upload Videos", description: "Select video files to process" },
+  { id: 1, title: "Choose Videos", description: "Upload files, or use a folder on the server" },
   { id: 2, title: "Select Pipelines", description: "Choose annotation pipelines" },
   { id: 3, title: "Configure", description: "Set pipeline parameters" },
   { id: 4, title: "Review & Submit", description: "Review and start jobs" },
@@ -120,6 +122,14 @@ const CreateNewJob = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedPipelines, setSelectedPipelines] = useState<string[]>([]);
   const [batchName, setBatchName] = useState("");
+  // Videos can come from this computer (uploaded one at a time) or from a
+  // folder the server can already see (one request, nothing copied). The mode
+  // is explicit state rather than derived from `serverFolder`: you can't pick
+  // a folder before switching to the server tab, so deriving it would make the
+  // tab impossible to open.
+  const [videoSource, setVideoSource] = useState<'upload' | 'server'>('upload');
+  const [serverFolder, setServerFolder] = useState<ServerFolderSelection | null>(null);
+  const usingServerFolder = videoSource === 'server' && serverFolder !== null;
 
   // The catalog (`pipelines` above) never carries per-field parameters —
   // apiClient.getPipelineCatalog()'s mapLegacyPipelineResponse always sets
@@ -232,19 +242,75 @@ const CreateNewJob = () => {
     performActualSubmission();
   };
 
+  /**
+   * One request creates the whole run: the server already has the videos, so
+   * there is nothing to upload. This is the difference between starting a
+   * 40-video corpus immediately and waiting out 40 multipart uploads.
+   */
+  const submitServerFolder = async () => {
+    if (!serverFolder) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess([]);
+
+    const effectiveConfigEntries = Object.entries(config).filter(([pipelineId]) =>
+      selectedPipelines.includes(pipelineId)
+    );
+    const effectiveConfig =
+      effectiveConfigEntries.length > 0 ? Object.fromEntries(effectiveConfigEntries) : undefined;
+
+    try {
+      const response = await apiClient.ingestFolder({
+        path: serverFolder.path,
+        recursive: serverFolder.recursive,
+        selected_pipelines: selectedPipelines,
+        config: effectiveConfig,
+        batch_name: batchName.trim() || undefined,
+      });
+
+      setSubmitSuccess(response.created);
+
+      // Files the server couldn't use are reported per file rather than
+      // failing the run, so say which — but don't treat it as a failure when
+      // the rest of the corpus started fine.
+      if (response.skipped.length > 0) {
+        setSubmitError(parseApiError({
+          error: `${response.skipped.length} file(s) were skipped`,
+          hint: response.skipped.map((s) => `${s.filename}: ${s.reason}`).join('\n'),
+        }));
+      }
+
+      if (response.created.length > 0) {
+        setTimeout(() => {
+          navigate(`/batches/${response.batch_id}`);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('💥 Folder ingest failed:', error);
+      setSubmitError(parseApiError(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const performActualSubmission = async () => {
     console.log('🚀 Submit button clicked - starting job submission');
-    console.log('Selected files:', selectedFiles.map(f => f.name));
     console.log('Selected pipelines:', selectedPipelines);
     console.log('Config:', config);
 
-    if (selectedFiles.length === 0) {
+    if (!usingServerFolder && selectedFiles.length === 0) {
       setSubmitError(parseApiError("No videos selected"));
       return;
     }
 
     if (selectedPipelines.length === 0) {
       setSubmitError(parseApiError("No pipelines selected"));
+      return;
+    }
+
+    if (usingServerFolder) {
+      await submitServerFolder();
       return;
     }
 
@@ -334,6 +400,10 @@ const CreateNewJob = () => {
           <VideoUploadStep
             selectedFiles={selectedFiles}
             setSelectedFiles={setSelectedFiles}
+            videoSource={videoSource}
+            setVideoSource={setVideoSource}
+            serverFolder={serverFolder}
+            setServerFolder={setServerFolder}
           />
         );
       case 2:
@@ -363,6 +433,7 @@ const CreateNewJob = () => {
       case 4:
         return (
           <ReviewStep
+            serverFolder={usingServerFolder ? serverFolder : null}
             selectedFiles={selectedFiles}
             selectedPipelines={selectedPipelines}
             config={config}
@@ -383,7 +454,7 @@ const CreateNewJob = () => {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return selectedFiles.length > 0;
+        return videoSource === 'server' ? serverFolder !== null : selectedFiles.length > 0;
       case 2:
         return selectedPipelines.length > 0 && pipelines.length > 0 && !catalogLoading;
       case 3:
@@ -493,7 +564,11 @@ const CreateNewJob = () => {
             disabled={isSubmitting || !canProceed()}
           >
             <Play className="h-4 w-4 mr-2" />
-            {isSubmitting ? 'Submitting...' : `Submit ${selectedFiles.length} Job${selectedFiles.length > 1 ? 's' : ''}`}
+            {isSubmitting
+              ? 'Submitting...'
+              : usingServerFolder
+                ? `Start run from folder`
+                : `Submit ${selectedFiles.length} Job${selectedFiles.length > 1 ? 's' : ''}`}
           </Button>
         ) : (
           <Button
@@ -543,10 +618,18 @@ const CreateNewJob = () => {
 // Step Components
 const VideoUploadStep = ({
   selectedFiles,
-  setSelectedFiles
+  setSelectedFiles,
+  videoSource,
+  setVideoSource,
+  serverFolder,
+  setServerFolder
 }: {
   selectedFiles: File[];
   setSelectedFiles: (files: File[]) => void;
+  videoSource: 'upload' | 'server';
+  setVideoSource: (source: 'upload' | 'server') => void;
+  serverFolder: ServerFolderSelection | null;
+  setServerFolder: (selection: ServerFolderSelection | null) => void;
 }) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -559,25 +642,69 @@ const VideoUploadStep = ({
 
   const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
 
+  // The two sources are mutually exclusive: mixing an upload set with a server
+  // folder would make "what is this run?" ambiguous, so switching clears the
+  // one being left behind.
+  const onSourceChange = (next: string) => {
+    const mode = next === 'server' ? 'server' : 'upload';
+    setVideoSource(mode);
+    if (mode === 'upload') setServerFolder(null);
+    else setSelectedFiles([]);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-        <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium mb-2">Upload Video Files</h3>
-        <p className="text-muted-foreground mb-4">
-          Select video files to process. Supports batch processing. Formats: MP4, WebM, AVI, MOV
-        </p>
+      <Tabs value={videoSource} onValueChange={onSourceChange}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="upload">
+            <Upload className="h-4 w-4 mr-2" />
+            Upload from this computer
+          </TabsTrigger>
+          <TabsTrigger value="server">
+            <HardDrive className="h-4 w-4 mr-2" />
+            Folder on the server
+          </TabsTrigger>
+        </TabsList>
 
-        <input
-          type="file"
-          accept="video/*"
-          multiple
-          onChange={handleFileChange}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-        />
-      </div>
+        <TabsContent value="upload" className="mt-4">
+          <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 text-center">
+            <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">Upload Video Files</h3>
+            <p className="text-muted-foreground mb-4">
+              Select video files to process. Formats: MP4, WebM, AVI, MOV
+            </p>
 
-      {selectedFiles.length > 0 && (
+            <input
+              type="file"
+              accept="video/*"
+              multiple
+              onChange={handleFileChange}
+              className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {selectedFiles.length > 8 && (
+              <p className="text-xs text-muted-foreground mt-4">
+                That&apos;s {selectedFiles.length} uploads, one per video, with this tab kept
+                open. If these files are on the machine running VideoAnnotator, the
+                &ldquo;Folder on the server&rdquo; tab starts them without uploading anything.
+              </p>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="server" className="mt-4 space-y-3">
+          <div className="flex items-start gap-2">
+            <FolderOpen className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              Pick a folder that the VideoAnnotator server can already see. Its videos are
+              read where they are — nothing is uploaded or copied, so a whole corpus starts
+              in one step.
+            </p>
+          </div>
+          <ServerFolderPicker selection={serverFolder} onSelect={setServerFolder} />
+        </TabsContent>
+      </Tabs>
+
+      {videoSource === 'upload' && selectedFiles.length > 0 && (
         <div className="p-4 bg-green-50 rounded-lg">
           <div className="flex justify-between items-center mb-2">
             <h4 className="font-medium text-green-800">
@@ -1015,6 +1142,7 @@ const ConfigurationStep = ({
 };
 
 const ReviewStep = ({
+  serverFolder,
   selectedFiles,
   selectedPipelines,
   config,
@@ -1026,6 +1154,7 @@ const ReviewStep = ({
   batchName,
   setBatchName
 }: {
+  serverFolder: ServerFolderSelection | null;
   selectedFiles: File[];
   selectedPipelines: string[];
   config: Record<string, unknown>;
@@ -1038,6 +1167,16 @@ const ReviewStep = ({
   setBatchName: Dispatch<SetStateAction<string>>;
 }) => {
   const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+  // A server-folder run has no File objects to describe, and its exact video
+  // count is the server's to report -- so describe the source, not a list.
+  const runLabel = serverFolder
+    ? serverFolder.path.split(/[/\\]/).filter(Boolean).pop() || serverFolder.path
+    : defaultBatchName(selectedFiles);
+  const videoCountLabel = serverFolder
+    ? serverFolder.recursive
+      ? 'Every video in that folder and its subfolders'
+      : `${serverFolder.videoCount} video${serverFolder.videoCount === 1 ? '' : 's'}`
+    : `${selectedFiles.length} video${selectedFiles.length === 1 ? '' : 's'}`;
   const pipelineNames = selectedPipelines
     .map((pipelineId) => pipelines.find((pipeline) => pipeline.id === pipelineId)?.name || pipelineId)
     .join(", ");
@@ -1062,22 +1201,33 @@ const ReviewStep = ({
       )}
 
       <div className="space-y-4">
-        <div className="p-4 border rounded-lg">
-          <h4 className="font-medium mb-2">Video Files ({selectedFiles.length})</h4>
-          <div className="space-y-1">
-            {selectedFiles.slice(0, 3).map((file, index) => (
-              <p key={index} className="text-sm text-foreground">
-                {file.name} ({(file.size / (1024 * 1024)).toFixed(1)} MB)
-              </p>
-            ))}
-            {selectedFiles.length > 3 && (
-              <p className="text-sm text-muted-foreground">...and {selectedFiles.length - 3} more files</p>
-            )}
-            <p className="text-sm font-medium text-muted-foreground">
-              Total size: {(totalSize / (1024 * 1024)).toFixed(1)} MB
+        {serverFolder ? (
+          <div className="p-4 border rounded-lg">
+            <h4 className="font-medium mb-2">Videos from the server</h4>
+            <p className="text-sm font-mono break-all">{serverFolder.path}</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {videoCountLabel} will be processed. Nothing is uploaded — the server reads
+              them where they are, so the run starts immediately.
             </p>
           </div>
-        </div>
+        ) : (
+          <div className="p-4 border rounded-lg">
+            <h4 className="font-medium mb-2">Video Files ({selectedFiles.length})</h4>
+            <div className="space-y-1">
+              {selectedFiles.slice(0, 3).map((file, index) => (
+                <p key={index} className="text-sm text-foreground">
+                  {file.name} ({(file.size / (1024 * 1024)).toFixed(1)} MB)
+                </p>
+              ))}
+              {selectedFiles.length > 3 && (
+                <p className="text-sm text-muted-foreground">...and {selectedFiles.length - 3} more files</p>
+              )}
+              <p className="text-sm font-medium text-muted-foreground">
+                Total size: {(totalSize / (1024 * 1024)).toFixed(1)} MB
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="p-4 border rounded-lg">
           <h4 className="font-medium mb-2">Selected Pipelines</h4>
@@ -1089,14 +1239,13 @@ const ReviewStep = ({
           <Input
             value={batchName}
             onChange={(event) => setBatchName(event.target.value)}
-            placeholder={defaultBatchName(selectedFiles)}
+            placeholder={runLabel}
             aria-label="Run name"
           />
           <p className="text-xs text-muted-foreground mt-2">
-            These {selectedFiles.length} video{selectedFiles.length === 1 ? '' : 's'} are
-            submitted together and tracked as one run, so you can watch their progress and
-            cancel or retry them as a group. Leave blank to use
-            &ldquo;{defaultBatchName(selectedFiles)}&rdquo;.
+            {videoCountLabel} submitted together and tracked as one run, so you can watch
+            progress and cancel or retry them as a group. Leave blank to use
+            &ldquo;{runLabel}&rdquo;.
           </p>
         </div>
 

@@ -22,6 +22,11 @@ import type {
   BatchRetryResponse,
   BatchSummary,
 } from '@/types/batches';
+import type {
+  IngestBrowseResponse,
+  IngestRequest,
+  IngestResponse,
+} from '@/types/ingest';
 import type { CurrentUser } from '@/types/api';
 import { APIError } from './handleError';
 
@@ -585,6 +590,27 @@ class APIClient {
 
   async retryBatch(batchId: string): Promise<BatchRetryResponse> {
     return this.request(`/api/v1/batches/${batchId}/retry`, { method: 'POST' });
+  }
+
+  // ==========================================================================
+  // Server-side folder ingest — create jobs from videos already on the
+  // server's disk, instead of uploading a corpus one file at a time.
+  // Admin-only and local-callers-only server-side; see src/types/ingest.ts.
+  // ==========================================================================
+
+  /** List server-side folders. Omit `path` to list the allowed roots. */
+  async browseServerFolders(path?: string): Promise<IngestBrowseResponse> {
+    const query = path ? `?path=${encodeURIComponent(path)}` : '';
+    return this.request(`/api/v1/ingest/browse${query}`);
+  }
+
+  /** Turn every video in a server-side folder into one batch of jobs. */
+  async ingestFolder(body: IngestRequest): Promise<IngestResponse> {
+    return this.request('/api/v1/ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
   }
 
   // Pipeline endpoints
