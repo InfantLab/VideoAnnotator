@@ -39,7 +39,14 @@ class TestResolveInstallCommand:
             patch.object(extras_install.shutil, "which", return_value="/usr/bin/uv"),
         ):
             command, cwd = extras_install.resolve_install_command("scene")
-        assert command == ["uv", "sync", "--extra", "scene", "--inexact"]
+        assert command == [
+            "uv",
+            "sync",
+            "--extra",
+            "scene",
+            "--inexact",
+            "--no-install-project",
+        ]
         assert cwd == fake_root
 
     def test_falls_back_to_pinned_pip_when_not_editable_checkout(self):
@@ -74,6 +81,17 @@ class TestResolveInstallCommand:
         assert command[0] == extras_install.sys.executable
         assert "pip" in command
         assert cwd is None
+
+
+class TestInstallEnv:
+    def test_points_uv_at_the_running_interpreters_environment(self):
+        env = extras_install.install_env()
+        assert env["UV_PROJECT_ENVIRONMENT"] == extras_install.sys.prefix
+
+    def test_keeps_the_rest_of_the_environment(self):
+        with patch.dict(extras_install.os.environ, {"HF_HOME": "/models"}):
+            env = extras_install.install_env()
+        assert env["HF_HOME"] == "/models"
 
 
 class TestDedupTracking:
@@ -196,6 +214,10 @@ class TestRunInstall:
             extras_install.run_install(job_id, "scene")
 
         mock_run.assert_called_once()
+        assert (
+            mock_run.call_args.kwargs["env"]["UV_PROJECT_ENVIRONMENT"]
+            == extras_install.sys.prefix
+        )
         db_session.refresh(job)
         assert job.status == ExtrasInstallJobStatus.COMPLETED
         assert job.command_output == "Successfully installed"

@@ -10,6 +10,7 @@ many-concurrent-video-jobs case `api/background_tasks.py` was built for
 
 import importlib.metadata
 import logging
+import os
 import shutil
 import subprocess
 import sys
@@ -108,10 +109,26 @@ def resolve_install_command(extra_name: str) -> tuple[list[str], Path | None]:
     call to this same function (e.g. installing `audio` would silently
     uninstall a previously-installed `face`). Discovered via a real end-to-
     end run during this feature's own implementation, not a hypothetical.
+
+    `--no-install-project` is required too: videoannotator itself is already
+    installed (it is the running server), and without the flag uv rebuilds and
+    reinstalls it, which on Windows means overwriting the locked
+    `Scripts/videoannotator.exe` the server was started from, failing every
+    install with os error 32.
     """
     root = _editable_checkout_root()
     if root is not None and shutil.which("uv"):
-        return (["uv", "sync", "--extra", extra_name, "--inexact"], root)
+        return (
+            [
+                "uv",
+                "sync",
+                "--extra",
+                extra_name,
+                "--inexact",
+                "--no-install-project",
+            ],
+            root,
+        )
 
     version = importlib.metadata.version(_DISTRIBUTION_NAME)
     command = [
@@ -122,6 +139,20 @@ def resolve_install_command(extra_name: str) -> tuple[list[str], Path | None]:
         f"{_DISTRIBUTION_NAME}[{extra_name}]=={version}",
     ]
     return (command, None)
+
+
+def install_env() -> dict[str, str]:
+    """Environment for the install subprocess.
+
+    `uv sync` ignores which interpreter is running and installs into
+    `<project root>/.venv` unless told otherwise. A server started from any
+    other environment (a second venv, a Windows venv beside a WSL `.venv`)
+    would "install" successfully into the wrong one and the pipeline would
+    never become available. Pointing UV_PROJECT_ENVIRONMENT at `sys.prefix`
+    makes uv target the environment actually serving requests; the pip
+    fallback already does, via `sys.executable`, and ignores the variable.
+    """
+    return {**os.environ, "UV_PROJECT_ENVIRONMENT": sys.prefix}
 
 
 def run_install(job_id: str, extra_name: str) -> None:
@@ -154,6 +185,7 @@ def run_install(job_id: str, extra_name: str) -> None:
             result = subprocess.run(
                 command,
                 cwd=cwd,
+                env=install_env(),
                 capture_output=True,
                 text=True,
                 check=False,
