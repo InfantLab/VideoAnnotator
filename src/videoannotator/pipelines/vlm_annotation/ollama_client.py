@@ -16,7 +16,17 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
-from ollama import Client
+
+# Deferred rather than a top-level `from ollama import Client`: `ollama` is
+# only installed under the `llm` extra (004-extras-based-install), and this
+# module is imported unconditionally by vlm_pipeline.py and api/v1/vlm.py --
+# a top-level import here would crash the whole server at startup whenever
+# `llm` isn't installed, instead of the missing-extras behaviour every other
+# pipeline gets (registry/pipeline_loader.py's extras_available() gate).
+try:
+    from ollama import Client
+except ImportError:
+    Client = None  # type: ignore[assignment,misc]
 
 
 class OllamaUnavailableError(RuntimeError):
@@ -40,6 +50,11 @@ class OllamaVLMClient:
     detection pipeline relies on in production."""
 
     def __init__(self, base_url: str, timeout: int):
+        if Client is None:
+            raise OllamaUnavailableError(
+                "The 'ollama' package is not installed. Install it with: "
+                "pip install videoannotator[llm]"
+            )
         self.base_url = base_url
         self._client = Client(host=base_url, timeout=timeout)
 

@@ -24,8 +24,17 @@ from ...pipelines.vlm_annotation.vlm_pipeline import (
     VLMAnnotationPipeline,
     _parse_label,
 )
+from ...registry.pipeline_loader import extras_available
 from ..errors import APIError
 from ..middleware.auth import validate_api_key
+from .exceptions import PipelineUnavailableException
+
+# ollama_client.py defers its own `import ollama` (only installed under the
+# `llm` extra, 004-extras-based-install), so importing it here is always
+# safe -- but every endpoint below still needs its own extras_available()
+# check so a missing `llm` extra surfaces as the standard 422
+# PipelineUnavailableException instead of an unhandled ImportError.
+VLM_REQUIRES_EXTRAS = ["llm"]
 
 logger = logging.getLogger("videoannotator.api")
 
@@ -55,6 +64,9 @@ async def list_vlm_models(
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> VlmModelsResponse:
     """List models pulled on the configured Ollama server."""
+    if not extras_available(VLM_REQUIRES_EXTRAS):
+        raise PipelineUnavailableException("vlm_annotation", VLM_REQUIRES_EXTRAS)
+
     try:
         client = OllamaVLMClient(base_url=base_url, timeout=10)
         models = client.list_models()
@@ -126,6 +138,9 @@ async def preview_vlm_prompt(
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> VlmPreviewResponse:
     """Test a prompt against a single frame or burst, synchronously."""
+    if not extras_available(VLM_REQUIRES_EXTRAS):
+        raise PipelineUnavailableException("vlm_annotation", VLM_REQUIRES_EXTRAS)
+
     if sampling_mode not in ("single_frame", "frame_burst"):
         raise APIError(
             status_code=422,
