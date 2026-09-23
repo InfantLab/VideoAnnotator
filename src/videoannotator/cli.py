@@ -1448,7 +1448,7 @@ def generate_token(
                 "username": username,
                 "email": user,
                 "key_name": key_name,
-                "key_id": api_key_obj.id,
+                "key_id": str(api_key_obj.id),
                 "created_at": api_key_obj.created_at.isoformat(),
                 "expires_at": expires_at.isoformat()
                 if expires_at is not None
