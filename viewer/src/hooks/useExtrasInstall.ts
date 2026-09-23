@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQueries } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { APIError } from '@/api/handleError';
+import { useRefreshPipelineCatalog } from '@/hooks/usePipelineCatalog';
 import type { ExtrasInstallJob, PipelineDescriptor } from '@/types/pipelines';
 
 const STORAGE_KEY = 'videoannotator_extras_install_jobs';
@@ -112,6 +113,21 @@ export function useExtrasInstall(catalogPipelines: PipelineDescriptor[] = []) {
       }
     });
   }, [extraNames, jobsByExtra, forgetJob]);
+
+  // A completed install changes what the server reports (top-level
+  // `restart_required`, and later `available`), but nothing else re-fetches the
+  // catalog, so the restart banner never appeared. Refresh once per completed job,
+  // bypassing the API client's own catalog cache.
+  const refreshCatalog = useRefreshPipelineCatalog();
+  const refreshedJobIds = useRef(new Set<string>());
+  useEffect(() => {
+    extraNames.forEach((extraName) => {
+      const job = jobsByExtra[extraName];
+      if (job?.status !== 'completed' || refreshedJobIds.current.has(job.jobId)) return;
+      refreshedJobIds.current.add(job.jobId);
+      refreshCatalog({ forceServerRefresh: true }).catch(() => {});
+    });
+  }, [extraNames, jobsByExtra, refreshCatalog]);
 
   // Once every pipeline a terminal job was tracking is confirmed available again
   // (server restarted), drop the local tracking entry - it's served its purpose.

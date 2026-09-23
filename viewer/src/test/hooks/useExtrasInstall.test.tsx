@@ -1,6 +1,7 @@
 // Unit tests for useExtrasInstall (specs/002-pipeline-extras-install, T013)
 // Covers: trigger persists to localStorage, mount rehydrates + resumes polling,
-// polling stops on terminal status, 404 drops the tracked job.
+// polling stops on terminal status, 404 drops the tracked job, and a completed
+// install force-refreshes the catalog so the restart banner can appear.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
@@ -16,7 +17,10 @@ const STORAGE_KEY = 'videoannotator_extras_install_jobs';
 vi.mock('@/api/client', () => ({
   apiClient: {
     installPipelineExtras: vi.fn(),
-    getExtrasInstallJob: vi.fn()
+    getExtrasInstallJob: vi.fn(),
+    clearPipelineCache: vi.fn(),
+    clearServerInfoCache: vi.fn(),
+    getPipelineCatalog: vi.fn().mockResolvedValue({ pipelines: [], restartRequired: true })
   }
 }));
 
@@ -207,5 +211,35 @@ describe('useExtrasInstall', () => {
     });
 
     expect(result.current.jobsByExtra.audio).toBeUndefined();
+  });
+
+  it('force-refreshes the pipeline catalog once when an install completes', async () => {
+    memoryStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        scene: { jobId: 'job-9', startedAt: '2026-09-23T10:00:00Z', pipelineIds: ['scene_detection'] }
+      })
+    );
+    vi.mocked(apiClient.getExtrasInstallJob).mockResolvedValue({
+      jobId: 'job-9',
+      extraName: 'scene',
+      status: 'completed',
+      createdAt: '2026-09-23T10:00:00Z',
+      startedAt: '2026-09-23T10:00:01Z',
+      finishedAt: '2026-09-23T10:01:00Z',
+      commandOutput: 'ok',
+      restartRequired: true
+    });
+
+    const { rerender } = renderHook(() => useExtrasInstall(), { wrapper });
+
+    await waitFor(() => {
+      expect(apiClient.getPipelineCatalog).toHaveBeenCalledWith({ forceRefresh: true, includeUnavailable: true });
+    });
+    expect(apiClient.clearPipelineCache).toHaveBeenCalled();
+
+    rerender();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(apiClient.getPipelineCatalog).toHaveBeenCalledTimes(1);
   });
 });

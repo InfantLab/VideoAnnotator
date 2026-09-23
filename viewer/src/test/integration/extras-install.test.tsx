@@ -192,7 +192,7 @@ describe('PipelineSelectionStep - Pipeline Extras Install UI', () => {
       });
 
       // Scene Detection's card (a different, untouched extras group) must not show progress.
-      const sceneCard = screen.getByText('Scene Detection').closest('div[aria-disabled="true"]');
+      const sceneCard = screen.getByText('Scene Detection').closest('div[data-locked="true"]');
       expect(sceneCard?.textContent).not.toMatch(/Installing/);
     });
 
@@ -403,7 +403,7 @@ describe('PipelineSelectionStep - Pipeline Extras Install UI', () => {
       // Wording is an expected next step, not error language.
       expect(screen.queryByText(/error/i)).not.toBeInTheDocument();
       // The pipeline itself is still shown locked - completion alone doesn't mean "ready".
-      expect(screen.getByText('Face Analysis').closest('div[aria-disabled="true"]')).not.toBeNull();
+      expect(screen.getByText('Face Analysis').closest('div[data-locked="true"]')).not.toBeNull();
     });
 
     it('renders a pipeline identically to an always-available one once the catalog reports it available (post-restart)', () => {

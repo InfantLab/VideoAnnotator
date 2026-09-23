@@ -1,4 +1,4 @@
-import { AlertTriangle, Lock, Loader2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Lock, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,10 +19,10 @@ export const LockedPipelineCard = ({ pipeline, children }: LockedPipelineCardPro
   const description = pipeline.description ?? "No description provided.";
 
   return (
-    <div
-      className="flex cursor-not-allowed flex-col gap-1 rounded-lg border border-dashed border-border bg-muted/40 p-3 opacity-90"
-      aria-disabled="true"
-    >
+    // Not aria-disabled/cursor-not-allowed: the card isn't a control, and both
+    // leak onto the Install button inside it (assistive tech then announces a
+    // working button as unavailable). The "Not installed" badge carries it.
+    <div data-locked="true" className="flex flex-col gap-1 rounded-lg border border-dashed border-border bg-muted/40 p-3 opacity-90">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <Lock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -159,10 +159,16 @@ export const ExtrasInstallStatus = ({
   }
 
   if (job?.status === 'completed') {
-    // Handled by the app/step-level RestartRequiredBanner - this pipeline stays
-    // "locked" until the server restarts and a later catalog fetch reports it
-    // available, so no separate per-card messaging here beyond that banner.
-    return null;
+    // The pipeline stays locked until the server restarts and a later catalog
+    // fetch reports it available. Say so on the card too: the step-level
+    // RestartRequiredBanner can be scrolled out of view, and a card that just
+    // reverts to "Not installed" reads as if the install did nothing.
+    return (
+      <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-500">
+        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+        Installed. Restart the server to activate it.
+      </p>
+    );
   }
 
   return (
