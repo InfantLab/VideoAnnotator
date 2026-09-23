@@ -32,6 +32,8 @@ TASKS = {
     "content-moderation",
     "person-reidentification",
     "interaction-analysis",
+    "frame-classification",
+    "vlm-captioning",
 }
 
 CAPABILITIES = {
@@ -67,6 +69,7 @@ BACKENDS = {
     "openvino",
     "cpu",
     "cuda",
+    "ollama",
 }
 
 STABILITY = {"experimental", "beta", "stable", "deprecated"}

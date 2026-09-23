@@ -1,6 +1,6 @@
 # Pipeline Specifications
 
-Generated: 2025-10-31T16:38:14.268275Z
+Generated: 2026-09-23T14:00:12.108500Z
 
 This file is auto-generated. Do not edit by hand.
 
@@ -15,6 +15,6 @@ This file is auto-generated. Do not edit by hand.
 | scene_detection | Scene Detection | scene | pyscenedetect-clip | scene-detection,scene-segmentation | video | batch,embedding | pytorch | beta | JSON:scene_boundary/scene_category |
 | speaker_diarization | Speaker Diarization | audio | pyannote | speaker-diarization,speaker-segmentation | audio | timeline,speaker-turns | pytorch | stable | RTTM:speaker_turns |
 | speech_recognition | Speech Recognition | audio | whisper | speech-transcription,automatic-speech-recognition | audio | streaming,word-timestamps,multilingual | pytorch | stable | WebVTT:transcript |
-| voice_emotion_baseline | Voice Emotion + Transcription (Baseline) | audio | whisper-spectral-emotion | speech-transcription,emotion-recognition | audio | streaming,embedding | pytorch | experimental | WebVTT:transcript;JSON:emotion_segments |
+| vlm_annotation | VLM Frame Annotation | vlm | ollama | frame-classification,vlm-captioning | video | batch | ollama | experimental | JSON:vlm_label/vlm_reasoning |
 
 Total pipelines: 10
