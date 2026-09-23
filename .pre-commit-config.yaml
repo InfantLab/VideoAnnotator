@@ -2,7 +2,7 @@
 # Install with: pre-commit install
 
 # Exclude tokens directory (contains encrypted blobs / non-JSON-safe data)
-exclude: ^tokens/
+exclude: ^(tokens/|src/videoannotator/viewer_static/)  # viewer_static: vendored build output, never hand-edited
 
 repos:
   # Built-in hooks
