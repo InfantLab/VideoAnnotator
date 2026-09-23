@@ -26,7 +26,8 @@
                         },
     "postCreateCommand":  "uv sync \u0026\u0026 uv sync --extra dev \u0026\u0026 HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh \u0026\u0026 uv run pre-commit install",
     "containerEnv":  {
-                         "UV_LINK_MODE":  "copy"
+                         "UV_LINK_MODE":  "copy",
+                         "UV_NO_SYNC":  "1"
                      },
     "customizations":  {
                            "vscode":  {
@@ -45,7 +46,8 @@
                                                              "astral-sh.ruff",
                                                              "ms-python.python",
                                                              "ms-python.vscode-pylance",
-                                                             "GitHub.copilot-chat"
+                                                             "GitHub.copilot-chat",
+                                                             "anthropic.claude-code"
                                                          ]
                                       }
                        },
