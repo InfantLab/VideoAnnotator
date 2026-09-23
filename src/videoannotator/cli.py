@@ -496,8 +496,39 @@ def list_jobs(
         raise typer.Exit(code=1)
 
 
-@app.command()
-def pipelines(
+pipelines_app = typer.Typer(
+    name="pipelines",
+    help="Inspect and manage annotation pipelines",
+    add_completion=False,
+)
+app.add_typer(pipelines_app, name="pipelines")
+
+
+@pipelines_app.callback(invoke_without_command=True)
+def _pipelines_default(
+    ctx: typer.Context,
+    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+    detailed: bool = typer.Option(False, help="Show extended pipeline information"),
+    json: bool = typer.Option(False, "--json", help="Output JSON for scripting"),
+    format: str | None = typer.Option(None, help="Alternate output format (markdown)"),
+    all: bool = typer.Option(
+        False,
+        "--all",
+        help=(
+            "Include pipelines whose required extras aren't installed "
+            "(shown with an install hint instead of being omitted)."
+        ),
+    ),
+):
+    """List available processing pipelines. Bare `videoannotator pipelines` runs
+    `pipelines list`; see `pipelines install` to add a missing one."""
+    if ctx.invoked_subcommand is not None:
+        return
+    list_pipelines(server=server, detailed=detailed, json=json, format=format, all=all)
+
+
+@pipelines_app.command("list")
+def list_pipelines(
     server: str = typer.Option("http://localhost:18011", help="API server URL"),
     detailed: bool = typer.Option(False, help="Show extended pipeline information"),
     json: bool = typer.Option(False, "--json", help="Output JSON for scripting"),
@@ -605,6 +636,201 @@ def pipelines(
             "[INFO] Ensure server is running: videoannotator server --port 18011"
         )
         raise typer.Exit(code=1)
+
+
+def _require_api_key(api_key: str | None) -> str:
+    if not api_key:
+        typer.echo("[ERROR] An admin API key is required.", err=True)
+        typer.echo(
+            "[INFO] Create one with: videoannotator generate-token --admin",
+            err=True,
+        )
+        typer.echo(
+            "[INFO] Then pass it with --api-key or set VIDEOANNOTATOR_API_KEY",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    return api_key
+
+
+def _auth_error(status_code: int) -> None:
+    if status_code == 401:
+        typer.echo("[ERROR] Authentication required or API key invalid.", err=True)
+        typer.echo(
+            "[INFO] Create one with: videoannotator generate-token --admin", err=True
+        )
+        raise typer.Exit(code=1)
+    if status_code == 403:
+        typer.echo("[ERROR] This API key is not an admin key.", err=True)
+        typer.echo(
+            "[INFO] Create an admin key with: videoannotator generate-token --admin",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+
+@pipelines_app.command("install")
+def install_pipeline(
+    extra: str = typer.Argument(
+        ...,
+        help="Extras group to install, e.g. 'face', 'audio', 'llm', 'all' "
+        "(run 'videoannotator pipelines --all' to see which pipelines need which group)",
+    ),
+    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+    api_key: str | None = typer.Option(
+        None,
+        "--api-key",
+        envvar="VIDEOANNOTATOR_API_KEY",
+        help="Admin API key (or set VIDEOANNOTATOR_API_KEY)",
+    ),
+    wait: bool = typer.Option(
+        True, help="Poll until the install finishes instead of returning immediately"
+    ),
+    poll_interval: float = typer.Option(
+        2.0, help="Seconds between status polls when --wait"
+    ),
+):
+    """Trigger an admin-only, in-app install of a pipeline extras group
+    (specs/005-pipeline-extras-install).
+
+    Runs `pip install videoannotator[<extra>]` on the server as a tracked background
+    job -- the same self-service install a future viewer UI will trigger, usable from
+    the terminal in the meantime. A completed install needs a server restart before
+    the new pipeline(s) show up.
+    """
+    import time
+
+    import requests
+
+    key = _require_api_key(api_key)
+    headers = {"Authorization": f"Bearer {key}"}
+
+    try:
+        resp = requests.post(
+            f"{server}/api/v1/pipelines/extras/{extra}/install",
+            headers=headers,
+            timeout=30,
+        )
+    except requests.RequestException as e:
+        typer.echo(f"[ERROR] Failed to connect to API server: {e}", err=True)
+        typer.echo(
+            "[INFO] Ensure server is running: videoannotator server --port 18011"
+        )
+        raise typer.Exit(code=1) from e
+
+    _auth_error(resp.status_code)
+    if resp.status_code == 422:
+        body = resp.json()
+        typer.echo(
+            f"[ERROR] {body.get('error', {}).get('message', resp.text)}", err=True
+        )
+        hint = body.get("error", {}).get("hint")
+        if hint:
+            typer.echo(f"[INFO] {hint}", err=True)
+        raise typer.Exit(code=1)
+    if resp.status_code != 202:
+        typer.echo(
+            f"[ERROR] Failed to start install: {resp.status_code} {resp.text}",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    job = resp.json()
+    job_id = job["job_id"]
+    status = job["status"]
+    typer.echo(f"[OK] Install job {job_id} for '{extra}': {status}")
+
+    if status == "completed":
+        typer.echo(f"[OK] '{extra}' was already installed; nothing to do.")
+        return
+
+    if not wait:
+        typer.echo(
+            f"[INFO] Check progress with: videoannotator pipelines install-status {job_id}"
+        )
+        return
+
+    typer.echo(
+        "[INFO] Waiting for install to finish (this can take several minutes)..."
+    )
+    while status in ("pending", "running"):
+        time.sleep(poll_interval)
+        try:
+            poll_resp = requests.get(
+                f"{server}/api/v1/pipelines/extras/install-jobs/{job_id}",
+                headers=headers,
+                timeout=10,
+            )
+        except requests.RequestException as e:
+            typer.echo(f"[ERROR] Lost connection to API server: {e}", err=True)
+            raise typer.Exit(code=1) from e
+        if poll_resp.status_code != 200:
+            typer.echo(
+                f"[ERROR] Failed to check install status: {poll_resp.status_code}",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+        job = poll_resp.json()
+        status = job["status"]
+
+    if status == "failed":
+        typer.echo(f"[ERROR] Install of '{extra}' failed.", err=True)
+        if job.get("command_output"):
+            typer.echo(job["command_output"], err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"[OK] Install of '{extra}' completed.")
+    if job.get("restart_required"):
+        typer.echo(
+            "[INFO] Restart the server for the new pipeline(s) to become available: "
+            "videoannotator server"
+        )
+
+
+@pipelines_app.command("install-status")
+def install_status(
+    job_id: str = typer.Argument(
+        ..., help="Install job id returned by 'pipelines install'"
+    ),
+    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+    api_key: str | None = typer.Option(
+        None,
+        "--api-key",
+        envvar="VIDEOANNOTATOR_API_KEY",
+        help="Admin API key (or set VIDEOANNOTATOR_API_KEY)",
+    ),
+):
+    """Check the status of an extras-group install job started by 'pipelines install'."""
+    import requests
+
+    key = _require_api_key(api_key)
+
+    try:
+        resp = requests.get(
+            f"{server}/api/v1/pipelines/extras/install-jobs/{job_id}",
+            headers={"Authorization": f"Bearer {key}"},
+            timeout=10,
+        )
+    except requests.RequestException as e:
+        typer.echo(f"[ERROR] Failed to connect to API server: {e}", err=True)
+        raise typer.Exit(code=1) from e
+
+    if resp.status_code == 404:
+        typer.echo(f"[ERROR] Install job '{job_id}' not found", err=True)
+        raise typer.Exit(code=1)
+    _auth_error(resp.status_code)
+    if resp.status_code != 200:
+        typer.echo(f"[ERROR] {resp.status_code} {resp.text}", err=True)
+        raise typer.Exit(code=1)
+
+    job = resp.json()
+    typer.echo(f"[OK] {job['extra_name']}: {job['status']}")
+    if job.get("command_output"):
+        typer.echo(job["command_output"])
+    if job.get("restart_required"):
+        typer.echo(
+            "[INFO] Restart the server for the new pipeline(s) to become available."
+        )
 
 
 @app.command()
@@ -1067,6 +1293,11 @@ def generate_token(
     output_file: Path = typer.Option(
         None, "--output", "-o", help="Save token to JSON file"
     ),
+    port: int = typer.Option(
+        API_PORT,
+        "--port",
+        help="Port the server runs/will run on (used only for the printed usage example and viewer-connect link)",
+    ),
     admin: bool = typer.Option(
         None,
         "--admin/--no-admin",
@@ -1202,10 +1433,12 @@ def generate_token(
         typer.echo("Usage:")
         typer.echo(f'  export API_KEY="{raw_key}"')
         typer.echo(
-            '  curl -H "Authorization: Bearer $API_KEY" http://localhost:18011/api/v1/jobs'
+            f'  curl -H "Authorization: Bearer $API_KEY" http://localhost:{port}/api/v1/jobs'
         )
         typer.echo("")
-        typer.echo(f"Connect the viewer with one click: {_viewer_connect_url(raw_key)}")
+        typer.echo(
+            f"Connect the viewer with one click: {_viewer_connect_url(raw_key, port=port)}"
+        )
         typer.echo("")
 
         # Save to file if requested
@@ -1257,6 +1490,11 @@ def setup_db(
     ),
     admin_full_name: str = typer.Option(
         "Administrator", help="Full name for the admin user"
+    ),
+    port: int = typer.Option(
+        API_PORT,
+        "--port",
+        help="Port the server runs/will run on (used only for the printed viewer-connect link)",
     ),
 ):
     """Initialize the local database and optionally create an admin API key."""
@@ -1312,7 +1550,7 @@ def setup_db(
 Save this key now; it will not be shown again.
 
 Connect the viewer with one click: {url}
-""".strip().format(key=raw_key, url=_viewer_connect_url(raw_key))
+""".strip().format(key=raw_key, url=_viewer_connect_url(raw_key, port=port))
         )
     else:
         typer.echo(
