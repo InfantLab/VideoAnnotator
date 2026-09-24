@@ -2,7 +2,10 @@
 
 **Feature Branch**: `011-pipeline-readiness`
 **Created**: 2026-09-23
-**Status**: Draft
+**Status**: Implemented 2026-09-24, pending the SC-001 manual run
+([tests/manual/pipeline_readiness_e2e.md](../../tests/manual/pipeline_readiness_e2e.md)).
+FR-017 (weight prefetch, optional P3) is deferred: it needs a download step per model library, and
+the first-run size notes (FR-016) already make the wait visible.
 **Input**: User description: "Pipelines should be discoverable and loadable by an end user. Today a
 core-only server shows the viewer a single placeholder stub pipeline; getting any real pipeline
 running still needs a terminal (install extras, restart the server, export tokens). Close that gap
@@ -273,7 +276,7 @@ download size; a pipeline whose weights aren't cached reports a `weights_cached:
   not in the local HF/torch cache, readiness MUST include a `weights_not_cached` note (not a
   blocker).
 - **FR-017**: `POST /api/v1/pipelines/{name}/prefetch` (admin) MAY start a trackable job that
-  downloads declared weights, reusing the extras install job table/status vocabulary.
+  downloads declared weights, reusing the extras install job table/status vocabulary. **Deferred** (see Status).
 
 **Release / cross-repo**
 

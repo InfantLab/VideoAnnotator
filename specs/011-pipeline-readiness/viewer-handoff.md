@@ -1,5 +1,7 @@
 # Handoff to video-annotation-viewer: Pipeline Readiness UI
 
+**Status (2026-09-24)**: built in video-annotation-viewer (readiness cards, install with progress and adoption of server-reported installs, Restart server, setup blockers display-only, older-server fallback) and bundled into `viewer_static/`. Remaining: the SC-001 manual run.
+
 **From**: VideoAnnotator, `specs/011-pipeline-readiness/` (v1.5.0 branch)
 **Purpose**: Paste this into the viewer repo's `/speckit-specify` as its input. It says *what* the
 user must be able to do; component structure, state management and visual design are the viewer's
