@@ -158,7 +158,19 @@ export const ExtrasInstallStatus = ({
     );
   }
 
+  if (job?.status === 'completed' && job.activation === 'live') {
+    // Usable already (VideoAnnotator spec 011); the catalog refresh that
+    // useExtrasInstall triggers swaps this card for a selectable one.
+    return (
+      <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-green-700 dark:text-green-500">
+        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+        Installed. Loading&hellip;
+      </p>
+    );
+  }
+
   if (job?.status === 'completed') {
+    // Needs a restart (or the server predates spec 011's live activation).
     // The pipeline stays locked until the server restarts and a later catalog
     // fetch reports it available. Say so on the card too: the step-level
     // RestartRequiredBanner can be scrolled out of view, and a card that just

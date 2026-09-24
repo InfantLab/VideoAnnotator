@@ -226,9 +226,10 @@ class APIClient {
 
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        let errorData: unknown;
 
         try {
-          const errorData = (await response.json()) as unknown;
+          errorData = (await response.json()) as unknown;
           const detail =
             errorData && typeof errorData === 'object'
               ? (errorData as Record<string, unknown>).detail
@@ -251,7 +252,7 @@ class APIClient {
           // If parsing error response fails, use default message
         }
 
-        throw new APIError(errorMessage, response.status, response);
+        throw new APIError(errorMessage, response.status, response, errorData);
       }
 
       // Handle 204 No Content responses (like DELETE operations)
@@ -504,6 +505,35 @@ class APIClient {
     return this.request('/health');
   }
 
+  /**
+   * The server process's identity (VideoAnnotator spec 011): `bootId` changes on
+   * every start, which is how a client knows a restart finished. Both fields are
+   * undefined on servers that predate it. Short timeout: this is polled while the
+   * server is down.
+   */
+  async getBootIdentity(): Promise<{ bootId?: string; restartMode?: string }> {
+    const response = await this.request<{ boot_id?: string; restart_mode?: string }>(
+      '/health',
+      {},
+      3000
+    );
+    return { bootId: response?.boot_id, restartMode: response?.restart_mode };
+  }
+
+  /**
+   * Ask the server to restart itself (admin-only, VideoAnnotator spec 011).
+   * POST /api/v1/system/restart -> 202; 409 with code RESTART_UNSUPPORTED,
+   * JOBS_RUNNING (retry with force) or INSTALL_IN_PROGRESS; read those with
+   * `apiErrorEnvelope`. 404 on servers that predate it.
+   */
+  async restartServer(force = false): Promise<{ bootId: string }> {
+    const response = await this.request<{ restarting: boolean; boot_id: string }>(
+      `/api/v1/system/restart${force ? '?force=true' : ''}`,
+      { method: 'POST' }
+    );
+    return { bootId: response.boot_id };
+  }
+
   async detailedHealth(): Promise<SystemHealthResponse> {
     return this.request('/api/v1/system/health');
   }
@@ -693,6 +723,8 @@ class APIClient {
       finished_at: string | null;
       command_output: string | null;
       restart_required?: boolean;
+      activation?: string | null;
+      conflicting_distributions?: { name: string; old_version: string; new_version: string | null }[];
     }>(`/api/v1/pipelines/extras/install-jobs/${encodeURIComponent(jobId)}`);
 
     return {
@@ -703,7 +735,13 @@ class APIClient {
       startedAt: response.started_at,
       finishedAt: response.finished_at,
       commandOutput: response.command_output,
-      restartRequired: response.restart_required === true
+      restartRequired: response.restart_required === true,
+      activation: response.activation ?? null,
+      conflictingDistributions: (response.conflicting_distributions ?? []).map((d) => ({
+        name: d.name,
+        oldVersion: d.old_version,
+        newVersion: d.new_version
+      }))
     };
   }
 

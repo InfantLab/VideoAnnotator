@@ -127,6 +127,13 @@ export interface ExtrasInstallJob {
   finishedAt: string | null;
   commandOutput: string | null;
   restartRequired: boolean;
+  /**
+   * VideoAnnotator spec 011, set once completed: `live` = usable now, no restart;
+   * `restart_required` = the install changed packages the server had loaded.
+   * null from servers that predate it (treat as restart_required, per 005).
+   */
+  activation?: 'live' | 'restart_required' | string | null;
+  conflictingDistributions?: { name: string; oldVersion: string; newVersion: string | null }[];
 }
 
 /**

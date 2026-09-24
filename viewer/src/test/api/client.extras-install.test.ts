@@ -1,9 +1,11 @@
 // Unit tests for the Pipeline Extras Install UI feature (specs/002-pipeline-extras-install)
 // Covers: getPipelineCatalog({ includeUnavailable }) field mapping (T005),
-// installPipelineExtras / getExtrasInstallJob (T011)
+// installPipelineExtras / getExtrasInstallJob (T011), and VideoAnnotator spec 011's
+// activation fields, restartServer and getBootIdentity
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { APIClient } from '@/api/client';
+import { apiErrorEnvelope } from '@/api/handleError';
 
 const TEST_BASE_URL = 'http://127.0.0.1:18011';
 const TEST_TOKEN = 'va_test12345678';
@@ -178,7 +180,9 @@ describe('APIClient pipeline extras install', () => {
         startedAt: '2026-08-26T10:00:01Z',
         finishedAt: null,
         commandOutput: null,
-        restartRequired: false
+        restartRequired: false,
+        activation: null,
+        conflictingDistributions: []
       });
       expect(mockFetch).toHaveBeenCalledWith(
         `${TEST_BASE_URL}/api/v1/pipelines/extras/install-jobs/job-1`,
@@ -272,6 +276,86 @@ describe('APIClient pipeline extras install', () => {
       });
 
       await expect(client.getCurrentUser()).rejects.toMatchObject({ status: 404 });
+    });
+  });
+
+  describe('spec 011: activation and restart', () => {
+    const json = (status: number, body: unknown) => ({
+      ok: status < 400,
+      status,
+      statusText: String(status),
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => body
+    });
+
+    it('maps activation and conflicting distributions on a completed install', async () => {
+      mockFetch.mockResolvedValueOnce(
+        json(200, {
+          job_id: 'job-2',
+          extra_name: 'person',
+          status: 'completed',
+          created_at: '2026-09-23T10:00:00Z',
+          started_at: '2026-09-23T10:00:01Z',
+          finished_at: '2026-09-23T10:01:00Z',
+          command_output: 'ok',
+          restart_required: true,
+          activation: 'restart_required',
+          conflicting_distributions: [{ name: 'pyyaml', old_version: '6.0.2', new_version: '6.0.3' }]
+        })
+      );
+
+      const job = await client.getExtrasInstallJob('job-2');
+
+      expect(job.activation).toBe('restart_required');
+      expect(job.conflictingDistributions).toEqual([
+        { name: 'pyyaml', oldVersion: '6.0.2', newVersion: '6.0.3' }
+      ]);
+    });
+
+    it('POSTs a restart, with force only when asked, and returns the old boot id', async () => {
+      mockFetch.mockResolvedValue(json(202, { restarting: true, boot_id: 'boot-1' }));
+
+      await expect(client.restartServer()).resolves.toEqual({ bootId: 'boot-1' });
+      expect(mockFetch).toHaveBeenLastCalledWith(
+        `${TEST_BASE_URL}/api/v1/system/restart`,
+        expect.objectContaining({ method: 'POST' })
+      );
+
+      await client.restartServer(true);
+      expect(mockFetch).toHaveBeenLastCalledWith(
+        `${TEST_BASE_URL}/api/v1/system/restart?force=true`,
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+
+    it("keeps a refusal's code, hint and details readable", async () => {
+      mockFetch.mockResolvedValueOnce(
+        json(409, {
+          error: {
+            code: 'JOBS_RUNNING',
+            message: '2 annotation job(s) are running and would be interrupted.',
+            details: { job_ids: ['a', 'b'] }
+          },
+          detail: '2 annotation job(s) are running and would be interrupted.'
+        })
+      );
+
+      const error = await client.restartServer().catch((e: unknown) => e);
+
+      expect(error).toMatchObject({ status: 409 });
+      expect(apiErrorEnvelope(error)).toEqual({
+        code: 'JOBS_RUNNING',
+        hint: undefined,
+        details: { job_ids: ['a', 'b'] }
+      });
+    });
+
+    it('reads boot identity from /health, undefined on older servers', async () => {
+      mockFetch.mockResolvedValueOnce(json(200, { status: 'healthy', boot_id: 'b2', restart_mode: 'execv' }));
+      await expect(client.getBootIdentity()).resolves.toEqual({ bootId: 'b2', restartMode: 'execv' });
+
+      mockFetch.mockResolvedValueOnce(json(200, { status: 'healthy' }));
+      await expect(client.getBootIdentity()).resolves.toEqual({ bootId: undefined, restartMode: undefined });
     });
   });
 });
