@@ -114,16 +114,39 @@ def server(
         typer.echo("")
 
     try:
-        uvicorn.run(
-            "videoannotator.api.main:app",
-            host=host,
-            port=port,
-            reload=reload,
-            workers=workers
-            if not reload
-            else 1,  # Reload doesn't work with multiple workers
-            log_level="info",
-        )
+        if reload or workers > 1:
+            # No self-restart here (spec 011): the reloader/worker supervisor
+            # owns the processes, so /api/v1/system/restart reports
+            # RESTART_UNSUPPORTED.
+            uvicorn.run(
+                "videoannotator.api.main:app",
+                host=host,
+                port=port,
+                reload=reload,
+                workers=workers
+                if not reload
+                else 1,  # Reload doesn't work with multiple workers
+                log_level="info",
+            )
+        else:
+            from .api import restart
+
+            uvicorn_server = uvicorn.Server(
+                uvicorn.Config(
+                    "videoannotator.api.main:app",
+                    host=host,
+                    port=port,
+                    log_level="info",
+                    # Bounded, so an open SSE stream or long poll can't stall
+                    # a requested restart indefinitely.
+                    timeout_graceful_shutdown=10,
+                )
+            )
+            restart.enable_execv(uvicorn_server)
+            uvicorn_server.run()
+            if restart.restart_requested():
+                typer.echo("[RESTART] Server stopped; starting it again...")
+                restart.relaunch()
     except OSError as e:
         if e.errno == 98:  # Address already in use
             typer.echo("")

@@ -25,13 +25,23 @@ class APIError(Exception):
     """Standardized API error with status code and machine readable fields."""
 
     def __init__(
-        self, status_code: int, code: str, message: str, hint: str | None = None
+        self,
+        status_code: int,
+        code: str,
+        message: str,
+        hint: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
-        """Initialize the API error with envelope metadata."""
+        """Initialize the API error with envelope metadata.
+
+        `details` carries machine-readable context a client can act on (e.g.
+        the job ids blocking a restart); emitted as `error.details`.
+        """
         self.status_code = status_code
         self.code = code
         self.message = message
         self.hint = hint
+        self.details = details
         super().__init__(message)
 
 
@@ -57,6 +67,8 @@ async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
     }
     if exc.hint:
         payload["error"]["hint"] = exc.hint  # type: ignore[index]
+    if exc.details:
+        payload["error"]["details"] = exc.details  # type: ignore[index]
     return JSONResponse(status_code=exc.status_code, content=payload)
 
 

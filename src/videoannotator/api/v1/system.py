@@ -6,14 +6,15 @@ from datetime import datetime
 from typing import Any
 
 import psutil
-from fastapi import APIRouter
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 
 from ...registry.pipeline_registry import get_registry
 from ...version import __version__ as videoannotator_version
+from .. import extras_install, restart
 from ..background_tasks import get_background_manager
-from ..database import check_database_health, get_database_info
+from ..database import check_database_health, get_database_info, get_storage_backend
 from ..errors import APIError
-from ..middleware.auth import is_auth_required
+from ..middleware.auth import is_auth_required, require_admin
 
 PROCESS_START_TIME = time.time()
 
@@ -346,6 +347,7 @@ async def detailed_health_check():
                 "auth_required": is_auth_required(),
             },
             "uptime_seconds": uptime_seconds,
+            **restart.boot_identity(),
         }
 
     except Exception as e:
@@ -359,7 +361,66 @@ async def detailed_health_check():
             "security": {
                 "auth_required": is_auth_required(),
             },
+            **restart.boot_identity(),
         }
+
+
+@router.post(
+    "/restart",
+    status_code=202,
+    summary="Restart the server to activate newly installed pipelines",
+    description="""
+Admin-only (specs/011-pipeline-readiness FR-007). Returns `202` with the current
+`boot_id`, then shuts the server down gracefully and starts it again with the same
+command. Poll `GET /health` until `boot_id` changes.
+
+Refused with `409`:
+- `RESTART_UNSUPPORTED`: this deployment can't restart itself; `hint` says how to.
+- `INSTALL_IN_PROGRESS`: an extras install is pending/running. `force` doesn't override.
+- `JOBS_RUNNING`: annotation jobs are running (`details.job_ids`). Retry with
+  `force=true` to restart anyway; those jobs are marked failed on the next start.
+""",
+)
+async def restart_server(
+    background_tasks: BackgroundTasks,
+    force: bool = Query(
+        False, description="Restart even if annotation jobs are running"
+    ),
+    user: dict[str, Any] = Depends(require_admin),
+) -> dict[str, Any]:
+    """Restart the server process."""
+    if restart.restart_mode() == "unsupported":
+        raise APIError(
+            status_code=409,
+            code="RESTART_UNSUPPORTED",
+            message="This server can't restart itself.",
+            hint=restart.unsupported_hint(),
+        )
+
+    install_job_ids = extras_install.in_flight_job_ids()
+    if install_job_ids:
+        raise APIError(
+            status_code=409,
+            code="INSTALL_IN_PROGRESS",
+            message="A pipeline install is still running; wait for it to finish.",
+            details={"install_job_ids": install_job_ids},
+        )
+
+    running = get_storage_backend().list_jobs(status_filter="running")
+    if running and not force:
+        raise APIError(
+            status_code=409,
+            code="JOBS_RUNNING",
+            message=(
+                f"{len(running)} annotation job(s) are running and would be interrupted."
+            ),
+            details={"job_ids": running},
+        )
+
+    # After the response is sent, so the client gets its 202 before the
+    # server stops accepting connections.
+    background_tasks.add_task(restart.request_restart)
+    return {"restarting": True, "boot_id": restart.BOOT_ID}
 
 
 @router.get("/metrics")

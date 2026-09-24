@@ -19,6 +19,7 @@ from ..utils.logging_config import get_logger
 from ..version import __version__ as videoannotator_version
 from .errors import register_error_handlers
 from .middleware import ErrorLoggingMiddleware, RequestLoggingMiddleware
+from .restart import boot_identity
 from .v1 import api_router
 
 API_VERSION = videoannotator_version
@@ -286,6 +287,7 @@ def create_app() -> FastAPI:
             "logging": "enhanced",
             "memory_percent": memory_percent,  # backward-compatible alias expected by some tests
             "database": db_status,
+            **boot_identity(),
         }
 
     # One-click bridge for onboarding: stores an API token (from `setup-db` /

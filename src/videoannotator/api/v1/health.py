@@ -17,6 +17,7 @@ from ...registry.pipeline_registry import get_registry
 from ...storage.config import get_storage_root
 from ...version import __version__
 from ..database import check_database_health
+from ..restart import boot_identity
 
 logger = get_logger("api")
 router = APIRouter()
@@ -292,6 +293,7 @@ async def health_check(
             "status": "ok",
             "version": __version__,
             "timestamp": timestamp,
+            **boot_identity(),
         }
 
     # Detailed mode: comprehensive diagnostics
@@ -326,6 +328,7 @@ async def health_check(
             "version": __version__,
             "timestamp": timestamp,
             "details": details,
+            **boot_identity(),
         }
         response.status_code = status.HTTP_200_OK
     else:
@@ -334,6 +337,7 @@ async def health_check(
             "version": __version__,
             "timestamp": timestamp,
             "details": details,
+            **boot_identity(),
         }
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         logger.warning("[HEALTH] System unhealthy - returning 503")
