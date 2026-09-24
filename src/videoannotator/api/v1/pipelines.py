@@ -16,6 +16,7 @@ from ...registry.pipeline_registry import get_registry
 from .. import extras_install
 from ..errors import APIError
 from ..middleware.auth import require_admin
+from ..readiness import extras_groups, pipeline_readiness
 
 logger = logging.getLogger("videoannotator.api")
 
@@ -24,6 +25,32 @@ logger = logging.getLogger("videoannotator.api")
 
 
 router = APIRouter()
+
+
+class ReadinessItem(BaseModel):
+    """A blocker or note on a pipeline's readiness (spec 011 contract §1)."""
+
+    kind: str
+    name: str
+    message: str
+    help_url: str | None = None
+    approx_mb: int | None = None
+
+
+class PipelineReadiness(BaseModel):
+    """Where a pipeline stands and the one next step (spec 011 contract §1).
+
+    `state`: installing | not_installed | restart_required | needs_setup | ready.
+    `next_action`: wait | install | restart | setup | none. Clients must
+    tolerate values they don't know.
+    """
+
+    state: str
+    next_action: str
+    extras_group: str | None = None
+    install_job_id: str | None = None
+    blockers: list[ReadinessItem] = []
+    notes: list[ReadinessItem] = []
 
 
 class PipelineInfo(BaseModel):
@@ -45,6 +72,24 @@ class PipelineInfo(BaseModel):
     examples: list[dict[str, Any]] = []
     available: bool = True
     install_hint: str | None = None
+    readiness: PipelineReadiness | None = None
+
+
+class ExtrasGroupInfo(BaseModel):
+    """One installable extras group (spec 011 contract §2)."""
+
+    name: str
+    pipelines: list[str]
+    installed: bool
+    approx_download_mb: int | None = None
+    includes_gpu_torch: bool = False
+    install_job_id: str | None = None
+
+
+class ExtrasGroupListResponse(BaseModel):
+    """Response for `GET /api/v1/pipelines/extras`."""
+
+    extras: list[ExtrasGroupInfo]
 
 
 class PipelineListResponse(BaseModel):
@@ -186,6 +231,7 @@ async def list_pipelines(
                     examples=m.examples,
                     available=available,
                     install_hint=None if available else install_hint(m.requires_extras),
+                    readiness=PipelineReadiness(**pipeline_readiness(m)),
                 )
             )
         return PipelineListResponse(
@@ -203,6 +249,26 @@ async def list_pipelines(
             message="Failed to list pipelines",
             hint="Check server logs for details",
         ) from e
+
+
+@router.get(
+    "/extras",
+    response_model=ExtrasGroupListResponse,
+    summary="List installable pipeline extras groups",
+    description="""
+Every extras group that enables at least one pipeline, in `pyproject.toml` order
+(spec 011): the pipelines it enables, whether it's installed, an approximate download
+size in MB (hand-maintained; includes torch only if torch isn't installed yet),
+whether it pulls a CUDA torch build, and the id of an install in progress, if any.
+""",
+)
+async def list_extras_groups() -> ExtrasGroupListResponse:
+    """List installable extras groups."""
+    reg = get_registry()
+    reg.load()
+    return ExtrasGroupListResponse(
+        extras=[ExtrasGroupInfo(**g) for g in extras_groups(reg.list())]
+    )
 
 
 @router.get("/{pipeline_name}/", include_in_schema=False)
@@ -334,6 +400,7 @@ async def get_pipeline_info(
             examples=meta.examples,
             available=available,
             install_hint=None if available else install_hint(meta.requires_extras),
+            readiness=PipelineReadiness(**pipeline_readiness(meta)),
         )
     except APIError:
         raise

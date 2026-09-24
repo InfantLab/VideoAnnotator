@@ -62,6 +62,35 @@ class PipelineConfigField:
 
 
 @dataclass
+class SetupRequirement:
+    """Something a pipeline needs beyond its Python packages (spec 011 FR-010).
+
+    `kind` is `secret` (an environment variable, e.g. HF_AUTH_TOKEN; `aliases`
+    are other variable names the pipeline also accepts), `service` (e.g.
+    ollama) or `licence` (a model licence to accept; can't be checked
+    locally, so only ever reported as a note).
+    """
+
+    kind: str
+    name: str
+    description: str = ""
+    help_url: str | None = None
+    aliases: list[str] = field(default_factory=list)
+
+
+@dataclass
+class WeightSpec:
+    """Model weights a pipeline downloads on first run with its default config
+    (spec 011 FR-016). `cache` says where to look: `huggingface` (the HF hub
+    cache, `id` is the repo id) or `whisper` (openai-whisper's cache, `id` is
+    the model name). Sizes are hand-maintained approximations."""
+
+    id: str
+    approx_mb: int
+    cache: str = "huggingface"
+
+
+@dataclass
 class PipelineMetadata:
     """Structured metadata describing a single pipeline."""
 
@@ -87,6 +116,9 @@ class PipelineMetadata:
     # "module.path:ClassName" — required; a file missing it is skipped with a
     # warning at load time rather than falling back to a hardcoded table.
     module_path: str | None = None
+    # spec 011: preconditions beyond packages, and first-run model downloads.
+    requires_setup: list[SetupRequirement] = field(default_factory=list)
+    weights: list[WeightSpec] = field(default_factory=list)
 
 
 class PipelineRegistry:
@@ -200,6 +232,47 @@ class PipelineRegistry:
                 return [x.strip() for x in val if x and isinstance(x, str)]
             return []
 
+        requires_setup: list[SetupRequirement] = []
+        for item in raw.get("requires_setup") or []:
+            if (
+                not isinstance(item, dict)
+                or not item.get("kind")
+                or not item.get("name")
+            ):
+                LOGGER.warning(
+                    "Metadata %s has an invalid requires_setup entry", source.name
+                )
+                continue
+            aliases = item.get("aliases") or []
+            requires_setup.append(
+                SetupRequirement(
+                    kind=str(item["kind"]),
+                    name=str(item["name"]),
+                    description=str(item.get("description", "")),
+                    help_url=str(item["help_url"]) if item.get("help_url") else None,
+                    aliases=[str(a) for a in aliases]
+                    if isinstance(aliases, list)
+                    else [],
+                )
+            )
+
+        weights: list[WeightSpec] = []
+        for item in raw.get("weights") or []:
+            if not isinstance(item, dict) or not item.get("id"):
+                LOGGER.warning("Metadata %s has an invalid weights entry", source.name)
+                continue
+            try:
+                approx_mb = int(item.get("approx_mb", 0))
+            except (TypeError, ValueError):
+                approx_mb = 0
+            weights.append(
+                WeightSpec(
+                    id=str(item["id"]),
+                    approx_mb=approx_mb,
+                    cache=str(item.get("cache", "huggingface")),
+                )
+            )
+
         return PipelineMetadata(
             name=str(raw["name"]),
             display_name=str(raw["display_name"]),
@@ -219,6 +292,8 @@ class PipelineRegistry:
             examples=examples,
             requires_extras=_list_field("requires_extras"),
             module_path=module_path,
+            requires_setup=requires_setup,
+            weights=weights,
         )
 
     def list(self) -> builtins.list[PipelineMetadata]:

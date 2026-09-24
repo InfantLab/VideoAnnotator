@@ -96,3 +96,9 @@ requirements:
   packages:
     - openai-whisper
     - ffmpeg-python
+
+# spec 011: first run downloads the default Whisper model.
+weights:
+  - id: base
+    approx_mb: 140
+    cache: whisper

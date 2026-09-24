@@ -177,6 +177,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     asyncio.get_running_loop().run_in_executor(None, warm_up_torch)
 
+    # Same for the Ollama reachability that pipeline readiness reports (spec
+    # 011), so the first pipeline listing doesn't wait on it.
+    from .readiness import warm_up as warm_up_readiness
+
+    asyncio.get_running_loop().run_in_executor(None, warm_up_readiness)
+
     # TODO: Initialize pipeline cache
 
     yield

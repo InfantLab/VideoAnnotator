@@ -18,6 +18,22 @@ LOGGER = logging.getLogger("videoannotator.registry")
 _DISTRIBUTION_NAME = "videoannotator"
 
 
+# Pipelines whose class failed to import although their extras are installed
+# (e.g. a native library missing), with the error. Spec 011 reports these as
+# an `import_error` readiness blocker instead of claiming the pipeline is ready.
+_import_errors: dict[str, str] = {}
+
+
+def import_error_for(pipeline_name: str) -> str | None:
+    """The last import failure for `pipeline_name` in this process, if any."""
+    return _import_errors.get(pipeline_name)
+
+
+def clear_import_errors() -> None:
+    """Forget recorded import failures, e.g. after installing packages."""
+    _import_errors.clear()
+
+
 @functools.cache
 def _packages_for_extra(extra: str) -> tuple[str, ...]:
     """Return the pip distribution names declared under `[extra]`.
@@ -225,6 +241,7 @@ class PipelineLoader:
 
             # Cache the result
             self._class_cache[meta.name] = pipeline_class
+            _import_errors.pop(meta.name, None)
 
             LOGGER.debug(f"Loaded pipeline class: {meta.name} -> {pipeline_class}")
             return pipeline_class
@@ -233,6 +250,7 @@ class PipelineLoader:
             LOGGER.warning(
                 f"Failed to import pipeline '{meta.name}' from {module_path}: {e}"
             )
+            _import_errors[meta.name] = f"{type(e).__name__}: {e}"
             return None
         except AttributeError as e:
             LOGGER.error(f"Pipeline class not found in module for '{meta.name}': {e}")

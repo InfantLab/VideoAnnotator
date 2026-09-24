@@ -42,3 +42,26 @@ version: 1
 stability: beta
 backends:
   - pytorch
+
+# spec 011: diarization (on by default) needs a HF token + licences; see speaker_diarization.yaml.
+requires_setup:
+  - kind: secret
+    name: HF_AUTH_TOKEN
+    aliases: [HUGGINGFACE_TOKEN]
+    description: A Hugging Face access token (to download the pyannote models)
+    help_url: https://huggingface.co/settings/tokens
+  - kind: licence
+    name: pyannote/speaker-diarization-3.1
+    description: Accept the pyannote/speaker-diarization-3.1 licence on Hugging Face, with the same account as the token.
+    help_url: https://huggingface.co/pyannote/speaker-diarization-3.1
+  - kind: licence
+    name: pyannote/segmentation-3.0
+    description: Accept the pyannote/segmentation-3.0 licence on Hugging Face too; speaker-diarization-3.1 uses it.
+    help_url: https://huggingface.co/pyannote/segmentation-3.0
+weights:
+  - id: base
+    approx_mb: 140
+    cache: whisper
+  - id: pyannote/speaker-diarization-3.1
+    approx_mb: 35
+    cache: huggingface

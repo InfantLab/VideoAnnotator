@@ -14,7 +14,9 @@ logger = get_logger("diagnostics")
 DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 
 
-def diagnose_ollama(base_url: str = DEFAULT_OLLAMA_BASE_URL) -> dict[str, Any]:
+def diagnose_ollama(
+    base_url: str = DEFAULT_OLLAMA_BASE_URL, timeout: int = 5
+) -> dict[str, Any]:
     """Check whether the configured Ollama server is reachable and, if so,
     which models are pulled.
 
@@ -49,7 +51,7 @@ def diagnose_ollama(base_url: str = DEFAULT_OLLAMA_BASE_URL) -> dict[str, Any]:
     )
 
     try:
-        client = OllamaVLMClient(base_url=base_url, timeout=5)
+        client = OllamaVLMClient(base_url=base_url, timeout=timeout)
         models = client.list_models()
     except OllamaUnavailableError as e:
         result["status"] = "warning"

@@ -41,12 +41,26 @@ _restart_required = False
 # In-process like the flag above: after a restart every install is active, so
 # an outcome recorded by a previous process has nothing left to say.
 _activation: dict[str, dict[str, Any]] = {}  # job_id -> outcome
+# Extras groups installed in this process whose activation needs a restart.
+_restart_pending_extras: set[str] = set()
 
 
 def restart_required() -> bool:
     """Whether any install completed since this process started needs a
     restart to take effect (activation `restart_required`)."""
     return _restart_required
+
+
+def restart_pending(extra_name: str) -> bool:
+    """Whether `extra_name` was installed in this process but only takes
+    effect after a restart."""
+    return extra_name in _restart_pending_extras
+
+
+def in_flight_job_for(extra_name: str) -> str | None:
+    """Job id of the pending/running install of `extra_name`, if any."""
+    with _lock:
+        return _in_flight.get(extra_name)
 
 
 def activation_for(job_id: str) -> dict[str, Any] | None:
@@ -210,6 +224,7 @@ def _activate_live() -> None:
     importlib.invalidate_caches()
     pipeline_loader._is_distribution_installed.cache_clear()
     pipeline_loader._packages_for_extra.cache_clear()
+    pipeline_loader.clear_import_errors()
 
 
 def run_install(job_id: str, extra_name: str) -> None:
@@ -274,6 +289,7 @@ def run_install(job_id: str, extra_name: str) -> None:
                     outcome["conflicting_distributions"],
                 )
                 _mark_restart_required()
+                _restart_pending_extras.add(extra_name)
             else:
                 _activate_live()
                 LOGGER.info("Install of %r activated without a restart", extra_name)

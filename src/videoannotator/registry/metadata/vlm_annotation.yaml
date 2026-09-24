@@ -82,3 +82,10 @@ version: 1
 stability: experimental
 backends:
   - ollama
+
+# spec 011: needs a reachable Ollama with a model pulled.
+requires_setup:
+  - kind: service
+    name: ollama
+    description: A running Ollama server with a vision model pulled
+    help_url: https://ollama.com/download

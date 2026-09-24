@@ -12,6 +12,7 @@ per-test `reset_storage_backend()` is enough.
 
 import uuid
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -180,7 +181,10 @@ class TestIngestRejectsUnusableRequests:
         """Discovering the pipeline isn't installed after creating 12 jobs
         would be worse than useless."""
         before = len(get_storage_backend().list_jobs())
-        response = _ingest(corpus, selected_pipelines=["speaker_diarization"])
+        # Forced unavailable, so the test doesn't depend on which extras this
+        # environment happens to have installed.
+        with patch("videoannotator.api.v1.jobs.extras_available", return_value=False):
+            response = _ingest(corpus, selected_pipelines=["speaker_diarization"])
         assert response.status_code == 422
         assert len(get_storage_backend().list_jobs()) == before
 
