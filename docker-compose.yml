@@ -11,6 +11,7 @@ services:
       - ./data:/app/data
       - ./output:/app/output
     environment:
+      - HF_AUTH_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
       - PYTHONPATH=/app
       - CUDA_VISIBLE_DEVICES=0
     ports:
@@ -29,6 +30,8 @@ services:
       - ./data:/app/data:ro
       - ./output:/app/output
     environment:
+      - HF_AUTH_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
+      - UV_NO_SYNC=1  # keep pipeline extras installed from the viewer across restarts (spec 011 FR-009)
       - PYTHONPATH=/app
     command: ["uv", "run", "videoannotator", "server", "--host", "0.0.0.0", "--port", "18011"]
     profiles:
@@ -43,6 +46,8 @@ services:
       - ./data:/app/data:ro
       - ./output:/app/output
     environment:
+      - HF_AUTH_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
+      - UV_NO_SYNC=1  # keep pipeline extras installed from the viewer across restarts (spec 011 FR-009)
       - PYTHONPATH=/app
       - CUDA_VISIBLE_DEVICES=0
     runtime: nvidia
@@ -68,6 +73,7 @@ services:
       - ./logs:/app/logs
       - ./database:/app/database # Persistent database for development
     environment:
+      - HF_AUTH_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
       - PYTHONPATH=/app
       - CUDA_VISIBLE_DEVICES=0
       - VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator_dev.db

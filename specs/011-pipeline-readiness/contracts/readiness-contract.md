@@ -145,33 +145,11 @@ Viewer restart wait: poll every 2 s; treat connection errors as "still restartin
 
 ---
 
-## 6. Secrets  *(new, admin)*
+## 6. Secrets: none
 
-`GET /api/v1/system/secrets`
-
-```jsonc
-{
-  "secrets": [
-    {
-      "name": "HF_AUTH_TOKEN",
-      "is_set": false,
-      "source": "unset",                     // environment | store | unset
-      "description": "Hugging Face access token",
-      "help_url": "https://huggingface.co/settings/tokens",
-      "required_by": ["speaker_diarization"]
-    }
-  ]
-}
-```
-
-Only names declared by some pipeline's `requires_setup` appear. Values are never returned.
-
-`PUT /api/v1/system/secrets/{name}` body `{ "value": "<string>" }` → `204`. Applied to the running
-process immediately; affected pipelines' readiness re-evaluates on the next listing.
-`DELETE /api/v1/system/secrets/{name}` → `204`.
-
-Errors: `422 UNKNOWN_SECRET` (name not declared by any pipeline), `409 SECRET_FROM_ENVIRONMENT`
-(set by the process environment; the operator's config wins), `403` non-admin.
+Dropped (2026-09-24): secrets such as `HF_AUTH_TOKEN` are set in the server's environment (the
+container env). A missing one shows up only as a `secret` blocker in §1, whose `message` says where
+to set it. There is no endpoint that reads or writes secrets.
 
 ---
 

@@ -30,8 +30,8 @@ admin by default):
 3. When it finishes, Face Analysis is selectable, either immediately or after one click on
    **Restart server** and a short wait handled by the viewer.
 4. Select it, finish the wizard, and the job completes.
-5. Repeat for Speaker Diarization, which additionally asks for a Hugging Face token in the viewer
-   and reminds the user to accept the model licence.
+5. Repeat for Speaker Diarization on a server with `HF_AUTH_TOKEN` in its container env. Without
+   it, the card says what to set; with it, it's Ready with a reminder to accept the model licence.
 
 No terminal at any point. Both repos' work is done only when this passes against the viewer build
 bundled into VideoAnnotator's `viewer_static/`.
@@ -72,18 +72,15 @@ bundled into VideoAnnotator's `viewer_static/`.
      deployment.
 
 4. **Set up**: act on each blocker by `kind`:
-   - `secret`: an input (password-style) for that secret, with `help_url` as "Get a token". Save
-     via `PUT /api/v1/system/secrets/{name}`, then re-fetch the pipeline list. Never display or
-     cache the value after saving. A Settings section listing `GET /api/v1/system/secrets`
-     (`is_set`, `source`, which pipelines need it) is the natural home, with the inline action
-     deep-linking there or reusing the same form. If `source == "environment"`, show it as set by
-     the server's config and not editable here.
+   - `secret`: show the `message` (it says which variable to set in the server's environment) and
+     `help_url` as "Get a token". No input: secrets are container configuration, set by whoever
+     runs the server (decision 2026-09-24), and the viewer never handles their values.
    - `service` with `name == "ollama"`: link to the existing Ollama status/model UI (spec 009).
    - `import_error`: show the message and "The server administrator needs to look at this". No
      action.
 
 5. **Admin gating** (carried over from 005 requirement 7): call `GET /api/v1/auth/me` once per
-   session. Install, Restart and secret editing are admin-only. For non-admins, show the states
+   session. Install and Restart are admin-only. For non-admins, show the states
    but replace the actions with "Requires an administrator API key (see Settings)". Show `is_admin`
    in Settings.
 
@@ -95,7 +92,7 @@ bundled into VideoAnnotator's `viewer_static/`.
 ## Non-goals
 
 - Cancelling an install (the backend doesn't support it).
-- Editing arbitrary server settings or environment variables. Only secrets that pipelines declare.
+- Editing server settings, environment variables or secrets. Setup blockers are shown, not fixed.
 - Pulling Ollama models (already covered by spec 009's UI, if present).
 - Weight prefetch (`POST /api/v1/pipelines/{name}/prefetch`) is P3 on the backend. Build it only if
   the endpoint exists (`404` means hide it).
@@ -106,7 +103,7 @@ bundled into VideoAnnotator's `viewer_static/`.
    *is* the fallback).
 2. Install with progress.
 3. Restart with the wait.
-4. Secrets and setup.
+4. Setup blockers (display only).
 5. Rebuild and hand the bundle back for `viewer_static/`.
 
 After step 3, face/scene/person/audio (minus diarization) meet the acceptance test.

@@ -133,30 +133,32 @@ changes, and confirm the pipeline is `ready`.
 
 ---
 
-### User Story 3 - Finish setup from the viewer (Priority: P2)
+### User Story 3 - See what a pipeline still needs, before a job fails (Priority: P2)
 
-A pipeline says "Needs setup: Hugging Face token". The admin pastes their token into the viewer, is
-reminded to accept the pyannote model licence (with a link), and the pipeline turns Ready. For the
-VLM pipeline, "Needs setup: Ollama not reachable" links to the existing Ollama diagnostics.
+A pipeline says "Needs setup: HF_AUTH_TOKEN isn't set on the server", with a link to get a token and
+a reminder to accept the pyannote model licence. For the VLM pipeline, "Needs setup: Ollama not
+reachable" links to the existing Ollama diagnostics.
+
+**Decision (Caspar, 2026-09-24)**: the Hugging Face token is *deployment configuration*, set in the
+container environment (`docker-compose.yml` and the devcontainer pass `HF_AUTH_TOKEN` through from
+the host), not entered in the viewer. So there is no secrets API: readiness reports what is missing
+and where to set it, and the operator sets it. This drops the first draft's secrets API (old FR-013 to FR-015)
+and contract section 6.
 
 **Why this priority**: Only some pipelines have setup requirements, but for those it's a hard wall
 today and the failure only shows up mid-job.
 
-**Independent Test**: With `audio` installed and no token, `PUT /api/v1/system/secrets/HF_AUTH_TOKEN`
-with a value as admin; confirm the value is never returned by any endpoint, `GET
-/api/v1/system/secrets` reports `is_set: true`, and `speaker_diarization` moves out of `needs_setup`.
+**Independent Test**: With `audio` installed and `HF_AUTH_TOKEN` unset, `speaker_diarization` is
+`needs_setup` with a `secret` blocker naming `HF_AUTH_TOKEN`; start the server with it set and it is
+`ready` with a licence note.
 
 **Acceptance Scenarios**:
 
-1. **Given** an admin, **When** they set a secret whose name is declared by some pipeline's
-   `requires_setup`, **Then** it is stored server-side, applied to the running process without a
-   restart, and never echoed back.
-2. **Given** any caller, **When** they try to set a secret name no pipeline declares, **Then** it is
-   refused with `422` (this is not a general env-var editor).
-3. **Given** a non-admin caller, **When** they try to set or clear a secret, **Then** `403`.
-4. **Given** a secret already set via the process environment, **When** listed, **Then** it reports
-   `is_set: true, source: "environment"` and the API refuses to overwrite it (the operator's
-   explicit config wins).
+1. **Given** a pipeline that declares `secret: HF_AUTH_TOKEN`, **When** the variable is unset in the
+   server's environment, **Then** it is `needs_setup` and the blocker's message says to set it in
+   the server's (container's) environment. The value itself is never read into any response.
+2. **Given** the variable is set, **When** the list is requested, **Then** the pipeline is not
+   blocked by it (the licence stays a note: it can't be checked locally).
 
 ---
 
@@ -255,20 +257,15 @@ download size; a pipeline whose weights aren't cached reports a `weights_cached:
   ollama`. `audio_processing` also runs pyannote diarization (`audio_pipeline_modular.py`) and
   needs the same declarations as `speaker_diarization`. Other shipped pipelines are audited and
   declare whatever they actually need.
-- **FR-012**: Readiness evaluation MUST check each requirement: `secret` → set in environment or
-  secret store; `service: ollama` → reuse `diagnostics.ollama.diagnose_ollama` (cached ≤ 30 s so
+- **FR-012**: Readiness evaluation MUST check each requirement: `secret` → set in the server's environment;
+  `service: ollama` → reuse `diagnostics.ollama.diagnose_ollama` (cached ≤ 30 s so
   listing stays fast); `licence` → cannot be verified locally, always reported as a `note`, never a
   blocker.
-- **FR-013**: `GET /api/v1/system/secrets` (admin) MUST list secret names declared by any pipeline,
-  each with `is_set`, `source` ∈ {`environment`, `store`, `unset`}, and the pipelines that need it.
-  Values MUST never be returned by any endpoint or written to logs.
-- **FR-014**: `PUT /api/v1/system/secrets/{name}` and `DELETE` (admin) MUST set/clear a secret
-  declared by some pipeline; any other name → `422`. Setting MUST apply to the running process
-  immediately. Overwriting a secret whose `source` is `environment` → `409`.
-- **FR-015**: Stored secrets MUST live in a local file in the server's data directory with owner-only
-  permissions, loaded at start-up (Local-First principle: never sent anywhere).
-  [NEEDS CLARIFICATION: plain file with 0600 vs. encrypted with a key derived from the existing
-  `cryptography` dependency — recommend 0600 plain file, matching how `.env` is handled today.]
+- **FR-013**: A `secret` blocker's `message` MUST say where to set it ("Set HF_AUTH_TOKEN in the
+  server's environment, e.g. the container env, and restart"). Secret values MUST never appear in
+  any response or log line. The server MUST NOT offer an API for setting secrets (decision under
+  User Story 3). `docker-compose.yml` and the devcontainer MUST pass the declared secrets through
+  from the host environment (done for `HF_AUTH_TOKEN`).
 
 **Weights (P3)**
 
@@ -291,7 +288,7 @@ download size; a pipeline whose weights aren't cached reports a `weights_cached:
 - **Pipeline readiness**: derived, per request, from installed extras, in-flight install jobs,
   activation outcome, declared setup requirements and their current status. Not persisted.
 - **Setup requirement**: a declared precondition of a pipeline (secret, external service, licence).
-- **Secret**: a named value a pipeline needs; stored locally, write-only via the API.
+- **Secret**: a named value a pipeline needs, read from the server's environment only.
 - **Boot identity**: `boot_id` + `started_at`, per server process.
 
 ## API Contract for Downstream Consumers
@@ -307,7 +304,7 @@ action names and field names are a stable contract under the same forward-compat
 - **SC-001 (the one that matters)**: On a fresh core-only install, using only the bundled viewer in
   a browser, a user with an admin key gets `face_analysis` from not visible to a completed annotation
   job **with zero terminal commands** after `videoannotator server` was started. Repeat for
-  `speaker_diarization` (includes entering an HF token). Recorded as a manual test script in
+  `speaker_diarization` with `HF_AUTH_TOKEN` set in the container env. Recorded as a manual test script in
   `tests/manual/pipeline_readiness_e2e.md` and run before release.
 - **SC-002**: A core-only listing with `include_unavailable=true` returns every shipped pipeline and
   zero test fixtures.
@@ -315,8 +312,8 @@ action names and field names are a stable contract under the same forward-compat
   matrix (`face`, `scene`, `person`, `audio`, `llm` from core-only); no restart offered.
 - **SC-004**: After `POST /system/restart`, the server is serving again with a new `boot_id` within
   30 s on the dev container (excluding install time).
-- **SC-005**: No endpoint response or log line ever contains a stored secret value (asserted by a
-  test that sets a sentinel value and greps responses and captured logs).
+- **SC-005**: No response or log line contains a secret's value (the readiness check only tests
+  whether the variable is set).
 - **SC-006**: Listing latency with `include_unavailable=true` stays under 200 ms p95 on the dev
   container with Ollama unreachable (service checks are cached and time-boxed).
 - **SC-007**: Existing clients see no breaking change: all current `tests/api` pipeline tests pass
