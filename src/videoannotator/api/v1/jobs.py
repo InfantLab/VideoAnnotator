@@ -504,11 +504,16 @@ async def submit_job(
         # Let validation errors and other custom exceptions propagate
         raise
     except Exception as e:
+        # The hint below sends people to the logs, so the traceback has to be
+        # there: this handler used to discard it, leaving a bare 500 and nothing
+        # to debug (GitHub issue #1). The exception type and message also go in
+        # the response, for users who can't read the server's logs.
+        logger.exception("Job submission failed")
         raise APIError(
             status_code=500,
             code="JOB_SUBMIT_FAILED",
-            message="Failed to submit job",
-            hint="Check server logs",
+            message=f"Failed to submit job: {type(e).__name__}: {e}",
+            hint="The server log has the full traceback.",
         ) from e
 
 

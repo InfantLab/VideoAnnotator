@@ -9,6 +9,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -275,6 +276,29 @@ class TestDatabaseEndpoint:
 
 class TestJobEndpoints:
     """Test job management endpoints with database persistence."""
+
+    def test_submit_job_failure_is_logged_and_explained(
+        self, client, sample_video_file, caplog
+    ):
+        """An unexpected error during submission must leave a traceback in the
+        log and say what went wrong in the 500 (GitHub issue #1: a bare
+        JOB_SUBMIT_FAILED with nothing in any log)."""
+        files = {"video": ("test_video.avi", sample_video_file, "video/avi")}
+
+        with patch(
+            "videoannotator.api.v1.jobs.extract_video_metadata",
+            side_effect=RuntimeError("metadata probe exploded"),
+        ):
+            response = client.post("/api/v1/jobs/", files=files)
+
+        assert response.status_code == 500
+        error = response.json()["error"]
+        assert error["code"] == "JOB_SUBMIT_FAILED"
+        assert "RuntimeError: metadata probe exploded" in error["message"]
+        failure_logs = [
+            r for r in caplog.records if r.getMessage() == "Job submission failed"
+        ]
+        assert failure_logs and failure_logs[0].exc_info is not None
 
     def test_submit_job_basic(self, client, sample_video_file):
         """Test basic job submission with database storage."""
