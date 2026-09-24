@@ -355,6 +355,14 @@ class ExtrasInstallTriggerResponse(BaseModel):
     status: str
 
 
+class ConflictingDistribution(BaseModel):
+    """An already-imported distribution an install changed (spec 011 FR-006)."""
+
+    name: str
+    old_version: str
+    new_version: str | None = None  # None: the install removed it
+
+
 class ExtrasInstallJobResponse(BaseModel):
     """Response for `GET /extras/install-jobs/{job_id}`."""
 
@@ -366,6 +374,12 @@ class ExtrasInstallJobResponse(BaseModel):
     finished_at: datetime | None = None
     command_output: str | None = None
     restart_required: bool = False
+    # spec 011: set once a job completes in this server process. `live`
+    # means the pipelines are usable now; `restart_required` means
+    # `conflicting_distributions` were already imported. None for a job
+    # completed before the last restart (it is active by now either way).
+    activation: str | None = None
+    conflicting_distributions: list[ConflictingDistribution] = []
 
 
 @router.post(
@@ -380,8 +394,9 @@ terminal/shell access (specs/005-pipeline-extras-install).
 
 Returns immediately with a trackable job id rather than waiting for the (potentially
 multi-minute) install to finish -- poll `GET /extras/install-jobs/{job_id}` for progress.
-A newly-completed install requires a server restart to activate; see the top-level
-`restart_required` field on `GET /api/v1/pipelines`.
+Most installs activate immediately (`activation: "live"` on the job). One that changed a
+package the server had already imported reports `activation: "restart_required"` and sets
+the top-level `restart_required` on `GET /api/v1/pipelines`; see `POST /api/v1/system/restart`.
 """,
 )
 async def install_extra(
@@ -489,6 +504,7 @@ async def get_extras_install_job(
             code="EXTRAS_INSTALL_JOB_NOT_FOUND",
             message=f"Install job '{job_id}' not found",
         )
+    outcome = extras_install.activation_for(str(job.id))
     return ExtrasInstallJobResponse(
         job_id=str(job.id),
         extra_name=job.extra_name,
@@ -497,7 +513,9 @@ async def get_extras_install_job(
         started_at=job.started_at,
         finished_at=job.finished_at,
         command_output=job.command_output,
-        restart_required=extras_install.restart_required(),
+        restart_required=(outcome or {}).get("activation") == "restart_required",
+        activation=(outcome or {}).get("activation"),
+        conflicting_distributions=(outcome or {}).get("conflicting_distributions", []),
     )
 
 

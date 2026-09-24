@@ -7,7 +7,6 @@ always mocked, even in the run_install tests below.
 
 import subprocess
 import threading
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -24,37 +23,82 @@ def _reset_module_state():
     """extras_install keeps module-level dedup/restart state; isolate tests."""
     extras_install._in_flight.clear()
     extras_install._restart_required = False
+    extras_install._activation.clear()
     yield
     extras_install._in_flight.clear()
     extras_install._restart_required = False
+    extras_install._activation.clear()
+
+
+def _fake_dist(requires):
+    dist = MagicMock()
+    dist.requires = requires
+    return dist
+
+
+class TestExtraRequirements:
+    REQUIRES = [
+        "fastapi>=0.115.0",
+        'torch==2.6.0; extra == "scene"',
+        'scenedetect>=0.6.3; extra == "scene"',
+        'torch==2.6.0; extra == "person"',
+        'ultralytics>=8.3.0; extra == "person"',
+        'pywin32>=300; sys_platform == "nonexistent-os" and extra == "scene"',
+        'videoannotator[person,scene]; extra == "all"',
+    ]
+
+    def _requirements(self, extra):
+        with patch.object(
+            extras_install.importlib.metadata,
+            "distribution",
+            return_value=_fake_dist(self.REQUIRES),
+        ):
+            return extras_install.extra_requirements(extra)
+
+    def test_returns_only_the_groups_own_requirements_without_markers(self):
+        assert self._requirements("scene") == ["torch==2.6.0", "scenedetect>=0.6.3"]
+
+    def test_drops_requirements_whose_platform_marker_does_not_apply(self):
+        assert not any("pywin32" in r for r in self._requirements("scene"))
+
+    def test_expands_a_meta_group_and_dedupes(self):
+        assert self._requirements("all") == [
+            "torch==2.6.0",
+            "ultralytics>=8.3.0",
+            "scenedetect>=0.6.3",
+        ]
+
+    def test_reads_this_installs_real_metadata(self):
+        # No mocking: the llm group is declared in pyproject.toml.
+        assert any(
+            r.startswith("ollama") for r in extras_install.extra_requirements("llm")
+        )
 
 
 class TestResolveInstallCommand:
-    def test_uses_uv_sync_for_editable_checkout_with_uv_on_path(self):
-        fake_root = Path("/workspaces/VideoAnnotator")
+    def test_uses_uv_pip_against_the_running_interpreter(self):
         with (
             patch.object(
-                extras_install, "_editable_checkout_root", return_value=fake_root
+                extras_install, "extra_requirements", return_value=["a>=1", "b"]
             ),
             patch.object(extras_install.shutil, "which", return_value="/usr/bin/uv"),
         ):
             command, cwd = extras_install.resolve_install_command("scene")
         assert command == [
             "uv",
-            "sync",
-            "--extra",
-            "scene",
-            "--inexact",
-            "--no-install-project",
+            "pip",
+            "install",
+            "--python",
+            extras_install.sys.executable,
+            "a>=1",
+            "b",
         ]
-        assert cwd == fake_root
+        assert cwd is None
 
-    def test_falls_back_to_pinned_pip_when_not_editable_checkout(self):
+    def test_uses_pip_when_uv_is_not_on_path(self):
         with (
-            patch.object(extras_install, "_editable_checkout_root", return_value=None),
-            patch.object(
-                extras_install.importlib.metadata, "version", return_value="1.5.0"
-            ),
+            patch.object(extras_install, "extra_requirements", return_value=["a>=1"]),
+            patch.object(extras_install.shutil, "which", return_value=None),
         ):
             command, cwd = extras_install.resolve_install_command("scene")
         assert command == [
@@ -62,36 +106,74 @@ class TestResolveInstallCommand:
             "-m",
             "pip",
             "install",
-            "videoannotator[scene]==1.5.0",
+            "a>=1",
         ]
         assert cwd is None
 
-    def test_falls_back_to_pip_when_editable_checkout_but_no_uv_on_path(self):
-        fake_root = Path("/workspaces/VideoAnnotator")
+    def test_never_re_syncs_the_environment(self):
+        command, _ = extras_install.resolve_install_command("llm")
+        assert "sync" not in command
+
+    def test_falls_back_to_pinned_extra_when_metadata_lists_nothing(self):
         with (
-            patch.object(
-                extras_install, "_editable_checkout_root", return_value=fake_root
-            ),
+            patch.object(extras_install, "extra_requirements", return_value=[]),
             patch.object(extras_install.shutil, "which", return_value=None),
             patch.object(
                 extras_install.importlib.metadata, "version", return_value="1.5.0"
             ),
         ):
-            command, cwd = extras_install.resolve_install_command("audio")
-        assert command[0] == extras_install.sys.executable
-        assert "pip" in command
-        assert cwd is None
+            command, _ = extras_install.resolve_install_command("scene")
+        assert command[-1] == "videoannotator[scene]==1.5.0"
 
 
-class TestInstallEnv:
-    def test_points_uv_at_the_running_interpreters_environment(self):
-        env = extras_install.install_env()
-        assert env["UV_PROJECT_ENVIRONMENT"] == extras_install.sys.prefix
+class TestDecideActivation:
+    def test_only_new_distributions_activate_live(self):
+        outcome = extras_install.decide_activation(
+            before={"numpy": "2.1.0"},
+            after={"numpy": "2.1.0", "scenedetect": "0.6.4"},
+            modules={"scenedetect": {"scenedetect"}},
+            loaded={"numpy"},
+        )
+        assert outcome == {"activation": "live", "conflicting_distributions": []}
 
-    def test_keeps_the_rest_of_the_environment(self):
-        with patch.dict(extras_install.os.environ, {"HF_HOME": "/models"}):
-            env = extras_install.install_env()
-        assert env["HF_HOME"] == "/models"
+    def test_changed_version_of_an_imported_distribution_needs_restart(self):
+        outcome = extras_install.decide_activation(
+            before={"numpy": "1.26.4"},
+            after={"numpy": "2.1.0"},
+            modules={"numpy": {"numpy"}},
+            loaded={"numpy"},
+        )
+        assert outcome["activation"] == "restart_required"
+        assert outcome["conflicting_distributions"] == [
+            {"name": "numpy", "old_version": "1.26.4", "new_version": "2.1.0"}
+        ]
+
+    def test_changed_version_of_an_unimported_distribution_stays_live(self):
+        outcome = extras_install.decide_activation(
+            before={"pillow": "10.0.0"},
+            after={"pillow": "11.0.0"},
+            modules={"pillow": {"PIL"}},
+            loaded={"numpy"},
+        )
+        assert outcome["activation"] == "live"
+
+    def test_module_name_differing_from_distribution_name_is_detected(self):
+        outcome = extras_install.decide_activation(
+            before={"pyyaml": "6.0.1"},
+            after={"pyyaml": "6.0.2"},
+            modules={"pyyaml": {"yaml", "_yaml"}},
+            loaded={"yaml"},
+        )
+        assert outcome["activation"] == "restart_required"
+
+    def test_removed_imported_distribution_needs_restart(self):
+        outcome = extras_install.decide_activation(
+            before={"opencv-python-headless": "4.10.0"},
+            after={},
+            modules={"opencv-python-headless": {"cv2"}},
+            loaded={"cv2"},
+        )
+        assert outcome["conflicting_distributions"][0]["new_version"] is None
 
 
 class TestDedupTracking:
@@ -130,39 +212,6 @@ class TestRestartRequiredFlag:
         assert extras_install.restart_required() is True
 
 
-class TestEditableCheckoutRootRealFilesystem:
-    """Exercises the real filesystem-walking logic (no mocking) -- this test
-    suite itself runs from an editable checkout of videoannotator, so the
-    real function should find this repo's own project root."""
-
-    def test_finds_this_repos_own_root(self):
-        root = extras_install._editable_checkout_root()
-        assert root is not None
-        assert (root / "pyproject.toml").is_file()
-        assert 'name = "videoannotator"' in (root / "pyproject.toml").read_text(
-            encoding="utf-8"
-        )
-
-    def test_returns_none_when_no_sibling_pyproject(self, tmp_path):
-        fake_pkg_file = tmp_path / "src" / "videoannotator" / "__init__.py"
-        fake_pkg_file.parent.mkdir(parents=True)
-        fake_pkg_file.write_text("")
-        with patch.object(
-            extras_install._videoannotator_pkg, "__file__", str(fake_pkg_file)
-        ):
-            assert extras_install._editable_checkout_root() is None
-
-    def test_returns_none_when_pyproject_names_different_project(self, tmp_path):
-        fake_pkg_file = tmp_path / "src" / "videoannotator" / "__init__.py"
-        fake_pkg_file.parent.mkdir(parents=True)
-        fake_pkg_file.write_text("")
-        (tmp_path / "pyproject.toml").write_text('[project]\nname = "something-else"\n')
-        with patch.object(
-            extras_install._videoannotator_pkg, "__file__", str(fake_pkg_file)
-        ):
-            assert extras_install._editable_checkout_root() is None
-
-
 @pytest.fixture
 def temp_db(monkeypatch, tmp_path):
     db_path = tmp_path / "test_run_install.db"
@@ -189,7 +238,7 @@ def db_session(temp_db):
 
 
 class TestRunInstall:
-    def test_success_updates_job_and_flips_restart_flag(self, temp_db, db_session):
+    def test_success_updates_job_and_activates_live(self, temp_db, db_session):
         job = ExtrasInstallJob(
             extra_name="scene", status=ExtrasInstallJobStatus.PENDING
         )
@@ -214,18 +263,97 @@ class TestRunInstall:
             extras_install.run_install(job_id, "scene")
 
         mock_run.assert_called_once()
-        assert (
-            mock_run.call_args.kwargs["env"]["UV_PROJECT_ENVIRONMENT"]
-            == extras_install.sys.prefix
-        )
         db_session.refresh(job)
         assert job.status == ExtrasInstallJobStatus.COMPLETED
         assert job.command_output == "Successfully installed"
         assert job.started_at is not None
         assert job.finished_at is not None
-        assert extras_install.restart_required() is True
+        # Nothing changed on disk (subprocess is mocked): live, no restart.
+        assert extras_install.activation_for(job_id)["activation"] == "live"
+        assert extras_install.restart_required() is False
         # dedup entry must be cleared once the job resolves.
         assert "scene" not in extras_install._in_flight
+
+    def test_conflicting_install_records_restart_required(self, temp_db, db_session):
+        job = ExtrasInstallJob(extra_name="face", status=ExtrasInstallJobStatus.PENDING)
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+        job_id = str(job.id)
+        extras_install.try_begin_install("face", job_id)
+
+        snapshots = iter(
+            [
+                ({"numpy": "1.26.4"}, {"numpy": {"numpy"}}),
+                ({"numpy": "2.1.0"}, {"numpy": {"numpy"}}),
+            ]
+        )
+        with (
+            patch.object(
+                subprocess,
+                "run",
+                return_value=MagicMock(returncode=0, stdout="", stderr=""),
+            ),
+            patch.object(
+                extras_install, "resolve_install_command", return_value=(["pip"], None)
+            ),
+            patch.object(
+                extras_install,
+                "_installed_distributions",
+                side_effect=lambda: next(snapshots),
+            ),
+        ):
+            extras_install.run_install(job_id, "face")
+
+        outcome = extras_install.activation_for(job_id)
+        assert outcome["activation"] == "restart_required"
+        assert outcome["conflicting_distributions"][0]["name"] == "numpy"
+        assert extras_install.restart_required() is True
+
+    def test_job_reads_completed_only_after_activation_is_settled(
+        self, temp_db, db_session
+    ):
+        # The viewer re-fetches the pipeline list the moment it sees
+        # `completed`; activation (cache clearing) must already be done.
+        job = ExtrasInstallJob(
+            extra_name="scene", status=ExtrasInstallJobStatus.PENDING
+        )
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+        job_id = str(job.id)
+        extras_install.try_begin_install("scene", job_id)
+
+        statuses_seen = []
+
+        def snapshot():
+            check = extras_install._db_module.SessionLocal()
+            try:
+                row = check.query(ExtrasInstallJob).filter_by(id=job.id).first()
+                statuses_seen.append(row.status)
+            finally:
+                check.close()
+            return ({}, {})
+
+        with (
+            patch.object(
+                subprocess,
+                "run",
+                return_value=MagicMock(returncode=0, stdout="", stderr=""),
+            ),
+            patch.object(
+                extras_install, "resolve_install_command", return_value=(["pip"], None)
+            ),
+            patch.object(
+                extras_install, "_installed_distributions", side_effect=snapshot
+            ),
+        ):
+            extras_install.run_install(job_id, "scene")
+
+        assert len(statuses_seen) == 2
+        assert ExtrasInstallJobStatus.COMPLETED not in statuses_seen
+        db_session.refresh(job)
+        assert job.status == ExtrasInstallJobStatus.COMPLETED
 
     def test_nonzero_exit_marks_failed_without_flipping_restart_flag(
         self, temp_db, db_session

@@ -8,20 +8,23 @@ many-concurrent-video-jobs case `api/background_tasks.py` was built for
 (research.md §2).
 """
 
+import importlib
 import importlib.metadata
 import logging
-import os
 import shutil
 import subprocess
 import sys
 import threading
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
-import videoannotator as _videoannotator_pkg
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
 from ..database import database as _db_module
 from ..database.models import ExtrasInstallJob, ExtrasInstallJobStatus
+from ..registry import pipeline_loader
 
 LOGGER = logging.getLogger("videoannotator.api.extras_install")
 
@@ -34,16 +37,34 @@ _in_flight: dict[str, str] = {}  # extra_name -> job_id
 # --- Restart-required signal (in-process only, see research.md §4) ---
 _restart_required = False
 
+# --- Activation outcome per completed install (spec 011 FR-005/FR-006) ---
+# In-process like the flag above: after a restart every install is active, so
+# an outcome recorded by a previous process has nothing left to say.
+_activation: dict[str, dict[str, Any]] = {}  # job_id -> outcome
+
 
 def restart_required() -> bool:
-    """Whether any install has completed successfully since this process
-    started, and the process has not been restarted since."""
+    """Whether any install completed since this process started needs a
+    restart to take effect (activation `restart_required`)."""
     return _restart_required
+
+
+def activation_for(job_id: str) -> dict[str, Any] | None:
+    """`{"activation", "conflicting_distributions"}` for a job completed in
+    this process, else None."""
+    return _activation.get(job_id)
 
 
 def _mark_restart_required() -> None:
     global _restart_required
     _restart_required = True
+
+
+def in_flight_job_ids() -> list[str]:
+    """Job ids of installs currently pending/running (spec 011: a restart
+    must not interrupt one)."""
+    with _lock:
+        return list(_in_flight.values())
 
 
 def try_begin_install(extra_name: str, job_id: str) -> str | None:
@@ -67,92 +88,128 @@ def _end_install(extra_name: str) -> None:
         _in_flight.pop(extra_name, None)
 
 
-def _editable_checkout_root() -> Path | None:
-    """Return this repo's project root if running from an editable/source
-    checkout of videoannotator itself, else None.
-
-    Detected by walking up from the installed package's own `__file__` to
-    find a sibling `pyproject.toml` declaring `name = "videoannotator"` --
-    the signature of `src/videoannotator/__init__.py` living under a
-    checked-out project root rather than site-packages (research.md §1).
-    """
-    pkg_file = Path(_videoannotator_pkg.__file__).resolve()
-    # src/videoannotator/__init__.py -> src/videoannotator -> src -> root
-    candidate_root = pkg_file.parent.parent.parent
-    pyproject = candidate_root / "pyproject.toml"
-    if not pyproject.is_file():
-        return None
+def extra_requirements(extra_name: str) -> list[str]:
+    """The requirement strings the `extra_name` extras group adds, read from
+    this package's installed metadata. A group that includes other groups
+    (`all = ["videoannotator[face,audio,...]"]`) is expanded into theirs."""
     try:
-        text = pyproject.read_text(encoding="utf-8")
-    except OSError:
-        return None
-    if 'name = "videoannotator"' not in text:
-        return None
-    return candidate_root
+        dist = importlib.metadata.distribution(_DISTRIBUTION_NAME)
+    except importlib.metadata.PackageNotFoundError:
+        return []
+
+    requirements: list[str] = []
+    seen_groups: set[str] = set()
+
+    def collect(group: str) -> None:
+        if group in seen_groups:
+            return
+        seen_groups.add(group)
+        for req_str in dist.requires or []:
+            req = Requirement(req_str)
+            # Evaluated against this interpreter, so platform-specific
+            # requirements are already resolved; the marker can then go.
+            if not (req.marker and req.marker.evaluate({"extra": group})):
+                continue
+            if canonicalize_name(req.name) == _DISTRIBUTION_NAME:
+                for sub_group in sorted(req.extras):
+                    collect(sub_group)
+                continue
+            req.marker = None
+            if str(req) not in requirements:
+                requirements.append(str(req))
+
+    collect(extra_name)
+    return requirements
 
 
 def resolve_install_command(extra_name: str) -> tuple[list[str], Path | None]:
     """Return `(command, cwd)` to run to install `extra_name`.
 
-    Prefers `uv sync --extra <name> --inexact` in this repo's own project
-    root when running from an editable/source checkout with `uv` on PATH
-    (mirrors `scripts/start_server.sh`'s own install mechanism); otherwise
-    falls back to a version-pinned `pip install videoannotator[<extra>]==
-    <running version>`, which works regardless of how the package was
-    installed and never silently upgrades the running videoannotator
-    release (research.md §1). `cwd` is None for the pip path (no specific
-    directory required).
+    Installs only the group's own requirements into the running interpreter's
+    environment (spec 011 FR-005a): `uv pip install --python <sys.executable>`
+    when uv is on PATH, else `python -m pip install`. Both leave already
+    satisfied packages alone, so an install normally only *adds*
+    distributions and can activate without a restart.
 
-    `--inexact` is required, not cosmetic: a bare `uv sync --extra X`
-    resolves "core + X" and *removes* anything installed outside that
-    closure -- including a different extras group installed by an earlier
-    call to this same function (e.g. installing `audio` would silently
-    uninstall a previously-installed `face`). Discovered via a real end-to-
-    end run during this feature's own implementation, not a hypothetical.
+    This replaced `uv sync --extra <name> --inexact`, which re-synced the
+    whole environment to `uv.lock` while the server was running: it rewrote
+    packages the server had already imported (on Windows, failing outright on
+    a loaded `.pyd`), targeted `<root>/.venv` rather than the running
+    environment, and reinstalled videoannotator itself (the locked
+    `videoannotator.exe` on Windows).
 
-    `--no-install-project` is required too: videoannotator itself is already
-    installed (it is the running server), and without the flag uv rebuilds and
-    reinstalls it, which on Windows means overwriting the locked
-    `Scripts/videoannotator.exe` the server was started from, failing every
-    install with os error 32.
+    `[tool.uv.sources]` isn't consulted this way. The only source there is
+    the cu124 torch index on Linux, and PyPI's Linux torch 2.6.0 wheels are
+    already cu124 builds.
+
+    Falls back to the version-pinned `videoannotator[<extra>]==<version>` if
+    the group's requirements can't be read from metadata. `cwd` is always
+    None; kept in the signature for callers.
     """
-    root = _editable_checkout_root()
-    if root is not None and shutil.which("uv"):
+    requirements = extra_requirements(extra_name)
+    if not requirements:
+        version = importlib.metadata.version(_DISTRIBUTION_NAME)
+        requirements = [f"{_DISTRIBUTION_NAME}[{extra_name}]=={version}"]
+
+    if shutil.which("uv"):
         return (
-            [
-                "uv",
-                "sync",
-                "--extra",
-                extra_name,
-                "--inexact",
-                "--no-install-project",
-            ],
-            root,
+            ["uv", "pip", "install", "--python", sys.executable, *requirements],
+            None,
         )
-
-    version = importlib.metadata.version(_DISTRIBUTION_NAME)
-    command = [
-        sys.executable,
-        "-m",
-        "pip",
-        "install",
-        f"{_DISTRIBUTION_NAME}[{extra_name}]=={version}",
-    ]
-    return (command, None)
+    return ([sys.executable, "-m", "pip", "install", *requirements], None)
 
 
-def install_env() -> dict[str, str]:
-    """Environment for the install subprocess.
+def _installed_distributions() -> tuple[dict[str, str], dict[str, set[str]]]:
+    """Snapshot `{distribution: version}` and `{distribution: top-level
+    modules}` for the running environment."""
+    importlib.invalidate_caches()
+    versions = {}
+    for dist in importlib.metadata.distributions():
+        name = dist.name
+        if name:
+            versions[canonicalize_name(name)] = dist.version
+    modules: dict[str, set[str]] = {}
+    for module, dist_names in importlib.metadata.packages_distributions().items():
+        for dist_name in dist_names:
+            modules.setdefault(canonicalize_name(dist_name), set()).add(module)
+    return versions, modules
 
-    `uv sync` ignores which interpreter is running and installs into
-    `<project root>/.venv` unless told otherwise. A server started from any
-    other environment (a second venv, a Windows venv beside a WSL `.venv`)
-    would "install" successfully into the wrong one and the pipeline would
-    never become available. Pointing UV_PROJECT_ENVIRONMENT at `sys.prefix`
-    makes uv target the environment actually serving requests; the pip
-    fallback already does, via `sys.executable`, and ignores the variable.
-    """
-    return {**os.environ, "UV_PROJECT_ENVIRONMENT": sys.prefix}
+
+def decide_activation(
+    before: dict[str, str],
+    after: dict[str, str],
+    modules: dict[str, set[str]],
+    loaded: set[str] | None = None,
+) -> dict[str, Any]:
+    """FR-005: `restart_required` iff a distribution whose version changed
+    (or that was removed) has a top-level module already imported in this
+    process; otherwise `live`. Newly added distributions can't be loaded
+    yet, so they never force a restart."""
+    loaded = set(sys.modules) if loaded is None else loaded
+    conflicts = []
+    for name, old_version in sorted(before.items()):
+        new_version = after.get(name)
+        if new_version == old_version:
+            continue
+        # A module name matching the distribution name covers packages whose
+        # metadata lists no top-level modules.
+        dist_modules = modules.get(name, set()) | {name.replace("-", "_")}
+        if dist_modules & loaded:
+            conflicts.append(
+                {"name": name, "old_version": old_version, "new_version": new_version}
+            )
+    return {
+        "activation": "restart_required" if conflicts else "live",
+        "conflicting_distributions": conflicts,
+    }
+
+
+def _activate_live() -> None:
+    """Make packages installed while running visible to this process: fresh
+    import finders, and availability recomputed rather than memoised."""
+    importlib.invalidate_caches()
+    pipeline_loader._is_distribution_installed.cache_clear()
+    pipeline_loader._packages_for_extra.cache_clear()
 
 
 def run_install(job_id: str, extra_name: str) -> None:
@@ -181,31 +238,50 @@ def run_install(job_id: str, extra_name: str) -> None:
 
         command, cwd = resolve_install_command(extra_name)
         LOGGER.info("Installing extras group %r: %s", extra_name, " ".join(command))
+        before, modules_before = _installed_distributions()
         try:
             result = subprocess.run(
                 command,
                 cwd=cwd,
-                env=install_env(),
                 capture_output=True,
                 text=True,
                 check=False,
             )
             output = (result.stdout or "") + (result.stderr or "")
             job.command_output = output
-            job.status = (
+            status = (
                 ExtrasInstallJobStatus.COMPLETED
                 if result.returncode == 0
                 else ExtrasInstallJobStatus.FAILED
             )
         except OSError as exc:
             job.command_output = f"Failed to launch install command: {exc}"
-            job.status = ExtrasInstallJobStatus.FAILED
+            status = ExtrasInstallJobStatus.FAILED
 
+        # Settle activation before the job reads as `completed`: a client
+        # re-fetches the pipeline list as soon as it sees `completed`, and
+        # must get the post-install availability, not the memoised one.
+        if status == ExtrasInstallJobStatus.COMPLETED:
+            after, modules_after = _installed_distributions()
+            # Removed distributions only appear in the "before" module map.
+            modules = {**modules_after, **modules_before}
+            outcome = decide_activation(before, after, modules)
+            if outcome["activation"] == "restart_required":
+                LOGGER.warning(
+                    "Install of %r changed already-imported distributions, restart "
+                    "required: %s",
+                    extra_name,
+                    outcome["conflicting_distributions"],
+                )
+                _mark_restart_required()
+            else:
+                _activate_live()
+                LOGGER.info("Install of %r activated without a restart", extra_name)
+            _activation[job_id] = outcome
+
+        job.status = status
         job.finished_at = datetime.now()
         db.commit()
-
-        if job.status == ExtrasInstallJobStatus.COMPLETED:
-            _mark_restart_required()
     finally:
         db.close()
         _end_install(extra_name)

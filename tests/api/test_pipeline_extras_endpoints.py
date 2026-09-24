@@ -49,9 +49,11 @@ def temp_db(monkeypatch, tmp_path):
 def _reset_extras_install_state():
     extras_install._in_flight.clear()
     extras_install._restart_required = False
+    extras_install._activation.clear()
     yield
     extras_install._in_flight.clear()
     extras_install._restart_required = False
+    extras_install._activation.clear()
 
 
 @pytest.fixture
@@ -219,13 +221,46 @@ class TestRestartRequiredSignal:
         db_session.commit()
         db_session.refresh(job)
 
+        # What run_install records for an install that changed an imported
+        # distribution (spec 011: the job reports its own activation).
+        extras_install._activation[str(job.id)] = {
+            "activation": "restart_required",
+            "conflicting_distributions": [
+                {"name": "numpy", "old_version": "1.26.4", "new_version": "2.1.0"}
+            ],
+        }
         extras_install._mark_restart_required()
 
         list_resp = admin_client.get("/api/v1/pipelines")
         assert list_resp.json()["restart_required"] is True
 
-        job_resp = admin_client.get(f"/api/v1/pipelines/extras/install-jobs/{job.id}")
-        assert job_resp.json()["restart_required"] is True
+        body = admin_client.get(
+            f"/api/v1/pipelines/extras/install-jobs/{job.id}"
+        ).json()
+        assert body["restart_required"] is True
+        assert body["activation"] == "restart_required"
+        assert body["conflicting_distributions"][0]["name"] == "numpy"
+
+    def test_live_install_reports_live_and_never_sets_restart(
+        self, admin_client, db_session
+    ):
+        job = ExtrasInstallJob(
+            extra_name="scene", status=ExtrasInstallJobStatus.COMPLETED
+        )
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+        extras_install._activation[str(job.id)] = {
+            "activation": "live",
+            "conflicting_distributions": [],
+        }
+
+        body = admin_client.get(
+            f"/api/v1/pipelines/extras/install-jobs/{job.id}"
+        ).json()
+        assert body["activation"] == "live"
+        assert body["restart_required"] is False
+        assert admin_client.get("/api/v1/pipelines").json()["restart_required"] is False
 
     def test_stays_true_across_a_subsequent_failed_job_for_a_different_extra(
         self, admin_client, db_session
