@@ -358,4 +358,80 @@ describe('APIClient pipeline extras install', () => {
       await expect(client.getBootIdentity()).resolves.toEqual({ bootId: undefined, restartMode: undefined });
     });
   });
+
+  describe('spec 011: readiness and extras groups', () => {
+    const json = (status: number, body: unknown) => ({
+      ok: status < 400,
+      status,
+      statusText: String(status),
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => body
+    });
+
+    it("maps each pipeline's readiness to camelCase, and leaves it undefined on older servers", async () => {
+      mockFetch.mockResolvedValueOnce(
+        json(200, {
+          pipelines: [
+            {
+              name: 'speaker_diarization',
+              available: true,
+              readiness: {
+                state: 'needs_setup',
+                next_action: 'setup',
+                extras_group: 'audio',
+                install_job_id: null,
+                blockers: [{ kind: 'secret', name: 'HF_AUTH_TOKEN', message: 'Set it.', help_url: 'https://hf.co/t' }],
+                notes: [{ kind: 'weights_not_cached', name: 'base', message: 'About 140 MB.', help_url: null, approx_mb: 140 }]
+              }
+            },
+            { name: 'scene_detection', available: true }
+          ],
+          total: 2,
+          restart_required: false
+        })
+      );
+
+      const { catalog: { pipelines } } = await client.getPipelineCatalog({ forceRefresh: true, includeUnavailable: true });
+
+      expect(pipelines[0].readiness).toEqual({
+        state: 'needs_setup',
+        nextAction: 'setup',
+        extrasGroup: 'audio',
+        installJobId: null,
+        blockers: [{ kind: 'secret', name: 'HF_AUTH_TOKEN', message: 'Set it.', helpUrl: 'https://hf.co/t', approxMb: null }],
+        notes: [{ kind: 'weights_not_cached', name: 'base', message: 'About 140 MB.', helpUrl: null, approxMb: 140 }]
+      });
+      expect(pipelines[1].readiness).toBeUndefined();
+    });
+
+    it('lists extras groups, and returns null when the server has no such endpoint', async () => {
+      mockFetch.mockResolvedValueOnce(
+        json(200, {
+          extras: [
+            {
+              name: 'audio',
+              pipelines: ['speech_recognition'],
+              installed: false,
+              approx_download_mb: 550,
+              includes_gpu_torch: true,
+              install_job_id: 'job-1'
+            }
+          ]
+        })
+      );
+      await expect(client.getExtrasGroups()).resolves.toEqual([
+        {
+          name: 'audio',
+          pipelines: ['speech_recognition'],
+          installed: false,
+          approxDownloadMb: 550,
+          includesGpuTorch: true,
+          installJobId: 'job-1'
+        }
+      ]);
+
+      mockFetch.mockResolvedValueOnce(json(404, { detail: 'Not Found' }));
+      await expect(client.getExtrasGroups()).resolves.toBeNull();
+    });
+  });
 });

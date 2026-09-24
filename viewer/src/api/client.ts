@@ -13,7 +13,10 @@ import type {
   ExtrasInstallTriggerResponse,
   VlmModelsResponse,
   VlmPreviewRequest,
-  VlmPreviewResponse
+  VlmPreviewResponse,
+  ReadinessItem,
+  PipelineReadiness,
+  ExtrasGroupInfo
 } from '@/types/pipelines';
 import type { SystemHealthResponse } from '@/types/system';
 import type {
@@ -29,6 +32,34 @@ import type {
 } from '@/types/ingest';
 import type { CurrentUser } from '@/types/api';
 import { APIError } from './handleError';
+
+const mapReadinessItems = (value: unknown): ReadinessItem[] =>
+  Array.isArray(value)
+    ? value
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+        .map((item) => ({
+          kind: String(item.kind ?? ''),
+          name: String(item.name ?? ''),
+          message: String(item.message ?? ''),
+          helpUrl: typeof item.help_url === 'string' ? item.help_url : null,
+          approxMb: typeof item.approx_mb === 'number' ? item.approx_mb : null
+        }))
+    : [];
+
+/** snake_case `readiness` (VideoAnnotator spec 011) -> PipelineReadiness; undefined from older servers. */
+const mapReadiness = (value: unknown): PipelineReadiness | undefined => {
+  if (!value || typeof value !== 'object') return undefined;
+  const r = value as Record<string, unknown>;
+  if (typeof r.state !== 'string') return undefined;
+  return {
+    state: r.state,
+    nextAction: typeof r.next_action === 'string' ? r.next_action : 'none',
+    extrasGroup: typeof r.extras_group === 'string' ? r.extras_group : null,
+    installJobId: typeof r.install_job_id === 'string' ? r.install_job_id : null,
+    blockers: mapReadinessItems(r.blockers),
+    notes: mapReadinessItems(r.notes)
+  };
+};
 
 // API configuration with localStorage fallback
 const getApiBaseUrl = () => {
@@ -372,7 +403,8 @@ class APIClient {
           : undefined,
         parameters: [],
         available: typeof available === 'boolean' ? available : undefined,
-        installHint: typeof installHint === 'string' ? installHint : undefined
+        installHint: typeof installHint === 'string' ? installHint : undefined,
+        readiness: mapReadiness(record.readiness)
       };
     });
 
@@ -518,6 +550,36 @@ class APIClient {
       3000
     );
     return { bootId: response?.boot_id, restartMode: response?.restart_mode };
+  }
+
+  /**
+   * Installable extras groups with approximate download sizes (VideoAnnotator spec 011).
+   * GET /api/v1/pipelines/extras. Returns null from servers that predate it (404).
+   */
+  async getExtrasGroups(): Promise<ExtrasGroupInfo[] | null> {
+    try {
+      const response = await this.request<{
+        extras: {
+          name: string;
+          pipelines: string[];
+          installed: boolean;
+          approx_download_mb: number | null;
+          includes_gpu_torch: boolean;
+          install_job_id: string | null;
+        }[];
+      }>('/api/v1/pipelines/extras');
+      return response.extras.map((g) => ({
+        name: g.name,
+        pipelines: g.pipelines,
+        installed: g.installed,
+        approxDownloadMb: g.approx_download_mb ?? null,
+        includesGpuTorch: g.includes_gpu_torch === true,
+        installJobId: g.install_job_id ?? null
+      }));
+    } catch (error) {
+      if (error instanceof APIError && error.status === 404) return null;
+      throw error;
+    }
   }
 
   /**

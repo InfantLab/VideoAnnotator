@@ -58,6 +58,42 @@ export interface PipelineDescriptor {
   available?: boolean;
   /** Human-readable install command (e.g. "pip install videoannotator[face]"), present only when available === false. */
   installHint?: string;
+  /** Where the pipeline stands and its next step (VideoAnnotator spec 011). Absent from older servers: fall back to `available`. */
+  readiness?: PipelineReadiness;
+}
+
+/** A blocker (why a pipeline can't be used yet) or note (worth knowing, never blocking). */
+export interface ReadinessItem {
+  /** secret | service | import_error (blockers); licence | weights_not_cached (notes). Unknown kinds may appear. */
+  kind: string;
+  name: string;
+  message: string;
+  helpUrl?: string | null;
+  approxMb?: number | null;
+}
+
+/**
+ * VideoAnnotator spec 011 contract §1. `state` is one of
+ * installing | not_installed | restart_required | needs_setup | ready, but newer
+ * servers may add states: treat anything unknown as "not ready" and show blockers.
+ */
+export interface PipelineReadiness {
+  state: string;
+  nextAction: string;
+  extrasGroup: string | null;
+  installJobId: string | null;
+  blockers: ReadinessItem[];
+  notes: ReadinessItem[];
+}
+
+/** GET /api/v1/pipelines/extras (spec 011 contract §2). */
+export interface ExtrasGroupInfo {
+  name: string;
+  pipelines: string[];
+  installed: boolean;
+  approxDownloadMb: number | null;
+  includesGpuTorch: boolean;
+  installJobId: string | null;
 }
 
 export interface PipelineCatalog {

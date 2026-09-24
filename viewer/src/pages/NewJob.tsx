@@ -30,17 +30,18 @@ import vavIcon from "@/assets/v-a-v.icon.png";
 import {
   usePipelineCatalog,
   useRefreshPipelineCatalog,
+  useExtrasGroups,
   pipelineSchemaQueryOptions,
 } from "@/hooks/usePipelineCatalog";
 import { DynamicPipelineParameters } from "@/components/DynamicPipelineParameters";
-import { LockedPipelineCard, ExtrasInstallStatus } from "@/components/LockedPipelineCard";
+import { LockedPipelineCard, ExtrasInstallStatus, ReadinessDetails } from "@/components/LockedPipelineCard";
 import { RestartRequiredBanner } from "@/components/RestartRequiredBanner";
 import type { PipelineDescriptor } from "@/types/pipelines";
 import { useConfigValidation } from "@/hooks/useConfigValidation";
 import { ConfigValidationPanel } from "@/components/ConfigValidationPanel";
 import { useExtrasInstall } from "@/hooks/useExtrasInstall";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { extraNameFromInstallHint } from "@/lib/pipelineExtras";
+import { extrasGroupOf, PIPELINE_CARD_BADGE, pipelineCardMode } from "@/lib/pipelineExtras";
 import { hasConfiguredApiToken } from "@/api/client";
 import { APIError } from "@/api/handleError";
 
@@ -784,16 +785,19 @@ export const PipelineSelectionStep = ({
 
   const canInstallExtras = hasConfiguredApiToken();
   const { isAdmin } = useCurrentUser();
-  const { jobsByExtra, install, isInstalling, installError, installErrorExtraName } =
+  const { jobsByExtra, install, isInstalling, installError, installErrorExtraName, adoptJob } =
     useExtrasInstall(pipelines);
+  const { data: extrasGroups } = useExtrasGroups({ enabled: pipelines.length > 0 });
+  const refreshCatalog = useRefreshPipelineCatalog();
+  const [isCheckingAgain, setIsCheckingAgain] = useState(false);
 
   // Pipelines sharing one extras group (e.g. two locked pipelines both unlocked by
   // `face`) must be triggered/tracked together, not treated as independent installs.
   const lockedPipelineIdsByExtra = useMemo(() => {
     const map = new Map<string, string[]>();
     pipelines.forEach((pipeline) => {
-      if (pipeline.available === false) {
-        const extraName = extraNameFromInstallHint(pipeline.installHint);
+      if (pipelineCardMode(pipeline) !== 'selectable') {
+        const extraName = extrasGroupOf(pipeline);
         if (extraName) {
           map.set(extraName, [...(map.get(extraName) ?? []), pipeline.id]);
         }
@@ -801,6 +805,34 @@ export const PipelineSelectionStep = ({
     });
     return map;
   }, [pipelines]);
+
+  // An install the server reports as running but this browser didn't start
+  // (another tab, another admin): track it so the card shows its progress.
+  useEffect(() => {
+    pipelines.forEach((pipeline) => {
+      const readiness = pipeline.readiness;
+      const extraName = extrasGroupOf(pipeline);
+      if (readiness?.state === 'installing' && readiness.installJobId && extraName) {
+        adoptJob(extraName, readiness.installJobId, lockedPipelineIdsByExtra.get(extraName) ?? [pipeline.id]);
+      }
+    });
+  }, [pipelines, adoptJob, lockedPipelineIdsByExtra]);
+
+  // Setup is done outside the viewer (start Ollama, set a token in the server's
+  // env), so offer a re-check. The server refreshes a stale service check in the
+  // background, so fetch twice: the second read picks up the fresh result.
+  const checkAgain = async () => {
+    setIsCheckingAgain(true);
+    try {
+      await refreshCatalog({ forceServerRefresh: true });
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await refreshCatalog({ forceServerRefresh: true });
+    } catch {
+      // The catalog query surfaces its own errors.
+    } finally {
+      setIsCheckingAgain(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -845,7 +877,7 @@ export const PipelineSelectionStep = ({
         the live API catalog.
       </p>
 
-      {pipelines.some((pipeline) => pipeline.available === false) && (
+      {pipelines.some((pipeline) => pipelineCardMode(pipeline) === 'install') && (
         <p className="text-xs text-muted-foreground">
           {isAdmin === true && (
             <>Pipelines marked "Not installed" below can be installed from here — your API key has admin access.</>
@@ -883,8 +915,9 @@ export const PipelineSelectionStep = ({
             </div>
             <div className="space-y-3">
               {list.map((pipeline) => {
-                if (pipeline.available === false) {
-                  const extraName = extraNameFromInstallHint(pipeline.installHint);
+                const mode = pipelineCardMode(pipeline);
+                if (mode !== 'selectable') {
+                  const extraName = extrasGroupOf(pipeline);
                   const job = extraName ? jobsByExtra[extraName] : undefined;
                   const triggering = extraName ? isInstalling(extraName) : false;
                   const rawError =
@@ -896,12 +929,41 @@ export const PipelineSelectionStep = ({
                       }
                     : null;
 
+                  const group =
+                    pipeline.readiness && extraName && (mode === 'install' || mode === 'installing')
+                      ? {
+                          name: extraName,
+                          approxMb: extrasGroups?.get(extraName)?.approxDownloadMb ?? null,
+                          alsoEnables: pipelines
+                            .filter((p) => p.id !== pipeline.id && extrasGroupOf(p) === extraName)
+                            .map((p) => p.name)
+                        }
+                      : undefined;
+
                   return (
-                    <LockedPipelineCard key={pipeline.id} pipeline={pipeline}>
-                      {canInstallExtras && extraName && (
+                    <LockedPipelineCard
+                      key={pipeline.id}
+                      pipeline={pipeline}
+                      badge={PIPELINE_CARD_BADGE[mode]}
+                      group={group}
+                    >
+                      {mode === 'restart' && (!job || job.status !== 'completed') && (
+                        <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-500">
+                          Installed. Restart the server to activate it.
+                        </p>
+                      )}
+                      {(mode === 'setup' || mode === 'unavailable') && (
+                        <ReadinessDetails
+                          blockers={pipeline.readiness?.blockers}
+                          notes={pipeline.readiness?.notes}
+                          onCheckAgain={checkAgain}
+                          isChecking={isCheckingAgain}
+                        />
+                      )}
+                      {canInstallExtras && extraName && (mode === 'install' || mode === 'installing' || (mode === 'restart' && job?.status === 'completed')) && (
                         <ExtrasInstallStatus
                           job={job}
-                          isTriggering={triggering}
+                          isTriggering={triggering || (mode === 'installing' && !job)}
                           triggerError={triggerError}
                           adminStatus={isAdmin}
                           onInstall={() => {
@@ -955,6 +1017,7 @@ export const PipelineSelectionStep = ({
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground">{description}</p>
+                    <ReadinessDetails notes={pipeline.readiness?.notes} />
                   </label>
                 );
               })}

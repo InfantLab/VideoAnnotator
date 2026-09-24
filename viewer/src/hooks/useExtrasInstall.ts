@@ -182,6 +182,23 @@ export function useExtrasInstall(catalogPipelines: PipelineDescriptor[] = []) {
     [triggerMutation]
   );
 
+  /**
+   * Track an install the server reports as in flight (readiness `install_job_id`,
+   * VideoAnnotator spec 011) that this browser didn't start: another tab, another
+   * admin, or cleared storage. Without this the card couldn't show progress.
+   */
+  const adoptJob = useCallback((extraName: string, jobId: string, pipelineIds: string[]) => {
+    setTrackedJobs((prev) => {
+      if (prev[extraName]?.jobId === jobId) return prev;
+      const next: TrackedJobsMap = {
+        ...prev,
+        [extraName]: { jobId, startedAt: new Date().toISOString(), pipelineIds }
+      };
+      writeTrackedJobs(next);
+      return next;
+    });
+  }, []);
+
   /** Drop a tracked job's local state once its pipelines are confirmed available again, or the user dismisses it. */
   const clearTrackedJob = useCallback((extraName: string) => forgetJob(extraName), [forgetJob]);
 
@@ -196,6 +213,7 @@ export function useExtrasInstall(catalogPipelines: PipelineDescriptor[] = []) {
     installErrorExtraName: triggerMutation.isError ? triggerMutation.variables?.extraName : undefined,
     /** Pipeline ids tracked for a given extras group's most recent install job. */
     trackedPipelineIds: (extraName: string) => trackedJobs[extraName]?.pipelineIds ?? [],
-    clearTrackedJob
+    clearTrackedJob,
+    adoptJob
   };
 }
