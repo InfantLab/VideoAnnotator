@@ -16,6 +16,9 @@ import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { parseApiError } from '@/lib/errorHandling';
 import { formatUptime } from '@/lib/formatters';
 import { useBatch, useBatchActions, useBatchJobs } from '@/hooks/useBatches';
+import { isCompletedWithErrors } from '@/lib/jobOutcome';
+import { recallRunSetup, throughputSecondsRemaining, totalDownloadLabel } from '@/lib/runSetup';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   batchDisplayName,
   isBatchCancellable,
@@ -35,9 +38,22 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
   );
 }
 
-function etaText(batch: BatchSummary): { value: string; hint?: string } {
+function etaText(
+  batch: BatchSummary,
+  jobs: { status: string; completed_at?: string | null }[]
+): { value: string; hint?: string } {
   const remaining = batch.by_status.pending + batch.by_status.running;
   if (remaining === 0) return { value: 'Finished', hint: 'Nothing left to run' };
+  // The server averages every finished video, including the first, whose time
+  // is mostly one-off setup (loading models, downloading weights). Measure
+  // from the videos after it instead, once there are any.
+  const fromThroughput = throughputSecondsRemaining(jobs, remaining);
+  if (fromThroughput !== null) {
+    return {
+      value: `~${formatUptime(Math.round(fromThroughput))}`,
+      hint: 'Based on how fast videos finish after the first one',
+    };
+  }
   if (batch.estimated_seconds_remaining === null) {
     return {
       value: 'Estimating…',
@@ -48,7 +64,7 @@ function etaText(batch: BatchSummary): { value: string; hint?: string } {
   }
   return {
     value: `~${formatUptime(Math.round(batch.estimated_seconds_remaining))}`,
-    hint: 'Based on how long this batch’s finished videos actually took',
+    hint: 'From the first video, which included loading models, so probably high',
   };
 }
 
@@ -106,7 +122,26 @@ const BatchDetail = () => {
     );
   }
 
-  const eta = etaText(batch);
+  const jobs = jobsData?.jobs ?? [];
+  const eta = etaText(batch, jobs);
+  // Counted from the member jobs we have (first page), since the batch summary
+  // doesn't separate them. A job "completed" with an error message produced
+  // results for some pipelines but not all.
+  const withErrors = jobs.filter(isCompletedWithErrors).length;
+  const cleanlyCompleted = Math.max(0, batch.by_status.completed - withErrors);
+  // Nothing finished and no pipeline progress yet: the first video is loading
+  // models (and, first time, downloading weights). Say so rather than show a
+  // bare 0% that looks stuck.
+  const nothingFinished = batch.total - batch.by_status.pending - batch.by_status.running === 0;
+  const preparing =
+    nothingFinished &&
+    batch.by_status.running + batch.by_status.pending > 0 &&
+    jobs.every((job) => {
+      const progress = (job as { progress_percentage?: number }).progress_percentage;
+      return !progress;
+    });
+  const setupNotes = recallRunSetup(batchId);
+  const downloadLabel = totalDownloadLabel(setupNotes);
   const finished = batch.total - batch.by_status.pending - batch.by_status.running;
   const cancellable = isBatchCancellable(batch);
   const retryable = isBatchRetryable(batch);
@@ -179,7 +214,11 @@ const BatchDetail = () => {
         <StatCard label="Time remaining" value={eta.value} hint={eta.hint} />
         <StatCard
           label="Outcome"
-          value={`${batch.by_status.completed} ok · ${batch.by_status.failed} failed`}
+          value={
+            withErrors > 0
+              ? `${cleanlyCompleted} ok · ${withErrors} with errors · ${batch.by_status.failed} failed`
+              : `${batch.by_status.completed} ok · ${batch.by_status.failed} failed`
+          }
           hint={
             batch.by_status.cancelled > 0
               ? `${batch.by_status.cancelled} cancelled`
@@ -187,6 +226,35 @@ const BatchDetail = () => {
           }
         />
       </div>
+
+      {preparing && (
+        <Alert>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertDescription>
+            <p className="font-medium">
+              Preparing: the first run loads models
+              {setupNotes.length > 0
+                ? ` and downloads ${downloadLabel ?? 'model weights'}`
+                : ' and may download weights'}
+              . This can take several minutes before any progress shows.
+            </p>
+            {setupNotes.map((note) => (
+              <p key={`${note.pipeline}:${note.message}`} className="text-xs text-muted-foreground">
+                {note.pipeline}: {note.message}
+              </p>
+            ))}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {withErrors > 0 && (
+        <Alert className="border-orange-300">
+          <AlertDescription>
+            {withErrors} video{withErrors === 1 ? '' : 's'} finished without results from every
+            pipeline. The reason is on each video&apos;s row; open a video for details.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardContent className="pt-6 space-y-2">
@@ -205,12 +273,20 @@ const BatchDetail = () => {
                 {batch.by_status.pending} queued
               </Badge>
             )}
-            {batch.by_status.completed > 0 && (
+            {cleanlyCompleted > 0 && (
               <Badge
                 variant="outline"
                 className="text-xs bg-green-100 text-green-800 border-green-200"
               >
-                {batch.by_status.completed} done
+                {cleanlyCompleted} done
+              </Badge>
+            )}
+            {withErrors > 0 && (
+              <Badge
+                variant="outline"
+                className="text-xs bg-orange-100 text-orange-800 border-orange-200"
+              >
+                {withErrors} with errors
               </Badge>
             )}
             {batch.by_status.failed > 0 && (
@@ -239,7 +315,7 @@ const BatchDetail = () => {
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
         ) : (
-          <JobsTable jobs={jobsData?.jobs ?? []} onChanged={() => refetchJobs()} />
+          <JobsTable jobs={jobs} onChanged={() => refetchJobs()} preparing={preparing} />
         )}
       </Card>
     </div>

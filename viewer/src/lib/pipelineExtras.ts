@@ -59,3 +59,49 @@ export const PIPELINE_CARD_BADGE: Record<Exclude<PipelineCardMode, 'selectable'>
 export function extrasGroupOf(pipeline: PipelineDescriptor): string | null {
   return pipeline.readiness?.extrasGroup ?? extraNameFromInstallHint(pipeline.installHint);
 }
+
+/** Only pipelines in the `selectable` card mode can be part of a job. */
+export function isPipelineSelectable(pipeline: PipelineDescriptor): boolean {
+  return pipelineCardMode(pipeline) === 'selectable';
+}
+
+const NOT_READY_FALLBACK: Record<Exclude<PipelineCardMode, 'selectable'>, string> = {
+  install: "it isn't installed",
+  installing: "it's still installing",
+  restart: 'it needs a server restart',
+  setup: 'it needs setup',
+  unavailable: "the server says it isn't available"
+};
+
+/**
+ * Why a pipeline can't run right now, in one line: the server's first blocker
+ * if it gave one ("can't reach the Ollama server"), else the card state.
+ * Empty for a selectable pipeline.
+ */
+export function notReadyReason(pipeline: PipelineDescriptor): string {
+  const mode = pipelineCardMode(pipeline);
+  if (mode === 'selectable') return '';
+  const blocker = pipeline.readiness?.blockers?.[0]?.message?.trim();
+  return blocker ? blocker.replace(/\.$/, '') : NOT_READY_FALLBACK[mode];
+}
+
+/**
+ * Splits a wished-for selection (defaults, a retried job's pipelines) into the
+ * ids that can run now and notices for the ones left out, e.g.
+ * "VLM Frame Annotation left out: Ollama isn't reachable". Ids the catalog
+ * doesn't know are kept: the server validates them on submit.
+ */
+export function partitionSelection(
+  ids: string[],
+  pipelines: PipelineDescriptor[]
+): { kept: string[]; leftOut: string[] } {
+  const byId = new Map(pipelines.map((p) => [p.id, p]));
+  const kept: string[] = [];
+  const leftOut: string[] = [];
+  ids.forEach((id) => {
+    const pipeline = byId.get(id);
+    if (!pipeline || isPipelineSelectable(pipeline)) kept.push(id);
+    else leftOut.push(`${pipeline.name} left out: ${notReadyReason(pipeline)}.`);
+  });
+  return { kept, leftOut };
+}

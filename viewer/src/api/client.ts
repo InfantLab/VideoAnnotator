@@ -31,6 +31,7 @@ import type {
   IngestResponse,
 } from '@/types/ingest';
 import type { CurrentUser } from '@/types/api';
+import type { JobResults } from '@/lib/jobOutcome';
 import { APIError } from './handleError';
 
 const mapReadinessItems = (value: unknown): ReadinessItem[] =>
@@ -621,6 +622,11 @@ class APIClient {
 
   async getJob(jobId: string): Promise<JobResponse> {
     return this.request(`/api/v1/jobs/${jobId}`);
+  }
+
+  /** Per-pipeline outcome of a job, including why a pipeline failed. */
+  async getJobResults(jobId: string): Promise<JobResults> {
+    return this.request(`/api/v1/jobs/${jobId}/results`);
   }
 
   async deleteJob(jobId: string): Promise<void> {

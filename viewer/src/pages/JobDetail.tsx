@@ -15,6 +15,7 @@ import { JobDeleteButton } from "@/components/JobDeleteButton";
 import { canCancelJob } from "@/hooks/useJobCancellation";
 import { canDeleteJob } from "@/hooks/useJobDeletion";
 import type { JobStatus } from "@/types/api";
+import { failedPipelinesOf, isCompletedWithErrors } from "@/lib/jobOutcome";
 
 const CreateJobDetail = () => {
   const { jobId } = useParams<{ jobId: string }>();
@@ -38,6 +39,17 @@ const CreateJobDetail = () => {
       return status === "running" || status === "pending" || status === "cancelling" ? 2000 : false;
     },
   });
+
+  // Which pipelines produced nothing, and why: only worth asking once the job
+  // has finished with an error message.
+  const withErrors = !!job && isCompletedWithErrors(job);
+  const { data: results } = useQuery({
+    queryKey: ["job-results", jobId],
+    queryFn: () => apiClient.getJobResults(jobId!),
+    enabled: !!jobId && withErrors,
+    staleTime: 60_000,
+  });
+  const failedPipelines = Object.entries(failedPipelinesOf(results));
 
   const getStatusClassName = (status: string, errorMessage?: string | null) => {
     const statusMap = {
@@ -240,12 +252,22 @@ const CreateJobDetail = () => {
         </div>
       </div>
 
-      {/* Partial Success Warning */}
-      {job.status === 'completed' && job.error_message && (
+      {/* Completed, but some pipelines produced nothing */}
+      {withErrors && (
         <Alert className="bg-orange-50 border-orange-200 text-orange-800">
           <AlertCircle className="h-4 w-4 !text-orange-600" />
-          <AlertDescription className="ml-2">
-            <span className="font-semibold">Partial Success:</span> {job.error_message}
+          <AlertDescription className="ml-2 space-y-1">
+            <p>
+              <span className="font-semibold">Completed with errors:</span>{" "}
+              {failedPipelines.length > 0
+                ? "these pipelines produced no results."
+                : job.error_message}
+            </p>
+            {failedPipelines.map(([name, reason]) => (
+              <p key={name} className="text-sm">
+                <span className="font-mono font-medium">{name}</span>: {reason}
+              </p>
+            ))}
           </AlertDescription>
         </Alert>
       )}
@@ -377,7 +399,9 @@ const CreateJobDetail = () => {
           <CardContent>
             <div className="space-y-4">
               <p className="text-muted-foreground">
-                Job completed successfully! Results are ready for viewing.
+                {withErrors
+                  ? "Results from the pipelines that succeeded are ready for viewing."
+                  : "Job completed successfully! Results are ready for viewing."}
               </p>
 
               <div className="flex gap-2">

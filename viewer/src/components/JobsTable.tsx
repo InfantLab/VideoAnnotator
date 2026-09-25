@@ -64,7 +64,7 @@ function getStatusBadge(status: string, errorMessage?: string | null) {
         <Tooltip>
           <TooltipTrigger asChild>{badge}</TooltipTrigger>
           <TooltipContent className="max-w-xs">
-            <p className="font-semibold">{isPartialSuccess ? 'Partial Success:' : 'Error:'}</p>
+            <p className="font-semibold">{isPartialSuccess ? 'Completed with errors:' : 'Error:'}</p>
             <p>{errorMessage}</p>
           </TooltipContent>
         </Tooltip>
@@ -127,6 +127,8 @@ interface JobsTableProps {
   emptyState?: React.ReactNode;
   /** Hide the progress column where it adds nothing (e.g. an all-finished batch). */
   showProgress?: boolean;
+  /** The run is still in first-run setup: show "Preparing" rather than 0% on running jobs. */
+  preparing?: boolean;
 }
 
 export function JobsTable({
@@ -134,6 +136,7 @@ export function JobsTable({
   onChanged,
   emptyState,
   showProgress = true,
+  preparing = false,
 }: JobsTableProps) {
   const navigate = useNavigate();
 
@@ -194,7 +197,9 @@ export function JobsTable({
                     <div className="flex items-center gap-2">
                       <Progress value={progress} className="h-1.5 w-16" />
                       <span className="text-xs text-muted-foreground tabular-nums">
-                        {Math.round(progress)}%
+                        {preparing && job.status === 'running' && progress === 0
+                          ? 'Preparing'
+                          : `${Math.round(progress)}%`}
                       </span>
                     </div>
                   </TableCell>

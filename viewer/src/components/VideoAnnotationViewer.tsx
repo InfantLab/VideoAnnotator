@@ -28,6 +28,8 @@ interface VideoAnnotationViewerProps {
   backLabel?: string;
   /** Path for the back button (default: "/") */
   backPath?: string;
+  /** Pipelines of this job that failed on the server: name -> reason. */
+  failedPipelines?: Record<string, string>;
 }
 
 export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
@@ -36,6 +38,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   initialAnnotationData = null,
   backLabel = 'Home',
   backPath = '/',
+  failedPipelines = {},
 }) => {
   const navigate = useNavigate();
   const [videoFile, setVideoFile] = useState<File | null>(initialVideoFile);
@@ -371,6 +374,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                   onOverlayChange={setOverlaySettings}
                   onTimelineChange={setTimelineSettings}
                   annotationData={annotationData}
+                  failedPipelines={failedPipelines}
                 />
 
                 {/* OpenFace3 Controls */}

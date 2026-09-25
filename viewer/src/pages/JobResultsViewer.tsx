@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { isDemoJobId, getDemoLabel } from '@/lib/localLibrary/installDemoDataset';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/api/client';
+import { failedPipelinesOf } from '@/lib/jobOutcome';
 
 const JobResultsViewer = () => {
   const { jobId } = useParams<{ jobId: string }>();
@@ -24,6 +27,17 @@ const JobResultsViewer = () => {
 
   const isDemo = useMemo(() => jobId ? isDemoJobId(jobId) : false, [jobId]);
   const demoLabel = useMemo(() => jobId ? getDemoLabel(jobId) : null, [jobId]);
+
+  // Pipelines that ran but failed, so their tracks say why instead of "(No
+  // data)". Best effort: older servers and demo jobs have no results endpoint.
+  const { data: results } = useQuery({
+    queryKey: ['job-results', jobId],
+    queryFn: () => apiClient.getJobResults(jobId!),
+    enabled: !!jobId && !isDemo,
+    retry: false,
+    staleTime: 60_000,
+  });
+  const failedPipelines = useMemo(() => failedPipelinesOf(results), [results]);
 
   useEffect(() => {
     if (jobId && state === 'idle') {
@@ -73,6 +87,7 @@ const JobResultsViewer = () => {
            initialAnnotationData={annotationData}
            backLabel={isDemo ? 'Library' : 'Jobs'}
            backPath={isDemo ? '/library' : '/jobs'}
+           failedPipelines={failedPipelines}
          />
       </ErrorBoundary>
     );

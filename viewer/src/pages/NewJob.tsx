@@ -41,7 +41,15 @@ import { useConfigValidation } from "@/hooks/useConfigValidation";
 import { ConfigValidationPanel } from "@/components/ConfigValidationPanel";
 import { useExtrasInstall } from "@/hooks/useExtrasInstall";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { extrasGroupOf, PIPELINE_CARD_BADGE, pipelineCardMode } from "@/lib/pipelineExtras";
+import {
+  extrasGroupOf,
+  isPipelineSelectable,
+  notReadyReason,
+  partitionSelection,
+  PIPELINE_CARD_BADGE,
+  pipelineCardMode
+} from "@/lib/pipelineExtras";
+import { rememberRunSetup, totalDownloadLabel, weightsNotesFor } from "@/lib/runSetup";
 import { hasConfiguredApiToken } from "@/api/client";
 import { APIError } from "@/api/handleError";
 
@@ -122,6 +130,10 @@ const CreateNewJob = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedPipelines, setSelectedPipelines] = useState<string[]>([]);
+  // Pipelines dropped from a selection we built for the user (defaults, a
+  // retried job) because they can't run now, e.g. "VLM ... left out: Ollama
+  // isn't reachable". Shown on the pipeline step so nothing vanishes silently.
+  const [selectionNotices, setSelectionNotices] = useState<string[]>([]);
   const [batchName, setBatchName] = useState("");
   // Videos can come from this computer (uploaded one at a time) or from a
   // folder the server can already see (one request, nothing copied). The mode
@@ -170,7 +182,7 @@ const CreateNewJob = () => {
   const defaultSelectedPipelines = useMemo(
     () =>
       pipelines
-        .filter((pipeline) => pipeline.defaultEnabled !== false && pipeline.available !== false)
+        .filter((pipeline) => pipeline.defaultEnabled !== false && isPipelineSelectable(pipeline))
         .map((pipeline) => pipeline.id),
     [pipelines]
   );
@@ -201,7 +213,9 @@ const CreateNewJob = () => {
   useEffect(() => {
     if (retryState && pipelines.length) {
       if (retryState.retryJobPipelines) {
-        setSelectedPipelines(retryState.retryJobPipelines);
+        const { kept, leftOut } = partitionSelection(retryState.retryJobPipelines, pipelines);
+        setSelectedPipelines(kept);
+        setSelectionNotices(leftOut);
       }
       if (retryState.retryJobConfig) {
         setConfig(retryState.retryJobConfig);
@@ -210,6 +224,14 @@ const CreateNewJob = () => {
       window.history.replaceState({}, document.title);
     }
   }, [retryState, pipelines]);
+
+  // Readiness is re-fetched while the wizard is open, so a pipeline can stop
+  // being runnable after it was selected (Ollama goes down). It stays selected
+  // so the user sees what happened, but blocks the wizard until it's removed.
+  const notReadySelected = useMemo(
+    () => pipelines.filter((p) => selectedPipelines.includes(p.id) && !isPipelineSelectable(p)),
+    [pipelines, selectedPipelines]
+  );
 
   // Validate config whenever it changes
   useEffect(() => {
@@ -271,6 +293,7 @@ const CreateNewJob = () => {
       });
 
       setSubmitSuccess(response.created);
+      rememberRunSetup(response.batch_id, weightsNotesFor(pipelines, selectedPipelines));
 
       // Files the server couldn't use are reported per file rather than
       // failing the run, so say which — but don't treat it as a failure when
@@ -307,6 +330,14 @@ const CreateNewJob = () => {
 
     if (selectedPipelines.length === 0) {
       setSubmitError(parseApiError("No pipelines selected"));
+      return;
+    }
+
+    if (notReadySelected.length > 0) {
+      setSubmitError(parseApiError({
+        error: "Some selected pipelines can't run right now",
+        hint: notReadySelected.map((p) => `${p.name}: ${notReadyReason(p)}`).join('\n'),
+      }));
       return;
     }
 
@@ -359,6 +390,7 @@ const CreateNewJob = () => {
 
       if (jobIds.length > 0) {
         setSubmitSuccess(jobIds);
+        rememberRunSetup(batchId, weightsNotesFor(pipelines, selectedPipelines));
 
         // Land on the run itself rather than the full list — the thing the
         // user just created is the thing they want to watch.
@@ -417,6 +449,8 @@ const CreateNewJob = () => {
             error={catalogError}
             onRetry={() => refreshPipelineCatalog({ forceServerRefresh: true })}
             restartRequired={catalogData?.restartRequired ?? false}
+            selectionNotices={selectionNotices}
+            onDismissNotices={() => setSelectionNotices([])}
           />
         );
       case 3:
@@ -445,6 +479,7 @@ const CreateNewJob = () => {
             pipelines={pipelinesWithSchema}
             batchName={batchName}
             setBatchName={setBatchName}
+            notReadySelected={notReadySelected}
           />
         );
       default:
@@ -457,13 +492,18 @@ const CreateNewJob = () => {
       case 1:
         return videoSource === 'server' ? serverFolder !== null : selectedFiles.length > 0;
       case 2:
-        return selectedPipelines.length > 0 && pipelines.length > 0 && !catalogLoading;
+        return (
+          selectedPipelines.length > 0 &&
+          pipelines.length > 0 &&
+          !catalogLoading &&
+          notReadySelected.length === 0
+        );
       case 3:
         // Can proceed from config step if validation passes (or is still loading)
-        return validationResult?.valid !== false;
+        return validationResult?.valid !== false && notReadySelected.length === 0;
       case 4:
-        // Cannot submit if config is invalid
-        return validationResult?.valid !== false;
+        // Cannot submit if config is invalid, or a selected pipeline can't run
+        return validationResult?.valid !== false && notReadySelected.length === 0;
       default:
         return false;
     }
@@ -748,7 +788,9 @@ export const PipelineSelectionStep = ({
   isLoading,
   error,
   onRetry,
-  restartRequired = false
+  restartRequired = false,
+  selectionNotices = [],
+  onDismissNotices
 }: {
   pipelines: PipelineDescriptor[];
   selectedPipelines: string[];
@@ -757,6 +799,8 @@ export const PipelineSelectionStep = ({
   error: unknown;
   onRetry: () => void;
   restartRequired?: boolean;
+  selectionNotices?: string[];
+  onDismissNotices?: () => void;
 }) => {
   const groupedPipelines = useMemo(() => {
     const groups = new Map<string, PipelineDescriptor[]>();
@@ -774,6 +818,10 @@ export const PipelineSelectionStep = ({
       }))
       .sort((a, b) => a.groupName.localeCompare(b.groupName));
   }, [pipelines]);
+
+  const blockedSelection = pipelines.filter(
+    (p) => selectedPipelines.includes(p.id) && !isPipelineSelectable(p)
+  );
 
   const togglePipeline = (pipelineId: string) => {
     if (selectedPipelines.includes(pipelineId)) {
@@ -872,6 +920,24 @@ export const PipelineSelectionStep = ({
     <div className="space-y-6">
       <RestartRequiredBanner restartRequired={restartRequired} />
 
+      {selectionNotices.length > 0 && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <div className="space-y-1">
+              {selectionNotices.map((notice) => (
+                <p key={notice}>{notice}</p>
+              ))}
+            </div>
+            {onDismissNotices && (
+              <Button type="button" size="sm" variant="ghost" className="mt-1 h-6 px-2 text-xs" onClick={onDismissNotices}>
+                Dismiss
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <p className="text-foreground">
         Select the annotation pipelines reported by your VideoAnnotator server. Feature availability reflects
         the live API catalog.
@@ -947,6 +1013,22 @@ export const PipelineSelectionStep = ({
                       badge={PIPELINE_CARD_BADGE[mode]}
                       group={group}
                     >
+                      {selectedPipelines.includes(pipeline.id) && (
+                        // Not ready means it can't be chosen, but one that's
+                        // already selected must always be removable.
+                        <div className="mt-1 flex flex-wrap items-center gap-2 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-800 dark:text-amber-400">
+                          <span>Selected, but it can&apos;t run: {notReadyReason(pipeline)}.</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-[11px]"
+                            onClick={() => togglePipeline(pipeline.id)}
+                          >
+                            Remove from this run
+                          </Button>
+                        </div>
+                      )}
                       {mode === 'restart' && (!job || job.status !== 'completed') && (
                         <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-500">
                           Installed. Restart the server to activate it.
@@ -1025,6 +1107,16 @@ export const PipelineSelectionStep = ({
           </div>
         ))}
       </div>
+
+      {blockedSelection.length > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Remove {blockedSelection.map((p) => p.name).join(", ")} to continue:{" "}
+            {blockedSelection.length === 1 ? "it can't" : "they can't"} run right now.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {selectedPipelines.length === 0 && (
         <Alert>
@@ -1215,7 +1307,8 @@ const ReviewStep = ({
   submitSuccess,
   pipelines,
   batchName,
-  setBatchName
+  setBatchName,
+  notReadySelected = []
 }: {
   serverFolder: ServerFolderSelection | null;
   selectedFiles: File[];
@@ -1228,7 +1321,10 @@ const ReviewStep = ({
   pipelines: PipelineDescriptor[];
   batchName: string;
   setBatchName: Dispatch<SetStateAction<string>>;
+  notReadySelected?: PipelineDescriptor[];
 }) => {
+  const setupNotes = weightsNotesFor(pipelines, selectedPipelines);
+  const downloadLabel = totalDownloadLabel(setupNotes);
   const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
   // A server-folder run has no File objects to describe, and its exact video
   // count is the server's to report -- so describe the source, not a list.
@@ -1252,6 +1348,40 @@ const ReviewStep = ({
 
       {submitError && (
         <ErrorDisplay error={submitError} />
+      )}
+
+      {notReadySelected.length > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-medium">This run can&apos;t be submitted yet:</p>
+            {notReadySelected.map((p) => (
+              <p key={p.id}>
+                {p.name}: {notReadyReason(p)}.
+              </p>
+            ))}
+            <p className="mt-1">Go back to Select Pipelines to remove it, or fix it and wait for its card to show it&apos;s ready.</p>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {setupNotes.length > 0 && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-medium">
+              {downloadLabel
+                ? `First run downloads ${downloadLabel} of model weights.`
+                : 'First run downloads model weights.'}{' '}
+              The first video will take several minutes longer; the rest won&apos;t.
+            </p>
+            {setupNotes.map((note) => (
+              <p key={`${note.pipeline}:${note.message}`} className="text-xs text-muted-foreground">
+                {note.pipeline}: {note.message}
+              </p>
+            ))}
+          </AlertDescription>
+        </Alert>
       )}
 
       {submitSuccess.length > 0 && (

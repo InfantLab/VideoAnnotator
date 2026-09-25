@@ -20,15 +20,21 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const containerRef = useRef<HTMLDivElement>(null);
     const [videoUrl, setVideoUrl] = useState<string>('');
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    // Set when the browser can't decode the picture (typically H.265/HEVC),
+    // which otherwise shows as a silent black frame. Annotations still work.
+    const [codecProblem, setCodecProblem] = useState(false);
 
     // Create video URL from file
     useEffect(() => {
       if (videoFile) {
+        setCodecProblem(false);
         const url = URL.createObjectURL(videoFile);
         setVideoUrl(url);
         return () => URL.revokeObjectURL(url);
       }
     }, [videoFile]);
+
+    const looksHevc = /(h\.?265|hevc|x265)/i.test(videoFile?.name ?? '');
 
     // Get current pose data based on current time
     const getCurrentPoseData = useCallback((): COCOPersonAnnotation[] => {
@@ -694,8 +700,19 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           width: video.current.videoWidth,
           height: video.current.videoHeight
         });
+        // Metadata loaded but no picture: the container parsed, the video
+        // codec didn't (audio may still play).
+        if (video.current.videoWidth === 0) setCodecProblem(true);
       }
     }, [onDurationChange, ref]);
+
+    const handleVideoError = useCallback(() => {
+      const video = ref as React.MutableRefObject<HTMLVideoElement>;
+      const code = video.current?.error?.code;
+      if (code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED || code === MediaError.MEDIA_ERR_DECODE) {
+        setCodecProblem(true);
+      }
+    }, [ref]);
 
     const handleTimeUpdate = useCallback(() => {
       const video = ref as React.MutableRefObject<HTMLVideoElement>;
@@ -793,6 +810,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
             src={videoUrl}
             className="w-full h-full object-contain"
             onLoadedMetadata={handleLoadedMetadata}
+            onError={handleVideoError}
             onTimeUpdate={handleTimeUpdate}
             onPlay={handlePlay}
             onPause={handlePause}
@@ -802,6 +820,23 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
             ref={canvasRef}
             className="absolute inset-0 pointer-events-none"
           />
+          {codecProblem && (
+            <div role="alert" className="absolute inset-0 flex items-center justify-center p-6">
+              <div className="max-w-lg rounded-lg border border-border bg-card/95 p-4 text-sm text-foreground shadow-lg">
+                <p className="font-medium">
+                  This browser can&apos;t play this video&apos;s codec
+                  {looksHevc ? ' (H.265/HEVC)' : ' (often H.265/HEVC)'}.
+                </p>
+                <p className="mt-2 text-muted-foreground">
+                  Annotations are still available below. To see the video, re-encode it to H.264, e.g.
+                </p>
+                <code className="mt-1 block break-all rounded bg-muted px-2 py-1 font-mono text-xs">
+                  ffmpeg -i in.mp4 -c:v libx264 -crf 18 -c:a copy out.mp4
+                </code>
+                <p className="mt-2 text-muted-foreground">or open it in a browser with HEVC support.</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

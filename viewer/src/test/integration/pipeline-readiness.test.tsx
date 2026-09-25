@@ -80,6 +80,26 @@ const renderStep = (pipelines: PipelineDescriptor[]) => {
   );
 };
 
+const renderSelected = (pipelines: PipelineDescriptor[], selected: string[], onChange: (ids: string[]) => void) => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <PipelineSelectionStep
+          pipelines={pipelines}
+          selectedPipelines={selected}
+          setSelectedPipelines={onChange}
+          isLoading={false}
+          error={null}
+          onRetry={() => {}}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+};
+
 const card = (name: string) => screen.getByText(name, { selector: 'span' }).closest('div[data-locked="true"], label') as HTMLElement;
 
 describe('Pipeline readiness cards', () => {
@@ -240,5 +260,22 @@ describe('pipelineCardMode', () => {
   it('uses available when there is no readiness', () => {
     expect(pipelineCardMode({ id: 'p', name: 'P', available: false })).toBe('install');
     expect(pipelineCardMode({ id: 'p', name: 'P' })).toBe('selectable');
+  });
+
+  // spec 011 e2e finding 1: "not ready" also covers pipelines already selected.
+  it('lets an already-selected pipeline that is not ready be removed, and blocks until it is', () => {
+    const onChange = vi.fn();
+    const vlm = pipeline('vlm_annotation', 'VLM Frame Annotation', {
+      state: 'needs_setup',
+      extrasGroup: 'llm',
+      blockers: [{ kind: 'service', name: 'ollama', message: "Can't reach the Ollama server." }]
+    });
+    renderSelected([vlm, pipeline('speech_recognition', 'Speech', {})], ['vlm_annotation', 'speech_recognition'], onChange);
+
+    expect(within(card('VLM Frame Annotation')).getByText(/Selected, but it can't run: Can't reach the Ollama server/)).toBeInTheDocument();
+    expect(screen.getByText(/Remove VLM Frame Annotation to continue/)).toBeInTheDocument();
+
+    within(card('VLM Frame Annotation')).getByRole('button', { name: 'Remove from this run' }).click();
+    expect(onChange).toHaveBeenCalledWith(['speech_recognition']);
   });
 });
