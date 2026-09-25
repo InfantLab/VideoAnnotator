@@ -22,6 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ..registry.pipeline_loader import import_error_for
 from ..storage.base import StorageBackend
 from .types import BatchJob, JobStatus, PipelineResult
 
@@ -62,6 +63,15 @@ def _run(
     # calling in; the CLI/BatchOrchestrator path didn't previously mark a
     # job RUNNING at all, so it's set here unconditionally to guarantee
     # both paths give the same visibility while a job is in progress.
+    # A /cancel can land while the job waits on a cold-start pipeline import
+    # (minutes); setting RUNNING below would otherwise overwrite it.
+    if _cancellation_requested(job.job_id, storage):
+        job.status = JobStatus.CANCELLED
+        job.error_message = "Job cancelled by user request"
+        job.completed_at = datetime.now()
+        storage.save_job_metadata(job)
+        return job
+
     job.status = JobStatus.RUNNING
     job.started_at = job.started_at or datetime.now()
     storage.save_job_metadata(job)
@@ -75,6 +85,15 @@ def _run(
     pipelines_to_run = _resolve_pipelines(job, pipeline_classes)
     if job.pipeline_results is None:
         job.pipeline_results = {}
+    unavailable = [
+        p for p in (job.selected_pipelines or []) if p not in pipeline_classes
+    ]
+    for name in unavailable:
+        job.pipeline_results[name] = PipelineResult(
+            pipeline_name=name,
+            status=JobStatus.FAILED,
+            error_message=_unavailable_reason(name),
+        )
 
     total = len(pipelines_to_run)
     for completed_count, pipeline_name in enumerate(pipelines_to_run):
@@ -105,7 +124,7 @@ def _run(
         job.progress_percentage = round((completed_count + 1) / total * 100, 1)
         storage.save_job_metadata(job)
 
-    _settle_final_status(job, pipelines_to_run)
+    _settle_final_status(job, unavailable + pipelines_to_run)
     job.completed_at = datetime.now()
     storage.save_job_metadata(job)
     return job
@@ -123,6 +142,13 @@ def _resolve_pipelines(job: BatchJob, pipeline_classes: dict[str, type]) -> list
     if not available:
         raise ValueError(f"No requested pipelines are available: {requested}")
     return available
+
+
+def _unavailable_reason(pipeline_name: str) -> str:
+    reason = import_error_for(pipeline_name)
+    if reason:
+        return f"Pipeline not available on this server: {reason}"
+    return "Pipeline not available on this server (not installed or not registered)"
 
 
 def _cancellation_requested(job_id: str, storage: StorageBackend) -> bool:

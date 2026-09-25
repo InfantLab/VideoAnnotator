@@ -82,8 +82,9 @@ class SetupRequirement:
 class WeightSpec:
     """Model weights a pipeline downloads on first run with its default config
     (spec 011 FR-016). `cache` says where to look: `huggingface` (the HF hub
-    cache, `id` is the repo id) or `whisper` (openai-whisper's cache, `id` is
-    the model name). Sizes are hand-maintained approximations."""
+    cache, `id` is the repo id), `whisper` (openai-whisper's cache, `id` is
+    the model name) or `deepface` (`$DEEPFACE_HOME/.deepface/weights`, `id`
+    is the weights filename). Sizes are hand-maintained approximations."""
 
     id: str
     approx_mb: int

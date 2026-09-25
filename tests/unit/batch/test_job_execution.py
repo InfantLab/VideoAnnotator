@@ -114,6 +114,37 @@ class TestRunJobPipelines(unittest.TestCase):
         self.assertIn("first", result.pipeline_results)
         self.assertNotIn("second", result.pipeline_results)
 
+    def test_unavailable_pipeline_is_reported_not_silently_dropped(self):
+        """A selected pipeline the server couldn't load (e.g. its import
+        failed after a live install) used to be skipped with only a log
+        line, so the job read as a clean success with that output missing."""
+        job = self._job(["a", "missing"])
+        pipeline_classes = {"a": self._succeeding_pipeline_class()}
+        self.storage.load_job_metadata.return_value = BatchJob(
+            job_id=job.job_id, status=JobStatus.RUNNING
+        )
+
+        result = run_job_pipelines(job, self.storage, pipeline_classes)
+
+        self.assertEqual(result.status, JobStatus.COMPLETED)
+        self.assertIn("missing", result.error_message)
+        self.assertEqual(result.pipeline_results["missing"].status, JobStatus.FAILED)
+        self.assertIn("not available", result.pipeline_results["missing"].error_message)
+
+    def test_cancel_before_start_is_not_overwritten_by_running(self):
+        """A /cancel landing while the job waited on a cold-start pipeline
+        import must not be clobbered by the RUNNING save at the start."""
+        storage = _FakeStatefulStorage()
+        job = self._job(["a"])
+        cls = self._succeeding_pipeline_class()
+        storage.save_job_metadata(job)
+        storage.externally_cancel(job.job_id)
+
+        result = run_job_pipelines(job, storage, {"a": cls})
+
+        self.assertEqual(result.status, JobStatus.CANCELLED)
+        cls.return_value.process.assert_not_called()
+
     def test_normal_completion_reaches_100_percent(self):
         job = self._job(["a", "b"])
         pipeline_classes = {

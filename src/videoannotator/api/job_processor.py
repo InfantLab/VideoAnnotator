@@ -23,8 +23,8 @@ class JobProcessor:
     execution path."""
 
     def __init__(self):
-        loader = get_pipeline_loader()
-        self.pipeline_classes = loader.load_all_pipelines()
+        self._loader = get_pipeline_loader()
+        self.pipeline_classes = self._loader.load_all_pipelines()
 
         if not self.pipeline_classes:
             logger.warning("No pipeline classes loaded - check registry metadata")
@@ -53,5 +53,9 @@ class JobProcessor:
             storage.save_job_metadata(job)
             return job
 
+        # Pick up pipelines an extras group installed live after this
+        # processor was built; already-loaded classes are cached by the loader.
+        for name, cls in self._loader.load_all_pipelines().items():
+            self.pipeline_classes.setdefault(name, cls)
         logger.info(f"Processing job {job.job_id}: {job.video_path}")
         return run_job_pipelines(job, storage, self.pipeline_classes)

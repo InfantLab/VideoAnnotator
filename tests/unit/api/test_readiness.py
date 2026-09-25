@@ -238,3 +238,24 @@ class TestExtrasGroups:
 
     def test_unknown_group_has_no_size(self):
         assert readiness.approx_download_mb("not-a-group") is None
+
+
+class TestDeepFaceWeights:
+    def test_deepface_weights_checked_in_deepface_home(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("DEEPFACE_HOME", str(tmp_path))
+        weight = WeightSpec(id="age_model_weights.h5", approx_mb=540, cache="deepface")
+        assert not readiness._weights_cached(weight)
+
+        weights_dir = tmp_path / ".deepface" / "weights"
+        weights_dir.mkdir(parents=True)
+        (weights_dir / "age_model_weights.h5").write_bytes(b"")
+        assert readiness._weights_cached(weight)
+
+    def test_face_analysis_declares_its_deepface_weights(self):
+        from videoannotator.registry.pipeline_registry import get_registry
+
+        registry = get_registry()
+        registry.load()
+        meta = next(m for m in registry.list() if m.name == "face_analysis")
+        assert {w.cache for w in meta.weights} == {"deepface"}
+        assert sum(w.approx_mb for w in meta.weights) > 1000

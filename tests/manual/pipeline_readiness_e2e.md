@@ -24,18 +24,20 @@ browser. Record the date, platform and result at the bottom.
 
 Open **Create Job**, add the video, go to **Select Pipelines**.
 
-- [ ] Every shipped pipeline is listed. No "Stub" pipeline.
-- [ ] Face, audio, scene, person pipelines show **Not installed**, with "Installs the *group*
+- [x] Every shipped pipeline is listed. No "Stub" pipeline.
+- [x] Face, audio, scene, person pipelines show **Not installed**, with "Installs the *group*
       group (approx. N MB)". The three audio pipelines each say the group also enables the others.
-- [ ] VLM Frame Annotation shows **Not installed** (llm group), or **Needs setup** with
+- [x] VLM Frame Annotation shows **Not installed** (llm group), or **Needs setup** with
       "Ollama isn't reachable" if the llm extra is already there and Ollama isn't running.
-- [ ] Nothing on the page asks you to run a command.
+- [x] Nothing on the page asks you to run a command.
 
 ## B. Install and use `face_analysis`
 
-- [ ] Click **Install** on Face Analysis (DeepFace). The card shows progress; it takes minutes.
-- [ ] Reload the page mid-install: the card still shows **Installing** (picked up from the server).
-- [ ] When it finishes, **one** of:
+- [x] Click **Install** on Face Analysis (DeepFace). The card shows progress; it takes minutes.
+- [f] Reload the page mid-install: the card still shows **Installing** (picked up from the server).
+FAIL - goes back to http://localhost:18011/viewer/jobs/new "Choose videos" panel with empty values.
+but adding new videos and clicking through to "Select Pipelines" shows "Installing… this can take several minutes (larger pipelines download GPU-accelerated dependencies)"
+- [x] When it finishes, **one** of:
   - it turns selectable on its own ("Installed. Loading…" then a checkbox): *live activation*; or
   - a **Server restart needed** banner appears. Click **Restart server**, see
     "Restarting server…", and within about 30 s the page updates and Face Analysis is selectable.
@@ -57,8 +59,12 @@ Open **Create Job**, add the video, go to **Select Pipelines**.
 - [ ] Start the server with `--reload`, click **Restart server** (after any install that asks
       for it): the banner shows the server's own instructions for restarting manually.
 - [ ] Non-admin key: cards show their state, but Install/Restart are replaced by an explanation.
-- [ ] With Ollama stopped, VLM shows **Needs setup**. Start `ollama serve` (and pull a model),
+- [f] With Ollama stopped, VLM shows **Needs setup**. Start `ollama serve` (and pull a model),
       click **Check again**: the card becomes selectable.
+
+      yes. but then after starting ollama we get
+      WOllama isn't reachable at http://127.0.0.1:11434. Start it with 'ollama serve'. Get Ollama"
+      Nonetheless, the VLM parameters appear on the next page.
 
 ## Results
 

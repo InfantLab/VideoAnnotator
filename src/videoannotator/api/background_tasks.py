@@ -5,6 +5,7 @@ background tasks and asyncio for seamless operation.
 """
 
 import asyncio
+import threading
 import time
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime
@@ -57,6 +58,9 @@ class BackgroundJobManager:
         # (which may load heavy ML libraries or perform IO) and can block
         # FastAPI application startup. Create it lazily in _run_single_job_processing.
         self.job_processor: Any = None
+        # Concurrent first jobs would otherwise each build their own
+        # JobProcessor, importing every pipeline module in parallel.
+        self._job_processor_lock = threading.Lock()
 
         self.running = False
         self.processing_jobs: set[str] = set()
@@ -272,19 +276,27 @@ class BackgroundJobManager:
         try:
             logger.info(f"Starting pipeline processing for job {job.job_id}")
 
-            # Lazily create JobProcessor to avoid heavy imports during server startup
-            if self.job_processor is None:
-                try:
-                    from videoannotator.api.job_processor import JobProcessor
+            # Mark RUNNING before the JobProcessor import below: on a cold
+            # start that import (TensorFlow, torch, ...) takes minutes, and a
+            # job still reading PENDING through it looks stuck in the queue.
+            job.status = JobStatus.RUNNING
+            job.started_at = job.started_at or datetime.now()
+            self.storage.save_job_metadata(job)
 
-                    self.job_processor = JobProcessor()
-                except Exception as e:
-                    logger.error(f"Failed to initialize JobProcessor: {e}")
-                    job.status = JobStatus.FAILED
-                    job.error_message = f"JobProcessor initialization failed: {e}"
-                    job.completed_at = datetime.fromtimestamp(time.time())
-                    self.storage.save_job_metadata(job)
-                    return job
+            # Lazily create JobProcessor to avoid heavy imports during server startup
+            try:
+                with self._job_processor_lock:
+                    if self.job_processor is None:
+                        from videoannotator.api.job_processor import JobProcessor
+
+                        self.job_processor = JobProcessor()
+            except Exception as e:
+                logger.error(f"Failed to initialize JobProcessor: {e}")
+                job.status = JobStatus.FAILED
+                job.error_message = f"JobProcessor initialization failed: {e}"
+                job.completed_at = datetime.fromtimestamp(time.time())
+                self.storage.save_job_metadata(job)
+                return job
 
             return self.job_processor.process_job(job, self.storage)
 

@@ -429,3 +429,62 @@ class TestStartInstall:
             assert done.wait(timeout=5)
 
         assert called_with == {"job_id": "job-123", "extra_name": "face"}
+
+
+class TestPurgeNamespaceStubs:
+    """An import that lands mid-install caches an attribute-less namespace
+    module (`module 'torch' has no attribute 'save'`) that outlives
+    `invalidate_caches()`."""
+
+    def test_stub_for_now_regular_package_is_purged(self, tmp_path, monkeypatch):
+        pkg = tmp_path / "halfinstalled_pkg"
+        pkg.mkdir()
+        monkeypatch.syspath_prepend(str(tmp_path))
+        import importlib
+        import sys
+
+        stub = importlib.import_module("halfinstalled_pkg")
+        assert getattr(stub, "__file__", None) is None
+        (pkg / "__init__.py").write_text("def save():\n    return 1\n")
+        (pkg / "sub.py").write_text("")
+        sys.modules["halfinstalled_pkg.sub"] = MagicMock()
+        importlib.invalidate_caches()
+
+        purged = extras_install.purge_namespace_stubs()
+
+        assert set(purged) == {"halfinstalled_pkg", "halfinstalled_pkg.sub"}
+        assert importlib.import_module("halfinstalled_pkg").save() == 1
+        sys.modules.pop("halfinstalled_pkg", None)
+
+    def test_genuine_namespace_package_is_left_alone(self, tmp_path, monkeypatch):
+        (tmp_path / "real_ns_pkg").mkdir()
+        monkeypatch.syspath_prepend(str(tmp_path))
+        import importlib
+        import sys
+
+        module = importlib.import_module("real_ns_pkg")
+
+        assert "real_ns_pkg" not in extras_install.purge_namespace_stubs()
+        assert sys.modules["real_ns_pkg"] is module
+        sys.modules.pop("real_ns_pkg", None)
+
+
+class TestDeferImportDuringInstall:
+    """Health checks import torch opportunistically every poll; mid-install
+    that import is what caches the half-written stub."""
+
+    def test_unloaded_module_deferred_while_install_running(self):
+        with patch.object(extras_install, "in_flight_job_ids", return_value=["j"]):
+            with pytest.raises(extras_install.ImportDeferredError):
+                extras_install.defer_import_during_install("not_loaded_mod_xyz")
+
+    def test_already_loaded_module_never_deferred(self):
+        with patch.object(extras_install, "in_flight_job_ids", return_value=["j"]):
+            extras_install.defer_import_during_install("sys")
+
+    def test_nothing_deferred_without_install(self):
+        with patch.object(extras_install, "in_flight_job_ids", return_value=[]):
+            extras_install.defer_import_during_install("not_loaded_mod_xyz")
+
+    def test_deferred_error_is_an_import_error(self):
+        assert issubclass(extras_install.ImportDeferredError, ImportError)

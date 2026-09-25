@@ -14,6 +14,7 @@ from .. import extras_install, restart
 from ..background_tasks import get_background_manager
 from ..database import check_database_health, get_database_info, get_storage_backend
 from ..errors import APIError
+from ..extras_install import ImportDeferredError, defer_import_during_install
 from ..middleware.auth import is_auth_required, require_admin
 
 PROCESS_START_TIME = time.time()
@@ -219,6 +220,7 @@ async def detailed_health_check():
         # Get GPU information if available
         gpu_info = None
         try:
+            defer_import_during_install("torch")
             import torch
 
             if torch.cuda.is_available():
@@ -269,6 +271,8 @@ async def detailed_health_check():
 
             else:
                 gpu_info = {"available": False, "reason": "CUDA not available"}
+        except ImportDeferredError as e:
+            gpu_info = {"available": False, "reason": str(e)}
         except ImportError:
             gpu_info = {"available": False, "reason": "PyTorch not installed"}
 

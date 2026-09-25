@@ -17,6 +17,7 @@ from ...registry.pipeline_registry import get_registry
 from ...storage.config import get_storage_root
 from ...version import __version__
 from ..database import check_database_health
+from ..extras_install import ImportDeferredError, defer_import_during_install
 from ..restart import boot_identity
 
 logger = get_logger("api")
@@ -30,6 +31,7 @@ def _check_gpu_status() -> dict[str, Any]:
         Dictionary with GPU information
     """
     try:
+        defer_import_during_install("torch")
         import torch
 
         if torch.cuda.is_available():
@@ -61,6 +63,8 @@ def _check_gpu_status() -> dict[str, Any]:
             }
         else:
             return {"available": False, "reason": "CUDA not available"}
+    except ImportDeferredError as e:
+        return {"available": False, "reason": str(e)}
     except ImportError:
         return {"available": False, "reason": "PyTorch not installed"}
     except Exception as e:

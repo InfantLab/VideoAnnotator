@@ -8,6 +8,7 @@ representation and export.
 import json
 import logging
 import os
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -65,6 +66,19 @@ try:
     DEEPFACE_AVAILABLE = True
 except ImportError:
     DEEPFACE_AVAILABLE = False
+
+
+# DeepFace fetches attribute-model weights on first use and caches built models
+# per process. Concurrent jobs each hitting that first use would download the
+# same files (~1 GB) in parallel; building them once under a lock makes the
+# second job wait and reuse the cached models instead. Sizes (MB) mirror the
+# `weights:` block in registry/metadata/face_analysis.yaml.
+_DEEPFACE_MODELS_LOCK = threading.Lock()
+_DEEPFACE_WEIGHT_FILES = {
+    "Emotion": ("facial_expression_model_weights.h5", 6),
+    "Age": ("age_model_weights.h5", 540),
+    "Gender": ("gender_model_weights.h5", 540),
+}
 
 
 class FaceAnalysisPipeline(BasePipeline):
@@ -221,6 +235,9 @@ class FaceAnalysisPipeline(BasePipeline):
         Returns:
             List of COCO format annotation dictionaries with face detection results and person identity information.
         """
+        if self.config["detection_backend"] == "deepface" and DEEPFACE_AVAILABLE:
+            self._prepare_deepface_models()
+
         # Get video metadata
         video_metadata = self._get_video_metadata(video_path)
 
@@ -457,7 +474,6 @@ class FaceAnalysisPipeline(BasePipeline):
             self.logger.info("Using OpenCV face detection")
 
         elif backend == "deepface" and DEEPFACE_AVAILABLE:
-            # DeepFace will be initialized on first use
             self.logger.info("Using DeepFace detection")
 
         else:
@@ -465,6 +481,45 @@ class FaceAnalysisPipeline(BasePipeline):
                 f"Backend {backend} not available, falling back to OpenCV"
             )
             self.config["detection_backend"] = "opencv"
+
+    def _deepface_actions(self) -> list[str]:
+        if (
+            self.config.get("detect_emotions", True)
+            or self.config.get("detect_age", True)
+            or self.config.get("detect_gender", True)
+        ):
+            return ["emotion", "age", "gender"]
+        return ["emotion"]  # At least one action is required
+
+    def _prepare_deepface_models(self) -> None:
+        """Build DeepFace's attribute models up front, downloading any missing
+        weights, so the (slow, one-off) download is logged as such rather
+        than stalling the first frame silently."""
+        from deepface.commons.folder_utils import get_deepface_home
+
+        models = [action.capitalize() for action in self._deepface_actions()]
+        weights_dir = Path(get_deepface_home()) / ".deepface" / "weights"
+        missing = [
+            _DEEPFACE_WEIGHT_FILES[m]
+            for m in models
+            if m in _DEEPFACE_WEIGHT_FILES
+            and not (weights_dir / _DEEPFACE_WEIGHT_FILES[m][0]).exists()
+        ]
+        with _DEEPFACE_MODELS_LOCK:
+            if missing:
+                self.logger.info(
+                    f"First use of face analysis: downloading DeepFace model "
+                    f"weights {[name for name, _ in missing]} (about "
+                    f"{sum(mb for _, mb in missing)} MB, one-off) to {weights_dir}"
+                )
+            for model in models:
+                try:
+                    DeepFace.build_model(model_name=model, task="facial_attribute")
+                except Exception as e:
+                    # Left to fail (and be reported) per frame, as before.
+                    self.logger.warning(
+                        f"Could not prepare DeepFace {model} model: {e}"
+                    )
 
     def _detect_faces_in_frame(
         self,
@@ -567,13 +622,7 @@ class FaceAnalysisPipeline(BasePipeline):
                 # Get face regions with coordinates using DeepFace.analyze
                 analyze_results = DeepFace.analyze(
                     rgb_frame,
-                    actions=["emotion", "age", "gender"]
-                    if (
-                        self.config.get("detect_emotions", True)
-                        or self.config.get("detect_age", True)
-                        or self.config.get("detect_gender", True)
-                    )
-                    else ["emotion"],  # At least one action is required
+                    actions=self._deepface_actions(),
                     detector_backend=detector_backend,
                     enforce_detection=enforce_detection,
                 )

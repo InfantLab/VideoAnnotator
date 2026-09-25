@@ -235,8 +235,19 @@ class PipelineLoader:
 
             module_name, class_name = module_path.split(":", 1)
 
-            # Dynamically import the module
-            module = importlib.import_module(module_name)
+            # Any exception out of the import itself (not only ImportError) is
+            # recorded, so the pipeline reads as unavailable-with-a-reason
+            # rather than silently vanishing -- e.g. an AttributeError from a
+            # dependency left half-imported by an in-process install.
+            try:
+                module = importlib.import_module(module_name)
+            except Exception as e:
+                LOGGER.warning(
+                    f"Failed to import pipeline '{meta.name}' from {module_path}: {e}"
+                )
+                _import_errors[meta.name] = f"{type(e).__name__}: {e}"
+                return None
+
             pipeline_class = getattr(module, class_name)
 
             # Cache the result
@@ -246,14 +257,9 @@ class PipelineLoader:
             LOGGER.debug(f"Loaded pipeline class: {meta.name} -> {pipeline_class}")
             return pipeline_class
 
-        except ImportError as e:
-            LOGGER.warning(
-                f"Failed to import pipeline '{meta.name}' from {module_path}: {e}"
-            )
-            _import_errors[meta.name] = f"{type(e).__name__}: {e}"
-            return None
         except AttributeError as e:
             LOGGER.error(f"Pipeline class not found in module for '{meta.name}': {e}")
+            _import_errors[meta.name] = f"{type(e).__name__}: {e}"
             return None
         except Exception as e:
             LOGGER.error(

@@ -146,9 +146,16 @@ def _whisper_cached(model: str) -> bool:
     return (root / f"{model}.pt").is_file()
 
 
+def _deepface_cached(filename: str) -> bool:
+    home = Path(os.environ.get("DEEPFACE_HOME", Path.home()))
+    return (home / ".deepface" / "weights" / filename).is_file()
+
+
 def _weights_cached(weight: WeightSpec) -> bool:
     if weight.cache == "whisper":
         return _whisper_cached(weight.id)
+    if weight.cache == "deepface":
+        return _deepface_cached(weight.id)
     return _hf_cached(weight.id)
 
 

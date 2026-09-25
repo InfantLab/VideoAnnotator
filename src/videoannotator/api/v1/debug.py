@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from ...version import __version__ as videoannotator_version
 from ..database import get_database_info, get_storage_backend
 from ..dependencies import get_current_user
+from ..extras_install import ImportDeferredError, defer_import_during_install
 
 # Store for request logging (in production, use Redis or database)
 _request_log: list[dict[str, Any]] = []
@@ -66,6 +67,7 @@ async def get_server_debug_info():
         # Try to get GPU info
         gpu_info = {"available": False, "error": "Not detected"}
         try:
+            defer_import_during_install("torch")
             import torch
 
             if torch.cuda.is_available():
@@ -89,6 +91,8 @@ async def get_server_debug_info():
                 }
             else:
                 gpu_info = {"available": False, "error": "CUDA not available"}
+        except ImportDeferredError as e:
+            gpu_info = {"available": False, "error": str(e)}
         except ImportError:
             gpu_info = {"available": False, "error": "PyTorch not installed"}
 

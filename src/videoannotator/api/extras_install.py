@@ -9,6 +9,7 @@ many-concurrent-video-jobs case `api/background_tasks.py` was built for
 """
 
 import importlib
+import importlib.machinery
 import importlib.metadata
 import logging
 import shutil
@@ -79,6 +80,22 @@ def in_flight_job_ids() -> list[str]:
     must not interrupt one)."""
     with _lock:
         return list(_in_flight.values())
+
+
+class ImportDeferredError(ImportError):
+    """An optional import skipped because an extras install is running."""
+
+
+def defer_import_during_install(module_name: str) -> None:
+    """Raise `ImportDeferredError` if importing `module_name` now could cache a
+    half-written package: an install is running and the module isn't loaded
+    yet. For opportunistic probes (e.g. health checks' GPU info) that
+    would otherwise import torch every poll, mid-install (see
+    `purge_namespace_stubs`)."""
+    if module_name not in sys.modules and in_flight_job_ids():
+        raise ImportDeferredError(
+            f"{module_name} not checked while an extras install is running"
+        )
 
 
 def try_begin_install(extra_name: str, job_id: str) -> str | None:
@@ -218,10 +235,48 @@ def decide_activation(
     }
 
 
+def purge_namespace_stubs(modules: dict[str, Any] | None = None) -> list[str]:
+    """Drop `sys.modules` entries that were imported as an empty namespace
+    package but are now a regular package on disk, plus their submodules.
+
+    An `import torch` that lands mid-install -- after the `torch/` directory
+    exists but before `torch/__init__.py` is written (the health endpoint's
+    GPU probe, polled every ~30s, does this) -- caches a namespace module
+    with no attributes. `invalidate_caches()` doesn't touch `sys.modules`,
+    so every later import gets that stub (`module 'torch' has no attribute
+    'save'`) until restart. Genuine namespace packages (`google`, `nvidia`)
+    still resolve to a namespace spec and are left alone -- purging those
+    would duplicate submodules other packages already hold.
+    """
+    modules = sys.modules if modules is None else modules
+    stubs = []
+    for name, module in list(modules.items()):
+        if "." in name or module is None:
+            continue
+        if getattr(module, "__file__", None) is not None:
+            continue
+        if not hasattr(module, "__path__"):
+            continue
+        spec = importlib.machinery.PathFinder.find_spec(name)
+        if spec is not None and spec.origin not in (None, "namespace"):
+            stubs.append(name)
+    purged = []
+    for name in stubs:
+        for mod_name in list(modules):
+            if mod_name == name or mod_name.startswith(name + "."):
+                del modules[mod_name]
+                purged.append(mod_name)
+    return purged
+
+
 def _activate_live() -> None:
     """Make packages installed while running visible to this process: fresh
-    import finders, and availability recomputed rather than memoised."""
+    import finders, no half-installed namespace stubs, and availability
+    recomputed rather than memoised."""
     importlib.invalidate_caches()
+    purged = purge_namespace_stubs()
+    if purged:
+        LOGGER.info("Dropped modules imported mid-install: %s", purged)
     pipeline_loader._is_distribution_installed.cache_clear()
     pipeline_loader._packages_for_extra.cache_clear()
     pipeline_loader.clear_import_errors()

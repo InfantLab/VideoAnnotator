@@ -103,3 +103,15 @@ requirements:
   packages:
     - deepface
     - opencv-python
+# Attribute models DeepFace fetches on first use (emotion/age/gender all on by
+# default); the default `opencv` detector backend needs no download.
+weights:
+  - id: facial_expression_model_weights.h5
+    approx_mb: 6
+    cache: deepface
+  - id: age_model_weights.h5
+    approx_mb: 540
+    cache: deepface
+  - id: gender_model_weights.h5
+    approx_mb: 540
+    cache: deepface

@@ -367,3 +367,39 @@ class TestFaceAnalysisAdvanced:
         # Both should have face category
         assert opencv_schema["categories"][0]["name"] == "face"
         assert deepface_schema["categories"][0]["name"] == "face"
+
+
+class TestDeepFaceModelPreparation:
+    """Concurrent jobs used to each download the same DeepFace weights on
+    their first frame; models are now built once, under a lock."""
+
+    @pytest.fixture(autouse=True)
+    def _needs_deepface(self):
+        pytest.importorskip("deepface")
+
+    @patch("videoannotator.pipelines.face_analysis.face_pipeline.DeepFace")
+    def test_models_built_under_lock_before_analysis(self, mock_deepface, tmp_path):
+        from videoannotator.pipelines.face_analysis import face_pipeline
+
+        pipeline = FaceAnalysisPipeline({"detection_backend": "deepface"})
+        lock_held = []
+        mock_deepface.build_model.side_effect = lambda **_: lock_held.append(
+            face_pipeline._DEEPFACE_MODELS_LOCK.locked()
+        )
+
+        with patch.dict(os.environ, {"DEEPFACE_HOME": str(tmp_path)}):
+            pipeline._prepare_deepface_models()
+
+        built = [
+            c.kwargs["model_name"] for c in mock_deepface.build_model.call_args_list
+        ]
+        assert built == ["Emotion", "Age", "Gender"]
+        assert all(lock_held)
+
+    @patch("videoannotator.pipelines.face_analysis.face_pipeline.DeepFace")
+    def test_build_failure_does_not_raise(self, mock_deepface, tmp_path):
+        mock_deepface.build_model.side_effect = OSError("offline")
+        pipeline = FaceAnalysisPipeline({"detection_backend": "deepface"})
+
+        with patch.dict(os.environ, {"DEEPFACE_HOME": str(tmp_path)}):
+            pipeline._prepare_deepface_models()
