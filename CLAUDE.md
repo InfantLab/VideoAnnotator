@@ -23,7 +23,7 @@ src/videoannotator/
 tests/
 ├── unit/ integration/ pipelines/ api/ contract/
 specs/<NNN>-<slug>/  # spec-kit feature specs (spec.md, plan.md, tasks.md, ...)
-docs/development/roadmap_v1.{5,6}.0.md, roadmap_v1.7_to_v2.0.md  # release roadmap
+docs/development/roadmap_v1.{5,6,7}.0.md, roadmap_v1.7_to_v2.0.md  # release roadmap (v1.6.0 = public release)
 ```
 
 ## Commands
@@ -61,7 +61,7 @@ against it.
   `install_hint` fields. Backend-only; viewer UI is a separate spec in `video-annotation-viewer`.
 - 004-extras-based-install: extras-based modular install + metadata-driven registry loading
   (removes `LEGACY_MAPPINGS`, adds `requires_extras` to `PipelineMetadata`), scoped to leave room
-  for v1.6.0's Ollama backend and v1.7+'s remote/HPC dispatch without another schema migration.
+  for the Ollama backend (shipped in v1.5.0) and v1.8+'s remote/HPC dispatch without another schema migration.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

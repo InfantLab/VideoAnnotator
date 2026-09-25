@@ -13,11 +13,14 @@ This release scopes down the full modular-pipeline-architecture design in
 to the subset that matters for the resubmission: a slim, extras-based install, and a runtime
 integration between VideoAnnotator and Video Annotation Viewer. The plugin-discovery and
 remote-dispatch seams from that spec are real and worth building, but they are not blocking a
-resubmission — they move to [`roadmap_v1.6.0.md`](roadmap_v1.6.0.md).
+resubmission — they move to [`roadmap_v1.7.0.md`](roadmap_v1.7.0.md) (planned as v1.6.0 until
+2026-09-24, when v1.6.0 became the public release: [`roadmap_v1.6.0.md`](roadmap_v1.6.0.md)).
 
 **Target Release**: Alongside/ahead of the JOSS resubmission (Phase 2 — /viewer integration —
-shipped in v1.4.4; Phase 1 — extras-based install — shipped in v1.5.0, 2026-07-19)
-**Current Status**: v1.5.0 released
+shipped in v1.4.4; Phase 1 — extras-based install — landed on the `v1.5.0` branch 2026-07-19)
+**Current Status**: code complete on the `v1.5.0` branch, **not yet tagged** (latest tag: v1.4.4).
+Tag after spec 011's SC-001 manual run. The CHANGELOG dates `[1.5.0]` to 2026-07-19, when Phase 1
+landed; fold `[Unreleased]` into it and set the real date at tagging.
 **Main Goal**: Slim, per-pipeline install; LAION demoted from the default install; VideoAnnotator can
 optionally serve Video Annotation Viewer directly
 **Constitution Principle in play**: Principle V (Backward Compatibility by Default) — v1.4.x
@@ -39,11 +42,12 @@ source files, CUDA-only torch pin, stale `openai-whisper` pin) — see commits `
 - ✅ **LAION is opt-in, not default** — LAION Empathic-Insight (face and voice emotion) is an
   actively-changing external project with a narrow user base; it should not tax every install.
 
-**Out of scope for v1.5.0** (moved to v1.6.0 — see below):
+**Out of scope for v1.5.0** (moved to v1.7.0 — see [`roadmap_v1.7.0.md`](roadmap_v1.7.0.md)):
 - ❌ Third-party plugin discovery via `importlib.metadata.entry_points`
 - ❌ Dispatcher ABC / HTTPDispatcher / SlurmDispatcher seam
 - ❌ Cross-cutting utilities split into a sibling `videoannotator-utils` package
-- ❌ Ollama / llama.cpp local LLM pipeline backend
+- ❌ Ollama / llama.cpp local LLM pipeline backend (in the end the Ollama half shipped in v1.5.0 as
+  `vlm_annotation`; see below)
 
 **Deferred, unscheduled** (the original v1.5.0 UX wishlist — setup wizard, progress indicators,
 FiftyOne/Label Studio export, quality-assessment tooling, etc.) has been archived to
@@ -133,6 +137,27 @@ before resubmission.
 
 ---
 
+### Also in v1.5.0 (added after this plan was written)
+
+These were not in the plan above. They came from using the tool with a real non-technical user,
+and each has its own spec in `specs/`:
+
+- **Local VLM pipeline** (`vlm_annotation`, Ollama): single-frame and burst sampling, per-record
+  provenance, prompt preview, model discovery and reachability (spec 009). See
+  [`vlm_annotation_pipeline.md`](vlm_annotation_pipeline.md).
+- **Pipeline installs from the API and viewer** (spec 005), and **readiness** (spec 011): each
+  pipeline shows Ready / Not installed / Installing / Restart needed / Needs setup; installs add
+  only their own packages, activate without a restart when they can, and the server restarts
+  from the viewer when it can't.
+- **One job-execution path** with real cancel and retry (spec 006).
+- **Saved datasets and pipeline presets** (spec 007, backend only).
+- **Batches as a unit**: tagging, real aggregate progress and ETA, batch cancel and retry (spec 008);
+  **folder ingest**: a server-side folder becomes a batch with no upload and no copying.
+- **Viewer**: run-first Jobs page, batch pages, VLM review panel with ELAN comparison,
+  readiness-driven pipeline cards, restart button.
+
+---
+
 ## ✅ Success Criteria
 
 - [x] `pip install videoannotator` (no extras) installs without torch/transformers/pyannote/ultralytics/whisper.
@@ -171,6 +196,7 @@ before resubmission.
 
 ---
 
-**Last Updated**: 2026-07-19
+**Last Updated**: 2026-09-24
 **Target Release**: Ahead of / alongside JOSS resubmission
-**Status**: v1.5.0 released — Phase 1 (extras-based install) complete
+**Status**: code complete, not yet tagged — Phases 1 and 2 complete; tag after spec 011's manual run.
+The public release is v1.6.0 ([`roadmap_v1.6.0.md`](roadmap_v1.6.0.md)).

@@ -2,26 +2,37 @@
 
 ## Theme: Remote Pipelines, HPC Dispatch, Multimodal VLM, Slim Core
 
+> **Renumbered 2026-09-24.** v1.6.0 became the public release ([`roadmap_v1.6.0.md`](roadmap_v1.6.0.md)),
+> so the plugin-ecosystem plan that was v1.6.0 is now v1.7.0 ([`roadmap_v1.7.0.md`](roadmap_v1.7.0.md)),
+> and everything below moved one version later: the old v1.7 is now v1.8, the old v1.8 is now v1.9.
+> Target dates predate the renumbering. Items pulled forward into v1.6.0 are marked.
+
 This document covers the arc from v1.7 through v2.0 — the period when VideoAnnotator stops being a single-machine monolith and becomes a toolkit that can dispatch work to GPU servers, HPC clusters, and remote multimodal models.
 
-The detail here is intentionally lighter than [v1.5](roadmap_v1.5.0.md) and [v1.6](roadmap_v1.6.0.md). These versions are 6-12+ months out; specifics will firm up as v1.5/v1.6 land and field experience informs the design.
+The detail here is intentionally lighter than [v1.5](roadmap_v1.5.0.md), [v1.6](roadmap_v1.6.0.md) and [v1.7](roadmap_v1.7.0.md). These versions are 6-12+ months out; specifics will firm up as those land and field experience informs the design.
 
-**Prerequisite:** v1.5.0's extras-based install and metadata-driven registry loading (see [`specs/004-extras-based-install/spec.md`](../../specs/004-extras-based-install/spec.md)), plus v1.6.0's entry-point plugin discovery, `Dispatcher` ABC seam, and Ollama/llama.cpp local-LLM backend (which establishes the `backends` metadata field's non-local-execution pattern this document extends to remote/HPC targets).
+**Prerequisite:** v1.5.0's extras-based install and metadata-driven registry loading (see [`specs/004-extras-based-install/spec.md`](../../specs/004-extras-based-install/spec.md)), v1.6.0's OpenAI-compatible connector, plus v1.7.0's entry-point plugin discovery and `Dispatcher` ABC seam (the local-LLM backend already establishes the `backends` metadata field's non-local-execution pattern this document extends to remote/HPC targets).
 
 ---
 
-## v1.7 — Remote pipelines and the first VLM plugin
+## v1.7 — Plugin ecosystem
+
+Planned in full in [`roadmap_v1.7.0.md`](roadmap_v1.7.0.md): entry-point pipeline discovery, the `Dispatcher` ABC with `LocalThreadDispatcher`, the `videoannotator-utils` package, a reference third-party plugin, and pandas-based movement deltas for `person_tracking`.
+
+---
+
+## v1.8 — Remote pipelines and the first VLM plugin
 
 **Theme:** Pipelines no longer have to run in-process. Adds the proxy layer that v2.0 needs and ships the first plugin that uses it.
 
-**Target:** Q2-Q3 2027
+**Target:** Q2-Q3 2027 (set before renumbering)
 **Estimated duration:** ~10 weeks
 
 ### Deliverables
 
 - [ ] **`RemotePipelineProxy(BasePipeline)`** in core. Reads `endpoint`, `model`, `auth`, sampling params from config. In `process()`, serialises args as JSON, POSTs to the endpoint, parses the response back to `list[dict]`. The pipeline class is locally installable and locally instantiable; only the heavy compute lives elsewhere.
 - [ ] **`HTTPDispatcher`** as a third `Dispatcher` implementation alongside `LocalThreadDispatcher`. Submits jobs to a remote VideoAnnotator instance over the existing FastAPI v1. Useful for "I have a GPU server in the next room and a laptop in front of me" workflows.
-- [ ] **Transport security and credential handling for `HTTPDispatcher`/`RemotePipelineProxy`.** TLS-only endpoints by default (reject plaintext `http://` unless explicitly opted into for local-network use), and a defined credential-storage model for the `auth` config field (e.g. environment variable or OS keychain reference, never a literal secret in a checked-in config file). This was flagged as an open gap in earlier drafts of this roadmap and must be a first-class requirement of the v1.7.0 spec, not an afterthought — see [`specs/004-extras-based-install/spec.md`](../../specs/004-extras-based-install/spec.md) Assumptions section.
+- [ ] **Transport security and credential handling for `HTTPDispatcher`/`RemotePipelineProxy`.** TLS-only endpoints by default (reject plaintext `http://` unless explicitly opted into for local-network use), and a defined credential-storage model for the `auth` config field (e.g. environment variable or OS keychain reference, never a literal secret in a checked-in config file). This was flagged as an open gap in earlier drafts of this roadmap and must be a first-class requirement of the v1.8.0 spec, not an afterthought — see [`specs/004-extras-based-install/spec.md`](../../specs/004-extras-based-install/spec.md) Assumptions section.
 - [ ] **Reference pipeline-runner microserver.** A 30-50 line FastAPI app at `packages/videoannotator-pipeline-runner/` that exposes a single `BasePipeline` instance over HTTP using the same JSON contract as `RemotePipelineProxy`. Production-deployable as a Docker image.
 - [ ] **`videoannotator-vlm` plugin (first VLM pipeline).** New sibling package. Default backend: Qwen2.5-VL-7B via Ollama (`qwen2.5vl:7b`). Optional backend: vLLM for batch throughput. Pipeline config:
   ```yaml
@@ -43,14 +54,16 @@ The detail here is intentionally lighter than [v1.5](roadmap_v1.5.0.md) and [v1.
   max_new_tokens: 512
   ```
   Output: WebVTT cues with parsed JSON sidecars (mirrors v1.5's native-format doctrine). Source: [survey notes](#vlm-survey-summary).
-- [ ] **Reproducibility plumbing.** Extend `create_annotation_metadata` with `revision_sha` (HF model commit), `quantisation` (Q4_K_M / Q8_0 / F16 for Ollama), `prompt_sha256`, `sampling_params` echoed verbatim. VLM output without these is research-grade unusable.
+- [ ] **Reproducibility plumbing.** Extend `create_annotation_metadata` with `revision_sha` (HF model commit), `quantisation` (Q4_K_M / Q8_0 / F16 for Ollama), `prompt_sha256`, `sampling_params` echoed verbatim. VLM output without these is research-grade unusable. **Pulled forward to v1.6.0** (the methods paragraph in Phase 2 needs it).
 
-### Out of scope for v1.7
+Note (2026-09-24): the VLM pipeline itself already exists in core as `vlm_annotation` (v1.5.0). What remains here is packaging it as a plugin and the remote proxy.
 
-- HPC dispatcher (deferred to v1.8 unless someone needs it sooner).
-- New specialist pipelines (pose, hand, motion) — deferred to v1.8.
+### Out of scope for v1.8
+
+- HPC dispatcher (deferred to v1.9 unless someone needs it sooner).
+- New specialist pipelines (pose, hand, motion) — deferred to v1.9. (v1.6.0 may add the voice type classifier, gaze target or SAM 3 tracking if pilot labs ask.)
 - Splitting face/scene/person plugins — that's v2.0.
-- **Auto-restart after in-app extras install.** [`specs/005-pipeline-extras-install/spec.md`](../../specs/005-pipeline-extras-install/spec.md)
+- ~~**Auto-restart after in-app extras install.**~~ **Done in v1.5.0** (spec 011: installs activate without a restart when they can, and the server restarts from the viewer when they can't). Original note: [`specs/005-pipeline-extras-install/spec.md`](../../specs/005-pipeline-extras-install/spec.md)
   (self-service `pip install videoannotator[<extra>]` triggered from the API/viewer) ships with a
   manual-restart requirement — the server never restarts itself. Once this phase's process-
   supervision/`Dispatcher` seams exist, revisit having the server safely restart itself after a
@@ -59,11 +72,11 @@ The detail here is intentionally lighter than [v1.5](roadmap_v1.5.0.md) and [v1.
 
 ---
 
-## v1.8 — HPC dispatch and new pipeline categories
+## v1.9 — HPC dispatch and new pipeline categories
 
 **Theme:** Lab-scale to cluster-scale. Adds Slurm and the pipelines researchers have been asking for that aren't VLMs.
 
-**Target:** Q4 2027
+**Target:** Q4 2027 (set before renumbering)
 **Estimated duration:** ~8-10 weeks
 
 ### Deliverables
@@ -74,7 +87,7 @@ The detail here is intentionally lighter than [v1.5](roadmap_v1.5.0.md) and [v1.
 - [ ] **`videoannotator-hand` plugin.** MediaPipe Hand Landmarker. 21 keypoints/hand on CPU, trivial CC-licensed dependency. Useful for caregiver-infant gesture coding. Source: [github.com/google-ai-edge/mediapipe](https://github.com/google-ai-edge/mediapipe).
 - [ ] **`videoannotator-motion` plugin (optional).** SEA-RAFT optical flow as an opt-in for "how much movement happened in this clip" features. BSD-3. Source: [github.com/princeton-vl/SEA-RAFT](https://github.com/princeton-vl/SEA-RAFT).
 
-### Out of scope for v1.8
+### Out of scope for v1.9
 
 - Distributed multi-node within a single job (still single-machine per pipeline call).
 - Audio events (BEATs) — defer unless requested.
@@ -113,7 +126,7 @@ The detail here is intentionally lighter than [v1.5](roadmap_v1.5.0.md) and [v1.
 
 ### Reproducibility
 
-VLM outputs vary with sampling, model version, prompt phrasing. Standard practice for research papers: pin the HF revision SHA, set `temperature=0` and a fixed seed, store the exact prompt verbatim, report inference framework + version + quantisation. The reproducibility plumbing landed in v1.7 (above) makes this enforceable: every annotation carries the full reproducibility envelope.
+VLM outputs vary with sampling, model version, prompt phrasing. Standard practice for research papers: pin the HF revision SHA, set `temperature=0` and a fixed seed, store the exact prompt verbatim, report inference framework + version + quantisation. The reproducibility plumbing (above; pulled forward to v1.6.0) makes this enforceable: every annotation carries the full reproducibility envelope.
 
 For paper-grade reproducibility, recommend the **vLLM or transformers backend with `torch.use_deterministic_algorithms(True)`** rather than Ollama — Ollama/llama.cpp can produce non-deterministic outputs across hardware due to floating-point reductions even at temperature 0.
 
@@ -145,7 +158,7 @@ The Ultralytics AGPL-3.0 issue is the only real licensing wrinkle. Ship `videoan
 
 ### VLM survey summary
 
-[Full survey on file with maintainer.] Headline recommendation for v1.7: **Qwen2.5-VL-7B-Instruct via Ollama as default, vLLM as power-user backend**. Apache-2.0, native video, 32K context, fits 24 GB VRAM, weak refusal behaviour around children. Runner-up: **InternVL3.5-8B via lmdeploy** (different vision encoder, useful as a second rater for reproducibility cross-checks). Future upgrade: Qwen3-VL-8B (256K native context, October 2025 weights) once Ollama publishes a first-party tag.
+[Full survey on file with maintainer.] Headline recommendation for v1.7 (now v1.8): **Qwen2.5-VL-7B-Instruct via Ollama as default, vLLM as power-user backend**. Apache-2.0, native video, 32K context, fits 24 GB VRAM, weak refusal behaviour around children. Runner-up: **InternVL3.5-8B via lmdeploy** (different vision encoder, useful as a second rater for reproducibility cross-checks). Future upgrade: Qwen3-VL-8B (256K native context, October 2025 weights) once Ollama publishes a first-party tag.
 
 Pipelines a VLM can **replace**: scene labelling, coarse action description, video-segment summaries, person/object enumeration, simple emotion description. Pipelines a VLM **augments but doesn't replace**: face emotion (use as independent rater), behaviour description on top of person tracks. Pipelines a VLM **never replaces**: pose keypoints, AUs, diarisation timestamps, frame-accurate scene cuts.
 
@@ -153,12 +166,12 @@ Pipelines a VLM can **replace**: scene labelling, coarse action description, vid
 
 ## Risks and open questions
 
-- **Ollama video support.** Ollama currently has no video parameter on `/api/generate`; video is sent as multi-image at extracted frames. If Ollama adds native video before v1.7 lands, the plugin can use it; otherwise the multi-image pattern is fine.
+- **Ollama video support.** Ollama currently has no video parameter on `/api/generate`; video is sent as multi-image at extracted frames. If Ollama adds native video before v1.8 lands, the plugin can use it; otherwise the multi-image pattern is fine. (Still no video input for Qwen3-VL in Ollama as of 2026-09; v1.6.0 gets real video input through vLLM instead.)
 - **Cluster heterogeneity.** Slurm clusters vary wildly (partitions, GRES syntax, container runtimes). The `SlurmDispatcher` ships a sensible default but expect lab-specific config files in practice.
 - **Plugin release coupling.** Once we have 7+ sibling packages, version-resolution between core and plugins becomes a real maintenance task. Mitigation: lock-step semver-major releases of core + all official plugins until v3.0 if needed.
 - **Long-tail of specialist models.** Field will keep moving; v2.0+ should include a clear cadence ("review specialist defaults each minor release") rather than letting them drift.
 
 ---
 
-**Last updated:** 2026-07-18
+**Last updated:** 2026-09-24 (renumbered; content last revised 2026-07-18)
 **Authors:** Caspar Addyman (with Claude Code review)

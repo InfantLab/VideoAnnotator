@@ -1,6 +1,6 @@
 """Ollama reachability diagnostics for VideoAnnotator (spec 009).
 
-Closes an already-open item from roadmap_v1.6.0.md: `videoannotator diagnose`
+Closes an already-open item from roadmap_v1.7.0.md: `videoannotator diagnose`
 reports GPU/storage/database health but had no way to say whether the
 vlm_annotation pipeline's local VLM backend is actually usable right now.
 """
