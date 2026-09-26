@@ -48,8 +48,8 @@ without help
 
 ## 📋 v1.6.0 Deliverables
 
-Phases are in order. Phases 0–2 make release candidate 1; the pilot runs from there to release and
-reorders Phases 3–6.
+Phases are in order. Phases 0–3 make release candidate 1; the pilot runs from there to release and
+reorders Phases 4–7.
 
 ### Phase 0: One Repository
 
@@ -81,7 +81,81 @@ that means rewriting them, and breaking links pilot labs have already saved.
 
 ---
 
-### Phase 1: Clean First Contact
+### Phase 1: Housekeeping — Pipelines and Dependencies
+
+**Problem**: both the set of pipelines and most version pins are historical, not decisions. The
+pipelines are whatever got added along the way, and no one has asked which tools a developmental
+researcher actually needs. Most pins are the same: `torch==2.6.0` is pinned exactly in
+five extras groups; `pyannote.audio<4.0`, `transformers<5.0` and `opencv-python<5.0` were
+defensive bounds against breakage we never tested for; Python is locked to 3.12
+(`>=3.12,<3.13`), which has had security fixes only since 2025 and reaches end of life in October
+2028. Every one of these gets more expensive after release: once outside labs have results, an
+upgrade that changes outputs breaks their comparisons. With no users yet, now is the cheapest time
+it will ever be.
+
+**Already known about dependencies** (uv resolution of every extras group with the historical pins
+lifted, 2026-09-26):
+- Python 3.13 resolves cleanly for every group, with current releases (torch 2.14, pyannote.audio
+  4, transformers 5, TensorFlow 2.21).
+- Python 3.14 resolves for every group except `face`: deepface needs TensorFlow, which has only a
+  release candidate for 3.14.
+- `openface-test` must stay at `==0.1.13`: every later release pins Pillow 9.4, numpy 1.26 and
+  scipy 1.13, which have to be built from source on 3.13+.
+- pyannote.audio 4 changes the pipeline API, reads audio through torchcodec (FFmpeg shared
+  libraries at runtime) and brings `speaker-diarization-community-1`, the free open-weights
+  successor to `speaker-diarization-3.1` (the paid "precision" models are pyannoteAI's hosted
+  service and stay out: local by default).
+- A newer torch leaves the cu124 wheel index in `[tool.uv.sources]`, which raises the minimum GPU
+  driver.
+
+**Also known about the pipelines** (Hugging Face, 2026-09-26):
+- LAION Empathic-Insight Voice (`laion_voice`): the model repositories are 16 GB (Small) and
+  32 GB (Large), last updated in May 2025, with 1 and 4 downloads in the last 30 days. The face
+  models (`face_laion_clip`) are small (30 MB / 300 MB) but had no downloads in that period. Both
+  look abandoned upstream.
+- deepface (`face_analysis`) is the only reason TensorFlow is in the dependency tree, and so the
+  only thing holding back Python 3.14. Its age and gender outputs say nothing useful about infants.
+- `face_openface3_embedding` installs OpenFace 3 through `openface-test`, a third-party
+  repackaging whose releases after 0.1.13 pin old Pillow, numpy and scipy.
+
+**Solution**, in four steps:
+- [ ] **Pipeline review** (`docs/development/pipeline_review_v1.6.0.md`). Start from what the
+      field asks, not from what we have: caregiver speech, infant vocalisations, who is speaking,
+      faces and expressions, movement, gaze and joint attention, touch. For each question, which
+      tool answers it best today. For each existing pipeline: which question it answers, whether
+      its upstream is maintained, download and install cost, licence, how it does on infants and
+      young children, and overlap with other pipelines. Decide for each: keep, replace, mark
+      experimental, or drop (a dropped pipeline can come back as a v1.7.0 plugin). The review sets
+      the scope of the audit and of Phase 5's model work, and gives Phase 7 its "which pipeline
+      for which question" page. With no users yet, dropping a pipeline breaks no one.
+- [ ] **Dependency audit** (`docs/development/dependency_audit_v1.6.0.md`), for the pipelines the
+      review keeps. For every direct dependency of the core package, each extras group and the
+      viewer (merged in Phase 0): current constraint,
+      latest release, why it is pinned (git history, CHANGELOG), what upgrading changes (API,
+      outputs, install: wheels, CUDA, system libraries), and a decision: upgrade, keep with a
+      stated reason, replace, or drop. Also covers the Python version, the CUDA index and driver
+      floor, Docker base images, Node and the JS package manager, pre-commit hooks and GitHub
+      Actions versions.
+- [ ] **Specs**: one spec-kit spec per coherent change the audit calls for (`/speckit-specify`).
+      Expected, subject to the review and audit: removing dropped pipelines; Python 3.13 (with a
+      3.14 CI job, made required once TensorFlow ships for it, or once deepface is dropped) and the
+      core dependencies; the torch stack and CUDA index; the pyannote.audio 4 migration; the
+      viewer's dependencies.
+- [ ] **Implement** the specs before rc1. Re-baseline the v1.4.x acceptance fixtures once, on
+      purpose, and record the before/after differences on the demo video in the CHANGELOG.
+
+**Library versions vs default models**: this phase upgrades libraries. Switching a pipeline's
+*default model* (for example to `speaker-diarization-community-1`) still waits for the benchmark in
+Phase 5. If a library upgrade can't keep the current default model runnable, the audit says so and
+the spec decides.
+
+**Why second**: the install instructions, tutorials and docs written from Phase 2 onwards name the
+pipelines, the Python version, the extras and the system requirements. Changing those after writing
+the docs means rewriting them.
+
+---
+
+### Phase 2: Clean First Contact
 
 **Problem**: the README and docs are written for developers and have drifted. The README's
 quickstart still installs pipelines with `curl` and says every install needs a restart, both
@@ -109,7 +183,7 @@ say.
 
 ---
 
-### Phase 2: Results Out
+### Phase 3: Results Out
 
 **Problem**: each pipeline writes its own native format (COCO, WebVTT, RTTM, scene JSON). That is
 right for provenance and wrong for analysis: to get one table in R, a researcher has to write a
@@ -118,8 +192,8 @@ parser per pipeline.
 **Solution**:
 - [ ] **Tidy export**: one row per event (video, pipeline, track or person, start, end, label,
       value, confidence, model), as CSV and Parquet, per job and per batch or dataset, from the
-      API, the CLI and a viewer button. This table also feeds the corpus view (Phase 5) and agents
-      (Phase 3).
+      API, the CLI and a viewer button. This table also feeds the corpus view (Phase 6) and agents
+      (Phase 4).
 - [ ] **ELAN export**: `.eaf` with one tier per pipeline track. The viewer already parses `.eaf`
       (`src/lib/parsers/elan.ts`), so this closes the loop with the tool many labs already code in.
 - [ ] **Methods paragraph**: `GET /api/v1/jobs/{id}/methods`, a CLI command and a viewer button.
@@ -130,7 +204,7 @@ parser per pipeline.
 - [ ] Two worked analysis notebooks, one R and one Python, reading the tidy export of the demo
       video.
 
-**→ Release candidate 1 (`v1.6.0rc1`)**: Phases 0–2 done. The pilot starts.
+**→ Release candidate 1 (`v1.6.0rc1`)**: Phases 0–3 done. The pilot starts.
 
 ---
 
@@ -139,12 +213,12 @@ parser per pipeline.
 - [ ] 3–5 labs outside the team (conference contacts first) run it on about ten of their own
       videos, with a concrete ask: tell us where it broke.
 - [ ] Their reports go in the public issue tracker. Label starter tasks `good first issue`.
-- [ ] Pilot feedback reorders Phases 3–6.
+- [ ] Pilot feedback reorders Phases 4–7.
 - [ ] With permission, record who used it and for what, for the JOSS research impact statement.
 
 ---
 
-### Phase 3: Agents
+### Phase 4: Agents
 
 **Problem**: researchers increasingly work alongside an agent of their own (Claude Code, Codex,
 Gemini CLI and others). The REST API is complete but an agent has to discover it from scratch, and
@@ -165,9 +239,9 @@ parts of the CLI still prompt interactively.
 
 ---
 
-### Phase 4: Models
+### Phase 5: Models
 
-#### 4a. Connectors
+#### 5a. Connectors
 
 - [ ] **OpenAI-compatible connector** alongside the Ollama one (`backends: [ollama,
       openai_compatible]`), moved here from v1.7.0. One client covers Ollama, llama.cpp, vLLM,
@@ -179,7 +253,7 @@ parts of the CLI still prompt interactively.
 - [ ] Hosted endpoints are off by default. Enabling one shows a plain warning that frames leave the
       machine; for infant video that is an ethics-approval question.
 
-#### 4b. Benchmark first
+#### 5b. Benchmark first
 
 - [ ] `videoannotator benchmark`: runs chosen pipelines on a benchmark set that has human codes, and
       writes a score table per pipeline and model version.
@@ -187,23 +261,25 @@ parts of the CLI still prompt interactively.
       clip is one. The limit here is data, not code.
 - [ ] A published score for every default model, in the docs.
 
-#### 4c. Refresh defaults (each only if the benchmark agrees)
+#### 5c. Refresh defaults (each only if the benchmark agrees)
 
-- [ ] **Face**: replace the default OpenCV Haar-cascade detector (`face_pipeline.py`,
-      `detector_backend: opencv`) with YuNet or RetinaFace. Turn age and gender off by default:
-      the models were trained on adults and say nothing useful about infants. Choose the emotion
-      model using Uwerikowe et al.'s comparison of facial-emotion models on caregiver–child video.
+- [ ] **Face** (if the Phase 1 review keeps a deepface-based pipeline): replace the default OpenCV
+      Haar-cascade detector (`face_pipeline.py`, `detector_backend: opencv`) with YuNet or
+      RetinaFace. Turn age and gender off by default: the models were trained on adults and say
+      nothing useful about infants. Choose the emotion model using Uwerikowe et al.'s comparison of
+      facial-emotion models on caregiver–child video.
 - [ ] **Speech**: `openai-whisper` (built from source at install) → faster-whisper with
       large-v3-turbo.
-- [ ] **Diarization**: pyannote `speaker-diarization-3.1` → `speaker-diarization-community-1`
-      (pyannote.audio 4), which mainly improves speaker counting and keeps speaker identity
-      consistent across a recording.
+- [ ] **Diarization**: pyannote `speaker-diarization-3.1` → `speaker-diarization-community-1`,
+      which mainly improves speaker counting and keeps speaker identity consistent across a
+      recording. The pyannote.audio 4 library upgrade itself happens in Phase 1.
 - [ ] **Person**: `yolo11n-pose` → `yolo26n-pose`.
-- [ ] **OpenFace 3**: confirm `openface-test` is the maintained distribution.
+- [ ] **OpenFace 3**: confirm `openface-test` is the maintained distribution (the Phase 1
+      audit keeps it at `==0.1.13`).
 
-#### 4d. New pipelines: whichever the pilot labs ask for
+#### 5d. New pipelines: whichever the pilot labs ask for
 
-Candidates, none committed:
+Candidates, none committed (the Phase 1 pipeline review may promote some before the pilot):
 - **Voice Type Classifier**: key child, other child, female adult, male adult. Already standard in
   child-language research.
 - **Gaze target** (Gaze-LLE), for joint attention.
@@ -211,7 +287,7 @@ Candidates, none committed:
 
 ---
 
-### Phase 5: Corpus Overview
+### Phase 6: Corpus Overview
 
 **Problem**: the viewer shows one video at a time. Researchers think in corpora: which videos
 failed, where the pipelines disagree, what the whole dataset looks like.
@@ -227,7 +303,7 @@ failed, where the pipelines disagree, what the whole dataset looks like.
 
 ---
 
-### Phase 6: Docs and Tutorials
+### Phase 7: Docs and Tutorials
 
 - [ ] **Tutorial**: the Peekaboo demo video from start to finish (install, run, review, export,
       analyse in R and Python).
@@ -270,6 +346,9 @@ failed, where the pipelines disagree, what the whole dataset looks like.
       permission).
 - [ ] At least one issue or pull request from outside the team has been resolved or merged.
 - [ ] Changing viewer code cannot ship a stale bundle: CI fails on a mismatch.
+- [ ] Every version constraint in `pyproject.toml` and the viewer's `package.json` has a recorded
+      reason in the dependency audit, and the release supports Python 3.13 (3.14 as soon as
+      TensorFlow does).
 - [ ] Every default model has a published benchmark score, and none changed without one.
 - [ ] Everything the viewer does is available from the CLI with `--json` and through MCP.
 - [ ] The viewer has zero TypeScript errors and no placeholder pages.
@@ -277,6 +356,6 @@ failed, where the pipelines disagree, what the whole dataset looks like.
 
 ---
 
-**Last Updated**: 2026-09-24
+**Last Updated**: 2026-09-26
 **Target Release**: Early 2027, ahead of BCCCD (7–9 Jan 2027)
 **Status**: Planning Phase — Public Release
