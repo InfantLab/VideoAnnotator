@@ -171,7 +171,9 @@ half-built page.
 - [ ] Docs site (mkdocs-material on GitHub Pages) built from `docs/`, archive excluded.
 - [ ] No placeholder pages. The Datasets page says "Coming Soon" behind a disabled button, although
       spec 007's backend shipped in v1.5.0: wire it up or hide it.
-- [ ] Viewer: zero `tsc --noEmit` errors (44 today), with typechecking in CI.
+      (Preset load/save in the job wizard landed in v1.5.0; the Datasets page, saved datasets and
+      import/export from spec 007's viewer handoff are what's left.)
+- [ ] Viewer: zero `tsc --noEmit` errors (24 on 2026-09-26), with typechecking in CI.
 - [ ] Viewer: one function decides which pipeline produced a file. Today there are four
       (`merger.ts`, `fileUtils.ts`, and two arrays in `FileUploader.tsx`) and they disagree.
 - [ ] A structural pass along the one path users take: install → add videos → run → review →
