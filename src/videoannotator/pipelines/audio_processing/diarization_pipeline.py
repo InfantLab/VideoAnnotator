@@ -67,8 +67,10 @@ class DiarizationPipeline(BasePipeline):
 
         try:
             if hf_token:
+                # `use_auth_token`, not `token`: the latter only exists from
+                # pyannote.audio 4.0, and we pin <4.0.
                 self.diarization_model = PyAnnotePipeline.from_pretrained(
-                    self.config["model"], token=hf_token
+                    self.config["model"], use_auth_token=hf_token
                 )
             else:
                 self.diarization_model = PyAnnotePipeline.from_pretrained(

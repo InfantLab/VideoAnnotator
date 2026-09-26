@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from videoannotator.exporters.native_formats import (
     ValidationResult,
     _format_timestamp,
@@ -318,6 +320,7 @@ class TestExportRTTMDiarization:
     """Tests for export_rttm_diarization."""
 
     def test_creates_rttm(self, tmp_path):
+        pytest.importorskip("pyannote.core", reason="requires the `audio` extra")
         segments = [
             {"start": 0.0, "end": 2.0, "speaker_id": "SPEAKER_01"},
             {"start": 2.5, "end": 5.0, "speaker_id": "SPEAKER_02"},
@@ -376,6 +379,7 @@ class TestAutoExportAnnotations:
         assert "textgrid" in result
 
     def test_diarization_exports_rttm(self, tmp_path):
+        pytest.importorskip("pyannote.core", reason="requires the `audio` extra")
         annotations = [
             {"type": "diarization", "start": 0, "end": 2, "speaker_id": "SPK1"},
         ]

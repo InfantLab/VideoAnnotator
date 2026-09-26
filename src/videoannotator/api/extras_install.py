@@ -12,6 +12,7 @@ import importlib
 import importlib.machinery
 import importlib.metadata
 import logging
+import re
 import shutil
 import subprocess
 import sys
@@ -172,7 +173,8 @@ def resolve_install_command(extra_name: str) -> tuple[list[str], Path | None]:
 
     `[tool.uv.sources]` isn't consulted this way. The only source there is
     the cu124 torch index on Linux, and PyPI's Linux torch 2.6.0 wheels are
-    already cu124 builds.
+    already cu124 builds -- which is why `_lock_constraints` drops the lock's
+    `+cu124` local-version labels.
 
     In a source checkout, the group's `uv.lock` versions are passed as
     constraints (`_lock_constraints`), so an install gets what CI tested
@@ -256,8 +258,19 @@ def _lock_constraints(extra_name: str) -> Path | None:
         )
         return None
     path = Path(tempfile.gettempdir()) / f"videoannotator-{extra_name}-constraints.txt"
-    path.write_text(result.stdout)
+    path.write_text(_strip_local_versions(result.stdout))
     return path
+
+
+_LOCAL_VERSION = re.compile(r"^(\S+==[^\s;+]+)\+[^\s;]+", re.MULTILINE)
+
+
+def _strip_local_versions(constraints: str) -> str:
+    """`torch==2.6.0+cu124` -> `torch==2.6.0`. The lock resolves torch from
+    the cu124 index (`[tool.uv.sources]`), but the install only searches
+    PyPI, which never publishes local versions -- so a `+cu124` pin makes
+    every torch-using group unsatisfiable on Linux."""
+    return _LOCAL_VERSION.sub(r"\1", constraints)
 
 
 def _installed_distributions() -> tuple[dict[str, str], dict[str, set[str]]]:

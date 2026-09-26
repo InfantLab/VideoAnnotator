@@ -7,6 +7,7 @@ always mocked, even in the run_install tests below.
 
 import subprocess
 import threading
+from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -37,7 +38,7 @@ def _fake_dist(requires):
 
 
 class TestExtraRequirements:
-    REQUIRES = [
+    REQUIRES: ClassVar[list[str]] = [
         "fastapi>=0.115.0",
         'torch==2.6.0; extra == "scene"',
         'scenedetect>=0.6.3; extra == "scene"',
@@ -159,6 +160,31 @@ class TestLockConstraints:
         assert args[:2] == ["uv", "export"]
         assert "--frozen" in args
         assert args[args.index("--extra") + 1] == "face-openface3"
+
+    def test_local_version_labels_are_dropped(self, tmp_path):
+        exported = subprocess.CompletedProcess(
+            [],
+            0,
+            "torch==2.6.0 ; sys_platform != 'linux'\n"
+            "torch==2.6.0+cu124 ; sys_platform == 'linux'\n"
+            "    # via torchaudio\n"
+            "torchaudio==2.6.0+cu124\n",
+            "",
+        )
+        with (
+            patch.object(
+                extras_install, "_source_checkout_root", return_value=tmp_path
+            ),
+            patch.object(extras_install.shutil, "which", return_value="/usr/bin/uv"),
+            patch.object(extras_install.subprocess, "run", return_value=exported),
+        ):
+            path = extras_install._lock_constraints("audio")
+        assert path.read_text() == (
+            "torch==2.6.0 ; sys_platform != 'linux'\n"
+            "torch==2.6.0 ; sys_platform == 'linux'\n"
+            "    # via torchaudio\n"
+            "torchaudio==2.6.0\n"
+        )
 
     def test_no_lockfile_means_no_constraints(self):
         with patch.object(extras_install, "_source_checkout_root", return_value=None):

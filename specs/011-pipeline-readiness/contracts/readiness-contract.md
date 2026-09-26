@@ -27,7 +27,7 @@ Each pipeline entry gains:
     "install_job_id": null,          // set while state == "installing"
     "blockers": [
       {
-        "kind": "secret",            // secret | service | import_error
+        "kind": "secret",            // secret | service | import_error | licence
         "name": "HUGGINGFACE_TOKEN",
         "message": "A Hugging Face access token is required to download the pyannote models.",
         "help_url": "https://huggingface.co/settings/tokens"
@@ -66,6 +66,10 @@ Invariants:
   `help_url` and resolving it is an operator task (the viewer shows it, doesn't offer an action).
 - Blocker `kind: "service"` with `name: "ollama"` — the viewer links to its existing Ollama
   diagnostics/model UI (spec 009); no new endpoint.
+- `licence` is checked against Hugging Face with the server's token (cached; skipped for models
+  already in the local cache). Not accepted by the token's account → a `licence` **blocker**
+  whose `message` names the account; accepted → nothing; Hub unreachable or no token → a
+  `licence` **note**, as before. A token the Hub rejects → a `secret` blocker instead.
 
 Clients MUST tolerate unknown `state`, `next_action` or `kind` values (render as a generic "not
 ready" with the `message`), so later specs can add states without a viewer release.

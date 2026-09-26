@@ -18,8 +18,11 @@ outputs:
 config_schema:
   model_path:
     type: string
-    default: models/face/openface3.onnx
-    description: Path to OpenFace3 ONNX model
+    default: ""
+    description: >
+      Path to a custom RetinaFace face-detector checkpoint (.pth). Leave empty
+      to use ./weights if present, else the nutPace/openface_weights model,
+      downloaded on first run.
   batch_size:
     type: integer
     default: 32
@@ -36,3 +39,9 @@ stability: experimental
 backends:
   - onnx
   - pytorch
+
+# spec 011: RetinaFace + Landmark_98 + MTL_backbone from the (ungated) weights repo.
+weights:
+  - id: nutPace/openface_weights
+    approx_mb: 282
+    cache: huggingface

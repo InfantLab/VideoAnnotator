@@ -112,10 +112,18 @@ def create_admin_user(
 
     db = SessionLocal()
     try:
-        # Check if admin user already exists
-        existing_user = UserCRUD.get_by_username(db, username)
+        # Any existing admin counts, not just one named `username`: on
+        # restart, start_server.sh skips its prompts and passes the default
+        # admin identity, so a username-only check minted a second admin
+        # (plus key) whenever the first-run admin had a custom name.
+        existing_user = UserCRUD.get_by_username(db, username) or (
+            db.query(User)
+            .filter(User.is_admin.is_(True))
+            .order_by(User.created_at)
+            .first()
+        )
         if existing_user:
-            logger.info(f"Admin user '{username}' already exists")
+            logger.info(f"Admin user '{existing_user.username}' already exists")
             # Force attributes to load before the session closes below — the
             # caller reads user.username/user.email after this function
             # returns, and a closed session raises DetachedInstanceError on

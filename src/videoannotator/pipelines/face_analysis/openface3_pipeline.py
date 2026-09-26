@@ -96,6 +96,23 @@ def _lazy_import_openface():
     return OPENFACE3_AVAILABLE
 
 
+OPENFACE_WEIGHTS_REPO = "nutPace/openface_weights"
+
+
+def _weight_path(filename: str) -> str:
+    """`./weights/<filename>` if present (where `openface download` puts
+    them), else the Hugging Face cache copy, downloaded on first use. The
+    weights repo isn't gated, so no token is needed; before this the pipeline
+    only ever looked in `./weights`, relative to the server's cwd, and nothing
+    put them there."""
+    local = Path("weights") / filename
+    if local.is_file():
+        return str(local)
+    from huggingface_hub import hf_hub_download
+
+    return hf_hub_download(OPENFACE_WEIGHTS_REPO, filename)
+
+
 class OpenFace3Pipeline(BasePipeline):
     """OpenFace 3.0 face analysis pipeline using COCO format.
 
@@ -187,8 +204,8 @@ class OpenFace3Pipeline(BasePipeline):
             self.logger.info(f"Initializing OpenFace 3.0 on device: {device}")
 
             # Initialize face detector with model path
-            face_detector_path = (
-                self.config.get("model_path") or "./weights/Alignment_RetinaFace.pth"
+            face_detector_path = self.config.get("model_path") or _weight_path(
+                "Alignment_RetinaFace.pth"
             )
             self.face_detector = FaceDetector(
                 model_path=face_detector_path,
@@ -202,8 +219,8 @@ class OpenFace3Pipeline(BasePipeline):
             if "/" in model_type or "\\" in model_type:
                 landmark_model_path = model_type
             else:
-                landmark_model_path = (
-                    f"./weights/Landmark_{model_type.split('_')[0]}.pkl"
+                landmark_model_path = _weight_path(
+                    f"Landmark_{model_type.split('_')[0]}.pkl"
                 )
             # Configure device IDs for CUDA
             device_ids = [0] if device == "cuda" else [-1]
@@ -221,7 +238,7 @@ class OpenFace3Pipeline(BasePipeline):
                     self.config["enable_emotions"],
                 ]
             ):
-                mtl_model_path = "./weights/MTL_backbone.pth"
+                mtl_model_path = _weight_path("MTL_backbone.pth")
                 self.multitask_predictor = MultitaskPredictor(
                     model_path=mtl_model_path, device=device
                 )

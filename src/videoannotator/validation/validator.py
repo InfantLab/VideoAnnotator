@@ -126,19 +126,17 @@ class ConfigValidator:
         errors: list[FieldError] = []
         warnings: list[FieldWarning] = []
 
-        # Check if pipeline is known
-        if pipeline_name not in self.PIPELINE_REQUIREMENTS:
+        requirements = self._requirements_for(pipeline_name)
+        if requirements is None:
             errors.append(
                 FieldError(
                     field="pipeline",
                     message=f"Unknown pipeline '{pipeline_name}'",
                     code="PIPELINE_NOT_FOUND",
-                    hint=f"Available pipelines: {', '.join(self.PIPELINE_REQUIREMENTS.keys())}",
+                    hint=f"Available pipelines: {', '.join(self._known_pipelines())}",
                 )
             )
             return ValidationResult(valid=False, errors=errors, warnings=warnings)
-
-        requirements = self.PIPELINE_REQUIREMENTS[pipeline_name]
 
         # Check required fields
         for required_field in requirements["required"]:
@@ -205,6 +203,13 @@ class ConfigValidator:
                             )
                         )
 
+        # Job submission passes the whole job config, keyed by pipeline name.
+        section = config.get(pipeline_name)
+        own = section if isinstance(section, dict) else config
+        base_url_error = _base_url_error(pipeline_name, own.get("base_url"))
+        if base_url_error:
+            errors.append(base_url_error)
+
         # Check for unknown fields (warnings, not errors)
         all_known_fields = requirements["required"] + requirements["optional"]
         for field in config:
@@ -220,6 +225,23 @@ class ConfigValidator:
         return ValidationResult(
             valid=len(errors) == 0, errors=errors, warnings=warnings
         )
+
+    def _requirements_for(self, pipeline_name: str) -> dict[str, list[str]] | None:
+        """The hand-written rules above, else the registry's config schema.
+        Pipelines added since v1.3.0 (speaker_diarization, speech_recognition,
+        face_openface3_embedding, ...) exist only in the registry, and job
+        submission rejected them as unknown."""
+        if pipeline_name in self.PIPELINE_REQUIREMENTS:
+            return self.PIPELINE_REQUIREMENTS[pipeline_name]
+        meta = _registry().get(pipeline_name)
+        if meta is None:
+            return None
+        return {"required": [], "optional": list(meta.config_schema)}
+
+    def _known_pipelines(self) -> list[str]:
+        names = list(self.PIPELINE_REQUIREMENTS)
+        names += [m.name for m in _registry().list() if m.name not in names]
+        return names
 
     def _validate_nested(
         self, parent_path: str, config: dict[str, Any]
@@ -299,3 +321,38 @@ class ConfigValidator:
         for pipeline_name, config in configs.items():
             results[pipeline_name] = self.validate(pipeline_name, config)
         return results
+
+
+def _base_url_error(pipeline_name: str, value: Any) -> FieldError | None:
+    """A non-empty `base_url` must be an http(s) URL. Checked here so a bad
+    one fails at submission, not minutes into the job as an opaque client
+    error (e.g. a viewer that sent the prompt text as the URL)."""
+    if value in (None, ""):
+        return None
+    from urllib.parse import urlsplit
+
+    ok = isinstance(value, str) and not any(c.isspace() for c in value)
+    if ok:
+        try:
+            parts = urlsplit(value)
+            _ = parts.port  # raises on a non-numeric or out-of-range port
+            ok = parts.scheme in ("http", "https") and bool(parts.hostname)
+        except ValueError:
+            ok = False
+    if ok:
+        return None
+    shown = value if len(str(value)) <= 60 else f"{str(value)[:57]}..."
+    return FieldError(
+        field=f"{pipeline_name}.base_url",
+        message=f"base_url {shown!r} is not an http(s) URL",
+        code="INVALID_URL",
+        hint="Use e.g. http://localhost:11434, or leave it empty for the server default",
+    )
+
+
+def _registry():
+    from ..registry.pipeline_registry import get_registry
+
+    registry = get_registry()
+    registry.load()
+    return registry

@@ -160,6 +160,9 @@ class TestOllamaDiagnostics:
     def test_reachable_server_reports_reachable_and_models(self):
         from unittest.mock import patch
 
+        import pytest
+
+        pytest.importorskip("ollama", reason="requires the `llm` extra")
         from videoannotator.diagnostics import diagnose_ollama
 
         with patch(
@@ -177,6 +180,9 @@ class TestOllamaDiagnostics:
         """US3 acceptance scenario 2."""
         from unittest.mock import patch
 
+        import pytest
+
+        pytest.importorskip("ollama", reason="requires the `llm` extra")
         from videoannotator.diagnostics import diagnose_ollama
         from videoannotator.pipelines.vlm_annotation.ollama_client import (
             OllamaUnavailableError,
@@ -198,6 +204,9 @@ class TestOllamaDiagnostics:
         distinguishable, not one generic failure."""
         from unittest.mock import patch
 
+        import pytest
+
+        pytest.importorskip("ollama", reason="requires the `llm` extra")
         from videoannotator.diagnostics import diagnose_ollama
 
         with patch(

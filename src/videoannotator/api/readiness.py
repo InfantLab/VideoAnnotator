@@ -10,20 +10,27 @@ derived per request and never stored.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.metadata
 import os
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
 
 from packaging.requirements import Requirement
 
-from ..config_env import default_ollama_base_url
+from ..config_env import default_ollama_base_url, huggingface_token
 from ..registry import pipeline_loader
 from ..registry.pipeline_loader import extras_available
-from ..registry.pipeline_registry import PipelineMetadata, WeightSpec
+from ..registry.pipeline_registry import (
+    PipelineMetadata,
+    SetupRequirement,
+    WeightSpec,
+)
 from . import extras_install
 
 # Hand-maintained, approximate download sizes (MB) for each extras group's own
@@ -59,6 +66,16 @@ _OLLAMA_TIMEOUT_S = 1
 _ollama_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 _ollama_lock = threading.Lock()
 _ollama_refreshing: set[str] = set()
+
+# Whether the configured Hugging Face token works and its account has accepted
+# each gated model's licence. Cached like Ollama; a failing result expires
+# sooner so accepting a licence or fixing the token is noticed within a minute.
+_HF_OK_TTL_S = 600.0
+_HF_RETRY_TTL_S = 60.0
+_HF_TIMEOUT_S = 5
+_hf_cache: dict[tuple[str, tuple[str, ...]], tuple[float, dict[str, Any]]] = {}
+_hf_lock = threading.Lock()
+_hf_refreshing: set[tuple[str, tuple[str, ...]]] = set()
 
 
 def _extra_requires_torch(extra: str) -> bool:
@@ -126,6 +143,147 @@ def _ollama_status(base_url: str) -> dict[str, Any]:
             target=_check_ollama, args=(base_url,), name="ollama-readiness", daemon=True
         ).start()
     return cached[1]
+
+
+def _hf_get(path: str, token: str) -> tuple[int | None, bytes]:
+    """GET a Hub API path; `(status, body)`, status None if unreachable.
+    Plain urllib, not huggingface_hub: that's an `audio` dependency, and its
+    `auth_check` has no timeout."""
+    endpoint = os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/")
+    request = urllib.request.Request(
+        endpoint + path, headers={"Authorization": f"Bearer {token}"}
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=_HF_TIMEOUT_S) as response:
+            return response.status, response.read()
+    except urllib.error.HTTPError as exc:
+        return exc.code, b""
+    except (urllib.error.URLError, OSError, ValueError):
+        return None, b""
+
+
+def _check_hf_access(token: str, repos: tuple[str, ...]) -> dict[str, Any]:
+    """`token`: ok | invalid | unknown; `repos[r]`: ok | not_accepted |
+    unknown; `user`: the token's account name, when known."""
+    import json
+
+    status: dict[str, Any] = {
+        "token": "unknown",
+        "user": None,
+        "repos": dict.fromkeys(repos, "unknown"),
+    }
+    code, body = _hf_get("/api/whoami-v2", token)
+    if code == 401:
+        status["token"] = "invalid"
+    elif code == 200:
+        status["token"] = "ok"
+        try:
+            status["user"] = json.loads(body).get("name")
+        except (ValueError, AttributeError):
+            pass
+        for repo in repos:
+            code, _ = _hf_get(f"/api/models/{repo}/auth-check", token)
+            if code == 200:
+                status["repos"][repo] = "ok"
+            elif code in (401, 403):
+                status["repos"][repo] = "not_accepted"
+    key = (hashlib.sha256(token.encode()).hexdigest(), repos)
+    with _hf_lock:
+        _hf_cache[key] = (time.monotonic(), status)
+        _hf_refreshing.discard(key)
+    return status
+
+
+def _hf_access(token: str, repos: tuple[str, ...]) -> dict[str, Any]:
+    """Cached `_check_hf_access`, refreshed in the background once stale
+    (same scheme as `_ollama_status`)."""
+    key = (hashlib.sha256(token.encode()).hexdigest(), repos)
+    with _hf_lock:
+        cached = _hf_cache.get(key)
+        all_ok = cached is not None and (
+            cached[1]["token"] == "ok"
+            and all(v == "ok" for v in cached[1]["repos"].values())
+        )
+        ttl = _HF_OK_TTL_S if all_ok else _HF_RETRY_TTL_S
+        stale = cached is None or time.monotonic() - cached[0] >= ttl
+        start_refresh = stale and cached is not None and key not in _hf_refreshing
+        if start_refresh:
+            _hf_refreshing.add(key)
+    if cached is None:
+        return _check_hf_access(token, repos)
+    if start_refresh:
+        threading.Thread(
+            target=_check_hf_access,
+            args=(token, repos),
+            name="hf-readiness",
+            daemon=True,
+        ).start()
+    return cached[1]
+
+
+def _licence_blockers_and_notes(
+    licences: list[SetupRequirement],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Check gated-model licences against the configured token. Models
+    already in the local cache were evidently accepted, so they're skipped
+    without touching the network."""
+    pending = [r for r in licences if not _hf_cached(r.name)]
+    token = huggingface_token()
+    if not pending or not token:
+        # No token: the `secret` blocker already says so; keep the licence
+        # reminders so they can be done at the same time.
+        return [], [_licence_item(r, "unchecked") for r in pending]
+
+    access = _hf_access(token, tuple(r.name for r in pending))
+    if access["token"] == "invalid":
+        return [
+            {
+                "kind": "secret",
+                "name": "HUGGINGFACE_TOKEN",
+                "message": (
+                    "HUGGINGFACE_TOKEN is set, but Hugging Face rejects it (expired, "
+                    "revoked or mis-pasted). Create a new token, put it in the "
+                    "server's environment (e.g. .env) and restart the server."
+                ),
+                "help_url": "https://huggingface.co/settings/tokens",
+            }
+        ], []
+    blockers, notes = [], []
+    for req in pending:
+        state = access["repos"].get(req.name, "unknown")
+        if state == "not_accepted":
+            blockers.append(_licence_item(req, state, access["user"]))
+        elif state != "ok":
+            notes.append(_licence_item(req, state))
+    return blockers, notes
+
+
+def _licence_item(
+    req: SetupRequirement, state: str, user: str | None = None
+) -> dict[str, Any]:
+    account = f"Hugging Face account {user!r}" if user else "Hugging Face account"
+    if state == "not_accepted":
+        message = (
+            f"The {account} that owns HUGGINGFACE_TOKEN hasn't accepted the "
+            f"{req.name} licence. Open the model page signed in as that account, "
+            "accept it, then check again."
+        )
+    elif state == "unknown":
+        message = (
+            f"Couldn't reach Hugging Face to check the {req.name} licence. Make "
+            "sure the account that owns HUGGINGFACE_TOKEN has accepted it."
+        )
+    else:
+        message = req.description or "Accept this model's licence on Hugging Face."
+    item: dict[str, Any] = {
+        "kind": "licence",
+        "name": req.name,
+        "message": message,
+        "help_url": req.help_url,
+    }
+    if state != "not_accepted":
+        item["approx_mb"] = None
+    return item
 
 
 def _hf_cached(repo_id: str) -> bool:
@@ -224,18 +382,14 @@ def _blockers_and_notes(
                         "help_url": req.help_url,
                     }
                 )
-        elif req.kind == "licence":
-            notes.append(
-                {
-                    "kind": "licence",
-                    "name": req.name,
-                    "message": req.description
-                    or "Accept this model's licence on Hugging Face.",
-                    "help_url": req.help_url,
-                    "approx_mb": None,
-                }
-            )
+        # `licence` is handled below, all of a pipeline's licences at once.
         # Unknown kinds are ignored here rather than blocking a pipeline.
+
+    licence_blockers, licence_notes = _licence_blockers_and_notes(
+        [r for r in meta.requires_setup if r.kind == "licence"]
+    )
+    blockers.extend(licence_blockers)
+    notes.extend(licence_notes)
 
     for weight in meta.weights:
         if not _weights_cached(weight):
@@ -309,6 +463,10 @@ def warm_up() -> None:
                 r.kind == "service" and r.name == "ollama" for r in meta.requires_setup
             ):
                 _ollama_status(_ollama_base_url(meta))
+            if extras_available(meta.requires_extras):
+                _licence_blockers_and_notes(
+                    [r for r in meta.requires_setup if r.kind == "licence"]
+                )
     except Exception:  # best-effort; a listing will check again
         pass
 

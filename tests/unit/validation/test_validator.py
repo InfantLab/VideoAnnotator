@@ -1,5 +1,7 @@
 """Unit tests for configuration validator."""
 
+import pytest
+
 from videoannotator.validation.models import FieldError, FieldWarning, ValidationResult
 from videoannotator.validation.validator import ConfigValidator
 
@@ -130,6 +132,55 @@ class TestConfigValidator:
         assert result.errors[0].code == "PIPELINE_NOT_FOUND"
         assert "nonexistent_pipeline" in result.errors[0].message
         assert result.errors[0].hint is not None
+
+    def test_every_registered_pipeline_is_known(self):
+        """Job submission validates every selected pipeline; ones added after
+        v1.3.0 exist only in the registry and were rejected as unknown."""
+        from videoannotator.registry.pipeline_registry import get_registry
+
+        registry = get_registry()
+        registry.load()
+        names = [m.name for m in registry.list()]
+        assert "speaker_diarization" in names
+        for name in names:
+            result = self.validator.validate(name, {})
+            assert result.valid, (name, result.errors)
+
+    def test_registry_only_pipeline_uses_its_config_schema(self):
+        result = self.validator.validate("speaker_diarization", {"not_a_real_field": 1})
+        assert result.valid
+        assert [w.field for w in result.warnings] == [
+            "speaker_diarization.not_a_real_field"
+        ]
+
+    @pytest.mark.parametrize(
+        "url", ["", None, "http://localhost:11434", "https://ollama.example.org"]
+    )
+    def test_base_url_accepts_urls_and_empty(self, url):
+        assert self.validator.validate("vlm_annotation", {"base_url": url}).valid
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "Count the number of people. Return JSON count: 2, child: True",
+            "localhost:11434",
+            "http://localhost:notaport",
+            "ftp://host",
+        ],
+    )
+    def test_base_url_rejects_non_urls(self, url):
+        result = self.validator.validate("vlm_annotation", {"base_url": url})
+        assert not result.valid
+        assert result.errors[0].code == "INVALID_URL"
+        assert result.errors[0].field == "vlm_annotation.base_url"
+
+    def test_base_url_checked_in_a_job_config_keyed_by_pipeline(self):
+        config = {"vlm_annotation": {"prompt": "p", "base_url": "not a url"}}
+        results = self.validator.validate_batch(
+            {"vlm_annotation": config, "speaker_diarization": config}
+        )
+        assert not results["vlm_annotation"].valid
+        assert results["speaker_diarization"].valid
 
     def test_unknown_field_warning(self):
         """Test unknown field generates warning."""

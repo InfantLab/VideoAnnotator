@@ -57,7 +57,14 @@ def _clean(monkeypatch):
     pipeline_loader.clear_import_errors()
     readiness._ollama_cache.clear()
     readiness._ollama_refreshing.clear()
-    with patch.object(readiness, "extras_available", return_value=True):
+    readiness._hf_cache.clear()
+    readiness._hf_refreshing.clear()
+    # Never reach the real Hub: by default it looks unreachable.
+    with (
+        patch.object(readiness, "extras_available", return_value=True),
+        patch.object(readiness, "_hf_get", return_value=(None, b"")),
+        patch.object(readiness, "_hf_cached", return_value=False),
+    ):
         yield
     extras_install._in_flight.clear()
     extras_install._restart_pending_extras.clear()
@@ -112,11 +119,12 @@ class TestStates:
         assert r["state"] == "ready"
         assert [n["kind"] for n in r["notes"]] == ["licence"]
 
-    def test_licence_is_a_note_never_a_blocker(self, monkeypatch):
+    def test_unverifiable_licence_is_a_note(self, monkeypatch):
         monkeypatch.setenv("HUGGINGFACE_TOKEN", "x")
         r = readiness.pipeline_readiness(_meta(setup=[HF_SECRET, LICENCE]))
         assert r["state"] == "ready" and r["next_action"] == "none"
         assert r["notes"][0]["help_url"].endswith("speaker-diarization-3.1")
+        assert "HUGGINGFACE_TOKEN" in r["notes"][0]["message"]
 
     def test_import_error_blocks(self):
         pipeline_loader._import_errors["speaker_diarization"] = (
@@ -147,6 +155,87 @@ class TestStates:
         with patch.object(readiness, "_weights_cached", return_value=True):
             r = readiness.pipeline_readiness(_meta(weights=[weight]))
         assert r["notes"] == []
+
+
+SEGMENTATION = SetupRequirement(
+    kind="licence",
+    name="pyannote/segmentation-3.0",
+    help_url="https://huggingface.co/pyannote/segmentation-3.0",
+)
+
+
+def _hub(whoami=200, accepted=()):
+    def get(path, token):
+        if path == "/api/whoami-v2":
+            return whoami, b'{"name": "someone"}'
+        repo = path.removeprefix("/api/models/").removesuffix("/auth-check")
+        return (200 if repo in accepted else 403), b""
+
+    return get
+
+
+class TestHuggingFaceLicences:
+    @pytest.fixture(autouse=True)
+    def _token(self, monkeypatch):
+        monkeypatch.setenv("HUGGINGFACE_TOKEN", "hf_x")
+
+    def _readiness(self):
+        return readiness.pipeline_readiness(
+            _meta(setup=[HF_SECRET, LICENCE, SEGMENTATION])
+        )
+
+    def test_rejected_token_blocks_and_says_so(self):
+        with patch.object(readiness, "_hf_get", side_effect=_hub(whoami=401)):
+            r = self._readiness()
+        assert r["state"] == "needs_setup"
+        [blocker] = r["blockers"]
+        assert blocker["kind"] == "secret"
+        assert "rejects it" in blocker["message"]
+        assert r["notes"] == []
+
+    def test_unaccepted_licence_blocks_naming_the_tokens_account(self):
+        accepted = {"pyannote/speaker-diarization-3.1"}
+        with patch.object(readiness, "_hf_get", side_effect=_hub(accepted=accepted)):
+            r = self._readiness()
+        assert r["state"] == "needs_setup"
+        [blocker] = r["blockers"]
+        assert blocker["kind"] == "licence"
+        assert blocker["name"] == "pyannote/segmentation-3.0"
+        assert "'someone'" in blocker["message"]
+        assert "HUGGINGFACE_TOKEN" in blocker["message"]
+
+    def test_accepted_licences_say_nothing(self):
+        accepted = {"pyannote/speaker-diarization-3.1", "pyannote/segmentation-3.0"}
+        with patch.object(readiness, "_hf_get", side_effect=_hub(accepted=accepted)):
+            r = self._readiness()
+        assert r["state"] == "ready"
+        assert r["blockers"] == [] and r["notes"] == []
+
+    def test_cached_models_skip_the_network(self):
+        with (
+            patch.object(readiness, "_hf_cached", return_value=True),
+            patch.object(readiness, "_hf_get") as get,
+        ):
+            r = self._readiness()
+        get.assert_not_called()
+        assert r["state"] == "ready" and r["notes"] == []
+
+    def test_checks_are_cached(self):
+        with patch.object(readiness, "_hf_get", side_effect=_hub()) as get:
+            self._readiness()
+            calls = get.call_count
+            self._readiness()
+        assert get.call_count == calls
+
+    def test_no_token_keeps_licence_reminders_next_to_the_secret_blocker(
+        self, monkeypatch
+    ):
+        monkeypatch.delenv("HUGGINGFACE_TOKEN")
+        with patch.object(readiness, "_hf_get") as get:
+            r = self._readiness()
+        get.assert_not_called()
+        assert [b["kind"] for b in r["blockers"]] == ["secret"]
+        assert [n["kind"] for n in r["notes"]] == ["licence", "licence"]
 
 
 class TestOllama:

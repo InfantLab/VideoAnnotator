@@ -6,6 +6,8 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
+pytest.importorskip("cv2", reason="requires the `person` extra")
+
 from videoannotator.pipelines.person_tracking.person_pipeline import (
     PersonTrackingPipeline,
 )

@@ -114,6 +114,7 @@ class TestBatchOrchestratorPipelineManagement:
 
     def test_get_available_pipelines(self):
         """Test getting available pipeline names."""
+        pytest.importorskip("scenedetect", reason="requires the `scene` extra")
         # The orchestrator should have pipeline classes imported
         available = list(self.orchestrator.pipeline_classes.keys())
         assert len(available) > 0
