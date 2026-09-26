@@ -32,7 +32,7 @@ admin by default):
 3. When it finishes, Face Analysis is selectable, either immediately or after one click on
    **Restart server** and a short wait handled by the viewer.
 4. Select it, finish the wizard, and the job completes.
-5. Repeat for Speaker Diarization on a server with `HF_AUTH_TOKEN` in its container env. Without
+5. Repeat for Speaker Diarization on a server with `HUGGINGFACE_TOKEN` in its container env. Without
    it, the card says what to set; with it, it's Ready with a reminder to accept the model licence.
 
 No terminal at any point. Both repos' work is done only when this passes against the viewer build

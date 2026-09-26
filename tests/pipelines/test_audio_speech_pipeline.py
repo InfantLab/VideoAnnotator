@@ -48,7 +48,7 @@ class TestDiarizationPipeline:
 
     def test_diarization_config_token_from_env(self):
         """Test that config picks up token from environment."""
-        with patch.dict("os.environ", {"HF_AUTH_TOKEN": "env_token"}, clear=False):
+        with patch.dict("os.environ", {"HUGGINGFACE_TOKEN": "env_token"}, clear=False):
             config = {}
             pipeline = DiarizationPipeline(config)
 
@@ -78,7 +78,7 @@ class TestDiarizationPipeline:
 
         # Patch environment to use fake token
         with unittest_mock.patch.dict(
-            os.environ, {"HF_AUTH_TOKEN": "FAKE_TOKEN_FOR_TESTING"}
+            os.environ, {"HUGGINGFACE_TOKEN": "FAKE_TOKEN_FOR_TESTING"}
         ):
             # Mock PyAnnote pipeline
             mock_pipeline = Mock()

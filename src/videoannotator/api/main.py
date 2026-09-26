@@ -26,11 +26,15 @@ API_VERSION = videoannotator_version
 
 try:
     # Load environment variables from .env early (best-effort)
-    from dotenv import load_dotenv
+    from ..config_env import load_env_file
 
-    load_dotenv()
+    load_env_file()
 except Exception:
     pass
+
+
+# Logging configuration is handled by entrypoints; this module uses the shared logger.
+logger = get_logger("api")
 
 
 # Apply SciPy compatibility patch for OpenFace 3.0 before any pipeline imports
@@ -40,26 +44,19 @@ def apply_scipy_compatibility_patch():
         import scipy.integrate
 
         if not hasattr(scipy.integrate, "simps"):
-            import logging
-
-            logging.info(
+            logger.info(
                 "Applying scipy.integrate.simps compatibility patch for OpenFace 3.0"
             )
             scipy.integrate.simps = scipy.integrate.simpson
-            logging.info("Successfully patched scipy.integrate.simps")
+            logger.info("Successfully patched scipy.integrate.simps")
     except ImportError:
         pass  # SciPy not available
     except Exception as e:
-        import logging
-
-        logging.warning(f"Failed to apply scipy compatibility patch: {e}")
+        logger.warning(f"Failed to apply scipy compatibility patch: {e}")
 
 
 # Apply patch early
 apply_scipy_compatibility_patch()
-
-# Logging configuration is handled by entrypoints; this module uses the shared logger.
-logger = get_logger("api")
 
 
 @asynccontextmanager

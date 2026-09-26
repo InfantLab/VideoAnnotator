@@ -268,3 +268,19 @@ class TestDiagnosticsIntegration:
             result = diag_func()
             if result["errors"]:
                 assert result["status"] == "error"
+
+
+class TestOllamaClientLiveInstall:
+    def test_client_class_resolved_per_call_not_at_import(self):
+        """ollama_client is imported at server startup; if `llm` is installed
+        live afterwards, a module-level `Client = None` never recovers."""
+        from unittest.mock import patch
+
+        import pytest
+
+        from videoannotator.pipelines.vlm_annotation import ollama_client
+
+        pytest.importorskip("ollama")
+        with patch.dict("sys.modules", {"ollama": None}):
+            assert ollama_client._ollama_client_class() is None
+        assert ollama_client._ollama_client_class() is not None

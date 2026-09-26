@@ -65,7 +65,7 @@ class PipelineConfigField:
 class SetupRequirement:
     """Something a pipeline needs beyond its Python packages (spec 011 FR-010).
 
-    `kind` is `secret` (an environment variable, e.g. HF_AUTH_TOKEN; `aliases`
+    `kind` is `secret` (an environment variable, e.g. HUGGINGFACE_TOKEN; `aliases`
     are other variable names the pipeline also accepts), `service` (e.g.
     ollama) or `licence` (a model licence to accept; can't be checked
     locally, so only ever reported as a note).

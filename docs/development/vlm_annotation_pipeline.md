@@ -109,7 +109,7 @@ by pipeline name: `{"vlm_annotation": {"prompt": "...", ...}}`.
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `prompt` | string | Irene's `maternal_perspective` touch-detection prompt | Applied identically and independently to every sample point |
-| `base_url` | string | `http://127.0.0.1:11434` | Local Ollama server |
+| `base_url` | string | `""` (server's `OLLAMA_BASE_URL`, else `http://127.0.0.1:11434`) | Ollama server. The devcontainer and `docker-compose.yml` set `OLLAMA_BASE_URL=http://host.docker.internal:11434` so a server in a container reaches Ollama on the host |
 | `model` | string | `qwen3.5:9b` | Must already be pulled (`ollama pull <name>`) — nothing is auto-downloaded |
 | `sampling_mode` | string | `single_frame` | `single_frame` or `frame_burst` |
 | `frame_interval_sec` | float | `5.0` | Seconds between sample points |

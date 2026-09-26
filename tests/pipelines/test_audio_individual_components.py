@@ -40,7 +40,7 @@ class TestDiarizationPipeline:
 
     def test_diarization_config_token_from_env(self):
         """Test that config picks up token from environment."""
-        with patch.dict("os.environ", {"HF_AUTH_TOKEN": "env_token"}, clear=False):
+        with patch.dict("os.environ", {"HUGGINGFACE_TOKEN": "env_token"}, clear=False):
             config = {}
             pipeline = DiarizationPipeline(config)
 
@@ -83,11 +83,7 @@ class TestDiarizationPipeline:
         assert called_args[0] == "pyannote/speaker-diarization-3.1"
         import os
 
-        expected_token = (
-            os.environ.get("HF_AUTH_TOKEN")
-            or os.environ.get("HUGGINGFACE_TOKEN")
-            or "FAKE_TOKEN_FOR_TESTING"
-        )
+        expected_token = os.environ.get("HUGGINGFACE_TOKEN") or "FAKE_TOKEN_FOR_TESTING"
         assert called_kwargs["token"] == expected_token
 
         pipeline.cleanup()

@@ -15,6 +15,8 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from pydantic import BaseModel
 
+from ...config_env import default_ollama_base_url
+from ...diagnostics.ollama import unreachable_hint
 from ...pipelines.vlm_annotation.ollama_client import (
     OllamaUnavailableError,
     OllamaVLMClient,
@@ -40,8 +42,6 @@ logger = logging.getLogger("videoannotator.api")
 
 router = APIRouter()
 
-DEFAULT_BASE_URL = "http://127.0.0.1:11434"
-
 
 class VlmModelsResponse(BaseModel):
     base_url: str
@@ -60,12 +60,13 @@ researcher needs to tell apart, not one generic failure (FR-005).
 """,
 )
 async def list_vlm_models(
-    base_url: str = DEFAULT_BASE_URL,
+    base_url: str | None = None,
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> VlmModelsResponse:
     """List models pulled on the configured Ollama server."""
     if not extras_available(VLM_REQUIRES_EXTRAS):
         raise PipelineUnavailableException("vlm_annotation", VLM_REQUIRES_EXTRAS)
+    base_url = base_url or default_ollama_base_url()
 
     try:
         client = OllamaVLMClient(base_url=base_url, timeout=10)
@@ -75,7 +76,7 @@ async def list_vlm_models(
             status_code=503,
             code="OLLAMA_UNREACHABLE",
             message=f"Cannot reach Ollama server at {base_url}",
-            hint=str(e),
+            hint=f"{e} {unreachable_hint(base_url)}",
         ) from e
     return VlmModelsResponse(base_url=base_url, models=models)
 
@@ -134,12 +135,14 @@ async def preview_vlm_prompt(
         None, description="JSON-encoded list[int], e.g. '[-2,-1,0,1,2]'"
     ),
     think: bool = Form(False),
-    base_url: str = Form(DEFAULT_BASE_URL),
+    base_url: str | None = Form(None),
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> VlmPreviewResponse:
     """Test a prompt against a single frame or burst, synchronously."""
     if not extras_available(VLM_REQUIRES_EXTRAS):
         raise PipelineUnavailableException("vlm_annotation", VLM_REQUIRES_EXTRAS)
+
+    base_url = base_url or default_ollama_base_url()
 
     if sampling_mode not in ("single_frame", "frame_burst"):
         raise APIError(

@@ -3,9 +3,9 @@
 Handles speaker segmentation and identification with timestamps.
 """
 
-import os
 from typing import Any
 
+from ...config_env import huggingface_token
 from ..base_pipeline import BasePipeline
 
 try:
@@ -56,11 +56,11 @@ class DiarizationPipeline(BasePipeline):
             )
 
         # Check for HuggingFace token
-        hf_token = os.getenv("HF_AUTH_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
+        hf_token = huggingface_token()
         if not hf_token and self.config["use_auth_token"]:
             raise ValueError(
                 "HuggingFace token required for PyAnnote models. "
-                "Set HF_AUTH_TOKEN environment variable or disable with use_auth_token=False"
+                "Set HUGGINGFACE_TOKEN (e.g. in .env) or disable with use_auth_token=False"
             )
 
         self.logger.info(f"Loading diarization model: {self.config['model']}")

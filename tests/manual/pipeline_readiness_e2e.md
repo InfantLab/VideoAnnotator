@@ -9,7 +9,7 @@ browser. Record the date, platform and result at the bottom.
 1. A **core-only** environment: a fresh venv or container with `videoannotator` installed and no
    extras. In a source checkout: `uv venv .venv-e2e && UV_PROJECT_ENVIRONMENT=.venv-e2e uv sync`.
    Check: `python -c "import torch"` fails.
-2. For the diarization part, set `HF_AUTH_TOKEN` in the server's environment (the container env, or
+2. For the diarization part, set `HUGGINGFACE_TOKEN` in the server's environment (the container env, or
    `.env` for docker compose) with a token whose account has accepted the licences of
    [pyannote/speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1) and
    [pyannote/segmentation-3.0](https://huggingface.co/pyannote/segmentation-3.0).
@@ -47,7 +47,7 @@ but adding new videos and clicking through to "Select Pipelines" shows "Installi
 ## C. `speaker_diarization`
 
 - [ ] Install the **audio** group from Speaker Diarization's card. Afterwards (restart if asked):
-  - without `HF_AUTH_TOKEN`: the card shows **Needs setup**, "Set HF_AUTH_TOKEN in the server's
+  - without `HUGGINGFACE_TOKEN`: the card shows **Needs setup**, "Set HUGGINGFACE_TOKEN in the server's
     environment…", a **Get a token** link, and no field to type a token into;
   - with it: the card is selectable, with licence notes linking to both model pages, and a note
     about the first-run model download.

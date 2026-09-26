@@ -23,7 +23,7 @@ The VideoAnnotator project uses PyAnnote for speaker diarization, which requires
 2. Edit `.env` and add your token:
    ```bash
    # HuggingFace Authentication Token
-   HF_AUTH_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   HUGGINGFACE_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    ```
 
 #### Option B: Using System Environment Variables
@@ -33,19 +33,19 @@ Set the environment variable in your shell:
 **Windows (PowerShell):**
 
 ```powershell
-$env:HF_AUTH_TOKEN="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+$env:HUGGINGFACE_TOKEN="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
 **Windows (Command Prompt):**
 
 ```cmd
-set HF_AUTH_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+set HUGGINGFACE_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 **Linux/macOS:**
 
 ```bash
-export HF_AUTH_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+export HUGGINGFACE_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ### 3. Test Your Setup
@@ -78,7 +78,8 @@ If configured correctly, you should see:
 **"HuggingFace token: ✗ Not found"**
 
 - Check that your `.env` file exists in the project root
-- Verify the token is set as `HF_AUTH_TOKEN=your_token_here`
+- Verify the token is set as `HUGGINGFACE_TOKEN=your_token_here`
+- Older setups using `HF_AUTH_TOKEN` (or Hugging Face's own `HF_TOKEN`) still work; `HUGGINGFACE_TOKEN` wins if both are set
 - Ensure no extra spaces around the equals sign
 
 **"Authentication failed"**

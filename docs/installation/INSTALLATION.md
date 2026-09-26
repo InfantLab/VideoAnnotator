@@ -54,7 +54,7 @@ These tips address the most common macOS installation issues.
   chmod u+w ~/.zshrc
   # If .zshrc is missing, write PATH to ~/.zprofile instead for login shells
   ```
-- Hugging Face token (for speaker diarization): set `HF_AUTH_TOKEN` in a `.env` file or your shell. See Environment Setup guide.
+- Hugging Face token (for speaker diarization): set `HUGGINGFACE_TOKEN` in a `.env` file or your shell. See Environment Setup guide.
 - Viewer: available at `/viewer` on the running VideoAnnotator server, no separate setup. For
   standalone development of the viewer repo itself, use `npm run dev` (not `npm start`).
 

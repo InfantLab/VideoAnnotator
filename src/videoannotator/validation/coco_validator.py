@@ -9,6 +9,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+logger = logging.getLogger(__name__)
+
 try:
     from pycocotools.coco import COCO
     from pycocotools.cocoeval import COCOeval
@@ -16,7 +18,7 @@ try:
     PYCOCOTOOLS_AVAILABLE = True
 except ImportError:
     PYCOCOTOOLS_AVAILABLE = False
-    logging.warning("pycocotools not available. Install with: pip install pycocotools")
+    logger.warning("pycocotools not available. Install with: pip install pycocotools")
 
 import numpy as np
 from pydantic import BaseModel

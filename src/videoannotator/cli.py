@@ -995,7 +995,7 @@ def version():
 
     typer.echo(f"VideoAnnotator v{__version__}")
     typer.echo(f"API Version: {__version__}")
-    typer.echo("https://github.com/your-org/VideoAnnotator")
+    typer.echo("https://github.com/InfantLab/VideoAnnotator")
 
 
 # ============================================================================

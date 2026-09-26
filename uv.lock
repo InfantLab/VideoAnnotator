@@ -4305,7 +4305,7 @@ requires-dist = [
     { name = "opencv-python", marker = "extra == 'llm'", specifier = ">=4.11.0.86,<5.0" },
     { name = "opencv-python", marker = "extra == 'person'", specifier = ">=4.11.0.86,<5.0" },
     { name = "opencv-python", marker = "extra == 'scene'", specifier = ">=4.11.0.86,<5.0" },
-    { name = "openface-test", marker = "extra == 'face-openface3'", specifier = ">=0.1.13" },
+    { name = "openface-test", marker = "extra == 'face-openface3'", specifier = "==0.1.13" },
     { name = "openpyxl" },
     { name = "packaging", specifier = ">=21.0" },
     { name = "pandas", specifier = ">=2.2.2" },

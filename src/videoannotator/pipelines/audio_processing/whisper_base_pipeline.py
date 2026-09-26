@@ -34,6 +34,8 @@ try:
 except ImportError:
     pass
 
+logger = logging.getLogger(__name__)
+
 # Suppress librosa warnings that might indicate instability
 warnings.filterwarnings("ignore", category=UserWarning, module="librosa")
 
@@ -48,7 +50,7 @@ try:
     HF_WHISPER_AVAILABLE = True
 except ImportError:
     HF_WHISPER_AVAILABLE = False
-    logging.warning(
+    logger.warning(
         "Hugging Face transformers not available. Install with: pip install transformers"
     )
 
@@ -242,14 +244,12 @@ class WhisperBasePipeline(BasePipeline):
             auth_token = None
 
             if use_auth_token:
-                import os
+                from videoannotator.config_env import huggingface_token
 
-                auth_token = os.getenv("HF_AUTH_TOKEN") or os.getenv(
-                    "HUGGINGFACE_TOKEN"
-                )
+                auth_token = huggingface_token()
                 if not auth_token:
                     self.logger.warning(
-                        "HF_AUTH_TOKEN environment variable not set but use_auth_token=True"
+                        "HUGGINGFACE_TOKEN not set but use_auth_token=True"
                     )
 
             # Load processor

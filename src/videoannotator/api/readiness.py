@@ -20,6 +20,7 @@ from typing import Any
 
 from packaging.requirements import Requirement
 
+from ..config_env import default_ollama_base_url
 from ..registry import pipeline_loader
 from ..registry.pipeline_loader import extras_available
 from ..registry.pipeline_registry import PipelineMetadata, WeightSpec
@@ -207,10 +208,7 @@ def _blockers_and_notes(
                     {
                         "kind": "service",
                         "name": "ollama",
-                        "message": (
-                            f"Ollama isn't reachable at {status.get('base_url')}. "
-                            "Start it with 'ollama serve'."
-                        ),
+                        "message": _ollama_unreachable_message(status),
                         "help_url": req.help_url,
                     }
                 )
@@ -287,9 +285,16 @@ def pipeline_readiness(meta: PipelineMetadata) -> dict[str, Any]:
     }
 
 
+def _ollama_unreachable_message(status: dict[str, Any]) -> str:
+    from ..diagnostics.ollama import unreachable_hint
+
+    base_url = str(status.get("base_url"))
+    return f"Ollama isn't reachable at {base_url}. {unreachable_hint(base_url)}"
+
+
 def _ollama_base_url(meta: PipelineMetadata) -> str:
     field = meta.config_schema.get("base_url")
-    return str(field.default) if field and field.default else "http://127.0.0.1:11434"
+    return str(field.default) if field and field.default else default_ollama_base_url()
 
 
 def warm_up() -> None:

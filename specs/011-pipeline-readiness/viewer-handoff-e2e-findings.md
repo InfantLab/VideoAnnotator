@@ -81,24 +81,29 @@ this (see above), but the run page only counts ok/failed.
 - In the annotation viewer, a component whose pipeline failed shows "Failed: <reason>" rather than
   "(No data)".
 
-## 4. H.265/HEVC videos play as a black frame with no explanation
+## 4. A video the browser can't decode plays as a black frame with no explanation
 
-**Seen**: `2UWdXP.joke1.rep2.take1.Peekaboo_h265.mp4` opened in the viewer with annotations loaded
-(face/emotion tracks present), but the video area stayed black. Most browsers on Linux, and some
-elsewhere, can't decode HEVC.
+**Seen**: `2UWdXP.joke1.rep2.take1.Peekaboo_h265.mp4` (HEVC Main, 8-bit, 640x480, `hev1` tag)
+opened with annotations loaded but a black video area. HEVC support depends on the browser, OS and
+GPU: Chrome/Edge on Windows decode it in hardware when available; Firefox generally doesn't; Safari
+needs the `hvc1` tag. So the same file can play on one machine and not on another.
 
-**Expected**:
+**Built (v0.7.x bundle)**: detection via `loadedmetadata` with `videoWidth === 0`, or a `<video>`
+`error` with `MEDIA_ERR_SRC_NOT_SUPPORTED` / `MEDIA_ERR_DECODE`. Keep that. Don't add
+`canPlayType('video/mp4; codecs="hvc1"')`, which this handoff suggested earlier: a bare `hvc1`
+isn't a complete codec string, so Chrome returns `""` even where HEVC plays.
 
-- Detect it: a `<video>` `error` with `MEDIA_ERR_SRC_NOT_SUPPORTED`, or `loadedmetadata` with
-  `videoWidth === 0`. Where a codec hint helps, `canPlayType('video/mp4; codecs="hvc1"')` returning
-  `""` is a good early warning.
-- Show it over the player: "This browser can't play this video's codec (H.265/HEVC). Annotations are
-  still available below. To see the video, re-encode to H.264, e.g.
-  `ffmpeg -i in.mp4 -c:v libx264 -crf 18 -c:a copy out.mp4`, or open it in a browser with HEVC
-  support."
-- Keep the timeline and annotation panels working, as they do now.
+**Change**: the message names H.265 unconditionally. It shouldn't claim a codec it hasn't checked:
 
-Converting HEVC on upload is a possible future backend feature; it isn't planned yet.
+- "This browser can't decode this video's codec (often H.265/HEVC). Annotations are still
+  available below."
+- Then the fixes, in order of effort: try Chrome or Edge with hardware acceleration on (on Windows,
+  HEVC also needs the "HEVC Video Extensions" from the Microsoft Store); for Safari, remux without
+  re-encoding: `ffmpeg -i in.mp4 -c copy -tag:v hvc1 out.mp4`; or re-encode to H.264:
+  `ffmpeg -i in.mp4 -c:v libx264 -crf 18 -c:a copy out.mp4`.
+
+Reporting the actual codec (probed at upload) is a possible backend addition. Converting on upload
+is a future backend feature; neither is planned yet.
 
 ## Suggested order
 

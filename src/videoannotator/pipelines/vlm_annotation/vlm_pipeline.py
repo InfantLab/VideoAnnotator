@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from videoannotator.config_env import default_ollama_base_url
 from videoannotator.exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
@@ -68,7 +69,7 @@ class VLMAnnotationPipeline(BasePipeline):
     def __init__(self, config: dict[str, Any] | None = None):
         default_config: dict[str, Any] = {
             "prompt": DEFAULT_PROMPT,
-            "base_url": "http://127.0.0.1:11434",
+            "base_url": "",  # empty: the server's default_ollama_base_url()
             "model": "qwen3.5:9b",
             "sampling_mode": "single_frame",  # or "frame_burst"
             "frame_interval_sec": 5.0,
@@ -83,6 +84,11 @@ class VLMAnnotationPipeline(BasePipeline):
         }
         if config:
             default_config.update(config)
+        # Resolved here so the output's provenance records the URL actually
+        # used, and so an empty value from a config form means "server default".
+        default_config["base_url"] = (
+            default_config["base_url"] or default_ollama_base_url()
+        )
         super().__init__(default_config)
         self.logger = logging.getLogger(__name__)
         self._client: OllamaVLMClient | None = None

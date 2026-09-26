@@ -28,7 +28,7 @@ Each pipeline entry gains:
     "blockers": [
       {
         "kind": "secret",            // secret | service | import_error
-        "name": "HF_AUTH_TOKEN",
+        "name": "HUGGINGFACE_TOKEN",
         "message": "A Hugging Face access token is required to download the pyannote models.",
         "help_url": "https://huggingface.co/settings/tokens"
       }
@@ -147,7 +147,7 @@ Viewer restart wait: poll every 2 s; treat connection errors as "still restartin
 
 ## 6. Secrets: none
 
-Dropped (2026-09-24): secrets such as `HF_AUTH_TOKEN` are set in the server's environment (the
+Dropped (2026-09-24): secrets such as `HUGGINGFACE_TOKEN` are set in the server's environment (the
 container env). A missing one shows up only as a `secret` blocker in §1, whose `message` says where
 to set it. There is no endpoint that reads or writes secrets.
 
@@ -166,7 +166,7 @@ status endpoint and status vocabulary (`pending|running|completed|failed`, `comm
 ```yaml
 requires_setup:            # optional, default []
   - kind: secret           # secret | service | licence
-    name: HF_AUTH_TOKEN
+    name: HUGGINGFACE_TOKEN
     description: Hugging Face access token
     help_url: https://huggingface.co/settings/tokens
   - kind: licence

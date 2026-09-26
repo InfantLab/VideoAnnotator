@@ -53,9 +53,8 @@ def disable_auth_for_tests(monkeypatch):
 @pytest.fixture(autouse=True)
 def patch_hf_token(monkeypatch):
     """Patch HuggingFace token for tests: use real token if available, else fake."""
-    real_token = os.environ.get("HF_AUTH_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN")
+    real_token = os.environ.get("HUGGINGFACE_TOKEN") or os.environ.get("HF_AUTH_TOKEN")
     token = real_token if real_token else "FAKE_TOKEN_FOR_TESTING"
-    monkeypatch.setenv("HF_AUTH_TOKEN", token)
     monkeypatch.setenv("HUGGINGFACE_TOKEN", token)
     yield
 

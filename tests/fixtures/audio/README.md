@@ -119,7 +119,7 @@ ffplay speech_single_speaker.wav
 ffprobe speech_single_speaker.wav
 
 # Run tests
-export HF_AUTH_TOKEN="your_token"
+export HUGGINGFACE_TOKEN="your_token"
 export TEST_INTEGRATION=1
 uv run pytest tests/pipelines/test_audio_individual_components.py -k integration
 ```

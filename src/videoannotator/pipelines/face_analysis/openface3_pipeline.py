@@ -8,6 +8,7 @@ VideoAnnotator standards.
 
 import json
 import logging
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,8 @@ from videoannotator.pipelines.base_pipeline import BasePipeline
 from videoannotator.utils.person_identity import PersonIdentityManager
 from videoannotator.version import __version__
 
+logger = logging.getLogger(__name__)
+
 
 # Apply SciPy compatibility patch first - OpenFace 3.0 uses deprecated scipy.integrate.simps
 def patch_scipy_compatibility():
@@ -33,18 +36,19 @@ def patch_scipy_compatibility():
         import scipy.integrate
 
         if not hasattr(scipy.integrate, "simps"):
-            logging.info(
+            logger.info(
                 "Applying scipy.integrate.simps compatibility patch for OpenFace 3.0"
             )
             scipy.integrate.simps = scipy.integrate.simpson
-            logging.info("Successfully patched scipy.integrate.simps")
+            logger.info("Successfully patched scipy.integrate.simps")
     except ImportError as e:
-        logging.warning(f"Failed to apply scipy compatibility patch: {e}")
+        logger.warning(f"Failed to apply scipy compatibility patch: {e}")
     except Exception as e:
-        logging.error(f"Unexpected error applying scipy patch: {e}")
+        logger.error(f"Unexpected error applying scipy patch: {e}")
 
 
 OPENFACE3_AVAILABLE = False  # Will be updated to True after successful lazy import
+_OPENFACE3_UNAVAILABLE_REASON = "OpenFace 3.0 not installed"
 
 # These are assigned during lazy import; declare for type checkers.
 FaceDetector: Any
@@ -60,27 +64,35 @@ def _lazy_import_openface():
     collection) from encountering unexpected argparse exits.
     """
     global OPENFACE3_AVAILABLE, FaceDetector, LandmarkDetector, MultitaskPredictor
+    global _OPENFACE3_UNAVAILABLE_REASON
     # If already successfully imported return True immediately
     if OPENFACE3_AVAILABLE:
         return True
     patch_scipy_compatibility()
+    # openface's modules run argparse on import, so the host process's own
+    # arguments (e.g. `videoannotator server --host ...`) make it exit(2).
+    saved_argv = sys.argv
+    sys.argv = sys.argv[:1]
     try:
         from openface.face_detection import FaceDetector
         from openface.landmark_detection import LandmarkDetector
         from openface.multitask_model import MultitaskPredictor
 
         OPENFACE3_AVAILABLE = True
-        logging.info("OpenFace 3.0 successfully imported (lazy)")
+        logger.info("OpenFace 3.0 successfully imported (lazy)")
     except SystemExit as e:
-        # Some OpenFace builds call sys.exit via argparse on import when CLI args missing.
         OPENFACE3_AVAILABLE = False
-        logging.warning(
+        _OPENFACE3_UNAVAILABLE_REASON = f"OpenFace 3.0 import exited with status {e}"
+        logger.warning(
             f"OpenFace 3.0 import triggered SystemExit ({e}). Treating as unavailable for runtime."
         )
     except ImportError as e:
         OPENFACE3_AVAILABLE = False
-        logging.error(f"OpenFace 3.0 not available: {e}")
-        logging.error("Install from: https://github.com/CMU-MultiComp-Lab/OpenFace-3.0")
+        _OPENFACE3_UNAVAILABLE_REASON = f"OpenFace 3.0 not installed ({e})"
+        logger.error(f"OpenFace 3.0 not available: {e}")
+        logger.error("Install from: https://github.com/CMU-MultiComp-Lab/OpenFace-3.0")
+    finally:
+        sys.argv = saved_argv
     return OPENFACE3_AVAILABLE
 
 
@@ -154,7 +166,7 @@ class OpenFace3Pipeline(BasePipeline):
             self._model_info = {
                 "model_name": "OpenFace 3.0",
                 "available": False,
-                "unavailable_reason": "OpenFace 3.0 not installed",
+                "unavailable_reason": _OPENFACE3_UNAVAILABLE_REASON,
             }
             self.logger.warning(
                 "OpenFace 3.0 unavailable - skipping initialization (graceful)"

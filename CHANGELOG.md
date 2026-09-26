@@ -95,6 +95,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one person re-connecting the viewer to their own server), accepts an explicit `--admin`/
   `--no-admin` override in either direction (including promoting/demoting an existing user), and
   always prints the resulting admin status.
+- Every server log line was printed twice (once formatted, once as `INFO:name:message`). A bare
+  `logging.info()` at import time in `api/main.py` (and module-level `logging.warning()` calls in
+  four pipeline modules) made Python install a default root handler, so `videoannotator.*`
+  records were emitted by both it and our own handler. They now log through named loggers.
+- `HUGGINGFACE_TOKEN` set in `.env` was ignored in the dev container: the container forwards
+  host variables it doesn't have as empty strings, and `.env` never overrides an existing
+  variable. `.env` values now fill variables that are set but blank (`config_env.load_env_file`).
+- `OLLAMA_BASE_URL` in the dev container was the literal `http`: the devcontainer
+  `${localEnv:NAME:default}` syntax cuts the default at its first colon. It is now set directly.
+- `face_openface3_embedding` always failed inside the server with "OpenFace 3.0 not installed",
+  although it was: OpenFace's modules run `argparse` on import, which rejected the server's own
+  command-line arguments and exited. The import now runs with those arguments hidden, and the
+  error states the real reason.
 
 ### Planned
 

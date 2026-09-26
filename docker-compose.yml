@@ -11,7 +11,8 @@ services:
       - ./data:/app/data
       - ./output:/app/output
     environment:
-      - HF_AUTH_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
+      - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
+      - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
       - PYTHONPATH=/app
       - CUDA_VISIBLE_DEVICES=0
     ports:
@@ -30,9 +31,13 @@ services:
       - ./data:/app/data:ro
       - ./output:/app/output
     environment:
-      - HF_AUTH_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
+      - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
+      - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
       - UV_NO_SYNC=1  # keep pipeline extras installed from the viewer across restarts (spec 011 FR-009)
       - PYTHONPATH=/app
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}  # Ollama on the host (vlm_annotation)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Linux Docker Engine; Docker Desktop provides it already
     command: ["uv", "run", "videoannotator", "server", "--host", "0.0.0.0", "--port", "18011"]
     profiles:
       - prod
@@ -46,10 +51,14 @@ services:
       - ./data:/app/data:ro
       - ./output:/app/output
     environment:
-      - HF_AUTH_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
+      - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
+      - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
       - UV_NO_SYNC=1  # keep pipeline extras installed from the viewer across restarts (spec 011 FR-009)
       - PYTHONPATH=/app
       - CUDA_VISIBLE_DEVICES=0
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}  # Ollama on the host (vlm_annotation)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Linux Docker Engine; Docker Desktop provides it already
     runtime: nvidia
     deploy:
       resources:
@@ -73,10 +82,14 @@ services:
       - ./logs:/app/logs
       - ./database:/app/database # Persistent database for development
     environment:
-      - HF_AUTH_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
+      - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
+      - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
       - PYTHONPATH=/app
       - CUDA_VISIBLE_DEVICES=0
       - VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator_dev.db
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}  # Ollama on the host (vlm_annotation)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Linux Docker Engine; Docker Desktop provides it already
     runtime: nvidia
     deploy:
       resources:

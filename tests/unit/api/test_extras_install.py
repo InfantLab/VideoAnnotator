@@ -76,6 +76,11 @@ class TestExtraRequirements:
 
 
 class TestResolveInstallCommand:
+    @pytest.fixture(autouse=True)
+    def _no_lockfile(self):
+        with patch.object(extras_install, "_lock_constraints", return_value=None):
+            yield
+
     def test_uses_uv_pip_against_the_running_interpreter(self):
         with (
             patch.object(
@@ -124,6 +129,51 @@ class TestResolveInstallCommand:
         ):
             command, _ = extras_install.resolve_install_command("scene")
         assert command[-1] == "videoannotator[scene]==1.5.0"
+
+    def test_locked_versions_passed_as_constraints(self, tmp_path):
+        constraints = tmp_path / "c.txt"
+        with (
+            patch.object(extras_install, "extra_requirements", return_value=["a>=1"]),
+            patch.object(extras_install.shutil, "which", return_value="/usr/bin/uv"),
+            patch.object(extras_install, "_lock_constraints", return_value=constraints),
+        ):
+            command, _ = extras_install.resolve_install_command("face-openface3")
+        assert command[-3:] == ["--constraint", str(constraints), "a>=1"]
+
+
+class TestLockConstraints:
+    def test_exports_the_extras_locked_versions(self, tmp_path):
+        exported = subprocess.CompletedProcess([], 0, "openface-test==0.1.13\n", "")
+        with (
+            patch.object(
+                extras_install, "_source_checkout_root", return_value=tmp_path
+            ),
+            patch.object(extras_install.shutil, "which", return_value="/usr/bin/uv"),
+            patch.object(
+                extras_install.subprocess, "run", return_value=exported
+            ) as run,
+        ):
+            path = extras_install._lock_constraints("face-openface3")
+        assert path.read_text() == "openface-test==0.1.13\n"
+        args = run.call_args.args[0]
+        assert args[:2] == ["uv", "export"]
+        assert "--frozen" in args
+        assert args[args.index("--extra") + 1] == "face-openface3"
+
+    def test_no_lockfile_means_no_constraints(self):
+        with patch.object(extras_install, "_source_checkout_root", return_value=None):
+            assert extras_install._lock_constraints("scene") is None
+
+    def test_failed_export_means_no_constraints(self, tmp_path):
+        failed = subprocess.CompletedProcess([], 2, "", "lock out of date")
+        with (
+            patch.object(
+                extras_install, "_source_checkout_root", return_value=tmp_path
+            ),
+            patch.object(extras_install.shutil, "which", return_value="/usr/bin/uv"),
+            patch.object(extras_install.subprocess, "run", return_value=failed),
+        ):
+            assert extras_install._lock_constraints("scene") is None
 
 
 class TestDecideActivation:

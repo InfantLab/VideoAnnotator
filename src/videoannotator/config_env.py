@@ -9,10 +9,27 @@ v1.3.0: Added concurrent job limiting configuration.
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values, find_dotenv, load_dotenv
 
-# Load environment variables from .env file if present
-load_dotenv()
+
+def load_env_file() -> None:
+    """Load .env into the environment without overriding values already set.
+
+    A variable that is set but blank still takes its .env value: the
+    devcontainer forwards host variables as `${localEnv:NAME}`, which defines
+    them as "" when the host doesn't set them, and that would otherwise mask
+    .env entirely (python-dotenv never overrides an existing variable).
+    """
+    path = find_dotenv(usecwd=True)
+    if not path:
+        return
+    load_dotenv(path)
+    for key, value in dotenv_values(path).items():
+        if value and not os.environ.get(key, "").strip():
+            os.environ[key] = value
+
+
+load_env_file()
 
 
 def get_int_env(key: str, default: int) -> int:
@@ -201,6 +218,37 @@ DEVICE = get_str_env("DEVICE", "auto")
 # Use FP16 precision when available
 USE_FP16 = get_bool_env("USE_FP16", True)
 
+# Hugging Face token for gated models (pyannote). HUGGINGFACE_TOKEN is the
+# documented name; HF_AUTH_TOKEN (the pre-v1.5 name) and HF_TOKEN
+# (huggingface_hub's own) are still read, in that order.
+HUGGINGFACE_TOKEN_ENV = "HUGGINGFACE_TOKEN"
+HUGGINGFACE_TOKEN_ALIASES = ("HF_AUTH_TOKEN", "HF_TOKEN")
+
+
+def huggingface_token() -> str | None:
+    """The configured Hugging Face token, or None."""
+    for name in (HUGGINGFACE_TOKEN_ENV, *HUGGINGFACE_TOKEN_ALIASES):
+        value = os.environ.get(name, "").strip()
+        if value:
+            return value
+    return None
+
+
+# Ollama server for the vlm_annotation pipeline when a job doesn't name one.
+# In a container with Ollama on the host: http://host.docker.internal:11434
+DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+OLLAMA_BASE_URL_ENV = "OLLAMA_BASE_URL"
+
+
+def default_ollama_base_url() -> str:
+    """`$OLLAMA_BASE_URL`, else `http://127.0.0.1:11434`. Read per call so it
+    follows the server's current environment.
+
+    Not `OLLAMA_HOST`: that is Ollama's own *listen* address (commonly
+    `0.0.0.0:11434` on the host), not something to connect to.
+    """
+    return os.environ.get(OLLAMA_BASE_URL_ENV, "").strip() or DEFAULT_OLLAMA_BASE_URL
+
 
 def print_config() -> None:
     """Print current configuration (for debugging)."""
@@ -233,6 +281,7 @@ def print_config() -> None:
     print(f"  MODEL_CACHE_DIR: {MODEL_CACHE_DIR}")
     print(f"  DEVICE: {DEVICE}")
     print(f"  USE_FP16: {USE_FP16}")
+    print(f"  OLLAMA_BASE_URL: {default_ollama_base_url()}")
     print("=" * 50)
 
 

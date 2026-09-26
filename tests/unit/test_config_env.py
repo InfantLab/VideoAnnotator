@@ -79,6 +79,32 @@ class TestConfigEnvHelpers:
             assert get_str_env("NONEXISTENT", "fallback") == "fallback"
 
 
+class TestLoadEnvFile:
+    """.env loading must not be masked by blank forwarded variables."""
+
+    def test_blank_env_var_takes_dotenv_value(self, tmp_path, monkeypatch):
+        from videoannotator.config_env import load_env_file
+
+        (tmp_path / ".env").write_text("VA_TEST_TOKEN=from-dotenv\n")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("VA_TEST_TOKEN", "")
+
+        load_env_file()
+
+        assert os.environ["VA_TEST_TOKEN"] == "from-dotenv"
+
+    def test_real_env_var_is_not_overridden(self, tmp_path, monkeypatch):
+        from videoannotator.config_env import load_env_file
+
+        (tmp_path / ".env").write_text("VA_TEST_TOKEN=from-dotenv\n")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("VA_TEST_TOKEN", "from-env")
+
+        load_env_file()
+
+        assert os.environ["VA_TEST_TOKEN"] == "from-env"
+
+
 class TestWorkerConfiguration:
     """Test worker-related configuration values."""
 

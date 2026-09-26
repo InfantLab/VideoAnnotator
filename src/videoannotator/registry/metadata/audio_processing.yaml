@@ -46,8 +46,8 @@ backends:
 # spec 011: diarization (on by default) needs a HF token + licences; see speaker_diarization.yaml.
 requires_setup:
   - kind: secret
-    name: HF_AUTH_TOKEN
-    aliases: [HUGGINGFACE_TOKEN]
+    name: HUGGINGFACE_TOKEN
+    aliases: [HF_AUTH_TOKEN, HF_TOKEN]
     description: A Hugging Face access token (to download the pyannote models)
     help_url: https://huggingface.co/settings/tokens
   - kind: licence

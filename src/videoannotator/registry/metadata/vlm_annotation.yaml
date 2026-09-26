@@ -37,8 +37,11 @@ config_schema:
     widget: textarea
   base_url:
     type: string
-    default: "http://127.0.0.1:11434"
-    description: Base URL of the local Ollama server.
+    default: ""
+    description: >
+      Base URL of the Ollama server. Leave empty to use the server's
+      OLLAMA_BASE_URL (default http://127.0.0.1:11434; from a container with
+      Ollama on the host, http://host.docker.internal:11434).
   model:
     type: string
     default: "qwen3.5:9b"

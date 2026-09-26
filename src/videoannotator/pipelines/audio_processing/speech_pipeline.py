@@ -14,19 +14,20 @@ from typing import Any
 import librosa
 import numpy as np
 import torch
-from dotenv import load_dotenv
 
+from videoannotator.config_env import load_env_file
 from videoannotator.version import __version__
 
 from .whisper_base_pipeline import WhisperBasePipeline
 
-# Load environment variables from .env file
-load_dotenv()
+load_env_file()
+
+logger = logging.getLogger(__name__)
 
 # Detect Whisper availability without importing the heavy module at top-level
 WHISPER_AVAILABLE = importlib_util.find_spec("whisper") is not None
 if not WHISPER_AVAILABLE:
-    logging.warning("whisper not available. Speech recognition will be disabled.")
+    logger.warning("whisper not available. Speech recognition will be disabled.")
 
 
 def _missing_whisper(*_args: object, **_kwargs: object) -> None:

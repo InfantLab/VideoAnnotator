@@ -42,7 +42,7 @@ What remains, and what this spec is for, are the gaps that still force a termina
 1. **Restart is manual** (005 FR-014 deliberately deferred it). The user has to get to the server
    host to activate what they just installed.
 2. **`available` means "Python packages present", not "usable".** Speaker diarization still needs
-   `HF_AUTH_TOKEN` plus a model licence accepted on Hugging Face; `vlm_annotation` needs a reachable
+   `HUGGINGFACE_TOKEN` plus a model licence accepted on Hugging Face; `vlm_annotation` needs a reachable
    Ollama with a pulled model; most pipelines silently download model weights (often GBs) on first
    run. None of this is visible before a job fails.
 3. **Installing re-syncs the whole lockfile while the server runs.** `uv sync --extra X --inexact`
@@ -88,7 +88,7 @@ returns all shipped pipelines (and no stub), each with a `readiness.state` of `n
 1. **Given** a core-only server, **When** the pipeline list is requested with
    `include_unavailable=true`, **Then** every shipped pipeline is returned with a readiness state,
    and the stub fixture is not among them.
-2. **Given** the `audio` extras are installed but `HF_AUTH_TOKEN` is unset, **When** the list is
+2. **Given** the `audio` extras are installed but `HUGGINGFACE_TOKEN` is unset, **When** the list is
    requested, **Then** `speaker_diarization` is `needs_setup` with a blocker naming the missing
    token and linking to where to get it, while `speech_recognition` (no token needed) is `ready`.
 3. **Given** the `llm` extras are installed but Ollama is unreachable, **When** the list is
@@ -138,12 +138,12 @@ changes, and confirm the pipeline is `ready`.
 
 ### User Story 3 - See what a pipeline still needs, before a job fails (Priority: P2)
 
-A pipeline says "Needs setup: HF_AUTH_TOKEN isn't set on the server", with a link to get a token and
+A pipeline says "Needs setup: HUGGINGFACE_TOKEN isn't set on the server", with a link to get a token and
 a reminder to accept the pyannote model licence. For the VLM pipeline, "Needs setup: Ollama not
 reachable" links to the existing Ollama diagnostics.
 
 **Decision (Caspar, 2026-09-24)**: the Hugging Face token is *deployment configuration*, set in the
-container environment (`docker-compose.yml` and the devcontainer pass `HF_AUTH_TOKEN` through from
+container environment (`docker-compose.yml` and the devcontainer pass `HUGGINGFACE_TOKEN` through from
 the host), not entered in the viewer. So there is no secrets API: readiness reports what is missing
 and where to set it, and the operator sets it. This drops the first draft's secrets API (old FR-013 to FR-015)
 and contract section 6.
@@ -151,13 +151,13 @@ and contract section 6.
 **Why this priority**: Only some pipelines have setup requirements, but for those it's a hard wall
 today and the failure only shows up mid-job.
 
-**Independent Test**: With `audio` installed and `HF_AUTH_TOKEN` unset, `speaker_diarization` is
-`needs_setup` with a `secret` blocker naming `HF_AUTH_TOKEN`; start the server with it set and it is
+**Independent Test**: With `audio` installed and `HUGGINGFACE_TOKEN` unset, `speaker_diarization` is
+`needs_setup` with a `secret` blocker naming `HUGGINGFACE_TOKEN`; start the server with it set and it is
 `ready` with a licence note.
 
 **Acceptance Scenarios**:
 
-1. **Given** a pipeline that declares `secret: HF_AUTH_TOKEN`, **When** the variable is unset in the
+1. **Given** a pipeline that declares `secret: HUGGINGFACE_TOKEN`, **When** the variable is unset in the
    server's environment, **Then** it is `needs_setup` and the blocker's message says to set it in
    the server's (container's) environment. The value itself is never read into any response.
 2. **Given** the variable is set, **When** the list is requested, **Then** the pipeline is not
@@ -255,7 +255,7 @@ download size; a pipeline whose weights aren't cached reports a `weights_cached:
 - **FR-010**: `PipelineMetadata` MUST gain an optional `requires_setup` list. Each item has `kind` ∈
   {`secret`, `service`, `licence`}, `name`, `description`, optional `help_url`. Absent means none.
   Additive; the stub-style forward-compat guarantee of 004 SC-007 still holds.
-- **FR-011**: `speaker_diarization` MUST declare `secret: HF_AUTH_TOKEN` and `licence:
+- **FR-011**: `speaker_diarization` MUST declare `secret: HUGGINGFACE_TOKEN` and `licence:
   pyannote/speaker-diarization` (with the Hugging Face URL). `vlm_annotation` MUST declare `service:
   ollama`. `audio_processing` also runs pyannote diarization (`audio_pipeline_modular.py`) and
   needs the same declarations as `speaker_diarization`. Other shipped pipelines are audited and
@@ -264,11 +264,13 @@ download size; a pipeline whose weights aren't cached reports a `weights_cached:
   `service: ollama` → reuse `diagnostics.ollama.diagnose_ollama` (cached ≤ 30 s so
   listing stays fast); `licence` → cannot be verified locally, always reported as a `note`, never a
   blocker.
-- **FR-013**: A `secret` blocker's `message` MUST say where to set it ("Set HF_AUTH_TOKEN in the
+- **FR-013**: A `secret` blocker's `message` MUST say where to set it ("Set HUGGINGFACE_TOKEN in the
   server's environment, e.g. the container env, and restart"). Secret values MUST never appear in
   any response or log line. The server MUST NOT offer an API for setting secrets (decision under
   User Story 3). `docker-compose.yml` and the devcontainer MUST pass the declared secrets through
-  from the host environment (done for `HF_AUTH_TOKEN`).
+  from the host environment (done for `HUGGINGFACE_TOKEN`).
+  *Renamed 2026-09-25*: the secret is `HUGGINGFACE_TOKEN` (the name users already had in `.env`);
+  `HF_AUTH_TOKEN`, this spec's original name, and `HF_TOKEN` are read as fallbacks.
 
 **Weights (P3)**
 
@@ -307,7 +309,7 @@ action names and field names are a stable contract under the same forward-compat
 - **SC-001 (the one that matters)**: On a fresh core-only install, using only the bundled viewer in
   a browser, a user with an admin key gets `face_analysis` from not visible to a completed annotation
   job **with zero terminal commands** after `videoannotator server` was started. Repeat for
-  `speaker_diarization` with `HF_AUTH_TOKEN` set in the container env. Recorded as a manual test script in
+  `speaker_diarization` with `HUGGINGFACE_TOKEN` set in the container env. Recorded as a manual test script in
   `tests/manual/pipeline_readiness_e2e.md` and run before release.
 - **SC-002**: A core-only listing with `include_unavailable=true` returns every shipped pipeline and
   zero test fixtures.

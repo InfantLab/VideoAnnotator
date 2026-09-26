@@ -15,6 +15,7 @@ import logging
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -173,6 +174,11 @@ def resolve_install_command(extra_name: str) -> tuple[list[str], Path | None]:
     the cu124 torch index on Linux, and PyPI's Linux torch 2.6.0 wheels are
     already cu124 builds.
 
+    In a source checkout, the group's `uv.lock` versions are passed as
+    constraints (`_lock_constraints`), so an install gets what CI tested
+    rather than the newest release in range -- e.g. `openface-test` >0.1.13
+    pins `Pillow==9.4.0`, which has no Python 3.12 wheel and fails to build.
+
     Falls back to the version-pinned `videoannotator[<extra>]==<version>` if
     the group's requirements can't be read from metadata. `cwd` is always
     None; kept in the signature for callers.
@@ -182,12 +188,76 @@ def resolve_install_command(extra_name: str) -> tuple[list[str], Path | None]:
         version = importlib.metadata.version(_DISTRIBUTION_NAME)
         requirements = [f"{_DISTRIBUTION_NAME}[{extra_name}]=={version}"]
 
+    constraints = _lock_constraints(extra_name)
+    constraint_args = ["--constraint", str(constraints)] if constraints else []
+
     if shutil.which("uv"):
         return (
-            ["uv", "pip", "install", "--python", sys.executable, *requirements],
+            [
+                "uv",
+                "pip",
+                "install",
+                "--python",
+                sys.executable,
+                *constraint_args,
+                *requirements,
+            ],
             None,
         )
-    return ([sys.executable, "-m", "pip", "install", *requirements], None)
+    return (
+        [sys.executable, "-m", "pip", "install", *constraint_args, *requirements],
+        None,
+    )
+
+
+def _source_checkout_root() -> Path | None:
+    """The project root when running from a source checkout (which has a
+    `uv.lock`), else None -- a wheel install has no lockfile to honour."""
+    root = Path(__file__).resolve().parents[3]
+    if (root / "uv.lock").is_file() and (root / "pyproject.toml").is_file():
+        return root
+    return None
+
+
+def _lock_constraints(extra_name: str) -> Path | None:
+    """Write `extra_name`'s locked versions (`uv export`) to a constraints
+    file and return its path, or None when there's no lockfile, no uv, or
+    the export fails (the install then proceeds unconstrained, as before)."""
+    root = _source_checkout_root()
+    if root is None or not shutil.which("uv"):
+        return None
+    try:
+        result = subprocess.run(
+            [
+                "uv",
+                "export",
+                "--frozen",
+                "--no-hashes",
+                "--no-emit-project",
+                "--no-header",
+                "--extra",
+                extra_name,
+                "--project",
+                str(root),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        LOGGER.warning("Could not export locked versions for %r: %s", extra_name, exc)
+        return None
+    if result.returncode != 0:
+        LOGGER.warning(
+            "Could not export locked versions for %r: %s",
+            extra_name,
+            result.stderr.strip(),
+        )
+        return None
+    path = Path(tempfile.gettempdir()) / f"videoannotator-{extra_name}-constraints.txt"
+    path.write_text(result.stdout)
+    return path
 
 
 def _installed_distributions() -> tuple[dict[str, str], dict[str, set[str]]]:

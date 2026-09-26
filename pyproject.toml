@@ -134,7 +134,10 @@ face-laion = [
     "huggingface-hub>=0.20.0,<1.0",
 ]
 face-openface3 = [
-    "openface-test>=0.1.13",
+    # ==, not >=: every later release pins Pillow==9.4.0 (no Python 3.12 wheel,
+    # so it builds from source and fails without libjpeg headers) plus an
+    # exact numpy.
+    "openface-test==0.1.13",
     "scipy>=1.11.0",
     # openface3_pipeline.py imports cv2 directly and openface-test itself
     # declares no opencv dependency of its own — unlike `face`/`person`,

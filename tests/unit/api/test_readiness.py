@@ -17,8 +17,8 @@ from videoannotator.registry.pipeline_registry import (
 
 HF_SECRET = SetupRequirement(
     kind="secret",
-    name="HF_AUTH_TOKEN",
-    aliases=["HUGGINGFACE_TOKEN"],
+    name="HUGGINGFACE_TOKEN",
+    aliases=["HF_AUTH_TOKEN", "HF_TOKEN"],
     description="A Hugging Face access token",
     help_url="https://huggingface.co/settings/tokens",
 )
@@ -50,7 +50,7 @@ def _meta(
 
 @pytest.fixture(autouse=True)
 def _clean(monkeypatch):
-    for var in ("HF_AUTH_TOKEN", "HUGGINGFACE_TOKEN"):
+    for var in ("HUGGINGFACE_TOKEN", "HF_AUTH_TOKEN", "HF_TOKEN"):
         monkeypatch.delenv(var, raising=False)
     extras_install._in_flight.clear()
     extras_install._restart_pending_extras.clear()
@@ -95,23 +95,25 @@ class TestStates:
         assert (r["state"], r["next_action"]) == ("needs_setup", "setup")
         [blocker] = r["blockers"]
         assert blocker["kind"] == "secret"
-        assert blocker["name"] == "HF_AUTH_TOKEN"
+        assert blocker["name"] == "HUGGINGFACE_TOKEN"
+        assert "Set HUGGINGFACE_TOKEN" in blocker["message"]
         assert "server's environment" in blocker["message"]
         assert blocker["help_url"] == "https://huggingface.co/settings/tokens"
 
     def test_secret_value_never_appears(self, monkeypatch):
-        monkeypatch.setenv("HF_AUTH_TOKEN", "hf_sentinel_value")
+        monkeypatch.setenv("HUGGINGFACE_TOKEN", "hf_sentinel_value")
         r = readiness.pipeline_readiness(_meta(setup=[HF_SECRET, LICENCE]))
         assert "hf_sentinel_value" not in repr(r)
 
-    def test_alias_counts_as_set(self, monkeypatch):
-        monkeypatch.setenv("HUGGINGFACE_TOKEN", "x")
+    @pytest.mark.parametrize("legacy_name", ["HF_AUTH_TOKEN", "HF_TOKEN"])
+    def test_alias_counts_as_set(self, monkeypatch, legacy_name):
+        monkeypatch.setenv(legacy_name, "x")
         r = readiness.pipeline_readiness(_meta(setup=[HF_SECRET, LICENCE]))
         assert r["state"] == "ready"
         assert [n["kind"] for n in r["notes"]] == ["licence"]
 
     def test_licence_is_a_note_never_a_blocker(self, monkeypatch):
-        monkeypatch.setenv("HF_AUTH_TOKEN", "x")
+        monkeypatch.setenv("HUGGINGFACE_TOKEN", "x")
         r = readiness.pipeline_readiness(_meta(setup=[HF_SECRET, LICENCE]))
         assert r["state"] == "ready" and r["next_action"] == "none"
         assert r["notes"][0]["help_url"].endswith("speaker-diarization-3.1")
@@ -259,3 +261,80 @@ class TestDeepFaceWeights:
         meta = next(m for m in registry.list() if m.name == "face_analysis")
         assert {w.cache for w in meta.weights} == {"deepface"}
         assert sum(w.approx_mb for w in meta.weights) > 1000
+
+
+class TestOllamaBaseUrl:
+    """The e2e run: Ollama running on the host, the server in a devcontainer
+    checking the hardcoded 127.0.0.1 -- the container's own loopback."""
+
+    def test_empty_schema_default_uses_server_env(self, monkeypatch):
+        monkeypatch.setenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")
+        meta = _meta(
+            name="vlm_annotation",
+            config={"base_url": PipelineConfigField(type="string", default="")},
+        )
+        assert readiness._ollama_base_url(meta) == "http://host.docker.internal:11434"
+
+    def test_unset_env_falls_back_to_loopback(self, monkeypatch):
+        monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+        meta = _meta(name="vlm_annotation", config={})
+        assert readiness._ollama_base_url(meta) == "http://127.0.0.1:11434"
+
+    def test_shipped_metadata_defers_to_server_default(self):
+        from videoannotator.registry.pipeline_registry import get_registry
+
+        registry = get_registry()
+        registry.load()
+        meta = next(m for m in registry.list() if m.name == "vlm_annotation")
+        assert not meta.config_schema["base_url"].default
+
+    def test_unreachable_loopback_in_container_points_at_host(self):
+        from videoannotator.diagnostics import ollama
+
+        with patch.object(ollama, "_in_container", return_value=True):
+            hint = ollama.unreachable_hint("http://127.0.0.1:11434")
+        assert "OLLAMA_BASE_URL=http://host.docker.internal:11434" in hint
+
+    def test_unreachable_outside_container_says_start_it(self):
+        from videoannotator.diagnostics import ollama
+
+        with patch.object(ollama, "_in_container", return_value=False):
+            hint = ollama.unreachable_hint("http://127.0.0.1:11434")
+        assert hint == "Start it with 'ollama serve'."
+
+
+class TestHuggingFaceToken:
+    @pytest.fixture(autouse=True)
+    def _unset(self, monkeypatch):
+        for var in ("HUGGINGFACE_TOKEN", "HF_AUTH_TOKEN", "HF_TOKEN"):
+            monkeypatch.delenv(var, raising=False)
+
+    def test_primary_name_wins(self, monkeypatch):
+        from videoannotator.config_env import huggingface_token
+
+        monkeypatch.setenv("HUGGINGFACE_TOKEN", "primary")
+        monkeypatch.setenv("HF_AUTH_TOKEN", "legacy")
+        assert huggingface_token() == "primary"
+
+    def test_legacy_name_still_read(self, monkeypatch):
+        from videoannotator.config_env import huggingface_token
+
+        monkeypatch.setenv("HF_AUTH_TOKEN", "legacy")
+        assert huggingface_token() == "legacy"
+
+    def test_unset_or_blank_is_none(self, monkeypatch):
+        from videoannotator.config_env import huggingface_token
+
+        monkeypatch.setenv("HUGGINGFACE_TOKEN", "  ")
+        assert huggingface_token() is None
+
+    def test_shipped_metadata_names_huggingface_token(self):
+        from videoannotator.registry.pipeline_registry import get_registry
+
+        registry = get_registry()
+        registry.load()
+        for name in ("speaker_diarization", "audio_processing"):
+            meta = next(m for m in registry.list() if m.name == name)
+            [secret] = [r for r in meta.requires_setup if r.kind == "secret"]
+            assert secret.name == "HUGGINGFACE_TOKEN"
+            assert "HF_AUTH_TOKEN" in secret.aliases

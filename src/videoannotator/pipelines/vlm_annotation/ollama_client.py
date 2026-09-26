@@ -17,16 +17,21 @@ from typing import Any
 
 import httpx
 
-# Deferred rather than a top-level `from ollama import Client`: `ollama` is
-# only installed under the `llm` extra (004-extras-based-install), and this
-# module is imported unconditionally by vlm_pipeline.py and api/v1/vlm.py --
-# a top-level import here would crash the whole server at startup whenever
-# `llm` isn't installed, instead of the missing-extras behaviour every other
-# pipeline gets (registry/pipeline_loader.py's extras_available() gate).
-try:
-    from ollama import Client
-except ImportError:
-    Client = None  # type: ignore[assignment,misc]
+
+def _ollama_client_class() -> Any:
+    """`ollama.Client`, or None if the `llm` extra isn't installed.
+
+    Imported per call, not at module top: this module is imported by
+    api/v1/vlm.py at server startup, so a module-level binding would stay
+    None for the life of the server if `llm` was installed from the viewer
+    afterwards (live activation, spec 011) -- and every reachability check
+    would keep failing with a running Ollama.
+    """
+    try:
+        from ollama import Client
+    except ImportError:
+        return None
+    return Client
 
 
 class OllamaUnavailableError(RuntimeError):
@@ -50,13 +55,14 @@ class OllamaVLMClient:
     detection pipeline relies on in production."""
 
     def __init__(self, base_url: str, timeout: int):
-        if Client is None:
+        client_class = _ollama_client_class()
+        if client_class is None:
             raise OllamaUnavailableError(
                 "The 'ollama' package is not installed. Install it with: "
                 "pip install videoannotator[llm]"
             )
         self.base_url = base_url
-        self._client = Client(host=base_url, timeout=timeout)
+        self._client = client_class(host=base_url, timeout=timeout)
 
     def list_models(self) -> list[str]:
         """Return the names of models currently pulled on this server.
