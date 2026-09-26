@@ -6,10 +6,12 @@ and gaze estimation. Uses COCO format for compatibility with the
 VideoAnnotator standards.
 """
 
+import contextlib
 import json
 import logging
 import sys
 import time
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -111,6 +113,36 @@ def _weight_path(filename: str) -> str:
     from huggingface_hub import hf_hub_download
 
     return hf_hub_download(OPENFACE_WEIGHTS_REPO, filename)
+
+
+@contextlib.contextmanager
+def _without_star_training_setup() -> Iterator[None]:
+    """Build a LandmarkDetector without STAR's training-time setup.
+
+    Every LandmarkDetector calls `Base.init_instance()`, which adds a console
+    and a log.txt handler to the *root* logger and sets it to NOTSET (so each
+    OpenFace job made every server log line, DEBUG included, print once
+    more), and opens a TensorBoard writer under a new directory in the
+    upstream author's hard-coded `/work/jiewenh/...` path, which fails
+    wherever that can't be created. Inference never uses any of it
+    (`config.logger`/`writer` are None-checked). Root handlers and level are
+    also restored, in case a later openface-test does this elsewhere.
+    """
+    from openface.STAR.conf.base import Base
+
+    root = logging.getLogger()
+    handlers, level = list(root.handlers), root.level
+    init_instance = Base.init_instance
+    Base.init_instance = lambda self: None  # type: ignore[method-assign]
+    try:
+        yield
+    finally:
+        Base.init_instance = init_instance  # type: ignore[method-assign]
+        for handler in root.handlers[:]:
+            if handler not in handlers:
+                root.removeHandler(handler)
+                handler.close()
+        root.setLevel(level)
 
 
 class OpenFace3Pipeline(BasePipeline):
@@ -225,9 +257,12 @@ class OpenFace3Pipeline(BasePipeline):
             # Configure device IDs for CUDA
             device_ids = [0] if device == "cuda" else [-1]
 
-            self.landmark_detector = LandmarkDetector(
-                model_path=landmark_model_path, device=device, device_ids=device_ids
-            )
+            with _without_star_training_setup():
+                self.landmark_detector = LandmarkDetector(
+                    model_path=landmark_model_path,
+                    device=device,
+                    device_ids=device_ids,
+                )
 
             # Initialize multitask predictor for Action Units, Head Pose, Gaze, etc.
             if any(
