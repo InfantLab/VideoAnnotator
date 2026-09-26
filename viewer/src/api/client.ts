@@ -32,6 +32,7 @@ import type {
 } from '@/types/ingest';
 import type { CurrentUser } from '@/types/api';
 import type { JobResults } from '@/lib/jobOutcome';
+import type { Preset, PresetCreateRequest, PresetListResponse } from '@/types/presets';
 import { APIError } from './handleError';
 
 const mapReadinessItems = (value: unknown): ReadinessItem[] =>
@@ -622,6 +623,19 @@ class APIClient {
 
   async getJob(jobId: string): Promise<JobResponse> {
     return this.request(`/api/v1/jobs/${jobId}`);
+  }
+
+  /** Saved pipeline presets (spec 007), shared by everyone on the server. */
+  async listPresets(): Promise<PresetListResponse> {
+    return this.request('/api/v1/presets');
+  }
+
+  async createPreset(body: PresetCreateRequest): Promise<Preset> {
+    return this.request('/api/v1/presets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
   }
 
   /** Per-pipeline outcome of a job, including why a pipeline failed. */

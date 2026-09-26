@@ -1,4 +1,4 @@
-import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
+import { Dispatch, ReactNode, SetStateAction, useEffect, useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,8 @@ import {
   PIPELINE_CARD_BADGE,
   pipelineCardMode
 } from "@/lib/pipelineExtras";
+import { PresetBar } from "@/components/PresetBar";
+import type { Preset } from "@/types/presets";
 import { rememberRunSetup, totalDownloadLabel, weightsNotesFor } from "@/lib/runSetup";
 import { hasConfiguredApiToken } from "@/api/client";
 import { APIError } from "@/api/handleError";
@@ -224,6 +226,15 @@ const CreateNewJob = () => {
       window.history.replaceState({}, document.title);
     }
   }, [retryState, pipelines]);
+
+  // A preset is applied like a retried job: its pipelines through the same
+  // readiness filter (left-out ones are named), its settings over the current ones.
+  const applyPreset = (preset: Preset) => {
+    const { kept, leftOut } = partitionSelection(preset.selected_pipelines, pipelines);
+    setSelectedPipelines(kept);
+    setSelectionNotices(leftOut);
+    setConfig((prev) => ({ ...prev, ...preset.config }));
+  };
 
   // Readiness is re-fetched while the wizard is open, so a pipeline can stop
   // being runnable after it was selected (Ollama goes down). It stays selected
@@ -451,6 +462,9 @@ const CreateNewJob = () => {
             restartRequired={catalogData?.restartRequired ?? false}
             selectionNotices={selectionNotices}
             onDismissNotices={() => setSelectionNotices([])}
+            presetBar={
+              <PresetBar selectedPipelines={selectedPipelines} config={config} onApply={applyPreset} />
+            }
           />
         );
       case 3:
@@ -790,7 +804,8 @@ export const PipelineSelectionStep = ({
   onRetry,
   restartRequired = false,
   selectionNotices = [],
-  onDismissNotices
+  onDismissNotices,
+  presetBar
 }: {
   pipelines: PipelineDescriptor[];
   selectedPipelines: string[];
@@ -801,6 +816,8 @@ export const PipelineSelectionStep = ({
   restartRequired?: boolean;
   selectionNotices?: string[];
   onDismissNotices?: () => void;
+  /** Load/save presets; a slot so the step stays usable without a server that has them. */
+  presetBar?: ReactNode;
 }) => {
   const groupedPipelines = useMemo(() => {
     const groups = new Map<string, PipelineDescriptor[]>();
@@ -919,6 +936,8 @@ export const PipelineSelectionStep = ({
   return (
     <div className="space-y-6">
       <RestartRequiredBanner restartRequired={restartRequired} />
+
+      {presetBar}
 
       {selectionNotices.length > 0 && (
         <Alert>

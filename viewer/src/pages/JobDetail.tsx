@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient, type JobResponse } from "@/api/client";
@@ -98,16 +99,30 @@ const CreateJobDetail = () => {
     navigate(`/view/${job.id}`);
   };
 
+  // The job's artifacts zip: source video, every pipeline's output and the job log.
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const handleDownloadResults = async () => {
     if (!job) return;
-
+    setIsDownloading(true);
+    setDownloadError(null);
     try {
-      // TODO: Implement actual download from API
-      // For now, show placeholder
-      alert(`Download functionality coming soon for job ${job.id}`);
+      const response = await apiClient.getJobArtifacts(job.id);
+      if (!response.ok) throw new Error(`the server answered ${response.status}`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `job_${job.id}_artifacts.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch (error) {
       console.error("Download failed:", error);
-      alert("Download failed. Please try again.");
+      setDownloadError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -409,44 +424,26 @@ const CreateJobDetail = () => {
                   <Eye className="h-4 w-4 mr-2" />
                   Open in Viewer
                 </Button>
-                <Button variant="outline" onClick={handleDownloadResults}>
+                <Button variant="outline" onClick={handleDownloadResults} disabled={isDownloading}>
                   <Download className="h-4 w-4 mr-2" />
-                  Download Results
+                  {isDownloading ? "Preparing zip…" : "Download Results"}
                 </Button>
                 <Button variant="outline" onClick={handleViewRawData}>
                   <ExternalLink className="h-4 w-4 mr-2" />
                   View Raw Data
                 </Button>
               </div>
+              {downloadError && (
+                <p className="text-sm text-destructive">Couldn&apos;t download the results: {downloadError}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                The zip holds the video, each pipeline&apos;s output and the job log.
+              </p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Logs Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Logs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-black text-green-400 p-4 rounded-md font-mono text-sm h-64 overflow-y-auto">
-            {/* TODO: Implement real-time log streaming */}
-            <div className="space-y-1">
-              <div>[{new Date().toISOString()}] Job {job.id} created</div>
-              <div>[{new Date().toISOString()}] Video uploaded: {videoFilename}</div>
-              {job.status !== "pending" && (
-                <div>[{new Date().toISOString()}] Processing started...</div>
-              )}
-              {job.status === "completed" && (
-                <div>[{new Date().toISOString()}] Job completed successfully</div>
-              )}
-              {job.status === "failed" && (
-                <div>[{new Date().toISOString()}] Job failed: Check error details</div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
