@@ -27,6 +27,122 @@ interface UseZipDownloaderResult {
   reset: () => void;
 }
 
+/**
+ * Bump when a parser starts reading something it used to miss (e.g. COCO scene
+ * `annotations`, v2). The library caches the *parsed* result per job, so
+ * without this a parser fix never reaches a job that was already opened.
+ */
+const ANNOTATION_PARSER_VERSION = 2;
+
+/** Unzip a job's artifacts and parse every annotation file in it. */
+export async function parseArtifactsZip(blob: Blob): Promise<{ video: File; annotations: StandardAnnotationData }> {
+  const reader = new zip.BlobReader(blob);
+  const zipReader = new zip.ZipReader(reader);
+  const entries = await zipReader.getEntries();
+  
+  let foundVideo: File | null = null;
+  let foundAnnotations: StandardAnnotationData | null = null;
+  const candidateFiles: File[] = [];
+
+  type ZipEntryLike = {
+    filename: string;
+    directory?: boolean;
+    getData?: (writer: unknown) => Promise<Blob>;
+  };
+
+  for (const entry of entries) {
+    const entryLike = entry as unknown as ZipEntryLike;
+    if (entryLike.directory) continue;
+
+    if (entryLike.filename.match(/\.(mp4|mov|avi|mkv|webm)$/i)) {
+      const getData = entryLike.getData;
+      const videoBlob = typeof getData === 'function' ? await getData(new zip.BlobWriter()) : null;
+      if (videoBlob) {
+        foundVideo = new File([videoBlob], entryLike.filename, { type: 'video/mp4' });
+      }
+    } else {
+      // Extract other files for detection (JSON, VTT, RTTM)
+      const getData = entryLike.getData;
+      const fileBlob = typeof getData === 'function' ? await getData(new zip.BlobWriter()) : null;
+      if (fileBlob) {
+        candidateFiles.push(new File([fileBlob], entryLike.filename));
+      }
+    }
+  }
+
+  await zipReader.close();
+
+  if (!foundVideo) {
+    throw new Error('No video file found in artifacts ZIP');
+  }
+
+  // Detect and merge annotations
+  if (candidateFiles.length > 0) {
+    console.log('Detecting annotation files from ZIP:', candidateFiles.map(f => f.name));
+    const detectedFiles: DetectedFile[] = [];
+    
+    for (const file of candidateFiles) {
+      const detected = await detectFileType(file);
+      if (detected.type !== 'unknown') {
+        console.log(`Detected ${file.name} as ${detected.type}`);
+        detectedFiles.push(detected);
+      } else {
+        // Fallback: Check if it's a legacy results.json (StandardAnnotationData)
+        if (file.name === 'results.json') {
+           try {
+             const text = await file.text();
+             const json = JSON.parse(text);
+             if (json.metadata && json.annotations) {
+               console.log('Detected legacy results.json');
+               foundAnnotations = json;
+             }
+           } catch (e) {
+             console.warn('Failed to parse potential results.json', e);
+           }
+        }
+      }
+    }
+
+    if (detectedFiles.length > 0) {
+      // Add the video file to the detected files list so merger can use it for metadata
+      if (foundVideo) {
+         detectedFiles.push({
+           file: foundVideo,
+           type: 'video',
+           confidence: 1.0
+         });
+      }
+
+      const result = await mergeAnnotationData(detectedFiles);
+      foundAnnotations = result.data;
+    }
+  }
+
+  if (!foundAnnotations) {
+    console.warn('No valid annotations found in artifacts ZIP');
+    // We might want to allow viewing video without annotations, 
+    // but for now let's assume annotations are expected or create empty structure
+    const now = new Date().toISOString();
+    foundAnnotations = {
+      video_info: {
+        filename: foundVideo.name,
+        duration: 0,
+        width: 0,
+        height: 0,
+        frame_rate: 30
+      },
+      metadata: {
+        created: now,
+        version: '1.0.0',
+        pipelines: [],
+        source: 'videoannotator'
+      }
+    };
+  }
+
+  return { video: foundVideo, annotations: foundAnnotations };
+}
+
 export const useZipDownloader = (): UseZipDownloaderResult => {
   const [state, setState] = useState<DownloadState>('idle');
   const [progress, setProgress] = useState(0);
@@ -89,6 +205,34 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
         return null;
       }
 
+      // Parsed by an older viewer: re-parse the job's own artifacts ZIP, kept
+      // alongside, so parser fixes reach jobs opened before them (no server
+      // needed). Without the ZIP, fall through to a fresh download.
+      const manifestHandle = await datasetDir.getFileHandle('dataset.json', { create: false }).catch(() => null);
+      const manifest = manifestHandle
+        ? (JSON.parse(await (await manifestHandle.getFile()).text()) as Record<string, unknown>)
+        : null;
+      if (manifest?.parser_version !== ANNOTATION_PARSER_VERSION) {
+        const zipHandle = await datasetDir.getFileHandle(`job_${jobId}_artifacts.zip`, { create: false }).catch(() => null);
+        if (!zipHandle) return null;
+        const { annotations } = await parseArtifactsZip(await zipHandle.getFile());
+        const writable = await (await datasetDir.getFileHandle('annotations_merged.json', { create: true })).createWritable();
+        await writable.write(JSON.stringify(annotations, null, 2));
+        await writable.close();
+        if (manifest && manifestHandle) {
+          const manifestWritable = await manifestHandle.createWritable();
+          await manifestWritable.write(
+            JSON.stringify(
+              { ...manifest, parser_version: ANNOTATION_PARSER_VERSION, updated_at: new Date().toISOString() },
+              null,
+              2
+            )
+          );
+          await manifestWritable.close();
+        }
+        return { videoFile, annotationData: annotations };
+      }
+
       const annotationsFile = await annotationsHandle.getFile();
       const annotationsText = await annotationsFile.text();
       const annotations = JSON.parse(annotationsText) as StandardAnnotationData;
@@ -147,6 +291,7 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
       const now = new Date().toISOString();
       const datasetManifest = {
         schema_version: '1',
+        parser_version: ANNOTATION_PARSER_VERSION,
         dataset_id: datasetId,
         created_at: now,
         updated_at: now,
@@ -306,109 +451,7 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
       // 4. Unzip logic
       setState('unzipping');
       
-      const reader = new zip.BlobReader(blob);
-      const zipReader = new zip.ZipReader(reader);
-      const entries = await zipReader.getEntries();
-      
-      let foundVideo: File | null = null;
-      let foundAnnotations: StandardAnnotationData | null = null;
-      const candidateFiles: File[] = [];
-
-      type ZipEntryLike = {
-        filename: string;
-        directory?: boolean;
-        getData?: (writer: unknown) => Promise<Blob>;
-      };
-
-      for (const entry of entries) {
-        const entryLike = entry as unknown as ZipEntryLike;
-        if (entryLike.directory) continue;
-
-        if (entryLike.filename.match(/\.(mp4|mov|avi|mkv|webm)$/i)) {
-          const getData = entryLike.getData;
-          const videoBlob = typeof getData === 'function' ? await getData(new zip.BlobWriter()) : null;
-          if (videoBlob) {
-            foundVideo = new File([videoBlob], entryLike.filename, { type: 'video/mp4' });
-          }
-        } else {
-          // Extract other files for detection (JSON, VTT, RTTM)
-          const getData = entryLike.getData;
-          const fileBlob = typeof getData === 'function' ? await getData(new zip.BlobWriter()) : null;
-          if (fileBlob) {
-            candidateFiles.push(new File([fileBlob], entryLike.filename));
-          }
-        }
-      }
-
-      await zipReader.close();
-
-      if (!foundVideo) {
-        throw new Error('No video file found in artifacts ZIP');
-      }
-
-      // Detect and merge annotations
-      if (candidateFiles.length > 0) {
-        console.log('Detecting annotation files from ZIP:', candidateFiles.map(f => f.name));
-        const detectedFiles: DetectedFile[] = [];
-        
-        for (const file of candidateFiles) {
-          const detected = await detectFileType(file);
-          if (detected.type !== 'unknown') {
-            console.log(`Detected ${file.name} as ${detected.type}`);
-            detectedFiles.push(detected);
-          } else {
-            // Fallback: Check if it's a legacy results.json (StandardAnnotationData)
-            if (file.name === 'results.json') {
-               try {
-                 const text = await file.text();
-                 const json = JSON.parse(text);
-                 if (json.metadata && json.annotations) {
-                   console.log('Detected legacy results.json');
-                   foundAnnotations = json;
-                 }
-               } catch (e) {
-                 console.warn('Failed to parse potential results.json', e);
-               }
-            }
-          }
-        }
-
-        if (detectedFiles.length > 0) {
-          // Add the video file to the detected files list so merger can use it for metadata
-          if (foundVideo) {
-             detectedFiles.push({
-               file: foundVideo,
-               type: 'video',
-               confidence: 1.0
-             });
-          }
-
-          const result = await mergeAnnotationData(detectedFiles);
-          foundAnnotations = result.data;
-        }
-      }
-
-      if (!foundAnnotations) {
-        console.warn('No valid annotations found in artifacts ZIP');
-        // We might want to allow viewing video without annotations, 
-        // but for now let's assume annotations are expected or create empty structure
-        const now = new Date().toISOString();
-        foundAnnotations = {
-          video_info: {
-            filename: foundVideo.name,
-            duration: 0,
-            width: 0,
-            height: 0,
-            frame_rate: 30
-          },
-          metadata: {
-            created: now,
-            version: '1.0.0',
-            pipelines: [],
-            source: 'videoannotator'
-          }
-        };
-      }
+      const { video: foundVideo, annotations: foundAnnotations } = await parseArtifactsZip(blob);
 
       setVideoFile(foundVideo);
       setAnnotationData(foundAnnotations);
