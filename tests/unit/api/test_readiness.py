@@ -48,6 +48,9 @@ def _meta(
     )
 
 
+_REAL_HF_CACHED = readiness._hf_cached
+
+
 @pytest.fixture(autouse=True)
 def _clean(monkeypatch):
     for var in ("HUGGINGFACE_TOKEN", "HF_AUTH_TOKEN", "HF_TOKEN"):
@@ -329,6 +332,26 @@ class TestExtrasGroups:
 
     def test_unknown_group_has_no_size(self):
         assert readiness.approx_download_mb("not-a-group") is None
+
+
+class TestWeightCacheLocations:
+    def test_pyannote_models_found_in_pyannotes_own_cache(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("PYANNOTE_CACHE", str(tmp_path))
+        snapshot = (
+            tmp_path / "models--pyannote--speaker-diarization-3.1" / "snapshots" / "abc"
+        )
+        snapshot.mkdir(parents=True)
+        with patch.object(readiness, "_hf_cached", _REAL_HF_CACHED):
+            assert readiness._hf_cached("pyannote/speaker-diarization-3.1")
+            assert not readiness._hf_cached("pyannote/segmentation-3.0")
+
+    def test_whisper_found_in_the_pipelines_models_dir(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg"))
+        monkeypatch.chdir(tmp_path)
+        assert not readiness._whisper_cached("base")
+        (tmp_path / "models" / "whisper").mkdir(parents=True)
+        (tmp_path / "models" / "whisper" / "base.pt").write_bytes(b"")
+        assert readiness._whisper_cached("base")
 
 
 class TestDeepFaceWeights:

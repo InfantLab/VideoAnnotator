@@ -287,22 +287,37 @@ def _licence_item(
 
 
 def _hf_cached(repo_id: str) -> bool:
+    """In the Hugging Face hub cache, or pyannote 3.x's own cache
+    (`from_pretrained` defaults to `$PYANNOTE_CACHE`, else
+    `~/.cache/torch/pyannote`, not the hub cache)."""
     try:
         from huggingface_hub.constants import HF_HUB_CACHE
 
-        cache = Path(HF_HUB_CACHE)
+        hub = Path(HF_HUB_CACHE)
     except ImportError:
-        cache = (
+        hub = (
             Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface"))
             / "hub"
         )
-    snapshots = cache / f"models--{repo_id.replace('/', '--')}" / "snapshots"
-    return snapshots.is_dir() and any(snapshots.iterdir())
+    pyannote = Path(
+        os.environ.get("PYANNOTE_CACHE", Path.home() / ".cache" / "torch" / "pyannote")
+    )
+    folder = f"models--{repo_id.replace('/', '--')}"
+    for cache in (hub, pyannote):
+        snapshots = cache / folder / "snapshots"
+        if snapshots.is_dir() and any(snapshots.iterdir()):
+            return True
+    return False
 
 
 def _whisper_cached(model: str) -> bool:
-    root = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "whisper"
-    return (root / f"{model}.pt").is_file()
+    """openai-whisper's default cache, or `./models/whisper`, the speech
+    pipelines' `cache_dir` default (relative to the server's cwd)."""
+    roots = (
+        Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "whisper",
+        Path("models") / "whisper",
+    )
+    return any((root / f"{model}.pt").is_file() for root in roots)
 
 
 def _deepface_cached(filename: str) -> bool:

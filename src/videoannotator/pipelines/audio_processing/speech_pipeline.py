@@ -30,16 +30,21 @@ if not WHISPER_AVAILABLE:
     logger.warning("whisper not available. Speech recognition will be disabled.")
 
 
-def _missing_whisper(*_args: object, **_kwargs: object) -> None:
-    raise ImportError(
-        "Standard whisper not available. Install with: pip install openai-whisper"
-    )
+def _load_model(*args: Any, **kwargs: Any) -> Any:
+    try:
+        import whisper as openai_whisper
+    except ImportError:
+        raise ImportError(
+            "Standard whisper not available. Install with: pip install openai-whisper"
+        ) from None
+    return openai_whisper.load_model(*args, **kwargs)
 
 
-# Provide a patchable module-level symbol for tests.
-# When the real dependency is not installed, this stub prevents AttributeError
-# during patching (e.g. patch('...speech_pipeline.whisper.load_model')).
-whisper = SimpleNamespace(load_model=_missing_whisper)
+# A patchable module-level symbol for tests
+# (patch('...speech_pipeline.whisper.load_model')) that forwards to the real
+# package, imported lazily. It used to be a stub that always raised, even with
+# openai-whisper installed, so SpeechPipeline never loaded a model outside tests.
+whisper = SimpleNamespace(load_model=_load_model)
 
 
 class SpeechPipeline(WhisperBasePipeline):

@@ -50,7 +50,7 @@ try:
     HF_WHISPER_AVAILABLE = True
 except ImportError:
     HF_WHISPER_AVAILABLE = False
-    logger.warning(
+    logger.debug(
         "Hugging Face transformers not available. Install with: pip install transformers"
     )
 

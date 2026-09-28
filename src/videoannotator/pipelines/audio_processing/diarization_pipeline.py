@@ -3,10 +3,13 @@
 Handles speaker segmentation and identification with timestamps.
 """
 
+import tempfile
+from pathlib import Path
 from typing import Any
 
 from ...config_env import huggingface_token
 from ..base_pipeline import BasePipeline
+from .ffmpeg_utils import extract_audio_from_video
 
 try:
     from pyannote.audio import Pipeline as PyAnnotePipeline
@@ -14,6 +17,8 @@ try:
     PYANNOTE_AVAILABLE = True
 except ImportError:
     PYANNOTE_AVAILABLE = False
+
+_SOUNDFILE_SUFFIXES = {".wav", ".flac", ".ogg"}
 
 
 class DiarizationPipeline(BasePipeline):
@@ -99,30 +104,38 @@ class DiarizationPipeline(BasePipeline):
         if not self.is_initialized:
             self.initialize()
 
-        # For diarization, we process the full audio file
-        # Extract audio from video if needed (simplified - in production would use ffmpeg)
-        audio_path = video_path  # Assume video path can be used directly
+        video_id = Path(video_path).stem
 
-        # Create metadata
-        from pathlib import Path
+        if self.diarization_model is None:
+            raise RuntimeError("Diarization model not initialized")
 
-        metadata = {"video_id": Path(video_path).stem, "filepath": video_path}
+        # pyannote reads audio through soundfile, which cannot open video
+        # containers (mp4/mov/mkv), so decode to wav with ffmpeg first.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            if Path(video_path).suffix.lower() in _SOUNDFILE_SUFFIXES:
+                audio_path: Path | None = Path(video_path)
+            else:
+                audio_path = extract_audio_from_video(
+                    video_path, Path(temp_dir) / "audio.wav"
+                )
+            if audio_path is None:
+                self.logger.warning(
+                    f"No audio could be extracted from {video_path}; "
+                    "skipping diarization"
+                )
+                return []
 
-        # Apply diarization
-        if self.diarization_model is not None:
             diarization = self.diarization_model(
-                audio_path,
+                str(audio_path),
                 min_speakers=self.config["min_speakers"],
                 max_speakers=self.config["max_speakers"],
             )
-        else:
-            raise RuntimeError("Diarization model not initialized")
 
         # Convert to RTTM format
         turns = []
         for turn, _, speaker in diarization.itertracks(yield_label=True):
             turn_data = {
-                "file_id": metadata.get("video_id", "unknown"),
+                "file_id": video_id,
                 "start_time": turn.start,
                 "duration": turn.duration,
                 "end_time": turn.end,  # For convenience

@@ -76,9 +76,15 @@ def _lazy_import_openface():
     saved_argv = sys.argv
     sys.argv = sys.argv[:1]
     try:
+        from openface import multitask_model
         from openface.face_detection import FaceDetector
         from openface.landmark_detection import LandmarkDetector
         from openface.multitask_model import MultitaskPredictor
+
+        # openface's multitask_model calls cv2.cvtColor without importing cv2,
+        # so every predict() raised NameError and AU/emotion/gaze were dropped.
+        if not hasattr(multitask_model, "cv2"):
+            multitask_model.cv2 = cv2  # type: ignore[attr-defined]
 
         OPENFACE3_AVAILABLE = True
         logger.info("OpenFace 3.0 successfully imported (lazy)")
