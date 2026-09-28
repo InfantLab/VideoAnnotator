@@ -28,7 +28,7 @@ If a job completes with partial failures, the `error_message` field on the job o
 {
   "id": "job_123",
   "status": "completed",
-  "error_message": "Job completed with errors. Failed pipelines: speaker_diarization",
+  "error_message": "Completed with errors. speaker_diarization: Error opening '/path/video.mp4': Format not recognised.",
   "pipeline_results": {
     "face_analysis": { ... },  // Available!
     "speaker_diarization": null // Missing or error info

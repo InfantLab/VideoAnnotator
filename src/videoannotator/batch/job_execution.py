@@ -253,13 +253,18 @@ def _settle_final_status(job: BatchJob, pipelines_to_run: list[str]) -> None:
         if job.pipeline_results.get(name)
         and job.pipeline_results[name].status == JobStatus.FAILED
     ]
+    # Each failure's own error goes in the job-level message: clients that show
+    # one message per job (the viewer's status tooltip, batch rows) otherwise
+    # say *which* pipelines failed but never *why*.
+    reasons = "; ".join(
+        f"{name}: {job.pipeline_results[name].error_message or 'unknown error'}"
+        for name in failed
+    )
     if failed and len(failed) == len(pipelines_to_run):
         job.status = JobStatus.FAILED
-        job.error_message = f"All pipelines failed: {', '.join(failed)}"
+        job.error_message = f"All pipelines failed. {reasons}"
     elif failed:
         job.status = JobStatus.COMPLETED
-        job.error_message = (
-            f"Completed with errors. Failed pipelines: {', '.join(failed)}"
-        )
+        job.error_message = f"Completed with errors. {reasons}"
     else:
         job.status = JobStatus.COMPLETED

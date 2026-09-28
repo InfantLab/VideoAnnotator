@@ -78,7 +78,8 @@ class TestJobProcessorPartialFailure(unittest.TestCase):
 
         self.assertEqual(result.status, JobStatus.COMPLETED)
         self.assertIn("Completed with errors", result.error_message)
-        self.assertIn("pipeline2", result.error_message)
+        self.assertIn("pipeline2: Simulated failure", result.error_message)
+        self.assertNotIn("pipeline1", result.error_message)
         self.assertEqual(
             result.pipeline_results["pipeline1"].status, JobStatus.COMPLETED
         )
@@ -96,6 +97,8 @@ class TestJobProcessorPartialFailure(unittest.TestCase):
 
         self.assertEqual(result.status, JobStatus.FAILED)
         self.assertIn("All pipelines failed", result.error_message)
+        self.assertIn("pipeline1: Simulated failure", result.error_message)
+        self.assertIn("pipeline2: Simulated failure", result.error_message)
 
 
 if __name__ == "__main__":
