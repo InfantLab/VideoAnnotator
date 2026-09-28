@@ -76,6 +76,23 @@ happens from outside either repo.
       repo with a pointer README, and update links in `README.md`, `paper/paper.md` and
       `CITATION.cff`.
 
+**Viewer bugs found in the v1.5.0 end-to-end run** (2026-09-26), to fix once `viewer/` is in
+this repo:
+- [ ] **VLM prompt sent as `base_url`**: submitting a job with `vlm_annotation` stored the prompt
+      text in both `prompt` and `base_url`, so the job failed with "Port could not be cast to
+      integer value as ' 2, child: True'". Likely the wizard's config form binding the prompt
+      textarea's value to the `base_url` field too. Since `610aea1` the server rejects a non-URL
+      `base_url` at submission (400 `INVALID_URL`), so it now fails fast, but the form is still
+      wrong.
+- [ ] **Misleading error on a rejected job**: when `POST /api/v1/jobs` returns 400 with a clear
+      message (e.g. "Unknown pipeline 'speaker_diarization'"), the viewer shows "All job
+      submissions failed" with a generic tip that the server may not be running or the token may be
+      invalid. Show the server's `message`/`hint` instead; keep connection tips for actual
+      connection failures.
+- [ ] **No library folder selected → flickering dialog on "View jobs"**: the dialog flickers and
+      never explains what a library folder is or how to choose one. Show a steady prompt with a
+      "Choose folder" action (and why it's needed), or let job viewing work without one.
+
 **Why first**: every later phase writes docs and tutorials full of repository links. Moving after
 that means rewriting them, and breaking links pilot labs have already saved.
 
@@ -179,6 +196,31 @@ half-built page.
 - [ ] A structural pass along the one path users take: install → add videos → run → review →
       export. Anything off that path moves or goes. A Playwright "first-time user" run on a clean
       machine files each point of friction as an issue.
+
+**Run it again**: the path doesn't end at review. A researcher who likes a result wants the same
+settings on more videos; one who doesn't wants to tweak and rerun. Today both mean rebuilding the
+job in the wizard from memory, although every job already stores its `selected_pipelines` and
+`config`.
+- [ ] **Rerun a job**: same videos, same settings, one click, as a new job that links back to the
+      original (`rerun_of`). "Edit and rerun" opens the wizard prefilled.
+- [ ] **Reuse settings on new videos**: "Use these settings" on a job or batch opens the wizard at
+      "Choose videos" with pipelines and config filled in; "Save as preset" writes the existing
+      `saved_pipeline_presets` table.
+- [ ] **UX cues that lead there**, not only buttons in a menu: the actions sit on the job/batch
+      result page where the user is looking when they decide; the wizard's first step offers
+      "Start from a previous job" and recent presets before the blank form; a failed or partial job
+      says "Fix settings and rerun"; a completed batch suggests "Run on more videos". Check each
+      in the Playwright first-time-user run.
+- [ ] **Prompt library**: every VLM prompt used, in a job or a preview, saved to the database once
+      (deduplicated by SHA-256, the same hash as the methods paragraph's provenance) with its
+      model, first/last used and the jobs that used it. A browser to search, view, diff, name,
+      star and reuse them; reusing one fills the prompt field.
+- [ ] **Prompt workbench**: the "test prompt" panel from inside the VLM pipeline config as a
+      standalone page, since prompt design is iterative and deserves more room than a wizard step.
+      Pick a video and frame (or burst), a model and a prompt; run; compare responses side by side
+      across prompt versions or models; send the winner to a job or preset. Backend exists
+      (`POST /api/v1/vlm/preview`, `GET /api/v1/vlm/models`); new work is the page, the prompt
+      table and its endpoints. Also through the CLI/MCP (Phase 4).
 
 **Not in this phase**: a visual redesign. Decide on one after the pilot, from what outside users
 say.
