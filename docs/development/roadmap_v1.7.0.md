@@ -134,6 +134,32 @@ additive post-processing step.
 
 ---
 
+### Phase 4: Model Management
+
+**Problem**: model weights are the largest thing VideoAnnotator puts on a user's disk (a full
+install downloads several GB), and the only way to see or remove them is a file manager. Nothing
+shows which model and which version a pipeline uses, how big it is, whether it's downloaded, or
+which other pipelines share it. Builds on v1.6.0's single models directory
+(`VIDEOANNOTATOR_MODELS_DIR`): one place to look makes one place to manage.
+
+**Solution**:
+- [ ] A models inventory: every model the installed pipelines use, with its source (Hugging Face
+      repo, Whisper size, DeepFace file, YOLO checkpoint), version or revision, size on disk (or
+      download size if not downloaded), the pipelines that use it, and when it was last used.
+      `GET /api/v1/models` and `videoannotator models list`.
+- [ ] Download ahead of time (`videoannotator models pull <pipeline|model>`, and a button), so the
+      first job doesn't sit at "Preparing" for minutes.
+- [ ] Delete weights, with a warning naming the pipelines that will download them again. Admin-only
+      over the API, like extras install (005).
+- [ ] A Models page in the viewer: the inventory, total disk use, pull and delete.
+- [ ] Provenance: the model revision recorded with each job's results (Principle III) matches what
+      the inventory shows.
+
+**Reference**: raised in the v1.5.0 end-to-end run (2026-09-28), after a container rebuild silently
+deleted every cached model. Write a spec before implementing.
+
+---
+
 ## ✅ Success Criteria
 
 - [ ] A third-party plugin package (≤ 50 lines) is installable and runnable through the standard
@@ -144,6 +170,8 @@ additive post-processing step.
 - [x] Provenance metadata for local-LLM pipeline runs records backend, base URL, and model identity.
 - [ ] `person_tracking` output includes frame-to-frame movement-delta fields via a pandas-based
       post-processing step, additive-only (no v1.5.x output field ever removed or renamed).
+- [ ] A user can see every downloaded model's size, version and users, and pull or delete it, from
+      the CLI and the viewer without touching the filesystem.
 
 ---
 

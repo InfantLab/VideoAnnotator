@@ -92,6 +92,25 @@ this repo:
 - [ ] **No library folder selected → flickering dialog on "View jobs"**: the dialog flickers and
       never explains what a library folder is or how to choose one. Show a steady prompt with a
       "Choose folder" action (and why it's needed), or let job viewing work without one.
+- [ ] **Scene detection always shows "(No data)"**: `parseSceneDetection`
+      (`src/lib/parsers/scene.ts`) accepts a bare array, `results` or `scenes`, but not COCO's
+      `annotations`, which is what the backend writes. It throws, and the scenes panel is empty
+      for every job, however many scenes there are. Found 2026-09-28 on a clip with one scene
+      (0–7.32 s, "nursery") the backend had detected correctly.
+- [ ] **Failed pipelines' reasons are hard to find**: a batch says "N with errors … the reason is
+      on each video's row", but the reason is only a hover tooltip on the status badge, and the
+      job page doesn't list failed pipelines with their `error_message` from
+      `GET /jobs/{id}/results`. Show per-pipeline errors on the job page and inline in the batch
+      row. (Server side: since 2026-09-28 the job-level `error_message` includes each failed
+      pipeline's error, not only its name.)
+- [ ] **Results view isn't batch-aware**: opening a video from a batch loses the batch. Show which
+      batch and video (n of N) you're on, previous/next between the batch's videos, and a way back
+      to the batch page. Overlaps Phase 6's previous/next item; do the navigation here, before
+      release.
+- [ ] **First-run download total double-counts shared weights**: the "Preparing… downloads about
+      1.4 GB" line sums each pipeline's `weights_not_cached` notes, so a model two pipelines share
+      (`pyannote/speaker-diarization-3.1`, for audio_processing and speaker_diarization) counts
+      twice. Deduplicate by the note's `name` before summing.
 
 **Why first**: every later phase writes docs and tutorials full of repository links. Moving after
 that means rewriting them, and breaking links pilot labs have already saved.
@@ -160,6 +179,27 @@ lifted, 2026-09-26):
       viewer's dependencies.
 - [ ] **Implement** the specs before rc1. Re-baseline the v1.4.x acceptance fixtures once, on
       purpose, and record the before/after differences on the demo video in the CHANGELOG.
+
+**Also in this phase: one place for model weights.** Today the weights end up wherever each
+library puts them by default. Whisper, YOLO and the LAION pipelines use `./models/<name>`
+(relative to the server's working directory, so a different directory means another download).
+Hugging Face uses `~/.cache/huggingface`, pyannote 3.x uses `~/.cache/torch/pyannote`, and
+DeepFace uses `~/.deepface`. Users can't find them, and in a container they're lost on every
+rebuild. The devcontainer points all of them into `models/` with environment variables (2026-09-28),
+but only the devcontainer does.
+- [ ] One setting, `VIDEOANNOTATOR_MODELS_DIR` (default decided in the spec: `./models` or a
+      per-user data directory), resolved to an absolute path once at startup. Under it, one
+      subdirectory per source: `huggingface/`, `pyannote/`, `torch/`, `deepface/`, `whisper/`,
+      `yolo/`, and so on.
+- [ ] The server and CLI set `HF_HOME`, `TORCH_HOME`, `PYANNOTE_CACHE` and `DEEPFACE_HOME` from it
+      before any pipeline library is imported, unless the user has set them. Pipelines' own
+      `cache_dir` defaults come from the same place.
+- [ ] Readiness (`api/readiness.py`) finds weights through the same resolver, so "downloads about
+      N MB" is never wrong about where it looked.
+- [ ] Moving the default means existing installs download once more. Say so in the CHANGELOG and
+      print the old and new locations the first time the server starts. Drop the devcontainer's own
+      environment variables once the app sets them.
+- [ ] `videoannotator diagnose` shows where the models directory is and how much it holds.
 
 **Library versions vs default models**: this phase upgrades libraries. Switching a pipeline's
 *default model* (for example to `speaker-diarization-community-1`) still waits for the benchmark in
