@@ -34,6 +34,7 @@ import {
   pipelineSchemaQueryOptions,
 } from "@/hooks/usePipelineCatalog";
 import { DynamicPipelineParameters } from "@/components/DynamicPipelineParameters";
+import { findUrlFieldErrors } from "@/lib/pipelineUrlFields";
 import { LockedPipelineCard, ExtrasInstallStatus, ReadinessDetails } from "@/components/LockedPipelineCard";
 import { RestartRequiredBanner } from "@/components/RestartRequiredBanner";
 import type { PipelineDescriptor } from "@/types/pipelines";
@@ -53,7 +54,7 @@ import { PresetBar } from "@/components/PresetBar";
 import type { Preset } from "@/types/presets";
 import { rememberRunSetup, totalDownloadLabel, weightsNotesFor } from "@/lib/runSetup";
 import { hasConfiguredApiToken } from "@/api/client";
-import { APIError } from "@/api/handleError";
+import { APIError, apiErrorEnvelope } from "@/api/handleError";
 
 // Wizard steps
 const STEPS = [
@@ -173,6 +174,11 @@ const CreateNewJob = () => {
     );
   }, [pipelines, selectedPipelines, schemaQueries]);
   const [config, setConfig] = useState<Record<string, unknown>>({});
+  // Checked locally: the server only rejects a bad URL at submission.
+  const urlFieldErrors = useMemo(
+    () => findUrlFieldErrors(pipelinesWithSchema, selectedPipelines, config),
+    [pipelinesWithSchema, selectedPipelines, config]
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<ParsedError | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string[]>([]);
@@ -380,6 +386,10 @@ const CreateNewJob = () => {
     try {
       console.log(`📤 Submitting ${selectedFiles.length} job(s) as batch ${batchId}...`);
 
+      // The server answered and said no (e.g. 400 INVALID_URL), as opposed
+      // to not answering at all; only the latter gets connection tips.
+      const serverRejections: APIError[] = [];
+
       // Submit each video as a separate job
       for (const file of selectedFiles) {
         try {
@@ -396,6 +406,9 @@ const CreateNewJob = () => {
           console.error(`❌ Job submission failed for ${file.name}:`, error);
           const parsedError = parseApiError(error);
           errors.push(`${file.name}: ${parsedError.message}`);
+          if (error instanceof APIError && error.status > 0) {
+            serverRejections.push(error);
+          }
         }
       }
 
@@ -420,7 +433,17 @@ const CreateNewJob = () => {
         }));
       }
 
-      if (jobIds.length === 0 && errors.length > 0) {
+      if (jobIds.length === 0 && errors.length > 0 && serverRejections.length === errors.length) {
+        console.error('❌ All job submissions rejected by the server');
+        const first = serverRejections[0];
+        const envelope = apiErrorEnvelope(first);
+        const sameReason = serverRejections.every((e) => e.message === first.message);
+        setSubmitError({
+          message: sameReason ? first.message : `The server rejected all ${errors.length} job(s)`,
+          code: envelope.code,
+          hint: sameReason ? envelope.hint : errors.join('\n'),
+        });
+      } else if (jobIds.length === 0 && errors.length > 0) {
         console.error('❌ All job submissions failed');
         setSubmitError(parseApiError({
           error: 'All job submissions failed',
@@ -514,10 +537,18 @@ const CreateNewJob = () => {
         );
       case 3:
         // Can proceed from config step if validation passes (or is still loading)
-        return validationResult?.valid !== false && notReadySelected.length === 0;
+        return (
+          validationResult?.valid !== false &&
+          notReadySelected.length === 0 &&
+          urlFieldErrors.length === 0
+        );
       case 4:
         // Cannot submit if config is invalid, or a selected pipeline can't run
-        return validationResult?.valid !== false && notReadySelected.length === 0;
+        return (
+          validationResult?.valid !== false &&
+          notReadySelected.length === 0 &&
+          urlFieldErrors.length === 0
+        );
       default:
         return false;
     }

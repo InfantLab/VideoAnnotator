@@ -1,6 +1,7 @@
 // Scene detection parser for VideoAnnotator scene detection data
 // Reference: https://github.com/InfantLab/VideoAnnotator
-// VideoAnnotator produces simple JSON arrays for scene detection
+// VideoAnnotator writes scene detection as a COCO export (scenes in
+// `annotations`); bare arrays and results/scenes wrappers are older formats
 
 import type { SceneAnnotation } from '@/types/annotations';
 import { validateSceneData } from '@/lib/validation';
@@ -36,8 +37,11 @@ export async function parseSceneDetection(file: File): Promise<SceneAnnotation[]
         } else if (data.scenes && Array.isArray(data.scenes)) {
             // Alternative format with scenes array
             scenes = data.scenes;
+        } else if (data.annotations && Array.isArray(data.annotations)) {
+            // COCO export, which is what the VideoAnnotator backend writes
+            scenes = data.annotations;
         } else {
-            throw new Error('Invalid scene detection format: expected array of scenes or object with scenes/results array');
+            throw new Error('Invalid scene detection format: expected array of scenes or object with scenes/results/annotations array');
         }
 
         if (scenes.length === 0) {
@@ -277,7 +281,8 @@ export async function isValidSceneDetection(file: File): Promise<boolean> {
 
         return (
             (data.results && Array.isArray(data.results)) ||
-            (data.scenes && Array.isArray(data.scenes))
+            (data.scenes && Array.isArray(data.scenes)) ||
+            (data.annotations && Array.isArray(data.annotations))
         );
     } catch {
         return false;

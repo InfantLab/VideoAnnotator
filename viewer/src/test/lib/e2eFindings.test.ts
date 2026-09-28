@@ -57,6 +57,13 @@ describe('first-run setup', () => {
     expect(weightsNotesFor([face], [])).toEqual([]);
   });
 
+  it('counts weights two pipelines share once', () => {
+    const pyannote = { kind: 'weights_not_cached', name: 'pyannote/speaker-diarization-3.1', message: 'x', helpUrl: null, approxMb: 300 };
+    const audio = pipeline('audio_processing', 'Audio', { notes: [pyannote] });
+    const diar = pipeline('speaker_diarization', 'Diarization', { notes: [pyannote] });
+    expect(totalDownloadLabel(weightsNotesFor([audio, diar], ['audio_processing', 'speaker_diarization']))).toBe('about 300 MB');
+  });
+
   it('estimates from videos after the first, ignoring its setup time', () => {
     const t0 = Date.parse('2026-09-25T10:00:00Z');
     const at = (minutes: number) => new Date(t0 + minutes * 60_000).toISOString();

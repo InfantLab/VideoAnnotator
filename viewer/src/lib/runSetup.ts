@@ -16,6 +16,9 @@ export interface SetupNote {
   pipeline: string;
   message: string;
   approxMb: number | null;
+  /** The weights' own name, shared by pipelines that use the same model.
+   * Absent on notes remembered before it was recorded. */
+  name?: string;
 }
 
 /** The `weights_not_cached` notes of the selected pipelines. */
@@ -25,13 +28,29 @@ export function weightsNotesFor(pipelines: PipelineDescriptor[], selectedIds: st
     .flatMap((p) =>
       (p.readiness?.notes ?? [])
         .filter((note: ReadinessItem) => note.kind === 'weights_not_cached')
-        .map((note) => ({ pipeline: p.name, message: note.message, approxMb: note.approxMb ?? null }))
+        .map((note) => ({
+          pipeline: p.name,
+          message: note.message,
+          approxMb: note.approxMb ?? null,
+          name: note.name || undefined,
+        }))
     );
 }
 
-/** "about 1.1 GB", or null when no note carries a size. */
+/**
+ * "about 1.1 GB", or null when no note carries a size. Weights two pipelines
+ * share (pyannote for audio_processing and speaker_diarization) download
+ * once, so they count once.
+ */
 export function totalDownloadLabel(notes: SetupNote[]): string | null {
-  const mb = notes.reduce((sum, n) => sum + (n.approxMb ?? 0), 0);
+  const seen = new Set<string>();
+  const mb = notes.reduce((sum, n) => {
+    if (n.name) {
+      if (seen.has(n.name)) return sum;
+      seen.add(n.name);
+    }
+    return sum + (n.approxMb ?? 0);
+  }, 0);
   if (mb <= 0) return null;
   return mb >= 1000 ? `about ${(mb / 1000).toFixed(1)} GB` : `about ${Math.round(mb)} MB`;
 }

@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { VlmModelPicker } from '@/components/VlmModelPicker';
 import { VlmPromptTestPanel } from '@/components/VlmPromptTestPanel';
+import { isUrlParameter, urlValueError } from '@/lib/pipelineUrlFields';
 
 import type { PipelineDescriptor, PipelineParameterSchema } from '@/types/pipelines';
 
@@ -390,16 +391,30 @@ export const DynamicPipelineParameters = ({
                         </div>
                       );
 
-                    default:
+                    default: {
+                      const urlError = isUrlParameter(parameter)
+                        ? urlValueError(currentValue)
+                        : null;
                       return (
                         <div key={parameter.name} className="space-y-1">
-                          <Label className="text-sm">{parameter.label || parameter.name}</Label>
+                          <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
+                            {parameter.label || parameter.name}
+                          </Label>
                           <Input
+                            id={`${pipeline.id}-${parameter.name}`}
                             value={String(currentValue ?? '')}
                             onChange={(event) =>
                               handleValueChange(pipeline.id, parameter, event.target.value)
                             }
+                            {...(isUrlParameter(parameter) && {
+                              type: 'url',
+                              placeholder: 'Leave empty for the server default',
+                              'aria-invalid': urlError !== null
+                            })}
                           />
+                          {urlError && (
+                            <p className="text-xs text-destructive">{urlError}</p>
+                          )}
                           {parameter.description && (
                             <p className="text-xs text-muted-foreground">
                               {parameter.description}
@@ -407,6 +422,7 @@ export const DynamicPipelineParameters = ({
                           )}
                         </div>
                       );
+                    }
                   }
                 })}
               </div>
