@@ -97,7 +97,9 @@ def server(
     from .config_env import ENABLE_VIEWER
 
     if ENABLE_VIEWER:
-        display_host = "localhost" if host == "0.0.0.0" else host
+        # 127.0.0.1, not localhost: the viewer only works from that origin
+        # (see the redirect in api/main.py).
+        display_host = "127.0.0.1" if host in ("0.0.0.0", "localhost") else host
         typer.echo(
             f"[INFO] Video Annotation Viewer available at http://{display_host}:{port}/viewer"
         )
@@ -1298,7 +1300,7 @@ def _viewer_connect_url(token: str, port: int = API_PORT) -> str:
     """
     from urllib.parse import quote
 
-    return f"http://localhost:{port}/viewer-connect?token={quote(token)}"
+    return f"http://127.0.0.1:{port}/viewer-connect?token={quote(token)}"
 
 
 @app.command("generate-token")

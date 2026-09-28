@@ -108,6 +108,16 @@ this repo:
       `GET /jobs/{id}/results`. Show per-pipeline errors on the job page and inline in the batch
       row. (Server side: since 2026-09-28 the job-level `error_message` includes each failed
       pipeline's error, not only its name.)
+- [ ] **`localhost` vs `127.0.0.1`: viewer can't connect, or connects without its token**
+      (recurring). The server side (`start_server.sh`, the `setup-db`/`generate-token` login
+      links, `CORS_AND_AUTH_PROTOCOL.md`) says `localhost`. The viewer defaults its API URL to
+      `127.0.0.1` and rewrites a saved `localhost` to `127.0.0.1`. The browser treats them as two
+      sites with separate storage, so after logging in via a `localhost` link the viewer either
+      can't reach the API ("Cannot Connect", seen 2026-09-28 in the devcontainer on Windows) or
+      reaches it with no token (401 on every call). **Server side fixed in v1.5.0** (2026-09-28):
+      the server redirects `localhost/viewer…` and `/viewer-connect` to `127.0.0.1`, and every
+      link it prints uses `127.0.0.1`. **Left for the viewer**: when the server serves it, use the
+      page's own origin as the API URL, with no rewriting, and drop the redirect.
 - [ ] **Results view isn't batch-aware**: opening a video from a batch loses the batch. Show which
       batch and video (n of N) you're on, previous/next between the batch's videos, and a way back
       to the batch page. Overlaps Phase 6's previous/next item; do the navigation here, before

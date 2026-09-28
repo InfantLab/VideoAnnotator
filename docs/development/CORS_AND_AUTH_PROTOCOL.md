@@ -78,7 +78,11 @@ If you want to disable authentication completely for rapid prototyping:
 -   **VS Code Port Forwarding**: Ensure port `18011` is forwarded.
     -   Check the "Ports" tab in VS Code.
     -   If "Visibility" is Private, you may need to authenticate in the browser first.
--   **Address**: Use `http://localhost:18011`.
+-   **Address**: Use `http://127.0.0.1:18011`, not `localhost`. The bundled viewer calls the API
+    at `127.0.0.1`, and the browser keeps the API token separately for each origin, so a viewer
+    opened at `localhost` either can't reach the API or reaches it without its token (401 on
+    every call). The server redirects `localhost/viewer…` and `/viewer-connect` to `127.0.0.1`,
+    and every link it prints uses `127.0.0.1`.
 
 ### Scenario B: Client in Browser (Codespaces) -> Server in Codespace
 -   **Address**: Use the forwarded URL provided by GitHub (e.g., `https://...-18011.app.github.dev`).

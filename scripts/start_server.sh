@@ -127,7 +127,8 @@ echo "$SETUP_OUTPUT"
 CONNECT_LINK="$(echo "$SETUP_OUTPUT" | grep -oE 'http://[^[:space:]]+/viewer-connect\?token=[^[:space:]]+' || true)"
 
 DISPLAY_HOST="$HOST"
-[[ "$HOST" == "0.0.0.0" ]] && DISPLAY_HOST="localhost"
+# 127.0.0.1, not localhost: the viewer only works from that origin.
+[[ "$HOST" == "0.0.0.0" || "$HOST" == "localhost" ]] && DISPLAY_HOST="127.0.0.1"
 
 print_viewer_info() {
     if [[ "${VIDEOANNOTATOR_ENABLE_VIEWER:-true}" == "false" ]]; then

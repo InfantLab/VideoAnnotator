@@ -8,9 +8,9 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
@@ -315,6 +315,24 @@ def create_app() -> FastAPI:
 </script>
 </body></html>"""
         return HTMLResponse(content=html)
+
+    # The viewer pins its API URL to 127.0.0.1 (and rewrites a saved
+    # `localhost` to it), and the browser keeps the API token per origin. A
+    # page opened at `localhost` therefore either can't reach the API or
+    # reaches it without the token. Send browsers to the one origin that works.
+    @app.middleware("http")
+    async def viewer_on_loopback_ip(request: Request, call_next):
+        path = request.url.path
+        if (
+            request.method in ("GET", "HEAD")
+            and request.url.hostname == "localhost"
+            and (path in ("/viewer", "/viewer-connect") or path.startswith("/viewer/"))
+        ):
+            netloc = "127.0.0.1" + (f":{request.url.port}" if request.url.port else "")
+            return RedirectResponse(
+                str(request.url.replace(netloc=netloc)), status_code=307
+            )
+        return await call_next(request)
 
     _mount_viewer(app)
 
