@@ -24,13 +24,21 @@
                                           "onAutoForward":  "notify"
                                       }
                         },
+    "onCreateCommand":  "grep -qF scripts/shell_aliases.sh ~/.bashrc || echo \"source ${containerWorkspaceFolder}/scripts/shell_aliases.sh\" >> ~/.bashrc",
     "postCreateCommand":  "uv sync --inexact --extra dev \u0026\u0026 HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh \u0026\u0026 uv run pre-commit install",
+    "mounts":  [
+                   "source=videoannotator-claude-home,target=/root/.claude,type=volume"
+               ],
     "containerEnv":  {
                          "UV_LINK_MODE":  "copy",
                          "UV_NO_SYNC":  "1",
                          "HUGGINGFACE_TOKEN":  "${localEnv:HUGGINGFACE_TOKEN}",
                          "HF_AUTH_TOKEN":  "${localEnv:HF_AUTH_TOKEN}",
-                         "OLLAMA_BASE_URL":  "http://host.docker.internal:11434"
+                         "OLLAMA_BASE_URL":  "http://host.docker.internal:11434",
+                         "HF_HOME":  "${containerWorkspaceFolder}/models/huggingface",
+                         "TORCH_HOME":  "${containerWorkspaceFolder}/models/torch",
+                         "PYANNOTE_CACHE":  "${containerWorkspaceFolder}/models/pyannote",
+                         "DEEPFACE_HOME":  "${containerWorkspaceFolder}/models/deepface"
                      },
     "customizations":  {
                            "vscode":  {

@@ -91,6 +91,19 @@ login link once the server is actually up. Safe to re-run any time (e.g. after a
 restart). Pass `--background` to keep it running after this terminal closes, or `--help` for all options
 (custom port, non-interactive mode, extras to sync, etc).
 
+**Optional shorthands.** In the dev container, two aliases are already set up. Elsewhere, add
+`source /path/to/VideoAnnotator/scripts/shell_aliases.sh` to your `~/.bashrc` or `~/.zshrc`:
+
+| Alias      | Runs                      |
+|------------|---------------------------|
+| `va-start` | `scripts/start_server.sh` |
+| `va`       | `uv run videoannotator`   |
+
+They're only shorthand, and they work from any directory. `va-start --background` and
+`va job submit video.mp4 --pipelines scene_detection` work as you'd expect. This README always
+spells out the full commands. Note that `va server` starts only the bare server, without the
+setup steps; use `va-start` for the one-command start.
+
 The default (core) install runs the server and viewer with no pipeline installed yet — each pipeline
 family lives behind a named extras group (e.g. `face`, `audio`, `scene`, `person`, `all`; see
 [pyproject.toml](pyproject.toml)'s `[project.optional-dependencies]`), so the install stays small until
