@@ -78,25 +78,30 @@ happens from outside either repo.
 
 **Viewer bugs found in the v1.5.0 end-to-end run** (2026-09-26), to fix once `viewer/` is in
 this repo:
-- [ ] **VLM prompt sent as `base_url`**: submitting a job with `vlm_annotation` stored the prompt
+- [x] **VLM prompt sent as `base_url`**: submitting a job with `vlm_annotation` stored the prompt
       text in both `prompt` and `base_url`, so the job failed with "Port could not be cast to
       integer value as ' 2, child: True'". Likely the wizard's config form binding the prompt
       textarea's value to the `base_url` field too. Since `610aea1` the server rejects a non-URL
       `base_url` at submission (400 `INVALID_URL`), so it now fails fast, but the form is still
       wrong.
-- [ ] **Misleading error on a rejected job**: when `POST /api/v1/jobs` returns 400 with a clear
+      Fixed early in the viewer (`4ec8d0b`): the stored job's `base_url` is the prompt with its
+      newlines stripped, i.e. pasted into the single-line Base Url box, not a binding bug. URL
+      fields now show an inline error and block Next/Submit.
+- [x] **Misleading error on a rejected job**: when `POST /api/v1/jobs` returns 400 with a clear
       message (e.g. "Unknown pipeline 'speaker_diarization'"), the viewer shows "All job
       submissions failed" with a generic tip that the server may not be running or the token may be
       invalid. Show the server's `message`/`hint` instead; keep connection tips for actual
       connection failures.
+      Fixed early in the viewer (`4ec8d0b`).
 - [ ] **No library folder selected → flickering dialog on "View jobs"**: the dialog flickers and
       never explains what a library folder is or how to choose one. Show a steady prompt with a
       "Choose folder" action (and why it's needed), or let job viewing work without one.
-- [ ] **Scene detection always shows "(No data)"**: `parseSceneDetection`
+- [x] **Scene detection always shows "(No data)"**: `parseSceneDetection`
       (`src/lib/parsers/scene.ts`) accepts a bare array, `results` or `scenes`, but not COCO's
       `annotations`, which is what the backend writes. It throws, and the scenes panel is empty
       for every job, however many scenes there are. Found 2026-09-28 on a clip with one scene
       (0–7.32 s, "nursery") the backend had detected correctly.
+      Fixed early in the viewer (`4ec8d0b`).
 - [ ] **Failed pipelines' reasons are hard to find**: a batch says "N with errors … the reason is
       on each video's row", but the reason is only a hover tooltip on the status badge, and the
       job page doesn't list failed pipelines with their `error_message` from
@@ -107,10 +112,11 @@ this repo:
       batch and video (n of N) you're on, previous/next between the batch's videos, and a way back
       to the batch page. Overlaps Phase 6's previous/next item; do the navigation here, before
       release.
-- [ ] **First-run download total double-counts shared weights**: the "Preparing… downloads about
+- [x] **First-run download total double-counts shared weights**: the "Preparing… downloads about
       1.4 GB" line sums each pipeline's `weights_not_cached` notes, so a model two pipelines share
       (`pyannote/speaker-diarization-3.1`, for audio_processing and speaker_diarization) counts
       twice. Deduplicate by the note's `name` before summing.
+      Fixed early in the viewer (`4ec8d0b`).
 
 **Why first**: every later phase writes docs and tutorials full of repository links. Moving after
 that means rewriting them, and breaking links pilot labs have already saved.
@@ -155,6 +161,7 @@ lifted, 2026-09-26):
   repackaging whose releases after 0.1.13 pin old Pillow, numpy and scipy.
 
 **Solution**, in four steps:
+      Fixed early in the viewer (`4ec8d0b`).
 - [ ] **Pipeline review** (`docs/development/pipeline_review_v1.6.0.md`). Start from what the
       field asks, not from what we have: caregiver speech, infant vocalisations, who is speaking,
       faces and expressions, movement, gaze and joint attention, touch. For each question, which
