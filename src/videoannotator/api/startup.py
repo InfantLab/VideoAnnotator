@@ -102,14 +102,19 @@ def ensure_api_key_exists() -> tuple[str | None, bool]:
         print("=" * 80)
         print(f"\nYour API key: {api_key}")
         print("\nSave this key securely - it will NOT be shown again!")
-        print("\nUsage:")
-        print(
-            f"  curl -H 'Authorization: Bearer {api_key}' http://localhost:8000/api/v1/jobs"
-        )
+        from urllib.parse import quote
+
+        from videoannotator.config_env import API_PORT
+
+        base = f"http://127.0.0.1:{API_PORT}"
+        print("\nConnect the viewer with one click:")
+        print(f"  {base}/viewer-connect?token={quote(api_key)}")
+        print("\nOr paste the key into the viewer's Settings page, or use it directly:")
+        print(f"  curl -H 'Authorization: Bearer {api_key}' {base}/api/v1/jobs")
         print("\nTo disable authentication (development only):")
         print("  export AUTH_REQUIRED=false")
-        print("\nTo generate additional keys:")
-        print("  python -m scripts.manage_tokens create")
+        print("\nLost this key, or need one for another user:")
+        print("  videoannotator generate-token")
         print("=" * 80 + "\n")
 
         logger.info(f"Generated first API key for user '{username}'")

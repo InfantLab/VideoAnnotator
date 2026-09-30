@@ -81,6 +81,31 @@ _DEEPFACE_WEIGHT_FILES = {
 }
 
 
+def _is_no_face_placeholder(
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    confidence: float | None,
+    frame_width: int,
+    frame_height: int,
+) -> bool:
+    """Whether DeepFace's region is its "no face found" stand-in, not a face.
+
+    With ``enforce_detection=False`` DeepFace doesn't raise when a frame has no
+    face: it returns the whole image as one face with confidence 0 and still
+    analyses it, so every faceless frame would otherwise become a full-frame
+    box with a made-up emotion, age and gender.
+    """
+    return (
+        not confidence
+        and x <= 0
+        and y <= 0
+        and w >= frame_width - 1
+        and h >= frame_height - 1
+    )
+
+
 class FaceAnalysisPipeline(BasePipeline):
     """Standards-only face analysis pipeline using COCO format.
 
@@ -639,6 +664,11 @@ class FaceAnalysisPipeline(BasePipeline):
                     w = region.get("w", 100)
                     h = region.get("h", 100)
 
+                    if _is_no_face_placeholder(
+                        x, y, w, h, analysis.get("face_confidence"), width, height
+                    ):
+                        continue
+
                     # Skip faces that are too small
                     if (
                         w < self.config["min_face_size"]
@@ -731,12 +761,25 @@ class FaceAnalysisPipeline(BasePipeline):
 
                     for i, face_obj in enumerate(face_objs):
                         if face_obj is not None:
+                            area = face_obj.get("facial_area", {})
+                            fx, fy = area.get("x", 0), area.get("y", 0)
+                            fw, fh = area.get("w", width), area.get("h", height)
+                            if _is_no_face_placeholder(
+                                fx,
+                                fy,
+                                fw,
+                                fh,
+                                face_obj.get("confidence"),
+                                width,
+                                height,
+                            ):
+                                continue
                             # Create basic annotation without analysis
                             annotation = create_coco_annotation(
                                 annotation_id=0,  # Will be set later
                                 image_id=f"{video_id}_frame_{frame_number}",
                                 category_id=100,  # Face category
-                                bbox=[0.0, 0.0, 100.0, 100.0],  # Placeholder
+                                bbox=[float(fx), float(fy), float(fw), float(fh)],
                                 score=1.0,
                                 # VideoAnnotator extensions
                                 face_id=i,

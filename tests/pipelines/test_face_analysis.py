@@ -403,3 +403,78 @@ class TestDeepFaceModelPreparation:
 
         with patch.dict(os.environ, {"DEEPFACE_HOME": str(tmp_path)}):
             pipeline._prepare_deepface_models()
+
+
+class TestDeepFaceNoFacePlaceholder:
+    """With enforce_detection=False, DeepFace reports a faceless frame as one
+    full-frame "face" with confidence 0; those used to be saved as real faces
+    (143 of 255 boxes in the v1.5.0 end-to-end run)."""
+
+    @pytest.fixture(autouse=True)
+    def _needs_deepface(self):
+        pytest.importorskip("deepface")
+
+    def _detect(self, pipeline):
+        return pipeline._detect_faces_deepface(
+            frame=np.zeros((480, 640, 3), dtype=np.uint8),
+            timestamp=0.0,
+            video_id="test",
+            frame_number=0,
+            width=640,
+            height=480,
+        )
+
+    @patch("videoannotator.pipelines.face_analysis.face_pipeline.DeepFace")
+    def test_placeholder_dropped_real_face_kept(self, mock_deepface):
+        mock_deepface.extract_faces.return_value = [{"confidence": 0}]
+        mock_deepface.analyze.return_value = [
+            {
+                "region": {"x": 0, "y": 0, "w": 640, "h": 480},
+                "face_confidence": 0,
+                "emotion": {"angry": 75.0, "happy": 25.0},
+                "dominant_emotion": "angry",
+            },
+            {
+                "region": {"x": 88, "y": 84, "w": 70, "h": 70},
+                "face_confidence": 0.93,
+                "emotion": {"angry": 5.0, "happy": 95.0},
+                "dominant_emotion": "happy",
+            },
+        ]
+        pipeline = FaceAnalysisPipeline({"detection_backend": "deepface"})
+
+        annotations = self._detect(pipeline)
+
+        assert [a["bbox"] for a in annotations] == [[88.0, 84.0, 70.0, 70.0]]
+
+    @patch("videoannotator.pipelines.face_analysis.face_pipeline.DeepFace")
+    def test_full_frame_face_with_confidence_kept(self, mock_deepface):
+        mock_deepface.extract_faces.return_value = [{"confidence": 0.9}]
+        mock_deepface.analyze.return_value = [
+            {"region": {"x": 0, "y": 0, "w": 640, "h": 480}, "face_confidence": 0.9}
+        ]
+        pipeline = FaceAnalysisPipeline({"detection_backend": "deepface"})
+
+        assert len(self._detect(pipeline)) == 1
+
+    @patch("videoannotator.pipelines.face_analysis.face_pipeline.DeepFace")
+    def test_fallback_uses_facial_area_and_drops_placeholder(self, mock_deepface):
+        mock_deepface.analyze.side_effect = RuntimeError("analysis failed")
+        mock_deepface.extract_faces.side_effect = [
+            [{"confidence": 0.9}],
+            [
+                {
+                    "facial_area": {"x": 0, "y": 0, "w": 640, "h": 480},
+                    "confidence": 0,
+                },
+                {
+                    "facial_area": {"x": 10, "y": 20, "w": 50, "h": 60},
+                    "confidence": 0.8,
+                },
+            ],
+        ]
+        pipeline = FaceAnalysisPipeline({"detection_backend": "deepface"})
+
+        annotations = self._detect(pipeline)
+
+        assert [a["bbox"] for a in annotations] == [[10.0, 20.0, 50.0, 60.0]]

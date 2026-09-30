@@ -118,6 +118,41 @@ this repo:
       the server redirects `localhost/viewer…` and `/viewer-connect` to `127.0.0.1`, and every
       link it prints uses `127.0.0.1`. **Left for the viewer**: when the server serves it, use the
       page's own origin as the API URL, with no rewriting, and drop the redirect.
+- [ ] **Settings page doesn't say how to get a token** (2026-09-30): the welcome box says "Get your
+      API token from the server console or administrator", and its default URL is
+      `http://localhost:18011` (see the item above). A new user doesn't know which console, what
+      the token looks like, or what to do if they missed it. Replace the Quick Start with:
+      1. **First start**: the server prints `[API KEY] VIDEOANNOTATOR API KEY GENERATED`, then a
+         `va_…` key and a one-click `http://127.0.0.1:18011/viewer-connect?token=…` link. Opening
+         the link logs the viewer in; there's no need to paste anything.
+      2. **Missed it, or need another key**: in a terminal on the server machine, run
+         `videoannotator generate-token` (in a `uv` checkout, `uv run videoannotator
+         generate-token`). It prints a new key and a one-click link. Keys can't be shown again
+         once printed.
+      3. **Someone else runs the server**: ask them to run step 2 for you with `--user <your
+         email>`.
+      4. **Auth off** (`AUTH_REQUIRED=false`): leave the token blank.
+      Include a copy button for the command, and show the key format (`va_` + 43 characters) as
+      placeholder text so a pasted wrong value (for example the whole `Bearer …` line) is caught
+      before "Test Connection". Server side (done 2026-09-30): the first-run banner now prints the
+      viewer-connect link and `videoannotator generate-token`. Before this it pointed at
+      `localhost:8000` and a `scripts.manage_tokens` module that pip installs don't have.
+- [ ] **Face boxes and OpenFace landmarks almost never show** (2026-09-30): both overlays draw a
+      face only within ±0.1 s of its timestamp (`JD(face_analysis, t, 0.1)` and the
+      `openface3_faces` filter). The face pipelines sample about once a second (0.97 s apart on a
+      30 fps clip), so a face flashes for 0.2 s per second during playback and never shows when
+      paused between samples. The data is in the job's `*_face_detections.json` and
+      `*_openface3_analysis.json`, and it parses. Hold each face until the next sample of its
+      track, capped at about 1.5× the sample interval, which is taken from the data itself rather
+      than a constant, so a face that disappears doesn't stay on screen. Server side (fixed
+      2026-09-30): DeepFace's "no face found" stand-in, a full-frame box with confidence 0 and
+      an invented emotion, was saved as a real face (143 of 255 boxes in the e2e jobs). Jobs run
+      before the fix still contain those boxes.
+- [ ] **`openface3_detailed.json` detected as face analysis**: the face check (`"emotions"` in the
+      first 8 KB) matches its `metadata.model_info.features`, and it runs before the OpenFace
+      check. The file parses to nothing, so today the face boxes survive only because
+      `face_detections.json` sorts first in the zip. Check for OpenFace before face analysis, or
+      match on structure (`metadata.pipeline` + `faces`) instead of substrings.
 - [ ] **Results view isn't batch-aware**: opening a video from a batch loses the batch. Show which
       batch and video (n of N) you're on, previous/next between the batch's videos, and a way back
       to the batch page. Overlaps Phase 6's previous/next item; do the navigation here, before

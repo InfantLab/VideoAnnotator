@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Planned
+
+- Queue position display for pending jobs
+- Deterministic test fixtures with synthetic video generation
+- Research workflow examples for JOSS paper
+- Benchmark results and performance validation
+- Additional contributor documentation improvements
+
+## [1.5.0] - 2026-09-30
+
 ### Added
 
 - **Create jobs from videos already on the server — `POST /api/v1/ingest`**: one request turns a
@@ -74,6 +84,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Face analysis saved frames with no face as full-frame faces**: DeepFace, run with
+  `enforce_detection=False`, reports a frame with no face as one face covering the whole image,
+  with confidence 0, and still assigns it an emotion, age and gender. The pipeline saved these as
+  real detections with `score: 1.0`. They made up 143 of 255 face boxes in the v1.5.0
+  end-to-end run. They're now dropped. The fallback path (used when analysis fails) also records
+  each face's real detected box instead of a fixed `[0, 0, 100, 100]` placeholder.
+
+- **First-run API key banner**: it now prints a one-click viewer-connect link and
+  `videoannotator generate-token` for new keys. Before, it pointed at `localhost:8000` and at
+  `python -m scripts.manage_tokens`, which pip installs don't include.
+
 - `api/job_processor.py` (the job-execution path used by the API server's automatic background
   processor) instantiated pipeline classes with no config at all, silently ignoring any per-pipeline
   `config` submitted with a job — unlike `batch/batch_orchestrator.py`, which already passed it
@@ -108,16 +129,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   although it was: OpenFace's modules run `argparse` on import, which rejected the server's own
   command-line arguments and exited. The import now runs with those arguments hidden, and the
   error states the real reason.
-
-### Planned
-
-- Queue position display for pending jobs
-- Deterministic test fixtures with synthetic video generation
-- Research workflow examples for JOSS paper
-- Benchmark results and performance validation
-- Additional contributor documentation improvements
-
-## [1.5.0] - 2026-07-19
 
 ### Extras-Based Modular Install & Registry Refactor
 
