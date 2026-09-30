@@ -1,6 +1,13 @@
 """Shared pytest fixtures and environment patches for VideoAnnotator tests."""
 
+import os
+
 import pytest
+
+# The API's startup launches the background job processor, which would pick up
+# jobs other tests submitted and run real pipelines. Tests of the processor build
+# their own BackgroundJobManager.
+os.environ.setdefault("VIDEOANNOTATOR_BACKGROUND_PROCESSING", "false")
 
 
 # --- Speech Pipeline Robustness Fixture ---

@@ -143,7 +143,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # Don't fail startup if this cleanup fails, but log prominently
 
     # Log server configuration
-    from ..config_env import CORS_ORIGINS
+    from ..config_env import CORS_ORIGINS, get_bool_env
+
+    # Read at startup rather than import so the test suite's setting always applies:
+    # with it on, jobs other tests submitted get picked up and run real models,
+    # which ran CI out of memory (macOS) and stack (Windows).
+    background_processing = get_bool_env("VIDEOANNOTATOR_BACKGROUND_PROCESSING", True)
 
     logger.info(
         "Server configuration initialized",
@@ -153,17 +158,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "logging": "enhanced",
             "middleware": ["CORS", "RequestLogging", "ErrorLogging"],
             "cors_origins": CORS_ORIGINS,
-            "background_processing": "enabled",
+            "background_processing": (
+                "enabled" if background_processing else "disabled"
+            ),
         },
     )
 
-    # Start background job processing
-    from .background_tasks import start_background_processing
+    if background_processing:
+        from .background_tasks import start_background_processing
 
-    await start_background_processing()
-    logger.info(
-        "Background job processing started", extra={"component": "background_tasks"}
-    )
+        await start_background_processing()
+        logger.info(
+            "Background job processing started",
+            extra={"component": "background_tasks"},
+        )
+    else:
+        logger.warning(
+            "Background job processing disabled (VIDEOANNOTATOR_BACKGROUND_PROCESSING)",
+            extra={"component": "background_tasks"},
+        )
 
     # Warm up torch/CUDA in the background so the first client request to
     # /api/v1/system/health (typically the viewer, right after startup)
@@ -189,13 +202,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         "VideoAnnotator API server shutting down...", extra={"event": "shutdown"}
     )
 
-    # Stop background job processing
-    from .background_tasks import stop_background_processing
+    if background_processing:
+        from .background_tasks import stop_background_processing
 
-    await stop_background_processing()
-    logger.info(
-        "Background job processing stopped", extra={"component": "background_tasks"}
-    )
+        await stop_background_processing()
+        logger.info(
+            "Background job processing stopped",
+            extra={"component": "background_tasks"},
+        )
 
     # TODO: Cleanup pipeline resources
 

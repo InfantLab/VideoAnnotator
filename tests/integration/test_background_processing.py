@@ -15,8 +15,11 @@ import pytest
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_background_job_processing():
+async def test_background_job_processing(monkeypatch):
     """Test that the integrated background worker processes pending jobs."""
+    # Off for the rest of the suite (tests/conftest.py); safe here, where the
+    # database is a fresh temporary one with no other tests' jobs in it.
+    monkeypatch.setenv("VIDEOANNOTATOR_BACKGROUND_PROCESSING", "true")
 
     # Use a temporary, isolated DB + storage root for this test.
     with tempfile.TemporaryDirectory() as tmp_dir:
