@@ -1,7 +1,9 @@
 """VideoAnnotator CLI - Unified command-line interface."""
 
 import os
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import typer
 import uvicorn
@@ -1033,7 +1035,7 @@ def diagnose(
     )
 
     # Map component names to diagnostic functions
-    components_map = {
+    components_map: dict[str, tuple[str, Callable[[], dict[str, Any]]]] = {
         "system": ("System", diagnose_system),
         "gpu": ("GPU", diagnose_gpu),
         "storage": ("Storage", diagnose_storage),
@@ -1422,6 +1424,10 @@ def generate_token(
                 f"[INFO] {verb} administrator privileges for existing user "
                 "(explicit --admin/--no-admin)"
             )
+
+        if db_user is None:
+            typer.echo(f"[ERROR] User {user} disappeared while updating it", err=True)
+            raise typer.Exit(code=1)
 
         # Create API key
         api_key_obj, raw_key = APIKeyCRUD.create(
