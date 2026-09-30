@@ -756,7 +756,7 @@ class APIClient {
    * GET /api/v1/auth/me - any authenticated caller can read this about
    * themselves (401 unauthenticated, never 403) - it's how the viewer knows
    * in advance whether an admin-gated action will succeed, instead of only
-   * finding out via a bare 403. Absent on pre-v1.5.1 servers (404).
+   * finding out via a bare 403. Absent on pre-v1.5.0 servers (404).
    */
   async getCurrentUser(): Promise<CurrentUser> {
     const response = await this.request<{

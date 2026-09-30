@@ -73,7 +73,7 @@ describe('useCurrentUser', () => {
     expect(apiClient.getCurrentUser).not.toHaveBeenCalled();
   });
 
-  it('reports isAdmin: "unknown" and endpointUnsupported: true on a 404 (pre-v1.5.1 server)', async () => {
+  it('reports isAdmin: "unknown" and endpointUnsupported: true on a 404 (pre-v1.5.0 server)', async () => {
     vi.mocked(hasConfiguredApiToken).mockReturnValue(true);
     vi.mocked(apiClient.getCurrentUser).mockRejectedValue(new APIError('Not found', 404));
 

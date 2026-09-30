@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-30 — VLM Annotation, Runs & Pipeline Readiness
+
+Companion release to VideoAnnotator v1.5.0. Run grouping, folder ingest, pipeline extras
+install and readiness need a v1.5.0+ server (admin-status detection uses its
+`GET /api/v1/auth/me`); against older servers those features fall back or explain why.
+
 ### ✨ Added
+- **`vlm_annotation` pipeline support**: full display support for VideoAnnotator's new local-VLM
+  frame classification pipeline (per-frame classification/captioning via a locally-hosted
+  vision-language model through Ollama). New `VLMFrameAnnotation` type + Zod schema, a parser
+  (`src/lib/parsers/vlm.ts`), detection wired into the merge pipeline, a Timeline point-marker
+  track, and a `VlmAnnotationPanel` showing the current label plus expandable model reasoning,
+  synced to playback time.
+- **ELAN ground-truth comparison**: `.eaf` file parsing (`src/lib/parsers/elan.ts`, ported from
+  the touch-detection research repo's own preprocessing script) with a four-way category
+  collapse (configurable tier-to-side mapping, defaulting to the Crucianelli et al. 2019
+  mother-infant touch coding scheme), a Timeline segment track for the raw tiers, and a live
+  agree/disagree indicator comparing VLM predictions against ground truth at the current time.
+- **Job-creation form now renders real per-pipeline parameters**: fixed a `GET /pipelines/{name}/schema`
+  404 (the endpoint the form already tried to call) that meant every pipeline's Configure step
+  showed "No configurable parameters," not just the new one — now wired end-to-end via
+  `usePipelineSchema`. New `'text'` parameter type renders a proper multi-line textarea (e.g. for
+  a long prompt) instead of a one-line input.
 - **Run a folder that's already on the server — no uploading.** The job wizard's first step now
   offers "Folder on the server" alongside uploading from this computer: browse the folders the
   VideoAnnotator server can see, pick one, and every video in it becomes a run in a single
@@ -31,6 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   individually and says so. See VideoAnnotator's `specs/008-batch-group-workflow/`.
 
 ### 🐛 Fixed
+- File-type detection for `vlm_annotation.json` and `.eaf` files across all four places the app
+  independently re-derives a file's pipeline type from its content (`merger.ts`, `fileUtils.ts`,
+  and two hardcoded arrays in `FileUploader.tsx`) — previously only `merger.ts` needed to know
+  about a new type; missing it in the other three meant a valid file showed "Unknown File Type"
+  in the upload preview and could leave the Process-Files button disabled even though the actual
+  parse would have worked.
 - **The app shell no longer fights its own theme.** `AppLayout` wrapped every page in a hardcoded
   light `bg-gray-50` while the theme tokens are dark, so cards rendered dark on a light page and
   any text using the theme's own `text-foreground` was light-on-light — page headings were
@@ -60,40 +88,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   forward. Settings' "Getting Help" tab and the Select Pipelines step now also explain token
   scopes up front, before a user hits the error.
 - **Real admin-status detection**: the viewer now calls VideoAnnotator's new
-  `GET /api/v1/auth/me` (v1.5.1+) to know in advance whether the current session has admin
+  `GET /api/v1/auth/me` (v1.5.0+) to know in advance whether the current session has admin
   access, instead of only finding out via a `403`. The Install action is disabled with an
   inline explanation (and the exact `generate-token --admin` command to fix it) when the
   session is known not to be admin; Settings and `TokenSetup` now show real admin status
   instead of the previously-always-empty "Permissions" field. Servers that predate this
   endpoint fall back to the original attempt-then-403 behavior unchanged.
-
-## [0.7.0] - 2026-08-24 — VLM Frame Annotation Support
-
-### ✨ Added
-- **`vlm_annotation` pipeline support**: full display support for VideoAnnotator's new local-VLM
-  frame classification pipeline (per-frame classification/captioning via a locally-hosted
-  vision-language model through Ollama). New `VLMFrameAnnotation` type + Zod schema, a parser
-  (`src/lib/parsers/vlm.ts`), detection wired into the merge pipeline, a Timeline point-marker
-  track, and a `VlmAnnotationPanel` showing the current label plus expandable model reasoning,
-  synced to playback time.
-- **ELAN ground-truth comparison**: `.eaf` file parsing (`src/lib/parsers/elan.ts`, ported from
-  the touch-detection research repo's own preprocessing script) with a four-way category
-  collapse (configurable tier-to-side mapping, defaulting to the Crucianelli et al. 2019
-  mother-infant touch coding scheme), a Timeline segment track for the raw tiers, and a live
-  agree/disagree indicator comparing VLM predictions against ground truth at the current time.
-- **Job-creation form now renders real per-pipeline parameters**: fixed a `GET /pipelines/{name}/schema`
-  404 (the endpoint the form already tried to call) that meant every pipeline's Configure step
-  showed "No configurable parameters," not just the new one — now wired end-to-end via
-  `usePipelineSchema`. New `'text'` parameter type renders a proper multi-line textarea (e.g. for
-  a long prompt) instead of a one-line input.
-
-### 🐛 Fixed
-- File-type detection for `vlm_annotation.json` and `.eaf` files across all four places the app
-  independently re-derives a file's pipeline type from its content (`merger.ts`, `fileUtils.ts`,
-  and two hardcoded arrays in `FileUploader.tsx`) — previously only `merger.ts` needed to know
-  about a new type; missing it in the other three meant a valid file showed "Unknown File Type"
-  in the upload preview and could leave the Process-Files button disabled even though the actual
-  parse would have worked.
 
 ## [0.6.3] - 2026-07-08 — Embedding Support & Demo Slimdown
 

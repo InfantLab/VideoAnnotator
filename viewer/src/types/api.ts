@@ -54,7 +54,7 @@ export interface ServerCapabilities {
 }
 
 // =============================================================================
-// CURRENT USER / AUTH (v1.5.1 - GET /api/v1/auth/me)
+// CURRENT USER / AUTH (v1.5.0 - GET /api/v1/auth/me)
 // =============================================================================
 
 /**
