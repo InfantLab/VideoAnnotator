@@ -61,11 +61,16 @@ unactioned (spec 008's `viewer-handoff.md`), two changelogs and two CI setups, a
 happens from outside either repo.
 
 **Solution**:
-- [ ] Import `video-annotation-viewer` into `viewer/` with its full history (rewrite paths with
+- [x] Import `video-annotation-viewer` into `viewer/` with its full history (rewrite paths with
       `git filter-repo --to-subdirectory-filter viewer`, then merge with
       `--allow-unrelated-histories`), taken from `feature/vlm-annotation-support`.
-- [ ] One build step produces `viewer_static/` from `viewer/`. CI fails when the committed bundle
+      Done 2026-09-30 from the viewer's `main` at its v0.7.0 release, which includes that branch;
+      its tags are kept as `viewer-v0.x.x`.
+- [x] One build step produces `viewer_static/` from `viewer/`. CI fails when the committed bundle
       doesn't match the source, so the copy can't be forgotten.
+      `scripts/build_viewer.sh` (`--check` in CI's `viewer` job, which also runs the viewer's lint
+      and unit tests; releases wait for it). The viewer's Playwright and Lighthouse jobs, both
+      informational, aren't in CI yet.
 - [ ] One dev command runs the API server and the Vite dev server (API proxied, hot reload), plus
       VS Code tasks for it.
 - [ ] The viewer takes VideoAnnotator's version number from v1.6.0: one product, one version, one

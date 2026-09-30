@@ -20,6 +20,7 @@ src/videoannotator/
 ├── registry/       # pipeline_registry.py, pipeline_loader.py, metadata/*.yaml
 ├── storage/        # job/annotation storage backends
 └── exporters/      # COCO/RTTM/WebVTT/native-format writers
+viewer/             # Video Annotation Viewer (React/Vite, Bun); built into src/videoannotator/viewer_static/
 tests/
 ├── unit/ integration/ pipelines/ api/ contract/
 specs/<NNN>-<slug>/  # spec-kit feature specs (spec.md, plan.md, tasks.md, ...)
@@ -35,6 +36,8 @@ mypy src/videoannotator        # type check
 pre-commit run --all-files    # full pre-commit gate (used on every commit)
 videoannotator pipelines list # CLI: list available pipelines
 videoannotator job submit <video> --pipelines <name>
+bash scripts/build_viewer.sh  # rebuild viewer/ into viewer_static/ (commit the result; CI checks it)
+cd viewer && bun run lint && bun run test:run  # viewer lint + unit tests
 ```
 
 ## Code Style
