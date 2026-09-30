@@ -7,6 +7,7 @@ import { FileViewer } from './FileViewer';
 import { FileUploader } from './FileUploader';
 import { Footer } from './Footer';
 import { DebugPanel } from './DebugPanel';
+import { VlmAnnotationPanel } from './VlmAnnotationPanel';
 import { OpenFace3Controls } from './OpenFace3Controls';
 import { defaultOpenFace3Settings, type OpenFace3Settings } from './openface3Settings';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,8 @@ interface VideoAnnotationViewerProps {
   backLabel?: string;
   /** Path for the back button (default: "/") */
   backPath?: string;
+  /** Pipelines of this job that failed on the server: name -> reason. */
+  failedPipelines?: Record<string, string>;
 }
 
 export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
@@ -35,6 +38,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   initialAnnotationData = null,
   backLabel = 'Home',
   backPath = '/',
+  failedPipelines = {},
 }) => {
   const navigate = useNavigate();
   const [videoFile, setVideoFile] = useState<File | null>(initialVideoFile);
@@ -60,6 +64,8 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
     showMotion: true,
     showFaces: true,
     showEmotions: true,
+    showVlm: true,
+    showElan: true,
   });
 
   const [openface3Settings, setOpenface3Settings] = useState<OpenFace3Settings>(defaultOpenFace3Settings);
@@ -342,6 +348,17 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                 />
               </div>
 
+              {/* VLM Frame Annotation Panel - label + expandable reasoning at current time */}
+              {annotationData?.vlm_annotations && annotationData.vlm_annotations.length > 0 && (
+                <div className="flex-shrink-0 p-2 border-b border-border">
+                  <VlmAnnotationPanel
+                    annotations={annotationData.vlm_annotations}
+                    currentTime={currentTime}
+                    elanGroundTruth={annotationData.elan_ground_truth}
+                  />
+                </div>
+              )}
+
               {/* Footer - compact version */}
               <div className="flex-shrink-0">
                 <Footer />
@@ -357,6 +374,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                   onOverlayChange={setOverlaySettings}
                   onTimelineChange={setTimelineSettings}
                   annotationData={annotationData}
+                  failedPipelines={failedPipelines}
                 />
 
                 {/* OpenFace3 Controls */}

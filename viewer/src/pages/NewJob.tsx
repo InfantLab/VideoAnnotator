@@ -1,10 +1,14 @@
-import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
+import { Dispatch, ReactNode, SetStateAction, useEffect, useMemo, useState } from "react";
+import { useQueries } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ServerFolderPicker, type ServerFolderSelection } from "@/components/ServerFolderPicker";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw, FolderOpen, HardDrive } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { apiClient } from "@/api/client";
 import { handleAPIError } from "@/api/handleError";
@@ -23,15 +27,38 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import vavIcon from "@/assets/v-a-v.icon.png";
-import { usePipelineCatalog, useRefreshPipelineCatalog } from "@/hooks/usePipelineCatalog";
+import {
+  usePipelineCatalog,
+  useRefreshPipelineCatalog,
+  useExtrasGroups,
+  pipelineSchemaQueryOptions,
+} from "@/hooks/usePipelineCatalog";
 import { DynamicPipelineParameters } from "@/components/DynamicPipelineParameters";
+import { findUrlFieldErrors } from "@/lib/pipelineUrlFields";
+import { LockedPipelineCard, ExtrasInstallStatus, ReadinessDetails } from "@/components/LockedPipelineCard";
+import { RestartRequiredBanner } from "@/components/RestartRequiredBanner";
 import type { PipelineDescriptor } from "@/types/pipelines";
 import { useConfigValidation } from "@/hooks/useConfigValidation";
 import { ConfigValidationPanel } from "@/components/ConfigValidationPanel";
+import { useExtrasInstall } from "@/hooks/useExtrasInstall";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import {
+  extrasGroupOf,
+  isPipelineSelectable,
+  notReadyReason,
+  partitionSelection,
+  PIPELINE_CARD_BADGE,
+  pipelineCardMode
+} from "@/lib/pipelineExtras";
+import { PresetBar } from "@/components/PresetBar";
+import type { Preset } from "@/types/presets";
+import { rememberRunSetup, totalDownloadLabel, weightsNotesFor } from "@/lib/runSetup";
+import { hasConfiguredApiToken } from "@/api/client";
+import { APIError, apiErrorEnvelope } from "@/api/handleError";
 
 // Wizard steps
 const STEPS = [
-  { id: 1, title: "Upload Videos", description: "Select video files to process" },
+  { id: 1, title: "Choose Videos", description: "Upload files, or use a folder on the server" },
   { id: 2, title: "Select Pipelines", description: "Choose annotation pipelines" },
   { id: 3, title: "Configure", description: "Set pipeline parameters" },
   { id: 4, title: "Review & Submit", description: "Review and start jobs" },
@@ -63,6 +90,29 @@ const buildDefaultConfig = (pipelines: PipelineDescriptor[]) => {
   }, {});
 };
 
+/**
+ * A name for a run when the user doesn't type one.
+ *
+ * Prefers the folder the videos came from — `webkitRelativePath` is populated
+ * when files are picked with a directory picker, which is exactly the "I
+ * selected a folder" case — and otherwise describes the selection, because a
+ * raw uuid tells a researcher nothing when they come back to it tomorrow.
+ */
+const defaultBatchName = (files: File[]): string => {
+  const relativePath = (files[0] as File & { webkitRelativePath?: string })
+    ?.webkitRelativePath;
+  const folder = relativePath?.split('/')[0];
+  if (folder) return folder;
+
+  const stamp = new Date().toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+  });
+  return files.length === 1
+    ? `${files[0]?.name ?? '1 video'} — ${stamp}`
+    : `${files.length} videos — ${stamp}`;
+};
+
 // Type for retry state passed via React Router
 interface RetryJobState {
   retryJobId: string;
@@ -83,7 +133,52 @@ const CreateNewJob = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedPipelines, setSelectedPipelines] = useState<string[]>([]);
+  // Pipelines dropped from a selection we built for the user (defaults, a
+  // retried job) because they can't run now, e.g. "VLM ... left out: Ollama
+  // isn't reachable". Shown on the pipeline step so nothing vanishes silently.
+  const [selectionNotices, setSelectionNotices] = useState<string[]>([]);
+  const [batchName, setBatchName] = useState("");
+  // Videos can come from this computer (uploaded one at a time) or from a
+  // folder the server can already see (one request, nothing copied). The mode
+  // is explicit state rather than derived from `serverFolder`: you can't pick
+  // a folder before switching to the server tab, so deriving it would make the
+  // tab impossible to open.
+  const [videoSource, setVideoSource] = useState<'upload' | 'server'>('upload');
+  const [serverFolder, setServerFolder] = useState<ServerFolderSelection | null>(null);
+  const usingServerFolder = videoSource === 'server' && serverFolder !== null;
+
+  // The catalog (`pipelines` above) never carries per-field parameters —
+  // apiClient.getPipelineCatalog()'s mapLegacyPipelineResponse always sets
+  // `parameters: []`, since the plain pipeline-list endpoint doesn't have
+  // per-field type/enum/widget info. That detail lives behind the separate
+  // per-pipeline GET /pipelines/{id}/schema endpoint (apiClient.getPipelineSchema),
+  // fetched here only for the pipelines the user actually selected and merged
+  // into the descriptors passed to the Configure step, so its form can render
+  // real fields instead of "No configurable parameters for this pipeline."
+  const schemaQueries = useQueries({
+    queries: selectedPipelines.map((id) => pipelineSchemaQueryOptions(id)),
+  });
+
+  const pipelinesWithSchema = useMemo(() => {
+    if (selectedPipelines.length === 0) return pipelines;
+    const parametersById = new Map(
+      selectedPipelines
+        .map((id, index) => [id, schemaQueries[index]?.data?.parameters] as const)
+        .filter((entry): entry is [string, NonNullable<(typeof entry)[1]>] => !!entry[1])
+    );
+    if (parametersById.size === 0) return pipelines;
+    return pipelines.map((pipeline) =>
+      parametersById.has(pipeline.id)
+        ? { ...pipeline, parameters: parametersById.get(pipeline.id)! }
+        : pipeline
+    );
+  }, [pipelines, selectedPipelines, schemaQueries]);
   const [config, setConfig] = useState<Record<string, unknown>>({});
+  // Checked locally: the server only rejects a bad URL at submission.
+  const urlFieldErrors = useMemo(
+    () => findUrlFieldErrors(pipelinesWithSchema, selectedPipelines, config),
+    [pipelinesWithSchema, selectedPipelines, config]
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<ParsedError | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string[]>([]);
@@ -93,7 +188,10 @@ const CreateNewJob = () => {
   const { validationResult, isValidating, validateConfig } = useConfigValidation();
 
   const defaultSelectedPipelines = useMemo(
-    () => pipelines.filter((pipeline) => pipeline.defaultEnabled !== false).map((pipeline) => pipeline.id),
+    () =>
+      pipelines
+        .filter((pipeline) => pipeline.defaultEnabled !== false && isPipelineSelectable(pipeline))
+        .map((pipeline) => pipeline.id),
     [pipelines]
   );
 
@@ -123,7 +221,9 @@ const CreateNewJob = () => {
   useEffect(() => {
     if (retryState && pipelines.length) {
       if (retryState.retryJobPipelines) {
-        setSelectedPipelines(retryState.retryJobPipelines);
+        const { kept, leftOut } = partitionSelection(retryState.retryJobPipelines, pipelines);
+        setSelectedPipelines(kept);
+        setSelectionNotices(leftOut);
       }
       if (retryState.retryJobConfig) {
         setConfig(retryState.retryJobConfig);
@@ -132,6 +232,23 @@ const CreateNewJob = () => {
       window.history.replaceState({}, document.title);
     }
   }, [retryState, pipelines]);
+
+  // A preset is applied like a retried job: its pipelines through the same
+  // readiness filter (left-out ones are named), its settings over the current ones.
+  const applyPreset = (preset: Preset) => {
+    const { kept, leftOut } = partitionSelection(preset.selected_pipelines, pipelines);
+    setSelectedPipelines(kept);
+    setSelectionNotices(leftOut);
+    setConfig((prev) => ({ ...prev, ...preset.config }));
+  };
+
+  // Readiness is re-fetched while the wizard is open, so a pipeline can stop
+  // being runnable after it was selected (Ollama goes down). It stays selected
+  // so the user sees what happened, but blocks the wizard until it's removed.
+  const notReadySelected = useMemo(
+    () => pipelines.filter((p) => selectedPipelines.includes(p.id) && !isPipelineSelectable(p)),
+    [pipelines, selectedPipelines]
+  );
 
   // Validate config whenever it changes
   useEffect(() => {
@@ -165,19 +282,84 @@ const CreateNewJob = () => {
     performActualSubmission();
   };
 
+  /**
+   * One request creates the whole run: the server already has the videos, so
+   * there is nothing to upload. This is the difference between starting a
+   * 40-video corpus immediately and waiting out 40 multipart uploads.
+   */
+  const submitServerFolder = async () => {
+    if (!serverFolder) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess([]);
+
+    const effectiveConfigEntries = Object.entries(config).filter(([pipelineId]) =>
+      selectedPipelines.includes(pipelineId)
+    );
+    const effectiveConfig =
+      effectiveConfigEntries.length > 0 ? Object.fromEntries(effectiveConfigEntries) : undefined;
+
+    try {
+      const response = await apiClient.ingestFolder({
+        path: serverFolder.path,
+        recursive: serverFolder.recursive,
+        selected_pipelines: selectedPipelines,
+        config: effectiveConfig,
+        batch_name: batchName.trim() || undefined,
+      });
+
+      setSubmitSuccess(response.created);
+      rememberRunSetup(response.batch_id, weightsNotesFor(pipelines, selectedPipelines));
+
+      // Files the server couldn't use are reported per file rather than
+      // failing the run, so say which — but don't treat it as a failure when
+      // the rest of the corpus started fine.
+      if (response.skipped.length > 0) {
+        setSubmitError(parseApiError({
+          error: `${response.skipped.length} file(s) were skipped`,
+          hint: response.skipped.map((s) => `${s.filename}: ${s.reason}`).join('\n'),
+        }));
+      }
+
+      if (response.created.length > 0) {
+        setTimeout(() => {
+          navigate(`/batches/${response.batch_id}`);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('💥 Folder ingest failed:', error);
+      setSubmitError(parseApiError(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const performActualSubmission = async () => {
     console.log('🚀 Submit button clicked - starting job submission');
-    console.log('Selected files:', selectedFiles.map(f => f.name));
     console.log('Selected pipelines:', selectedPipelines);
     console.log('Config:', config);
 
-    if (selectedFiles.length === 0) {
+    if (!usingServerFolder && selectedFiles.length === 0) {
       setSubmitError(parseApiError("No videos selected"));
       return;
     }
 
     if (selectedPipelines.length === 0) {
       setSubmitError(parseApiError("No pipelines selected"));
+      return;
+    }
+
+    if (notReadySelected.length > 0) {
+      setSubmitError(parseApiError({
+        error: "Some selected pipelines can't run right now",
+        hint: notReadySelected.map((p) => `${p.name}: ${notReadyReason(p)}`).join('\n'),
+      }));
+      return;
+    }
+
+    if (usingServerFolder) {
+      await submitServerFolder();
       return;
     }
 
@@ -192,8 +374,21 @@ const CreateNewJob = () => {
     );
     const effectiveConfig = effectiveConfigEntries.length > 0 ? Object.fromEntries(effectiveConfigEntries) : undefined;
 
+    // One batch identifier for this whole submission (spec 008). Uploads stay
+    // one request per video — the shared id is the only thing that's new, and
+    // it's what lets these N jobs be tracked, shown and controlled as one run
+    // instead of N unrelated rows. Minted for every submission including a
+    // single-video one: a threshold would mean two code paths and a UI that
+    // changes shape without the user asking it to.
+    const batchId = crypto.randomUUID();
+    const effectiveBatchName = batchName.trim() || defaultBatchName(selectedFiles);
+
     try {
-      console.log(`📤 Submitting ${selectedFiles.length} job(s) to VideoAnnotator API...`);
+      console.log(`📤 Submitting ${selectedFiles.length} job(s) as batch ${batchId}...`);
+
+      // The server answered and said no (e.g. 400 INVALID_URL), as opposed
+      // to not answering at all; only the latter gets connection tips.
+      const serverRejections: APIError[] = [];
 
       // Submit each video as a separate job
       for (const file of selectedFiles) {
@@ -202,7 +397,8 @@ const CreateNewJob = () => {
           const response = await apiClient.submitJob(
             file,
             selectedPipelines,
-            effectiveConfig
+            effectiveConfig,
+            { id: batchId, name: effectiveBatchName }
           );
           console.log(`✅ Job created successfully: ${response.id}`);
           jobIds.push(response.id);
@@ -210,16 +406,21 @@ const CreateNewJob = () => {
           console.error(`❌ Job submission failed for ${file.name}:`, error);
           const parsedError = parseApiError(error);
           errors.push(`${file.name}: ${parsedError.message}`);
+          if (error instanceof APIError && error.status > 0) {
+            serverRejections.push(error);
+          }
         }
       }
 
       if (jobIds.length > 0) {
         setSubmitSuccess(jobIds);
+        rememberRunSetup(batchId, weightsNotesFor(pipelines, selectedPipelines));
 
-        // If all jobs succeeded, navigate to jobs list after a delay
+        // Land on the run itself rather than the full list — the thing the
+        // user just created is the thing they want to watch.
         if (errors.length === 0) {
           setTimeout(() => {
-            navigate('/jobs');
+            navigate(`/batches/${batchId}`);
           }, 2000);
         }
       }
@@ -232,7 +433,17 @@ const CreateNewJob = () => {
         }));
       }
 
-      if (jobIds.length === 0 && errors.length > 0) {
+      if (jobIds.length === 0 && errors.length > 0 && serverRejections.length === errors.length) {
+        console.error('❌ All job submissions rejected by the server');
+        const first = serverRejections[0];
+        const envelope = apiErrorEnvelope(first);
+        const sameReason = serverRejections.every((e) => e.message === first.message);
+        setSubmitError({
+          message: sameReason ? first.message : `The server rejected all ${errors.length} job(s)`,
+          code: envelope.code,
+          hint: sameReason ? envelope.hint : errors.join('\n'),
+        });
+      } else if (jobIds.length === 0 && errors.length > 0) {
         console.error('❌ All job submissions failed');
         setSubmitError(parseApiError({
           error: 'All job submissions failed',
@@ -256,6 +467,10 @@ const CreateNewJob = () => {
           <VideoUploadStep
             selectedFiles={selectedFiles}
             setSelectedFiles={setSelectedFiles}
+            videoSource={videoSource}
+            setVideoSource={setVideoSource}
+            serverFolder={serverFolder}
+            setServerFolder={setServerFolder}
           />
         );
       case 2:
@@ -267,6 +482,12 @@ const CreateNewJob = () => {
             isLoading={catalogLoading}
             error={catalogError}
             onRetry={() => refreshPipelineCatalog({ forceServerRefresh: true })}
+            restartRequired={catalogData?.restartRequired ?? false}
+            selectionNotices={selectionNotices}
+            onDismissNotices={() => setSelectionNotices([])}
+            presetBar={
+              <PresetBar selectedPipelines={selectedPipelines} config={config} onApply={applyPreset} />
+            }
           />
         );
       case 3:
@@ -275,14 +496,16 @@ const CreateNewJob = () => {
             config={config}
             setConfig={setConfig}
             selectedPipelines={selectedPipelines}
-            pipelines={pipelines}
+            pipelines={pipelinesWithSchema}
             validationResult={validationResult}
             isValidating={isValidating}
+            previewVideoFile={selectedFiles[0]}
           />
         );
       case 4:
         return (
           <ReviewStep
+            serverFolder={usingServerFolder ? serverFolder : null}
             selectedFiles={selectedFiles}
             selectedPipelines={selectedPipelines}
             config={config}
@@ -290,7 +513,10 @@ const CreateNewJob = () => {
             isSubmitting={isSubmitting}
             submitError={submitError}
             submitSuccess={submitSuccess}
-            pipelines={pipelines}
+            pipelines={pipelinesWithSchema}
+            batchName={batchName}
+            setBatchName={setBatchName}
+            notReadySelected={notReadySelected}
           />
         );
       default:
@@ -301,15 +527,28 @@ const CreateNewJob = () => {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return selectedFiles.length > 0;
+        return videoSource === 'server' ? serverFolder !== null : selectedFiles.length > 0;
       case 2:
-        return selectedPipelines.length > 0 && pipelines.length > 0 && !catalogLoading;
+        return (
+          selectedPipelines.length > 0 &&
+          pipelines.length > 0 &&
+          !catalogLoading &&
+          notReadySelected.length === 0
+        );
       case 3:
         // Can proceed from config step if validation passes (or is still loading)
-        return validationResult?.valid !== false;
+        return (
+          validationResult?.valid !== false &&
+          notReadySelected.length === 0 &&
+          urlFieldErrors.length === 0
+        );
       case 4:
-        // Cannot submit if config is invalid
-        return validationResult?.valid !== false;
+        // Cannot submit if config is invalid, or a selected pipeline can't run
+        return (
+          validationResult?.valid !== false &&
+          notReadySelected.length === 0 &&
+          urlFieldErrors.length === 0
+        );
       default:
         return false;
     }
@@ -411,7 +650,11 @@ const CreateNewJob = () => {
             disabled={isSubmitting || !canProceed()}
           >
             <Play className="h-4 w-4 mr-2" />
-            {isSubmitting ? 'Submitting...' : `Submit ${selectedFiles.length} Job${selectedFiles.length > 1 ? 's' : ''}`}
+            {isSubmitting
+              ? 'Submitting...'
+              : usingServerFolder
+                ? `Start run from folder`
+                : `Submit ${selectedFiles.length} Job${selectedFiles.length > 1 ? 's' : ''}`}
           </Button>
         ) : (
           <Button
@@ -461,10 +704,18 @@ const CreateNewJob = () => {
 // Step Components
 const VideoUploadStep = ({
   selectedFiles,
-  setSelectedFiles
+  setSelectedFiles,
+  videoSource,
+  setVideoSource,
+  serverFolder,
+  setServerFolder
 }: {
   selectedFiles: File[];
   setSelectedFiles: (files: File[]) => void;
+  videoSource: 'upload' | 'server';
+  setVideoSource: (source: 'upload' | 'server') => void;
+  serverFolder: ServerFolderSelection | null;
+  setServerFolder: (selection: ServerFolderSelection | null) => void;
 }) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -477,25 +728,69 @@ const VideoUploadStep = ({
 
   const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
 
+  // The two sources are mutually exclusive: mixing an upload set with a server
+  // folder would make "what is this run?" ambiguous, so switching clears the
+  // one being left behind.
+  const onSourceChange = (next: string) => {
+    const mode = next === 'server' ? 'server' : 'upload';
+    setVideoSource(mode);
+    if (mode === 'upload') setServerFolder(null);
+    else setSelectedFiles([]);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-        <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium mb-2">Upload Video Files</h3>
-        <p className="text-muted-foreground mb-4">
-          Select video files to process. Supports batch processing. Formats: MP4, WebM, AVI, MOV
-        </p>
+      <Tabs value={videoSource} onValueChange={onSourceChange}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="upload">
+            <Upload className="h-4 w-4 mr-2" />
+            Upload from this computer
+          </TabsTrigger>
+          <TabsTrigger value="server">
+            <HardDrive className="h-4 w-4 mr-2" />
+            Folder on the server
+          </TabsTrigger>
+        </TabsList>
 
-        <input
-          type="file"
-          accept="video/*"
-          multiple
-          onChange={handleFileChange}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-        />
-      </div>
+        <TabsContent value="upload" className="mt-4">
+          <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 text-center">
+            <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">Upload Video Files</h3>
+            <p className="text-muted-foreground mb-4">
+              Select video files to process. Formats: MP4, WebM, AVI, MOV
+            </p>
 
-      {selectedFiles.length > 0 && (
+            <input
+              type="file"
+              accept="video/*"
+              multiple
+              onChange={handleFileChange}
+              className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {selectedFiles.length > 8 && (
+              <p className="text-xs text-muted-foreground mt-4">
+                That&apos;s {selectedFiles.length} uploads, one per video, with this tab kept
+                open. If these files are on the machine running VideoAnnotator, the
+                &ldquo;Folder on the server&rdquo; tab starts them without uploading anything.
+              </p>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="server" className="mt-4 space-y-3">
+          <div className="flex items-start gap-2">
+            <FolderOpen className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              Pick a folder that the VideoAnnotator server can already see. Its videos are
+              read where they are — nothing is uploaded or copied, so a whole corpus starts
+              in one step.
+            </p>
+          </div>
+          <ServerFolderPicker selection={serverFolder} onSelect={setServerFolder} />
+        </TabsContent>
+      </Tabs>
+
+      {videoSource === 'upload' && selectedFiles.length > 0 && (
         <div className="p-4 bg-green-50 rounded-lg">
           <div className="flex justify-between items-center mb-2">
             <h4 className="font-medium text-green-800">
@@ -531,13 +826,17 @@ const VideoUploadStep = ({
   );
 };
 
-const PipelineSelectionStep = ({
+export const PipelineSelectionStep = ({
   pipelines,
   selectedPipelines,
   setSelectedPipelines,
   isLoading,
   error,
-  onRetry
+  onRetry,
+  restartRequired = false,
+  selectionNotices = [],
+  onDismissNotices,
+  presetBar
 }: {
   pipelines: PipelineDescriptor[];
   selectedPipelines: string[];
@@ -545,6 +844,11 @@ const PipelineSelectionStep = ({
   isLoading: boolean;
   error: unknown;
   onRetry: () => void;
+  restartRequired?: boolean;
+  selectionNotices?: string[];
+  onDismissNotices?: () => void;
+  /** Load/save presets; a slot so the step stays usable without a server that has them. */
+  presetBar?: ReactNode;
 }) => {
   const groupedPipelines = useMemo(() => {
     const groups = new Map<string, PipelineDescriptor[]>();
@@ -563,11 +867,66 @@ const PipelineSelectionStep = ({
       .sort((a, b) => a.groupName.localeCompare(b.groupName));
   }, [pipelines]);
 
+  const blockedSelection = pipelines.filter(
+    (p) => selectedPipelines.includes(p.id) && !isPipelineSelectable(p)
+  );
+
   const togglePipeline = (pipelineId: string) => {
     if (selectedPipelines.includes(pipelineId)) {
       setSelectedPipelines(selectedPipelines.filter((p) => p !== pipelineId));
     } else {
       setSelectedPipelines([...selectedPipelines, pipelineId]);
+    }
+  };
+
+  const canInstallExtras = hasConfiguredApiToken();
+  const { isAdmin } = useCurrentUser();
+  const { jobsByExtra, install, isInstalling, installError, installErrorExtraName, adoptJob } =
+    useExtrasInstall(pipelines);
+  const { data: extrasGroups } = useExtrasGroups({ enabled: pipelines.length > 0 });
+  const refreshCatalog = useRefreshPipelineCatalog();
+  const [isCheckingAgain, setIsCheckingAgain] = useState(false);
+
+  // Pipelines sharing one extras group (e.g. two locked pipelines both unlocked by
+  // `face`) must be triggered/tracked together, not treated as independent installs.
+  const lockedPipelineIdsByExtra = useMemo(() => {
+    const map = new Map<string, string[]>();
+    pipelines.forEach((pipeline) => {
+      if (pipelineCardMode(pipeline) !== 'selectable') {
+        const extraName = extrasGroupOf(pipeline);
+        if (extraName) {
+          map.set(extraName, [...(map.get(extraName) ?? []), pipeline.id]);
+        }
+      }
+    });
+    return map;
+  }, [pipelines]);
+
+  // An install the server reports as running but this browser didn't start
+  // (another tab, another admin): track it so the card shows its progress.
+  useEffect(() => {
+    pipelines.forEach((pipeline) => {
+      const readiness = pipeline.readiness;
+      const extraName = extrasGroupOf(pipeline);
+      if (readiness?.state === 'installing' && readiness.installJobId && extraName) {
+        adoptJob(extraName, readiness.installJobId, lockedPipelineIdsByExtra.get(extraName) ?? [pipeline.id]);
+      }
+    });
+  }, [pipelines, adoptJob, lockedPipelineIdsByExtra]);
+
+  // Setup is done outside the viewer (start Ollama, set a token in the server's
+  // env), so offer a re-check. The server refreshes a stale service check in the
+  // background, so fetch twice: the second read picks up the fresh result.
+  const checkAgain = async () => {
+    setIsCheckingAgain(true);
+    try {
+      await refreshCatalog({ forceServerRefresh: true });
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await refreshCatalog({ forceServerRefresh: true });
+    } catch {
+      // The catalog query surfaces its own errors.
+    } finally {
+      setIsCheckingAgain(false);
     }
   };
 
@@ -607,10 +966,61 @@ const PipelineSelectionStep = ({
 
   return (
     <div className="space-y-6">
+      <RestartRequiredBanner restartRequired={restartRequired} />
+
+      {presetBar}
+
+      {selectionNotices.length > 0 && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <div className="space-y-1">
+              {selectionNotices.map((notice) => (
+                <p key={notice}>{notice}</p>
+              ))}
+            </div>
+            {onDismissNotices && (
+              <Button type="button" size="sm" variant="ghost" className="mt-1 h-6 px-2 text-xs" onClick={onDismissNotices}>
+                Dismiss
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <p className="text-foreground">
         Select the annotation pipelines reported by your VideoAnnotator server. Feature availability reflects
         the live API catalog.
       </p>
+
+      {pipelines.some((pipeline) => pipelineCardMode(pipeline) === 'install') && (
+        <p className="text-xs text-muted-foreground">
+          {isAdmin === true && (
+            <>Pipelines marked "Not installed" below can be installed from here — your API key has admin access.</>
+          )}
+          {isAdmin === false && (
+            <>
+              Pipelines marked "Not installed" below require an <strong>admin-scoped</strong> API
+              key to install, which yours doesn't have. See the "Getting Help" tab on the{" "}
+              <Link to="/settings" className="underline">
+                Settings
+              </Link>{" "}
+              page for how to get one.
+            </>
+          )}
+          {isAdmin === 'unknown' && (
+            <>
+              Pipelines marked "Not installed" below can be installed from here, but only with an{" "}
+              <strong>admin-scoped</strong> API key. If you're running your own single-user
+              server, your token is usually admin already — see the "Getting Help" tab on the{" "}
+              <Link to="/settings" className="underline">
+                Settings
+              </Link>{" "}
+              page for details.
+            </>
+          )}
+        </p>
+      )}
 
       <div className="space-y-6">
         {groupedPipelines.map(({ groupName, list }) => (
@@ -621,6 +1031,87 @@ const PipelineSelectionStep = ({
             </div>
             <div className="space-y-3">
               {list.map((pipeline) => {
+                const mode = pipelineCardMode(pipeline);
+                if (mode !== 'selectable') {
+                  const extraName = extrasGroupOf(pipeline);
+                  const job = extraName ? jobsByExtra[extraName] : undefined;
+                  const triggering = extraName ? isInstalling(extraName) : false;
+                  const rawError =
+                    extraName && installErrorExtraName === extraName ? installError : null;
+                  const triggerError = rawError
+                    ? {
+                        status: rawError instanceof APIError ? rawError.status : undefined,
+                        message: rawError.message
+                      }
+                    : null;
+
+                  const group =
+                    pipeline.readiness && extraName && (mode === 'install' || mode === 'installing')
+                      ? {
+                          name: extraName,
+                          approxMb: extrasGroups?.get(extraName)?.approxDownloadMb ?? null,
+                          alsoEnables: pipelines
+                            .filter((p) => p.id !== pipeline.id && extrasGroupOf(p) === extraName)
+                            .map((p) => p.name)
+                        }
+                      : undefined;
+
+                  return (
+                    <LockedPipelineCard
+                      key={pipeline.id}
+                      pipeline={pipeline}
+                      badge={PIPELINE_CARD_BADGE[mode]}
+                      group={group}
+                    >
+                      {selectedPipelines.includes(pipeline.id) && (
+                        // Not ready means it can't be chosen, but one that's
+                        // already selected must always be removable.
+                        <div className="mt-1 flex flex-wrap items-center gap-2 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-800 dark:text-amber-400">
+                          <span>Selected, but it can&apos;t run: {notReadyReason(pipeline)}.</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-[11px]"
+                            onClick={() => togglePipeline(pipeline.id)}
+                          >
+                            Remove from this run
+                          </Button>
+                        </div>
+                      )}
+                      {mode === 'restart' && (!job || job.status !== 'completed') && (
+                        <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-500">
+                          Installed. Restart the server to activate it.
+                        </p>
+                      )}
+                      {(mode === 'setup' || mode === 'unavailable') && (
+                        <ReadinessDetails
+                          blockers={pipeline.readiness?.blockers}
+                          notes={pipeline.readiness?.notes}
+                          onCheckAgain={checkAgain}
+                          isChecking={isCheckingAgain}
+                        />
+                      )}
+                      {canInstallExtras && extraName && (mode === 'install' || mode === 'installing' || (mode === 'restart' && job?.status === 'completed')) && (
+                        <ExtrasInstallStatus
+                          job={job}
+                          isTriggering={triggering || (mode === 'installing' && !job)}
+                          triggerError={triggerError}
+                          adminStatus={isAdmin}
+                          onInstall={() => {
+                            // Errors are surfaced via `installError`/`installErrorExtraName`
+                            // state (rendered above) - swallow the rejection here so it
+                            // doesn't also surface as an unhandled promise rejection.
+                            install(extraName, lockedPipelineIdsByExtra.get(extraName) ?? [pipeline.id]).catch(
+                              () => {}
+                            );
+                          }}
+                        />
+                      )}
+                    </LockedPipelineCard>
+                  );
+                }
+
                 const checked = selectedPipelines.includes(pipeline.id);
                 const description = pipeline.description ?? 'No description provided.';
                 return (
@@ -658,6 +1149,7 @@ const PipelineSelectionStep = ({
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground">{description}</p>
+                    <ReadinessDetails notes={pipeline.readiness?.notes} />
                   </label>
                 );
               })}
@@ -665,6 +1157,16 @@ const PipelineSelectionStep = ({
           </div>
         ))}
       </div>
+
+      {blockedSelection.length > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Remove {blockedSelection.map((p) => p.name).join(", ")} to continue:{" "}
+            {blockedSelection.length === 1 ? "it can't" : "they can't"} run right now.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {selectedPipelines.length === 0 && (
         <Alert>
@@ -684,7 +1186,8 @@ const ConfigurationStep = ({
   selectedPipelines,
   pipelines,
   validationResult,
-  isValidating
+  isValidating,
+  previewVideoFile
 }: {
   config: Record<string, unknown>;
   setConfig: Dispatch<SetStateAction<Record<string, unknown>>>;
@@ -692,6 +1195,9 @@ const ConfigurationStep = ({
   pipelines: PipelineDescriptor[];
   validationResult: ReturnType<typeof useConfigValidation>['validationResult'];
   isValidating: boolean;
+  /** First selected video, used only by vlm_annotation's "test this prompt"
+   * slot (spec 009) to extract a preview frame client-side. */
+  previewVideoFile?: File;
 }) => {
   const activePipelines = useMemo(
     () => pipelines.filter((pipeline) => selectedPipelines.includes(pipeline.id)),
@@ -719,6 +1225,7 @@ const ConfigurationStep = ({
         selectedPipelineIds={selectedPipelines}
         config={config}
         onConfigChange={setConfig}
+        previewVideoFile={previewVideoFile}
       />
 
       <details className="p-4 bg-blue-50 rounded-lg">
@@ -840,6 +1347,7 @@ const ConfigurationStep = ({
 };
 
 const ReviewStep = ({
+  serverFolder,
   selectedFiles,
   selectedPipelines,
   config,
@@ -847,8 +1355,12 @@ const ReviewStep = ({
   isSubmitting,
   submitError,
   submitSuccess,
-  pipelines
+  pipelines,
+  batchName,
+  setBatchName,
+  notReadySelected = []
 }: {
+  serverFolder: ServerFolderSelection | null;
   selectedFiles: File[];
   selectedPipelines: string[];
   config: Record<string, unknown>;
@@ -857,8 +1369,23 @@ const ReviewStep = ({
   submitError: ParsedError | null;
   submitSuccess: string[];
   pipelines: PipelineDescriptor[];
+  batchName: string;
+  setBatchName: Dispatch<SetStateAction<string>>;
+  notReadySelected?: PipelineDescriptor[];
 }) => {
+  const setupNotes = weightsNotesFor(pipelines, selectedPipelines);
+  const downloadLabel = totalDownloadLabel(setupNotes);
   const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+  // A server-folder run has no File objects to describe, and its exact video
+  // count is the server's to report -- so describe the source, not a list.
+  const runLabel = serverFolder
+    ? serverFolder.path.split(/[/\\]/).filter(Boolean).pop() || serverFolder.path
+    : defaultBatchName(selectedFiles);
+  const videoCountLabel = serverFolder
+    ? serverFolder.recursive
+      ? 'Every video in that folder and its subfolders'
+      : `${serverFolder.videoCount} video${serverFolder.videoCount === 1 ? '' : 's'}`
+    : `${selectedFiles.length} video${selectedFiles.length === 1 ? '' : 's'}`;
   const pipelineNames = selectedPipelines
     .map((pipelineId) => pipelines.find((pipeline) => pipeline.id === pipelineId)?.name || pipelineId)
     .join(", ");
@@ -873,6 +1400,40 @@ const ReviewStep = ({
         <ErrorDisplay error={submitError} />
       )}
 
+      {notReadySelected.length > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-medium">This run can&apos;t be submitted yet:</p>
+            {notReadySelected.map((p) => (
+              <p key={p.id}>
+                {p.name}: {notReadyReason(p)}.
+              </p>
+            ))}
+            <p className="mt-1">Go back to Select Pipelines to remove it, or fix it and wait for its card to show it&apos;s ready.</p>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {setupNotes.length > 0 && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-medium">
+              {downloadLabel
+                ? `First run downloads ${downloadLabel} of model weights.`
+                : 'First run downloads model weights.'}{' '}
+              The first video will take several minutes longer; the rest won&apos;t.
+            </p>
+            {setupNotes.map((note) => (
+              <p key={`${note.pipeline}:${note.message}`} className="text-xs text-muted-foreground">
+                {note.pipeline}: {note.message}
+              </p>
+            ))}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {submitSuccess.length > 0 && (
         <Alert>
           <AlertDescription>
@@ -883,22 +1444,33 @@ const ReviewStep = ({
       )}
 
       <div className="space-y-4">
-        <div className="p-4 border rounded-lg">
-          <h4 className="font-medium mb-2">Video Files ({selectedFiles.length})</h4>
-          <div className="space-y-1">
-            {selectedFiles.slice(0, 3).map((file, index) => (
-              <p key={index} className="text-sm text-foreground">
-                {file.name} ({(file.size / (1024 * 1024)).toFixed(1)} MB)
-              </p>
-            ))}
-            {selectedFiles.length > 3 && (
-              <p className="text-sm text-muted-foreground">...and {selectedFiles.length - 3} more files</p>
-            )}
-            <p className="text-sm font-medium text-muted-foreground">
-              Total size: {(totalSize / (1024 * 1024)).toFixed(1)} MB
+        {serverFolder ? (
+          <div className="p-4 border rounded-lg">
+            <h4 className="font-medium mb-2">Videos from the server</h4>
+            <p className="text-sm font-mono break-all">{serverFolder.path}</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {videoCountLabel} will be processed. Nothing is uploaded — the server reads
+              them where they are, so the run starts immediately.
             </p>
           </div>
-        </div>
+        ) : (
+          <div className="p-4 border rounded-lg">
+            <h4 className="font-medium mb-2">Video Files ({selectedFiles.length})</h4>
+            <div className="space-y-1">
+              {selectedFiles.slice(0, 3).map((file, index) => (
+                <p key={index} className="text-sm text-foreground">
+                  {file.name} ({(file.size / (1024 * 1024)).toFixed(1)} MB)
+                </p>
+              ))}
+              {selectedFiles.length > 3 && (
+                <p className="text-sm text-muted-foreground">...and {selectedFiles.length - 3} more files</p>
+              )}
+              <p className="text-sm font-medium text-muted-foreground">
+                Total size: {(totalSize / (1024 * 1024)).toFixed(1)} MB
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="p-4 border rounded-lg">
           <h4 className="font-medium mb-2">Selected Pipelines</h4>
@@ -906,8 +1478,26 @@ const ReviewStep = ({
         </div>
 
         <div className="p-4 border rounded-lg">
-          <h4 className="font-medium mb-2">Estimated Processing Time</h4>
-          <p>~{Math.ceil(selectedFiles.length * 7)} minutes (depending on video lengths and selected pipelines)</p>
+          <h4 className="font-medium mb-2">Name this run</h4>
+          <Input
+            value={batchName}
+            onChange={(event) => setBatchName(event.target.value)}
+            placeholder={runLabel}
+            aria-label="Run name"
+          />
+          <p className="text-xs text-muted-foreground mt-2">
+            {videoCountLabel} submitted together and tracked as one run, so you can watch
+            progress and cancel or retry them as a group. Leave blank to use
+            &ldquo;{runLabel}&rdquo;.
+          </p>
+        </div>
+
+        <div className="p-4 border rounded-lg">
+          <h4 className="font-medium mb-2">Processing Time</h4>
+          <p className="text-muted-foreground">
+            Estimated once the first video finishes — the run&apos;s page shows time remaining
+            based on how long these videos actually take, rather than a guess made up front.
+          </p>
         </div>
 
         <div className="p-4 border rounded-lg">

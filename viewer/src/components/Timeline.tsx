@@ -235,6 +235,58 @@ export const Timeline = ({ annotationData, currentTime, duration, settings, onSe
             </div>
           )}
 
+          {/* VLM Frame Annotation Track (point markers, not intervals) */}
+          {settings.showVlm !== false && annotationData.vlm_annotations && (
+            <div className="absolute top-14 left-0 right-0 h-4">
+              {annotationData.vlm_annotations.map((annotation, index) => {
+                const left = (annotation.timestamp_sec / duration) * 100;
+                const hue = (annotation.label.charCodeAt(0) * 137.508) % 360;
+                return (
+                  <div
+                    key={annotation.id ?? index}
+                    role="button"
+                    className="absolute w-2.5 h-2.5 rounded-full border border-background/60 opacity-80 hover:opacity-100 hover:scale-125 transition-transform cursor-pointer"
+                    style={{
+                      left: `${left}%`,
+                      top: '1px',
+                      transform: 'translateX(-50%)',
+                      backgroundColor: `hsl(${hue}, 70%, 55%)`
+                    }}
+                    title={`${annotation.label} @ ${annotation.timestamp_sec.toFixed(1)}s`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSeek(annotation.timestamp_sec);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* ELAN Ground Truth Track (raw tier segments, colored by tier name) */}
+          {settings.showElan !== false && annotationData.elan_ground_truth && (
+            <div className="absolute top-[4.5rem] left-0 right-0 h-4">
+              {annotationData.elan_ground_truth.map((annotation, index) => {
+                const left = (annotation.startSec / duration) * 100;
+                const width = ((annotation.endSec - annotation.startSec) / duration) * 100;
+                const hue = (annotation.tier.charCodeAt(0) * 137.508) % 360;
+                return (
+                  <div
+                    key={index}
+                    className="absolute h-3 rounded opacity-80 hover:opacity-100"
+                    style={{
+                      left: `${left}%`,
+                      width: `${width}%`,
+                      top: '0px',
+                      backgroundColor: `hsl(${hue}, 70%, 50%)`
+                    }}
+                    title={`${annotation.tier}${annotation.value ? `: ${annotation.value}` : ''}`}
+                  />
+                );
+              })}
+            </div>
+          )}
+
           {/* Motion Graph */}
           {settings.showMotion && (
             <canvas

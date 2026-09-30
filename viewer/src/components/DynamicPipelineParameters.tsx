@@ -11,6 +11,9 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { VlmModelPicker } from '@/components/VlmModelPicker';
+import { VlmPromptTestPanel } from '@/components/VlmPromptTestPanel';
+import { isUrlParameter, urlValueError } from '@/lib/pipelineUrlFields';
 
 import type { PipelineDescriptor, PipelineParameterSchema } from '@/types/pipelines';
 
@@ -21,6 +24,11 @@ interface DynamicPipelineParametersProps {
   onConfigChange: (
     updater: (prev: Record<string, unknown>) => Record<string, unknown>
   ) => void;
+  /** A representative selected video, threaded down so vlm_annotation's
+   * "test this prompt" slot has something to extract a frame from
+   * (VideoAnnotator spec 009 / viewer-handoff #2). Optional: every other
+   * pipeline's generic form ignores it entirely. */
+  previewVideoFile?: File;
 }
 
 const getPipelineConfig = (
@@ -87,6 +95,24 @@ const normalizeValue = (parameter: PipelineParameterSchema, value: unknown) => {
   }
 };
 
+/**
+ * The same normalized/defaulted value a field's widget currently displays
+ * (schema default until the user actually edits it), by name — since raw
+ * `pipelineConfig[name]` is `undefined` until then, a consumer outside the
+ * parameter-render loop (e.g. VlmPromptTestPanel) that read the raw config
+ * directly would see an empty value even while the form visibly shows a
+ * default like the pipeline's own DEFAULT_PROMPT or default model.
+ */
+const resolveParameterValue = (
+  parameters: PipelineParameterSchema[] | undefined,
+  pipelineConfig: Record<string, unknown>,
+  name: string
+): unknown => {
+  const parameter = parameters?.find((p) => p.name === name);
+  if (!parameter) return pipelineConfig[name];
+  return normalizeValue(parameter, pipelineConfig[name]);
+};
+
 const renderFieldDescription = (parameter: PipelineParameterSchema) => {
   const meta: string[] = [];
   if (parameter.required) meta.push('required');
@@ -101,7 +127,8 @@ export const DynamicPipelineParameters = ({
   pipelines,
   selectedPipelineIds,
   config,
-  onConfigChange
+  onConfigChange,
+  previewVideoFile
 }: DynamicPipelineParametersProps) => {
   const selectedPipelines = useMemo(
     () => pipelines.filter((pipeline) => selectedPipelineIds.includes(pipeline.id)),
@@ -162,6 +189,22 @@ export const DynamicPipelineParameters = ({
                   );
                   const fieldHint = renderFieldDescription(parameter);
 
+                  // vlm_annotation's `model` field: the one deliberate,
+                  // narrowly-scoped pipeline-specific UI exception (spec
+                  // 009 / viewer-handoff) — a live-populated picker instead
+                  // of the generic free-text default. Every other
+                  // pipeline/field still goes through the switch below.
+                  if (pipeline.id === 'vlm_annotation' && parameter.name === 'model') {
+                    return (
+                      <VlmModelPicker
+                        key={parameter.name}
+                        value={typeof currentValue === 'string' ? currentValue : ''}
+                        onChange={(value) => handleValueChange(pipeline.id, parameter, value)}
+                        fieldId={`${pipeline.id}-${parameter.name}`}
+                      />
+                    );
+                  }
+
                   switch (parameter.type) {
                     case 'boolean':
                       return (
@@ -189,6 +232,31 @@ export const DynamicPipelineParameters = ({
                               handleValueChange(pipeline.id, parameter, checked)
                             }
                           />
+                        </div>
+                      );
+
+                    case 'text':
+                      return (
+                        <div key={parameter.name} className="space-y-1">
+                          <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
+                            {parameter.label || parameter.name}
+                          </Label>
+                          <Textarea
+                            id={`${pipeline.id}-${parameter.name}`}
+                            value={typeof currentValue === 'string' ? currentValue : ''}
+                            rows={6}
+                            onChange={(event) =>
+                              handleValueChange(pipeline.id, parameter, event.target.value)
+                            }
+                          />
+                          {parameter.description && (
+                            <p className="text-xs text-muted-foreground">
+                              {parameter.description}
+                            </p>
+                          )}
+                          {fieldHint && (
+                            <p className="text-[11px] text-muted-foreground/80">{fieldHint}</p>
+                          )}
                         </div>
                       );
 
@@ -323,16 +391,30 @@ export const DynamicPipelineParameters = ({
                         </div>
                       );
 
-                    default:
+                    default: {
+                      const urlError = isUrlParameter(parameter)
+                        ? urlValueError(currentValue)
+                        : null;
                       return (
                         <div key={parameter.name} className="space-y-1">
-                          <Label className="text-sm">{parameter.label || parameter.name}</Label>
+                          <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
+                            {parameter.label || parameter.name}
+                          </Label>
                           <Input
+                            id={`${pipeline.id}-${parameter.name}`}
                             value={String(currentValue ?? '')}
                             onChange={(event) =>
                               handleValueChange(pipeline.id, parameter, event.target.value)
                             }
+                            {...(isUrlParameter(parameter) && {
+                              type: 'url',
+                              placeholder: 'Leave empty for the server default',
+                              'aria-invalid': urlError !== null
+                            })}
                           />
+                          {urlError && (
+                            <p className="text-xs text-destructive">{urlError}</p>
+                          )}
                           {parameter.description && (
                             <p className="text-xs text-muted-foreground">
                               {parameter.description}
@@ -340,11 +422,24 @@ export const DynamicPipelineParameters = ({
                           )}
                         </div>
                       );
+                    }
                   }
                 })}
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">No configurable parameters for this pipeline.</p>
+            )}
+
+            {pipeline.id === 'vlm_annotation' && (
+              <VlmPromptTestPanel
+                prompt={String(
+                  resolveParameterValue(pipeline.parameters, pipelineConfig, 'prompt') ?? ''
+                )}
+                model={String(
+                  resolveParameterValue(pipeline.parameters, pipelineConfig, 'model') ?? ''
+                )}
+                videoFile={previewVideoFile}
+              />
             )}
           </div>
         );

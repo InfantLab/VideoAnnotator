@@ -387,7 +387,7 @@ export const OpenFace3Controls = ({
         {/* Display Options */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="confidence-threshold" className="text-xs text-gray-600">
+            <Label htmlFor="confidence-threshold" className="text-xs text-muted-foreground">
               Confidence: {settings.confidence_threshold}
             </Label>
             <input
@@ -411,7 +411,7 @@ export const OpenFace3Controls = ({
                 onCheckedChange={(checked) => onChange({ ...settings, show_confidence_scores: checked })}
                 disabled={!hasData}
               />
-              <Label htmlFor="show-confidence" className="text-xs text-gray-600">
+              <Label htmlFor="show-confidence" className="text-xs text-muted-foreground">
                 Show Confidence
               </Label>
             </div>
@@ -423,7 +423,7 @@ export const OpenFace3Controls = ({
                 onCheckedChange={(checked) => onChange({ ...settings, show_feature_labels: checked })}
                 disabled={!hasData}
               />
-              <Label htmlFor="show-labels" className="text-xs text-gray-600">
+              <Label htmlFor="show-labels" className="text-xs text-muted-foreground">
                 Show Labels
               </Label>
             </div>
@@ -431,7 +431,7 @@ export const OpenFace3Controls = ({
         </div>
 
         {!hasData && (
-          <div className="text-xs text-gray-500 text-center py-2">
+          <div className="text-xs text-muted-foreground text-center py-2">
             Load OpenFace3 data to enable controls
           </div>
         )}

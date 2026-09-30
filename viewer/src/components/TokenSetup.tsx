@@ -21,6 +21,10 @@ interface TokenStatus {
   permissions?: string[];
   expiresAt?: string;
   error?: string;
+  /** From GET /api/v1/auth/me, fetched alongside validation. `undefined` when the
+   * server predates that endpoint (404) - not the same as a known non-admin (`false`). */
+  isAdmin?: boolean;
+  username?: string;
 }
 
 export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
@@ -70,12 +74,28 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
       // This checks both health AND permissions (by hitting /jobs)
       const result = await apiClient.validateToken();
 
+      // Fetch admin status alongside validation (GET /api/v1/auth/me). Best-effort:
+      // a 404 just means an older server that predates this endpoint, a 401 means
+      // the token isn't actually authenticated - neither should block showing the
+      // rest of the validation result.
+      let currentUser: { isAdmin: boolean; username: string } | null = null;
+      if (result.isValid && tokenToTest) {
+        try {
+          const me = await apiClient.getCurrentUser();
+          currentUser = { isAdmin: me.isAdmin, username: me.username };
+        } catch {
+          // Leave isAdmin/username undefined - see TokenStatus.isAdmin doc comment.
+        }
+      }
+
       setTokenStatus({
         isValid: result.isValid,
         user: result.user,
         permissions: result.permissions,
         expiresAt: result.expiresAt,
-        error: result.error
+        error: result.error,
+        isAdmin: currentUser?.isAdmin,
+        username: currentUser?.username
       });
 
       // Also update auth required status
@@ -479,10 +499,21 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                         {tokenStatus.user && (
                           <div>Authenticated as: <Badge variant="secondary">{tokenStatus.user}</Badge></div>
                         )}
-                        {tokenStatus.permissions && tokenStatus.permissions.length > 0 && (
-                          <div>Permissions: {tokenStatus.permissions.map(p =>
-                            <Badge key={p} variant="outline" className="mr-1">{p}</Badge>
-                          )}</div>
+                        {tokenStatus.username && (
+                          <div>Server identity: <Badge variant="secondary">{tokenStatus.username}</Badge></div>
+                        )}
+                        {tokenStatus.isAdmin !== undefined && (
+                          <div>
+                            Admin access:{' '}
+                            <Badge variant={tokenStatus.isAdmin ? 'secondary' : 'outline'}>
+                              {tokenStatus.isAdmin ? 'Yes' : 'No'}
+                            </Badge>
+                            {!tokenStatus.isAdmin && (
+                              <span className="ml-1 text-xs text-muted-foreground">
+                                (needed for pipeline installs — see below)
+                              </span>
+                            )}
+                          </div>
                         )}
                         {tokenStatus.expiresAt && (
                           <p className="text-sm text-muted-foreground">

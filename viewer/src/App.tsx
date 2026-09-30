@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SSEProvider } from "@/contexts/SSEContext";
 import { PipelineProvider } from "@/contexts/PipelineProvider";
 import { ServerCapabilitiesProvider } from "@/contexts/ServerCapabilitiesProvider";
@@ -13,6 +13,7 @@ import Home from "./pages/Home";
 import GettingStarted from "./pages/GettingStarted";
 import NotFound from "./pages/NotFound";
 import Jobs from "./pages/Jobs";
+import BatchDetail from "./pages/BatchDetail";
 import JobDetail from "./pages/JobDetail";
 import NewJob from "./pages/NewJob";
 import Datasets from "./pages/Datasets";
@@ -48,6 +49,9 @@ const App = () => (
                     <Route path="/jobs" element={<Jobs />} />
                     <Route path="/jobs/:jobId" element={<JobDetail />} />
                     <Route path="/jobs/new" element={<NewJob />} />
+                    {/* Runs (batches) are listed on the Jobs page. */}
+                    <Route path="/batches" element={<Navigate to="/jobs" replace />} />
+                    <Route path="/batches/:batchId" element={<BatchDetail />} />
                     <Route path="/datasets" element={<Datasets />} />
                     <Route path="/settings" element={<Settings />} />
                   </Route>

@@ -117,22 +117,37 @@ SPEAKER file1 1 3.00 1.50 <NA> <NA> SPEAKER_01 <NA> <NA>`
       expect(result).toHaveLength(0)
     })
 
-    it('should handle COCO format scene annotations', async () => {
+    it('should parse the COCO export the VideoAnnotator backend writes', async () => {
       const cocoData = {
+        info: { description: 'VideoAnnotator COCO Export', version: '1.5.0' },
+        images: [{ id: 'clip_frame_000110', video_id: 'clip', timestamp: 3.66 }],
         annotations: [
           {
             id: 1,
-            image_id: 'frame_0001',
+            image_id: 'clip_frame_000110',
             category_id: 1,
-            bbox: [0, 0, 100, 100],
-            timestamp: 1.5,
-            scene_type: 'outdoor'
+            bbox: [0, 0, 640, 360],
+            area: 230400,
+            iscrowd: 0,
+            score: 0.81,
+            video_id: 'clip',
+            timestamp: 3.66,
+            start_time: 0,
+            end_time: 7.32,
+            duration: 7.32,
+            scene_type: 'nursery',
+            frame_start: 0,
+            frame_end: 219,
+            all_scores: { nursery: 0.81, office: 0.1 }
           }
-        ]
+        ],
+        categories: [{ id: 1, name: 'scene', supercategory: 'video_segment' }]
       }
 
-      const file = createMockFile(JSON.stringify(cocoData), 'coco_scenes.json', 'application/json')
-      await expect(parseSceneDetection(file)).rejects.toThrow('Failed to parse scene detection data')
+      const file = createMockFile(JSON.stringify(cocoData), 'clip_scene_detection.json', 'application/json')
+      const result = await parseSceneDetection(file)
+      expect(result).toHaveLength(1)
+      expect(result[0]).toMatchObject({ scene_type: 'nursery', start_time: 0, end_time: 7.32 })
     })
   })
 })

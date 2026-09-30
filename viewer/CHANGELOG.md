@@ -7,6 +7,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Added
+- **Run a folder that's already on the server — no uploading.** The job wizard's first step now
+  offers "Folder on the server" alongside uploading from this computer: browse the folders the
+  VideoAnnotator server can see, pick one, and every video in it becomes a run in a single
+  request. Nothing is uploaded or copied — the jobs read the videos where they already sit — so a
+  40-video corpus starts immediately instead of after 40 multipart uploads with the tab held open.
+  Optionally includes subfolders. A browser can't discover a real path (neither the file input nor
+  the File System Access API exposes one), so the server lists its own readable folders and the
+  picker walks them. Needs VideoAnnotator with the ingest API, an admin token, and the viewer
+  running on the server's own machine; where any of that isn't true the picker explains why and
+  uploading still works. The upload tab also now points this out once a selection passes 8 files.
+- **Runs, not scattered jobs**: videos submitted together are now tracked and shown as one
+  run. The wizard tags every submission with a shared batch id (and a name you can set on
+  the Review step, defaulting to the folder the videos came from), and the Jobs page leads
+  with one card per run — real aggregate progress, a real time estimate, per-state counts,
+  and Cancel-all / Retry-all in a single call each. A new run detail page at
+  `/batches/:batchId` shows that run's headline numbers and every video in it. Submitting 12
+  videos previously produced 12 unrelated rows split across two pages of a paginated table,
+  with no way to see the run as a whole or act on it as a whole; jobs belonging to no batch
+  (CLI submissions, older work) still appear, in their own section. Requires VideoAnnotator
+  v1.5.0+ for grouping; against an older server the page falls back to listing jobs
+  individually and says so. See VideoAnnotator's `specs/008-batch-group-workflow/`.
+
+### 🐛 Fixed
+- **The app shell no longer fights its own theme.** `AppLayout` wrapped every page in a hardcoded
+  light `bg-gray-50` while the theme tokens are dark, so cards rendered dark on a light page and
+  any text using the theme's own `text-foreground` was light-on-light — page headings were
+  literally invisible across the app. The shell now uses `bg-background`, and the page-level text
+  that had been written to assume a light page behind it uses theme tokens. Self-contained colour
+  chips (status badges, icon tiles) and the light "note" panels are deliberately unchanged.
+- **Progress bars show real progress.** The job detail page derived progress from status
+  alone — every running job read exactly 50%, whatever it was actually doing. It now uses
+  the server's real completed/total-pipelines figure, as does the per-video progress column
+  in the new run views.
+- **No more invented time estimates.** The wizard's "estimated processing time" was
+  `number of files × 7 minutes`, unrelated to video length or the pipelines selected. A run
+  now reports time remaining computed by the server from how long that run's own finished
+  videos actually took, and honestly says it is still estimating until the first one
+  finishes.
+- **Pipeline extras install UI**: the job-creation wizard's Select Pipelines step now shows
+  every pipeline a VideoAnnotator v1.5.0+ server knows about, not just installed ones —
+  locked pipelines display their install hint instead of silently disappearing. An
+  admin-authenticated session can trigger a self-service install directly from the app,
+  track its progress (polled every 5s, survives a page reload via `localStorage`), see
+  failure output on a failed install, and get a clear "server restart needed" banner once
+  an install finishes but isn't active yet — instead of the previous options of hiding the
+  pipeline or requiring shell access to the server. See `specs/002-pipeline-extras-install/`.
+- **Admin-token guidance**: a 403 from the install action now explains that single-user
+  deployments usually already have an admin-scoped token by default (the one VideoAnnotator
+  generates on first server start), rather than just stating the requirement with no path
+  forward. Settings' "Getting Help" tab and the Select Pipelines step now also explain token
+  scopes up front, before a user hits the error.
+- **Real admin-status detection**: the viewer now calls VideoAnnotator's new
+  `GET /api/v1/auth/me` (v1.5.1+) to know in advance whether the current session has admin
+  access, instead of only finding out via a `403`. The Install action is disabled with an
+  inline explanation (and the exact `generate-token --admin` command to fix it) when the
+  session is known not to be admin; Settings and `TokenSetup` now show real admin status
+  instead of the previously-always-empty "Permissions" field. Servers that predate this
+  endpoint fall back to the original attempt-then-403 behavior unchanged.
+
+## [0.7.0] - 2026-08-24 — VLM Frame Annotation Support
+
+### ✨ Added
+- **`vlm_annotation` pipeline support**: full display support for VideoAnnotator's new local-VLM
+  frame classification pipeline (per-frame classification/captioning via a locally-hosted
+  vision-language model through Ollama). New `VLMFrameAnnotation` type + Zod schema, a parser
+  (`src/lib/parsers/vlm.ts`), detection wired into the merge pipeline, a Timeline point-marker
+  track, and a `VlmAnnotationPanel` showing the current label plus expandable model reasoning,
+  synced to playback time.
+- **ELAN ground-truth comparison**: `.eaf` file parsing (`src/lib/parsers/elan.ts`, ported from
+  the touch-detection research repo's own preprocessing script) with a four-way category
+  collapse (configurable tier-to-side mapping, defaulting to the Crucianelli et al. 2019
+  mother-infant touch coding scheme), a Timeline segment track for the raw tiers, and a live
+  agree/disagree indicator comparing VLM predictions against ground truth at the current time.
+- **Job-creation form now renders real per-pipeline parameters**: fixed a `GET /pipelines/{name}/schema`
+  404 (the endpoint the form already tried to call) that meant every pipeline's Configure step
+  showed "No configurable parameters," not just the new one — now wired end-to-end via
+  `usePipelineSchema`. New `'text'` parameter type renders a proper multi-line textarea (e.g. for
+  a long prompt) instead of a one-line input.
+
+### 🐛 Fixed
+- File-type detection for `vlm_annotation.json` and `.eaf` files across all four places the app
+  independently re-derives a file's pipeline type from its content (`merger.ts`, `fileUtils.ts`,
+  and two hardcoded arrays in `FileUploader.tsx`) — previously only `merger.ts` needed to know
+  about a new type; missing it in the other three meant a valid file showed "Unknown File Type"
+  in the upload preview and could leave the Process-Files button disabled even though the actual
+  parse would have worked.
+
 ## [0.6.3] - 2026-07-08 — Embedding Support & Demo Slimdown
 
 ### ✨ Added

@@ -2,6 +2,24 @@ import { forwardRef, useEffect, useRef, useCallback, useState } from 'react';
 import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCue, RTTMSegment, SceneAnnotation, LAIONFaceAnnotation, COCO_SKELETON_CONNECTIONS, YOLO_POSE_PALETTE, YOLO_LIMB_COLORS, YOLO_KEYPOINT_COLORS, OpenFace3ActionUnit, OpenFace3ActionUnits } from '@/types/annotations';
 import { getFacesAtTime, getDominantEmotion } from '@/lib/parsers/face';
 import type { OpenFace3Settings } from './openface3Settings';
+import { browserClaimFor, sniffVideoCodec, type VideoCodecInfo } from '@/lib/videoCodec';
+
+/** Why the picture isn't showing, as the browser reported it. */
+interface PlaybackProblem {
+  /** The object URL it happened on: a problem only counts for the video on screen now. */
+  url: string;
+  /** "error": the element fired an error. "no-picture": data loaded but no video frames (videoWidth 0). */
+  kind: 'error' | 'no-picture';
+  code?: number;
+  message?: string;
+}
+
+const MEDIA_ERROR_NAMES: Record<number, string> = {
+  1: 'MEDIA_ERR_ABORTED',
+  2: 'MEDIA_ERR_NETWORK',
+  3: 'MEDIA_ERR_DECODE',
+  4: 'MEDIA_ERR_SRC_NOT_SUPPORTED',
+};
 
 interface VideoPlayerProps {
   videoFile: File;
@@ -20,13 +38,29 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const containerRef = useRef<HTMLDivElement>(null);
     const [videoUrl, setVideoUrl] = useState<string>('');
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    // Set when the browser can't show the picture (a black frame otherwise).
+    // Keyed to the URL it happened on, so a late event from a previous video,
+    // or from the element before it had a source, can't stick to this one.
+    const [problem, setProblem] = useState<PlaybackProblem | null>(null);
+    const [codec, setCodec] = useState<VideoCodecInfo | null>(null);
+    const playbackProblem = problem && videoUrl && problem.url === videoUrl ? problem : null;
 
     // Create video URL from file
     useEffect(() => {
       if (videoFile) {
+        setProblem(null);
+        setCodec(null);
         const url = URL.createObjectURL(videoFile);
         setVideoUrl(url);
-        return () => URL.revokeObjectURL(url);
+        let cancelled = false;
+        // Evidence for the message: what the container itself says the codec is.
+        sniffVideoCodec(videoFile).then((info) => {
+          if (!cancelled) setCodec(info);
+        });
+        return () => {
+          cancelled = true;
+          URL.revokeObjectURL(url);
+        };
       }
     }, [videoFile]);
 
@@ -697,12 +731,42 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       }
     }, [onDurationChange, ref]);
 
+    /** The element's events only count for the video on screen now, never an empty or revoked source. */
+    const isCurrentSource = (el: HTMLVideoElement) => !!videoUrl && el.currentSrc === videoUrl;
+
+    // First frame's data is in. A width of 0 here means the audio decoded and
+    // the picture didn't (seen: HEVC in Chrome with hardware decoding off).
+    // Checked here rather than at loadedmetadata, where an hev1 stream's
+    // in-band parameter sets may not have been read yet.
+    const handleLoadedData = useCallback(() => {
+      const el = (ref as React.MutableRefObject<HTMLVideoElement>).current;
+      if (!el || !isCurrentSource(el)) return;
+      if (el.videoWidth === 0) setProblem({ url: videoUrl, kind: 'no-picture' });
+    }, [ref, videoUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const handleVideoError = useCallback(() => {
+      const el = (ref as React.MutableRefObject<HTMLVideoElement>).current;
+      const error = el?.error;
+      // An empty src (before the object URL exists) reports "Empty src
+      // attribute" as MEDIA_ERR_SRC_NOT_SUPPORTED: that was the false
+      // "can't play this codec" message on every video.
+      if (!el || !error || !isCurrentSource(el)) return;
+      if (error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED || error.code === MediaError.MEDIA_ERR_DECODE) {
+        console.warn('[VideoPlayer] playback error', { code: error.code, message: error.message, file: videoFile?.name });
+        setProblem({ url: videoUrl, kind: 'error', code: error.code, message: error.message });
+      }
+    }, [ref, videoUrl, videoFile]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const handleTimeUpdate = useCallback(() => {
       const video = ref as React.MutableRefObject<HTMLVideoElement>;
       if (video.current) {
         onTimeUpdate(video.current.currentTime);
+        // Frames are decoding after all: drop any message. Not on `playing`,
+        // which Edge fires even after a decode error with the clock stuck at 0.
+        const el = video.current;
+        if (problem && el.currentTime > 0 && el.videoWidth > 0 && !el.error) setProblem(null);
       }
-    }, [onTimeUpdate, ref]);
+    }, [onTimeUpdate, ref, problem]);
 
     const handlePlay = useCallback(() => {
       onPlayStateChange(true);
@@ -790,9 +854,11 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         <div className="relative w-full h-full">
           <video
             ref={ref}
-            src={videoUrl}
+            src={videoUrl || undefined}
             className="w-full h-full object-contain"
             onLoadedMetadata={handleLoadedMetadata}
+            onLoadedData={handleLoadedData}
+            onError={handleVideoError}
             onTimeUpdate={handleTimeUpdate}
             onPlay={handlePlay}
             onPause={handlePause}
@@ -802,8 +868,65 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
             ref={canvasRef}
             className="absolute inset-0 pointer-events-none"
           />
+          {playbackProblem && (
+            <PlaybackProblemNotice problem={playbackProblem} codec={codec} />
+          )}
         </div>
       </div>
     );
   }
 );
+
+/**
+ * Over the player when the picture won't show. Names the codec only from the
+ * file's own sample entry, repeats what the browser reported, and lists fixes
+ * in order of effort. (A lossless hev1 -> hvc1 remux was tested and made no
+ * difference in Chrome or Edge, so it isn't offered.)
+ */
+function PlaybackProblemNotice({ problem, codec }: { problem: PlaybackProblem; codec: VideoCodecInfo | null }) {
+  const isHevc = codec?.label === 'H.265/HEVC';
+  const claim = codec ? browserClaimFor(codec.fourcc) : 'unknown';
+  const reported =
+    problem.kind === 'error'
+      ? `${MEDIA_ERROR_NAMES[problem.code ?? 0] ?? `error ${problem.code}`}${problem.message ? `: ${problem.message}` : ''}`
+      : 'the video loaded but no picture decoded (videoWidth 0); audio may still play';
+
+  return (
+    <div role="alert" className="absolute inset-0 flex items-center justify-center p-6">
+      <div className="max-w-lg rounded-lg border border-border bg-card/95 p-4 text-sm text-foreground shadow-lg">
+        <p className="font-medium">
+          This browser couldn&apos;t show the picture of this video
+          {codec ? <> ({codec.label}, according to the file)</> : null}.
+        </p>
+        {isHevc && claim === 'probably' && (
+          <p className="mt-1 text-muted-foreground">
+            The browser says it supports H.265 but failed to decode it. That usually means
+            hardware video decoding isn&apos;t available to it.
+          </p>
+        )}
+        <p className="mt-2 text-muted-foreground">Annotations are still available below. To see the video:</p>
+        <ol className="mt-1 list-decimal space-y-1 pl-5 text-muted-foreground">
+          {isHevc && (
+            <li>
+              Open it in Chrome with hardware acceleration on (Settings → System). Edge on
+              Windows depends on Microsoft&apos;s &ldquo;HEVC Video Extensions&rdquo; and the
+              graphics driver, and can fail even with both installed.
+            </li>
+          )}
+          <li>
+            Re-encode it to H.264, e.g.
+            <code className="mt-1 block break-all rounded bg-muted px-2 py-1 font-mono text-xs">
+              ffmpeg -i in.mp4 -c:v libx264 -crf 18 -c:a copy out.mp4
+            </code>
+          </li>
+        </ol>
+        <details className="mt-2 text-xs text-muted-foreground">
+          <summary className="cursor-pointer">Details</summary>
+          <p className="mt-1">Browser reported: {reported}</p>
+          <p>Codec in file: {codec ? codec.fourcc : 'not identified'} · browser claims support: {claim}</p>
+          <p>{navigator.userAgent}</p>
+        </details>
+      </div>
+    </div>
+  );
+}

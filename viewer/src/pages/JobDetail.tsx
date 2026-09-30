@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient, type JobResponse } from "@/api/client";
@@ -15,6 +16,7 @@ import { JobDeleteButton } from "@/components/JobDeleteButton";
 import { canCancelJob } from "@/hooks/useJobCancellation";
 import { canDeleteJob } from "@/hooks/useJobDeletion";
 import type { JobStatus } from "@/types/api";
+import { failedPipelinesOf, isCompletedWithErrors } from "@/lib/jobOutcome";
 
 const CreateJobDetail = () => {
   const { jobId } = useParams<{ jobId: string }>();
@@ -39,6 +41,17 @@ const CreateJobDetail = () => {
     },
   });
 
+  // Which pipelines produced nothing, and why: only worth asking once the job
+  // has finished with an error message.
+  const withErrors = !!job && isCompletedWithErrors(job);
+  const { data: results } = useQuery({
+    queryKey: ["job-results", jobId],
+    queryFn: () => apiClient.getJobResults(jobId!),
+    enabled: !!jobId && withErrors,
+    staleTime: 60_000,
+  });
+  const failedPipelines = Object.entries(failedPipelinesOf(results));
+
   const getStatusClassName = (status: string, errorMessage?: string | null) => {
     const statusMap = {
       pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -56,16 +69,22 @@ const CreateJobDetail = () => {
     return statusMap[status as keyof typeof statusMap] || "bg-gray-100 text-gray-800 border-gray-200";
   };
 
-  const getProgressValue = (status: string) => {
-    const progressMap = {
-      pending: 0,
-      running: 50,
-      completed: 100,
-      failed: 0,
-      cancelled: 0,
-      cancelling: 25,
-    };
-    return progressMap[status as keyof typeof progressMap] || 0;
+  /**
+   * Real progress, reported by the server as completed/total selected pipelines
+   * (spec 006). This used to be a fixed status-to-number map — every running
+   * job showed exactly 50% regardless of how much work was actually done.
+   *
+   * Only the terminal states are still derived: a job that finished is 100%
+   * whatever its last reported figure was, and one that failed or was cancelled
+   * keeps the progress it had reached, which is more informative than zero.
+   */
+  const getProgressValue = (job: { status: string; progress_percentage?: number }) => {
+    const reported =
+      typeof job.progress_percentage === 'number' && Number.isFinite(job.progress_percentage)
+        ? job.progress_percentage
+        : 0;
+    if (job.status === 'completed') return 100;
+    return Math.max(0, Math.min(100, Math.round(reported)));
   };
 
   // Button handlers
@@ -80,16 +99,30 @@ const CreateJobDetail = () => {
     navigate(`/view/${job.id}`);
   };
 
+  // The job's artifacts zip: source video, every pipeline's output and the job log.
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const handleDownloadResults = async () => {
     if (!job) return;
-
+    setIsDownloading(true);
+    setDownloadError(null);
     try {
-      // TODO: Implement actual download from API
-      // For now, show placeholder
-      alert(`Download functionality coming soon for job ${job.id}`);
+      const response = await apiClient.getJobArtifacts(job.id);
+      if (!response.ok) throw new Error(`the server answered ${response.status}`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `job_${job.id}_artifacts.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch (error) {
       console.error("Download failed:", error);
-      alert("Download failed. Please try again.");
+      setDownloadError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -234,12 +267,22 @@ const CreateJobDetail = () => {
         </div>
       </div>
 
-      {/* Partial Success Warning */}
-      {job.status === 'completed' && job.error_message && (
+      {/* Completed, but some pipelines produced nothing */}
+      {withErrors && (
         <Alert className="bg-orange-50 border-orange-200 text-orange-800">
           <AlertCircle className="h-4 w-4 !text-orange-600" />
-          <AlertDescription className="ml-2">
-            <span className="font-semibold">Partial Success:</span> {job.error_message}
+          <AlertDescription className="ml-2 space-y-1">
+            <p>
+              <span className="font-semibold">Completed with errors:</span>{" "}
+              {failedPipelines.length > 0
+                ? "these pipelines produced no results."
+                : job.error_message}
+            </p>
+            {failedPipelines.map(([name, reason]) => (
+              <p key={name} className="text-sm">
+                <span className="font-mono font-medium">{name}</span>: {reason}
+              </p>
+            ))}
           </AlertDescription>
         </Alert>
       )}
@@ -262,9 +305,9 @@ const CreateJobDetail = () => {
             <div>
               <div className="flex justify-between text-sm mb-2">
                 <span>Progress</span>
-                <span>{getProgressValue(job.status)}%</span>
+                <span>{getProgressValue(job)}%</span>
               </div>
-              <Progress value={getProgressValue(job.status)} className="h-2" />
+              <Progress value={getProgressValue(job)} className="h-2" />
             </div>
 
             {job.status === "running" && (
@@ -371,7 +414,9 @@ const CreateJobDetail = () => {
           <CardContent>
             <div className="space-y-4">
               <p className="text-muted-foreground">
-                Job completed successfully! Results are ready for viewing.
+                {withErrors
+                  ? "Results from the pipelines that succeeded are ready for viewing."
+                  : "Job completed successfully! Results are ready for viewing."}
               </p>
 
               <div className="flex gap-2">
@@ -379,44 +424,26 @@ const CreateJobDetail = () => {
                   <Eye className="h-4 w-4 mr-2" />
                   Open in Viewer
                 </Button>
-                <Button variant="outline" onClick={handleDownloadResults}>
+                <Button variant="outline" onClick={handleDownloadResults} disabled={isDownloading}>
                   <Download className="h-4 w-4 mr-2" />
-                  Download Results
+                  {isDownloading ? "Preparing zip…" : "Download Results"}
                 </Button>
                 <Button variant="outline" onClick={handleViewRawData}>
                   <ExternalLink className="h-4 w-4 mr-2" />
                   View Raw Data
                 </Button>
               </div>
+              {downloadError && (
+                <p className="text-sm text-destructive">Couldn&apos;t download the results: {downloadError}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                The zip holds the video, each pipeline&apos;s output and the job log.
+              </p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Logs Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Logs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-black text-green-400 p-4 rounded-md font-mono text-sm h-64 overflow-y-auto">
-            {/* TODO: Implement real-time log streaming */}
-            <div className="space-y-1">
-              <div>[{new Date().toISOString()}] Job {job.id} created</div>
-              <div>[{new Date().toISOString()}] Video uploaded: {videoFilename}</div>
-              {job.status !== "pending" && (
-                <div>[{new Date().toISOString()}] Processing started...</div>
-              )}
-              {job.status === "completed" && (
-                <div>[{new Date().toISOString()}] Job completed successfully</div>
-              )}
-              {job.status === "failed" && (
-                <div>[{new Date().toISOString()}] Job failed: Check error details</div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

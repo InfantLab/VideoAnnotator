@@ -8,9 +8,101 @@
 
 This guide provides client-side developers with tools and protocols for effective collaboration with the VideoAnnotator server team during API integration and testing.
 
-**Target Server**: VideoAnnotator v1.2.x / v1.3.x / v1.4.x API Server  
+**Target Server**: VideoAnnotator v1.2.x / v1.3.x / v1.4.x / v1.5.x API Server  
 **Client Application**: Video Annotation Viewer (React + TypeScript)  
-**Latest Supported Version**: v1.4.2
+**Latest Supported Version**: v1.5.1
+
+---
+
+## 🆕 VideoAnnotator v1.5.1 — Admin Status Detection (Addendum)
+
+A manual walkthrough of the v1.5.0 extras-install UI (above) found a real procedural gap: a
+`403` from the install action told the user nothing about *why*, and the viewer had no way to
+check its own admin status in advance. Root cause was partly backend (`generate-token` had no
+admin concept at all, so re-issuing a key could silently produce a non-admin identity) and
+partly frontend (no visibility into the result). v1.5.1 adds:
+
+```http
+GET /api/v1/auth/me
+Authorization: Bearer {token}
+```
+`200 { id, username, email, is_admin }` for any authenticated caller - **never `403`**, since
+this is how a client finds out in advance whether it *would* get a `403` elsewhere. `401`
+unauthenticated. Absent (`404`) on servers that predate v1.5.1.
+
+**Client implementation**: `apiClient.getCurrentUser()` / `useCurrentUser()`
+(`src/hooks/useCurrentUser.ts`) - a tri-state `isAdmin: boolean | 'unknown'` (`'unknown'` covers
+no token configured, request in flight, or a 404-unsupported endpoint, uniformly). The Install
+action in `LockedPipelineCard`/`ExtrasInstallStatus` is now disabled with an inline explanation
+(and the exact `uv run videoannotator generate-token --admin` remediation command) when
+`isAdmin === false`; `true` or `'unknown'` falls back to the original enabled-button /
+attempt-then-403 behavior, so a pre-v1.5.1 server degrades gracefully rather than losing the
+install action entirely. Admin status is also now shown in Settings (Connection tab) and
+`TokenSetup`, replacing a `permissions` field that was always empty in practice.
+
+See `specs/002-pipeline-extras-install/spec.md`'s Addendum section, and
+`contracts/extras-install-viewer-contract.md` §4, for the full design.
+
+---
+
+## 🆕 VideoAnnotator v1.5.0 Features
+
+### **Pipeline Extras Install UI** (specs/002-pipeline-extras-install)
+
+VideoAnnotator ships as a slim "core" install by default - most pipelines don't run until
+their extras group (`face`, `audio`, `scene`, `person`, ...) is installed. As of v1.5.0 the
+server can report which pipelines it knows about but hasn't installed, and can trigger a
+self-service install job for one, so the viewer no longer has to hide unavailable pipelines
+or send users to a terminal.
+
+#### **Pipeline discoverability**
+```http
+GET /api/v1/pipelines?include_unavailable=true
+```
+
+Returns every pipeline the server knows about (not just installed ones). Each entry gets
+`available: bool` and, when `false`, `install_hint: string` (e.g. `"pip install
+videoannotator[face]"`). The response also gains a top-level `restart_required: bool`,
+true once at least one extras group has finished installing but the server hasn't
+restarted to activate it yet.
+
+#### **Trigger an install (admin-only)**
+```http
+POST /api/v1/pipelines/extras/{extra}/install
+Authorization: Bearer {admin-token}
+```
+`202 { job_id, extra_name, status }` - fire-and-forget, does not wait for the install.
+`401` unauthenticated, `403` authenticated but not admin, `422` unrecognized extras name.
+
+#### **Poll install job status**
+```http
+GET /api/v1/pipelines/extras/install-jobs/{job_id}
+```
+`200 { job_id, extra_name, status, created_at, started_at, finished_at, command_output,
+restart_required }`. `status` is one of `pending | running | completed | failed`.
+`command_output` is populated on `failed`.
+
+#### **Client implementation**
+
+- `apiClient.getPipelineCatalog({ includeUnavailable: true })` - now the default for
+  `usePipelineCatalog()`, so every catalog consumer sees locked pipelines and
+  `restartRequired`.
+- `apiClient.installPipelineExtras(extraName)` / `apiClient.getExtrasInstallJob(jobId)` -
+  thin wrappers around the two endpoints above (`src/api/client.ts`).
+- `useExtrasInstall()` (`src/hooks/useExtrasInstall.ts`) - triggers installs, polls job
+  status every 5s while `pending`/`running`, persists in-flight jobs to `localStorage`
+  (`videoannotator_extras_install_jobs`) so progress survives a page reload, and drops a
+  finished job's local tracking once its pipelines are confirmed available again.
+- `LockedPipelineCard` / `ExtrasInstallStatus` (`src/components/LockedPipelineCard.tsx`)
+  and `RestartRequiredBanner` (`src/components/RestartRequiredBanner.tsx`) - the UI, wired
+  into the job-creation wizard's Select Pipelines step (`src/pages/NewJob.tsx`).
+
+A pre-v1.5.0 server (missing these fields/endpoints entirely) degrades gracefully: every
+pipeline is treated as `available`, `restartRequired` defaults to `false`, and no Install
+action is shown since no pipeline is ever locked.
+
+See `specs/002-pipeline-extras-install/` (spec, plan, data model, endpoint contract,
+quickstart) for the full design.
 
 ---
 

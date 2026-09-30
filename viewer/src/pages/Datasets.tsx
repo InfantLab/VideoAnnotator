@@ -10,7 +10,7 @@ const CreateDatasets = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Dataset Management</h2>
-          <p className="text-gray-600">Manage video datasets for batch processing</p>
+          <p className="text-muted-foreground">Manage video datasets for batch processing</p>
         </div>
         <Button disabled>
           <Plus className="h-4 w-4 mr-2" />
@@ -32,8 +32,8 @@ const CreateDatasets = () => {
         <Card className="border-dashed border-2">
           <CardContent className="flex flex-col items-center justify-center p-8 text-center">
             <Database className="h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="font-medium text-gray-600 mb-2">No Datasets Registered</h3>
-            <p className="text-sm text-gray-500 mb-4">
+            <h3 className="font-medium text-foreground mb-2">No Datasets Registered</h3>
+            <p className="text-sm text-muted-foreground mb-4">
               Register your first video dataset to enable batch processing
             </p>
             <Button variant="outline" disabled>
@@ -55,15 +55,15 @@ const CreateDatasets = () => {
             <div className="space-y-2 text-sm">
               <div>
                 <span className="font-medium">Path:</span>
-                <span className="ml-2 text-gray-600">/videos/training</span>
+                <span className="ml-2 text-muted-foreground">/videos/training</span>
               </div>
               <div>
                 <span className="font-medium">Videos:</span>
-                <span className="ml-2 text-gray-600">125 files</span>
+                <span className="ml-2 text-muted-foreground">125 files</span>
               </div>
               <div>
                 <span className="font-medium">Total Size:</span>
-                <span className="ml-2 text-gray-600">2.3 GB</span>
+                <span className="ml-2 text-muted-foreground">2.3 GB</span>
               </div>
             </div>
             <div className="mt-4 flex gap-2">
@@ -85,7 +85,7 @@ const CreateDatasets = () => {
               <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
               <div>
                 <h4 className="font-medium">Dataset Registration</h4>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Register video directories with metadata for organized batch processing
                 </p>
               </div>
@@ -95,7 +95,7 @@ const CreateDatasets = () => {
               <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
               <div>
                 <h4 className="font-medium">Video Scanning</h4>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Automatically discover and catalog video files in registered datasets
                 </p>
               </div>
@@ -105,7 +105,7 @@ const CreateDatasets = () => {
               <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
               <div>
                 <h4 className="font-medium">Batch Processing</h4>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Process entire datasets with consistent pipeline configurations
                 </p>
               </div>
@@ -115,7 +115,7 @@ const CreateDatasets = () => {
               <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
               <div>
                 <h4 className="font-medium">Progress Tracking</h4>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Monitor batch job progress across multiple videos simultaneously
                 </p>
               </div>

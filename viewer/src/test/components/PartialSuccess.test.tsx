@@ -10,6 +10,7 @@ import type { JobResponse } from '@/api/client';
 vi.mock('@/api/client', () => ({
   apiClient: {
     getJob: vi.fn(),
+    getJobResults: vi.fn().mockRejectedValue(new Error('no results endpoint')),
   }
 }));
 
@@ -71,13 +72,39 @@ describe('CreateJobDetail - Partial Success', () => {
     expect(statusBadge).toBeInTheDocument();
 
     // Check for the partial success alert
-    const alertMessage = await screen.findByText(/Partial Success:/i);
+    const alertMessage = await screen.findByText(/Completed with errors:/i);
     expect(alertMessage).toBeInTheDocument();
     expect(screen.getByText(/Failed pipelines: speaker_diarization/i)).toBeInTheDocument();
     
     // Check if the badge has the orange color class (partial success)
     // Note: We can't easily check class names on the badge component directly without data-testid, 
     // but we can check if the alert is present which confirms the logic branch was taken.
+  });
+
+  it('lists each failed pipeline with its reason from the results endpoint', async () => {
+    const mockJob = {
+      id: 'job_126',
+      status: 'completed',
+      error_message: 'Completed with errors. Failed pipelines: person_tracking',
+      video_filename: 'test_video.mp4',
+    };
+
+    const { apiClient } = await import('@/api/client');
+    vi.mocked(apiClient.getJob).mockResolvedValueOnce(mockJob as unknown as JobResponse);
+    vi.mocked(apiClient.getJobResults).mockResolvedValueOnce({
+      job_id: 'job_126',
+      status: 'completed',
+      pipeline_results: {
+        face_analysis: { status: 'completed' },
+        person_tracking: { status: 'failed', error_message: 'Pipeline could not be imported' },
+      },
+    });
+
+    renderWithProviders(<CreateJobDetail />);
+
+    expect(await screen.findByText(/Pipeline could not be imported/)).toBeInTheDocument();
+    expect(screen.getByText('person_tracking')).toBeInTheDocument();
+    expect(screen.queryByText('face_analysis')).not.toBeInTheDocument();
   });
 
   it('displays normal success when status is completed and no error_message', async () => {
@@ -96,7 +123,7 @@ describe('CreateJobDetail - Partial Success', () => {
     await screen.findByText('COMPLETED');
 
     // Should NOT show partial success alert
-    const alertMessage = screen.queryByText(/Partial Success:/i);
+    const alertMessage = screen.queryByText(/Completed with errors:/i);
     expect(alertMessage).not.toBeInTheDocument();
   });
 
@@ -116,7 +143,7 @@ describe('CreateJobDetail - Partial Success', () => {
     await screen.findByText('FAILED');
 
     // Should NOT show partial success alert (it's a full failure)
-    const alertMessage = screen.queryByText(/Partial Success:/i);
+    const alertMessage = screen.queryByText(/Completed with errors:/i);
     expect(alertMessage).not.toBeInTheDocument();
   });
 });

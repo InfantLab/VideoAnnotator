@@ -8,10 +8,60 @@ import type {
   PipelineParameterSchema,
   VideoAnnotatorFeatureFlags,
   VideoAnnotatorServerInfo,
-  PipelineCapability
+  PipelineCapability,
+  ExtrasInstallJob,
+  ExtrasInstallTriggerResponse,
+  VlmModelsResponse,
+  VlmPreviewRequest,
+  VlmPreviewResponse,
+  ReadinessItem,
+  PipelineReadiness,
+  ExtrasGroupInfo
 } from '@/types/pipelines';
 import type { SystemHealthResponse } from '@/types/system';
+import type {
+  BatchCancelResponse,
+  BatchListResponse,
+  BatchRetryResponse,
+  BatchSummary,
+} from '@/types/batches';
+import type {
+  IngestBrowseResponse,
+  IngestRequest,
+  IngestResponse,
+} from '@/types/ingest';
+import type { CurrentUser } from '@/types/api';
+import type { JobResults } from '@/lib/jobOutcome';
+import type { Preset, PresetCreateRequest, PresetListResponse } from '@/types/presets';
 import { APIError } from './handleError';
+
+const mapReadinessItems = (value: unknown): ReadinessItem[] =>
+  Array.isArray(value)
+    ? value
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+        .map((item) => ({
+          kind: String(item.kind ?? ''),
+          name: String(item.name ?? ''),
+          message: String(item.message ?? ''),
+          helpUrl: typeof item.help_url === 'string' ? item.help_url : null,
+          approxMb: typeof item.approx_mb === 'number' ? item.approx_mb : null
+        }))
+    : [];
+
+/** snake_case `readiness` (VideoAnnotator spec 011) -> PipelineReadiness; undefined from older servers. */
+const mapReadiness = (value: unknown): PipelineReadiness | undefined => {
+  if (!value || typeof value !== 'object') return undefined;
+  const r = value as Record<string, unknown>;
+  if (typeof r.state !== 'string') return undefined;
+  return {
+    state: r.state,
+    nextAction: typeof r.next_action === 'string' ? r.next_action : 'none',
+    extrasGroup: typeof r.extras_group === 'string' ? r.extras_group : null,
+    installJobId: typeof r.install_job_id === 'string' ? r.install_job_id : null,
+    blockers: mapReadinessItems(r.blockers),
+    notes: mapReadinessItems(r.notes)
+  };
+};
 
 // API configuration with localStorage fallback
 const getApiBaseUrl = () => {
@@ -43,6 +93,14 @@ const getApiToken = () => {
 
   return import.meta.env.VITE_API_TOKEN || '';
 };
+
+/**
+ * Whether any API token is configured (localStorage or env). Does not verify
+ * the token is valid/admin — used only to decide whether to offer actions
+ * that require auth (e.g. the extras-install button), which then handle a
+ * 401/403 from the server as the definitive answer.
+ */
+export const hasConfiguredApiToken = (): boolean => getApiToken().trim() !== '';
 
 /**
  * Validates if a token looks like a valid API key or JWT token
@@ -201,9 +259,10 @@ class APIClient {
 
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        let errorData: unknown;
 
         try {
-          const errorData = (await response.json()) as unknown;
+          errorData = (await response.json()) as unknown;
           const detail =
             errorData && typeof errorData === 'object'
               ? (errorData as Record<string, unknown>).detail
@@ -226,7 +285,7 @@ class APIClient {
           // If parsing error response fails, use default message
         }
 
-        throw new APIError(errorMessage, response.status, response);
+        throw new APIError(errorMessage, response.status, response, errorData);
       }
 
       // Handle 204 No Content responses (like DELETE operations)
@@ -299,6 +358,8 @@ class APIClient {
       const outputs = record.outputs;
       const defaultEnabled = record.default_enabled;
       const enabled = record.enabled;
+      const available = record.available;
+      const installHint = record.install_hint;
 
       const formatsFromOutputs = Array.isArray(outputs)
         ? outputs
@@ -342,7 +403,10 @@ class APIClient {
         capabilities: Array.isArray(record.capabilities)
           ? (record.capabilities as PipelineCapability[])
           : undefined,
-        parameters: []
+        parameters: [],
+        available: typeof available === 'boolean' ? available : undefined,
+        installHint: typeof installHint === 'string' ? installHint : undefined,
+        readiness: mapReadiness(record.readiness)
       };
     });
 
@@ -354,7 +418,8 @@ class APIClient {
 
   private buildCatalogResponse(
     catalog: PipelineCatalog,
-    server: VideoAnnotatorServerInfo | null
+    server: VideoAnnotatorServerInfo | null,
+    restartRequired: boolean
   ): PipelineCatalogResponse {
     const fallbackServer: VideoAnnotatorServerInfo =
       server ?? this.serverInfoCache ?? {
@@ -364,12 +429,15 @@ class APIClient {
 
     return {
       catalog,
-      server: fallbackServer
+      server: fallbackServer,
+      restartRequired
     };
   }
 
-  async getPipelineCatalog(options: { forceRefresh?: boolean } = {}): Promise<PipelineCatalogResponse> {
-    const { forceRefresh = false } = options;
+  async getPipelineCatalog(
+    options: { forceRefresh?: boolean; includeUnavailable?: boolean } = {}
+  ): Promise<PipelineCatalogResponse> {
+    const { forceRefresh = false, includeUnavailable = false } = options;
     const now = Date.now();
 
     // Check cache first
@@ -378,13 +446,14 @@ class APIClient {
       if (age < this.pipelineCatalogTTL) {
         return this.buildCatalogResponse(
           this.pipelineCatalogCache.catalog,
-          this.pipelineCatalogCache.server
+          this.pipelineCatalogCache.server,
+          this.pipelineCatalogCache.restartRequired
         );
       }
     }
 
     // Simple: just fetch pipelines, no server info needed
-    const pipelineData = await this.getPipelines();
+    const { pipelines: pipelineData, restartRequired } = await this.fetchPipelinesEnvelope(includeUnavailable);
     const catalog = this.mapLegacyPipelineResponse(pipelineData);
 
     // Use cached or default server info
@@ -396,10 +465,11 @@ class APIClient {
     this.pipelineCatalogCache = {
       catalog,
       server: serverInfo,
+      restartRequired,
       fetchedAt: now
     };
 
-    return this.buildCatalogResponse(catalog, serverInfo);
+    return this.buildCatalogResponse(catalog, serverInfo, restartRequired);
   }
 
   async getPipelineSchema(pipelineId: string): Promise<PipelineSchemaResponse> {
@@ -469,6 +539,65 @@ class APIClient {
     return this.request('/health');
   }
 
+  /**
+   * The server process's identity (VideoAnnotator spec 011): `bootId` changes on
+   * every start, which is how a client knows a restart finished. Both fields are
+   * undefined on servers that predate it. Short timeout: this is polled while the
+   * server is down.
+   */
+  async getBootIdentity(): Promise<{ bootId?: string; restartMode?: string }> {
+    const response = await this.request<{ boot_id?: string; restart_mode?: string }>(
+      '/health',
+      {},
+      3000
+    );
+    return { bootId: response?.boot_id, restartMode: response?.restart_mode };
+  }
+
+  /**
+   * Installable extras groups with approximate download sizes (VideoAnnotator spec 011).
+   * GET /api/v1/pipelines/extras. Returns null from servers that predate it (404).
+   */
+  async getExtrasGroups(): Promise<ExtrasGroupInfo[] | null> {
+    try {
+      const response = await this.request<{
+        extras: {
+          name: string;
+          pipelines: string[];
+          installed: boolean;
+          approx_download_mb: number | null;
+          includes_gpu_torch: boolean;
+          install_job_id: string | null;
+        }[];
+      }>('/api/v1/pipelines/extras');
+      return response.extras.map((g) => ({
+        name: g.name,
+        pipelines: g.pipelines,
+        installed: g.installed,
+        approxDownloadMb: g.approx_download_mb ?? null,
+        includesGpuTorch: g.includes_gpu_torch === true,
+        installJobId: g.install_job_id ?? null
+      }));
+    } catch (error) {
+      if (error instanceof APIError && error.status === 404) return null;
+      throw error;
+    }
+  }
+
+  /**
+   * Ask the server to restart itself (admin-only, VideoAnnotator spec 011).
+   * POST /api/v1/system/restart -> 202; 409 with code RESTART_UNSUPPORTED,
+   * JOBS_RUNNING (retry with force) or INSTALL_IN_PROGRESS; read those with
+   * `apiErrorEnvelope`. 404 on servers that predate it.
+   */
+  async restartServer(force = false): Promise<{ bootId: string }> {
+    const response = await this.request<{ restarting: boolean; boot_id: string }>(
+      `/api/v1/system/restart${force ? '?force=true' : ''}`,
+      { method: 'POST' }
+    );
+    return { bootId: response.boot_id };
+  }
+
   async detailedHealth(): Promise<SystemHealthResponse> {
     return this.request('/api/v1/system/health');
   }
@@ -478,12 +607,40 @@ class APIClient {
   }
 
   // Job management endpoints
-  async getJobs(page: number = 1, perPage: number = 20): Promise<JobListResponse> {
-    return this.request(`/api/v1/jobs?page=${page}&per_page=${perPage}`);
+  async getJobs(
+    page: number = 1,
+    perPage: number = 20,
+    options?: { batchId?: string; unbatchedOnly?: boolean }
+  ): Promise<JobListResponse> {
+    const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+    if (options?.batchId) params.set('batch_id', options.batchId);
+    // Asking the server for "jobs in no batch" rather than filtering a page of
+    // results client-side: otherwise a page filled with batched jobs hides
+    // every ungrouped one behind it.
+    if (options?.unbatchedOnly) params.set('unbatched_only', 'true');
+    return this.request(`/api/v1/jobs?${params.toString()}`);
   }
 
   async getJob(jobId: string): Promise<JobResponse> {
     return this.request(`/api/v1/jobs/${jobId}`);
+  }
+
+  /** Saved pipeline presets (spec 007), shared by everyone on the server. */
+  async listPresets(): Promise<PresetListResponse> {
+    return this.request('/api/v1/presets');
+  }
+
+  async createPreset(body: PresetCreateRequest): Promise<Preset> {
+    return this.request('/api/v1/presets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  /** Per-pipeline outcome of a job, including why a pipeline failed. */
+  async getJobResults(jobId: string): Promise<JobResults> {
+    return this.request(`/api/v1/jobs/${jobId}/results`);
   }
 
   async deleteJob(jobId: string): Promise<void> {
@@ -495,7 +652,8 @@ class APIClient {
   async submitJob(
     video: File,
     selectedPipelines?: string[],
-    config?: Record<string, unknown>
+    config?: Record<string, unknown>,
+    batch?: { id: string; name?: string; datasetId?: string }
   ): Promise<JobResponse> {
     const formData = new FormData();
     formData.append('video', video);
@@ -509,25 +667,243 @@ class APIClient {
       formData.append('config', JSON.stringify(config));
     }
 
+    // Spec 008: the batch id is the entire grouping mechanism — there is no
+    // "create a batch" call. Every video in one submission carries the same id
+    // (and name), and the server groups by it on read. Servers older than
+    // v1.5.0 ignore these fields, so sending them is always safe.
+    if (batch) {
+      formData.append('batch_id', batch.id);
+      if (batch.name) formData.append('batch_name', batch.name);
+      if (batch.datasetId) formData.append('dataset_id', batch.datasetId);
+    }
+
     return this.request('/api/v1/jobs', {
       method: 'POST',
       body: formData,
     });
   }
 
+  // ==========================================================================
+  // Batches (spec 008) — see src/types/batches.ts for why these are
+  // hand-typed rather than derived from the generated schema.
+  // ==========================================================================
+
+  async getBatches(page: number = 1, perPage: number = 20): Promise<BatchListResponse> {
+    return this.request(`/api/v1/batches?page=${page}&per_page=${perPage}`);
+  }
+
+  async getBatch(batchId: string): Promise<BatchSummary> {
+    return this.request(`/api/v1/batches/${batchId}`);
+  }
+
+  async cancelBatch(batchId: string): Promise<BatchCancelResponse> {
+    return this.request(`/api/v1/batches/${batchId}/cancel`, { method: 'POST' });
+  }
+
+  async retryBatch(batchId: string): Promise<BatchRetryResponse> {
+    return this.request(`/api/v1/batches/${batchId}/retry`, { method: 'POST' });
+  }
+
+  // ==========================================================================
+  // Server-side folder ingest — create jobs from videos already on the
+  // server's disk, instead of uploading a corpus one file at a time.
+  // Admin-only and local-callers-only server-side; see src/types/ingest.ts.
+  // ==========================================================================
+
+  /** List server-side folders. Omit `path` to list the allowed roots. */
+  async browseServerFolders(path?: string): Promise<IngestBrowseResponse> {
+    const query = path ? `?path=${encodeURIComponent(path)}` : '';
+    return this.request(`/api/v1/ingest/browse${query}`);
+  }
+
+  /** Turn every video in a server-side folder into one batch of jobs. */
+  async ingestFolder(body: IngestRequest): Promise<IngestResponse> {
+    return this.request('/api/v1/ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
   // Pipeline endpoints
   async getPipelines(): Promise<PipelineResponse[]> {
-    const response = await this.request<{ pipelines: PipelineResponse[]; total?: number }>('/api/v1/pipelines');
+    return (await this.fetchPipelinesEnvelope()).pipelines;
+  }
+
+  private async fetchPipelinesEnvelope(
+    includeUnavailable = false
+  ): Promise<{ pipelines: PipelineResponse[]; restartRequired: boolean }> {
+    const endpoint = includeUnavailable
+      ? '/api/v1/pipelines?include_unavailable=true'
+      : '/api/v1/pipelines';
+    const response = await this.request<
+      { pipelines: PipelineResponse[]; total?: number; restart_required?: boolean } | PipelineResponse[]
+    >(endpoint);
 
     // Handle both legacy format (direct array) and new format (object with pipelines key)
     if (Array.isArray(response)) {
-      return response;
+      return { pipelines: response, restartRequired: false };
     } else if (response && Array.isArray(response.pipelines)) {
-      return response.pipelines;
+      return { pipelines: response.pipelines, restartRequired: response.restart_required === true };
     } else {
       console.warn('Unexpected pipeline response format:', response);
-      return [];
+      return { pipelines: [], restartRequired: false };
     }
+  }
+
+  /**
+   * The authenticated caller's own identity, including admin scope.
+   * GET /api/v1/auth/me - any authenticated caller can read this about
+   * themselves (401 unauthenticated, never 403) - it's how the viewer knows
+   * in advance whether an admin-gated action will succeed, instead of only
+   * finding out via a bare 403. Absent on pre-v1.5.1 servers (404).
+   */
+  async getCurrentUser(): Promise<CurrentUser> {
+    const response = await this.request<{
+      id: string | number;
+      username: string;
+      email: string;
+      is_admin: boolean;
+    }>('/api/v1/auth/me');
+
+    return {
+      id: response.id,
+      username: response.username,
+      email: response.email,
+      isAdmin: response.is_admin === true
+    };
+  }
+
+  /**
+   * Trigger a self-service install of a pipeline extras group.
+   * POST /api/v1/pipelines/extras/{extra}/install (admin-only; 401/403/422 propagate as APIError)
+   */
+  async installPipelineExtras(extraName: string): Promise<ExtrasInstallTriggerResponse> {
+    const response = await this.request<{ job_id: string; extra_name: string; status: string }>(
+      `/api/v1/pipelines/extras/${encodeURIComponent(extraName)}/install`,
+      { method: 'POST' }
+    );
+
+    return {
+      jobId: response.job_id,
+      extraName: response.extra_name,
+      status: response.status as ExtrasInstallTriggerResponse['status']
+    };
+  }
+
+  /**
+   * Poll the status of an extras-install job.
+   * GET /api/v1/pipelines/extras/install-jobs/{job_id} (404 once the job is unknown/expired)
+   */
+  async getExtrasInstallJob(jobId: string): Promise<ExtrasInstallJob> {
+    const response = await this.request<{
+      job_id: string;
+      extra_name: string;
+      status: string;
+      created_at: string;
+      started_at: string | null;
+      finished_at: string | null;
+      command_output: string | null;
+      restart_required?: boolean;
+      activation?: string | null;
+      conflicting_distributions?: { name: string; old_version: string; new_version: string | null }[];
+    }>(`/api/v1/pipelines/extras/install-jobs/${encodeURIComponent(jobId)}`);
+
+    return {
+      jobId: response.job_id,
+      extraName: response.extra_name,
+      status: response.status as ExtrasInstallJob['status'],
+      createdAt: response.created_at,
+      startedAt: response.started_at,
+      finishedAt: response.finished_at,
+      commandOutput: response.command_output,
+      restartRequired: response.restart_required === true,
+      activation: response.activation ?? null,
+      conflictingDistributions: (response.conflicting_distributions ?? []).map((d) => ({
+        name: d.name,
+        oldVersion: d.old_version,
+        newVersion: d.new_version
+      }))
+    };
+  }
+
+  /**
+   * List vision-language models pulled on the configured Ollama server.
+   * GET /api/v1/vlm/models — throws APIError(503, OLLAMA_UNREACHABLE) when
+   * the server can't be reached at all; a reachable server with zero models
+   * pulled returns normally with an empty `models` array (these are
+   * deliberately distinct states — VideoAnnotator spec 009 FR-005).
+   */
+  async getVlmModels(): Promise<VlmModelsResponse> {
+    const response = await this.request<{ base_url: string; models: string[] }>(
+      '/api/v1/vlm/models'
+    );
+    return { baseUrl: response.base_url, models: response.models };
+  }
+
+  /**
+   * Test a vlm_annotation prompt against a single frame (or burst)
+   * synchronously — no job or annotation record is created.
+   * POST /api/v1/vlm/preview
+   */
+  async previewVlmPrompt(request: VlmPreviewRequest): Promise<VlmPreviewResponse> {
+    const formData = new FormData();
+    if (request.image) {
+      formData.append('image', request.image, 'preview-frame.jpg');
+    }
+    if (request.videoPath !== undefined) {
+      formData.append('video_path', request.videoPath);
+    }
+    if (request.timestampSec !== undefined) {
+      formData.append('timestamp_sec', String(request.timestampSec));
+    }
+    formData.append('prompt', request.prompt);
+    formData.append('model', request.model);
+    if (request.samplingMode) {
+      formData.append('sampling_mode', request.samplingMode);
+    }
+    if (request.frameIntervalSec !== undefined) {
+      formData.append('frame_interval_sec', String(request.frameIntervalSec));
+    }
+    if (request.burstOffsets) {
+      formData.append('burst_offsets', JSON.stringify(request.burstOffsets));
+    }
+    if (request.think !== undefined) {
+      formData.append('think', String(request.think));
+    }
+    if (request.baseUrl) {
+      formData.append('base_url', request.baseUrl);
+    }
+
+    const response = await this.request<{
+      label: string;
+      reasoning: string;
+      raw_response: string;
+      total_time: number;
+      load_time: number;
+      prompt_tokens: number;
+      resp_tokens: number;
+      tokens_per_sec: number;
+    }>(
+      '/api/v1/vlm/preview',
+      { method: 'POST', body: formData },
+      // Preview can be slow on a cold model — the pipeline's own docs note
+      // first-call load time can dominate; match its own generous timeout
+      // rather than the default 30s (VideoAnnotator ollama_client.py /
+      // viewer-handoff.md).
+      245000
+    );
+
+    return {
+      label: response.label,
+      reasoning: response.reasoning,
+      rawResponse: response.raw_response,
+      totalTime: response.total_time,
+      loadTime: response.load_time,
+      promptTokens: response.prompt_tokens,
+      respTokens: response.resp_tokens,
+      tokensPerSec: response.tokens_per_sec
+    };
   }
 
   // Server-Sent Events connection

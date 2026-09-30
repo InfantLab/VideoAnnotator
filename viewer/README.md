@@ -1,6 +1,6 @@
 <div align="center">
   <img src="public/icon-64x64.png" alt="Video Annotation Viewer Icon" width="64" height="64">
-  <h1>Video Annotation Viewer v0.6.3</h1>
+  <h1>Video Annotation Viewer v0.7.0</h1>
 </div>
 
 [![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -94,6 +94,19 @@ Video Annotation Viewer is a sophisticated web-based application designed for re
 
 ## 🚀 Quick Start
 
+### Start the App
+
+**Option A — bundled with VideoAnnotator (recommended, zero config):** if you `pip install videoannotator[all]` and run `videoannotator serve`, the viewer is already included at `http://localhost:18011/viewer`. Open that URL — no separate install or server setup needed for the viewer itself.
+
+**Option B — run this repo standalone:**
+```bash
+git clone https://github.com/InfantLab/video-annotation-viewer.git
+cd video-annotation-viewer
+bun install        # or npm install
+bun run dev         # or npm run dev
+```
+This starts the viewer at `http://localhost:19011`. Demo Mode and Load Your Own Data work immediately with no other setup. **Create New Annotation Jobs** additionally requires a running VideoAnnotator server — see [Connect to VideoAnnotator API](#connect-to-videoannotator-api) below.
+
 ### Demo Mode
 1. Open the application
 2. Click **"View Demo"** on the welcome screen
@@ -108,6 +121,8 @@ Video Annotation Viewer is a sophisticated web-based application designed for re
 4. Click **"Start Viewing"** to begin analysis
 
 ### Create New Annotation Jobs
+> Requires a running [VideoAnnotator](https://github.com/InfantLab/VideoAnnotator) server (`videoannotator serve`) that this viewer is connected to — see [Connect to VideoAnnotator API](#connect-to-videoannotator-api).
+
 1. Click **"Create Annotations"** from the main interface
 2. Navigate to **"New Job"** in the job management panel
 3. Upload your video files (supports batch processing)

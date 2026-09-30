@@ -14,15 +14,33 @@ interface UnifiedControlsProps {
   onOverlayChange: (settings: OverlaySettings) => void;
   onTimelineChange: (settings: TimelineSettings) => void;
   annotationData?: StandardAnnotationData | null;
+  /** Pipelines of this job that failed on the server: name -> reason. */
+  failedPipelines?: Record<string, string>;
 }
+
+/** Server pipelines whose output feeds each component, most specific first. */
+const COMPONENT_PIPELINES: Record<string, string[]> = {
+  person: ['person_tracking'],
+  face: ['face_analysis', 'face_laion_clip', 'face_openface3_embedding'],
+  emotions: ['face_analysis', 'face_laion_clip'],
+  speech: ['speech_recognition', 'audio_processing'],
+  speakers: ['speaker_diarization', 'audio_processing'],
+  scenes: ['scene_detection'],
+};
 
 export const UnifiedControls = ({ 
   overlaySettings,
   timelineSettings,
   onOverlayChange,
   onTimelineChange,
-  annotationData 
+  annotationData,
+  failedPipelines = {}
 }: UnifiedControlsProps) => {
+  // "Failed: <reason>" beats "(No data)" when the pipeline did run and failed.
+  const failureFor = (componentId: string): string | null => {
+    const name = (COMPONENT_PIPELINES[componentId] ?? []).find((p) => failedPipelines[p]);
+    return name ? failedPipelines[name] : null;
+  };
   const [isLocked, setIsLocked] = useState(false);
 
   // Map component keys to FileViewer tabs
@@ -292,7 +310,13 @@ export const UnifiedControls = ({
                   {component.description}
                 </div>
                 {!component.available && (
-                  <div className="text-xs text-muted-foreground">(No data)</div>
+                  failureFor(component.id) ? (
+                    <div className="text-xs text-orange-700 dark:text-orange-400">
+                      Failed: {failureFor(component.id)}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">(No data)</div>
+                  )
                 )}
               </div>
 
@@ -357,7 +381,13 @@ export const UnifiedControls = ({
                   {component.description}
                 </div>
                 {!component.available && (
-                  <div className="text-xs text-muted-foreground">(No data)</div>
+                  failureFor(component.id) ? (
+                    <div className="text-xs text-orange-700 dark:text-orange-400">
+                      Failed: {failureFor(component.id)}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">(No data)</div>
+                  )
                 )}
               </div>
 
