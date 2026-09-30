@@ -1,0 +1,341 @@
+openapi: 3.0.3
+info:
+  title: VideoAnnotator Configuration Validation API
+  version: 1.3.0
+  description: API contracts for validating pipeline configurations before job submission
+
+servers:
+  - url: http://localhost:18011
+    description: Local development server
+
+paths:
+  /api/v1/config/validate:
+    post:
+      summary: Validate complete job configuration
+      description: |
+        Validates a full job configuration including all selected pipelines and their parameters.
+        Returns structured validation errors with field-level details and helpful hints.
+        Does not create a job; only validates the configuration.
+      
+      operationId: validateConfig
+      tags:
+        - Configuration
+      
+      security:
+        - bearerAuth: []
+      
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigValidationRequest'
+            examples:
+              validConfig:
+                value:
+                  config:
+                    scene_detection:
+                      threshold: 30.0
+                    person_tracking:
+                      confidence_threshold: 0.5
+                  selected_pipelines:
+                    - scene_detection
+                    - person_tracking
+              invalidConfig:
+                value:
+                  config:
+                    person_tracking:
+                      confidence_threshold: 1.5
+                  selected_pipelines:
+                    - person_tracking
+      
+      responses:
+        '200':
+          description: Validation completed (may contain errors or warnings)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigValidationResult'
+              examples:
+                valid:
+                  value:
+                    valid: true
+                    errors: []
+                    warnings: []
+                    pipelines_validated: ["scene_detection", "person_tracking"]
+                invalidWithErrors:
+                  value:
+                    valid: false
+                    errors:
+                      - field: "person_tracking.confidence_threshold"
+                        message: "Value must be between 0.0 and 1.0"
+                        code: "VALUE_OUT_OF_RANGE"
+                        hint: "Try using 0.5 as a sensible default"
+                    warnings: []
+                    pipelines_validated: ["person_tracking"]
+                validWithWarnings:
+                  value:
+                    valid: true
+                    errors: []
+                    warnings:
+                      - field: "scene_detection.threshold"
+                        message: "Threshold is higher than recommended"
+                        code: "VALUE_SUBOPTIMAL"
+                        hint: "Consider using 30.0 for better results"
+                    pipelines_validated: ["scene_detection"]
+        
+        '400':
+          description: Invalid request format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        
+        '401':
+          description: Unauthorized - invalid or missing API token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  
+  /api/v1/pipelines/{name}/validate:
+    post:
+      summary: Validate single pipeline configuration
+      description: |
+        Validates configuration for a specific pipeline. Useful for real-time validation
+        as user edits individual pipeline settings.
+      
+      operationId: validatePipeline
+      tags:
+        - Configuration
+      
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Pipeline name to validate
+          schema:
+            type: string
+            enum:
+              - scene_detection
+              - person_tracking
+              - face_analysis
+              - audio_processing
+          example: "person_tracking"
+      
+      security:
+        - bearerAuth: []
+      
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PipelineValidationRequest'
+            examples:
+              valid:
+                value:
+                  config:
+                    confidence_threshold: 0.5
+                    min_detection_area: 100
+              invalid:
+                value:
+                  config:
+                    confidence_threshold: 2.0
+      
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PipelineValidationResult'
+              examples:
+                valid:
+                  value:
+                    valid: true
+                    errors: []
+                    warnings: []
+                    pipeline: "person_tracking"
+                invalid:
+                  value:
+                    valid: false
+                    errors:
+                      - field: "confidence_threshold"
+                        message: "Value must be between 0.0 and 1.0"
+                        code: "VALUE_OUT_OF_RANGE"
+                        hint: "Try using 0.5 as a sensible default"
+                    warnings: []
+                    pipeline: "person_tracking"
+        
+        '404':
+          description: Pipeline not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+
+  schemas:
+    ConfigValidationRequest:
+      type: object
+      required:
+        - config
+        - selected_pipelines
+      properties:
+        config:
+          type: object
+          description: Pipeline configurations keyed by pipeline name
+          additionalProperties: true
+          example:
+            scene_detection:
+              threshold: 30.0
+            person_tracking:
+              confidence_threshold: 0.5
+        selected_pipelines:
+          type: array
+          items:
+            type: string
+          description: List of pipeline names to validate
+          example: ["scene_detection", "person_tracking"]
+    
+    PipelineValidationRequest:
+      type: object
+      required:
+        - config
+      properties:
+        config:
+          type: object
+          description: Pipeline-specific configuration parameters
+          additionalProperties: true
+          example:
+            confidence_threshold: 0.5
+            min_detection_area: 100
+    
+    ConfigValidationResult:
+      type: object
+      required:
+        - valid
+        - errors
+        - warnings
+        - pipelines_validated
+      properties:
+        valid:
+          type: boolean
+          description: Whether configuration is valid (true if no errors)
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          description: Blocking validation errors
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationWarning'
+          description: Non-blocking validation warnings
+        pipelines_validated:
+          type: array
+          items:
+            type: string
+          description: List of pipelines that were validated
+    
+    PipelineValidationResult:
+      type: object
+      required:
+        - valid
+        - errors
+        - warnings
+        - pipeline
+      properties:
+        valid:
+          type: boolean
+          description: Whether pipeline configuration is valid
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationWarning'
+        pipeline:
+          type: string
+          description: Pipeline name that was validated
+    
+    ValidationError:
+      type: object
+      required:
+        - field
+        - message
+        - code
+      properties:
+        field:
+          type: string
+          description: Field name with dot notation (e.g., "person_tracking.confidence_threshold")
+          example: "confidence_threshold"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Value must be between 0.0 and 1.0"
+        code:
+          type: string
+          description: Machine-readable error code (SCREAMING_SNAKE_CASE)
+          example: "VALUE_OUT_OF_RANGE"
+        hint:
+          type: string
+          description: Helpful suggestion for correction
+          example: "Try using 0.5 as a sensible default"
+    
+    ValidationWarning:
+      type: object
+      required:
+        - field
+        - message
+        - code
+      properties:
+        field:
+          type: string
+          description: Field name with dot notation
+          example: "threshold"
+        message:
+          type: string
+          description: Human-readable warning message
+          example: "Threshold is higher than recommended"
+        code:
+          type: string
+          description: Machine-readable warning code
+          example: "VALUE_SUBOPTIMAL"
+        hint:
+          type: string
+          description: Helpful suggestion
+          example: "Consider using 30.0 for better results"
+    
+    ErrorEnvelope:
+      type: object
+      required:
+        - message
+      properties:
+        error_code:
+          type: string
+          example: "INVALID_REQUEST"
+        message:
+          type: string
+          example: "Request validation failed"
+        field:
+          type: string
+          example: "selected_pipelines"
+        hint:
+          type: string
+          example: "At least one pipeline must be selected"
+        status:
+          type: integer
+          example: 400
+        request_id:
+          type: string
+          example: "req_abc123"

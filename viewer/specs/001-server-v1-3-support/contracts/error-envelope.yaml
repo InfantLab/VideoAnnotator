@@ -1,0 +1,178 @@
+openapi: 3.0.3
+info:
+  title: VideoAnnotator Error Envelope Format
+  version: 1.3.0
+  description: Standardized error response format for v1.3.0 API endpoints
+
+servers:
+  - url: http://localhost:18011
+    description: Local development server
+
+components:
+  schemas:
+    ErrorEnvelope:
+      type: object
+      required:
+        - message
+      properties:
+        error_code:
+          type: string
+          description: |
+            Machine-readable error code for programmatic handling.
+            Format: SCREAMING_SNAKE_CASE
+          example: "VALUE_OUT_OF_RANGE"
+          pattern: '^[A-Z_]+$'
+        
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Value must be between 0.0 and 1.0"
+          minLength: 1
+        
+        field:
+          type: string
+          description: |
+            Field name for field-level validation errors.
+            Uses dot notation for nested fields (e.g., "person_tracking.confidence_threshold")
+          example: "person_tracking.confidence_threshold"
+        
+        hint:
+          type: string
+          description: |
+            Helpful suggestion for resolving the error.
+            Plain text (no HTML/markdown).
+          example: "Try using 0.5 as a sensible default"
+        
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+          minimum: 400
+          maximum: 599
+        
+        request_id:
+          type: string
+          description: |
+            Unique request identifier for support/debugging.
+            Include in bug reports or support requests.
+          example: "req_xyz789"
+          pattern: '^req_[a-zA-Z0-9]+$'
+      
+      example:
+        error_code: "VALUE_OUT_OF_RANGE"
+        message: "Value must be between 0.0 and 1.0"
+        field: "person_tracking.confidence_threshold"
+        hint: "Try using 0.5 as a sensible default"
+        status: 400
+        request_id: "req_xyz789"
+    
+    # Common error codes
+    ErrorCodes:
+      type: string
+      enum:
+        # Authentication errors (401)
+        - UNAUTHORIZED
+        - INVALID_TOKEN
+        - TOKEN_EXPIRED
+        
+        # Authorization errors (403)
+        - FORBIDDEN
+        - INSUFFICIENT_PERMISSIONS
+        
+        # Not found errors (404)
+        - JOB_NOT_FOUND
+        - PIPELINE_NOT_FOUND
+        - RESOURCE_NOT_FOUND
+        
+        # Validation errors (400)
+        - INVALID_REQUEST
+        - VALUE_OUT_OF_RANGE
+        - REQUIRED_FIELD_MISSING
+        - INVALID_FIELD_TYPE
+        - INVALID_FIELD_FORMAT
+        - INVALID_PIPELINE_SELECTION
+        
+        # Job state errors (400)
+        - JOB_NOT_CANCELLABLE
+        - JOB_ALREADY_CANCELLED
+        - JOB_ALREADY_COMPLETED
+        
+        # Server errors (500)
+        - INTERNAL_SERVER_ERROR
+        - DATABASE_ERROR
+        - STORAGE_ERROR
+        - PROCESSING_ERROR
+        
+        # Service unavailable (503)
+        - SERVICE_UNAVAILABLE
+        - WORKER_OFFLINE
+        - GPU_UNAVAILABLE
+
+  examples:
+    ValidationError:
+      summary: Validation error with field details
+      value:
+        error_code: "VALUE_OUT_OF_RANGE"
+        message: "Value must be between 0.0 and 1.0"
+        field: "confidence_threshold"
+        hint: "Try using 0.5 as a sensible default"
+        status: 400
+    
+    AuthenticationError:
+      summary: Authentication error
+      value:
+        error_code: "UNAUTHORIZED"
+        message: "Authentication required"
+        hint: "Provide a valid API token in the Authorization header"
+        status: 401
+    
+    NotFoundError:
+      summary: Resource not found
+      value:
+        error_code: "JOB_NOT_FOUND"
+        message: "Job with id 'abc-123' not found"
+        status: 404
+    
+    JobStateError:
+      summary: Invalid job state for operation
+      value:
+        error_code: "JOB_NOT_CANCELLABLE"
+        message: "Job cannot be cancelled"
+        hint: "Job has already completed or failed"
+        status: 400
+    
+    InternalError:
+      summary: Internal server error
+      value:
+        error_code: "INTERNAL_SERVER_ERROR"
+        message: "An unexpected error occurred"
+        hint: "Please try again later or contact support"
+        status: 500
+        request_id: "req_abc123"
+
+# Usage Notes:
+# 
+# 1. Backward Compatibility:
+#    - v1.2.x returns: string or {error: "message"} or {message: "message"}
+#    - v1.3.0 returns: ErrorEnvelope (structured format)
+#    - Clients must handle both formats defensively
+# 
+# 2. Field-Level Errors:
+#    - Use dot notation for nested fields
+#    - Example: "person_tracking.confidence_threshold"
+#    - Frontend should display inline near form input
+# 
+# 3. Error Codes:
+#    - Always SCREAMING_SNAKE_CASE
+#    - Stable across versions (no breaking changes)
+#    - Use for programmatic error handling (not user display)
+# 
+# 4. Hints:
+#    - Plain text suggestions (no formatting)
+#    - Actionable and specific
+#    - Optional; only include when helpful
+# 
+# 5. Request IDs:
+#    - Generated by server for all errors
+#    - Include in bug reports/support requests
+#    - Format: "req_" followed by alphanumeric ID

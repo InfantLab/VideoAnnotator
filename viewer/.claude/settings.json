@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx update-browserslist-db@latest)",
+      "Bash(npx vite build)",
+      "Bash(python3 -c \"import json; json.load\\(open\\(''c:/Users/caspar/code/video-annotation-viewer/demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/complete_results.json''\\)\\); print\\(''✓ Valid JSON''\\)\")",
+      "Bash(python3 -c \"import json; json.load\\(open\\(''c:/Users/caspar/code/video-annotation-viewer/demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/complete_results.json''\\)\\); print\\(''Valid JSON''\\)\")",
+      "Bash(python3 -c \"import json; data = json.load\\(open\\(''c:/Users/caspar/code/video-annotation-viewer/demo/videos_out/2UWdXP.joke1.rep2.take1.Peekaboo_h265/complete_results.json''\\)\\); print\\(''Top-level keys:'', list\\(data.keys\\(\\)\\)\\)\")",
+      "Bash(fi)",
+      "Bash(npx vitest run --reporter=verbose)",
+      "Bash(gh release list --limit 5)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\caspar\\AppData\\Roaming\\Code\\User"
+    ]
+  }
+}

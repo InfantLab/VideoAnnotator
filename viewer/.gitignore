@@ -1,0 +1,49 @@
+.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+#data files
+data/
+
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+ 
+# Test & coverage outputs
+coverage/
+playwright-report/
+test-results/
+.lighthouseci/
+
+# Python caches
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Agents files not meant to be committe
+.agents/
+
+# Claude Code (per spec-kit init recommendation; keep skills/ and project settings.json shared)
+.claude/settings.local.json
+.claude/.credentials.json
+.claude/state/
