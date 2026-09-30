@@ -2,7 +2,7 @@
 
 **Feature Branch**: `007-datasets-and-presets`
 **Created**: 2026-08-26
-**Status**: Draft
+**Status**: Backend shipped in v1.5.0 (2026-08-26). Viewer: preset save/load shipped; the Datasets page and import/export are in v1.6.0
 **Input**: User description: "Let a researcher save a named set of videos (a dataset) and a named set of pipeline selections + config (a preset) for reuse, instead of re-picking files and re-typing configuration on every job submission. Server-side, DB-backed, so it survives cleared browser data and is usable by anyone with access to the same server — not a client-only/single-browser feature."
 
 ## Relationship to Existing Specs

@@ -4,6 +4,17 @@
 **Input**: Design documents from `/workspaces/VideoAnnotator/specs/001-videoannotator-v1-3/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/, quickstart.md
 
+**Closed (2026-09-30)**: shipped as v1.3.0 (merged 2025-10-30, tagged and released 2025-10-31,
+Zenodo DOI 10.5281/zenodo.16961751 in the README). The release tasks T085-T089 were done but never ticked; they
+are now. The remaining unticked boxes are either moved or were never recorded:
+- Moved to v1.6.0 (`docs/development/roadmap_v1.6.0.md`): the docs reorganisation (T055, T056,
+  T059) to Phase 2, and queue position for pending jobs (T066).
+- Not recorded: external review sessions (T079-T081; the JOSS review took their place) and the
+  multi-platform, upgrade-path and performance runs (T082-T084). v1.6.0's release checks replace
+  them.
+- The Success Criteria checklist at the end was never updated; read it as the plan, not the
+  outcome.
+
 **Generated**: October 12, 2025
 **Last Updated**: October 22, 2025
 **Total Estimated Effort**: 240-320 hours (6-8 weeks, 1-2 developers)
@@ -1032,31 +1043,31 @@ Tasks are organized by user story to enable independent implementation and testi
 
 ### Release Preparation
 
-- [ ] **T085** [P] Update CHANGELOG.md
+- [x] **T085** [P] Update CHANGELOG.md
   - Breaking changes section
   - New features
   - Bug fixes
   - Migration guide from v1.2.x
   - **Effort**: 2 hours
 
-- [ ] **T086** [P] Update version in `src/version.py`
+- [x] **T086** [P] Update version in `src/version.py`
   - Set to 1.3.0
   - **Effort**: 0.5 hours
 
-- [ ] **T087** Tag release
+- [x] **T087** Tag release
   - `git tag v1.3.0`
   - `git push origin v1.3.0`
   - **Depends on**: T086
   - **Effort**: 0.5 hours
 
-- [ ] **T088** [P] Create GitHub release
+- [x] **T088** [P] Create GitHub release
   - CHANGELOG excerpt
   - Installation instructions
   - Breaking changes warning
   - **Depends on**: T087
   - **Effort**: 1 hour
 
-- [ ] **T089** [P] Create Zenodo archive for JOSS
+- [x] **T089** [P] Create Zenodo archive for JOSS
   - Upload release archive
   - Obtain DOI
   - **Depends on**: T087

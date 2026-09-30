@@ -231,6 +231,9 @@ lifted, 2026-09-26):
       viewer's dependencies.
 - [ ] **Implement** the specs before rc1. Re-baseline the v1.4.x acceptance fixtures once, on
       purpose, and record the before/after differences on the demo video in the CHANGELOG.
+- [ ] **Docker image size**: build `Dockerfile.cpu`/`Dockerfile.gpu` slim and with
+      `--build-arg EXTRAS=all`, and record both sizes against the v1.4.3 baseline. v1.5.0 set a
+      target of 80% smaller but couldn't measure it (no Docker where it was checked).
 
 **Also in this phase: one place for model weights.** Today the weights end up wherever each
 library puts them by default. Whisper, YOLO and the LAION pipelines use `./models/<name>`
@@ -252,6 +255,11 @@ but only the devcontainer does.
       print the old and new locations the first time the server starts. Drop the devcontainer's own
       environment variables once the app sets them.
 - [ ] `videoannotator diagnose` shows where the models directory is and how much it holds.
+- [ ] **Download weights ahead of time** (spec 011's FR-017, deferred there): an action per
+      pipeline, in the viewer, the API and the CLI, that downloads its declared weights into the
+      models directory before the first job, reusing the extras install job's table and statuses.
+      Needs a download step per model library (Hugging Face, torch hub, Ultralytics, DeepFace,
+      Whisper), which this phase's one models directory makes practical.
 
 **Library versions vs default models**: this phase upgrades libraries. Switching a pipeline's
 *default model* (for example to `speaker-diarization-community-1`) still waits for the benchmark in
@@ -278,6 +286,8 @@ half-built page.
       `Issues for Server Team.md`, `TEAM_HANDOFF_PACKAGE.md` and others) and `docs/Figure 1.docx`
       move to `docs/archive/` or go.
 - [ ] Docs site (mkdocs-material on GitHub Pages) built from `docs/`, archive excluded.
+- [ ] Docs have one entry page (`docs/README.md`) and a link check in CI, so moving files can't
+      leave dead links. (Unfinished since spec 001: T055, T056, T059.)
 - [ ] No placeholder pages. The Datasets page says "Coming Soon" behind a disabled button, although
       spec 007's backend shipped in v1.5.0: wire it up or hide it.
       (Preset load/save in the job wizard landed in v1.5.0; the Datasets page, saved datasets and
@@ -288,6 +298,9 @@ half-built page.
 - [ ] A structural pass along the one path users take: install → add videos → run → review →
       export. Anything off that path moves or goes. A Playwright "first-time user" run on a clean
       machine files each point of friction as an issue.
+- [ ] **Queue position**: a pending job shows how many jobs are ahead of it ("3rd in queue"), in
+      the job list, the job page and `GET /api/v1/jobs/{id}`. Today a queued job looks the same as
+      a stuck one. (Planned since spec 001's T066.)
 
 **Run it again**: the path doesn't end at review. A researcher who likes a result wants the same
 settings on more videos; one who doesn't wants to tweak and rerun. Today both mean rebuilding the
@@ -313,6 +326,10 @@ job in the wizard from memory, although every job already stores its `selected_p
       across prompt versions or models; send the winner to a job or preset. Backend exists
       (`POST /api/v1/vlm/preview`, `GET /api/v1/vlm/models`); new work is the page, the prompt
       table and its endpoints. Also through the CLI/MCP (Phase 4).
+- [ ] **Compare two VLM jobs** on the same video: their labels on one timeline, with the frames
+      where they disagree listed, and ELAN ground truth as a third row when there is one. The
+      workbench compares prompts on single frames; this compares whole runs. Asked for in spec
+      009's viewer handoff; comparing across a whole dataset stays in Phase 6.
 
 **Not in this phase**: a visual redesign. Decide on one after the pilot, from what outside users
 say.
@@ -492,6 +509,6 @@ failed, where the pipelines disagree, what the whole dataset looks like.
 
 ---
 
-**Last Updated**: 2026-09-26
+**Last Updated**: 2026-09-30
 **Target Release**: Early 2027, ahead of BCCCD (7–9 Jan 2027)
 **Status**: Planning Phase — Public Release

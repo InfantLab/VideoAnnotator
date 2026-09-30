@@ -2,7 +2,7 @@
 
 **Feature Branch**: `006-job-execution-consolidation`
 **Created**: 2026-08-26
-**Status**: Draft
+**Status**: Shipped in v1.5.0 (2026-08-26)
 **Input**: User description: "Consolidate the three divergent job-execution code paths into one, and make cancel and retry actually work. Prerequisite for the workflow-upgrades effort (datasets, saved presets, batch/group tracking, VLM tooling) — group-level progress/cancel/retry need one reliable execution path to build on, not three."
 
 ## Relationship to Existing Specs & Roadmap

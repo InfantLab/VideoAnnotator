@@ -18,9 +18,9 @@ resubmission — they move to [`roadmap_v1.7.0.md`](roadmap_v1.7.0.md) (planned 
 
 **Target Release**: Alongside/ahead of the JOSS resubmission (Phase 2 — /viewer integration —
 shipped in v1.4.4; Phase 1 — extras-based install — landed on the `v1.5.0` branch 2026-07-19)
-**Current Status**: code complete on the `v1.5.0` branch, **not yet tagged** (latest tag: v1.4.4).
-Tag after spec 011's SC-001 manual run. The CHANGELOG dates `[1.5.0]` to 2026-07-19, when Phase 1
-landed; fold `[Unreleased]` into it and set the real date at tagging.
+**Current Status**: **released 2026-09-30** (tag `v1.5.0`, GitHub release). Spec 011's SC-001 run
+passed in the release walkthrough (`tests/manual/v1.5.0_release_e2e.md`). The three unticked items
+below moved to v1.6.0.
 **Main Goal**: Slim, per-pipeline install; LAION demoted from the default install; VideoAnnotator can
 optionally serve Video Annotation Viewer directly
 **Constitution Principle in play**: Principle V (Backward Compatibility by Default) — v1.4.x
@@ -125,7 +125,7 @@ struggling to understand how they relate.
       Python, sourced from `video-annotation-viewer`'s `src/lib/validation.ts`). Runs automatically in
       the existing CI test job — no workflow changes needed. This already found two real contract
       gaps (see below).
-- [ ] TypeScript-side half (deferred): a CI job that checks out VAV and runs its actual parsers
+- [ ] TypeScript-side half (deferred; moved to v1.6.0 Phase 0): a CI job that checks out VAV and runs its actual parsers
       against these fixtures. Needs Node/bun tooling to build and verify — out of scope for this
       environment; do this as a follow-up once the Python-side gaps below are resolved.
 - [x] Single quickstart doc covering install → process a sample video → open the viewer
@@ -165,11 +165,12 @@ and each has its own spec in `specs/`:
       videoannotator[scene]`/`[face]` runs during 004's manual quickstart pass (§1/§2) that only the
       requested family's deps land, nothing else.
 - [ ] `pip install videoannotator[all]` reproduces v1.4.3 behaviour exactly; no config/CLI changes needed.
+      (Moved to v1.6.0: the acceptance fixtures are re-baselined there.)
       Mechanism exists (`tests/integration/test_v144_parity.py`, run and passing — 4 passed, 6
       skipped) but the skips are real: no v1.4.4 golden fixtures have been captured yet (needs
       checking out the v1.4.4 tag and running real model inference to generate them — substantial,
       not done in this pass). See the test file's own module docstring for the capture procedure.
-- [ ] Default Docker image size reduced by ≥ 80% vs. the v1.4.3 baseline. Not measurable in this
+- [ ] Default Docker image size reduced by ≥ 80% vs. the v1.4.3 baseline. (Moved to v1.6.0.) Not measurable in this
       sandbox (no `docker` binary available) — needs an environment with Docker to build
       `Dockerfile.cpu`/`Dockerfile.gpu` both slim and `--build-arg EXTRAS=all`, and compare.
 - [x] A user with no extras installed gets an actionable install command, not a traceback, when
@@ -196,7 +197,7 @@ and each has its own spec in `specs/`:
 
 ---
 
-**Last Updated**: 2026-09-24
+**Last Updated**: 2026-09-30
 **Target Release**: Ahead of / alongside JOSS resubmission
-**Status**: code complete, not yet tagged — Phases 1 and 2 complete; tag after spec 011's manual run.
+**Status**: released 2026-09-30 as v1.5.0. Phases 1 and 2 complete.
 The public release is v1.6.0 ([`roadmap_v1.6.0.md`](roadmap_v1.6.0.md)).

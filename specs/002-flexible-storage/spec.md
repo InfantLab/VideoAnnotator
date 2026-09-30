@@ -2,7 +2,7 @@
 
 **Feature Branch**: `002-flexible-storage`
 **Created**: 2025-12-08
-**Status**: Draft
+**Status**: Shipped in v1.4.1 (2025-12-15)
 **Input**: User description: "Now that the completed pipelines are working between server and client. we want to find the best way for the client to be able to easily view the videos and theit annotations together. I think this might involve a rethink of how data is stored. At present I believe our pipeline process copies videos into the server container in a Storage/jobs/<jobid> folder and stores annotations in same location. this is currently not accessible to client directly. As a first step we need to allow download of all annotations. In long run I don't think the server container is the best location to accumulate all this data. So we need to be able to support being able to specify a stand-alone storage location wiith some flexibility. Initially we want to be able to support a storage location We should investigate the best way to do this (what do other similar annotation tools do). As a first remote location. How easy is it support accessing a onedrive instance which the client could also access?"
 
 ## User Scenarios & Testing *(mandatory)*

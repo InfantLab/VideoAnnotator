@@ -2,7 +2,7 @@
 
 **Feature Branch**: `v1.5-modularity`
 **Created**: 2026-05-06
-**Status**: Draft
+**Status**: Split, not implemented as one spec. The extras install and metadata-driven registry (User Stories 1-2) became spec 004, shipped in v1.5.0. Job-execution consolidation became spec 006, shipped in v1.5.0. The `Dispatcher` ABC, entry-point discovery and the `videoannotator-utils` package moved to v1.7 (`docs/development/roadmap_v1.7.0.md`)
 **Input**: User description: "Refactor VideoAnnotator's package structure to support modular installation, optional pipeline plugins, and out-of-process pipeline dispatch. Move heavy ML deps (torch, ultralytics, pyannote, whisper, transformers, etc.) from required [project] dependencies to per-pipeline [project.optional-dependencies] extras (face, audio, scene, person, embedding). Strip eager pipeline imports from pipelines/__init__.py. Replace the hardcoded LEGACY_MAPPINGS dict in the registry with metadata-driven loading via per-pipeline YAML module_path + requires_extras keys, unioned with importlib.metadata.entry_points discovery for future third-party plugins. Consolidate the duplicate job-execution paths (api/job_processor.py and batch/batch_orchestrator._process_single_job) into a single function. Introduce a Dispatcher ABC with LocalThreadDispatcher preserving current behaviour, as the seam for future HTTPDispatcher/SlurmDispatcher. Migrate cross-cutting utils/{person_identity,automatic_labeling,model_loader,size_based_person_analysis} to a sibling videoannotator-utils package in the monorepo. Drop the numpy<2.0 pin. Slim core install must run FastAPI/CLI without any heavy ML dep; videoannotator[all] reproduces v1.4.2 behaviour exactly."
 
 ## User Scenarios & Testing *(mandatory)*

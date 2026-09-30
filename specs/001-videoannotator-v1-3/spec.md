@@ -2,7 +2,7 @@
 
 **Feature Branch**: `001-videoannotator-v1-3`
 **Created**: October 11, 2025
-**Status**: Draft
+**Status**: Shipped in v1.3.0 (merged 2025-10-30). Leftovers: the docs reorganisation (T055, T056, T059) moved to v1.6.0 Phase 2, and queue position (T066) to v1.6.0; see `docs/development/roadmap_v1.6.0.md`
 **Input**: User description: "VideoAnnotator v1.3.0 Production Reliability & Critical Fixes Release"
 
 ## User Scenarios & Testing *(mandatory)*

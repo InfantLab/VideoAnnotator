@@ -2,7 +2,7 @@
 
 **Feature Branch**: `005-pipeline-extras-install`
 **Created**: 2026-08-26
-**Status**: Draft
+**Status**: Shipped in v1.5.0 (2026-08-26)
 **Input**: User description: "In-app pipeline extras discoverability and self-service install. Builds on spec 004 (extras-based install, v1.5.0) which already gives GET /api/v1/pipelines an available:bool and install_hint:str per pipeline, but there is no way to act on that hint without dropping to a terminal and running uv sync --extra <name> plus a manual server restart. Add a self-service install action reachable from the API so a user can go from 'core install' to 'core + the extras group I actually need' without leaving the browser, while keeping the core install exactly as small as spec 004 made it."
 
 ## Relationship to Existing Specs

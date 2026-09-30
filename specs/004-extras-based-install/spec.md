@@ -2,7 +2,7 @@
 
 **Feature Branch**: `004-extras-based-install`
 **Created**: 2026-07-18
-**Status**: Draft
+**Status**: Shipped in v1.5.0 (merged 2026-07-19)
 **Input**: User description: "Now that the JOSS resubmission is in review, resume the v1.5.0 modularity work. Implement the extras-based install and metadata-driven registry loading that Phase 1 of the v1.5.0 roadmap scopes (moving heavy ML deps to per-pipeline optional-dependencies groups, replacing LEGACY_MAPPINGS with metadata-driven module loading, registry graceful-degradation, migration messaging, dropping the numpy<2.0 pin). The resulting extras/metadata design must not foreclose the already-roadmapped follow-on work: v1.6.0's Ollama/llama.cpp local-LLM pipeline backend, and v1.7-v2.0's HTTPDispatcher, SlurmDispatcher/HPC dispatch, and secure remote/cloud pipeline execution — this modularity effort exists specifically to make local Ollama models, HPC offload, and remote/cloud offload possible in later releases without re-architecting the registry or install system again."
 
 ## Relationship to Existing Specs

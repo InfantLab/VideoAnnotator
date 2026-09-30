@@ -2,7 +2,7 @@
 
 **Feature Branch**: `010-corpus-analysis-foundations`
 **Created**: 2026-08-26
-**Status**: Draft
+**Status**: Draft, not started. Scheduled for v1.6.0 Phase 6
 **Input**: User description: "Give a researcher an at-a-glance view of an entire dataset's results — completion coverage, label distribution, and ground-truth agreement where available — without opening every video individually. Deliberately scoped as foundations: basic counts and rates, not a full statistics suite. Deeper analysis (kappa, significance testing, plots) stays in the existing Python research repo."
 
 ## Relationship to Existing Specs

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `008-batch-group-workflow`
 **Created**: 2026-08-26
-**Status**: Draft
+**Status**: Backend shipped in v1.5.0 (2026-08-27, extended 2026-09-10). Viewer: batch pages shipped; previous/next between a batch's videos is in v1.6.0
 **Input**: User description: "Let jobs submitted together (e.g. 10+ videos with one config in one wizard pass) be tracked, viewed, cancelled, and retried as a group — with real aggregate progress and a time estimate — instead of N independent job rows with no shared identity. Real-time push notifications over the existing (currently stub) SSE stream, replacing polling-only status checks."
 
 ## Relationship to Existing Specs

@@ -2,10 +2,11 @@
 
 **Feature Branch**: `011-pipeline-readiness`
 **Created**: 2026-09-23
-**Status**: Implemented 2026-09-24, pending the SC-001 manual run
-([tests/manual/pipeline_readiness_e2e.md](../../tests/manual/pipeline_readiness_e2e.md)).
-FR-017 (weight prefetch, optional P3) is deferred: it needs a download step per model library, and
-the first-run size notes (FR-016) already make the wait visible.
+**Status**: Shipped in v1.5.0. Implemented 2026-09-24. The SC-001 manual run
+([tests/manual/pipeline_readiness_e2e.md](../../tests/manual/pipeline_readiness_e2e.md)) passed on
+2026-09-30 as part of the v1.5.0 release walkthrough (`tests/manual/v1.5.0_release_e2e.md`).
+FR-017 (weight prefetch, optional P3) is deferred to v1.6.0 Phase 1: it needs a download step per
+model library, and the first-run size notes (FR-016) already make the wait visible.
 **Input**: User description: "Pipelines should be discoverable and loadable by an end user. Today a
 core-only server shows the viewer a single placeholder stub pipeline; getting any real pipeline
 running still needs a terminal (install extras, restart the server, export tokens). Close that gap

@@ -240,7 +240,7 @@ and a stub `module_path` loads successfully through the registry with zero loade
       `tests/integration` runs (real model inference) and an actual coverage-percentage
       measurement were not completed in this pass — infeasible within this session's sandbox
       (multi-GB model downloads/long inference runs) — follow-up, not skipped by oversight.
-- [ ] T037 Run every section of `specs/004-extras-based-install/quickstart.md` end-to-end — §6
+- [X] T037 Run every section of `specs/004-extras-based-install/quickstart.md` end-to-end — §6
       (forward-compat stub) covered by an automated test. §1 run manually (real
       `pip install .[scene]` into a clean venv): confirmed the isolation half of the acceptance
       criteria (`torch`/`open-clip-torch`/`scenedetect` present, `pyannote.audio`/`ultralytics`/
@@ -367,6 +367,12 @@ and a stub `module_path` loads successfully through the registry with zero loade
       test already). Given how many real bugs surfaced across §1 alone via actual `pip install` +
       running-server testing — versus zero found by unit/contract tests against the dev `.venv` —
       §2–§6 should also be run for real, not assumed clean by extrapolation from §1.
+
+      Closed 2026-09-30 with the v1.5.0 release walkthrough (`tests/manual/v1.5.0_release_e2e.md`),
+      run for real on a fresh dev container. §2: extras groups were installed one at a time from
+      the viewer, each adding to the last. §3: every group installed, and one job ran every
+      pipeline. §5: the dev venv runs numpy 2.2.6. §2 and §4 were also run from this quickstart;
+      see its "Known pitfalls". §6 is an automated test.
 - [X] T038 [P] Update `CHANGELOG.md` with the v1.5.0 Phase 1 entry
 
 ---

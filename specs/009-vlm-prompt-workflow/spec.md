@@ -2,7 +2,7 @@
 
 **Feature Branch**: `009-vlm-prompt-workflow`
 **Created**: 2026-08-26
-**Status**: Draft
+**Status**: Backend shipped in v1.5.0 (2026-08-27). Viewer: the prompt page and comparing two VLM jobs are in v1.6.0
 **Input**: User description: "Make the vlm_annotation pipeline's prompt-based workflow as clear and low-friction as possible for a researcher iterating on prompt wording: let them test a prompt against a single frame before committing to a full multi-video run, pick a model from what's actually installed rather than typing a name, and know whether the configured Ollama server is reachable at all."
 
 ## Relationship to Existing Specs
