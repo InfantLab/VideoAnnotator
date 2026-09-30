@@ -47,3 +47,8 @@ __pycache__/
 .claude/settings.local.json
 .claude/.credentials.json
 .claude/state/
+
+# The root .gitignore's Python patterns (lib/, models/) would otherwise hide new
+# source files here now that the viewer lives inside the VideoAnnotator repo.
+!src/lib/
+!src/models/

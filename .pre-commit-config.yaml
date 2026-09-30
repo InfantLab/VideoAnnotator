@@ -2,7 +2,9 @@
 # Install with: pre-commit install
 
 # Exclude tokens directory (contains encrypted blobs / non-JSON-safe data)
-exclude: ^(tokens/|src/videoannotator/viewer_static/)  # viewer_static: vendored build output, never hand-edited
+# viewer_static: vendored build output, never hand-edited. viewer/: TypeScript, checked by its own
+# lint/typecheck (these hooks are Python-oriented and reject its JSONC tsconfig files).
+exclude: ^(tokens/|src/videoannotator/viewer_static/|viewer/)
 
 repos:
   # Built-in hooks
