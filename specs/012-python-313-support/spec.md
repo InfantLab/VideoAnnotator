@@ -129,7 +129,8 @@ version inside and run the test suite in the dev container.
 - **FR-009**: The README and installation docs MUST state the supported versions as exactly 3.12
   and 3.13. They currently say "3.12+", which is wrong today.
 - **FR-010**: Speaker diarization MUST be verified on Python 3.13 with a real Hugging Face token
-  before this spec is marked done (it was the one pipeline the trial couldn't run).
+  before this spec is marked done (it was the one pipeline the trial couldn't run). *Verified
+  2026-10-01 on the demo video: completes on 3.13, and its four segments are identical to 3.12's.*
 - **FR-011**: The CHANGELOG MUST record the new supported version, and that Python 3.12 support is
   planned to end in v1.7.0.
 

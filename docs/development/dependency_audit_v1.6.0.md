@@ -140,8 +140,9 @@ CUDA.
   2 min 20 s. CI on 3.12 for the same commit: 1332 passed (fewer extras installed there).
 - Real pipelines on the viewer's demo video (`2UWdXP…Peekaboo_h265.mp4`, run through the server's
   `JobProcessor`): `speech_recognition`, `scene_detection`, `face_analysis`,
-  `face_openface3_embedding` and `person_tracking` all complete on 3.13. `speaker_diarization`
-  wasn't run: its model is gated and no Hugging Face token was available.
+  `face_openface3_embedding`, `person_tracking` and `speaker_diarization` all complete on 3.13.
+  `speaker_diarization`'s four segments are identical on 3.12 and 3.13 (start, end and speaker,
+  to every digit).
   - `person_tracking` first failed with `No module named 'lap'`. ByteTrack imports `lap`;
     ultralytics doesn't declare it and pip-installs it at runtime instead, which is how the 3.12
     dev environment got it. A fresh or offline install would fail. **Fixed on `1.6-dev`**: `lap`
