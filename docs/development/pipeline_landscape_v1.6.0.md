@@ -18,8 +18,8 @@ Ground rules for picking a tool, from the constitution and the review:
 | **Who is speaking, by voice type** (key child, other child, adult female, adult male) | nothing (diarization gives anonymous speakers) | — | **VTC 2** (BabyHuBERT, LAAC-LSCP); VTC 1 beat LENA by a wide margin | licence: confirm | Built for child-centred recordings, 10 languages | **Phase 5, top priority.** Needs Python ≥ 3.13 (now supported) |
 | **Adult word / syllable / phoneme counts** (the LENA AWC measure) | nothing | — | **ALICE** (Räsänen et al. 2021): counts from adult speech, using VTC for who is speaking | licence: confirm | Built for child-centred recordings | Phase 5, with VTC |
 | **Conversational turns** (the LENA CTC measure) | nothing | — | Derived from voice-type segments (adult ↔ child within a window); no model needed | ours | Standard measure in the field | Analysis layer (Phase 3 tidy export / Phase 6), once VTC is in |
-| Speech transcription | `speech_recognition`: openai-whisper `base` | Runtime ageing: openai-whisper's last release was 2025-06 | Whisper large-v3-turbo (MIT, 809M) via faster-whisper (MIT); NVIDIA Parakeet TDT 0.6B v3 (CC-BY-4.0; English/European, more accurate than Whisper large-v3 at a quarter the size); Canary-Qwen 2.5B (most accurate) | MIT / CC-BY-4.0 | All adult-trained; transcribe caregiver speech, not infant sounds | Phase 5 benchmark: faster-whisper + turbo vs Parakeet on parent speech. Keep Whisper models (multilingual) as default unless Parakeet wins clearly in English |
-| Speaker diarization | `speaker_diarization`: pyannote 3.1 | Superseded by community-1 | pyannote **community-1** (pyannote.audio 4): better speaker counting, same segmentation | MIT code, model card terms | Adult-trained | Library upgrade in spec 3; model switch in Phase 5. VTC answers the child-specific version of this question |
+| Speech transcription | `speech_recognition`: openai-whisper `base` | Runtime ageing: openai-whisper's last release was 2025-06 | Whisper large-v3-turbo (MIT, 809M) via faster-whisper (MIT); NVIDIA Parakeet TDT 0.6B v3 (CC-BY-4.0; English/European, more accurate than Whisper large-v3 at a quarter the size); Canary-Qwen 2.5B (most accurate); **Nemotron 3.5 ASR** (NVIDIA, June 2026: 600M, 40 language-locales in one streaming model, multilingual needs a GPU, NVIDIA Community Model License: confirm terms) | MIT / CC-BY-4.0 / NVIDIA licences | All adult-trained; transcribe caregiver speech, not infant sounds | Phase 5 benchmark: faster-whisper + turbo vs Parakeet on parent speech. Keep Whisper models (multilingual) as default unless Parakeet or Nemotron wins clearly. The NVIDIA models come through NeMo, a heavy dependency stack: weigh install cost, not only accuracy |
+| Speaker diarization | `speaker_diarization`: pyannote 3.1 | Superseded by community-1 | pyannote **community-1** (pyannote.audio 4): better speaker counting, same segmentation. NVIDIA **Streaming Sortformer** (`diar_streaming_sortformer_4spk-v2.1`, NVIDIA Open Model License): up to 4 speakers, frame-level, **no gated token** (pyannote needs a Hugging Face token with licences accepted, a real setup hurdle) | MIT code + model card terms / NVIDIA Open Model License (confirm) | Adult-trained | Library upgrade in spec 3; Phase 5 benchmarks community-1 vs Sortformer on parent–child audio. VTC answers the child-specific version of this question |
 | **Infant vocalisations** (cry, laugh, babble, canonical babbling) | nothing; Whisper hallucinates text on them | — | VTC 2's key-child segments for *when*; cry detectors exist as research code (e.g. a self-training cry detector, open source); vocal-maturity classifiers are research-grade | varies | Specific | Phase 5: VTC first; cry/laugh as a v1.7.0 plugin when a maintained model exists |
 | **Prosody / infant-directed speech** (pitch, pitch range, speech rate) | nothing (librosa is installed for audio I/O) | — | librosa `pyin` for pitch (ISC); Praat via parselmouth is the field standard but **GPL-3** | ISC / GPL-3 | Language-agnostic | Small pipeline on librosa: pitch contour and summary per voice-type segment. Cheap, widely used in IDS research |
 | Voice emotion | `laion_voice` (dropped by the review) | Yes | No infant-validated model | — | — | None for now |
@@ -109,7 +109,7 @@ openai-whisper as a runtime (slow; same weights run faster elsewhere); Ultralyti
 
 **Suggested placement**:
 - *v1.6.0 Phase 5 (benchmark, then default)*: VTC 2 (+ ALICE), RTMPose, faster-whisper /
-  large-v3-turbo vs Parakeet, pyannote community-1, face detection replacement, adult/child role,
+  large-v3-turbo vs Parakeet vs Nemotron 3.5 ASR, pyannote community-1 vs NVIDIA Streaming Sortformer, face detection replacement, adult/child role,
   default VLM.
 - *v1.6.0, small new pipelines or export options*: motion energy + synchrony, prosody, quality
   checks, de-identified export.
@@ -134,6 +134,10 @@ Gaze-LLE, LoCoNet, MiVOLO, deface.
 - Gaze-LLE: https://openaccess.thecvf.com/content/CVPR2025/html/Ryan_Gaze-LLE_Gaze_Target_Estimation_via_Large-Scale_Learned_Encoders_CVPR_2025_paper.html
 - LoCoNet: https://arxiv.org/abs/2301.08237
 - MiVOLO: https://github.com/WildChlamydia/MiVOLO
+- Nemotron 3.5 ASR: https://pasqualepillitteri.it/en/news/5210/nemotron-3-5-asr-nvidia-40-languages-real-time ;
+  model card https://build.nvidia.com/nvidia/nemotron-asr-streaming/modelcard
+- Streaming Sortformer: https://developer.nvidia.com/blog/identify-speakers-in-meetings-calls-and-voice-apps-in-real-time-with-nvidia-streaming-sortformer/ ;
+  https://huggingface.co/nvidia/diar_streaming_sortformer_4spk-v2.1
 - Speech recognition comparison (2026): https://northflank.com/blog/best-open-source-speech-to-text-stt-model-in-2026-benchmarks ,
   https://openwhispr.com/blog/parakeet-vs-whisper-vs-nemotron
 - pyannote community-1: https://pyannote.ai/blog/community-1 ; benchmark https://www.pyannote.ai/benchmark
