@@ -12,6 +12,8 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
+    # Normally 4-5 minutes; a stuck apt mirror once held a job for an hour.
+    timeout-minutes: 45
     # Windows has known SQLite file-locking issues during test teardown
     # (tracked separately); keep it informational so it doesn't block CI.
     continue-on-error: ${{ matrix.os == 'windows-latest' }}
@@ -95,6 +97,7 @@ jobs:
 
   viewer:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: viewer
