@@ -51,7 +51,15 @@ Execution, Stable Pipeline Contract, Provenance & Reproducibility, Modular by Co
 Backward Compatibility by Default). `/speckit-plan`'s Constitution Check gate evaluates every plan
 against it.
 
+## Current Plan
+<!-- SPECKIT START -->
+`specs/012-python-313-support/plan.md`: support Python 3.13 alongside 3.12 (no library upgrades).
+<!-- SPECKIT END -->
+
 ## Recent Changes
+- 012-python-313-support (planned): `requires-python` widens to `>=3.12,<3.14`; CI tests both;
+  `.python-version` makes 3.13 the dev/Docker default; ruff/mypy targets stay at 3.12 (oldest
+  supported).
 - Post-005 follow-up: added `GET /api/v1/auth/me` (any authenticated caller can check its own
   `is_admin` — closes the gap where a 403 from an admin-only endpoint was undiagnosable from the
   frontend) and made `generate-token` grant admin by default to a brand-new user while the
