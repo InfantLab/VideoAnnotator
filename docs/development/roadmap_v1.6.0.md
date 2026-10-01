@@ -119,12 +119,15 @@ this repo:
       for every job, however many scenes there are. Found 2026-09-28 on a clip with one scene
       (0–7.32 s, "nursery") the backend had detected correctly.
       Fixed early in the viewer (`4ec8d0b`).
-- [ ] **Failed pipelines' reasons are hard to find**: a batch says "N with errors … the reason is
+- [x] **Failed pipelines' reasons are hard to find**: a batch says "N with errors … the reason is
       on each video's row", but the reason is only a hover tooltip on the status badge, and the
       job page doesn't list failed pipelines with their `error_message` from
       `GET /jobs/{id}/results`. Show per-pipeline errors on the job page and inline in the batch
       row. (Server side: since 2026-09-28 the job-level `error_message` includes each failed
       pipeline's error, not only its name.)
+      Fixed: each batch/jobs row shows the reasons under its status badge (two lines, full text
+      on hover); a job that failed outright lists each pipeline's error on its page, as a job
+      completed with errors already did.
 - [x] **`localhost` vs `127.0.0.1`: viewer can't connect, or connects without its token**
       (recurring). The server side (`start_server.sh`, the `setup-db`/`generate-token` login
       links, `CORS_AND_AUTH_PROTOCOL.md`) says `localhost`. The viewer defaults its API URL to
