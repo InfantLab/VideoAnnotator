@@ -110,9 +110,17 @@ this repo:
       invalid. Show the server's `message`/`hint` instead; keep connection tips for actual
       connection failures.
       Fixed early in the viewer (`4ec8d0b`).
-- [ ] **No library folder selected → flickering dialog on "View jobs"**: the dialog flickers and
+- [x] **No library folder selected → flickering dialog on "View jobs"**: the dialog flickers and
       never explains what a library folder is or how to choose one. Show a steady prompt with a
       "Choose folder" action (and why it's needed), or let job viewing work without one.
+      Fixed: cause was a loop. The results page starts a download whenever its state is `idle`; a
+      folder picker that was cancelled, or refused because no click preceded it, set `idle`
+      again, so it restarted at once. Now it waits in `needs_folder`: a card says what the
+      library folder is for, with "Choose folder" (a real click, so the picker is allowed) and
+      "View without saving". A folder already granted is reused without asking.
+      Found alongside: the exported `apiClient` proxy didn't bind methods, so
+      `apiClient.updateConfig()` changed nothing and Settings' "Test Connection" always tested
+      the saved configuration, not the one on screen.
 - [x] **Scene detection always shows "(No data)"**: `parseSceneDetection`
       (`src/lib/parsers/scene.ts`) accepts a bare array, `results` or `scenes`, but not COCO's
       `annotations`, which is what the backend writes. It throws, and the scenes panel is empty

@@ -5,7 +5,8 @@ import { DownloadProgress } from '@/components/DownloadProgress';
 import { VideoAnnotationViewer } from '@/components/VideoAnnotationViewer';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, FolderOpen } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { isDemoJobId, getDemoLabel } from '@/lib/localLibrary/installDemoDataset';
 import { useQuery } from '@tanstack/react-query';
@@ -57,6 +58,40 @@ const JobResultsViewer = () => {
       startDownload(jobId);
     }
   };
+
+  if (state === 'needs_folder' && jobId) {
+    return (
+      <div className="container mx-auto p-8 max-w-2xl">
+        <Button variant="ghost" onClick={handleBack} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          {backLabel}
+        </Button>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5" />
+              Choose a library folder
+            </CardTitle>
+            <CardDescription>
+              The viewer keeps each job&apos;s results (the video and its annotations) in a folder on
+              this computer, so opening the job again doesn&apos;t download it again, and the files
+              stay yours. Choose a folder once; the browser remembers it.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-3">
+            <Button onClick={() => startDownload(jobId, 'pick')}>
+              <FolderOpen className="mr-2 h-4 w-4" />
+              Choose folder
+            </Button>
+            <Button variant="outline" onClick={() => startDownload(jobId, 'skip')}>
+              View without saving
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (state === 'error') {
     return (

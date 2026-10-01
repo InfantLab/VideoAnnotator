@@ -1211,9 +1211,17 @@ export function getApiClient(): APIClient {
 }
 
 // Export singleton as property for backward compatibility
+// Methods are bound to the real client: called through the proxy, `this` was
+// the proxy, so `this.token = ...` in updateConfig landed on the proxy's empty
+// target and Settings' "Test Connection" kept testing the saved configuration.
 export const apiClient = new Proxy({} as APIClient, {
   get(_target, prop) {
-    return getApiClient()[prop as keyof APIClient];
+    const client = getApiClient();
+    const value = Reflect.get(client, prop, client);
+    return typeof value === 'function' ? value.bind(client) : value;
+  },
+  set(_target, prop, value) {
+    return Reflect.set(getApiClient(), prop, value);
   },
 });
 

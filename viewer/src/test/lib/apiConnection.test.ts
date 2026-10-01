@@ -40,11 +40,13 @@ describe('tokenFormatProblem', () => {
 });
 
 describe('apiClient.updateConfig', () => {
-  it('treats an empty token as "no token", not "keep the old one"', () => {
-    // Settings tests "anonymous" by passing ''; it used to test the saved key.
+  it('changes the client Settings tests with, and an empty token means none', () => {
+    // Through the exported proxy, updateConfig used to change nothing, and ''
+    // meant "keep": "Test Connection" always tested the saved configuration.
     const { baseURL, token } = apiClient.getConfig();
     try {
-      apiClient.updateConfig(undefined, KEY);
+      apiClient.updateConfig('http://lab-server:18011', KEY);
+      expect(apiClient.getConfig()).toEqual({ baseURL: 'http://lab-server:18011', token: KEY });
       apiClient.updateConfig(undefined, '');
       expect(apiClient.getConfig().token).toBe('');
       apiClient.updateConfig('', undefined);
