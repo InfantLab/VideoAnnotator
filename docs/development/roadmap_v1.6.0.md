@@ -154,7 +154,7 @@ this repo:
       before "Test Connection". Server side (done 2026-09-30): the first-run banner now prints the
       viewer-connect link and `videoannotator generate-token`. Before this it pointed at
       `localhost:8000` and a `scripts.manage_tokens` module that pip installs don't have.
-- [ ] **Face boxes and OpenFace landmarks almost never show** (2026-09-30): both overlays draw a
+- [x] **Face boxes and OpenFace landmarks almost never show** (2026-09-30): both overlays draw a
       face only within ±0.1 s of its timestamp (`JD(face_analysis, t, 0.1)` and the
       `openface3_faces` filter). The face pipelines sample about once a second (0.97 s apart on a
       30 fps clip), so a face flashes for 0.2 s per second during playback and never shows when
@@ -165,11 +165,16 @@ this repo:
       2026-09-30): DeepFace's "no face found" stand-in, a full-frame box with confidence 0 and
       an invented emotion, was saved as a real face (143 of 255 boxes in the e2e jobs). Jobs run
       before the fix still contain those boxes.
-- [ ] **`openface3_detailed.json` detected as face analysis**: the face check (`"emotions"` in the
+      Fixed: `viewer/src/lib/sampledAtTime.ts` draws the latest sampled frame's detections until
+      the next sample, for at most 1.5× the median sample interval. Pose uses it too: its ±0.5 s
+      window stacked several frames' skeletons when sampling was dense.
+- [x] **`openface3_detailed.json` detected as face analysis**: the face check (`"emotions"` in the
       first 8 KB) matches its `metadata.model_info.features`, and it runs before the OpenFace
       check. The file parses to nothing, so today the face boxes survive only because
       `face_detections.json` sorts first in the zip. Check for OpenFace before face analysis, or
       match on structure (`metadata.pipeline` + `faces`) instead of substrings.
+      Fixed (`47cc786`), found by the contract test along with a worse one: `openface3_analysis`
+      was taken as person tracking and replaced it (see the contract test item above).
 - [ ] **Results view isn't batch-aware**: opening a video from a batch loses the batch. Show which
       batch and video (n of N) you're on, previous/next between the batch's videos, and a way back
       to the batch page. Overlaps Phase 6's previous/next item; do the navigation here, before

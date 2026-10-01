@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useRef, useCallback, useState } from 'react';
 import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCue, RTTMSegment, SceneAnnotation, LAIONFaceAnnotation, COCO_SKELETON_CONNECTIONS, YOLO_POSE_PALETTE, YOLO_LIMB_COLORS, YOLO_KEYPOINT_COLORS, OpenFace3ActionUnit, OpenFace3ActionUnits } from '@/types/annotations';
-import { getFacesAtTime, getDominantEmotion } from '@/lib/parsers/face';
+import { getDominantEmotion } from '@/lib/parsers/face';
+import { sampledAtTime } from '@/lib/sampledAtTime';
 import type { OpenFace3Settings } from './openface3Settings';
 import { browserClaimFor, sniffVideoCodec, type VideoCodecInfo } from '@/lib/videoCodec';
 
@@ -68,11 +69,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const getCurrentPoseData = useCallback((): COCOPersonAnnotation[] => {
       if (!annotationData?.person_tracking) return [];
 
-      // Find poses within a small time window around current time (±0.5 seconds for debugging)
-      const timeWindow = 0.5;
-      return annotationData.person_tracking.filter(pose =>
-        Math.abs(pose.timestamp - currentTime) <= timeWindow
-      );
+      return sampledAtTime(annotationData.person_tracking, currentTime);
     }, [currentTime, annotationData]);
 
     // Get current speech data
@@ -106,7 +103,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const getCurrentFaceData = useCallback((): LAIONFaceAnnotation[] => {
       if (!annotationData?.face_analysis) return [];
 
-      return getFacesAtTime(annotationData.face_analysis, currentTime, 0.1);
+      return sampledAtTime(annotationData.face_analysis, currentTime);
     }, [currentTime, annotationData]);
 
     // Draw COCO pose overlay with YOLO/Ultralytics colors
@@ -341,9 +338,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const getCurrentOpenFace3Data = useCallback(() => {
       if (!annotationData?.openface3_faces) return [];
       
-      return annotationData.openface3_faces.filter(face => 
-        Math.abs(face.timestamp - currentTime) < 0.1 // 100ms tolerance
-      );
+      return sampledAtTime(annotationData.openface3_faces, currentTime);
     }, [annotationData?.openface3_faces, currentTime]);
 
     // Draw OpenFace3 98-point facial landmarks
