@@ -149,6 +149,8 @@ class WhisperBasePipeline(BasePipeline):
             cuda_markers = [
                 "not compiled with cuda",
                 "cuda driver",
+                # torch built with CUDA on a machine without the NVIDIA driver
+                "no nvidia driver",
                 "no cuda gpus are available",
                 "cublas",
                 "cudnn",
