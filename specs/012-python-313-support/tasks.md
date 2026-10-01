@@ -46,7 +46,7 @@ ships with tests); otherwise the existing suite, run on both versions, is the te
 **Independent Test**: the PR's checks list `test` for each OS × version.
 
 - [X] T011 [US3] In `.github/workflows/ci-cd.yml`: `python-version: ["3.12", "3.13"]` in the `test` matrix; add `UV_PYTHON: ${{ matrix.python-version }}` to the job's `env`; run ruff, the format check and mypy only on `ubuntu-latest` + `3.13` (contracts/ci-matrix.md)
-- [ ] T012 [US3] Push and confirm on PR #8 that all six `test` jobs run, ubuntu/macOS pass on both versions, and Windows keeps `continue-on-error`
+- [X] T012 [US3] Push and confirm on PR #8 that all six `test` jobs run, ubuntu/macOS pass on both versions, and Windows keeps `continue-on-error` *(run 36842394295: ubuntu and macOS pass on 3.12 and 3.13; Windows fails only on its known file-locking tests, on both versions)*
 
 ## Phase 6: User Story 4 - Dev container and images on 3.13 (P3)
 
@@ -63,7 +63,7 @@ ships with tests); otherwise the existing suite, run on both versions, is the te
 - [X] T017 [P] Update `CLAUDE.md` Active Technologies line to `requires-python = ">=3.12,<3.14"` and the Recent Changes entry from "planned" to done
 - [X] T018 [P] Amend `.specify/memory/constitution.md` Engineering Standards CI line to "3.12 and 3.13" with a PATCH version bump and a sync-impact note (research R8)
 - [X] T019 [P] Add a CHANGELOG entry under `[Unreleased]` in `CHANGELOG.md`: Python 3.13 supported; 3.12 still supported, planned to end in v1.7.0; the startup warning (FR-011)
-- [ ] T020 Run `ruff check`, `ruff format --check`, `mypy src/videoannotator` and `pre-commit run` on changed files; tick the spec's tasks; update `specs/012-python-313-support/spec.md` status
+- [X] T020 Run `ruff check`, `ruff format --check`, `mypy src/videoannotator` and `pre-commit run` on changed files; tick the spec's tasks; update `specs/012-python-313-support/spec.md` status
 
 ## Dependencies
 
