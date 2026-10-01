@@ -211,7 +211,6 @@ lifted, 2026-09-26):
   repackaging whose releases after 0.1.13 pin old Pillow, numpy and scipy.
 
 **Solution**, in four steps:
-      Fixed early in the viewer (`4ec8d0b`).
 - [ ] **Pipeline review** (`docs/development/pipeline_review_v1.6.0.md`). Start from what the
       field asks, not from what we have: caregiver speech, infant vocalisations, who is speaking,
       faces and expressions, movement, gaze and joint attention, touch. For each question, which
@@ -303,6 +302,9 @@ half-built page.
 - [ ] A structural pass along the one path users take: install → add videos → run → review →
       export. Anything off that path moves or goes. A Playwright "first-time user" run on a clean
       machine files each point of friction as an issue.
+- [ ] `videoannotator process <video>` is listed in `--help` but only prints "Direct processing
+      is not yet implemented" (found 2026-10-01). Implement it on the shared job-execution path,
+      or remove it.
 - [ ] **Queue position**: a pending job shows how many jobs are ahead of it ("3rd in queue"), in
       the job list, the job page and `GET /api/v1/jobs/{id}`. Today a queued job looks the same as
       a stuck one. (Planned since spec 001's T066.)
