@@ -69,6 +69,8 @@ RUN uv run python3 -c "import torch; from pathlib import Path; print(f'[DEV BUIL
 
 # Set environment for development
 ENV PYTHONUNBUFFERED=1
+# Model weights (spec 016); docker-compose mounts a volume here so they survive rebuilds.
+ENV VIDEOANNOTATOR_MODELS_DIR=/app/models
 ENV CUDA_VISIBLE_DEVICES=0
 
 # Create directories for mounted volumes

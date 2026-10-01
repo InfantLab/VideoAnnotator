@@ -86,6 +86,8 @@ print('[CPU BUILD] Production image ready - models will download on first use');
 
 # Set environment for production
 ENV PYTHONUNBUFFERED=1
+# Model weights (spec 016); docker-compose mounts a volume here so they survive rebuilds.
+ENV VIDEOANNOTATOR_MODELS_DIR=/app/models
 
 # Create directories for mounted volumes
 RUN mkdir -p /app/data /app/output /app/logs

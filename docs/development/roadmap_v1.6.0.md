@@ -246,19 +246,22 @@ Hugging Face uses `~/.cache/huggingface`, pyannote 3.x uses `~/.cache/torch/pyan
 DeepFace uses `~/.deepface`. Users can't find them, and in a container they're lost on every
 rebuild. The devcontainer points all of them into `models/` with environment variables (2026-09-28),
 but only the devcontainer does.
-- [ ] One setting, `VIDEOANNOTATOR_MODELS_DIR` (default decided in the spec: `./models` or a
+- [x] One setting, `VIDEOANNOTATOR_MODELS_DIR` (default decided in the spec: `./models` or a
       per-user data directory), resolved to an absolute path once at startup. Under it, one
       subdirectory per source: `huggingface/`, `pyannote/`, `torch/`, `deepface/`, `whisper/`,
       `yolo/`, and so on.
-- [ ] The server and CLI set `HF_HOME`, `TORCH_HOME`, `PYANNOTE_CACHE` and `DEEPFACE_HOME` from it
+- [x] The server and CLI set `HF_HUB_CACHE` (not `HF_HOME`, which holds the login token), `TORCH_HOME`, `PYANNOTE_CACHE` and `DEEPFACE_HOME` from it
       before any pipeline library is imported, unless the user has set them. Pipelines' own
       `cache_dir` defaults come from the same place.
-- [ ] Readiness (`api/readiness.py`) finds weights through the same resolver, so "downloads about
+- [x] Readiness (`api/readiness.py`) finds weights through the same resolver, so "downloads about
       N MB" is never wrong about where it looked.
-- [ ] Moving the default means existing installs download once more. Say so in the CHANGELOG and
+- [x] Moving the default means existing installs download once more. Say so in the CHANGELOG and
       print the old and new locations the first time the server starts. Drop the devcontainer's own
       environment variables once the app sets them.
-- [ ] `videoannotator diagnose` shows where the models directory is and how much it holds.
+- [x] `videoannotator diagnose` shows where the models directory is and how much it holds.
+(Done in spec 016, 2026-10-01: default is the per-user data directory.)
+- [ ] Logs go to `./logs` relative to the working directory, like the models used to: put them
+      under a per-user directory too (found during spec 016).
 - [ ] **Download weights ahead of time** (spec 011's FR-017, deferred there): an action per
       pipeline, in the viewer, the API and the CLI, that downloads its declared weights into the
       models directory before the first job, reusing the extras install job's table and statuses.

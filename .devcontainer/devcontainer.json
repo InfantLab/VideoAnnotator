@@ -46,10 +46,7 @@
                          "HUGGINGFACE_TOKEN":  "${localEnv:HUGGINGFACE_TOKEN}",
                          "HF_AUTH_TOKEN":  "${localEnv:HF_AUTH_TOKEN}",
                          "OLLAMA_BASE_URL":  "http://host.docker.internal:11434",
-                         "HF_HOME":  "${containerWorkspaceFolder}/models/huggingface",
-                         "TORCH_HOME":  "${containerWorkspaceFolder}/models/torch",
-                         "PYANNOTE_CACHE":  "${containerWorkspaceFolder}/models/pyannote",
-                         "DEEPFACE_HOME":  "${containerWorkspaceFolder}/models/deepface"
+                         "VIDEOANNOTATOR_MODELS_DIR":  "${containerWorkspaceFolder}/models"
                      },
     "customizations":  {
                            "vscode":  {

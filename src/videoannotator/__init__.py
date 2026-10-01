@@ -28,6 +28,11 @@ os.environ.setdefault(
 # unless the user opts in (constitution principle I).
 os.environ.setdefault("PYANNOTE_METRICS_ENABLED", "0")
 
+# Before any model library is imported: point their caches into one directory.
+from .models_dir import configure_model_caches
+
+configure_model_caches()
+
 from .version import (
     __author__,
     __license__,

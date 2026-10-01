@@ -1013,7 +1013,7 @@ def version():
 def diagnose(
     component: str = typer.Argument(
         "all",
-        help="Component to diagnose: system, gpu, storage, database, ollama, or all",
+        help="Component to diagnose: system, gpu, storage, database, models, ollama, or all",
     ),
     json_output: bool = typer.Option(
         False, "--json", help="Output results as JSON for scripting"
@@ -1031,6 +1031,7 @@ def diagnose(
     from videoannotator.diagnostics import (
         diagnose_database,
         diagnose_gpu,
+        diagnose_models,
         diagnose_ollama,
         diagnose_storage,
         diagnose_system,
@@ -1042,6 +1043,7 @@ def diagnose(
         "gpu": ("GPU", diagnose_gpu),
         "storage": ("Storage", diagnose_storage),
         "database": ("Database", diagnose_database),
+        "models": ("Models", diagnose_models),
         "ollama": ("Ollama", diagnose_ollama),
     }
 
@@ -1135,6 +1137,13 @@ def diagnose(
                 free_gb = disk.get("free_gb", 0)
                 percent = disk.get("percent_used", 0)
                 typer.echo(f"  Disk: {free_gb:.1f} GB free ({percent:.1f}% used)")
+
+            elif comp_name == "models" and result["status"] != "error":
+                typer.echo(f"  Directory: {result['models_dir']}")
+                typer.echo(f"  Size: {result['total_bytes'] / 1e9:.2f} GB")
+                for source, size in result["sources"].items():
+                    if size:
+                        typer.echo(f"    {source}: {size / 1e9:.2f} GB")
 
             elif comp_name == "database" and result["status"] != "error":
                 connected = result.get("connected", False)

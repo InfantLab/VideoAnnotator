@@ -28,6 +28,7 @@ services:
       context: .
       dockerfile: Dockerfile.cpu
     volumes:
+      - models:/app/models  # model weights persist across rebuilds (spec 016)
       - ./data:/app/data:ro
       - ./output:/app/output
     environment:
@@ -48,6 +49,7 @@ services:
       context: .
       dockerfile: Dockerfile.gpu
     volumes:
+      - models:/app/models  # model weights persist across rebuilds (spec 016)
       - ./data:/app/data:ro
       - ./output:/app/output
     environment:
@@ -147,6 +149,7 @@ services:
 
 volumes:
   postgres_data:
+  models:
 
 networks:
   default:

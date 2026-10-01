@@ -69,6 +69,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     warn_if_unsupported_python()
 
+    # spec 016: weights moved to one directory in v1.6.0; say so once if an upgraded
+    # install still has them in the old places, rather than silently re-downloading.
+    from ..models_dir import directory_size, legacy_locations, models_dir
+
+    if directory_size(models_dir()) == 0:
+        old = legacy_locations()
+        if old:
+            logger.warning(
+                f"Model weights are now kept in {models_dir()} "
+                f"(set VIDEOANNOTATOR_MODELS_DIR to change it). Found weights in the "
+                f"old locations {', '.join(str(p) for p in old)}: move them there to "
+                "avoid downloading again, or delete them. "
+                "`videoannotator diagnose models` shows sizes."
+            )
+
     # Initialize security (API keys, CORS, authentication)
     try:
         from .startup import initialize_security

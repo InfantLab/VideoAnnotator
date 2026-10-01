@@ -24,6 +24,7 @@ from typing import Any
 from packaging.requirements import Requirement
 
 from ..config_env import default_ollama_base_url, huggingface_token
+from ..models_dir import source_dir
 from ..registry import pipeline_loader
 from ..registry.pipeline_loader import extras_available
 from ..registry.pipeline_registry import (
@@ -309,11 +310,11 @@ def _hf_cached(repo_id: str) -> bool:
 
 
 def _whisper_cached(model: str) -> bool:
-    """openai-whisper's default cache, or `./models/whisper`, the speech
-    pipelines' `cache_dir` default (relative to the server's cwd)."""
+    """The models directory (the speech pipelines' `cache_dir` default), or
+    openai-whisper's own default cache."""
     roots = (
+        source_dir("whisper"),
         Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "whisper",
-        Path("models") / "whisper",
     )
     return any((root / f"{model}.pt").is_file() for root in roots)
 

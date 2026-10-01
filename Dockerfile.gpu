@@ -95,6 +95,8 @@ RUN if [ "${SKIP_TORCH_INSTALL}" = "true" ]; then \
 
 # Set environment for production
 ENV PYTHONUNBUFFERED=1
+# Model weights (spec 016); docker-compose mounts a volume here so they survive rebuilds.
+ENV VIDEOANNOTATOR_MODELS_DIR=/app/models
 ENV CUDA_VISIBLE_DEVICES=0
 
 # Create directories for mounted volumes

@@ -18,6 +18,7 @@ from videoannotator.exporters.native_formats import (
     export_coco_json,
     validate_coco_json,
 )
+from videoannotator.models_dir import resolve_yolo_model
 from videoannotator.pipelines.base_pipeline import BasePipeline
 from videoannotator.utils.automatic_labeling import infer_person_labels_from_tracks
 from videoannotator.utils.model_loader import log_model_download
@@ -330,11 +331,13 @@ class PersonTrackingPipeline(BasePipeline):
 
         try:
             # Load model with enhanced download logging
+            # Load from the models directory; provenance keeps the configured name.
+            model_path = resolve_yolo_model(self.config["model"])
             self.model = log_model_download(
                 "YOLO11 Pose Detection Model",
-                self.config["model"],
+                model_path,
                 YOLO,
-                self.config["model"],
+                model_path,
             )
             # ASCII-safe success marker
             self.logger.info(f"[OK] YOLO model ready: {self.config['model']}")

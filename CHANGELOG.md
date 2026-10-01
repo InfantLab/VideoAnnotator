@@ -41,6 +41,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **One directory for model weights** (spec 016): `VIDEOANNOTATOR_MODELS_DIR`, by default the
+  per-user data directory (`~/.local/share/videoannotator/models` on Linux,
+  `~/Library/Application Support/videoannotator/models` on macOS,
+  `%LOCALAPPDATA%\videoannotator\models` on Windows), with one folder per source. Whisper and YOLO
+  used to download relative to wherever the server was started, so starting it elsewhere meant
+  downloading again. **Upgrading installs download their models once more**; the server says so
+  on start if it finds weights in the old places, and `videoannotator diagnose models` lists them
+  with sizes. `HF_HOME` (and your Hugging Face login) is left alone. The dev container uses
+  `<repo>/models` as before (no re-download); the Docker images use `/app/models`, a named volume in
+  docker-compose.
+- **OpenFace 3 works outside a source checkout.** Its face detector loaded a backbone file from
+  `./weights/`, relative to the working directory, which only a source checkout has (it's committed
+  to this repository). That load is skipped: the detector's full checkpoint replaces those weights
+  anyway (outputs unchanged).
 - **torch 2.6 → 2.11, pyannote.audio 3 → 4, CUDA 12.4 → 12.6 wheels** (spec 015). torch 2.11 is
   as far as it can go for now: pyannote.audio 4 imports torchaudio, which was discontinued at 2.11
   and won't load on a newer torch. **GPU users need NVIDIA driver 560+** (Linux 560.28.03, Windows

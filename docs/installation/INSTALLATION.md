@@ -215,6 +215,28 @@ cd ../python
 python setup.py install
 ```
 
+## Where model weights are stored
+
+Pipelines download their models on first use (the viewer's pipeline cards say how much). Since
+v1.6.0 every pipeline keeps them in **one directory**:
+
+| Platform | Default |
+| --- | --- |
+| Linux | `~/.local/share/videoannotator/models` (or `$XDG_DATA_HOME/videoannotator/models`) |
+| macOS | `~/Library/Application Support/videoannotator/models` |
+| Windows | `%LOCALAPPDATA%\videoannotator\models` |
+| Dev container, Docker images | `/app/models` or `<repo>/models` (a mounted directory or volume) |
+
+Set `VIDEOANNOTATOR_MODELS_DIR` to put them somewhere else (a shared data disk, for example).
+Inside it there's one folder per source: `huggingface/`, `pyannote/`, `torch/`, `deepface/`,
+`whisper/`, `yolo/`. VideoAnnotator points the libraries' own variables (`HF_HUB_CACHE`,
+`TORCH_HOME`, `PYANNOTE_CACHE`, `DEEPFACE_HOME`) there unless you've set them yourself; it never
+changes `HF_HOME`, so a `huggingface-cli login` token stays where it is.
+
+`uv run videoannotator diagnose models` shows the directory, its size per source, and any weights
+left in the pre-v1.6.0 locations (`~/.cache/huggingface`, `~/.cache/whisper`, `~/.deepface`,
+`./models`). Moving those into the new directory saves downloading them again.
+
 ## Verify Installation
 
 ```bash

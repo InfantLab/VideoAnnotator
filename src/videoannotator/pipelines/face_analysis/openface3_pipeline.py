@@ -121,6 +121,21 @@ def _weight_path(filename: str) -> str:
     return hf_hub_download(OPENFACE_WEIGHTS_REPO, filename)
 
 
+def _skip_retinaface_backbone_pretrain() -> None:
+    """Don't load RetinaFace's ImageNet backbone from `./weights/`.
+
+    openface-test's RetinaFace loads `./weights/mobilenetV1X0.25_pretrain.tar`,
+    relative to the working directory, when `cfg_mnet["pretrain"]` is set (it is),
+    so OpenFace failed outside a source checkout, which happens to commit that
+    file. FaceDetector then loads the full Alignment_RetinaFace checkpoint over
+    those weights anyway, so inference doesn't need it (outputs verified
+    unchanged, spec 016).
+    """
+    from openface.Pytorch_Retinaface.data import cfg_mnet
+
+    cfg_mnet["pretrain"] = False
+
+
 @contextlib.contextmanager
 def _without_star_training_setup() -> Iterator[None]:
     """Build a LandmarkDetector without STAR's training-time setup.
@@ -245,6 +260,7 @@ class OpenFace3Pipeline(BasePipeline):
             face_detector_path = self.config.get("model_path") or _weight_path(
                 "Alignment_RetinaFace.pth"
             )
+            _skip_retinaface_backbone_pretrain()
             self.face_detector = FaceDetector(
                 model_path=face_detector_path,
                 device=device,
