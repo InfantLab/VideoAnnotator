@@ -53,3 +53,29 @@ Dev container: rebuild, then `uv run python --version` (3.13.x) and `uv run pyte
 ## 5. CI (User Story 3)
 
 Open the pull request's checks: `test` appears for each of ubuntu / macOS / Windows × 3.12 / 3.13.
+
+## Results (2026-10-01)
+
+Linux x86_64, RTX 4060 Laptop GPU, demo video `2UWdXP.joke1.rep3.take1.Peekaboo_h265.mp4`;
+3.12.3 (system Python) and 3.13.15 (uv-managed), same lock.
+
+| Pipeline | Annotations | 3.12 run vs 3.12 run | 3.12 vs 3.13 |
+|---|---|---|---|
+| speech_recognition | 1 transcript ("Ready, baby girl? Good morning, girl. …") | identical | identical |
+| speaker_diarization | 4 segments | identical | identical |
+| scene_detection | 1 scene | identical | identical |
+| person_tracking | 22 | identical | identical |
+| face_analysis | 0 (finds no faces in this video on either version) | identical | identical |
+| face_openface3_embedding | 1 record | differs: landmarks ≤ 0.095 px, yaw ≤ 0.017, AU intensity ≤ 0.0064 | differs **less**: ≤ 0.040 px, ≤ 0.017, ≤ 0.0045 |
+
+OpenFace's differences are GPU run-to-run nondeterminism, present on 3.12 alone; 3.13 stays
+within it (SC-003). Test suite on 3.13: 1335 passed, 0 failed (CI covers both versions).
+
+Found and fixed on the way: a Triton cache shared between Python versions made
+`speech_recognition` return nothing on 3.12 after a 3.13 run (research R10).
+
+Dev container: the first rebuild after this change recreates `.venv` on 3.13 (its post-create
+`uv sync` follows `.python-version`); model files in `models/` are untouched.
+
+Not run here: Docker image builds (no Docker in the dev container); CI's `docker-build` job and
+the maintainer cover them.

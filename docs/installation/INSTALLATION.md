@@ -6,7 +6,7 @@ VideoAnnotator is a modern video analysis toolkit that uses AI models for compre
 
 ## Prerequisites
 
-- **Python 3.12+** (required)
+- **Python 3.12 or 3.13** (required; 3.13 recommended. Python 3.14 isn't supported yet.)
 - **Git** for cloning repositories
 - **uv** package manager (fast, modern Python dependency management)
 - **CUDA Toolkit 12.4+** (recommended for GPU acceleration)
@@ -357,7 +357,7 @@ VideoAnnotator uses:
 - **FastAPI** - Modern API framework
 - **Hatchling/setuptools** - Modern build backend
 - **Docker** - CPU and GPU containerization
-- **Python 3.12+** - Latest Python with performance improvements
+- **Python 3.12 or 3.13**
 
 ## Dependencies Overview
 

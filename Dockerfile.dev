@@ -42,7 +42,10 @@ WORKDIR /app
 
 # Copy project files explicitly so production images can exclude models/weights,
 # while the dev image intentionally includes them.
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock .python-version ./
+# Ubuntu 24.04 ships Python 3.12; uv installs the version in .python-version (3.13)
+# into the image, so containers don't download it at startup.
+RUN uv python install
 COPY api_server.py ./
 COPY src/ ./src/
 COPY configs/ ./configs/

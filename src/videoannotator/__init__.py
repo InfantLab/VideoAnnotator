@@ -4,8 +4,24 @@ A comprehensive toolkit for video analysis including scene detection,
 person tracking, face analysis, and audio processing.
 """
 
+import os
 import sys
+from pathlib import Path
 from typing import Any
+
+# Triton (used by Whisper's word timestamps on GPU) caches compiled C launchers in
+# ~/.triton/cache without keying them on the Python version, so a launcher built
+# by one interpreter fails in another ("PY_SSIZE_T_CLEAN macro must be defined").
+# With 3.12 and 3.13 both supported, keep one cache per Python version.
+os.environ.setdefault(
+    "TRITON_CACHE_DIR",
+    str(
+        Path.home()
+        / ".triton"
+        / "cache"
+        / f"py{sys.version_info.major}.{sys.version_info.minor}"
+    ),
+)
 
 from .version import (
     __author__,

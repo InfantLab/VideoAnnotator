@@ -65,6 +65,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("VideoAnnotator API server starting up...", extra={"event": "startup"})
 
+    from ..version import warn_if_unsupported_python
+
+    warn_if_unsupported_python()
+
     # Initialize security (API keys, CORS, authentication)
     try:
         from .startup import initialize_security

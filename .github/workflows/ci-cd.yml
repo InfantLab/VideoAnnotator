@@ -19,7 +19,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.12"]
+        python-version: ["3.12", "3.13"]
+    env:
+      # Otherwise uv follows .python-version (3.13) and the 3.12 jobs test 3.13.
+      UV_PYTHON: ${{ matrix.python-version }}
 
     steps:
       - uses: actions/checkout@v4
@@ -56,15 +59,17 @@ jobs:
           uv sync --dev --all-extras
 
       - name: Lint with ruff
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: |
           uv run ruff check src/videoannotator tests
 
       - name: Check formatting with ruff
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: |
           uv run ruff format --check src/videoannotator tests
 
       - name: Type check with mypy
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: |
           uv run mypy src/videoannotator
 
@@ -126,7 +131,7 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -163,7 +168,7 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -245,7 +250,7 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Install build dependencies
         run: |

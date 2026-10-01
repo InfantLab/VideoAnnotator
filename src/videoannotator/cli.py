@@ -10,7 +10,7 @@ import uvicorn
 
 from .config_env import API_PORT, MAX_CONCURRENT_JOBS, WORKER_POLL_INTERVAL
 from .validation.emotion_validator import validate_emotion_file
-from .version import __version__
+from .version import __version__, warn_if_unsupported_python
 
 app = typer.Typer(
     name="videoannotator",
@@ -34,6 +34,8 @@ def _default(
     This makes `uv run videoannotator` behave like `uv run videoannotator server`
     with the recommended host and port.
     """
+    warn_if_unsupported_python()
+
     # If a subcommand was invoked, do nothing here and let Typer handle it.
     if ctx.invoked_subcommand is not None:
         return

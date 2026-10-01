@@ -52,7 +52,10 @@ ARG SKIP_TORCH_INSTALL=true
 ARG EXTRAS=""
 
 # Copy project definition and lock file first to leverage Docker cache
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock .python-version ./
+# Ubuntu 24.04 ships Python 3.12; uv installs the version in .python-version (3.13)
+# into the image, so containers don't download it at startup.
+RUN uv python install
 
 # Install dependencies (including torch, via extras opt-in with $EXTRAS)
 # These steps can be skipped at build time for dev containers by setting

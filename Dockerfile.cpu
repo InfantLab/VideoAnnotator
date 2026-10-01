@@ -46,7 +46,10 @@ WORKDIR /app
 ARG EXTRAS=""
 
 # Copy source code explicitly (exclude models/weights)
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock .python-version ./
+# Ubuntu 24.04 ships Python 3.12; uv installs the version in .python-version (3.13)
+# into the image, so containers don't download it at startup.
+RUN uv python install
 COPY api_server.py ./
 COPY src/ ./src/
 COPY configs/ ./configs/

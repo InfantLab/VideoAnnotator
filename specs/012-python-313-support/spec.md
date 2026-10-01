@@ -2,7 +2,7 @@
 
 **Feature Branch**: `1.6-dev` (v1.6.0 development branch)
 **Created**: 2026-10-01
-**Status**: Draft
+**Status**: Implemented 2026-10-01 on `1.6-dev`; Docker image builds and the CI run on both versions pending
 **Input**: User description: "Python 3.13 support (v1.6.0 Phase 1, spec 1 of the dependency audit's sequence). Allow VideoAnnotator to install and run on Python 3.13 while keeping Python 3.12 working: widen requires-python to >=3.12,<3.14 with no other library change. CI runs the test suite on both 3.12 and 3.13; the dev container and the Docker images move to 3.13. Update classifiers, lint and type-check targets, and the install docs. Out of scope: any library upgrade, dropping Python 3.12 (v1.7.0), and Python 3.14 (blocked by TensorFlow until the face-stack spec removes it). Still to verify: speaker_diarization on 3.13 with a Hugging Face token."
 
 **Background**: [`docs/development/dependency_audit_v1.6.0.md`](../../docs/development/dependency_audit_v1.6.0.md)

@@ -3,7 +3,7 @@
 Auto-generated from feature plans by `.specify/scripts/bash/update-agent-context.sh`. Last updated: 2026-08-26
 
 ## Active Technologies
-- Python 3.12 (`requires-python = ">=3.12,<3.13"`), FastAPI, SQLAlchemy, Pydantic, Typer/Click (core — stays required with no extras installed)
+- Python 3.12 and 3.13 (`requires-python = ">=3.12,<3.14"`; `.python-version` = 3.13, the dev/Docker default), FastAPI, SQLAlchemy, Pydantic, Typer/Click (core — stays required with no extras installed)
 - Per-pipeline extras (torch, ultralytics, pyannote.audio, transformers, deepface, open-clip-torch, openai-whisper, etc.) — being moved from required dependencies to `[project.optional-dependencies]` groups (`face`, `face-laion`, `face-openface3`, `audio`, `audio-laion`, `scene`, `person`, `all`) as of 004-extras-based-install
 - SQLite/SQLAlchemy for job/pipeline state; local filesystem model cache (HF/torch cache dirs)
 - New `extras_install_jobs` table (005-pipeline-extras-install) tracks admin-triggered, in-app
@@ -41,7 +41,7 @@ cd viewer && bun run lint && bun run test:run  # viewer lint + unit tests
 ```
 
 ## Code Style
-Python 3.12, ruff-enforced (line-length 88, see `[tool.ruff]` in `pyproject.toml` for the
+Python 3.12+ syntax (ruff/mypy target 3.12, the oldest supported), ruff-enforced (line-length 88, see `[tool.ruff]` in `pyproject.toml` for the
 per-file-ignore exceptions). Follow standard conventions; no comments explaining *what* code does,
 only non-obvious *why*.
 
@@ -57,7 +57,7 @@ against it.
 <!-- SPECKIT END -->
 
 ## Recent Changes
-- 012-python-313-support (planned): `requires-python` widens to `>=3.12,<3.14`; CI tests both;
+- 012-python-313-support: `requires-python` widens to `>=3.12,<3.14`; CI tests both;
   `.python-version` makes 3.13 the dev/Docker default; ruff/mypy targets stay at 3.12 (oldest
   supported).
 - Post-005 follow-up: added `GET /api/v1/auth/me` (any authenticated caller can check its own

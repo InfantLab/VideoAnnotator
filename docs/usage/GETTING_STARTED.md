@@ -4,7 +4,7 @@ This guide helps you get up and running with VideoAnnotator using Docker (recomm
 
 ## Prerequisites
 
-- **Python 3.12+** (required)
+- **Python 3.12 or 3.13** (required; 3.13 recommended)
 - **uv** package manager (fast, modern dependency management)
 - **Git** (for version control)
 - Optional: **CUDA-compatible GPU** for faster processing

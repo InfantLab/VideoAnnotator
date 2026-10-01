@@ -1,6 +1,13 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.0.0 → 1.0.1 (2026-10-01)
+Bump rationale: PATCH. Engineering Standards' CI line now names Python 3.12 and
+3.13 as the supported versions, as the line itself anticipated ("3.13 added when
+upstream deps allow"); spec 012-python-313-support. No principle changed.
+Templates requiring updates: none.
+
+Previous report (1.0.0):
 Version change: (none) → 1.0.0
 Bump rationale: First ratification. Replaces the unfilled boilerplate template
 with concrete principles derived from the v1.4.2 (JOSS) project state and the
@@ -142,7 +149,7 @@ landing on `master`.
   CLI/API surface MUST ship with tests.
 - **Continuous integration.** GitHub Actions runs the full test suite on
   Ubuntu, Windows, and macOS against the supported Python versions (currently
-  3.12; 3.13 added when upstream deps allow). Ruff, mypy, and Trivy MUST pass
+  3.12 and 3.13). Ruff, mypy, and Trivy MUST pass
   on `master`.
 - **Type safety.** Public APIs (`BasePipeline` subclasses, FastAPI handlers,
   CLI command signatures, registry helpers) are fully type-annotated and pass
@@ -245,4 +252,4 @@ start of each minor-version planning cycle (e.g. when drafting
 practice, either the practice is corrected or the principle is amended; the
 gap is not allowed to persist.
 
-**Version**: 1.0.0 | **Ratified**: 2026-05-06 | **Last Amended**: 2026-05-06
+**Version**: 1.0.1 | **Ratified**: 2026-05-06 | **Last Amended**: 2026-10-01

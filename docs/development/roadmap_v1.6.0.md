@@ -302,6 +302,11 @@ half-built page.
 - [ ] A structural pass along the one path users take: install → add videos → run → review →
       export. Anything off that path moves or goes. A Playwright "first-time user" run on a clean
       machine files each point of friction as an issue.
+- [ ] **A pipeline that fails must say so.** `speech_recognition` catches errors in transcription,
+      logs them only to the pipeline log, and returns no annotations, so the job reports the
+      pipeline as completed with an empty transcript (found 2026-10-01 through a Triton cache
+      error). Raise instead, so the job shows the pipeline as failed with its error; check the
+      other pipelines for the same pattern.
 - [ ] `videoannotator process <video>` is listed in `--help` but only prints "Direct processing
       is not yet implemented" (found 2026-10-01). Implement it on the shared job-execution path,
       or remove it.

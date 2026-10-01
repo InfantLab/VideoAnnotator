@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Python 3.13 support** (spec 012). VideoAnnotator now installs and runs on Python 3.12 and 3.13;
+  3.13 is the default for the dev container and the Docker images. No library version changed:
+  on 3.13 the install adds only backports of standard-library audio modules that 3.13 removed.
+  Every pipeline was checked on a real video: identical results on both versions, except
+  OpenFace 3, whose GPU results vary slightly from run to run on either version (3.13 stayed
+  within that variation). Python
+  3.12 stays supported through v1.6.x and is planned to be dropped in v1.7.0. Python 3.14 waits
+  for TensorFlow, which the planned replacement of `face_analysis` removes.
+- The CLI and server log a warning when started on an unsupported Python. pip and `uv sync`
+  refuse unsupported versions, but `uv pip install .` from a checkout doesn't check.
+- `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
+  the outputs with another (for Python and library upgrades).
+
+### Fixed
+
+- **Speech recognition could return an empty transcript after another Python version had run on
+  the same machine.** Triton, which Whisper uses for word timestamps on GPU, caches compiled
+  launchers in `~/.triton/cache` without keying them on the Python version; a launcher built by
+  3.13 then fails under 3.12 (`PY_SSIZE_T_CLEAN macro must be defined`), and the pipeline
+  reported "completed" with no transcript. VideoAnnotator now uses one Triton cache per Python
+  version (`~/.triton/cache/py3.12`, `py3.13`) unless `TRITON_CACHE_DIR` is set.
+
 ### Planned
 
 - Queue position display for pending jobs

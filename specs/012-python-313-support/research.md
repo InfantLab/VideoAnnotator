@@ -102,3 +102,18 @@ Evidence base: the trial in [`dependency_audit_v1.6.0.md`](../../docs/developmen
 - **Packages whose classifiers stop at 3.12** (`open-clip-torch`, `tf-keras`, `webvtt-py`): all
   install and work on 3.13 in the trial; classifiers lag releases.
 - **Free-threaded 3.13 (`3.13t`)**: out of scope; standard builds only.
+
+## R10. Triton's compiled-launcher cache (found during implementation)
+
+- **Finding**: after a 3.13 run on the same machine, `speech_recognition` on 3.12 returned no
+  transcript. Whisper's word timestamps run a Triton kernel on GPU; Triton caches compiled C
+  launchers in `~/.triton/cache` without keying them on the Python version, and a launcher built
+  by 3.13 fails to load in 3.12 (`SystemError: PY_SSIZE_T_CLEAN macro must be defined for '#'
+  formats`). With a fresh cache, 3.12 transcribes correctly.
+- **Decision**: `videoannotator/__init__.py` sets `TRITON_CACHE_DIR` to
+  `~/.triton/cache/py<major>.<minor>` unless the user has set it. Verified: 3.12 → 3.13 → 3.12 on
+  one machine all transcribe correctly.
+- **Why it matters here**: this spec is what makes two Python versions on one machine normal
+  (CI images, the dev container's switch to 3.13, users trying both).
+- **Related, out of scope**: the pipeline turned the exception into "completed, no annotations"
+  instead of a failure. Recorded on the v1.6.0 roadmap (Phase 2).
