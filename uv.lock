@@ -1461,6 +1461,25 @@ wheels = [
 ]
 
 [[package]]
+name = "lap"
+version = "0.5.13"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f1/ae/5cc637c2e5158b7dcf1a9744d33b11dfc21d9309931169402f573e4d1ee3/lap-0.5.13.tar.gz", hash = "sha256:9eff7169e3ca452995af0493cc20d35452c4bfd06122c36c06457119ffbd411b", size = 1537351, upload-time = "2026-02-23T12:37:24.789Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/95/96bd702a260ddcdeef35a1d99a510b1f0cd51eab40f749daa728a2f66728/lap-0.5.13-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:77bbb235de0a416c77aae07aa2bebed4846ed741002da7721059279bd130ed4d", size = 1480314, upload-time = "2026-02-23T12:36:20.979Z" },
+    { url = "https://files.pythonhosted.org/packages/6c/c8/c16081ffcc8bf9f123940af8b74bfc8a1fac4f36b3cd7e9b440fdecd9fbc/lap-0.5.13-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:8a793935e238f5430f764c38a1757331e86487738e5c7e8b82c374860e5a1074", size = 1478096, upload-time = "2026-02-23T12:36:22.419Z" },
+    { url = "https://files.pythonhosted.org/packages/92/0a/8d8395c8ea22a665ab4150fb2bcb97cc1f987843a1d316aaabc2d71044dd/lap-0.5.13-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:226c24acbc1acd22c76bac54525174577571d7e71e70845d0c43dd664332e867", size = 1732084, upload-time = "2026-02-23T12:36:24.003Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/82/63fd09e866677f4263372785b23908efcce8da39bcc72fcced51e606bbe2/lap-0.5.13-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:355600a369281c830f900a9a215f8a8729c89ce3f2bf75e1943386fe3d8d1c88", size = 1725964, upload-time = "2026-02-23T12:36:25.339Z" },
+    { url = "https://files.pythonhosted.org/packages/4c/d3/82678703ab1b5a8773905e982244624b14ad004d8d3068d466c56bde0a31/lap-0.5.13-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:0a099030000709e5acfc85b1f3a464a2b7a61abc50e51ab0235f3058d9f26abb", size = 1724642, upload-time = "2026-02-23T12:36:26.759Z" },
+    { url = "https://files.pythonhosted.org/packages/89/f9/e1b61bd002ed6d37e71c355e102ca626f5c50218e769d3105215733b6c0d/lap-0.5.13-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:8687037b179a4a5014f69d26ab917fd2129bbe5894b0768e0a18a60e242794da", size = 1735247, upload-time = "2026-02-23T12:36:28.16Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/c7/cfd1b2274c00aba8513c0fa385c7e71790a9f44d7d23f5cdbcd94a895c06/lap-0.5.13-cp312-cp312-win_amd64.whl", hash = "sha256:eb9fc5d7977cb73cc6e69ee704b5329d18d0b1e1da27f4a6c848259b8148f39a", size = 1476908, upload-time = "2026-02-23T12:36:29.449Z" },
+    { url = "https://files.pythonhosted.org/packages/9e/bc/9101b3837c3aad5b0ca84f7fcdb8a75ecc666d8f060e7592a97e55f6da57/lap-0.5.13-cp312-cp312-win_arm64.whl", hash = "sha256:0f96f70d093896f0c61c48ad0b31b88225d310e7f6ab50401ca8fe9f5d5268d4", size = 1465883, upload-time = "2026-02-23T12:36:30.832Z" },
+]
+
+[[package]]
 name = "lark"
 version = "1.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -4159,6 +4178,7 @@ all = [
     { name = "imutils" },
     { name = "jupyter" },
     { name = "jupyterlab" },
+    { name = "lap" },
     { name = "librosa" },
     { name = "mypy" },
     { name = "ollama" },
@@ -4243,6 +4263,7 @@ llm = [
     { name = "opencv-python" },
 ]
 person = [
+    { name = "lap" },
     { name = "opencv-python" },
     { name = "supervision" },
     { name = "torch", version = "2.6.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
@@ -4290,6 +4311,7 @@ requires-dist = [
     { name = "imutils", marker = "extra == 'face'", specifier = ">=0.5.4" },
     { name = "jupyter", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "jupyterlab", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "lap", marker = "extra == 'person'", specifier = ">=0.5.12" },
     { name = "librosa", marker = "extra == 'audio'", specifier = ">=0.10.0" },
     { name = "librosa", marker = "extra == 'audio-laion'", specifier = ">=0.10.0" },
     { name = "matplotlib", specifier = ">=3.9.2" },

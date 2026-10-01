@@ -194,6 +194,9 @@ person = [
     # explicitly here too; see `face` group's comment re: opencv-python 5.0.
     "opencv-python>=4.11.0.86,<5.0",
     "ultralytics>=8.3.0",
+    # ByteTrack (person_tracking's tracker) imports `lap`; ultralytics doesn't
+    # declare it and pip-installs it at runtime instead, which fails offline.
+    "lap>=0.5.12",
     "supervision>=0.16.0",
 ]
 llm = [
