@@ -240,7 +240,7 @@ VideoAnnotator generates structured JSON files with comprehensive metadata:
 | -------------------- | ---------------------------------------------------------- | ------------------------------- | -------- |
 | **scene_detection**  | Scene boundary detection + CLIP environment classification | `*_scene_detection.json`        | ✅ Ready |
 | **person_tracking**  | YOLO11 + ByteTrack multi-person pose tracking              | `*_person_tracking.json`        | ✅ Ready |
-| **face_analysis**    | OpenFace 3.0 + LAION facial behavior analysis              | `*_laion_face_annotations.json` | ✅ Ready |
+| **face_analysis**    | DeepFace face detection and emotion                        | `*_face_detections.json`       | ✅ Ready |
 | **audio_processing** | Whisper speech recognition + pyannote diarization          | `*_speech_recognition.vtt`      | ✅ Ready |
 
 All pipelines are fully integrated with the API server and process through the background job system!

@@ -22,8 +22,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 
+### Removed
+
+- **The LAION pipelines** (spec 014, from the v1.6.0 pipeline review): `laion_voice` (16–32 GB of
+  models, unmaintained upstream, trained on adult acted speech) and `face_laion_clip`
+  (unmaintained upstream, unvalidated on infants), with the `audio-laion` and `face-laion`
+  extras. `transformers` is no longer installed by any extra. A job naming either pipeline is
+  rejected with the reason and an alternative (HTTP 422, `PIPELINE_REMOVED`). They can return as
+  v1.7.0 plugins.
+- `configs/laion_pipelines.yaml` and `examples/test_laion_voice_pipeline.py`.
+
+### Deprecated
+
+- **`audio_processing`**: it duplicates `speech_recognition` + `speaker_diarization`. It still runs
+  and gives the same output, but it's no longer listed, job submissions using it get a
+  `warnings` entry, and it will be removed in v1.7.0. The `audio_processing:` sections of the
+  bundled configs had no effect and are gone.
+
 ### Changed
 
+- **Short family names are predictable** (spec 014): `audio` and `face` resolve to the family's
+  declared default (`family_default` in pipeline metadata), not to whichever "stable" pipeline
+  sorted first. Before, `audio` meant the 16–32 GB LAION voice model whenever its extra was
+  installed, and `speaker_diarization` otherwise; it now means `audio_processing` (speech +
+  diarization) until v1.7.0. `face` means `face_analysis`.
+- Job responses have a `warnings` list (empty unless something deprecated was used).
 - **Core install is 82% smaller** (spec 013): 40 packages and 135 MB instead of 73 and 746 MB.
   Removed from core because nothing in VideoAnnotator imports them: `moviepy`, `matplotlib`,
   `tqdm`, `openpyxl`, `pandas`, `imageio`, `imageio-ffmpeg`, `av`, `alembic`, `rich`,

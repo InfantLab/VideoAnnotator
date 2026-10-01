@@ -38,10 +38,8 @@ from . import extras_install
 # installed yet, since groups share it). Labelled "approx." wherever shown.
 _EXTRA_OWN_MB: dict[str, int] = {
     "face": 650,  # deepface + tensorflow/tf-keras + opencv
-    "face-laion": 750,  # deepface/tensorflow + transformers + torchvision
     "face-openface3": 120,
     "audio": 300,  # openai-whisper, librosa, pyannote.*, torchaudio
-    "audio-laion": 200,  # transformers, librosa
     "scene": 120,  # open-clip, scenedetect, opencv
     "person": 200,  # ultralytics, supervision, torchvision, opencv
     "llm": 1,  # the ollama client; models are pulled into Ollama separately

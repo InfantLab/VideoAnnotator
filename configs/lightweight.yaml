@@ -44,22 +44,10 @@ face_analysis:
     emotion_model: "VGG-Face" # Lightweight model
     detector_backend: "opencv" # Fastest detector
 
-# Audio Processing Pipeline
-audio_processing:
-  speech_recognition:
-    model: "openai/whisper-tiny" # Smallest model
-    language: "en" # Fixed language
-
-  audio_classification:
-    confidence_threshold: 0.6 # Higher threshold
-
-  features:
-    sample_rate: 8000 # Lower sample rate
-    hop_length: 1024 # Lower resolution
-    n_mels: 64 # Fewer mel bins
-
-  segment_length: 60.0 # Longer segments
-  overlap: 0.1 # Minimal overlap
+# Audio: configure speech_recognition and speaker_diarization as their own sections
+# (keyed by pipeline name). The old `audio_processing` section here had no effect (its
+# settings were ignored or equal to the defaults); that pipeline is deprecated in v1.6.0
+# and removed in v1.7.0.
 
 # Global Settings
 global:

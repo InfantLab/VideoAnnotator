@@ -22,7 +22,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ..registry.pipeline_loader import import_error_for
+from ..registry.pipeline_loader import (
+    deprecation_message,
+    import_error_for,
+    removed_pipeline_message,
+)
+from ..registry.pipeline_registry import get_registry
 from ..storage.base import StorageBackend
 from .types import BatchJob, JobStatus, PipelineResult
 
@@ -145,6 +150,9 @@ def _resolve_pipelines(job: BatchJob, pipeline_classes: dict[str, type]) -> list
 
 
 def _unavailable_reason(pipeline_name: str) -> str:
+    removed = removed_pipeline_message(pipeline_name)
+    if removed:
+        return removed
     reason = import_error_for(pipeline_name)
     if reason:
         return f"Pipeline not available on this server: {reason}"
@@ -176,6 +184,11 @@ def _run_one_pipeline(
             pipeline_name=pipeline_name, status=JobStatus.COMPLETED
         )
         return
+
+    meta = get_registry().get(pipeline_name)
+    deprecation = deprecation_message(meta) if meta else None
+    if deprecation:
+        logger.warning(f"Job {job.job_id}: {deprecation}")
 
     start_time = datetime.now()
     pipeline_config = job.config.get(pipeline_name, {}) if job.config else {}

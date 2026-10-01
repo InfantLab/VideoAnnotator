@@ -93,13 +93,12 @@ install that matches what you're doing:
 | Run only speech/diarization            | `uv sync --extra audio`                         | torch, torchaudio, librosa, openai-whisper, pyannote.audio |
 | Mix a few families                     | `uv sync --extra scene --extra person`          | union of the groups listed |
 | Run a slim API server (no local pipelines) | `uv sync`                                   | core only — useful if pipelines run on separate workers/nodes |
-| Reproduce the old "everything installed" behaviour | `uv sync --all-extras` (or `uv sync --extra all`) | every pipeline family, dev tools, and annotation extras |
+| Reproduce the old "everything installed" behaviour | `uv sync --all-extras` (or `uv sync --extra all`) | every pipeline family |
 
-Available extras groups: `face`, `face-laion`, `face-openface3`, `audio`,
-`audio-laion`, `scene`, `person`, plus the meta-group `all`. `face-laion`,
-`face-openface3`, and `audio-laion` are **not** included by a plain
-`--extra face`/`--extra audio` — they're separate, deliberately opt-in
-groups (see "LAION / OpenFace3 pipelines" below). `videoannotator pipelines
+Available extras groups: `face`, `face-openface3`, `audio`, `scene`, `person`,
+`llm`, plus the meta-group `all`. `face-openface3` is **not** included by a plain
+`--extra face`: it's a separate, deliberately opt-in group (see "OpenFace 3"
+below). `videoannotator pipelines
 --all` shows every pipeline the registry knows about, including ones your
 current install doesn't have the extras for (each with an install hint).
 
@@ -119,28 +118,27 @@ uv run videoannotator setup-db --admin-email you@example.com --admin-username yo
 
 > The `setup-db` command is idempotent. Re-run it after pulling new schema changes or use `--force` when you want to drop and recreate tables. Pass `--skip-admin` if you prefer to manage API keys yourself later with `videoannotator generate-token`.
 
-#### LAION / OpenFace3 pipelines (separate opt-in extras groups)
+#### OpenFace 3 (separate opt-in extras group)
 
-`face-laion` (LAION CLIP face embeddings), `audio-laion` (LAION empathic
-voice), and `face-openface3` (OpenFace3 embeddings) are separate extras
-groups from `face`/`audio` because they pull in different, heavier
-dependency sets (`transformers`, `huggingface-hub`, or `openface-test`).
-They're included in `--all-extras`/`--extra all`, but not in a plain
-`--extra face` or `--extra audio`. If you're upgrading from a v1.4.x
-install that used a LAION or OpenFace3 pipeline, see "Upgrading from
-v1.4.x" below.
+`face-openface3` (landmarks, action units, gaze) is separate from `face` because it
+pulls in a different, heavier dependency set (`openface-test`, torch). It's included
+in `--all-extras`/`--extra all`, but not in a plain `--extra face`. **OpenFace 3.0 is
+licensed for academic or non-profit, non-commercial research use only.**
+
+The LAION pipelines (`face_laion_clip`, `laion_voice`) and their extras groups
+(`face-laion`, `audio-laion`) were removed in v1.6.0; a job naming one gets a message
+saying so and what to use instead.
 
 ### Upgrading from v1.4.x
 
 v1.4.x installed every pipeline by default. If your config references
-`face_laion_clip`, `laion_voice`, or `face_openface3_embedding` and you
-install anything less than `--all-extras`, job submission returns a clear
-message rather than a crash:
+`face_openface3_embedding` and you install anything less than `--all-extras`, job
+submission returns a clear message rather than a crash:
 
 ```
-Error: pipeline 'face_laion_clip' is not available in this install.
-As of v1.5.0, pipelines requiring the 'face-laion' extras group are no longer installed by default.
-Install it with: pip install videoannotator[face-laion]
+Error: pipeline 'face_openface3_embedding' is not available in this install.
+As of v1.5.0, pipelines requiring the 'face-openface3' extras group are no longer installed by default.
+Install it with: pip install videoannotator[face-openface3]
 ```
 
 Run `uv sync --all-extras` to restore full v1.4.x-equivalent behaviour, or
@@ -230,7 +228,7 @@ uv run videoannotator server --host 0.0.0.0 --port 18011
 ```
 
 If you installed a torch-backed extras group (`scene`, `person`, `audio`,
-`face-laion`, `audio-laion`), you can additionally confirm the GPU/CPU
+`face-openface3`), you can additionally confirm the GPU/CPU
 build:
 
 ```bash
@@ -363,13 +361,11 @@ VideoAnnotator uses:
 
 | Extras group      | Tools                          | Purpose                             | Needs torch |
 | ------------------ | ------------------------------ | ------------------------------------ | ----------- |
-| `person`           | YOLO11, ByteTrack, supervision | Person detection & tracking          | ✅          |
+| `person`           | YOLO11, ByteTrack              | Person detection & tracking          | ✅          |
 | `scene`            | PySceneDetect, OpenCLIP        | Scene segmentation & classification  | ✅          |
 | `face`             | DeepFace                       | Face detection, emotion, age/gender  | ❌          |
-| `face-laion`       | LAION CLIP face embeddings     | Semantic face embeddings             | ✅          |
-| `face-openface3`   | OpenFace 3.0                   | 512-D face embeddings                | ✅ (lazy)   |
+| `face-openface3`   | OpenFace 3.0                   | Landmarks, action units, gaze        | ✅          |
 | `audio`            | Whisper, pyannote.audio        | Speech transcription & diarization   | ✅          |
-| `audio-laion`      | LAION empathic voice           | Nuanced audio emotion analysis       | ✅          |
 | *(core, always on)* | FastAPI, uvicorn, SQLAlchemy   | REST API server, job/storage state   | N/A         |
 
 `face` is the only pipeline family that doesn't need torch at all — see the

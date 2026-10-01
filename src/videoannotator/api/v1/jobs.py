@@ -18,7 +18,11 @@ from sqlalchemy.orm import Session
 from ...batch.types import BatchJob, JobStatus
 from ...database.crud import SavedDatasetCRUD
 from ...database.database import get_db
-from ...registry.pipeline_loader import extras_available
+from ...registry.pipeline_loader import (
+    deprecation_message,
+    extras_available,
+    removed_pipeline_message,
+)
 from ...registry.pipeline_registry import get_registry
 from ...storage.base import StorageBackend
 from ...storage.manager import get_storage_provider
@@ -32,6 +36,7 @@ from .exceptions import (
     JobAlreadyCompletedException,
     JobNotFoundException,
     JobNotRetryableException,
+    PipelineRemovedException,
     PipelineUnavailableException,
 )
 
@@ -150,6 +155,22 @@ class JobResponse(BaseModel):
         default=None,
         description="Saved dataset (spec 007) this job was submitted from, if any",
     )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Non-fatal notices about the submission, e.g. a deprecated pipeline (spec 014)",
+    )
+
+
+def deprecation_warnings(selected_pipelines: list[str] | None) -> list[str]:
+    """Warnings for any deprecated pipelines among `selected_pipelines`."""
+    registry = get_registry()
+    messages = []
+    for name in selected_pipelines or []:
+        meta = registry.get(name)
+        message = deprecation_message(meta) if meta else None
+        if message:
+            messages.append(message)
+    return messages
 
 
 class JobListResponse(BaseModel):
@@ -213,6 +234,8 @@ def validate_pipeline_selection(
     registry = get_registry()
     registry.load()
     for pipeline_name in selected_pipelines:
+        if removed_pipeline_message(pipeline_name):
+            raise PipelineRemovedException(pipeline_name)
         meta = registry.get(pipeline_name)
         if meta is not None and not extras_available(meta.requires_extras):
             raise PipelineUnavailableException(pipeline_name, meta.requires_extras)
@@ -493,12 +516,14 @@ async def submit_job(
             batch_id=batch_job.batch_id,
             batch_name=batch_job.batch_name,
             dataset_id=batch_job.dataset_id,
+            warnings=deprecation_warnings(batch_job.selected_pipelines),
         )
 
     except (
         InvalidRequestException,
         InvalidConfigException,
         APIError,
+        PipelineRemovedException,
         PipelineUnavailableException,
     ):
         # Let validation errors and other custom exceptions propagate

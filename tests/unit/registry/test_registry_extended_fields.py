@@ -8,14 +8,14 @@ def test_registry_loads_with_extended_fields():
     metas = {m.name: m for m in reg.list()}
     # Ensure new face pipelines present
     assert "face_openface3_embedding" in metas
-    assert "face_laion_clip" in metas
+    assert "face_analysis" in metas
 
-    face_meta = metas["face_laion_clip"]
+    face_meta = metas["face_analysis"]
     assert "emotion-recognition" in face_meta.tasks
     assert face_meta.pipeline_family == "face"
-    assert face_meta.variant == "laion-clip-face"
+    assert face_meta.variant == "deepface"
     # Outputs still intact
-    assert any(o.format == "JSON" for o in face_meta.outputs)
+    assert any(o.format == "COCO" for o in face_meta.outputs)
 
 
 def test_vocabulary_is_superset():

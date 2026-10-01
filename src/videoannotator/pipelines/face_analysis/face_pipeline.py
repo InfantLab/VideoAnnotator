@@ -35,7 +35,7 @@ def _disable_tensorflow_gpu() -> None:
     the venv). These two pins can never both be satisfied in one venv, so
     TensorFlow's GPU ops fail at runtime (`No DNN in stream executor`) instead
     of erroring at install time. Forcing TF onto CPU sidesteps that entirely;
-    torch itself (scene/person/face-laion's CLIP/YOLO models) is untouched —
+    torch itself (scene/person's CLIP/YOLO models) is untouched —
     this only calls TensorFlow's own device-visibility API, not the
     `CUDA_VISIBLE_DEVICES` env var, which both frameworks would otherwise read.
     Set `VIDEOANNOTATOR_DEEPFACE_GPU=1` to skip this if you've resolved the

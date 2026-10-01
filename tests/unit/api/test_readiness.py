@@ -446,7 +446,9 @@ class TestHuggingFaceToken:
         registry = get_registry()
         registry.load()
         for name in ("speaker_diarization", "audio_processing"):
-            meta = next(m for m in registry.list() if m.name == name)
+            meta = next(
+                m for m in registry.list(include_deprecated=True) if m.name == name
+            )
             [secret] = [r for r in meta.requires_setup if r.kind == "secret"]
             assert secret.name == "HUGGINGFACE_TOKEN"
             assert "HF_AUTH_TOKEN" in secret.aliases

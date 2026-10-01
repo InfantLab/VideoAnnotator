@@ -211,12 +211,11 @@ Additional Specs:
 |----------|-----------|---------|-----------|
 | **Person Tracking & Pose** | YOLO11 + ByteTrack | COCO bounding boxes, 17-point pose keypoints, persistent person IDs | beta |
 
-### Face Analysis (3 pipelines)
+### Face Analysis (2 pipelines)
 
 | Pipeline | Technology | Outputs | Stability |
 |----------|-----------|---------|-----------|
 | **Face Analysis** | DeepFace (TensorFlow/OpenCV) | Emotion labels, age/gender, action units | stable |
-| **LAION CLIP Face Embedding** | LAION CLIP-derived model | 512-D semantic embeddings, zero-shot attribute & emotion tagging | experimental |
 | **OpenFace3 Face Embedding** | OpenFace 3.0 (ONNX/PyTorch) | 512-D face embeddings for recognition or clustering | experimental |
 
 ### Scene Detection (1 pipeline)
@@ -225,14 +224,13 @@ Additional Specs:
 |----------|-----------|---------|-----------|
 | **Scene Detection** | PySceneDetect + CLIP | Scene boundaries, environment classification, temporal segmentation | beta |
 
-### Audio Processing (4 pipelines + 1 combined)
+### Audio Processing (2 pipelines)
 
 | Pipeline | Technology | Outputs | Stability |
 |----------|-----------|---------|-----------|
 | **Speech Recognition** | OpenAI Whisper | WebVTT transcripts with word-level timestamps | stable |
 | **Speaker Diarization** | pyannote.audio | RTTM speaker turns with timestamps | stable |
-| **Audio Processing** | Whisper + pyannote (combined) | WebVTT transcripts + RTTM speaker turns | beta |
-| **LAION Empathic Voice** | LAION Empathic Insight + Whisper embeddings | Emotion segments, empathic scores, emotion timeline | stable |
+| **Audio Processing** | Whisper + pyannote (combined) | **Deprecated in v1.6.0** (removed in v1.7.0): select Speech Recognition and Speaker Diarization instead | deprecated |
 | **Voice Emotion Baseline** | Spectral CNN over Whisper embeddings | _(planned — not yet implemented)_ | experimental |
 
 ## 💡 Why VideoAnnotator?
@@ -376,10 +374,9 @@ docker run -p 18011:18011 --gpus all videoannotator:dev
 
 - **FastAPI** - High-performance REST API with automatic documentation
 - **YOLO11** - State-of-the-art object detection and pose estimation
-- **DeepFace / OpenFace 3.0 / LAION CLIP** - Facial analysis, embeddings, and emotion recognition
+- **DeepFace / OpenFace 3.0** - Facial analysis, action units, gaze and emotion recognition
 - **Whisper** - Robust speech recognition and transcription
 - **pyannote.audio** - Speaker diarization and segmentation
-- **LAION Empathic Insight** - Voice emotion analysis from Whisper embeddings
 - **PySceneDetect + CLIP** - Scene boundary detection and environment classification
 - **PyTorch** - GPU-accelerated machine learning inference
 
@@ -453,7 +450,7 @@ Built with and grateful to:
 - **[YOLO & Ultralytics](https://ultralytics.com/)** - Object detection, tracking, and pose estimation
 - **[DeepFace](https://github.com/serengil/deepface)** - Face detection and emotion recognition
 - **[OpenFace 3.0](https://github.com/CMU-MultiComp-Lab/OpenFace-3.0)** - Facial behavior analysis and embeddings
-- **[LAION](https://laion.ai/)** - CLIP face embeddings and empathic voice emotion models
+- **[LAION](https://laion.ai/)** - LAION-2B, the dataset the scene-labelling CLIP weights were trained on
 - **[OpenAI Whisper](https://github.com/openai/whisper)** - Speech recognition
 - **[pyannote.audio](https://github.com/pyannote/pyannote-audio)** - Speaker diarization
 - **[PySceneDetect](https://www.scenedetect.com/)** - Scene boundary detection

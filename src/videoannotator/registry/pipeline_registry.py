@@ -92,6 +92,14 @@ class WeightSpec:
 
 
 @dataclass
+class DeprecationInfo:
+    """Why a pipeline is deprecated, when it goes, and what to use instead."""
+
+    removal_version: str
+    replacement: list[str] = field(default_factory=list)
+
+
+@dataclass
 class PipelineMetadata:
     """Structured metadata describing a single pipeline."""
 
@@ -120,6 +128,10 @@ class PipelineMetadata:
     # spec 011: preconditions beyond packages, and first-run model downloads.
     requires_setup: list[SetupRequirement] = field(default_factory=list)
     weights: list[WeightSpec] = field(default_factory=list)
+    # spec 014: the pipeline its family's short name (e.g. 'audio') resolves to.
+    family_default: bool = False
+    # spec 014: still runs (existing configs keep working) but isn't listed.
+    deprecated: DeprecationInfo | None = None
 
 
 class PipelineRegistry:
@@ -295,19 +307,44 @@ class PipelineRegistry:
             module_path=module_path,
             requires_setup=requires_setup,
             weights=weights,
+            family_default=bool(raw.get("family_default", False)),
+            deprecated=_parse_deprecated(raw.get("deprecated"), source.name),
         )
 
-    def list(self) -> builtins.list[PipelineMetadata]:
-        """Return all loaded pipeline metadata entries."""
+    def list(self, include_deprecated: bool = False) -> builtins.list[PipelineMetadata]:
+        """Return loaded pipeline metadata entries.
+
+        Deprecated pipelines are left out unless asked for: they still run (the
+        loader and validator ask for them) but nothing should offer them.
+        """
         if not self._loaded:
             self.load()
-        return list(self._pipelines.values())
+        return [
+            m
+            for m in self._pipelines.values()
+            if include_deprecated or m.deprecated is None
+        ]
 
     def get(self, name: str) -> PipelineMetadata | None:
         """Return the metadata for a pipeline by name if available."""
         if not self._loaded:
             self.load()
         return self._pipelines.get(name)
+
+
+def _parse_deprecated(raw: Any, source_name: str) -> DeprecationInfo | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict) or not raw.get("removal_version"):
+        LOGGER.warning("Metadata %s has an invalid deprecated entry", source_name)
+        return None
+    replacement = raw.get("replacement") or []
+    return DeprecationInfo(
+        removal_version=str(raw["removal_version"]),
+        replacement=[str(r) for r in replacement]
+        if isinstance(replacement, list)
+        else [],
+    )
 
 
 # Singleton-style accessor
