@@ -21,6 +21,7 @@ src/videoannotator/
 ├── storage/        # job/annotation storage backends
 └── exporters/      # COCO/RTTM/WebVTT/native-format writers
 viewer/             # Video Annotation Viewer (React/Vite, Bun); built into src/videoannotator/viewer_static/
+                    # viewer conventions, where things go, pitfalls: AGENTS.md §23
 tests/
 ├── unit/ integration/ pipelines/ api/ contract/
 specs/<NNN>-<slug>/  # spec-kit feature specs (spec.md, plan.md, tasks.md, ...)

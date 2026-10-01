@@ -84,9 +84,14 @@ happens from outside either repo.
       throws on any larger file, so a looser substring check claimed it. Detection now classifies
       the whole parsed file by its annotation fields first.
 - [x] One JS package manager (the viewer has both `bun.lock` and `package-lock.json`). Bun; `package-lock.json` removed.
-- [ ] Merge the two `AGENTS.md`/`CLAUDE.md` files, move the viewer's open issues, archive the old
-      repo with a pointer README, and update links in `README.md`, `paper/paper.md` and
-      `CITATION.cff`.
+- [x] Merge the two `AGENTS.md`/`CLAUDE.md` files. The viewer's guidance is `AGENTS.md` §23
+      (corrected for Bun, `127.0.0.1`, the shared version and the contract fixtures); the viewer's
+      `AGENTS.md`, `CLAUDE.md`, Copilot instructions and Claude settings are removed.
+      Left: the viewer's constitution (`viewer/.specify/memory/constitution.md`: faithful annotation
+      display, composable view layers, ...) to fold into `.specify/memory/constitution.md` as an
+      amendment, then drop `viewer/.specify`, `viewer/.claude/skills` and `viewer/.github/prompts`.
+- [ ] Move the viewer's open issues, archive the old repo with a pointer README, and update links
+      in `README.md`, `paper/paper.md` and `CITATION.cff`.
 
 **Viewer bugs found in the v1.5.0 end-to-end run** (2026-09-26), to fix once `viewer/` is in
 this repo:
