@@ -92,6 +92,11 @@ happens from outside either repo.
       amendment, then drop `viewer/.specify`, `viewer/.claude/skills` and `viewer/.github/prompts`.
 - [ ] Move the viewer's open issues, archive the old repo with a pointer README, and update links
       in `README.md`, `paper/paper.md` and `CITATION.cff`.
+      Links done (2026-10-01): `README.md`, `docs/usage/GETTING_STARTED.md`, and the viewer's README,
+      docs, `CONTRIBUTING.md` and `package.json` point here; `viewer/CITATION.cff` (a separate
+      v0.7.0 that no longer exists) removed. `paper/paper.md` and `CITATION.cff` had none. Archives,
+      the frozen viewer changelog and the sent cover letter keep the old links. The old repo has
+      no open issues, so nothing to move. Left: the pointer README and archiving it (outward-facing).
 
 **Viewer bugs found in the v1.5.0 end-to-end run** (2026-09-26), to fix once `viewer/` is in
 this repo:

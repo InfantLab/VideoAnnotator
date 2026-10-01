@@ -5,9 +5,10 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/InfantLab/video-annotation-viewer"
+    "url": "https://github.com/InfantLab/VideoAnnotator",
+    "directory": "viewer"
   },
-  "homepage": "https://github.com/InfantLab/video-annotation-viewer",
+  "homepage": "https://github.com/InfantLab/VideoAnnotator/tree/master/viewer",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

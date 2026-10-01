@@ -143,7 +143,7 @@ curl http://localhost:18011/api/v1/system/health
 
 ## Still Not Working?
 
-Check the [GitHub Issues](https://github.com/InfantLab/video-annotation-viewer/issues) or create a new issue with:
+Check the [GitHub Issues](https://github.com/InfantLab/VideoAnnotator/issues) or create a new issue with:
 - Browser name and version
 - PowerShell test results
 - Browser console errors

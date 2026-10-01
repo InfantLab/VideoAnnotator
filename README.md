@@ -34,9 +34,9 @@ VideoAnnotator provides both **automated processing** and **interactive visualiz
 - REST API for integration with research workflows
 - Supports batch processing and custom configurations
 - Outputs standardized JSON data
-- Bundles **[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)**, served at `/viewer`
+- Includes the **[Video Annotation Viewer](viewer/)**, served at `/viewer`
 
-### 🌐 **[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)** (companion project, bundled here)
+### 🌐 **[Video Annotation Viewer](viewer/)** (in `viewer/`, served at `/viewer`)
 
 **Interactive web-based visualization tool**
 
@@ -50,15 +50,15 @@ VideoAnnotator provides both **automated processing** and **interactive visualiz
   <summary>Running Video Annotation Viewer standalone (without VideoAnnotator)</summary>
 
   ```bash
-  git clone https://github.com/InfantLab/video-annotation-viewer.git
-  cd video-annotation-viewer
-  npm install
-  npm run dev
+  git clone https://github.com/InfantLab/VideoAnnotator.git
+  cd VideoAnnotator/viewer
+  bun install
+  bun run dev
   ```
 
-  Note: Ensure Node and NPM are installed. On macOS with Homebrew: `brew install node`. Open
-  http://localhost:3000 and load your files, or connect it to a VideoAnnotator server via `.env` or
-  the in-app Settings page — see that repo's README for details.
+  Needs [Bun](https://bun.sh). Open http://127.0.0.1:19011 and load your files, or connect it to a
+  VideoAnnotator server in the in-app Settings page; see [`viewer/README.md`](viewer/README.md).
+  (The viewer was a separate repository, `InfantLab/video-annotation-viewer`, until v1.5.0.)
 
   </details>
 
@@ -85,7 +85,7 @@ scripts/start_server.sh
 ```
 
 This syncs dependencies, sets up the local database and an admin API key (prompting for an admin email
-the first time), starts the API server, and — since [Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)
+the first time), starts the API server, and — since [Video Annotation Viewer](viewer/)
 is bundled and served by this same process, not a separate frontend to start — prints a one-click viewer
 login link once the server is actually up. Safe to re-run any time (e.g. after a container/VS Code
 restart). Pass `--background` to keep it running after this terminal closes, or `--help` for all options
@@ -315,7 +315,7 @@ VideoAnnotator produces machine-readable outputs (primarily JSON files and API r
 
 - **Python**: Load JSON into pandas / numpy for analysis (see [examples/](examples/))
 - **R / MATLAB**: Not currently supported with official helper packages, but the JSON outputs can be consumed using standard JSON readers
-- **Visualization**: Bundled [Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer) at `/viewer` for interactive playback + overlays; also runs standalone against output from other tools
+- **Visualization**: Bundled [Video Annotation Viewer](viewer/) at `/viewer` for interactive playback + overlays; also runs standalone against output from other tools
 
 ## 🛠️ Installation Options
 
