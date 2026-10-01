@@ -196,11 +196,6 @@ this repo:
       match on structure (`metadata.pipeline` + `faces`) instead of substrings.
       Fixed (`47cc786`), found by the contract test along with a worse one: `openface3_analysis`
       was taken as person tracking and replaced it (see the contract test item above).
-- [ ] **The viewer's type check checks nothing**: `bunx tsc --noEmit` (the documented check) runs
-      the root `tsconfig.json`, which has `"files": []` and only references the app and node
-      configs, so it passes without compiling anything. `tsc --noEmit -p tsconfig.app.json` finds
-      24 errors in 13 files (2026-10-01), e.g. the OpenAPI `paths` type in `src/api/client.ts` no
-      longer has `/api/v1/jobs`. Fix them, then run that command in CI's `viewer` job.
 - [x] **Results view isn't batch-aware**: opening a video from a batch loses the batch. Show which
       batch and video (n of N) you're on, previous/next between the batch's videos, and a way back
       to the batch page. Overlaps Phase 6's previous/next item; do the navigation here, before
@@ -346,8 +341,13 @@ half-built page.
       (Preset load/save in the job wizard landed in v1.5.0; the Datasets page, saved datasets and
       import/export from spec 007's viewer handoff are what's left.)
 - [ ] Viewer: zero `tsc --noEmit` errors (24 on 2026-09-26), with typechecking in CI.
+      Note (2026-10-01): plain `bunx tsc --noEmit`, the documented check, compiles nothing (the root
+      `tsconfig.json` has `"files": []` and only references); run `-p tsconfig.app.json`. Still 24
+      errors in 13 files, e.g. the OpenAPI `paths` type in `src/api/client.ts` lacks `/api/v1/jobs`.
 - [ ] Viewer: one function decides which pipeline produced a file. Today there are four
       (`merger.ts`, `fileUtils.ts`, and two arrays in `FileUploader.tsx`) and they disagree.
+      Start from `merger.ts`'s `detectJSONStructure` (2026-10-01), which classifies a parsed file by
+      its fields and is covered by the contract test against real outputs.
 - [ ] A structural pass along the one path users take: install → add videos → run → review →
       export. Anything off that path moves or goes. A Playwright "first-time user" run on a clean
       machine files each point of friction as an issue.
