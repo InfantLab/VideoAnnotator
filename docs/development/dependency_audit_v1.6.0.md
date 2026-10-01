@@ -165,11 +165,16 @@ librosa 1.0, transformers 5) need the specs and their tests.
 
 ## Specs this suggests
 
-In order, each one small enough to review:
+In order, each one small enough to review. The pipeline review's recommendations were all accepted
+(2026-10-01).
 
-1. **Python 3.13 and core clean-up**: `requires-python <3.14`; drop unused core dependencies;
-   move numba to `audio`; upgrade the core; tooling and Actions upgrades.
-2. **torch 2.14 + pyannote.audio 4 + cu126**: one change, since each forces the others.
-3. **Drop pipelines** the review drops, with their extras.
-4. **Face stack**: replace or keep `face_analysis` per the review; with it, opencv 5 and TensorFlow.
-5. **Viewer dependencies** (separate audit).
+1. **Python 3.13**: `requires-python <3.14`, CI on 3.12 and 3.13, the dev container and Docker
+   images on 3.13. Nothing else: §7 shows it needs no library change.
+2. **Core clean-up and tooling**: drop unused core dependencies, move numba to `audio`, upgrade the
+   core, pre-commit hooks and GitHub Actions.
+3. **torch 2.14 + pyannote.audio 4 + cu126**: one change, since each forces the others.
+4. **Drop pipelines**: `laion_voice`, `face_laion_clip`, `audio_processing`, with their extras.
+5. **Face stack**: replace `face_analysis`; with it go DeepFace, TensorFlow and tf-keras, and the
+   opencv `<5` cap. This is the path to Python 3.14, so do it before rc1 if Phase 5's benchmark
+   allows, and add the 3.14 CI job with it.
+6. **Viewer dependencies** (separate audit).
