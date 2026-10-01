@@ -75,7 +75,14 @@ happens from outside either repo.
       VS Code tasks for it.
 - [x] The viewer takes VideoAnnotator's version number from v1.6.0: one product, one version, one
       changelog. Standalone mode (drop in files, no server) stays, and is still published.
-- [ ] The TypeScript half of the viewer contract test, deferred in v1.5.0, runs in CI.
+- [x] The TypeScript half of the viewer contract test, deferred in v1.5.0, runs in CI.
+      `viewer/src/test/contract/videoannotator-outputs.test.ts` loads real job outputs
+      (`tests/fixtures/viewer_contract/`) the way the artifacts zip is loaded. It found that
+      `*_openface3_analysis.json` was detected as person tracking and, sorting first in the zip,
+      replaced the real person tracks with OpenFace's face boxes, while `*_openface3_detailed.json`
+      was detected as face analysis. Cause: every detector `JSON.parse`d a 5–15 KB prefix, which
+      throws on any larger file, so a looser substring check claimed it. Detection now classifies
+      the whole parsed file by its annotation fields first.
 - [x] One JS package manager (the viewer has both `bun.lock` and `package-lock.json`). Bun; `package-lock.json` removed.
 - [ ] Merge the two `AGENTS.md`/`CLAUDE.md` files, move the viewer's open issues, archive the old
       repo with a pointer README, and update links in `README.md`, `paper/paper.md` and
