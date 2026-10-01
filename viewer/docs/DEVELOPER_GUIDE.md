@@ -89,15 +89,12 @@ cd video-annotation-viewer
 
 # Install dependencies
 bun install
-# or: npm install
 
 # Start development server
 bun run dev
-# or: npm run dev
 
 # Build for production
 bun run build
-# or: npm run build
 ```
 
 ### Available Scripts

@@ -13,7 +13,6 @@ Thank you for your interest in contributing to Video Annotation Viewer! This doc
 3. Install dependencies:
    ```bash
    bun install
-   # or npm install
    ```
 4. Start the development server:
    ```bash

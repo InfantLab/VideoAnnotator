@@ -102,9 +102,7 @@ Video Annotation Viewer is a sophisticated web-based application designed for re
 ```bash
 git clone https://github.com/InfantLab/video-annotation-viewer.git
 cd video-annotation-viewer
-bun install        # or npm install
-bun run dev         # or npm run dev
-```
+bun installbun run dev```
 This starts the viewer at `http://localhost:19011`. Demo Mode and Load Your Own Data work immediately with no other setup. **Create New Annotation Jobs** additionally requires a running VideoAnnotator server — see [Connect to VideoAnnotator API](#connect-to-videoannotator-api) below.
 
 ### Demo Mode
@@ -191,15 +189,12 @@ cd video-annotation-viewer
 
 # Install dependencies
 bun install
-# or npm install
 
 # Start development server
 bun run dev
-# or npm run dev
 
 # Build for production
 bun run build
-# or npm run build
 ```
 
 ### Project Structure

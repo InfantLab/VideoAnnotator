@@ -28,8 +28,8 @@ API client uses localStorage fallbacks:
 - `videoannotator_api_url`
 - `videoannotator_api_token`
 
-Commands (Bun preferred; npm works too):
-- Dev: `bun run dev` (or `npm run dev`)
+Commands (Bun; the repo has no npm lockfile):
+- Dev: `bun run dev`
 - Build: `bun run build`
 - Lint: `bun run lint`
 - Tests: `bun test` (watch), `bun run test:run`, `bun run test:coverage`, `bun run test:ui`
@@ -154,7 +154,7 @@ git commit -m "feat: T021 - Create useConfigValidation hook with debouncing"
 
 ## Quality Bar
 
-- Lint and typecheck before finishing work: `bun run lint`, `bunx tsc --noEmit` or `npm run typecheck` if present.
+- Lint and typecheck before finishing work: `bun run lint`, `bunx tsc --noEmit`.
 - Add or update tests for code you change.
 - Ensure dev build (`bun run dev`) and production build (`bun run build`) succeed locally when feasible.
 
