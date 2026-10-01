@@ -71,12 +71,12 @@ happens from outside either repo.
       `scripts/build_viewer.sh` (`--check` in CI's `viewer` job, which also runs the viewer's lint
       and unit tests; releases wait for it). The viewer's Playwright and Lighthouse jobs, both
       informational, aren't in CI yet.
-- [ ] One dev command runs the API server and the Vite dev server (API proxied, hot reload), plus
+- [x] One dev command runs the API server and the Vite dev server (API proxied, hot reload), plus
       VS Code tasks for it.
-- [ ] The viewer takes VideoAnnotator's version number from v1.6.0: one product, one version, one
+- [x] The viewer takes VideoAnnotator's version number from v1.6.0: one product, one version, one
       changelog. Standalone mode (drop in files, no server) stays, and is still published.
 - [ ] The TypeScript half of the viewer contract test, deferred in v1.5.0, runs in CI.
-- [ ] One JS package manager (the viewer has both `bun.lock` and `package-lock.json`).
+- [x] One JS package manager (the viewer has both `bun.lock` and `package-lock.json`). Bun; `package-lock.json` removed.
 - [ ] Merge the two `AGENTS.md`/`CLAUDE.md` files, move the viewer's open issues, archive the old
       repo with a pointer README, and update links in `README.md`, `paper/paper.md` and
       `CITATION.cff`.

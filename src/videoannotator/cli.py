@@ -129,6 +129,11 @@ def server(
                 host=host,
                 port=port,
                 reload=reload,
+                # Only the package: by default the reloader watches the whole
+                # working directory, which in a checkout includes .venv,
+                # viewer/node_modules and gigabytes of models (scanning that on a
+                # slow mount left the server hung in disk I/O).
+                reload_dirs=[str(Path(__file__).resolve().parent)] if reload else None,
                 workers=workers
                 if not reload
                 else 1,  # Reload doesn't work with multiple workers

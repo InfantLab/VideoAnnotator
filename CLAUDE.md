@@ -36,6 +36,7 @@ mypy src/videoannotator        # type check
 pre-commit run --all-files    # full pre-commit gate (used on every commit)
 videoannotator pipelines list # CLI: list available pipelines
 videoannotator job submit <video> --pipelines <name>
+bash scripts/dev.sh           # API (auto-reload) + viewer dev server (hot reload) at http://127.0.0.1:19011
 bash scripts/build_viewer.sh  # rebuild viewer/ into viewer_static/ (commit the result; CI checks it)
 cd viewer && bun run lint && bun run test:run  # viewer lint + unit tests
 ```
