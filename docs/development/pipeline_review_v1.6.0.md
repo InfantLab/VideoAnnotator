@@ -44,6 +44,8 @@ pipeline we have today, and the tool that answers it best on infant and child da
 
 ## 3. Candidates to add
 
+The full survey, beyond these three, is in [`pipeline_landscape_v1.6.0.md`](pipeline_landscape_v1.6.0.md).
+
 Not v1.6.0 scope by default (Phase 5 decides), but they answer the field's top questions:
 
 1. **VTC 2** for who is speaking in child-centred terms. Requires Python ≥ 3.13, which the audit

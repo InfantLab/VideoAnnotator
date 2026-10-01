@@ -406,6 +406,13 @@ parts of the CLI still prompt interactively.
 
 ### Phase 5: Models
 
+**Candidates**: [`pipeline_landscape_v1.6.0.md`](pipeline_landscape_v1.6.0.md) (2026-10-01) lists,
+per kind of processing, what we have, what's obsolete, the current best tools with licences, and
+what developmental research uses that we don't do at all. Top of its list: voice type
+classification (VTC 2) with adult word counts (ALICE) and conversational turns; infant looking
+(iCatcher+); motion energy and dyadic synchrony; adult/child role per person; de-identified
+export; caregiver prosody.
+
 #### 5a. Connectors
 
 - [ ] **OpenAI-compatible connector** alongside the Ollama one (`backends: [ollama,
