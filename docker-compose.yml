@@ -119,7 +119,7 @@ services:
       - PYTHONPATH=/app
     # --inexact: .:/app shares the repo's .venv; an exact sync would uninstall
     # pipeline extras installed from the viewer (see scripts/start_server.sh).
-    command: ["bash", "-lc", "uv sync --inexact --extra dev && uv run jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root"]
+    command: ["bash", "-lc", "uv sync --inexact --group notebooks && uv run jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root"]
     profiles:
       - dev
 

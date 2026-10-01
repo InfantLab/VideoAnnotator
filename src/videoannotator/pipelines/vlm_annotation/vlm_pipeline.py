@@ -142,6 +142,7 @@ class VLMAnnotationPipeline(BasePipeline):
         consecutive_failures = 0
         try:
             for i, anchor_t in enumerate(sample_points):
+                context_offsets: list[int] | None
                 if sampling_mode == "frame_burst":
                     offsets = self.config["burst_offsets"]
                     frame_numbers, images, context_offsets = self._read_burst(

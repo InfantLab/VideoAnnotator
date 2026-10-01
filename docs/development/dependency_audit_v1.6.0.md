@@ -45,6 +45,9 @@ connected:
 
 ## 3. Core dependencies
 
+**Done in spec 013** (2026-10-01): unused dependencies removed, numba moved to `audio`, core
+upgraded; core-only install 73 → 40 packages, 746 → 135 MB.
+
 | Package | Constraint | Locked | Latest | Notes | Recommendation |
 |---|---|---|---|---|---|
 | fastapi | `>=0.115.0` | 0.116.1 | 0.142.2 | | Upgrade; raise floor |
@@ -103,6 +106,8 @@ resolve to one torch and upgrades are deliberate.
   `ffmpeg` CLI; check that the libraries torchcodec loads are there too.
 
 ## 6. Tooling
+
+**Done in spec 013** (2026-10-01), except the viewer's packages and Bun (Phase 0).
 
 | Item | Now | Latest | Recommendation |
 |---|---|---|---|

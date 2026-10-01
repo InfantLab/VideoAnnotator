@@ -22,6 +22,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 
+### Changed
+
+- **Core install is 82% smaller** (spec 013): 40 packages and 135 MB instead of 73 and 746 MB.
+  Removed from core because nothing in VideoAnnotator imports them: `moviepy`, `matplotlib`,
+  `tqdm`, `openpyxl`, `pandas`, `imageio`, `imageio-ffmpeg`, `av`, `alembic`, `rich`,
+  `click` (still installed, via `typer`), `scikit-image`, `cryptography`. `numba` moved to the
+  `audio` extra, its only user. **If your own scripts used one of these because it arrived with
+  VideoAnnotator, install it yourself.** Removed from extras: `imutils` (`face`) and
+  `supervision` (`person`), both unused; the empty `annotation` extra is gone.
+- **Each extra now works on its own** (checked by installing core plus one extra in a clean
+  environment and running its pipelines on the demo video). `face-openface3` didn't:
+  `openface-test` imports torch, torchvision, timm, scikit-image, pandas, huggingface-hub, tqdm,
+  matplotlib, seaborn and tensorboardX without declaring them, and they used to arrive with core
+  or with another extra. They're now declared in `face-openface3`.
+- Removed two modules that couldn't be imported: `videoannotator.main` and
+  `videoannotator.visualization` (both still imported `src.*` paths from before the package
+  moved to `src/videoannotator/`).
+- Core libraries upgraded: FastAPI 0.142, SQLAlchemy 2.1, Pydantic 2.13, NumPy 2.5, Pillow 12,
+  and others. Pipeline outputs on the demo video are unchanged.
+- **Development tools**: declared once, in the `dev` dependency group (installed by `uv sync` by
+  default; `pip install -e . --group dev` with pip ≥ 25.1). The `dev` extra is gone, and
+  `uv sync --extra dev` no longer works: use `uv sync`. Jupyter moved to its own `notebooks` group.
+- **Type checking covers the whole package**: mypy used to exclude the pipelines and several
+  storage, utility and exporter modules, and the pre-commit hook used an older mypy than CI on an
+  even smaller subset. Both now run the same check on all 117 modules.
+- Pre-commit hooks upgraded; `pydocstyle` (it pointed at a directory that no longer exists) and
+  `mirrors-prettier` (no stable release since v3) removed. GitHub Actions moved to current
+  versions (Node 20 is deprecated on Actions).
+
 ### Fixed
 
 - **Speech recognition could return an empty transcript after another Python version had run on
@@ -1025,6 +1054,7 @@ The v1.0.0 release introduces significant architectural changes. Here's how to m
 ```python
 # Direct pipeline initialization
 from src.processors.video_processor import VideoProcessor
+
 processor = VideoProcessor(config_dict)
 ```
 
@@ -1033,6 +1063,7 @@ processor = VideoProcessor(config_dict)
 ```python
 # Modern pipeline architecture
 from src.pipelines import SceneDetectionPipeline
+
 pipeline = SceneDetectionPipeline(config)
 ```
 
@@ -1058,10 +1089,7 @@ results = pipeline.process(video_path, start_time=0, end_time=None)
 
 ```python
 # Python dictionary configuration
-config = {
-    'video_settings': {'fps': 30},
-    'audio_settings': {'sample_rate': 16000}
-}
+config = {"video_settings": {"fps": 30}, "audio_settings": {"sample_rate": 16000}}
 ```
 
 **New:**

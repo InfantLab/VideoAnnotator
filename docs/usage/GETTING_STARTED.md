@@ -56,8 +56,7 @@ cd VideoAnnotator
 # Install all dependencies (fast!)
 uv sync
 
-# Install development dependencies
-uv sync --extra dev
+# Development tools come with `uv sync` by default (dependency group `dev`)
 
 # Initialize the database and create an admin API key (idempotent)
 uv run videoannotator setup-db --admin-email you@example.com --admin-username you
@@ -169,15 +168,15 @@ curl -H "Authorization: Bearer $API_KEY" \
 ### Using the Python API
 
 ```python
-from videoannotator.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
-from videoannotator.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
+from videoannotator.pipelines.scene_detection.scene_pipeline import (
+    SceneDetectionPipeline,
+)
+from videoannotator.pipelines.person_tracking.person_pipeline import (
+    PersonTrackingPipeline,
+)
 
 # Scene detection
-scene_config = {
-    "threshold": 30.0,
-    "min_scene_length": 1.0,
-    "enabled": True
-}
+scene_config = {"threshold": 30.0, "min_scene_length": 1.0, "enabled": True}
 
 pipeline = SceneDetectionPipeline(scene_config)
 pipeline.initialize()
@@ -186,7 +185,7 @@ results = pipeline.process(
     video_path="path/to/video.mp4",
     start_time=0.0,
     end_time=30.0,  # Process first 30 seconds
-    output_dir="output/"
+    output_dir="output/",
 )
 
 pipeline.cleanup()

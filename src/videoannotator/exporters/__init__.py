@@ -9,7 +9,7 @@ instead of custom schema implementations:
 - praatio: TextGrid format for speech analysis
 
 Usage:
-    from src.exporters import (
+    from videoannotator.exporters import (
         export_coco_json,
         export_webvtt_captions,
         export_rttm_diarization,

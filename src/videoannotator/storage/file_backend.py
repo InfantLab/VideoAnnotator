@@ -370,9 +370,9 @@ class FileStorageBackend(StorageBackend):
 
         return sorted(
             reports,
-            key=lambda r: r.start_time
-            if r.start_time
-            else datetime.min.replace(tzinfo=None),
+            key=lambda r: (
+                r.start_time if r.start_time else datetime.min.replace(tzinfo=None)
+            ),
         )
 
     def list_report_ids(self) -> list[str]:

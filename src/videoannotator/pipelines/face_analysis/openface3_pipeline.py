@@ -84,7 +84,7 @@ def _lazy_import_openface():
         # openface's multitask_model calls cv2.cvtColor without importing cv2,
         # so every predict() raised NameError and AU/emotion/gaze were dropped.
         if not hasattr(multitask_model, "cv2"):
-            multitask_model.cv2 = cv2  # type: ignore[attr-defined]
+            multitask_model.cv2 = cv2
 
         OPENFACE3_AVAILABLE = True
         logger.info("OpenFace 3.0 successfully imported (lazy)")
@@ -139,11 +139,11 @@ def _without_star_training_setup() -> Iterator[None]:
     root = logging.getLogger()
     handlers, level = list(root.handlers), root.level
     init_instance = Base.init_instance
-    Base.init_instance = lambda self: None  # type: ignore[method-assign]
+    Base.init_instance = lambda self: None
     try:
         yield
     finally:
-        Base.init_instance = init_instance  # type: ignore[method-assign]
+        Base.init_instance = init_instance
         for handler in root.handlers[:]:
             if handler not in handlers:
                 root.removeHandler(handler)

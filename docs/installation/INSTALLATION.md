@@ -110,8 +110,8 @@ uv sync --extra scene
 # Example: everything, matching pre-v1.5.0 behaviour
 uv sync --all-extras
 
-# Install development dependencies (add to any of the above)
-uv sync --extra dev
+# Development tools (ruff, mypy, pytest, pre-commit) come with any `uv sync` by default
+# (dependency group `dev`); `--no-dev` leaves them out.
 
 # Initialize the local SQLite database (creates tables + admin API key)
 uv run videoannotator setup-db --admin-email you@example.com --admin-username you
