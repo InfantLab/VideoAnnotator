@@ -10,6 +10,7 @@ from typing import Any
 from ...config_env import huggingface_token
 from ..base_pipeline import BasePipeline
 from .ffmpeg_utils import extract_audio_from_video
+from .native_files import write_rttm
 
 try:
     from pyannote.audio import Pipeline as PyAnnotePipeline
@@ -165,6 +166,10 @@ class DiarizationPipeline(BasePipeline):
             turns.append(turn_data)
 
         self.logger.info(f"Diarization complete: {len(turns)} speaker turns")
+        if output_dir and turns:
+            out = Path(output_dir)
+            out.mkdir(parents=True, exist_ok=True)
+            write_rttm(turns, out / f"{video_id}_{self.pipeline_name}.rttm")
         return turns
 
     def get_schema(self) -> dict[str, Any]:

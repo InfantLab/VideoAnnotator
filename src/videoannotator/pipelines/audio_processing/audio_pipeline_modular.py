@@ -16,12 +16,9 @@ import librosa
 # from .emotion_pipeline import EmotionPipeline
 # from .f0_pipeline import F0Pipeline
 # from .timbre_pipeline import TimbrePipeline
-from videoannotator.exporters.native_formats import (
-    export_rttm_diarization,
-)
-
 from ..base_pipeline import BasePipeline
 from .diarization_pipeline import DiarizationPipeline
+from .native_files import write_rttm, write_webvtt
 from .speech_pipeline import SpeechPipeline
 
 
@@ -270,29 +267,11 @@ class AudioPipelineModular(BasePipeline):
 
             try:
                 if output_format == "webvtt" and data:
-                    # Save speech recognition as WebVTT manually to avoid library append issues
                     webvtt_path = output_path / f"{video_id}_{pipeline_name}.vtt"
                     try:
-                        # Extract segments list
-                        speech_result = (
-                            data[0] if isinstance(data, list) and data else {}
+                        write_webvtt(
+                            data if isinstance(data, list) else [], webvtt_path
                         )
-                        segments = speech_result.get("metadata", {}).get("segments", [])
-
-                        # Helper to format time to WebVTT
-                        def _fmt(t: float) -> str:
-                            hours = int(t // 3600)
-                            minutes = int((t % 3600) // 60)
-                            secs = t % 60
-                            return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
-
-                        # Write WebVTT file
-                        with open(webvtt_path, "w", encoding="utf-8") as f:
-                            f.write("WEBVTT\n\n")
-                            for idx, seg in enumerate(segments, start=1):
-                                start = _fmt(seg["start"])
-                                end = _fmt(seg["end"])
-                                f.write(f"{idx}\n{start} --> {end}\n{seg['text']}\n\n")
                         self.logger.info(f"Saved {pipeline_name} to {webvtt_path}")
                     except Exception as e:
                         self.logger.error(
@@ -300,22 +279,9 @@ class AudioPipelineModular(BasePipeline):
                         )
 
                 elif output_format == "rttm" and data:
-                    # Save diarization as RTTM; transform to segments with start, end, speaker_id
                     rttm_path = output_path / f"{video_id}_{pipeline_name}.rttm"
                     try:
-                        diarization_data = [
-                            {
-                                "start": seg.get("start_time", 0.0),
-                                "end": seg.get(
-                                    "end_time",
-                                    seg.get("start_time", 0.0)
-                                    + seg.get("duration", 0.0),
-                                ),
-                                "speaker_id": seg.get("speaker_id"),
-                            }
-                            for seg in data
-                        ]
-                        export_rttm_diarization(diarization_data, str(rttm_path))
+                        write_rttm(data, rttm_path)
                         self.logger.info(f"Saved {pipeline_name} to {rttm_path}")
                     except Exception as e:
                         self.logger.error(

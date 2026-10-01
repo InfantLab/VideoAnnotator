@@ -18,6 +18,7 @@ import torch
 from videoannotator.config_env import load_env_file
 from videoannotator.version import __version__
 
+from .native_files import write_webvtt
 from .whisper_base_pipeline import WhisperBasePipeline
 
 load_env_file()
@@ -133,6 +134,12 @@ class SpeechPipeline(WhisperBasePipeline):
             # Transcribe the audio
             result = self.transcribe_audio(audio)
             if result is not None:
+                if output_dir:
+                    out = Path(output_dir)
+                    out.mkdir(parents=True, exist_ok=True)
+                    write_webvtt(
+                        [result], out / f"{video_path.stem}_speech_recognition.vtt"
+                    )
                 return [result]
             return []
 
