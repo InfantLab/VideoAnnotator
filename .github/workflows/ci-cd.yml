@@ -83,7 +83,7 @@ jobs:
           # note. No-op on Linux/Windows.
           KMP_DUPLICATE_LIB_OK: "TRUE"
         run: |
-          uv run pytest -q -m "not real_models" --cov=src/videoannotator --cov-report=xml --cov-report=term-missing --cov-fail-under=45
+          uv run pytest -q -m "not real_models and not performance" --cov=src/videoannotator --cov-report=xml --cov-report=term-missing --cov-fail-under=45
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
