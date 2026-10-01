@@ -23,6 +23,11 @@ os.environ.setdefault(
     ),
 )
 
+# pyannote.audio 4 sends anonymous usage telemetry (pipeline, file durations,
+# speaker counts) to otel.pyannote.ai unless told not to; local-first means off
+# unless the user opts in (constitution principle I).
+os.environ.setdefault("PYANNOTE_METRICS_ENABLED", "0")
+
 from .version import (
     __author__,
     __license__,

@@ -93,8 +93,8 @@ face-openface3 = [
     # openface-test imports these without declaring them. They used to arrive with
     # core (scikit-image, pandas) or another extra (torch), so this group alone failed
     # with "No module named 'torch'" (found 2026-10-01, spec 013).
-    "torch==2.6.0",
-    "torchvision==0.21.0",
+    "torch>=2.11,<2.12",
+    "torchvision>=0.26,<0.27",
     "scikit-image>=0.25.2",
     "pandas>=2.2.2",
     "timm>=1.0",
@@ -113,8 +113,7 @@ face-openface3 = [
     "opencv-python>=4.11.0.86,<5.0",
 ]
 audio = [
-    "torch==2.6.0",
-    "torchaudio==2.6.0",
+    "torch>=2.11,<2.12",
     "librosa>=0.10.0",
     # whisper_base_pipeline configures numba's threading layer for librosa.
     "numba>=0.60.0",
@@ -127,14 +126,19 @@ audio = [
     # explicitly because unqualified `uv lock --upgrade` has broken this project
     # before (open-clip-torch 3.1, opencv-python 5.0; see CHANGELOG). The
     # pyannote.audio 4 migration lifts these (v1.6.0 spec 3).
-    "pyannote.audio>=3.3.2,<4.0",
-    "pyannote.core>=5.0.0,<6.0",
-    "pyannote.database>=5.1.0,<6.0",
-    "pyannote.metrics>=3.2.1,<4.0",
-    "pyannote.pipeline>=3.0.1,<4.0",
+    # torch stays at 2.11: pyannote.audio 4 imports torchaudio, whose last release
+    # (2.11, now discontinued) is compiled against torch 2.11 and fails to load on
+    # anything newer. Lift when pyannote.audio drops torchaudio.
+    "torchaudio>=2.11,<2.12",
+    # torchcodec (pyannote.audio 4's audio decoder) is compiled per torch release;
+    # 0.11.x is torch 2.11's. A newer one fails to load ("torchcodec is not
+    # installed correctly"). Our pipeline passes audio in memory, so decoding
+    # doesn't depend on it, but it should import cleanly.
+    "torchcodec>=0.11,<0.12",
+    "pyannote.audio>=4.0.7,<5",
 ]
 scene = [
-    "torch==2.6.0",
+    "torch>=2.11,<2.12",
     "open-clip-torch>=2.24.0",
     # scenedetect itself has no unconditional opencv dependency (only via its
     # own `[opencv]`/`[opencv-headless]` extras, which we don't use — see
@@ -150,8 +154,8 @@ scene = [
     "opencv-python>=4.11.0.86,<5.0",
 ]
 person = [
-    "torch==2.6.0",
-    "torchvision==0.21.0",
+    "torch>=2.11,<2.12",
+    "torchvision>=0.26,<0.27",
     # cv2 comes transitively via ultralytics/supervision's own unconditional
     # `opencv-python` dependency, uncapped by either — pin the ceiling
     # explicitly here too; see `face` group's comment re: opencv-python 5.0.
@@ -197,16 +201,16 @@ videoannotator = "videoannotator.cli:app"
 openai-whisper = ["setuptools", "wheel"]
 
 [[tool.uv.index]]
-name = "pytorch-cu124"
-url = "https://download.pytorch.org/whl/cu124"
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
 explicit = true
 
 # CUDA wheels only exist for Linux/Windows; restrict the cu124 index to Linux
 # so macOS and other platforms resolve torch from PyPI (CPU build).
 [tool.uv.sources]
-torch = [{ index = "pytorch-cu124", marker = "sys_platform == 'linux'" }]
-torchvision = [{ index = "pytorch-cu124", marker = "sys_platform == 'linux'" }]
-torchaudio = [{ index = "pytorch-cu124", marker = "sys_platform == 'linux'" }]
+torch = [{ index = "pytorch-cu126", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cu126", marker = "sys_platform == 'linux'" }]
+torchaudio = [{ index = "pytorch-cu126", marker = "sys_platform == 'linux'" }]
 
 [tool.ruff]
 line-length = 88  # Keep existing Black line length for consistency

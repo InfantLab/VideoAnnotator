@@ -21,6 +21,15 @@ except ImportError:
 _SOUNDFILE_SUFFIXES = {".wav", ".flac", ".ogg"}
 
 
+def _load_waveform(audio_path: Path) -> dict[str, Any]:
+    """Read audio into the in-memory form pyannote accepts."""
+    import soundfile
+    import torch
+
+    data, sample_rate = soundfile.read(str(audio_path), dtype="float32", always_2d=True)
+    return {"waveform": torch.from_numpy(data.T.copy()), "sample_rate": sample_rate}
+
+
 class DiarizationPipeline(BasePipeline):
     """Speaker diarization pipeline using PyAnnote.
 
@@ -72,10 +81,8 @@ class DiarizationPipeline(BasePipeline):
 
         try:
             if hf_token:
-                # `use_auth_token`, not `token`: the latter only exists from
-                # pyannote.audio 4.0, and we pin <4.0.
                 self.diarization_model = PyAnnotePipeline.from_pretrained(
-                    self.config["model"], use_auth_token=hf_token
+                    self.config["model"], token=hf_token
                 )
             else:
                 self.diarization_model = PyAnnotePipeline.from_pretrained(
@@ -109,9 +116,16 @@ class DiarizationPipeline(BasePipeline):
         if self.diarization_model is None:
             raise RuntimeError("Diarization model not initialized")
 
-        # pyannote reads audio through soundfile, which cannot open video
-        # containers (mp4/mov/mkv), so decode to wav with ffmpeg first.
+        # Decode to wav with the ffmpeg CLI, then hand pyannote the waveform in
+        # memory: given a path, pyannote.audio 4 decodes it with torchcodec, which
+        # needs FFmpeg's *shared* libraries (absent from static FFmpeg builds,
+        # e.g. Chocolatey's on Windows).
         with tempfile.TemporaryDirectory() as temp_dir:
+            if not Path(video_path).exists():
+                self.logger.warning(
+                    f"Input not found: {video_path}; skipping diarization"
+                )
+                return []
             if Path(video_path).suffix.lower() in _SOUNDFILE_SUFFIXES:
                 audio_path: Path | None = Path(video_path)
             else:
@@ -125,11 +139,15 @@ class DiarizationPipeline(BasePipeline):
                 )
                 return []
 
-            diarization = self.diarization_model(
-                str(audio_path),
+            output = self.diarization_model(
+                _load_waveform(audio_path),
                 min_speakers=self.config["min_speakers"],
                 max_speakers=self.config["max_speakers"],
             )
+        # pyannote.audio 4 wraps the Annotation in a DiarizeOutput.
+        diarization = (
+            output if hasattr(output, "itertracks") else output.speaker_diarization
+        )
 
         # Convert to RTTM format
         turns = []

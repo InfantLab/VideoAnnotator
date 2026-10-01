@@ -41,6 +41,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **torch 2.6 → 2.11, pyannote.audio 3 → 4, CUDA 12.4 → 12.6 wheels** (spec 015). torch 2.11 is
+  as far as it can go for now: pyannote.audio 4 imports torchaudio, which was discontinued at 2.11
+  and won't load on a newer torch. **GPU users need NVIDIA driver 560+** (Linux 560.28.03, Windows
+  560.76; 525+ usually works through CUDA's minor-version compatibility). On the demo video every
+  pipeline gives the same results: identical transcript text and speaker turns; person-tracking
+  boxes within 0.08 px and scene scores within 0.003 (numerical differences of the new torch);
+  OpenFace within its known run-to-run sensitivity.
+- **Diarization now also needs `pyannote/speaker-diarization-community-1`'s licence accepted on
+  Hugging Face**, even with the default `speaker-diarization-3.1` model: pyannote.audio 4 loads part
+  of every diarization pipeline from it. The pipeline's setup checklist lists it.
+- **pyannote.audio's telemetry is off by default.** pyannote.audio 4 sends anonymous usage data
+  (pipeline, file durations, speaker counts) to `otel.pyannote.ai` unless told not to; VideoAnnotator
+  sets `PYANNOTE_METRICS_ENABLED=0` unless you set it yourself (constitution principle I,
+  local-first).
+- Diarization hands pyannote the audio in memory, so it doesn't need FFmpeg's shared libraries
+  (pyannote.audio 4's own file decoding does).
 - **Short family names are predictable** (spec 014): `audio` and `face` resolve to the family's
   declared default (`family_default` in pipeline metadata), not to whichever "stable" pipeline
   sorted first. Before, `audio` meant the 16–32 GB LAION voice model whenever its extra was

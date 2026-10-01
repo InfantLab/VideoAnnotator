@@ -337,6 +337,13 @@ class TestExtrasGroups:
 class TestWeightCacheLocations:
     def test_pyannote_models_found_in_pyannotes_own_cache(self, tmp_path, monkeypatch):
         monkeypatch.setenv("PYANNOTE_CACHE", str(tmp_path))
+        # Isolate from the machine's real hub cache, where pyannote.audio 4 itself
+        # downloads (pyannote 3 used only PYANNOTE_CACHE).
+        import huggingface_hub.constants
+
+        monkeypatch.setattr(
+            huggingface_hub.constants, "HF_HUB_CACHE", str(tmp_path / "hub")
+        )
         snapshot = (
             tmp_path / "models--pyannote--speaker-diarization-3.1" / "snapshots" / "abc"
         )

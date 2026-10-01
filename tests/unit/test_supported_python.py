@@ -93,3 +93,27 @@ def test_triton_cache_is_per_python_version():
 def test_triton_cache_respects_user_setting(tmp_path):
     env = {**os.environ, "TRITON_CACHE_DIR": str(tmp_path)}
     assert _triton_cache_dir_after_import(env) == str(tmp_path)
+
+
+def _env_after_import(env: dict[str, str], var: str) -> str:
+    return subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            f"import os, videoannotator; print(os.environ[{var!r}])",
+        ],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+
+
+def test_pyannote_telemetry_off_by_default():
+    env = {k: v for k, v in os.environ.items() if k != "PYANNOTE_METRICS_ENABLED"}
+    assert _env_after_import(env, "PYANNOTE_METRICS_ENABLED") == "0"
+
+
+def test_pyannote_telemetry_respects_user_choice():
+    env = {**os.environ, "PYANNOTE_METRICS_ENABLED": "1"}
+    assert _env_after_import(env, "PYANNOTE_METRICS_ENABLED") == "1"

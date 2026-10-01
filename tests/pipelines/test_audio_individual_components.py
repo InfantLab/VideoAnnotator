@@ -84,7 +84,7 @@ class TestDiarizationPipeline:
         import os
 
         expected_token = os.environ.get("HUGGINGFACE_TOKEN") or "FAKE_TOKEN_FOR_TESTING"
-        assert called_kwargs["use_auth_token"] == expected_token
+        assert called_kwargs["token"] == expected_token
 
         pipeline.cleanup()
 

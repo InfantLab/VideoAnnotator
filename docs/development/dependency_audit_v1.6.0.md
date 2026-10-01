@@ -8,6 +8,11 @@ Versions: *locked* is `uv.lock` on `1.6-dev` (2026-09-30); *latest* is PyPI on 2
 
 ## 1. Summary
 
+**Update (spec 015, 2026-10-01)**: torch moved to **2.11**, not 2.14: pyannote.audio 4 imports
+torchaudio, discontinued at 2.11 and compiled against torch 2.11. torch ≥ 2.12 waits for
+pyannote.audio to drop torchaudio. pyannote.audio 4 also turned out to need the
+`speaker-diarization-community-1` licence and to send telemetry by default (now off).
+
 The lockfile is about a year old. Most of it upgrades freely. Five things don't, and they're
 connected:
 

@@ -9,7 +9,9 @@ VideoAnnotator is a modern video analysis toolkit that uses AI models for compre
 - **Python 3.12 or 3.13** (required; 3.13 recommended. Python 3.14 isn't supported yet.)
 - **Git** for cloning repositories
 - **uv** package manager (fast, modern Python dependency management)
-- **CUDA Toolkit 12.4+** (recommended for GPU acceleration)
+- **NVIDIA driver 560 or newer** for GPU acceleration (Linux ≥ 560.28.03, Windows ≥ 560.76: the CUDA 12.6
+  level). Drivers from 525 usually work through CUDA's minor-version compatibility. No CUDA Toolkit
+  install is needed: the PyTorch wheels bring their own CUDA libraries.
 - **NVIDIA GPU** with CUDA support (GTX 1060 6GB+ or better recommended)
 
 ## System Requirements
@@ -147,12 +149,11 @@ add just the extras group named in the message.
 ### 3. Install CUDA-enabled PyTorch (GPU acceleration)
 
 ```bash
-# Note: This repo pins Torch sources via `pyproject.toml` to the CUDA 12.4 wheel index.
-# In most cases `uv sync` is sufficient.
-# If you need to force a reinstall of CUDA wheels in your local environment:
-uv pip install --upgrade \
-   "torch==2.8.*+cu124" "torchvision==0.21.*+cu124" "torchaudio==2.8.*+cu124" \
-   --index-url https://download.pytorch.org/whl/cu124
+# `uv sync` installs torch 2.11 from the CUDA 12.6 wheel index on Linux (see
+# [tool.uv.sources] in pyproject.toml); macOS and Windows get PyPI's builds.
+# torch stays at 2.11 because pyannote.audio 4 needs torchaudio, discontinued at 2.11.
+uv sync --all-extras
+uv run python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
 ```
 
 ### 4. Install Native Dependencies (if needed)
@@ -336,9 +337,9 @@ Open the project in VS Code and use "Reopen in Container" for a complete GPU-ena
    uv run python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
    ```
 
-3. **CUDA version mismatch**: Ensure CUDA Toolkit matches PyTorch CUDA version:
-   - Check CUDA Toolkit: `nvcc --version`
-   - Check PyTorch CUDA: `uv run python -c "import torch; print(torch.version.cuda)"`
+3. **Driver too old**: torch's CUDA 12.6 wheels need NVIDIA driver 560+ (525+ with CUDA's
+   minor-version compatibility). `nvidia-smi` shows the driver version; update it if
+   `torch.cuda.is_available()` is False on a machine with a GPU. The pipelines fall back to CPU.
 
 ### Native Dependencies
 
