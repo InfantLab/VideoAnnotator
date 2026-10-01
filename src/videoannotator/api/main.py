@@ -349,10 +349,10 @@ def create_app() -> FastAPI:
 </body></html>"""
         return HTMLResponse(content=html)
 
-    # The viewer pins its API URL to 127.0.0.1 (and rewrites a saved
-    # `localhost` to it), and the browser keeps the API token per origin. A
-    # page opened at `localhost` therefore either can't reach the API or
-    # reaches it without the token. Send browsers to the one origin that works.
+    # The browser keeps the viewer's saved API key per origin, and every link
+    # the server prints (viewer-connect included) uses 127.0.0.1, so a viewer
+    # opened at `localhost` would start with no key. Send browsers to the one
+    # origin the key is saved under.
     @app.middleware("http")
     async def viewer_on_loopback_ip(request: Request, call_next):
         path = request.url.path

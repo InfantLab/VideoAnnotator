@@ -125,7 +125,7 @@ this repo:
       `GET /jobs/{id}/results`. Show per-pipeline errors on the job page and inline in the batch
       row. (Server side: since 2026-09-28 the job-level `error_message` includes each failed
       pipeline's error, not only its name.)
-- [ ] **`localhost` vs `127.0.0.1`: viewer can't connect, or connects without its token**
+- [x] **`localhost` vs `127.0.0.1`: viewer can't connect, or connects without its token**
       (recurring). The server side (`start_server.sh`, the `setup-db`/`generate-token` login
       links, `CORS_AND_AUTH_PROTOCOL.md`) says `localhost`. The viewer defaults its API URL to
       `127.0.0.1` and rewrites a saved `localhost` to `127.0.0.1`. The browser treats them as two
@@ -135,7 +135,14 @@ this repo:
       the server redirects `localhost/viewer…` and `/viewer-connect` to `127.0.0.1`, and every
       link it prints uses `127.0.0.1`. **Left for the viewer**: when the server serves it, use the
       page's own origin as the API URL, with no rewriting, and drop the redirect.
-- [ ] **Settings page doesn't say how to get a token** (2026-09-30): the welcome box says "Get your
+      Fixed (`viewer/src/lib/apiConnection.ts`): an empty API URL, or one naming the page's own
+      origin, stays relative, so the served viewer always calls its own server; Settings no longer
+      pre-fills `http://127.0.0.1:18011` there (saving that made the call cross-origin). Another
+      server at `localhost` is still sent to `127.0.0.1` (the server binds IPv4). The redirect
+      stays: the printed links save the key under `127.0.0.1`, and the redirect is what makes a
+      viewer opened at `localhost` find it. Also fixed: "Test Connection" with an empty key tested
+      the previously saved key, because the client treated `''` as "keep".
+- [x] **Settings page doesn't say how to get a token** (2026-09-30): the welcome box says "Get your
       API token from the server console or administrator", and its default URL is
       `http://localhost:18011` (see the item above). A new user doesn't know which console, what
       the token looks like, or what to do if they missed it. Replace the Quick Start with:
@@ -154,6 +161,9 @@ this repo:
       before "Test Connection". Server side (done 2026-09-30): the first-run banner now prints the
       viewer-connect link and `videoannotator generate-token`. Before this it pointed at
       `localhost:8000` and a `scripts.manage_tokens` module that pip installs don't have.
+      Done: `TokenHelp` (the four steps, copy button) on the Settings page and its Help tab, the
+      key format as placeholder, and an inline check that blocks saving a pasted `Bearer …`, a
+      truncated key or `dev-token`. Every `dev-token` instruction is gone; the client rejects it.
 - [x] **Face boxes and OpenFace landmarks almost never show** (2026-09-30): both overlays draw a
       face only within ±0.1 s of its timestamp (`JD(face_analysis, t, 0.1)` and the
       `openface3_faces` filter). The face pipelines sample about once a second (0.97 s apart on a
@@ -175,6 +185,11 @@ this repo:
       match on structure (`metadata.pipeline` + `faces`) instead of substrings.
       Fixed (`47cc786`), found by the contract test along with a worse one: `openface3_analysis`
       was taken as person tracking and replaced it (see the contract test item above).
+- [ ] **The viewer's type check checks nothing**: `bunx tsc --noEmit` (the documented check) runs
+      the root `tsconfig.json`, which has `"files": []` and only references the app and node
+      configs, so it passes without compiling anything. `tsc --noEmit -p tsconfig.app.json` finds
+      24 errors in 13 files (2026-10-01), e.g. the OpenAPI `paths` type in `src/api/client.ts` no
+      longer has `/api/v1/jobs`. Fix them, then run that command in CI's `viewer` job.
 - [ ] **Results view isn't batch-aware**: opening a video from a batch loses the batch. Show which
       batch and video (n of N) you're on, previous/next between the batch's videos, and a way back
       to the batch page. Overlaps Phase 6's previous/next item; do the navigation here, before

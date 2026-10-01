@@ -34,6 +34,7 @@ import type { CurrentUser } from '@/types/api';
 import type { JobResults } from '@/lib/jobOutcome';
 import type { Preset, PresetCreateRequest, PresetListResponse } from '@/types/presets';
 import { APIError } from './handleError';
+import { API_TOKEN_STORAGE_KEY, API_URL_STORAGE_KEY, defaultApiUrl, normalizeApiUrl } from '@/lib/apiConnection';
 
 const mapReadinessItems = (value: unknown): ReadinessItem[] =>
   Array.isArray(value)
@@ -63,32 +64,13 @@ const mapReadiness = (value: unknown): PipelineReadiness | undefined => {
   };
 };
 
-// API configuration with localStorage fallback
 const getApiBaseUrl = () => {
-  // Check localStorage first - respect empty string (Proxy mode)
-  let url = localStorage.getItem('videoannotator_api_url');
-  
-  if (url === null) {
-    // Fallback to env var or empty string
-    url = import.meta.env.VITE_API_BASE_URL || '';
-  }
-
-  // CRITICAL FIX: Force 127.0.0.1 over localhost
-  // This ensures that every time we retrieve the URL, we apply the DNS correction.
-  if (url && url.includes('//localhost:')) {
-    // Only log this once per session to avoid spamming
-    if (!window.__dns_correction_logged) {
-      console.log('🔄 DNS CORRECTION (Global): Switching API host from localhost to 127.0.0.1');
-      window.__dns_correction_logged = true;
-    }
-    return url.replace('//localhost:', '//127.0.0.1:');
-  }
-
-  return url;
+  const saved = localStorage.getItem(API_URL_STORAGE_KEY);
+  return saved === null ? defaultApiUrl() : normalizeApiUrl(saved);
 };
 
 const getApiToken = () => {
-  const saved = localStorage.getItem('videoannotator_api_token');
+  const saved = localStorage.getItem(API_TOKEN_STORAGE_KEY);
   if (saved !== null) return saved;
 
   return import.meta.env.VITE_API_TOKEN || '';
@@ -109,7 +91,7 @@ export const hasConfiguredApiToken = (): boolean => getApiToken().trim() !== '';
  * - JWT: starts with 'eyJ' (e.g., 'eyJhbGciOiJIUzI1NiIs...')
  * - Other tokens: At least 8 characters and contains only valid characters
  * 
- * Rejects obviously invalid tokens like 'dev-token', 'Bearer xyz', empty strings
+ * Rejects obviously invalid tokens like the old 'dev-token' placeholder, 'Bearer xyz', empty strings
  */
 const isValidToken = (token: string): boolean => {
   if (!token || token.trim() === '') return false;
@@ -123,14 +105,10 @@ const isValidToken = (token: string): boolean => {
   if (trimmed.startsWith('eyJ')) return true;
 
   // Reject known invalid patterns
-  // NOTE: 'dev-token' is explicitly ALLOWED for local development
-  const invalidPatterns = ['test-token', 'Bearer ', 'your-api-token'];
+  const invalidPatterns = ['dev-token', 'test-token', 'Bearer ', 'your-api-token'];
   if (invalidPatterns.some(pattern => trimmed.toLowerCase().includes(pattern.toLowerCase()))) {
     return false;
   }
-
-  // Accept 'dev-token' specifically
-  if (trimmed === 'dev-token') return true;
 
   // Accept any token that's at least 8 characters and looks like a valid token
   // (alphanumeric, dashes, underscores, dots)
@@ -159,31 +137,15 @@ class APIClient {
   private readonly pipelineCatalogTTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(baseURL?: string, token?: string) {
-    let url = baseURL || getApiBaseUrl();
-    
-    // CRITICAL FIX: Force 127.0.0.1 over localhost
-    // Your machine resolves 'localhost' to 103.86.96.100 (ISP DNS), which causes timeouts.
-    // We must use 127.0.0.1 to ensure we hit the local server.
-    if (url.includes('//localhost:')) {
-      console.log('🔄 DNS CORRECTION: Switching API host from localhost to 127.0.0.1');
-      url = url.replace('//localhost:', '//127.0.0.1:');
-    }
-
-    this.baseURL = url.replace(/\/$/, ''); // Remove trailing slash
+    this.baseURL = baseURL === undefined ? getApiBaseUrl() : normalizeApiUrl(baseURL);
     this.token = token || getApiToken();
   }
 
   // Update configuration dynamically
+  /** undefined keeps a setting; '' is a value (this page's origin, or no token). */
   updateConfig(baseURL?: string, token?: string) {
-    if (baseURL) {
-      let url = baseURL;
-      if (url.includes('//localhost:')) {
-        console.log('🔄 DNS CORRECTION: Switching API host from localhost to 127.0.0.1');
-        url = url.replace('//localhost:', '//127.0.0.1:');
-      }
-      this.baseURL = url.replace(/\/$/, '');
-    }
-    if (token) this.token = token;
+    if (baseURL !== undefined) this.baseURL = normalizeApiUrl(baseURL);
+    if (token !== undefined) this.token = token.trim();
   }
 
   // Get current configuration
