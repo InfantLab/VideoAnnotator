@@ -201,10 +201,13 @@ this repo:
       configs, so it passes without compiling anything. `tsc --noEmit -p tsconfig.app.json` finds
       24 errors in 13 files (2026-10-01), e.g. the OpenAPI `paths` type in `src/api/client.ts` no
       longer has `/api/v1/jobs`. Fix them, then run that command in CI's `viewer` job.
-- [ ] **Results view isn't batch-aware**: opening a video from a batch loses the batch. Show which
+- [x] **Results view isn't batch-aware**: opening a video from a batch loses the batch. Show which
       batch and video (n of N) you're on, previous/next between the batch's videos, and a way back
       to the batch page. Overlaps Phase 6's previous/next item; do the navigation here, before
       release.
+      Done: the results header shows the batch's name and "n of N" (a link to the batch page),
+      with previous/next to the nearest videos that have results, from any entry point (the job
+      carries its `batch_id`); Back goes to the batch.
 - [x] **First-run download total double-counts shared weights**: the "Preparing… downloads about
       1.4 GB" line sums each pipeline's `weights_not_cached` notes, so a model two pipelines share
       (`pyannote/speaker-diarization-3.1`, for audio_processing and speaker_diarization) counts
@@ -521,8 +524,9 @@ failed, where the pipelines disagree, what the whole dataset looks like.
 - [ ] A corpus page in the viewer: one row per video, one small track per pipeline, sortable (by
       speaker/face disagreement, coverage, failures). A click opens the existing single-video
       timeline. This is the paper's cross-modal audit, at corpus scale.
-- [ ] Previous/next between a batch's videos in the results viewer (item 4 of spec 008's viewer
+- [x] Previous/next between a batch's videos in the results viewer (item 4 of spec 008's viewer
       handoff).
+      Done in Phase 0 (see "Results view isn't batch-aware").
 
 ---
 

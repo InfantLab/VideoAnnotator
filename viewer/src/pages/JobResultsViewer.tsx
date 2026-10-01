@@ -12,9 +12,9 @@ import { isDemoJobId, getDemoLabel } from '@/lib/localLibrary/installDemoDataset
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { failedPipelinesOf } from '@/lib/jobOutcome';
+import { BatchNavigation } from '@/components/BatchNavigation';
 
-const JobResultsViewer = () => {
-  const { jobId } = useParams<{ jobId: string }>();
+const JobResultsViewerForJob = ({ jobId }: { jobId: string | undefined }) => {
   const navigate = useNavigate();
   const {
     state,
@@ -40,17 +40,29 @@ const JobResultsViewer = () => {
   });
   const failedPipelines = useMemo(() => failedPipelinesOf(results), [results]);
 
+  const { data: job } = useQuery({
+    queryKey: ['job', jobId],
+    queryFn: () => apiClient.getJob(jobId!),
+    enabled: !!jobId && !isDemo,
+    retry: false,
+    staleTime: 60_000,
+  });
+  const batchId: string | undefined = job?.batch_id ?? undefined;
+
   useEffect(() => {
     if (jobId && state === 'idle') {
       startDownload(jobId);
     }
   }, [jobId, state, startDownload]);
 
+  const backPath = isDemo ? '/library' : batchId ? `/batches/${batchId}` : '/jobs';
+  const backName = isDemo ? 'Library' : batchId ? 'Batch' : 'Jobs';
+
   const handleBack = () => {
-    navigate(isDemo ? '/library' : '/jobs');
+    navigate(backPath);
   };
 
-  const backLabel = isDemo ? 'Back to Library' : 'Back to Jobs';
+  const backLabel = `Back to ${backName}`;
 
   const handleRetry = () => {
     reset();
@@ -120,9 +132,10 @@ const JobResultsViewer = () => {
          <VideoAnnotationViewer
            initialVideoFile={videoFile}
            initialAnnotationData={annotationData}
-           backLabel={isDemo ? 'Library' : 'Jobs'}
-           backPath={isDemo ? '/library' : '/jobs'}
+           backLabel={backName}
+           backPath={backPath}
            failedPipelines={failedPipelines}
+           headerNav={batchId && jobId ? <BatchNavigation jobId={jobId} batchId={batchId} /> : undefined}
          />
       </ErrorBoundary>
     );
@@ -140,6 +153,13 @@ const JobResultsViewer = () => {
       )}
     </div>
   );
+};
+
+// Keyed by job: moving to the next video in a batch changes only the URL, and
+// the downloader's state would otherwise keep showing the previous video.
+const JobResultsViewer = () => {
+  const { jobId } = useParams<{ jobId: string }>();
+  return <JobResultsViewerForJob key={jobId} jobId={jobId} />;
 };
 
 export default JobResultsViewer;

@@ -30,6 +30,8 @@ interface VideoAnnotationViewerProps {
   backPath?: string;
   /** Pipelines of this job that failed on the server: name -> reason. */
   failedPipelines?: Record<string, string>;
+  /** Shown in the header after the video's name (e.g. batch previous/next). */
+  headerNav?: React.ReactNode;
 }
 
 export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
@@ -39,6 +41,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   backLabel = 'Home',
   backPath = '/',
   failedPipelines = {},
+  headerNav,
 }) => {
   const navigate = useNavigate();
   const [videoFile, setVideoFile] = useState<File | null>(initialVideoFile);
@@ -271,6 +274,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                   {annotationData.video_info?.filename || videoFile.name}
                 </h1>
               </div>
+              {headerNav}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <Button
