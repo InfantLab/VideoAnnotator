@@ -132,3 +132,40 @@ class TestAutoAPIKeyGeneration:
         assert token_info.token_type == TokenType.API_KEY
         uuid.UUID(token_info.user_id)
         assert token_info.is_active is True
+
+
+def test_first_start_on_a_fresh_database_creates_an_api_key(tmp_path):
+    """Security setup used to run before the tables existed, so a brand-new
+    install logged `no such table: users` and started with authentication on and
+    no key."""
+    import sqlite3
+    import subprocess
+    import sys
+
+    db = tmp_path / "fresh.db"
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if k not in ("AUTH_REQUIRED", "DATABASE_URL", "VIDEOANNOTATOR_DB_PATH")
+    }
+    env.update(
+        VIDEOANNOTATOR_DB_PATH=str(db),
+        VIDEOANNOTATOR_LOG_DIR=str(tmp_path / "logs"),
+        VIDEOANNOTATOR_BACKGROUND_PROCESSING="false",
+    )
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from fastapi.testclient import TestClient\n"
+            "from videoannotator.api.main import create_app\n"
+            "with TestClient(create_app()):\n"
+            "    pass\n",
+        ],
+        cwd=tmp_path,
+        env=env,
+        check=True,
+        capture_output=True,
+    )
+    with sqlite3.connect(db) as conn:
+        assert conn.execute("select count(*) from api_keys").fetchone()[0] == 1

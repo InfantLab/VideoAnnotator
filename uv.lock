@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'aarch64' and sys_platform == 'linux'",
@@ -4916,6 +4916,7 @@ version = "1.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "numpy" },
     { name = "packaging" },
     { name = "pillow" },
@@ -5043,6 +5044,7 @@ notebooks = [
 requires-dist = [
     { name = "deepface", marker = "extra == 'face'", specifier = ">=0.0.91" },
     { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "huggingface-hub", marker = "extra == 'face-openface3'", specifier = ">=0.20.0,<1.0" },
     { name = "lap", marker = "extra == 'person'", specifier = ">=0.5.12" },
     { name = "librosa", marker = "extra == 'audio'", specifier = ">=0.10.0" },

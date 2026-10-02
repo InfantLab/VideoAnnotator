@@ -123,6 +123,32 @@ jobs:
         working-directory: .
         run: bash scripts/build_viewer.sh --check
 
+  # Every other job installs the dev group and every extra, which hid a core
+  # dependency missing from `pip install videoannotator` (httpx, 2026-10-02).
+  core-install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.2.0  # no moving major tags since v8
+        with:
+          enable-cache: true
+
+      - name: Install core only (no dev group, no extras)
+        run: |
+          uv sync --frozen --no-dev
+
+      - name: Server starts on a fresh database and serves the API
+        run: |
+          export VIDEOANNOTATOR_DB_PATH="$RUNNER_TEMP/va.db" VIDEOANNOTATOR_LOG_DIR="$RUNNER_TEMP/logs"
+          uv run --no-sync videoannotator server --port 18011 > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 60); do curl -sf localhost:18011/health && break; sleep 2; done
+          curl -sf localhost:18011/health
+          curl -sf "localhost:18011/api/v1/pipelines/?include_unavailable=true" > /dev/null
+          ! grep -E "ERROR|Traceback" "$RUNNER_TEMP/server.log" || { cat "$RUNNER_TEMP/server.log"; exit 1; }
+
   integration-test:
     runs-on: ubuntu-latest
     needs: test

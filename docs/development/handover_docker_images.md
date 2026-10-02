@@ -1,8 +1,9 @@
 # Handover: build, check and measure the Docker image
 
 **For**: an agent with Docker on the host machine (outside the dev container).
-**From**: the agent that rewrote the Docker setup on `1.6-dev`, 2026-10-02. It had no Docker, so
-nothing below has been built yet.
+**From**: the agent that rewrote the Docker setup on `1.6-dev`, 2026-10-02. It had no Docker.
+**Status**: run once, 2026-10-02, at `ec5ab04`; results at the end. The commands below are corrected
+from that run (`docker run -i`, `?include_unavailable=true`); rerun them after Docker changes.
 **Ask Caspar before**: pushing anything, deleting images or volumes you didn't create, or changing
 host settings (`.wslconfig`, Docker Desktop).
 
@@ -67,7 +68,7 @@ If a build fails, stop and report the last 40 lines of its output.
 ```bash
 docker run -d --name va-slim -p 18011:18011 -e AUTH_REQUIRED=false va-check:slim
 sleep 20; curl -s localhost:18011/health; echo
-curl -s localhost:18011/api/v1/pipelines/ | python3 -c "import json,sys; [print(p['name'], p.get('available'), p.get('install_hint','')) for p in json.load(sys.stdin)['pipelines']]"
+curl -s "localhost:18011/api/v1/pipelines/?include_unavailable=true" | python3 -c "import json,sys; [print(p['name'], p.get('available'), p.get('install_hint','')) for p in json.load(sys.stdin)['pipelines']]"
 docker logs va-slim 2>&1 | grep -E "Logs:|Database:|ERROR" | head
 docker rm -f va-slim
 ```
@@ -80,7 +81,7 @@ Expected:
 ### 3. Full image on the GPU: libraries and imports
 
 ```bash
-docker run --rm --gpus all va-check:all python - <<'EOF'
+docker run -i --rm --gpus all va-check:all python - <<'EOF'
 import torch
 print("torch", torch.__version__, "cuda", torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else "")
 import tensorflow as tf
@@ -168,23 +169,31 @@ docker volume rm va-check-models
 docker builder prune -f    # the build cache, several GB
 ```
 
-## Report back to Caspar
+## Results, 2026-10-02 (`ec5ab04`)
 
-Fill this in and send it, with any failure output (no tokens):
+Run on `proart`: Windows 11, Docker Desktop 29.8.1 / WSL 2, RTX 4060 Laptop 8 GB, driver 616.92,
+16 GB for the Docker VM. "Disk" is Docker Desktop's containerd store (unpacked layers plus compressed
+blobs); "compressed" is what a registry push or pull moves.
 
-| | Result |
+| Image | Disk | Compressed | Build (wall) |
+|---|---|---|---|
+| `slim` | 1.35 GB | 347 MB | 79 s (cold) |
+| `all` | 14.9 GB (≈10.1 GB unpacked; `.venv` 8.7 GB: nvidia 3.6, tensorflow 1.8, torch 1.6, triton 0.6) | 4.78 GB | 741 s |
+| `devcontainer` | 1.13 GB | 296 MB | 41 s |
+| v1.4.3 (`Dockerfile.gpu`) | 26.1 GB | 8.89 GB | 1188 s |
+
+Against v1.4.3: `slim` −95%, `all` −43% on disk (−46% compressed). v1.5.0's "80% smaller default
+image" is met by the slim default; the everything image is not 80% smaller, and can't be while it
+carries CUDA, TensorFlow and torch.
+
+| Check | Result |
 |---|---|
-| Commit | |
-| `slim` size / build time | |
-| `all` size / build time | |
-| `devcontainer` size / build time | |
-| v1.4.3 size (optional) | |
-| Step 2: health, pipelines unavailable with hints, log/database paths | |
-| Step 3: torch CUDA, TensorFlow GPU, library paths, imports | |
-| Step 4: per-pipeline status and counts, wall time, peak memory | |
-| Step 5: CPU-only job status, wall time | |
-| Step 7: compose | |
-| Anything else that looked wrong | |
-
-The agent in the dev container will record the sizes in the roadmap and CHANGELOG and fix anything
-that failed.
+| Slim server start | **Failed**: `No module named 'httpx'` (core dependency dropped by spec 013). Fixed: `httpx` back in core; a CI job now installs core only and starts the server |
+| Slim pipelines | All 7 unavailable with install hints (listed only with `?include_unavailable=true`); `Logs: /app/logs`, `Database: /app/database/videoannotator.db` |
+| First start on a fresh database | **Failed**: the first API key was generated before migrations (`no such table: users`), so a fresh install started with authentication on and no key. Fixed: security setup runs after migrations; test added |
+| GPU libraries | torch 2.11.0+cu126 CUDA; TensorFlow sees the GPU, conv2d runs; every CUDA library from `/app/.venv/.../nvidia/` plus the driver's `libcuda` from `/usr/lib/wsl`; no `/usr/local/cuda`. The plain `ubuntu:24.04` base works |
+| Job, GPU | All 6 completed, counts 0/1/22/1/4/1 as expected. 391 s cold (2.5 GB weight download), ~78 s warm; peak 5.7 GB RAM, 2.4 GB GPU |
+| Job, CPU only | All 6 completed, same counts, 68 s, peak 5.0 GB (on a 14 s clip, model loading dominates) |
+| Compose | Valid; obsolete `version:` key removed |
+| Build context | No `.dockerignore` (sent `.git`, 190 MB). Fixed with an allowlist |
+| Noise | TensorFlow logs `cuInit ... (303)` on CPU-only runs: harmless |

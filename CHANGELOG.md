@@ -70,6 +70,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   VideoAnnotator itself; both shipped the dev tools and uv's download cache. The image now starts
   `videoannotator server` on 0.0.0.0. `Dockerfile.dev` (copied local models into the image) and
   compose's `videoannotator-dev-gpu` service are gone: use the dev container, or a models volume.
+  Sizes (2026-10-02): slim 1.35 GB (347 MB compressed), every pipeline 14.9 GB (4.78 GB), against
+  26.1 GB (8.89 GB) for v1.4.3. A `.dockerignore` keeps the build context to what the image needs
+  (and `.env`, which can hold tokens, out of it).
 - **Logs go to one per-user folder** instead of `./logs` under wherever the server was started:
   `VIDEOANNOTATOR_LOG_DIR`, by default `~/.local/state/videoannotator/logs` on Linux,
   `~/Library/Logs/videoannotator` on macOS and `%LOCALAPPDATA%\videoannotator\logs` on Windows.
@@ -144,6 +147,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A core install (`pip install videoannotator`, the slim Docker image) failed to start** with
+  `No module named 'httpx'`: the server imports the Ollama client at start, and the v1.6.0 core
+  clean-up dropped `httpx` as unused (every test environment had it through the dev tools). It is
+  a core dependency again, and CI now installs core alone and starts the server.
+- **A brand-new install started with no API key.** The first key was generated before the
+  database tables existed (`no such table: users`), so with authentication on by default a fresh
+  install couldn't be used until it was restarted. Security setup now runs after the tables are
+  created.
 - **`person_tracking` failed on a fresh install** with `No module named 'lap'`: ByteTrack needs
   `lap`, which ultralytics doesn't declare (it installs it at runtime, which fails offline or in a
   locked environment). `lap` is now a declared dependency of the `person` extra.

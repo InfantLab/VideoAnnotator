@@ -84,17 +84,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 "`videoannotator diagnose models` shows sizes."
             )
 
-    # Initialize security (API keys, CORS, authentication)
-    try:
-        from .startup import initialize_security
-
-        logger.info("Initializing security configuration...")
-        initialize_security()
-        logger.info("Security configuration initialized")
-    except Exception as e:
-        logger.error(f"Security initialization failed: {e}")
-        # Continue startup but log error
-
     # Create any tables not yet present (e.g. saved_datasets/saved_pipeline_presets
     # added by 007-datasets-and-presets) -- idempotent, skips existing tables.
     # ALTER-TABLE-style column migrations for already-existing tables are
@@ -120,6 +109,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         logger.error(f"Database migration failed: {e}")
         # Don't fail startup if migration fails, but log prominently
+
+    # After the tables exist: on a fresh database the first API key has nowhere to go
+    # before them, and authentication is on by default.
+    try:
+        from .startup import initialize_security
+
+        logger.info("Initializing security configuration...")
+        initialize_security()
+        logger.info("Security configuration initialized")
+    except Exception as e:
+        logger.error(f"Security initialization failed: {e}")
+        # Continue startup but log error
 
     # Resolve any extras-install jobs orphaned by an unclean shutdown/crash of
     # a previous process (specs/005-pipeline-extras-install) -- a job stuck

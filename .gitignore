@@ -208,9 +208,6 @@ outputs/
 .DS_Store
 Thumbs.db
 
-# Docker
-.dockerignore
-
 # Test and benchmark data
 test_data/
 sample_videos/
