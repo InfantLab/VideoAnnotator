@@ -27,6 +27,8 @@ os.environ.setdefault(
 # speaker counts) to otel.pyannote.ai unless told not to; local-first means off
 # unless the user opts in (constitution principle I).
 os.environ.setdefault("PYANNOTE_METRICS_ENABLED", "0")
+# huggingface_hub lets libraries send usage pings (send_telemetry); same rule.
+os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
 
 # Before any model library is imported: point their caches into one directory.
 from .models_dir import configure_model_caches

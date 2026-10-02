@@ -28,6 +28,13 @@ from videoannotator.utils.size_based_person_analysis import run_size_based_analy
 # Optional imports
 try:
     from ultralytics import YOLO
+    from ultralytics.hub.utils import events as _ultralytics_events
+
+    # Ultralytics sends a Google Analytics event on every predict while its
+    # global `sync` setting is on (the default). Switched off for this process
+    # only, so the user's own Ultralytics settings file is left alone
+    # (constitution principle I). YOLO_OFFLINE would also stop weight downloads.
+    _ultralytics_events.enabled = False
 
     YOLO_AVAILABLE = True
 except ImportError:
