@@ -38,7 +38,48 @@ own memory use, starved the host. **We want no VideoAnnotator user on Windows to
 evidence, but nobody has yet run the same suite from a container-volume clone and seen it stay healthy.
 Proving that is part of the job (step 4).
 
-## What the repo currently does
+## Update 2026-10-02: no tests were running (container-side evidence)
+
+The agent in the container went looking for the test command, to make step 4 like-for-like, and
+found there wasn't one. All times below are BST (UTC+1).
+
+- **Nothing ran.** The Claude session's last command was at 22:06 on 10-01; it resumed at 10:02,
+  after the reboot. No file in the workspace was written between those times, and a pytest run
+  always writes `.pytest_cache`, `__pycache__` and `logs/`. pytest's temp directories hold only
+  post-reboot runs. No other agent or terminal logged anything in the container.
+- **The laptop was asleep.** The Claude Code extension's log in the container
+  (`/root/.vscode-server/data/logs/20261001T095631/exthost1/Anthropic.claude-code/Claude VSCode.log`)
+  records "clock jumps": spans where the VM did not run at all. They were 1.6 h from about 01:30,
+  2.3 h from 03:15, and 3.0 h from 05:35, with brief wakes between.
+- **It froze on waking.** At 08:39 the VM resumed. The extension's event loop was blocked for
+  42 s, then 27 s, and the `ptyHost` stopped answering heartbeats. At 08:44 the VM kernel's soft
+  lockup in `page_reporting_process` followed (the host log above). That is the routine returning
+  freed memory to Windows, holding a VM of up to ~15.6 GB.
+
+**Revised diagnosis: resume from sleep with a large, idle Docker VM**, not file-bridge traffic
+from a test run. Defender at the top of the list fits a machine catching up after waking. This is
+not proven either. There are public reports of WSL2 hangs after sleep with Docker Desktop, with
+Resource Saver mode named as one cause
+([docker/for-win#14656](https://github.com/docker/for-win/issues/14656),
+[microsoft/WSL#9429](https://github.com/microsoft/WSL/issues/9429)); none was found naming
+`page_reporting_process`.
+
+**What the branch keeps and what changed.** The named volumes for `.venv` and models, the
+Windows-drive warning, and the volume-clone and memory-cap docs are kept: the bridge is slow
+whatever caused the freeze, and a smaller VM has less memory to hand back on resume. The docs no
+longer say a test run froze the machine; they add "stop the container before the machine sleeps"
+and a hint about Resource Saver.
+
+**Next evidence (Caspar, on the host).** This replaces step 4's test-suite comparison, which has
+no command to repeat.
+1. Is Docker Desktop's Resource Saver on (Settings → Resources)? Which Docker Desktop and WSL
+   versions (`wsl --version`)?
+2. Did the 7 dirty shutdowns since 2026-09-03 follow a night asleep with the container running?
+   Kernel-Power 41 times against the Docker VM's last log lines on those days would tell.
+3. A controlled repeat: container up (bind mount, as on 10-02), let the laptop sleep, wake it, and
+   watch for 15 minutes. Then the same with the `.wslconfig` cap, and/or Resource Saver off.
+
+## What the repo did before this branch
 
 - `.devcontainer/devcontainer.json` has no `workspaceMount`, so it uses the default bind mount of the
   host folder. It already uses named volumes for `/root/.claude`, `gh` config and `viewer/node_modules`.

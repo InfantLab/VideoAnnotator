@@ -256,26 +256,31 @@ Common fixes:
 
 ---
 
-### Machine freezes or MsMpEng is high during tests on Windows
+### Windows freezes or crawls while the dev container is running
 
 **Symptoms** (Windows, Docker Desktop, VS Code dev container):
-- The whole machine stops responding during a test run or a real-model job; even Task Manager
-  won't open, and only a forced power-off recovers it
-- Before that, `MsMpEng.exe` (Defender) at the top of Task Manager, and tests far slower than on
-  Linux or macOS
+- Tests, imports and model loading are far slower than on Linux or macOS, with `MsMpEng.exe`
+  (Defender) high in Task Manager
+- The whole machine stops responding, often just after waking from sleep with the container still
+  running; even Task Manager won't open, and only a forced power-off recovers it
 - The container printed `WARNING: this workspace is a Windows folder mounted into the container`
   when it started
 
-**Cause**: the repository was cloned to a Windows folder (e.g. `C:\Users\you\code\VideoAnnotator`)
-and opened with **Reopen in Container**. Every file the container reads or writes then crosses the
-Windows–WSL file bridge, and Defender scans each one on the Windows side. A test run reads tens of
-thousands of Python files and gigabytes of weights. With WSL also allowed half the RAM by default,
-Windows can be starved until it stops scheduling anything.
+**What we know**: two separate things are involved.
 
-**Solution**:
+- *Slowness* has a clear cause. Cloned to a Windows folder (e.g. `C:\Users\you\code\VideoAnnotator`)
+  and opened with **Reopen in Container**, every file the container reads or writes crosses the
+  Windows–WSL file bridge, and Defender scans each one on the Windows side. A test run reads tens
+  of thousands of Python files and gigabytes of weights.
+- *Freezes* are not fully explained. In the one case examined (2026-10-02) no tests were running:
+  the laptop had slept overnight with the container running, and within minutes of waking, the
+  Docker VM locked up while handing memory back to Windows (a `soft lockup` in
+  `page_reporting_process`). WSL lets that VM take half the RAM by default.
 
-1. Open the project from a container volume instead: in VS Code, **Dev Containers: Clone Repository
-   in Container Volume…**, then `https://github.com/InfantLab/VideoAnnotator`. The code then lives
+**What to do**:
+
+1. Open the project from a container volume: in VS Code, **Dev Containers: Clone Repository in
+   Container Volume…**, then `https://github.com/InfantLab/VideoAnnotator`. The code then lives
    on the Linux side and Windows never sees those files. Commit and push anything in your Windows
    clone first; the volume clone starts from GitHub.
 2. Cap WSL's memory in `%USERPROFILE%\.wslconfig`, then run `wsl --shutdown` in PowerShell:
@@ -284,9 +289,15 @@ Windows can be starved until it stops scheduling anything.
    memory=12GB
    swap=8GB
    ```
-3. Optional, if you administer the machine: put code on a
+3. Before the machine sleeps, stop the container (or quit Docker Desktop), until the freeze on
+   resume is understood. If Docker Desktop's **Resource Saver** mode is on (Settings → Resources),
+   try turning it off: it has been linked to WSL hangs after sleep.
+4. Optional, if you administer the machine: put code on a
    [Dev Drive](https://learn.microsoft.com/windows/dev-drive/), or exclude your code folder from
    Defender's real-time scanning.
+
+If your machine freezes with these in place, please open an issue with the time it happened and
+what was running; we are still collecting cases.
 
 **Model weights and the Python environment** live in Docker named volumes, `videoannotator-models`
 and `videoannotator-venv`, whichever way you open the project. They survive rebuilding the

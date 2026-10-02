@@ -112,14 +112,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   3.13 then fails under 3.12 (`PY_SSIZE_T_CLEAN macro must be defined`), and the pipeline
   reported "completed" with no transcript. VideoAnnotator now uses one Triton cache per Python
   version (`~/.triton/cache/py3.12`, `py3.13`) unless `TRITON_CACHE_DIR` is set.
-- **The dev container could freeze a Windows machine during test runs.** Opened from a Windows
-  folder ("Reopen in Container"), every file the container touched crossed the Windows–WSL file
-  bridge and was scanned by Defender; a full test run starved the host until it needed a forced
-  power-off. The Python environment and model weights now live in Docker named volumes
-  (`videoannotator-venv`, `videoannotator-models`), the container warns at start when its
-  workspace is on a Windows drive, and the install guide steers Windows users to "Clone
-  Repository in Container Volume" and a WSL memory cap (troubleshooting: "Machine freezes or
-  MsMpEng is high during tests on Windows"). The dev container's models move from `./models` to
+- **The Windows dev container was slow, and was running when a Windows machine froze.** Opened
+  from a Windows folder ("Reopen in Container"), every file the container touched crossed the
+  Windows–WSL file bridge and was scanned by Defender. The Python environment and model weights
+  now live in Docker named volumes (`videoannotator-venv`, `videoannotator-models`), the
+  container warns at start when its workspace is on a Windows drive, and the install guide steers
+  Windows users to "Clone Repository in Container Volume", a WSL memory cap, and stopping the
+  container before the machine sleeps (troubleshooting: "Windows freezes or crawls while the dev
+  container is running"). The one freeze examined happened on waking from sleep, not during a
+  test run; its cause is still open. The dev container's models move from `./models` to
   `/app/models`, as in the Docker images; the server lists the old folder at start so existing
   weights can be copied over. `docker-compose.yml` names its models volume
   `videoannotator-models`, so the dev container and Compose share one copy of the weights.

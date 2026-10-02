@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # Warn when the dev container's workspace is a Windows folder bind-mounted
 # through Docker Desktop. Every file access then crosses the Windows<->WSL file
-# bridge and is scanned by Defender, which makes tests slow and has frozen a
-# Windows host outright (docs/installation/troubleshooting.md). Warns only;
-# never fails.
+# bridge and is scanned by Defender, which makes tests and model loading slow
+# (docs/installation/troubleshooting.md). Warns only; never fails.
 #
 # Usage: check_workspace_mount.sh [workspace_dir] [mounts_file]
 # Set VIDEOANNOTATOR_SKIP_MOUNT_CHECK=1 to silence it.
@@ -34,14 +33,13 @@ if [ "$fstype" = "9p" ] && [[ "$options" == *aname=drvfs* ]]; then
   ======================================================================
   WARNING: this workspace is a Windows folder mounted into the container.
 
-  Tests and imports here are slow, and heavy runs (the full test suite,
-  real models) have frozen a Windows machine completely: every file read
+  Tests, imports and model loading are slow here: every file read
   crosses the Windows/WSL file bridge and Defender scans each one.
 
   Use "Dev Containers: Clone Repository in Container Volume..." instead,
-  and cap WSL's memory in %USERPROFILE%\.wslconfig. See "Machine freezes
-  or MsMpEng is high during tests on Windows" in
-  docs/installation/troubleshooting.md.
+  cap WSL's memory in %USERPROFILE%\.wslconfig, and stop the container
+  before the machine sleeps. See "Windows freezes or crawls while the
+  dev container is running" in docs/installation/troubleshooting.md.
 
   (Set VIDEOANNOTATOR_SKIP_MOUNT_CHECK=1 to hide this message.)
   ======================================================================
