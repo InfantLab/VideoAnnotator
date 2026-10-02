@@ -11,6 +11,8 @@ from pathlib import Path
 
 from dotenv import dotenv_values, find_dotenv, load_dotenv
 
+from videoannotator.database_location import database_url
+
 
 def load_env_file() -> None:
     """Load .env into the environment without overriding values already set.
@@ -181,8 +183,8 @@ INGEST_ROOTS = get_str_env("VIDEOANNOTATOR_INGEST_ROOTS", "")
 # Database Configuration
 # =============================================================================
 
-# Database URL (defaults to SQLite)
-DATABASE_URL = get_str_env("DATABASE_URL", "sqlite:///./videoannotator.db")
+# DATABASE_URL, else SQLite at VIDEOANNOTATOR_DB_PATH or the per-user default
+DATABASE_URL = database_url()
 
 # Enable database connection pool
 DB_POOL_ENABLED = get_bool_env("DB_POOL_ENABLED", True)

@@ -78,14 +78,15 @@ Control database connection:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `sqlite:///./videoannotator.db` | Database connection string |
+| `VIDEOANNOTATOR_DB_PATH` | per-user data folder | SQLite database file. Default: `videoannotator.db` in `~/.local/share/videoannotator/` (Linux), `~/Library/Application Support/videoannotator/` (macOS), `%LOCALAPPDATA%\videoannotator\` (Windows); `/app/database/videoannotator.db` in the Docker images. The server prints it at start (`[INFO] Database: ...`) |
+| `DATABASE_URL` | unset | Database connection string; overrides `VIDEOANNOTATOR_DB_PATH` |
 | `DB_POOL_ENABLED` | `true` | Enable connection pooling |
 | `DB_POOL_SIZE` | `5` | Connection pool size |
 
 **Database URL Examples**:
 ```bash
-# SQLite (default)
-DATABASE_URL=sqlite:///./videoannotator.db
+# SQLite at a chosen path (or set VIDEOANNOTATOR_DB_PATH)
+DATABASE_URL=sqlite:////srv/videoannotator/videoannotator.db
 
 # PostgreSQL
 DATABASE_URL=postgresql://user:password@localhost/dbname

@@ -145,7 +145,7 @@ curl -H "Authorization: Bearer $API_KEY" \
 |------|---------|-------------|
 | `tokens/tokens.json` | Encrypted API keys | 600 (read/write owner only) |
 | `tokens/encryption.key` | Encryption key for tokens | 600 (read/write owner only) |
-| `videoannotator.db` | SQLite database | 644 (read/write owner, read group/others) |
+| `videoannotator.db` (per-user data folder; printed at server start) | SQLite database | 644 (read/write owner, read group/others) |
 | `<log dir>/api_server.log` | Application logs | 644 |
 | `<log dir>/api_requests.log` | Request logs | 644 |
 

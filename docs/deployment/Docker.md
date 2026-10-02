@@ -131,7 +131,6 @@ docker run -p 18011:18011 --gpus all --rm \
   -v "${PWD}/output:/app/output" \
   -v "${PWD}/logs:/app/logs" \
   -v "${PWD}/database:/app/database" \
-  -e VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator.db \
   videoannotator:dev
 ```
 

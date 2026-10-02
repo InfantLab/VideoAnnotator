@@ -98,10 +98,11 @@ ENV PYTHONUNBUFFERED=1
 # Model weights (spec 016); docker-compose mounts a volume here so they survive rebuilds.
 ENV VIDEOANNOTATOR_MODELS_DIR=/app/models
 ENV VIDEOANNOTATOR_LOG_DIR=/app/logs
+ENV VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator.db
 ENV CUDA_VISIBLE_DEVICES=0
 
 # Create directories for mounted volumes
-RUN mkdir -p /app/data /app/output /app/logs
+RUN mkdir -p /app/data /app/output /app/logs /app/database
 
 EXPOSE 18011
 

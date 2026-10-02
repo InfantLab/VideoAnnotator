@@ -109,7 +109,7 @@ Complete security hardening checklist for deploying VideoAnnotator in production
   #!/bin/bash
   DATE=$(date +%Y%m%d_%H%M%S)
   tar -czf "backup_${DATE}.tar.gz" \
-      videoannotator.db \
+      "${VIDEOANNOTATOR_DB_PATH:-$HOME/.local/share/videoannotator/videoannotator.db}" \
       tokens/ \
       storage/
   aws s3 cp "backup_${DATE}.tar.gz" s3://backups/videoannotator/

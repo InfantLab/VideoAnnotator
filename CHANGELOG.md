@@ -51,6 +51,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with sizes. `HF_HOME` (and your Hugging Face login) is left alone. The dev container uses
   `<repo>/models` as before (no re-download); the Docker images use `/app/models`, a named volume in
   docker-compose.
+- **The database moves to the per-user data folder** instead of `./videoannotator.db` under
+  wherever the server was started (so starting it elsewhere showed an empty job list):
+  `videoannotator.db` next to the models folder's default (`~/.local/share/videoannotator/` on
+  Linux), or `VIDEOANNOTATOR_DB_PATH`; `DATABASE_URL` still overrides both. The server prints it at
+  start (`[INFO] Database: ...`). Both database layers now use the same setting: before,
+  `VIDEOANNOTATOR_DB_PATH` moved job storage but users, API keys, datasets and presets stayed in
+  `./videoannotator.db`. **An existing `./videoannotator.db` is not moved**: copy it to the new
+  location (or point `VIDEOANNOTATOR_DB_PATH` at it) to keep its jobs and API keys. The Docker
+  images use `/app/database/videoannotator.db`, a named volume (`videoannotator-database`) in
+  docker-compose, so jobs and keys now survive a rebuild; the dev container keeps
+  `<repo>/videoannotator.db`.
 - **Logs go to one per-user folder** instead of `./logs` under wherever the server was started:
   `VIDEOANNOTATOR_LOG_DIR`, by default `~/.local/state/videoannotator/logs` on Linux,
   `~/Library/Logs/videoannotator` on macOS and `%LOCALAPPDATA%\videoannotator\logs` on Windows.

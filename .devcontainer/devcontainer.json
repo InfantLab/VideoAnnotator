@@ -51,7 +51,8 @@
         "HF_AUTH_TOKEN": "${localEnv:HF_AUTH_TOKEN}",
         "OLLAMA_BASE_URL": "http://host.docker.internal:11434",
         "VIDEOANNOTATOR_MODELS_DIR": "/app/models",
-        "VIDEOANNOTATOR_LOG_DIR": "${containerWorkspaceFolder}/logs"
+        "VIDEOANNOTATOR_LOG_DIR": "${containerWorkspaceFolder}/logs",
+        "VIDEOANNOTATOR_DB_PATH": "${containerWorkspaceFolder}/videoannotator.db"
     },
     "customizations": {
         "vscode": {

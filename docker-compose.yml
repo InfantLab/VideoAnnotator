@@ -29,6 +29,7 @@ services:
       dockerfile: Dockerfile.cpu
     volumes:
       - models:/app/models  # model weights persist across rebuilds (spec 016)
+      - database:/app/database  # jobs, users and API keys persist across rebuilds
       - ./data:/app/data:ro
       - ./output:/app/output
     environment:
@@ -50,6 +51,7 @@ services:
       dockerfile: Dockerfile.gpu
     volumes:
       - models:/app/models  # model weights persist across rebuilds (spec 016)
+      - database:/app/database  # jobs, users and API keys persist across rebuilds
       - ./data:/app/data:ro
       - ./output:/app/output
     environment:
@@ -153,6 +155,8 @@ volumes:
     # Fixed name (not <project>_models), shared with the dev container, so the
     # weights download once per machine.
     name: videoannotator-models
+  database:
+    name: videoannotator-database
 
 networks:
   default:

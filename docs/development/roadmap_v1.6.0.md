@@ -336,14 +336,15 @@ but only the devcontainer does.
       under a per-user directory too (found during spec 016). (Done 2026-10-02:
       `VIDEOANNOTATOR_LOG_DIR`, per-user default; `/app/logs` in Docker, `<repo>/logs` in the dev
       container.)
-- [ ] **The database lives in `./videoannotator.db` too**, under wherever the server starts, so
+- [x] **The database lives in `./videoannotator.db` too**, under wherever the server starts, so
       starting it from another directory shows an empty job list (found 2026-10-02). There are two
       database layers: the storage backend (`api/database.py`, honours `VIDEOANNOTATOR_DB_PATH`)
       and the SQLAlchemy one (`database/database.py`: users, tokens, jobs routes, datasets,
       presets), which reads only `DATABASE_URL`. Set `VIDEOANNOTATOR_DB_PATH` alone and the second
-      still opens `./videoannotator.db`. Needs a spec: one setting, a per-user default like
-      models and logs, and moving an existing database (it holds users' job history and API
-      keys).
+      still opens `./videoannotator.db`. (Done 2026-10-02, no spec: with no users yet, an
+      existing database isn't migrated, only mentioned in the CHANGELOG. One resolver,
+      `database_location.py`, for both layers; per-user default; `/app/database` plus a named
+      volume in Docker; `<repo>/videoannotator.db` in the dev container.)
 - [ ] **Download weights ahead of time** (spec 011's FR-017, deferred there): an action per
       pipeline, in the viewer, the API and the CLI, that downloads its declared weights into the
       models directory before the first job, reusing the extras install job's table and statuses.

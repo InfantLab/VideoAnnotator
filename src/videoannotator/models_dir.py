@@ -27,14 +27,19 @@ _LIBRARY_VARIABLES = {
 }
 
 
-def _default_root() -> Path:
+def user_data_dir() -> Path:
+    """The platform's per-user data directory for VideoAnnotator."""
     if sys.platform == "win32":
         base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
     elif sys.platform == "darwin":
         base = Path.home() / "Library" / "Application Support"
     else:
         base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
-    return base / "videoannotator" / "models"
+    return base / "videoannotator"
+
+
+def _default_root() -> Path:
+    return user_data_dir() / "models"
 
 
 def models_dir() -> Path:

@@ -100,6 +100,16 @@ def server(
     from videoannotator.utils.logging_config import logs_dir
 
     typer.echo(f"[INFO] Logs: {logs_dir()}")
+    from videoannotator.database_location import database_url
+
+    db_url = database_url()
+    # A server URL can carry a password; only a SQLite path is safe to print.
+    db_shown = (
+        db_url.removeprefix("sqlite:///")
+        if db_url.startswith("sqlite")
+        else "DATABASE_URL"
+    )
+    typer.echo(f"[INFO] Database: {db_shown}")
 
     from .config_env import ENABLE_VIEWER
 
