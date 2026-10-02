@@ -87,16 +87,17 @@ happens from outside either repo.
 - [x] Merge the two `AGENTS.md`/`CLAUDE.md` files. The viewer's guidance is `AGENTS.md` §23
       (corrected for Bun, `127.0.0.1`, the shared version and the contract fixtures); the viewer's
       `AGENTS.md`, `CLAUDE.md`, Copilot instructions and Claude settings are removed.
-      Left: the viewer's constitution (`viewer/.specify/memory/constitution.md`: faithful annotation
-      display, composable view layers, ...) to fold into `.specify/memory/constitution.md` as an
-      amendment, then drop `viewer/.specify`, `viewer/.claude/skills` and `viewer/.github/prompts`.
-- [ ] Move the viewer's open issues, archive the old repo with a pointer README, and update links
+      The viewer's constitution is folded into `.specify/memory/constitution.md` (v1.1.0,
+      2026-10-02: new Principle VI, Faithful Annotation Display; viewer clauses in I, II, IV, V and
+      Engineering Standards), and the viewer's own spec-kit setup is removed. Making "no
+      telemetry" product-wide found Ultralytics sending a Google Analytics event per predict; off.
+- [x] Move the viewer's open issues, archive the old repo with a pointer README, and update links
       in `README.md`, `paper/paper.md` and `CITATION.cff`.
       Links done (2026-10-01): `README.md`, `docs/usage/GETTING_STARTED.md`, and the viewer's README,
       docs, `CONTRIBUTING.md` and `package.json` point here; `viewer/CITATION.cff` (a separate
       v0.7.0 that no longer exists) removed. `paper/paper.md` and `CITATION.cff` had none. Archives,
       the frozen viewer changelog and the sent cover letter keep the old links. The old repo has
-      no open issues, so nothing to move. Left: the pointer README and archiving it (outward-facing).
+      no open issues, so nothing to move. Pointer README pushed and the repo archived 2026-10-02.
 
 **Viewer bugs found in the v1.5.0 end-to-end run** (2026-09-26), to fix once `viewer/` is in
 this repo:
@@ -346,6 +347,9 @@ half-built page.
       (Preset load/save in the job wizard landed in v1.5.0; the Datasets page, saved datasets and
       import/export from spec 007's viewer handoff are what's left.)
 - [ ] Viewer: zero `tsc --noEmit` errors (24 on 2026-09-26), with typechecking in CI.
+      Constitution 1.1.0 makes this an Engineering Standard, as are a 300 KB gzipped initial bundle
+      (304 KB on 2026-10-02) and overlays naming the pipeline and version that drew them
+      (Principle VI; not shown yet). All three are open follow-ups in its Sync Impact Report.
       Note (2026-10-01): plain `bunx tsc --noEmit`, the documented check, compiles nothing (the root
       `tsconfig.json` has `"files": []` and only references); run `-p tsconfig.app.json`. Still 24
       errors in 13 files, e.g. the OpenAPI `paths` type in `src/api/client.ts` lacks `/api/v1/jobs`.

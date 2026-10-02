@@ -423,6 +423,7 @@ committed in the same commit; CI's `viewer` job runs `--check` and fails on a st
   build test files from strings.
 - Large files: load progressively; don't block the UI.
 - Viewer specs before the merge are in `viewer/specs/` (history); new viewer work gets a spec in
-  `specs/` like any other feature. `viewer/.specify/memory/constitution.md` still holds the viewer's
-  own principles (faithful annotation display, composable view layers) until they are folded into
-  `.specify/memory/constitution.md`.
+  `specs/` like any other feature, under the one constitution (`.specify/memory/constitution.md`),
+  which covers the viewer since v1.1.0: no telemetry (I), the formats it reads (II), layers (IV),
+  UI stability (V), and faithful display (VI): never create or hide values; holding the latest
+  sample until the next is allowed; overlays attributable to their pipeline.
