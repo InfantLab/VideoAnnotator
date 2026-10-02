@@ -96,6 +96,8 @@ def current_outputs(tmp_path_factory) -> dict[str, str]:
     env = {
         **os.environ,
         "VIDEOANNOTATOR_DB_PATH": str(work / "va.db"),
+        # The SQLAlchemy layer reads only DATABASE_URL, else ./videoannotator.db.
+        "DATABASE_URL": f"sqlite:///{work / 'va.db'}",
         "STORAGE_ROOT": str(work / "storage"),
         "STORAGE_BASE_DIR": str(work / "batch"),
         "AUTH_REQUIRED": "false",

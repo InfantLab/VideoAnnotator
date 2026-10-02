@@ -50,7 +50,8 @@
         "HUGGINGFACE_TOKEN": "${localEnv:HUGGINGFACE_TOKEN}",
         "HF_AUTH_TOKEN": "${localEnv:HF_AUTH_TOKEN}",
         "OLLAMA_BASE_URL": "http://host.docker.internal:11434",
-        "VIDEOANNOTATOR_MODELS_DIR": "/app/models"
+        "VIDEOANNOTATOR_MODELS_DIR": "/app/models",
+        "VIDEOANNOTATOR_LOG_DIR": "${containerWorkspaceFolder}/logs"
     },
     "customizations": {
         "vscode": {

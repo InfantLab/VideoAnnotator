@@ -199,7 +199,6 @@ DB_POOL_SIZE = get_int_env("DB_POOL_SIZE", 5)
 LOG_LEVEL = get_str_env("LOG_LEVEL", "INFO")
 
 # Log directory
-LOG_DIR = Path(get_str_env("LOG_DIR", "./logs"))
 
 # Enable structured JSON logging
 LOG_JSON = get_bool_env("LOG_JSON", False)
@@ -276,7 +275,9 @@ def print_config() -> None:
     print(f"  DB_POOL_SIZE: {DB_POOL_SIZE}")
     print("\nLogging:")
     print(f"  LOG_LEVEL: {LOG_LEVEL}")
-    print(f"  LOG_DIR: {LOG_DIR}")
+    from videoannotator.utils.logging_config import logs_dir
+
+    print(f"  VIDEOANNOTATOR_LOG_DIR: {logs_dir()}")
     print("\nModels:")
     print(f"  MODEL_CACHE_DIR: {MODEL_CACHE_DIR}")
     print(f"  DEVICE: {DEVICE}")

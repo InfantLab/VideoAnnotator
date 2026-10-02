@@ -61,10 +61,7 @@ with open("video.mp4", "rb") as f:
     files = {"video": f}
     data = {"selected_pipelines": "scene,person,face"}
     response = requests.post(
-        f"{BASE_URL}/jobs/",
-        headers=headers,
-        files=files,
-        data=data
+        f"{BASE_URL}/jobs/", headers=headers, files=files, data=data
     )
 job_id = response.json()["job_id"]
 ```
@@ -168,7 +165,7 @@ def api_client():
         user_id="test",
         username="test",
         email="test@example.com",
-        scopes=["read", "write", "admin"]
+        scopes=["read", "write", "admin"],
     )
 
     client = TestClient(app)
@@ -212,7 +209,7 @@ def api_client():
 5. **Monitor Key Usage**:
    ```bash
    # Check recent key activity
-   tail -f logs/api_requests.log | grep "user_id"
+   tail -f ~/.local/state/videoannotator/logs/api_requests.log | grep "user_id"
    ```
 
 ### Key Expiration

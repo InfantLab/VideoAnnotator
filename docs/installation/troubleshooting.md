@@ -178,8 +178,8 @@ df -h
 
 **2. Clean up**:
 ```bash
-# Remove old logs
-rm -rf logs/*.log
+# Remove old logs (folder printed at server start; Linux default shown)
+rm -f ~/.local/state/videoannotator/logs/*.log
 
 # Clean test artifacts
 rm -rf test_storage/
@@ -764,17 +764,18 @@ lsof custom_storage/jobs.db
 ### Log Analysis
 
 ```bash
-# View recent logs
-tail -f logs/videoannotator.log
+# View recent logs (folder printed at server start as "[INFO] Logs: ...";
+# Linux default shown, /app/logs in Docker)
+tail -f ~/.local/state/videoannotator/logs/api_server.log
 
 # Search for errors
-grep ERROR logs/videoannotator.log | tail -20
+tail -50 ~/.local/state/videoannotator/logs/errors.log
 
 # Search for specific job
-grep "job_abc123" logs/videoannotator.log
+grep "job_abc123" ~/.local/state/videoannotator/logs/api_server.log
 
 # Check API request logs
-grep "POST /api/v1/jobs" logs/videoannotator.log
+grep "POST /api/v1/jobs" ~/.local/state/videoannotator/logs/api_requests.log
 ```
 
 ---

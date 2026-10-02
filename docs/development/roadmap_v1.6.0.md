@@ -332,8 +332,18 @@ but only the devcontainer does.
       environment variables once the app sets them.
 - [x] `videoannotator diagnose` shows where the models directory is and how much it holds.
 (Done in spec 016, 2026-10-01: default is the per-user data directory.)
-- [ ] Logs go to `./logs` relative to the working directory, like the models used to: put them
-      under a per-user directory too (found during spec 016).
+- [x] Logs go to `./logs` relative to the working directory, like the models used to: put them
+      under a per-user directory too (found during spec 016). (Done 2026-10-02:
+      `VIDEOANNOTATOR_LOG_DIR`, per-user default; `/app/logs` in Docker, `<repo>/logs` in the dev
+      container.)
+- [ ] **The database lives in `./videoannotator.db` too**, under wherever the server starts, so
+      starting it from another directory shows an empty job list (found 2026-10-02). There are two
+      database layers: the storage backend (`api/database.py`, honours `VIDEOANNOTATOR_DB_PATH`)
+      and the SQLAlchemy one (`database/database.py`: users, tokens, jobs routes, datasets,
+      presets), which reads only `DATABASE_URL`. Set `VIDEOANNOTATOR_DB_PATH` alone and the second
+      still opens `./videoannotator.db`. Needs a spec: one setting, a per-user default like
+      models and logs, and moving an existing database (it holds users' job history and API
+      keys).
 - [ ] **Download weights ahead of time** (spec 011's FR-017, deferred there): an action per
       pipeline, in the viewer, the API and the CLI, that downloads its declared weights into the
       models directory before the first job, reusing the extras install job's table and statuses.

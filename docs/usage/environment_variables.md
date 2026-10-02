@@ -101,7 +101,7 @@ Control log output and verbosity:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
-| `LOG_DIR` | `./logs` | Directory for log files |
+| `VIDEOANNOTATOR_LOG_DIR` | per-user log folder | Directory for log files. Default: `~/.local/state/videoannotator/logs` (Linux), `~/Library/Logs/videoannotator` (macOS), `%LOCALAPPDATA%\videoannotator\logs` (Windows); `/app/logs` in the Docker images. The server prints it at start (`[INFO] Logs: ...`) |
 | `LOG_JSON` | `false` | Enable structured JSON logging |
 
 ### Model Configuration
@@ -276,7 +276,7 @@ MAX_CONCURRENT_JOBS=1
 **Solution**: Ensure worker is running and polling:
 ```bash
 # Check worker logs
-tail -f logs/videoannotator.log
+tail -f ~/.local/state/videoannotator/logs/api_server.log
 
 # Try reducing poll interval
 WORKER_POLL_INTERVAL=2 videoannotator worker

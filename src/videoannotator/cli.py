@@ -97,6 +97,9 @@ def server(
 
     typer.echo(f"[START] Starting VideoAnnotator API server on http://{host}:{port}")
     typer.echo(f"[INFO] API documentation available at http://{host}:{port}/docs")
+    from videoannotator.utils.logging_config import logs_dir
+
+    typer.echo(f"[INFO] Logs: {logs_dir()}")
 
     from .config_env import ENABLE_VIEWER
 

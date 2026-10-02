@@ -51,6 +51,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with sizes. `HF_HOME` (and your Hugging Face login) is left alone. The dev container uses
   `<repo>/models` as before (no re-download); the Docker images use `/app/models`, a named volume in
   docker-compose.
+- **Logs go to one per-user folder** instead of `./logs` under wherever the server was started:
+  `VIDEOANNOTATOR_LOG_DIR`, by default `~/.local/state/videoannotator/logs` on Linux,
+  `~/Library/Logs/videoannotator` on macOS and `%LOCALAPPDATA%\videoannotator\logs` on Windows.
+  The server prints the folder at start (`[INFO] Logs: ...`). The Docker images keep `/app/logs`
+  (docker-compose's `./logs` mount still works) and the dev container keeps `<repo>/logs`. Old
+  `./logs` folders are left where they are. The documented `LOG_DIR` setting never did anything
+  and is gone.
 - **OpenFace 3 works outside a source checkout.** Its face detector loaded a backbone file from
   `./weights/`, relative to the working directory, which only a source checkout has (it's committed
   to this repository). That load is skipped: the detector's full checkpoint replaces those weights
