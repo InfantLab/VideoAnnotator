@@ -351,8 +351,8 @@ reclaim, not kills.
     Volume" across two lines.
   - Fixed in `scripts/check_workspace_mount.sh` (uncommitted). The full run afterwards passes.
 - `face_analysis` (DeepFace) completed with **0 annotations** on the demo video, while OpenFace3 found faces
-  in it. Its output file isn't written, and there was no error. Possibly expected for DeepFace on infant
-  faces at default thresholds, but worth a look.
+  in it. Its output file isn't written, and there was no error. Expected: the demo clip has no faces
+  DeepFace detects (`tests/fixtures/viewer_contract/README.md`), in v1.5.0 too.
 - `videoannotator process` is a stub (`TODO`, `src/videoannotator/cli.py:209`), so (c) used
   `videoannotator server` with `AUTH_REQUIRED=false` and a scratch DB/storage. `--dev` alone still
   demanded an API key on `POST /api/v1/jobs/`.

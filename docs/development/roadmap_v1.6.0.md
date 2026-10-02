@@ -282,10 +282,12 @@ lifted, 2026-09-26):
       viewer's dependencies.
       (Done 2026-10-01: specs 012 Python 3.13, 013 core dependencies and tooling, 014 drop the
       LAION pipelines, 015 torch 2.11 + pyannote.audio 4, 016 one models directory.)
-- [ ] **Implement** the specs before rc1. Re-baseline the v1.4.x acceptance fixtures once, on
+- [x] **Implement** the specs before rc1. Re-baseline the v1.4.x acceptance fixtures once, on
       purpose, and record the before/after differences on the demo video in the CHANGELOG.
-      (Specs 012–016 implemented and passing CI on `1.6-dev`. Still to do: the re-baseline and the
-      CHANGELOG before/after record.)
+      (Specs 012–016 implemented and passing CI on `1.6-dev`. Re-baselined 2026-10-02 against
+      v1.5.0, not v1.4.4: the v1.4.4 fixtures were never captured, and v1.5.0 is the release these
+      upgrades follow. Outputs unchanged up to GPU noise (CHANGELOG). The baseline is the viewer
+      contract fixtures, checked by `tests/integration/test_output_baseline.py`, real models.)
 - [ ] **Docker image size**: build `Dockerfile.cpu`/`Dockerfile.gpu` slim and with
       `--build-arg EXTRAS=all`, and record both sizes against the v1.4.3 baseline. v1.5.0 set a
       target of 80% smaller but couldn't measure it (no Docker where it was checked).
@@ -393,6 +395,10 @@ half-built page.
       pipeline as completed with an empty transcript (found 2026-10-01 through a Triton cache
       error). Raise instead, so the job shows the pipeline as failed with its error; check the
       other pipelines for the same pattern.
+- [ ] **`GET /api/v1/jobs/{id}/results/files/{pipeline}` returns `OUTPUT_FILE_MISSING`** for
+      every result stored in the database (`output_file: database:/annotations/...`), which is
+      what each job's results list advertises as its `download_url`. Same in v1.5.0 (found
+      2026-10-02). Serve the file from the job folder, or stop advertising the URL.
 - [ ] `videoannotator process <video>` is listed in `--help` but only prints "Direct processing
       is not yet implemented" (found 2026-10-01). Implement it on the shared job-execution path,
       or remove it.

@@ -31,7 +31,7 @@ docs/development/roadmap_v1.{5,6,7}.0.md, roadmap_v1.7_to_v2.0.md  # release roa
 ## Commands
 ```bash
 pytest tests/                 # full suite
-pytest tests/ -k acceptance   # v1.4.x behaviour-parity fixtures
+pytest tests/integration/test_output_baseline.py  # demo-clip outputs vs baseline (real models, ~1 min)
 ruff check .                  # lint (see pyproject.toml [tool.ruff])
 mypy src/videoannotator        # type check
 pre-commit run --all-files    # full pre-commit gate (used on every commit)

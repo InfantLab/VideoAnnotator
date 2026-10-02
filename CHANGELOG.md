@@ -103,9 +103,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pre-commit hooks upgraded; `pydocstyle` (it pointed at a directory that no longer exists) and
   `mirrors-prettier` (no stable release since v3) removed. GitHub Actions moved to current
   versions (Node 20 is deprecated on Actions).
+- **Pipeline outputs are unchanged by this release's upgrades** (Python 3.13, torch 2.11,
+  pyannote.audio 4, the core dependency clean-up). The demo clip was run through v1.5.0 and this
+  release with the same six pipelines on the same GPU (2026-10-02):
+  - Identical: scene detection, person tracks, speaker diarization (every turn, to the
+    millisecond), and the speech transcript with its timings.
+  - Within run-to-run GPU noise: person-tracking scores (up to 0.12% apart; two runs of the same
+    version differ by up to 0.07%) and OpenFace 3 action-unit intensities (up to 1.4%, median
+    0.0004%; two runs of the same version differ by up to 1.6%).
+  - Face analysis (DeepFace) finds no faces in the demo clip in either version.
+  These outputs are now the committed baseline: `tests/integration/test_output_baseline.py` runs
+  the demo clip through a real server and compares every file with
+  `tests/fixtures/viewer_contract/` (real models, about a minute on a GPU; not run in CI).
 
 ### Fixed
 
+- **`person_tracking` failed on a fresh install** with `No module named 'lap'`: ByteTrack needs
+  `lap`, which ultralytics doesn't declare (it installs it at runtime, which fails offline or in a
+  locked environment). `lap` is now a declared dependency of the `person` extra.
+- **The standalone `speech_recognition` and `speaker_diarization` pipelines wrote no files.**
+  Their results went to the database only, so the viewer, which loads a job from its files, showed
+  no transcript or speaker turns. They now write `<video>_speech_recognition.vtt` and
+  `<video>_speaker_diarization.rttm` like the deprecated `audio_processing` did.
 - **Speech recognition could return an empty transcript after another Python version had run on
   the same machine.** Triton, which Whisper uses for word timestamps on GPU, caches compiled
   launchers in `~/.triton/cache` without keying them on the Python version; a launcher built by
@@ -119,8 +138,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   container warns at start when its workspace is on a Windows drive, and the install guide steers
   Windows users to "Clone Repository in Container Volume", a WSL memory cap, and stopping the
   container before the machine sleeps (troubleshooting: "Windows freezes or crawls while the dev
-  container is running"). The one freeze examined happened on waking from sleep, not during a
-  test run; its cause is still open. The dev container's models move from `./models` to
+  container is running"). The freeze examined was memory exhaustion, not a test run: the WSL VM,
+  uncapped, can grow by several GB of page cache (installing the extras alone fills ~10 GB), on
+  a machine already near its limit. The dev container is now capped at 12 GB (`--memory=12g` in
+  `devcontainer.json`); under that cap the full test suite peaks at 5.4 GB and a job running every
+  pipeline on the demo clip at 6.5 GB. The dev container's models move from `./models` to
   `/app/models`, as in the Docker images; the server lists the old folder at start so existing
   weights can be copied over. `docker-compose.yml` names its models volume
   `videoannotator-models`, so the dev container and Compose share one copy of the weights.
