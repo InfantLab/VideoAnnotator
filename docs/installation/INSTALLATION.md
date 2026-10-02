@@ -341,6 +341,10 @@ The dev container is a complete GPU-enabled development environment.
   administer the machine: a [Dev Drive](https://learn.microsoft.com/windows/dev-drive/) or a
   Defender exclusion for your code folder.
 
+Creating the container installs every pipeline's dependencies (`uv sync --all-extras`, as CI
+tests): allow 5–10 minutes and about 9 GB the first time. The container is capped at 12 GB of
+memory (`--memory=12g` in `devcontainer.json`).
+
 On every platform, the Python environment (`.venv`) and the model weights live in Docker named
 volumes (`videoannotator-venv`, `videoannotator-models`, the latter shared with
 `docker-compose.yml`). They survive container rebuilds and `docker system prune --volumes`, which

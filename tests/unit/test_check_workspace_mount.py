@@ -7,6 +7,7 @@ lines are named volumes on the same host.
 
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -22,7 +23,12 @@ WINDOWS_BIND = (
 VOLUME = "/dev/sdd /workspaces ext4 rw,relatime 0 0"
 ROOT = "overlay / overlay rw,relatime 0 0"
 
-pytestmark = pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+# The script runs inside the Linux dev container. On Windows `bash` may be WSL's
+# launcher, which fails when no distro is installed (seen on GitHub's runners).
+pytestmark = pytest.mark.skipif(
+    shutil.which("bash") is None or sys.platform == "win32",
+    reason="needs a POSIX bash",
+)
 
 
 def run(tmp_path, mounts, workspace=WS, **env):

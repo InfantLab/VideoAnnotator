@@ -5,7 +5,6 @@ API server. Converted from test_integrated_worker.py debugging script.
 """
 
 import asyncio
-import os
 import tempfile
 from pathlib import Path
 
@@ -28,9 +27,9 @@ async def test_background_job_processing(monkeypatch):
         storage_root = tmp_path / "storage" / "jobs"
         storage_root.mkdir(parents=True, exist_ok=True)
 
-        os.environ["VIDEOANNOTATOR_DB_PATH"] = str(db_path)
-        os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
-        os.environ["STORAGE_ROOT"] = str(storage_root)
+        monkeypatch.setenv("VIDEOANNOTATOR_DB_PATH", str(db_path))
+        monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+        monkeypatch.setenv("STORAGE_ROOT", str(storage_root))
 
         # Reset caches to ensure env changes are picked up.
         from videoannotator.api.database import reset_storage_backend
@@ -70,6 +69,8 @@ async def test_background_job_processing(monkeypatch):
                 assert isinstance(bp.get("poll_interval", 0), (int, float))
         finally:
             await lifespan_cm.__aexit__(None, None, None)
+            # Windows can't delete the temporary database while it is open.
+            reset_storage_backend()
 
 
 @pytest.mark.integration

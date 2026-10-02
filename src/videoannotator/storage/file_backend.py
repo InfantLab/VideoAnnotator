@@ -384,7 +384,13 @@ class FileStorageBackend(StorageBackend):
         """Clean up old files."""
         from datetime import datetime, timedelta
 
-        cutoff_time = datetime.now() - timedelta(days=max_age_days)
+        # 0 means everything: a file written this instant can carry an mtime later than
+        # now() on clocks coarser than the filesystem's (Windows), so `<` would keep it.
+        cutoff_time = (
+            datetime.max
+            if max_age_days <= 0
+            else datetime.now() - timedelta(days=max_age_days)
+        )
         deleted_jobs = 0
         deleted_reports = 0
 

@@ -34,7 +34,7 @@
         }
     },
     "onCreateCommand": "grep -qF scripts/shell_aliases.sh ~/.bashrc || echo \"source ${containerWorkspaceFolder}/scripts/shell_aliases.sh\" >> ~/.bashrc",
-    "postCreateCommand": "uv sync --inexact && HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh && uv run pre-commit install && (cd viewer && bun install)",
+    "postCreateCommand": "uv sync --inexact --all-extras && HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh && uv run pre-commit install && (cd viewer && bun install)",
     "postStartCommand": "bash scripts/check_workspace_mount.sh",
     "mounts": [
         "source=videoannotator-claude-home,target=/root/.claude,type=volume",

@@ -20,7 +20,10 @@ def test_default_is_in_the_per_user_data_dir(monkeypatch):
     monkeypatch.delenv(dl.DB_PATH_ENV, raising=False)
     monkeypatch.setenv("XDG_DATA_HOME", "/data-home")
     monkeypatch.setattr(sys, "platform", "linux")
-    assert dl.database_path() == Path("/data-home/videoannotator/videoannotator.db")
+    assert (
+        dl.database_path()
+        == Path("/data-home/videoannotator/videoannotator.db").resolve()
+    )
 
 
 def test_url_follows_the_path(tmp_path, monkeypatch):
@@ -50,8 +53,16 @@ def test_both_layers_use_one_file(tmp_path, setting):
         expected = tmp_path / "chosen" / "jobs.db"
         env[dl.DB_PATH_ENV] = str(expected)
     else:
-        env["XDG_DATA_HOME"] = str(tmp_path / "data-home")
-        expected = tmp_path / "data-home" / "videoannotator" / "videoannotator.db"
+        # Every platform's per-user base (XDG on Linux, ~/Library on macOS,
+        # LOCALAPPDATA on Windows) pointed into tmp_path.
+        home = tmp_path / "home"
+        env.update(
+            XDG_DATA_HOME=str(home / ".local" / "share"),
+            LOCALAPPDATA=str(home / "AppData" / "Local"),
+            HOME=str(home),
+            USERPROFILE=str(home),
+        )
+        expected = None
     out = subprocess.run(
         [
             sys.executable,
@@ -70,7 +81,12 @@ def test_both_layers_use_one_file(tmp_path, setting):
         check=True,
     ).stdout
     sa_url, backend_path = json.loads(out.strip().splitlines()[-1])
-    assert sa_url == f"sqlite:///{expected.resolve()}"
-    assert Path(backend_path) == expected.resolve()
-    assert expected.exists()
+    sa_path = Path(sa_url.removeprefix("sqlite:///"))
+    assert sa_path.exists()
+    assert sa_path.samefile(backend_path)
+    if expected is not None:
+        assert sa_path.samefile(expected)
+    else:
+        assert sa_path.resolve().is_relative_to((tmp_path / "home").resolve())
+        assert sa_path.name == "videoannotator.db"
     assert not (cwd / "videoannotator.db").exists()
