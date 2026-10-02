@@ -287,6 +287,79 @@ MariaDB needs to run at startup.
    the OOM symptom (`Killed`, exit 137) with the override. Whether a bare `pytest` should deselect heavy
    tests depends on (b).
 
+## Update 6 (agent, 2026-10-02, ~13:00): measurements in the volume clone
+
+**Setup.**
+- Fresh Clone Repository in Container Volume of `windows-devcontainer-freeze` at `084cef4`.
+- Workspace on ext4 (no 9p); cgroup `memory.max` = 12 GiB; VM `MemTotal` 15.9 GB (no `.wslconfig` cap).
+- RTX 4060 Laptop, 8 GB VRAM; Python 3.13.
+- The fresh `.venv` volume held only the core install (71 packages, no torch), because `postCreateCommand`
+  runs `uv sync` without extras. I installed `uv sync --inexact --extra all` (torch 2.11.0+cu126, CUDA
+  available). The models volume had survived, so no weights were downloaded.
+- Sampled once a second: `memory.current`, `anon`/`file` from `memory.stat`, `memory.events`, and
+  `nvidia-smi` used VRAM.
+- `anon` is the number that matters below. `file` (page cache) grows to fill whatever the cap allows and
+  is reclaimed inside the cgroup, so `memory.current` sits at about 12 GiB most of the time and says
+  nothing about need.
+
+**Results.** In every phase, `oom_kill` stayed at 0. The `max` events in the last column are cache
+reclaim, not kills.
+
+| Phase | Wall time | Peak `anon` (whole container) | Peak VRAM | `max` events |
+|---|---|---|---|---|
+| Baseline (VS Code server + Claude, idle) | – | 1.6–2.1 GiB | 0 | – |
+| `uv sync --extra all` | 320 s | 2.0 GiB (**`file` 9.8 GiB**) | 0 | 38,036 |
+| (a) `pytest --collect-only -q`, core env only | 0.9–3 s (11 import errors) | – | – | – |
+| (a) `pytest --collect-only -q`, all extras, ×3 | 27 s cold, then 9–11 s (pytest reports 6 s) | 2.7 GiB | 0 | – |
+| (a) `pytest tests/unit -q` | 23 s (806 passed, 1 failed, see below) | 2.7 GiB | 0 | – |
+| (b) full default `pytest` (1,375 tests) | **96 s**: 1,342 passed, 33 skipped | **5.4 GiB** (pytest RSS 4.1 GiB) | 0.8 GiB | 28,446 |
+| (c) API job, demo video (10 s), 6 pipelines | 45 s | **6.45 GiB** (server RSS 5.6 GiB) | 1.0 GiB | 15,055 |
+
+**What it shows.**
+- **Speed.** Collection drops from 179–266 s on the bind mount to 9–27 s on the volume, about 10–25×
+  faster. The whole default suite runs in 96 s. The volume clone advice stands on speed alone.
+- **The install alone fills the cap with page cache.** Installing the extras pushed `file` to 9.8 GiB
+  while `anon` stayed at 2 GiB. Without a container cap, that cache sits in the WSL VM until
+  the VM hands it back. That is the growth mechanism Update 3 suspected, now seen directly. With
+  the cap, reclaim kept it at 12 GiB with no kills.
+- **(b) The default `pytest` is not heavy.**
+  - Peak `anon` was 5.4 GiB including the ~2 GiB editor baseline.
+  - The biggest single step was +2.15 GiB at `tests/pipelines/test_face_analysis.py::TestDeepFaceAnalysis::test_deepface_error_handling`,
+    where TensorFlow/DeepFace loads. Whisper tests come next (`test_speech_audio_processing`, about 9 s).
+  - Memory ratchets up and isn't freed: pytest holds about 4.1 GiB RSS to the end.
+  - Deselecting `real_models`/`gpu`/`slow` by default isn't needed for memory. It would buy little time,
+    since the whole run is 96 s.
+- **(c) A real-models job peaks at about 6.5 GiB of container `anon`**, about 4.7 GiB above baseline.
+  - The pipelines run in order and each one keeps its models loaded, so memory climbs stepwise:
+    job start plus DeepFace/TensorFlow +2.7, OpenFace3 +0.7, YOLO +0.1, scene/CLIP +0.6, pyannote/whisper
+    +0.2 GiB.
+  - The server still held 5.6 GiB RSS after the job ended.
+  - VRAM never passed 1 GiB of the 8 GB card. Whether "Shared GPU memory" in Task Manager moved was
+    **not observed** (step 3 wasn't coordinated with Caspar), so Update 4, item 4 is still open.
+- **Cap sizing.**
+  - Measured need: 6.5 GiB peak (c), 5.4 GiB (b), each including about 2 GiB for the editor.
+  - With headroom, **8g** would cover both. It is also exactly WSL's default VM size on a 16 GB machine
+    (50% of RAM), so there the VM default already binds before a 12g container cap does.
+  - The 12g cap only bites on hosts of 24 GB or more, like Caspar's 32 GB.
+  - Caveat: the demo video is 10 s long. A long video, a larger Whisper model or concurrent jobs may need
+    more. **Recommendation:** keep 12g until one long-video job has been measured, then set peak plus
+    about 1.5 GiB (likely 8g or 10g).
+
+**Side findings.**
+- `tests/unit/test_check_workspace_mount.py::test_warns_for_a_windows_drive_bind_mount` failed.
+  - Cause: when 8e457c4 reworded the start-up warning, it wrapped the phrase "Clone Repository in Container
+    Volume" across two lines.
+  - Fixed in `scripts/check_workspace_mount.sh` (uncommitted). The full run afterwards passes.
+- `face_analysis` (DeepFace) completed with **0 annotations** on the demo video, while OpenFace3 found faces
+  in it. Its output file isn't written, and there was no error. Possibly expected for DeepFace on infant
+  faces at default thresholds, but worth a look.
+- `videoannotator process` is a stub (`TODO`, `src/videoannotator/cli.py:209`), so (c) used
+  `videoannotator server` with `AUTH_REQUIRED=false` and a scratch DB/storage. `--dev` alone still
+  demanded an API key on `POST /api/v1/jobs/`.
+- A fresh volume clone gets no torch or extras by default. That's by design (004), but the dev-container
+  docs should give the `uv sync --inexact --extra all` step, and say it takes about 5 minutes and fills
+  the page cache.
+
 ## What the repo did before this branch
 
 - `.devcontainer/devcontainer.json` has no `workspaceMount`, so it uses the default bind mount of the

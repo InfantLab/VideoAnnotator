@@ -36,9 +36,8 @@ if [ "$fstype" = "9p" ] && [[ "$options" == *aname=drvfs* ]]; then
   Tests, imports and model loading are slow here: every file read
   crosses the Windows/WSL file bridge and Defender scans each one.
 
-  For speed, use "Dev Containers: Clone Repository in Container
-  Volume..." instead. See docs/installation/INSTALLATION.md, "Dev
-  Container (VS Code)".
+  For speed, use "Dev Containers: Clone Repository in Container Volume..."
+  instead. See docs/installation/INSTALLATION.md, "Dev Container (VS Code)".
 
   (Set VIDEOANNOTATOR_SKIP_MOUNT_CHECK=1 to hide this message.)
   ======================================================================
