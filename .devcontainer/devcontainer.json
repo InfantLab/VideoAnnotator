@@ -11,7 +11,7 @@
     "runArgs": [
         "--gpus",
         "all",
-        "--memory=${localEnv:VIDEOANNOTATOR_DEV_MEMORY:12g}"
+        "--memory=12g"
     ],
     "features": {
         "ghcr.io/devcontainers/features/github-cli:1": {},

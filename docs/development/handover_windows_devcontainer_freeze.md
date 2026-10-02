@@ -364,3 +364,8 @@ their machine.
 - The docs steer Windows users to the volume clone and the WSL memory cap, with a troubleshooting entry.
 - Caspar's verification run is recorded, pass or fail.
 - `docs/development/roadmap_v1.6.0.md` (or the relevant roadmap) notes the change.
+
+**Fix (2026-10-02): `--memory` hard-coded to `12g`.** In a clone-in-volume container the
+`${localEnv:VIDEOANNOTATOR_DEV_MEMORY:12g}` default was not applied: with the variable unset on the host it
+resolved to an empty string, and `docker run` failed with `invalid argument "" for "-m, --memory" flag`.
+The `VIDEOANNOTATOR_DEV_MEMORY` override is dropped. To change the cap, edit `runArgs` directly.
