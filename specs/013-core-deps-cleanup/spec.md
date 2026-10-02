@@ -2,7 +2,7 @@
 
 **Feature Branch**: `1.6-dev` (v1.6.0 development branch)
 **Created**: 2026-10-01
-**Status**: Draft
+**Status**: Implemented 2026-10-01 on `1.6-dev` (81d1221); CI passes
 **Input**: User description: "Core dependency clean-up and tooling (v1.6.0 Phase 1, spec 2 of the dependency audit's sequence). Remove core dependencies nothing imports and the dead visualization package; remove unused extras dependencies and the empty `annotation` extra; move numba to the `audio` extra; upgrade core dependencies within constraints, with tests and the pipeline-output comparison as the guard; upgrade pre-commit hooks, make the mypy hook run CI's check, drop dead hooks, declare dev tools once, and move GitHub Actions off deprecated versions. Core install must get smaller; no pipeline output may change."
 
 **Background**: [`docs/development/dependency_audit_v1.6.0.md`](../../docs/development/dependency_audit_v1.6.0.md)

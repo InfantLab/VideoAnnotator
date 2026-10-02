@@ -2,7 +2,7 @@
 
 **Feature Branch**: `1.6-dev` (v1.6.0 development branch)
 **Created**: 2026-10-01
-**Status**: Implemented 2026-10-01 on `1.6-dev` (pending CI)
+**Status**: Implemented 2026-10-01 on `1.6-dev`; CI passes
 **Input**: v1.6.0 Phase 1, spec 3 of the dependency audit's sequence
 ([`dependency_audit_v1.6.0.md`](../../docs/development/dependency_audit_v1.6.0.md) §1, §4, §5).
 torch is held at 2.6.0 only because torchaudio ≥ 2.9 removed `AudioMetaData`, which pyannote.audio 3

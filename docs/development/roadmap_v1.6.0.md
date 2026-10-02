@@ -22,7 +22,7 @@ results export to ELAN, and every default model has a published benchmark score.
 > [`roadmap_v1.7.0.md`](roadmap_v1.7.0.md), with its git history.
 
 **Target Release**: in time for the early-2027 conference season (BCCCD, 7–9 Jan 2027)
-**Current Status**: Planning Phase
+**Current Status**: Phase 0 done; Phase 1 nearly done (open items below); Phase 2 next (2026-10-02)
 **Main Goal**: an outside lab can go from install to results in R or Python, on its own videos,
 without help
 **Prerequisites**: v1.5.0 tagged, after spec 011's SC-001 manual run
@@ -258,7 +258,7 @@ lifted, 2026-09-26):
   repackaging whose releases after 0.1.13 pin old Pillow, numpy and scipy.
 
 **Solution**, in four steps:
-- [ ] **Pipeline review** (`docs/development/pipeline_review_v1.6.0.md`). Start from what the
+- [x] **Pipeline review** (`docs/development/pipeline_review_v1.6.0.md`). Start from what the
       field asks, not from what we have: caregiver speech, infant vocalisations, who is speaking,
       faces and expressions, movement, gaze and joint attention, touch. For each question, which
       tool answers it best today. For each existing pipeline: which question it answers, whether
@@ -267,7 +267,7 @@ lifted, 2026-09-26):
       experimental, or drop (a dropped pipeline can come back as a v1.7.0 plugin). The review sets
       the scope of the audit and of Phase 5's model work, and gives Phase 7 its "which pipeline
       for which question" page. With no users yet, dropping a pipeline breaks no one.
-- [ ] **Dependency audit** (`docs/development/dependency_audit_v1.6.0.md`), for the pipelines the
+- [x] **Dependency audit** (`docs/development/dependency_audit_v1.6.0.md`), for the pipelines the
       review keeps. For every direct dependency of the core package, each extras group and the
       viewer (merged in Phase 0): current constraint,
       latest release, why it is pinned (git history, CHANGELOG), what upgrading changes (API,
@@ -275,27 +275,39 @@ lifted, 2026-09-26):
       stated reason, replace, or drop. Also covers the Python version, the CUDA index and driver
       floor, Docker base images, Node and the JS package manager, pre-commit hooks and GitHub
       Actions versions.
-- [ ] **Specs**: one spec-kit spec per coherent change the audit calls for (`/speckit-specify`).
+- [x] **Specs**: one spec-kit spec per coherent change the audit calls for (`/speckit-specify`).
       Expected, subject to the review and audit: removing dropped pipelines; Python 3.13 (with a
       3.14 CI job, made required once TensorFlow ships for it, or once deepface is dropped) and the
       core dependencies; the torch stack and CUDA index; the pyannote.audio 4 migration; the
       viewer's dependencies.
+      (Done 2026-10-01: specs 012 Python 3.13, 013 core dependencies and tooling, 014 drop the
+      LAION pipelines, 015 torch 2.11 + pyannote.audio 4, 016 one models directory.)
 - [ ] **Implement** the specs before rc1. Re-baseline the v1.4.x acceptance fixtures once, on
       purpose, and record the before/after differences on the demo video in the CHANGELOG.
+      (Specs 012–016 implemented and passing CI on `1.6-dev`. Still to do: the re-baseline and the
+      CHANGELOG before/after record.)
 - [ ] **Docker image size**: build `Dockerfile.cpu`/`Dockerfile.gpu` slim and with
       `--build-arg EXTRAS=all`, and record both sizes against the v1.4.3 baseline. v1.5.0 set a
       target of 80% smaller but couldn't measure it (no Docker where it was checked).
-- [ ] **Windows froze with the dev container running** (2026-10-02; handover in
-      `docs/development/handover_windows_devcontainer_freeze.md`). First thought to be a test run
-      reading `.venv` (66k files) and `models/` (17 GB) through the Windows–WSL bridge under
-      Defender; the logs showed no tests running. The laptop had slept overnight with the
-      container up, and the Docker VM locked up (`page_reporting_process`) minutes after waking.
-      Done on branch `windows-devcontainer-freeze`, worth having either way: `.venv` and models in
-      named volumes, a start-up warning for a Windows-drive workspace
-      (`scripts/check_workspace_mount.sh`), docs (volume clone, `.wslconfig` memory cap, stop the
-      container before sleep). Open: the freeze's cause. Next evidence: whether Docker Desktop's
-      Resource Saver is on, whether the earlier dirty shutdowns followed sleep with the container
-      up, and a sleep/resume test.
+- [x] **Windows froze with the dev container running** (2026-10-02; handover in
+      `docs/development/handover_windows_devcontainer_freeze.md`). Cause: memory exhaustion. The
+      host runs at ~80% of its 31 GB with everyday apps, and the WSL VM (uncapped, up to 15.6 GB)
+      is the one thing that can grow by ~11 GB: page cache and process memory count as VM memory
+      until the VM hands them back. A resume from hibernate added the last burst; the machine sat
+      at ~99% memory until a power-button reset. No test run was involved.
+      Done (merged 2026-10-02): `.venv`, models and `viewer/node_modules` in named volumes; a
+      start-up warning for a Windows-drive workspace (`scripts/check_workspace_mount.sh`); the
+      container capped at `--memory=12g` in `devcontainer.json`. Measured under that cap in a
+      volume clone (handover, Update 6): installing the extras alone fills the cap with page
+      cache (reclaimed, no OOM kills); the full default `pytest` peaks at 5.4 GiB and takes 96 s;
+      a six-pipeline job on the demo video peaks at 6.45 GiB; test collection is 10–25× faster than
+      over the bind mount.
+- [ ] Follow-ups from the freeze, not blocking:
+  - Size the container cap from one long-video job (likely 8g or 10g; 12g until then).
+  - Check whether CUDA's "Shared GPU memory" sits outside both caps (Task Manager during a job).
+  - Docs (Phase 2): the volume clone, the `uv sync --inexact --extra all` step a fresh clone needs
+    (~5 min), the 16 GB-machine guidance, and the OOM symptom (`Killed`, exit 137) with the cap
+    in `devcontainer.json`.
 
 **Also in this phase: one place for model weights.** Today the weights end up wherever each
 library puts them by default. Whisper, YOLO and the LAION pipelines use `./models/<name>`

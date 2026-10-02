@@ -31,4 +31,4 @@
 ## Phase 6: Polish
 
 - [X] T012 CHANGELOG (removed core dependencies, dev-tools change, smaller install); audit doc §3/§6 marked done
-- [ ] T013 ruff, mypy, pre-commit, full suite; commit; push; confirm CI
+- [X] T013 ruff, mypy, pre-commit, full suite; commit; push; confirm CI
