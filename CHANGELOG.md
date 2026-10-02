@@ -62,6 +62,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   images use `/app/database/videoannotator.db`, a named volume (`videoannotator-database`) in
   docker-compose, so jobs and keys now survive a rebuild; the dev container keeps
   `<repo>/videoannotator.db`.
+- **One Dockerfile for CPU and GPU** replaces `Dockerfile.cpu`, `Dockerfile.gpu` and
+  `Dockerfile.dev`: `docker build -t videoannotator .` (slim) or `--build-arg EXTRAS=all`, run with
+  `--gpus all` to use a GPU. It builds on `ubuntu:24.04` instead of a 2024 `nvidia/cuda` snapshot
+  (torch's wheels bring their own CUDA). Fixed on the way: the CPU image replaced torch with 2.6.0
+  after installing extras, which broke pyannote.audio 4; the GPU image didn't install
+  VideoAnnotator itself; both shipped the dev tools and uv's download cache. The image now starts
+  `videoannotator server` on 0.0.0.0. `Dockerfile.dev` (copied local models into the image) and
+  compose's `videoannotator-dev-gpu` service are gone: use the dev container, or a models volume.
 - **Logs go to one per-user folder** instead of `./logs` under wherever the server was started:
   `VIDEOANNOTATOR_LOG_DIR`, by default `~/.local/state/videoannotator/logs` on Linux,
   `~/Library/Logs/videoannotator` on macOS and `%LOCALAPPDATA%\videoannotator\logs` on Windows.

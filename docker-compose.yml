@@ -5,7 +5,7 @@ services:
   videoannotator-dev:
     build:
       context: .
-      dockerfile: Dockerfile.cpu
+      dockerfile: Dockerfile
     volumes:
       - .:/app
       - ./data:/app/data
@@ -26,7 +26,7 @@ services:
   videoannotator-prod:
     build:
       context: .
-      dockerfile: Dockerfile.cpu
+      dockerfile: Dockerfile
     volumes:
       - models:/app/models  # model weights persist across rebuilds (spec 016)
       - database:/app/database  # jobs, users and API keys persist across rebuilds
@@ -48,7 +48,7 @@ services:
   videoannotator-gpu:
     build:
       context: .
-      dockerfile: Dockerfile.gpu
+      dockerfile: Dockerfile
     volumes:
       - models:/app/models  # model weights persist across rebuilds (spec 016)
       - database:/app/database  # jobs, users and API keys persist across rebuilds
@@ -75,44 +75,11 @@ services:
     profiles:
       - gpu
 
-  # Development service with GPU and pre-cached models
-  videoannotator-dev-gpu:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    volumes:
-      - ./data:/app/data
-      - ./output:/app/output
-      - ./logs:/app/logs
-      - ./database:/app/database # Persistent database for development
-    environment:
-      - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
-      - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
-      - PYTHONPATH=/app
-      - CUDA_VISIBLE_DEVICES=0
-      - VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator_dev.db
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}  # Ollama on the host (vlm_annotation)
-    extra_hosts:
-      - "host.docker.internal:host-gateway"  # Linux Docker Engine; Docker Desktop provides it already
-    runtime: nvidia
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    ports:
-      - "18011:18011" # FastAPI server (host 18011)
-    command: ["uv", "run", "videoannotator", "server", "--host", "0.0.0.0", "--port", "18011"]
-    profiles:
-      - dev-gpu
-
   # Jupyter service for development
   jupyter:
     build:
       context: .
-      dockerfile: Dockerfile.cpu
+      dockerfile: Dockerfile
     volumes:
       - .:/app
       - ./data:/app/data

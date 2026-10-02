@@ -1,11 +1,10 @@
 {
     "name": "VideoAnnotator (GPU)",
     "build": {
-        "dockerfile": "../Dockerfile.gpu",
+        "dockerfile": "../Dockerfile",
         "context": "..",
         "args": {
-            "SKIP_IMAGE_UV_SYNC": "true",
-            "SKIP_TORCH_INSTALL": "true"
+            "SKIP_IMAGE_UV_SYNC": "true"
         }
     },
     "runArgs": [

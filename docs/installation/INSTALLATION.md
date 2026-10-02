@@ -295,33 +295,25 @@ uv run python api_server.py
 
 ## Docker Installation (Alternative)
 
-### CPU Container
-
-By default these images build **slim** (no pipeline extras, no torch),
-matching the core-only install above. Pass `--build-arg EXTRAS=...` to
-include one or more pipeline families, or `EXTRAS=all` to reproduce the
-pre-v1.5.0 "everything installed" image.
+One `Dockerfile` builds the image for CPU and GPU machines. It builds **slim** by default (no
+pipeline extras, no torch), matching the core-only install above; install pipelines from the viewer,
+or build them in with `--build-arg EXTRAS=...`. torch's wheels bring their own CUDA, so the same image
+uses an NVIDIA GPU when run with `--gpus all` (needs the NVIDIA Container Toolkit, or Docker Desktop
+with WSL 2 on Windows) and runs on the CPU otherwise.
 
 ```bash
 # Slim (no extras, no torch)
-docker build -f Dockerfile.cpu -t videoannotator:cpu .
+docker build -t videoannotator .
 
 # One or more pipeline families
-docker build -f Dockerfile.cpu --build-arg EXTRAS=scene,person -t videoannotator:cpu-scene-person .
+docker build --build-arg EXTRAS=scene,person -t videoannotator:scene-person .
 
-# Everything (pre-v1.5.0 equivalent)
-docker build -f Dockerfile.cpu --build-arg EXTRAS=all -t videoannotator:cpu-all .
+# Every pipeline
+docker build --build-arg EXTRAS=all -t videoannotator:all .
 
-docker run --rm -v $(pwd)/data:/app/data videoannotator:cpu
-```
-
-### GPU Container (Requires NVIDIA Container Toolkit)
-
-```bash
-# Build and run GPU version (SKIP_IMAGE_UV_SYNC=false performs the install
-# at build time; EXTRAS works the same as the CPU image above)
-docker build -f Dockerfile.gpu --build-arg SKIP_IMAGE_UV_SYNC=false --build-arg EXTRAS=all -t videoannotator:gpu .
-docker run --gpus all --rm -v $(pwd)/data:/app/data videoannotator:gpu
+# Run; the models volume keeps downloaded weights across containers
+docker run --rm -p 18011:18011 --gpus all \
+  -v videoannotator-models:/app/models -v $(pwd)/data:/app/data videoannotator:all
 ```
 
 ### Dev Container (VS Code)

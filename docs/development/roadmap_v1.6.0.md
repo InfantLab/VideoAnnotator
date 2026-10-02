@@ -288,17 +288,16 @@ lifted, 2026-09-26):
       v1.5.0, not v1.4.4: the v1.4.4 fixtures were never captured, and v1.5.0 is the release these
       upgrades follow. Outputs unchanged up to GPU noise (CHANGELOG). The baseline is the viewer
       contract fixtures, checked by `tests/integration/test_output_baseline.py`, real models.)
-- [ ] **Docker image size**: build `Dockerfile.cpu`/`Dockerfile.gpu` slim and with
-      `--build-arg EXTRAS=all`, and record both sizes against the v1.4.3 baseline. v1.5.0 set a
-      target of 80% smaller but couldn't measure it (no Docker where it was checked).
-      Needs Docker on the host (2026-10-02: build commands given to Caspar). Also open: the GPU
-      images' base, `nvidia/cuda:12.6.0-runtime-ubuntu24.04`, was built 2024-08-12 and never
-      rebuilt (two years of Ubuntu security fixes missing). torch's wheels carry their own CUDA
-      12.6 and cuDNN, so the base could be plain `ubuntu:24.04` like the CPU image (~1.3 GB smaller
-      compressed); the one dependency on it is TensorFlow (DeepFace) loading `cusolver`,
-      `cusparse` and `nvJitLink` from the base, which the venv also has. Verify TensorFlow still
-      reaches the GPU before switching; fallback is `12.6.3` plus `apt-get upgrade`. Ubuntu 26.04
-      only has CUDA 13 images. The Dockerfile headers still say cu124 and port 8000.
+- [ ] **Docker image size**: build the image slim and with `--build-arg EXTRAS=all`, and record
+      both sizes against the v1.4.3 baseline. v1.5.0 set a target of 80% smaller but couldn't
+      measure it (no Docker where it was checked). 2026-10-02: the three Dockerfiles became one
+      `Dockerfile` on `ubuntu:24.04` (no `nvidia/cuda` base: torch's wheels carry CUDA 12.6 and
+      cuDNN), fixing on the way a stale torch 2.6 CPU override, a GPU image that never installed
+      the project, and dev tools plus uv's cache in the images. Not built yet (no Docker in the dev
+      container): handover with build, check and measure steps in
+      `docs/development/handover_docker_images.md`, for an agent on the host. A CPU-wheel variant
+      (~3.6 GB smaller) is blocked: TensorFlow then open_clip segfaults on CPU torch wheels; revisit
+      when Phase 5 replaces DeepFace.
 - [x] **Windows froze with the dev container running** (2026-10-02; handover in
       `docs/development/handover_windows_devcontainer_freeze.md`). Cause: memory exhaustion. The
       host runs at ~80% of its 31 GB with everyday apps, and the WSL VM (uncapped, up to 15.6 GB)

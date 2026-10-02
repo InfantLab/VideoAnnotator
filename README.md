@@ -323,18 +323,16 @@ The quickstart above covers the recommended local install via `uv`. For more det
 
 ### **Docker (CPU/GPU)**
 
+One image for CPU and GPU machines; add `--gpus all` to use a GPU.
+
 ```bash
-# CPU version (lightweight)
-docker build -f Dockerfile.cpu -t videoannotator:cpu .
-docker run -p 18011:18011 videoannotator:cpu
+# Slim: core only; install pipelines from the viewer
+docker build -t videoannotator .
+docker run -p 18011:18011 -v videoannotator-models:/app/models videoannotator
 
-# GPU version (faster processing)
-docker build -f Dockerfile.gpu -t videoannotator:gpu .
-docker run -p 18011:18011 --gpus all videoannotator:gpu
-
-# Development version (pre-cached models)
-docker build -f Dockerfile.dev -t videoannotator:dev .
-docker run -p 18011:18011 --gpus all videoannotator:dev
+# Every pipeline built in
+docker build --build-arg EXTRAS=all -t videoannotator:all .
+docker run -p 18011:18011 --gpus all -v videoannotator-models:/app/models videoannotator:all
 ```
 
 ## 📚 Documentation & Resources
