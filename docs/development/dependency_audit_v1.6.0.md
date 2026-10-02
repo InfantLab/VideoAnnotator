@@ -174,6 +174,53 @@ their latest, both for reasons outside our constraints:
 Resolution says nothing about behaviour: B's majors (pyannote.audio 4, opencv 5, pandas 3,
 librosa 1.0, transformers 5) need the specs and their tests.
 
+## 8. Diarization and the torch cap (2026-10-02)
+
+Not an immediate priority; recorded so Phase 5 starts from it.
+
+**Why torch is held at 2.11.** pyannote.audio 4 imports torchaudio (audio I/O fallbacks and the
+speaker-embedding code). torchaudio is discontinued: its last release, 2.11, is compiled against
+torch 2.11 and fails to load on anything newer (`OSError: Could not load this library:
+.../_torchaudio.abi3.so`). It declares no torch requirement, so a resolver pairs it with torch 2.14
+and the failure only shows at runtime. Every extras group pins the same torch so combinations such
+as `[all]` resolve, so the whole stack waits. Our own code never imports torchaudio. Cost today:
+three minor torch releases, nothing broken (outputs unchanged, see CHANGELOG). The cost grows when
+a future model or library needs torch ≥ 2.12; whether torch 2.11 has builds for the newest GPUs
+(RTX 50-series) is unchecked.
+
+**Upstream state.** pyannote.audio 4.0.7 (2026-06-30) still requires `torchaudio>=2.8`. No open
+work to drop it: a PR relaxing the torch/torchaudio pins (#1977) was closed unmerged in February,
+and there have been no commits since 2026-06-30. Open issues worth knowing: #2019 "Remote Code
+Execution via Attacker-Controlled config.yaml Class Loading" (low risk for us: we load the
+official models) and #1963 (4.x uses ~6× the VRAM of 3.3). The company's effort appears to be on
+its hosted models.
+
+**Alternatives checked.**
+
+| Option | Removes torchaudio? | Notes |
+|---|---|---|
+| **VTC 2** (LAAC-LSCP): adult female, adult male, key child, other child | **No**: depends on `pyannote-audio>=3.4` | The tool the field wants (pipeline review: top Phase 5 priority). No LICENSE file in the repository. Installed by git clone + git-lfs, not from PyPI; Python ≥ 3.13; no Windows support |
+| **NVIDIA Streaming Sortformer** (`diar_streaming_sortformer_4spk-v2.1`) via NeMo | **Yes** | NeMo 3.0.0 (2026-08, Apache-2.0); model not gated (no HF-token hurdle), NVIDIA Open Model License, updated 2026-09. But NeMo's `asr` extra brings 23 packages, among them wandb, hydra and `nv_one_logger_*` telemetry packages to vet against Local-First. It caps `lightning<=2.4.0` while pyannote needs `>=2.4`: both together only at exactly 2.4.0. Up to 4 speakers |
+| **DiariZen** (BUT) | No | Vendors a pyannote fork pinned to torch 2.1.1, numpy 1.26.4, Python 3.10. Weights CC BY-NC. A step back |
+
+**Decision (2026-10-02): decide now, swap later.**
+1. Keep pyannote through v1.6.0 Phase 1: nothing is broken, and no default changes without a
+   benchmark score.
+2. Phase 5's diarization benchmark scores pyannote community-1, Sortformer and VTC 2, with
+   dependency health as a criterion alongside accuracy.
+3. Before Phase 5 relies on it, a half-day spike: Sortformer in a scratch environment on torch
+   2.14 without torchaudio; what the telemetry does and whether it can be switched off; install
+   size; output on the demo clip.
+4. Settle VTC 2's licence with LAAC-LSCP early (maintainer to email). If it stays unlicensed it
+   can't ship, and the voice-type plan changes.
+
+Sources: https://github.com/pyannote/pyannote-audio/releases ,
+https://github.com/LAAC-LSCP/VTC , https://huggingface.co/coml/VTC-2.0 ,
+https://huggingface.co/nvidia/diar_streaming_sortformer_4spk-v2.1 ,
+https://github.com/BUTSpeechFIT/DiariZen ,
+https://neosophie.com/en/blog/20260223-diarization (2026 comparison: Sortformer v2-streaming and
+DiariZen among the best open models).
+
 ## Specs this suggests
 
 In order, each one small enough to review. The pipeline review's recommendations were all accepted

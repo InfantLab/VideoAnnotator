@@ -291,6 +291,14 @@ lifted, 2026-09-26):
 - [ ] **Docker image size**: build `Dockerfile.cpu`/`Dockerfile.gpu` slim and with
       `--build-arg EXTRAS=all`, and record both sizes against the v1.4.3 baseline. v1.5.0 set a
       target of 80% smaller but couldn't measure it (no Docker where it was checked).
+      Needs Docker on the host (2026-10-02: build commands given to Caspar). Also open: the GPU
+      images' base, `nvidia/cuda:12.6.0-runtime-ubuntu24.04`, was built 2024-08-12 and never
+      rebuilt (two years of Ubuntu security fixes missing). torch's wheels carry their own CUDA
+      12.6 and cuDNN, so the base could be plain `ubuntu:24.04` like the CPU image (~1.3 GB smaller
+      compressed); the one dependency on it is TensorFlow (DeepFace) loading `cusolver`,
+      `cusparse` and `nvJitLink` from the base, which the venv also has. Verify TensorFlow still
+      reaches the GPU before switching; fallback is `12.6.3` plus `apt-get upgrade`. Ubuntu 26.04
+      only has CUDA 13 images. The Dockerfile headers still say cu124 and port 8000.
 - [x] **Windows froze with the dev container running** (2026-10-02; handover in
       `docs/development/handover_windows_devcontainer_freeze.md`). Cause: memory exhaustion. The
       host runs at ~80% of its 31 GB with everyday apps, and the WSL VM (uncapped, up to 15.6 GB)
@@ -547,7 +555,14 @@ export; caregiver prosody.
       large-v3-turbo.
 - [ ] **Diarization**: pyannote `speaker-diarization-3.1` → `speaker-diarization-community-1`,
       which mainly improves speaker counting and keeps speaker identity consistent across a
-      recording. The pyannote.audio 4 library upgrade itself happens in Phase 1.
+      recording. The pyannote.audio 4 library upgrade itself happens in Phase 1. Score NVIDIA
+      Streaming Sortformer alongside, with dependency health as a criterion: pyannote is what holds
+      torch at 2.11 (via the discontinued torchaudio) and upstream shows no plan to drop it.
+      Background and decision: `dependency_audit_v1.6.0.md` §8.
+- [ ] Before that benchmark: a half-day Sortformer spike (installs on torch 2.14 without
+      torchaudio? NeMo's telemetry? install size? demo-clip output). Audit §8.
+- [ ] Caspar: ask LAAC-LSCP about VTC 2's licence (the repository has none). VTC 2 also depends on
+      pyannote, so adopting it keeps the torch cap. Audit §8.
 - [ ] **Person**: `yolo11n-pose` → `yolo26n-pose`.
 - [ ] **OpenFace 3**: confirm `openface-test` is the maintained distribution (the Phase 1
       audit keeps it at `==0.1.13`).
@@ -556,7 +571,7 @@ export; caregiver prosody.
 
 Candidates, none committed (the Phase 1 pipeline review may promote some before the pilot):
 - **Voice Type Classifier**: key child, other child, female adult, male adult. Already standard in
-  child-language research.
+  child-language research. VTC 2 depends on pyannote.audio and has no stated licence (audit §8).
 - **Gaze target** (Gaze-LLE), for joint attention.
 - **Text-prompted segmentation and tracking** (SAM 3), e.g. "infant", "adult". Licence to check.
 
