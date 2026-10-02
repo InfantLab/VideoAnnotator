@@ -271,9 +271,11 @@ MariaDB needs to run at startup.
   A bare `pytest` runs all of them. CI's main job deselects `real_models` and `performance`.
 - Most markers are added by name in `tests/conftest.py`, so unmarked tests may still load real weights.
 
-**Measurements, in this order (they need the caps in place first).**
-1. **Caspar:** set the `.wslconfig` cap and run `wsl --shutdown`. Then open a fresh **Clone Repository in
-   Container Volume** of `windows-devcontainer-freeze`; it picks up the 12g container cap.
+**Measurements, in this order.**
+1. **Caspar:** open a fresh **Clone Repository in Container Volume** of `windows-devcontainer-freeze`, which
+   picks up the 12g container cap. No `.wslconfig` cap for now: Caspar wants more data before making a
+   machine-wide change. So the container cap is what bounds these runs, and the docs must not lead
+   with the WSL cap until the data supports it.
 2. **Agent, in that container**, sampling the cgroup every second (`memory.current`, plus `anon` and
    `file` from `memory.stat`, plus `memory.events` for any limit hits):
    - (a) `pytest --collect-only -q` and `pytest tests/unit -q`: wall time, compared with the bind mount;
