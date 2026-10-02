@@ -150,6 +150,9 @@ services:
 volumes:
   postgres_data:
   models:
+    # Fixed name (not <project>_models), shared with the dev container, so the
+    # weights download once per machine.
+    name: videoannotator-models
 
 networks:
   default:

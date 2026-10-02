@@ -184,9 +184,9 @@ rm -rf logs/*.log
 # Clean test artifacts
 rm -rf test_storage/
 
-# Remove cached models (will re-download when needed)
-rm -rf ~/.cache/huggingface/
-rm -rf models/
+# Remove model weights (re-downloaded when needed). Where they are, and
+# how much space each source takes:
+videoannotator diagnose models
 
 # Clean uv cache
 uv cache clean
@@ -253,6 +253,57 @@ Common fixes:
 - **Database check fails**: Fix permissions on `custom_storage/`
 - **GPU check fails**: See GPU/CUDA section below
 - **Video test fails**: Use `--skip-video-test` if no video needed
+
+---
+
+### Machine freezes or MsMpEng is high during tests on Windows
+
+**Symptoms** (Windows, Docker Desktop, VS Code dev container):
+- The whole machine stops responding during a test run or a real-model job; even Task Manager
+  won't open, and only a forced power-off recovers it
+- Before that, `MsMpEng.exe` (Defender) at the top of Task Manager, and tests far slower than on
+  Linux or macOS
+- The container printed `WARNING: this workspace is a Windows folder mounted into the container`
+  when it started
+
+**Cause**: the repository was cloned to a Windows folder (e.g. `C:\Users\you\code\VideoAnnotator`)
+and opened with **Reopen in Container**. Every file the container reads or writes then crosses the
+Windows–WSL file bridge, and Defender scans each one on the Windows side. A test run reads tens of
+thousands of Python files and gigabytes of weights. With WSL also allowed half the RAM by default,
+Windows can be starved until it stops scheduling anything.
+
+**Solution**:
+
+1. Open the project from a container volume instead: in VS Code, **Dev Containers: Clone Repository
+   in Container Volume…**, then `https://github.com/InfantLab/VideoAnnotator`. The code then lives
+   on the Linux side and Windows never sees those files. Commit and push anything in your Windows
+   clone first; the volume clone starts from GitHub.
+2. Cap WSL's memory in `%USERPROFILE%\.wslconfig`, then run `wsl --shutdown` in PowerShell:
+   ```ini
+   [wsl2]
+   memory=12GB
+   swap=8GB
+   ```
+3. Optional, if you administer the machine: put code on a
+   [Dev Drive](https://learn.microsoft.com/windows/dev-drive/), or exclude your code folder from
+   Defender's real-time scanning.
+
+**Model weights and the Python environment** live in Docker named volumes, `videoannotator-models`
+and `videoannotator-venv`, whichever way you open the project. They survive rebuilding the
+container and `docker system prune --volumes`, which removes only anonymous volumes (Docker 23
+and later). Only `docker volume rm`, `docker volume prune --all` or resetting Docker Desktop
+deletes them.
+
+```bash
+# On the host. Back up the weights to the current directory:
+docker run --rm -v videoannotator-models:/models -v "$PWD":/backup alpine tar czf /backup/videoannotator-models.tgz -C /models .
+# Wipe them (they download again when a pipeline needs them):
+docker volume rm videoannotator-models
+```
+
+Weights already downloaded into the old `models/` folder of a Windows clone can be reused: with
+the clone open in its container, `cp -a models/. /app/models/` copies them into the volume once.
+The server lists such old locations when it starts.
 
 ---
 
@@ -336,6 +387,7 @@ use_fp16: true
 **4. Clear GPU cache** between runs:
 ```python
 import torch
+
 torch.cuda.empty_cache()
 ```
 

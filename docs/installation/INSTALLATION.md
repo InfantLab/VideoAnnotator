@@ -326,7 +326,35 @@ docker run --gpus all --rm -v $(pwd)/data:/app/data videoannotator:gpu
 
 ### Dev Container (VS Code)
 
-Open the project in VS Code and use "Reopen in Container" for a complete GPU-enabled development environment.
+The dev container is a complete GPU-enabled development environment.
+
+- **Linux and macOS**: clone the repository, open it in VS Code and run **Dev Containers: Reopen in
+  Container**.
+- **Windows**: run **Dev Containers: Clone Repository in Container Volume…** and give it
+  `https://github.com/InfantLab/VideoAnnotator`. Don't clone to `C:\` and reopen: the container would
+  then read every file through the Windows–WSL file bridge, with Defender scanning each one. Tests
+  are slow that way, and a full test run has frozen a Windows machine completely. The container
+  prints a warning at start if it finds itself on a Windows drive.
+
+  Also cap the memory WSL may take, in `%USERPROFILE%\.wslconfig` (then run `wsl --shutdown`):
+
+  ```ini
+  [wsl2]
+  memory=12GB
+  swap=8GB
+  ```
+
+  WSL's default is half your RAM. Leave Windows enough to stay responsive. Optional extras, if you
+  administer the machine: a [Dev Drive](https://learn.microsoft.com/windows/dev-drive/) or a
+  Defender exclusion for your code folder.
+
+On every platform, the Python environment (`.venv`) and the model weights live in Docker named
+volumes (`videoannotator-venv`, `videoannotator-models`, the latter shared with
+`docker-compose.yml`). They survive container rebuilds and `docker system prune --volumes`, which
+removes only anonymous volumes (Docker 23 and later). They are deleted only by `docker volume rm`,
+`docker volume prune --all`, or resetting Docker Desktop. See
+[troubleshooting](troubleshooting.md#machine-freezes-or-msmpeng-is-high-during-tests-on-windows)
+to back them up or wipe them.
 
 ## Troubleshooting
 

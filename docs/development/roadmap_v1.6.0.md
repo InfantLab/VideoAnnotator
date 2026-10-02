@@ -285,6 +285,14 @@ lifted, 2026-09-26):
 - [ ] **Docker image size**: build `Dockerfile.cpu`/`Dockerfile.gpu` slim and with
       `--build-arg EXTRAS=all`, and record both sizes against the v1.4.3 baseline. v1.5.0 set a
       target of 80% smaller but couldn't measure it (no Docker where it was checked).
+- [ ] **The Windows dev container froze the host** (2026-10-02; handover in
+      `docs/development/handover_windows_devcontainer_freeze.md`). Opened from a Windows folder,
+      the container read `.venv` (66k files) and `models/` (17 GB) through the Windows–WSL bridge,
+      with Defender scanning every file; a test run needed a forced power-off. Done on branch
+      `windows-devcontainer-freeze`: `.venv` and models in named volumes, a start-up warning for a
+      Windows-drive workspace (`scripts/check_workspace_mount.sh`), install and troubleshooting
+      docs (volume clone, `.wslconfig` memory cap). Left: Caspar's verification run, the same
+      suite from a fresh volume clone, recorded in the troubleshooting entry, pass or fail.
 
 **Also in this phase: one place for model weights.** Today the weights end up wherever each
 library puts them by default. Whisper, YOLO and the LAION pipelines use `./models/<name>`
