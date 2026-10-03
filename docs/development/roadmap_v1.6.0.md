@@ -409,11 +409,25 @@ half-built page.
       face's gaze and action-unit intensities by up to ~2.4. Offer a deterministic mode
       (`torch.use_deterministic_algorithms`, cuDNN deterministic) and record it in provenance, and
       measure run-to-run spread for every pipeline in the Phase 5 benchmark.
-- [ ] **A pipeline that fails must say so.** `speech_recognition` catches errors in transcription,
+- [x] **A pipeline that fails must say so.** `speech_recognition` catches errors in transcription,
       logs them only to the pipeline log, and returns no annotations, so the job reports the
       pipeline as completed with an empty transcript (found 2026-10-01 through a Triton cache
       error). Raise instead, so the job shows the pipeline as failed with its error; check the
       other pipelines for the same pattern.
+      Done 2026-10-03. Every pipeline was audited, and seven had the pattern (see CHANGELOG). The
+      worst was `scene_detection`, which invented one whole-video scene on failure. Frame loops
+      keep skipping single bad frames, but `FrameFailures` (`base_pipeline.py`) fails the run
+      when every frame fails. Tests: `tests/unit/pipelines/test_pipeline_failures.py`.
+      Left as is: per-face enrichment failures still only log a warning, so those faces lack the
+      fields (OpenFace 3 landmarks/AUs, DeepFace emotion falling back to a bare box,
+      person_tracking's size-based labels). Surfacing degraded fields belongs with the provenance
+      work.
+- [ ] **The API stops answering while a job runs** (found 2026-10-03): during the real-model
+      baseline job, `GET /api/v1/jobs/{id}` timed out (over 30 s) or returned a body with no
+      `status`. The host was using 6.4 GB of the 8 GB GPU, so every pipeline ran 2–4× slower than
+      usual. Jobs run in an executor thread (`background_tasks.py`), so the likely cause is CPU or
+      GIL starvation. Reproduce on an idle machine, and make the status route stay responsive. It
+      is what the viewer polls.
 - [ ] **`GET /api/v1/jobs/{id}/results/files/{pipeline}` returns `OUTPUT_FILE_MISSING`** for
       every result stored in the database (`output_file: database:/annotations/...`), which is
       what each job's results list advertises as its `download_url`. Same in v1.5.0 (found

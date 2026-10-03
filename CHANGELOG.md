@@ -147,6 +147,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A pipeline that fails now says so.** Several pipelines caught their own errors and returned
+  nothing, so the job showed them as completed with empty results. Each now raises, and the job
+  lists the pipeline as failed with its error:
+  - `speech_recognition`: any transcription error (found through a Triton cache error), or a
+    missing input file.
+  - `speaker_diarization`: a missing input file, or a video with no audio track.
+  - `scene_detection`: a detection failure used to produce one invented scene spanning the whole
+    video; a scene classification failure used to drop the labels silently.
+  - `face_analysis` and `face_openface3_embedding`: when every sampled frame fails. A few bad
+    frames are still skipped, now with a warning counting them. An OpenFace 3 frame that fails
+    partway is dropped whole instead of keeping the faces it had reached.
+  - `person_tracking`: a YOLO model that couldn't be reloaded after corruption.
+  - `vlm_annotation`: a run that stops after repeated model failures, or where no sample point
+    got an answer. What it did get is still written to the job folder.
+  - `audio_processing` (deprecated): a sub-pipeline that fails to load or run. Before, it was
+    dropped silently.
 - **A core install (`pip install videoannotator`, the slim Docker image) failed to start** with
   `No module named 'httpx'`: the server imports the Ollama client at start, and the v1.6.0 core
   clean-up dropped `httpx` as unused (every test environment had it through the dev tools). It is

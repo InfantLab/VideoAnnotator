@@ -401,10 +401,9 @@ class PersonTrackingPipeline(BasePipeline):
                             iou=self.config["iou_threshold"],
                         )
                 except Exception as retry_e:
-                    self.logger.error(
-                        f"Failed to recover from model corruption: {retry_e}"
-                    )
-                    return []
+                    raise RuntimeError(
+                        f"YOLO model corrupted and could not be reloaded: {retry_e}"
+                    ) from retry_e
             else:
                 raise
 

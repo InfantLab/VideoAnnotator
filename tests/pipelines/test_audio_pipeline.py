@@ -204,10 +204,10 @@ class TestAudioPipeline:
         pipeline = AudioPipeline()
         pipeline.initialize()
 
-        # Test with non-existent file - should return empty list but not raise exception
-        result = pipeline.process("non_existent_file.mp4")
-        # Modular pipeline handles errors gracefully and returns results list
-        assert isinstance(result, list)
+        # Each sub-pipeline's failure is collected and raised, so the job
+        # reports the pipeline as failed rather than completed and empty.
+        with pytest.raises(RuntimeError, match="speech_recognition"):
+            pipeline.process("non_existent_file.mp4")
 
     def test_modular_output_format_consistency(self):
         """Test that modular outputs follow consistent format."""

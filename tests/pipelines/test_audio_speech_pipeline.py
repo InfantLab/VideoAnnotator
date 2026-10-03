@@ -196,10 +196,9 @@ class TestDiarizationPipeline:
         pipeline = DiarizationPipeline(config)
         pipeline.initialize()
 
-        # Test error handling for missing file - should return empty list or None
-        result = pipeline.process("non_existent_file.wav")
-        # Modern pipelines handle errors gracefully - might return empty list or None
-        assert result is None or (isinstance(result, list) and len(result) == 0)
+        # An empty result would make the job report this pipeline as completed.
+        with pytest.raises(FileNotFoundError):
+            pipeline.process("non_existent_file.wav")
 
         pipeline.cleanup()
 
@@ -359,10 +358,9 @@ class TestSpeechPipeline:
         config = {}
         pipeline = SpeechPipeline(config)
 
-        # Test error handling for missing file - should return empty list or None
-        result = pipeline.process("non_existent_file.wav")
-        # Modern pipelines handle errors gracefully - might return empty list or None
-        assert result is None or (isinstance(result, list) and len(result) == 0)
+        # An empty result would make the job report this pipeline as completed.
+        with pytest.raises(FileNotFoundError):
+            pipeline.process("non_existent_file.wav")
 
     def test_speech_pipeline_info(self):
         """Test pipeline info generation."""

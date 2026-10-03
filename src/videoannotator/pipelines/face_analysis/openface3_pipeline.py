@@ -24,7 +24,7 @@ from videoannotator.exporters.native_formats import (
     export_coco_json,
     validate_coco_json,
 )
-from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.pipelines.base_pipeline import BasePipeline, FrameFailures
 from videoannotator.utils.person_identity import PersonIdentityManager
 from videoannotator.version import __version__
 
@@ -577,6 +577,7 @@ class OpenFace3Pipeline(BasePipeline):
         categories: list[dict[str, Any]] = self._get_face_categories()
 
         annotation_id = 1
+        frame_failures = FrameFailures(self.logger)
 
         # Process frames
         for frame_idx, frame_num in enumerate(frames_to_process):
@@ -631,10 +632,12 @@ class OpenFace3Pipeline(BasePipeline):
                     annotation_id += 1
 
             except Exception as e:
-                self.logger.error(f"Error processing frame {frame_num}: {e}")
+                frame_failures.failed_on(frame_num, e)
                 continue
+            frame_failures.succeeded()
 
         cap.release()
+        frame_failures.check()
 
         # Create COCO dataset
         coco_dataset: dict[str, Any] = {
@@ -804,8 +807,6 @@ class OpenFace3Pipeline(BasePipeline):
 
                 face_results.append(face_data)
 
-        except Exception as e:
-            self.logger.error(f"Error processing frame at {timestamp:.2f}s: {e}")
         finally:
             # Clean up temporary file
             if temp_frame_path and os.path.exists(temp_frame_path):

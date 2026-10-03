@@ -116,3 +116,45 @@ class BasePipeline(ABC):
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
         self.cleanup()
+
+
+class FrameFailures:
+    """Counts per-frame errors during one run of a frame-sampling pipeline.
+
+    One unreadable or odd frame shouldn't fail a whole video, so frame loops
+    log and continue. But when every frame fails the run is broken, not a
+    video with nothing in it: `check()` raises then, so the job reports the
+    pipeline as failed instead of completed with no annotations.
+    """
+
+    def __init__(self, logger: logging.Logger):
+        """Start counting for one run, logging through `logger`."""
+        self.logger = logger
+        self.attempted = 0
+        self.failed = 0
+        self.first_error: str | None = None
+
+    def succeeded(self) -> None:
+        """Record a frame that was processed without error."""
+        self.attempted += 1
+
+    def failed_on(self, frame: int, error: BaseException) -> None:
+        """Record a frame whose processing raised `error`."""
+        self.attempted += 1
+        self.failed += 1
+        if self.first_error is None:
+            self.first_error = f"frame {frame}: {error}"
+        self.logger.error(f"Error processing frame {frame}: {error}")
+
+    def check(self) -> None:
+        """Raise if every attempted frame failed; warn if some did."""
+        if self.failed and self.failed == self.attempted:
+            raise RuntimeError(
+                f"All {self.failed} sampled frames failed; first error: "
+                f"{self.first_error}"
+            )
+        if self.failed:
+            self.logger.warning(
+                f"{self.failed} of {self.attempted} sampled frames failed and "
+                f"were skipped; first error: {self.first_error}"
+            )

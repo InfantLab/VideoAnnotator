@@ -116,52 +116,40 @@ class SpeechPipeline(WhisperBasePipeline):
         Returns:
             List containing SpeechRecognition result
         """
-        try:
-            # Convert path to Path object
-            video_path = Path(video_path)
+        video_path = Path(video_path)
+        if not video_path.exists():
+            raise FileNotFoundError(f"Input file not found: {video_path}")
 
-            # Graceful handling for missing input paths: don't force model init.
-            if not video_path.exists():
-                self.logger.error(f"Input file not found: {video_path}")
-                return []
+        if not self.is_initialized:
+            self.initialize()
 
-            if not self.is_initialized:
-                self.initialize()
+        audio, _sample_rate = self.extract_audio_from_video(video_path)
+        result = self.transcribe_audio(audio)
+        if output_dir:
+            out = Path(output_dir)
+            out.mkdir(parents=True, exist_ok=True)
+            write_webvtt([result], out / f"{video_path.stem}_speech_recognition.vtt")
+        return [result]
 
-            # Extract audio using base pipeline functionality
-            audio, _sample_rate = self.extract_audio_from_video(video_path)
-
-            # Transcribe the audio
-            result = self.transcribe_audio(audio)
-            if result is not None:
-                if output_dir:
-                    out = Path(output_dir)
-                    out.mkdir(parents=True, exist_ok=True)
-                    write_webvtt(
-                        [result], out / f"{video_path.stem}_speech_recognition.vtt"
-                    )
-                return [result]
-            return []
-
-        except Exception as e:
-            self.logger.error(f"Error processing speech recognition: {e}")
-            return []
-
-    def transcribe_audio(self, audio: str | Path | np.ndarray) -> dict[str, Any] | None:
+    def transcribe_audio(self, audio: str | Path | np.ndarray) -> dict[str, Any]:
         """Perform speech recognition on audio.
 
         Args:
             audio: Path to audio file or audio waveform
 
         Returns:
-            SpeechRecognition object or None if failed
+            SpeechRecognition object
+
+        Raises:
+            RuntimeError: if the model isn't loaded or transcription fails, so
+                the job reports this pipeline as failed rather than completed
+                with an empty transcript.
         """
         if not self.is_initialized:
             self.initialize()
 
         if not self.whisper_model:
-            self.logger.error("Whisper model not initialized")
-            return None
+            raise RuntimeError("Whisper model not initialized")
 
         try:
             self.logger.info("Performing speech recognition")
@@ -170,8 +158,7 @@ class SpeechPipeline(WhisperBasePipeline):
             if isinstance(audio, (str, Path)):
                 audio_path = Path(audio)
                 if not audio_path.exists():
-                    self.logger.error(f"Audio file not found: {audio_path}")
-                    return None
+                    raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
                 # For standard Whisper, use the built-in transcribe method
                 if self.model_type == "standard":
@@ -243,18 +230,16 @@ class SpeechPipeline(WhisperBasePipeline):
                 else:
                     # TODO: Implement HuggingFace Whisper transcription
                     # This requires using the tokenizer and generation utilities
-                    self.logger.error(
+                    raise NotImplementedError(
                         "HuggingFace Whisper transcription not yet implemented"
                     )
-                    return None
 
+        except (FileNotFoundError, NotImplementedError):
+            raise
         except Exception as e:
-            self.logger.error(f"Speech recognition failed: {e}")
-            return None
+            raise RuntimeError(f"Speech recognition failed: {e}") from e
 
-        # Unreachable - all paths above return, but mypy can't prove it
-        # due to complex isinstance checks
-        return None
+        raise TypeError(f"Unsupported audio input type: {type(audio).__name__}")
 
     def _process_transcription_result(
         self, result: dict[str, Any], video_id: str

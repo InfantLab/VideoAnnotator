@@ -108,21 +108,13 @@ class AudioPipelineModular(BasePipeline):
 
         self.logger.info("Initializing AudioPipeline coordinator...")
 
-        # Initialize all configured pipelines
-        failed_pipelines = []
         for pipeline_name, pipeline in self.audio_pipelines.items():
+            self.logger.info(f"Initializing {pipeline_name}")
             try:
-                self.logger.info(f"Initializing {pipeline_name}")
                 pipeline.initialize()
-                self.logger.info(f"{pipeline_name} initialized successfully")
             except Exception as e:
-                self.logger.error(f"Failed to initialize {pipeline_name}: {e}")
-                # Mark for removal instead of deleting during iteration
-                failed_pipelines.append(pipeline_name)
-
-        # Remove failed pipelines after iteration
-        for pipeline_name in failed_pipelines:
-            del self.audio_pipelines[pipeline_name]
+                raise RuntimeError(f"Failed to initialize {pipeline_name}: {e}") from e
+            self.logger.info(f"{pipeline_name} initialized successfully")
 
         self.is_initialized = True
         self.logger.info(
@@ -151,6 +143,7 @@ class AudioPipelineModular(BasePipeline):
 
         try:
             results = []
+            errors: list[str] = []
 
             # Process through each enabled pipeline
             for pipeline_name, pipeline in self.audio_pipelines.items():
@@ -183,12 +176,16 @@ class AudioPipelineModular(BasePipeline):
 
                 except Exception as e:
                     self.logger.error(f"Error in {pipeline_name}: {e}")
-                    # Continue with other pipelines even if one fails
-                    continue
+                    errors.append(f"{pipeline_name}: {e}")
 
             # Save results if output directory specified
             if output_dir:
                 self._save_results(results, output_dir, metadata)
+
+            # The others' outputs are saved above; the job still has to see
+            # that part of this pipeline failed.
+            if errors:
+                raise RuntimeError("; ".join(errors))
 
             # Return all pipeline results as separate streams
             return results

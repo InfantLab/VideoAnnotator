@@ -123,10 +123,7 @@ class DiarizationPipeline(BasePipeline):
         # e.g. Chocolatey's on Windows).
         with tempfile.TemporaryDirectory() as temp_dir:
             if not Path(video_path).exists():
-                self.logger.warning(
-                    f"Input not found: {video_path}; skipping diarization"
-                )
-                return []
+                raise FileNotFoundError(f"Input file not found: {video_path}")
             if Path(video_path).suffix.lower() in _SOUNDFILE_SUFFIXES:
                 audio_path: Path | None = Path(video_path)
             else:
@@ -134,11 +131,10 @@ class DiarizationPipeline(BasePipeline):
                     video_path, Path(temp_dir) / "audio.wav"
                 )
             if audio_path is None:
-                self.logger.warning(
-                    f"No audio could be extracted from {video_path}; "
-                    "skipping diarization"
+                raise RuntimeError(
+                    f"No audio could be extracted from {video_path}: it has no "
+                    "audio track, or ffmpeg failed (see the pipeline log)"
                 )
-                return []
 
             output = self.diarization_model(
                 _load_waveform(audio_path),
