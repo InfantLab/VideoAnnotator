@@ -110,10 +110,43 @@ def known_extras() -> list[str]:
 # "no longer installed by default" message instead of the generic
 # unavailable-pipeline text (research.md §4).
 _V144_DEMOTED_PIPELINES: dict[str, str] = {
-    "face_laion_clip": "face-laion",
-    "laion_voice": "audio-laion",
     "face_openface3_embedding": "face-openface3",
 }
+
+# Pipelines removed outright (spec 014, from the v1.6.0 pipeline review). Asking
+# for one gets this explanation instead of "unknown pipeline".
+REMOVED_PIPELINES: dict[str, tuple[str, str]] = {
+    "laion_voice": (
+        "1.6.0",
+        "its 16-32 GB models are unmaintained upstream and trained on adult acted "
+        "speech. There is no replacement for voice emotion yet.",
+    ),
+    "face_laion_clip": (
+        "1.6.0",
+        "its models are unmaintained upstream and unvalidated on infants. Use "
+        "face_openface3_embedding (action units, gaze) or face_analysis.",
+    ),
+}
+
+
+def removed_pipeline_message(pipeline_name: str) -> str | None:
+    """Explain why `pipeline_name` no longer exists, or None if it never did."""
+    removed = REMOVED_PIPELINES.get(pipeline_name)
+    if removed is None:
+        return None
+    version, reason = removed
+    return f"Pipeline '{pipeline_name}' was removed in v{version}: {reason}"
+
+
+def deprecation_message(meta: PipelineMetadata) -> str | None:
+    """The warning to show when a deprecated pipeline is used, or None."""
+    if meta.deprecated is None:
+        return None
+    replacement = " + ".join(meta.deprecated.replacement) or "another pipeline"
+    return (
+        f"Pipeline '{meta.name}' is deprecated and will be removed in "
+        f"v{meta.deprecated.removal_version}; use {replacement} instead."
+    )
 
 
 def migration_note(pipeline_name: str) -> str | None:
@@ -151,7 +184,7 @@ class PipelineLoader:
         stability_rank = {"stable": 0, "beta": 1, "experimental": 2}
         family_candidates: dict[str, list[tuple[int, str, type]]] = {}
 
-        for meta in self._registry.list():
+        for meta in self._registry.list(include_deprecated=True):
             pipeline_class = self._load_pipeline_class(meta)
             if pipeline_class:
                 # Add primary name
@@ -160,7 +193,13 @@ class PipelineLoader:
                 if meta.pipeline_family:
                     family_candidates.setdefault(meta.pipeline_family, []).append(
                         (
-                            stability_rank.get(meta.stability or "", 3),
+                            # A declared family default wins outright; otherwise
+                            # ties between equally stable pipelines were broken
+                            # alphabetically, so 'audio' meant laion_voice
+                            # whenever its extra was installed.
+                            -1
+                            if meta.family_default
+                            else stability_rank.get(meta.stability or "", 3),
                             meta.name,
                             pipeline_class,
                         )
@@ -288,4 +327,6 @@ __all__ = [
     "missing_extras",
     "install_hint",
     "migration_note",
+    "removed_pipeline_message",
+    "deprecation_message",
 ]

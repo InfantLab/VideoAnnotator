@@ -5,10 +5,10 @@ Checks database connectivity and schema version.
 v1.3.0: Phase 11 - T073
 """
 
-import os
 from typing import Any
 
 from videoannotator.api.database import check_database_health
+from videoannotator.database_location import database_url as configured_database_url
 from videoannotator.utils.logging_config import get_logger
 
 logger = get_logger("diagnostics")
@@ -22,7 +22,7 @@ def diagnose_database() -> dict[str, Any]:
         {
             "status": "ok" | "warning" | "error",
             "connected": true,
-            "database_path": "/app/storage/videoannotator.db",
+            "database_path": "/home/me/.local/share/videoannotator/videoannotator.db",
             "schema_version": "1.3.0",
             "job_count": 42,
             "errors": [],
@@ -40,8 +40,7 @@ def diagnose_database() -> dict[str, Any]:
     }
 
     try:
-        # Get database path from DATABASE_URL
-        database_url = os.getenv("DATABASE_URL", "sqlite:///./videoannotator.db")
+        database_url = configured_database_url()
         # Extract path from sqlite URL
         if database_url.startswith("sqlite:///"):
             db_path = database_url[10:]  # Remove "sqlite:///"

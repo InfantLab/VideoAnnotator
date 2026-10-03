@@ -5,7 +5,11 @@ and error responses. All exceptions inherit from VideoAnnotatorException and are
 automatically converted to ErrorEnvelope responses by FastAPI exception handlers.
 """
 
-from videoannotator.registry.pipeline_loader import install_hint, migration_note
+from videoannotator.registry.pipeline_loader import (
+    install_hint,
+    migration_note,
+    removed_pipeline_message,
+)
 
 
 class VideoAnnotatorException(Exception):
@@ -132,6 +136,27 @@ class PipelineUnavailableException(VideoAnnotatorException):
                 "install_hint": hint,
                 "requires_extras": requires_extras,
             },
+        )
+        self.status_code = 422
+
+
+class PipelineRemovedException(VideoAnnotatorException):
+    """A pipeline that existed in an earlier release and was removed (spec 014).
+
+    Distinct from PipelineNotFoundException so old configs and scripts get the
+    reason and the alternative instead of "not found".
+    """
+
+    def __init__(self, pipeline_name: str):
+        """Initialize PipelineRemovedException."""
+        message = removed_pipeline_message(pipeline_name) or (
+            f"Pipeline '{pipeline_name}' was removed."
+        )
+        super().__init__(
+            message=message,
+            code="PIPELINE_REMOVED",
+            hint="See the CHANGELOG for removed pipelines and their alternatives.",
+            detail={"pipeline": pipeline_name},
         )
         self.status_code = 422
 

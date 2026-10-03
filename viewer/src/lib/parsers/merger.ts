@@ -108,6 +108,52 @@ export async function detectFileType(file: File): Promise<DetectedFile> {
     return { file, type: 'unknown', confidence: 0.0 };
 }
 
+type JSONStructureType = Exclude<DetectedFile['type'], 'video' | 'audio' | 'unknown' | 'speech_recognition' | 'speaker_diarization' | 'elan_ground_truth'>;
+
+const STRUCTURE_CONFIDENCE: Record<JSONStructureType, number> = {
+    complete_results: 0.95,
+    openface3_faces: 0.95,
+    vlm_annotation: 0.95,
+    face_analysis: 0.9,
+    person_tracking: 0.9,
+    scene_detection: 0.9,
+};
+
+const STRUCTURE_PIPELINE: Partial<Record<JSONStructureType, string>> = {
+    openface3_faces: 'openface3',
+};
+
+/**
+ * Classifies a fully parsed VideoAnnotator JSON output by the fields its
+ * annotations carry. Checked before the prefix heuristics below because those
+ * parse a truncated sample, which throws on any file larger than the sample and
+ * lets a looser check claim it (OpenFace's COCO export also has keypoints and
+ * bboxes, so it was taken for person tracking).
+ */
+export function detectJSONStructure(data: unknown): JSONStructureType | 'person_id_summary' | null {
+    if (!data || typeof data !== 'object') return null;
+    const d = data as Record<string, unknown>;
+
+    if (d.video_path && d.pipeline_results && d.config) return 'complete_results';
+
+    const metadata = d.metadata as Record<string, unknown> | undefined;
+    if (metadata?.pipeline && Array.isArray(d.faces)) return 'openface3_faces';
+    // person_tracking's *_person_tracks.json: labels per person ID, no frames to draw.
+    if (Array.isArray(d.person_tracks) && !d.annotations) return 'person_id_summary';
+
+    const annotations = Array.isArray(data) ? data : d.annotations;
+    if (!Array.isArray(annotations) || annotations.length === 0) return null;
+    const first = annotations[0];
+    if (!first || typeof first !== 'object') return null;
+
+    if ('openface3' in first) return 'openface3_faces';
+    if ('sampling_mode' in first && 'reasoning' in first) return 'vlm_annotation';
+    if ('scene_type' in first || ('start_time' in first && 'end_time' in first)) return 'scene_detection';
+    if ('face_id' in first) return 'face_analysis';
+    if ('keypoints' in first && 'bbox' in first) return 'person_tracking';
+    return null;
+}
+
 /**
  * Detects JSON file type based on content structure
  */
@@ -115,6 +161,24 @@ async function detectJSONType(file: File): Promise<DetectedFile> {
     try {
         // DEBUG: Log JSON detection attempt
         console.log('🔍 detectJSONType for', file.name);
+
+        let structureType: ReturnType<typeof detectJSONStructure> = null;
+        try {
+            structureType = detectJSONStructure(JSON.parse(await file.text()));
+        } catch {
+            // Not valid JSON as a whole; the sample-based checks below still try.
+        }
+        if (structureType === 'person_id_summary') {
+            return { file, type: 'unknown', confidence: 0.9 };
+        }
+        if (structureType) {
+            return {
+                file,
+                type: structureType,
+                pipeline: STRUCTURE_PIPELINE[structureType] ?? structureType,
+                confidence: STRUCTURE_CONFIDENCE[structureType]
+            };
+        }
 
         // Check for VideoAnnotator v1.1.1 complete results format FIRST
         // (before trying to parse partial JSON)

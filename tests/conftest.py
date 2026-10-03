@@ -1,6 +1,22 @@
 """Shared pytest fixtures and environment patches for VideoAnnotator tests."""
 
+import os
+import tempfile
+from pathlib import Path
+
 import pytest
+
+# The API's startup launches the background job processor, which would pick up
+# jobs other tests submitted and run real pipelines. Tests of the processor build
+# their own BackgroundJobManager.
+os.environ.setdefault("VIDEOANNOTATOR_BACKGROUND_PROCESSING", "false")
+
+# Before any test module imports videoannotator: modules that bind SessionLocal at
+# import keep the engine made then, so test_storage_env (below) is too late for
+# them, and they would open the user's real database.
+_import_time_db = Path(tempfile.mkdtemp(prefix="va-tests-")) / "import_time.db"
+os.environ["VIDEOANNOTATOR_DB_PATH"] = str(_import_time_db)
+os.environ["DATABASE_URL"] = f"sqlite:///{_import_time_db}"
 
 
 # --- Speech Pipeline Robustness Fixture ---

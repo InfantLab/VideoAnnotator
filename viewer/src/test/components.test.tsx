@@ -7,7 +7,7 @@ import type { StandardAnnotationData } from '../types/annotations'
 // Mock the version utils
 vi.mock('../utils/version', () => ({
   VERSION: '0.2.0',
-  GITHUB_URL: 'https://github.com/InfantLab/video-annotation-viewer',
+  GITHUB_URL: 'https://github.com/InfantLab/VideoAnnotator',
   APP_NAME: 'Video Annotation Viewer'
 }))
 
@@ -25,7 +25,7 @@ describe('Components', () => {
 
       const sourceLink = screen.getByRole('link', { name: /Source/i })
       expect(sourceLink).toBeInTheDocument()
-      expect(sourceLink).toHaveAttribute('href', 'https://github.com/InfantLab/video-annotation-viewer')
+      expect(sourceLink).toHaveAttribute('href', 'https://github.com/InfantLab/VideoAnnotator')
       expect(sourceLink).toHaveAttribute('target', '_blank')
     })
 

@@ -10,7 +10,7 @@ import uvicorn
 
 from .config_env import API_PORT, MAX_CONCURRENT_JOBS, WORKER_POLL_INTERVAL
 from .validation.emotion_validator import validate_emotion_file
-from .version import __version__
+from .version import __version__, warn_if_unsupported_python
 
 app = typer.Typer(
     name="videoannotator",
@@ -34,6 +34,8 @@ def _default(
     This makes `uv run videoannotator` behave like `uv run videoannotator server`
     with the recommended host and port.
     """
+    warn_if_unsupported_python()
+
     # If a subcommand was invoked, do nothing here and let Typer handle it.
     if ctx.invoked_subcommand is not None:
         return
@@ -95,6 +97,19 @@ def server(
 
     typer.echo(f"[START] Starting VideoAnnotator API server on http://{host}:{port}")
     typer.echo(f"[INFO] API documentation available at http://{host}:{port}/docs")
+    from videoannotator.utils.logging_config import logs_dir
+
+    typer.echo(f"[INFO] Logs: {logs_dir()}")
+    from videoannotator.database_location import database_url
+
+    db_url = database_url()
+    # A server URL can carry a password; only a SQLite path is safe to print.
+    db_shown = (
+        db_url.removeprefix("sqlite:///")
+        if db_url.startswith("sqlite")
+        else "DATABASE_URL"
+    )
+    typer.echo(f"[INFO] Database: {db_shown}")
 
     from .config_env import ENABLE_VIEWER
 
@@ -127,6 +142,11 @@ def server(
                 host=host,
                 port=port,
                 reload=reload,
+                # Only the package: by default the reloader watches the whole
+                # working directory, which in a checkout includes .venv,
+                # viewer/node_modules and gigabytes of models (scanning that on a
+                # slow mount left the server hung in disk I/O).
+                reload_dirs=[str(Path(__file__).resolve().parent)] if reload else None,
                 workers=workers
                 if not reload
                 else 1,  # Reload doesn't work with multiple workers
@@ -1011,7 +1031,7 @@ def version():
 def diagnose(
     component: str = typer.Argument(
         "all",
-        help="Component to diagnose: system, gpu, storage, database, ollama, or all",
+        help="Component to diagnose: system, gpu, storage, database, models, ollama, or all",
     ),
     json_output: bool = typer.Option(
         False, "--json", help="Output results as JSON for scripting"
@@ -1029,6 +1049,7 @@ def diagnose(
     from videoannotator.diagnostics import (
         diagnose_database,
         diagnose_gpu,
+        diagnose_models,
         diagnose_ollama,
         diagnose_storage,
         diagnose_system,
@@ -1040,6 +1061,7 @@ def diagnose(
         "gpu": ("GPU", diagnose_gpu),
         "storage": ("Storage", diagnose_storage),
         "database": ("Database", diagnose_database),
+        "models": ("Models", diagnose_models),
         "ollama": ("Ollama", diagnose_ollama),
     }
 
@@ -1133,6 +1155,13 @@ def diagnose(
                 free_gb = disk.get("free_gb", 0)
                 percent = disk.get("percent_used", 0)
                 typer.echo(f"  Disk: {free_gb:.1f} GB free ({percent:.1f}% used)")
+
+            elif comp_name == "models" and result["status"] != "error":
+                typer.echo(f"  Directory: {result['models_dir']}")
+                typer.echo(f"  Size: {result['total_bytes'] / 1e9:.2f} GB")
+                for source, size in result["sources"].items():
+                    if size:
+                        typer.echo(f"    {source}: {size / 1e9:.2f} GB")
 
             elif comp_name == "database" and result["status"] != "error":
                 connected = result.get("connected", False)

@@ -4,7 +4,7 @@ This guide helps you get up and running with VideoAnnotator using Docker (recomm
 
 ## Prerequisites
 
-- **Python 3.12+** (required)
+- **Python 3.12 or 3.13** (required; 3.13 recommended)
 - **uv** package manager (fast, modern dependency management)
 - **Git** (for version control)
 - Optional: **CUDA-compatible GPU** for faster processing
@@ -25,7 +25,7 @@ docker compose --profile gpu up --build videoannotator-gpu
 
 Open http://localhost:18011/docs for the interactive API documentation, or
 http://localhost:18011/viewer to review annotated output in the bundled
-[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer) — no separate
+[Video Annotation Viewer](../../viewer/) — no separate
 install required (disable with `VIDEOANNOTATOR_ENABLE_VIEWER=false` if you don't want it).
 
 To initialize the database and create an admin API key explicitly:
@@ -56,8 +56,7 @@ cd VideoAnnotator
 # Install all dependencies (fast!)
 uv sync
 
-# Install development dependencies
-uv sync --extra dev
+# Development tools come with `uv sync` by default (dependency group `dev`)
 
 # Initialize the database and create an admin API key (idempotent)
 uv run videoannotator setup-db --admin-email you@example.com --admin-username you
@@ -95,8 +94,8 @@ uv run videoannotator --dev
 ```
 
 **Viewer**: `/viewer` serves a bundled build of Video Annotation Viewer, pre-configured to talk to
-this server (same-origin, no setup needed). It's independently installable/runnable too — see its
-[own repo](https://github.com/InfantLab/video-annotation-viewer) if you want the standalone client
+this server (same-origin, no setup needed). It also runs on its own — see
+[`viewer/README.md`](../../viewer/README.md) if you want the standalone client
 (e.g. for reviewing output from other tools, or a different VideoAnnotator instance).
 
 **CORS Note**: The official standalone web client (video-annotation-viewer on port 19011) is
@@ -169,15 +168,15 @@ curl -H "Authorization: Bearer $API_KEY" \
 ### Using the Python API
 
 ```python
-from videoannotator.pipelines.scene_detection.scene_pipeline import SceneDetectionPipeline
-from videoannotator.pipelines.person_tracking.person_pipeline import PersonTrackingPipeline
+from videoannotator.pipelines.scene_detection.scene_pipeline import (
+    SceneDetectionPipeline,
+)
+from videoannotator.pipelines.person_tracking.person_pipeline import (
+    PersonTrackingPipeline,
+)
 
 # Scene detection
-scene_config = {
-    "threshold": 30.0,
-    "min_scene_length": 1.0,
-    "enabled": True
-}
+scene_config = {"threshold": 30.0, "min_scene_length": 1.0, "enabled": True}
 
 pipeline = SceneDetectionPipeline(scene_config)
 pipeline.initialize()
@@ -186,7 +185,7 @@ results = pipeline.process(
     video_path="path/to/video.mp4",
     start_time=0.0,
     end_time=30.0,  # Process first 30 seconds
-    output_dir="output/"
+    output_dir="output/",
 )
 
 pipeline.cleanup()
@@ -241,7 +240,7 @@ VideoAnnotator generates structured JSON files with comprehensive metadata:
 | -------------------- | ---------------------------------------------------------- | ------------------------------- | -------- |
 | **scene_detection**  | Scene boundary detection + CLIP environment classification | `*_scene_detection.json`        | ✅ Ready |
 | **person_tracking**  | YOLO11 + ByteTrack multi-person pose tracking              | `*_person_tracking.json`        | ✅ Ready |
-| **face_analysis**    | OpenFace 3.0 + LAION facial behavior analysis              | `*_laion_face_annotations.json` | ✅ Ready |
+| **face_analysis**    | DeepFace face detection and emotion                        | `*_face_detections.json`       | ✅ Ready |
 | **audio_processing** | Whisper speech recognition + pyannote diarization          | `*_speech_recognition.vtt`      | ✅ Ready |
 
 All pipelines are fully integrated with the API server and process through the background job system!

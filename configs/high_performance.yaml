@@ -79,28 +79,10 @@ face_analysis:
     age_gender_model: "VGG-Face"
     detector_backend: "retinaface" # More accurate detector
 
-# Audio Processing Pipeline
-audio_processing:
-  speech_recognition:
-    model: "openai/whisper-large-v2" # Larger model
-    language: "auto"
-
-  speaker_diarization:
-    model: "pyannote/speaker-diarization"
-    min_speakers: 1
-    max_speakers: 15
-
-  audio_classification:
-    model: "yamnet"
-    confidence_threshold: 0.4 # Lower threshold
-
-  features:
-    sample_rate: 16000
-    hop_length: 256 # Higher resolution
-    n_mels: 256 # More mel bins
-
-  segment_length: 15.0 # Shorter segments for precision
-  overlap: 0.25
+# Audio: configure speech_recognition and speaker_diarization as their own sections
+# (keyed by pipeline name). The old `audio_processing` section here had no effect (its
+# settings were ignored or equal to the defaults); that pipeline is deprecated in v1.6.0
+# and removed in v1.7.0.
 
 # Global Settings
 global:

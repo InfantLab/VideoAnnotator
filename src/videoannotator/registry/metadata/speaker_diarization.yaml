@@ -73,6 +73,10 @@ requires_setup:
     name: pyannote/segmentation-3.0
     description: Accept the pyannote/segmentation-3.0 licence on Hugging Face too; speaker-diarization-3.1 uses it.
     help_url: https://huggingface.co/pyannote/segmentation-3.0
+  - kind: licence
+    name: pyannote/speaker-diarization-community-1
+    description: Accept the pyannote/speaker-diarization-community-1 licence too; pyannote.audio 4 loads part of every diarization pipeline (PLDA) from it, even with speaker-diarization-3.1.
+    help_url: https://huggingface.co/pyannote/speaker-diarization-community-1
 weights:
   - id: pyannote/speaker-diarization-3.1
     approx_mb: 35

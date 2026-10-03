@@ -51,9 +51,7 @@ Ongoing cleanup to modernize all examples and documentation to use the `videoann
    - **Current**: Custom analysis workflow
    - **Update**: Integrate with API results retrieval
 
-7. **examples/test_laion_voice_pipeline.py**
-   - **Current**: Direct pipeline testing
-   - **Update**: API-based LAION testing
+7. ~~**examples/test_laion_voice_pipeline.py**~~: removed with the LAION pipelines (v1.6.0)
 
 ## 🔄 **Recommended Approach**
 

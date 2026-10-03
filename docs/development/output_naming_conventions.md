@@ -72,7 +72,7 @@ Explicit extensions reduce downstream branching logic (e.g., can glob `*.emotion
 
 ```
 5ff12ab2_person_tracking.tracks.coco.json
-5ff12ab2_face_laion_clip.emotion.json
+5ff12ab2_face_analysis.emotion.json
 5ff12ab2_voice_emotion_baseline.emotion.json
 5ff12ab2_face_openface3_embedding.embeddings.json
 ```

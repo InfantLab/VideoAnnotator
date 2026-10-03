@@ -11,6 +11,14 @@ from unittest.mock import patch
 
 import pytest
 
+# A cleared environment, except what Path.home() needs on Windows (config_env
+# resolves the default database path at import).
+_HOME_ONLY = {
+    k: v
+    for k, v in os.environ.items()
+    if k in ("HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "LOCALAPPDATA")
+}
+
 
 class TestConfigEnvHelpers:
     """Test configuration helper functions."""
@@ -26,7 +34,7 @@ class TestConfigEnvHelpers:
         """Test get_int_env returns default when variable not set."""
         from videoannotator.config_env import get_int_env
 
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, _HOME_ONLY, clear=True):
             assert get_int_env("NONEXISTENT", 99) == 99
 
     def test_get_int_env_with_invalid_value(self):
@@ -60,7 +68,7 @@ class TestConfigEnvHelpers:
         """Test get_bool_env returns default when variable not set."""
         from videoannotator.config_env import get_bool_env
 
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, _HOME_ONLY, clear=True):
             assert get_bool_env("NONEXISTENT", True) is True
             assert get_bool_env("NONEXISTENT", False) is False
 
@@ -75,7 +83,7 @@ class TestConfigEnvHelpers:
         """Test get_str_env returns default when variable not set."""
         from videoannotator.config_env import get_str_env
 
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, _HOME_ONLY, clear=True):
             assert get_str_env("NONEXISTENT", "fallback") == "fallback"
 
 
@@ -115,7 +123,7 @@ class TestWorkerConfiguration:
 
         import videoannotator.config_env
 
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, _HOME_ONLY, clear=True):
             importlib.reload(videoannotator.config_env)
             from videoannotator.config_env import MAX_CONCURRENT_JOBS
 
@@ -139,7 +147,7 @@ class TestWorkerConfiguration:
 
         import videoannotator.config_env
 
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, _HOME_ONLY, clear=True):
             importlib.reload(videoannotator.config_env)
             from videoannotator.config_env import WORKER_POLL_INTERVAL
 
@@ -163,7 +171,7 @@ class TestWorkerConfiguration:
 
         import videoannotator.config_env
 
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, _HOME_ONLY, clear=True):
             importlib.reload(videoannotator.config_env)
             from videoannotator.config_env import MAX_JOB_RETRIES
 
@@ -175,7 +183,7 @@ class TestWorkerConfiguration:
 
         import videoannotator.config_env
 
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, _HOME_ONLY, clear=True):
             importlib.reload(videoannotator.config_env)
             from videoannotator.config_env import RETRY_DELAY_BASE
 

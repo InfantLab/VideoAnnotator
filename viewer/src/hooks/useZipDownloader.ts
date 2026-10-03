@@ -5,6 +5,7 @@ import * as zip from '@zip.js/zip.js';
 import { detectFileType, mergeAnnotationData, DetectedFile } from '@/lib/parsers/merger';
 import {
   ensurePermission,
+  hasPermission,
   getDatasetFolderName,
   getDatasetForJob,
   getRootDirHandle,
@@ -15,7 +16,13 @@ import {
 import { isDemoJobId, getDemoKey } from '@/lib/localLibrary/installDemoDataset';
 import { loadDemoVideo, loadDemoAnnotations } from '@/utils/debugUtils';
 
-export type DownloadState = 'idle' | 'selecting_dir' | 'downloading' | 'unzipping' | 'ready' | 'error';
+// 'needs_folder': no library folder yet (or the browser wants a click before
+// it shows the picker). Waits for the user; going back to 'idle' instead made
+// the page start again, reopen the picker and loop.
+export type DownloadState = 'idle' | 'needs_folder' | 'selecting_dir' | 'downloading' | 'unzipping' | 'ready' | 'error';
+
+/** 'ask': use the library folder, asking for one only if a click allows it. 'pick': the user clicked "Choose folder". 'skip': view without saving. */
+export type FolderChoice = 'ask' | 'pick' | 'skip';
 
 interface UseZipDownloaderResult {
   state: DownloadState;
@@ -23,7 +30,7 @@ interface UseZipDownloaderResult {
   error: string | null;
   videoFile: File | null;
   annotationData: StandardAnnotationData | null;
-  startDownload: (jobId: string) => Promise<void>;
+  startDownload: (jobId: string, folder?: FolderChoice) => Promise<void>;
   reset: () => void;
 }
 
@@ -243,6 +250,11 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
     }
   }, []);
 
+  const reuseGrantedRootDir = useCallback(async (): Promise<FileSystemDirectoryHandle | null> => {
+    const existing = await getRootDirHandle().catch(() => null);
+    return existing && (await hasPermission(existing, 'readwrite')) ? existing : null;
+  }, []);
+
   const pickOrReuseRootDir = useCallback(async (): Promise<FileSystemDirectoryHandle | null> => {
     const supportsFS = 'showDirectoryPicker' in window;
     if (!supportsFS) return null;
@@ -340,7 +352,7 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
     [writeFileToDir]
   );
 
-  const startDownload = useCallback(async (jobId: string) => {
+  const startDownload = useCallback(async (jobId: string, folder: FolderChoice = 'ask') => {
     console.log('Starting download for job:', jobId);
     setError(null);
     setProgress(0);
@@ -387,18 +399,19 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
       // Ignore and continue to download path.
     }
 
-    setState('selecting_dir');
+    if (folder === 'pick') setState('selecting_dir');
     setError(null);
     setProgress(0);
     
     try {
       const supportsFS = 'showDirectoryPicker' in window;
       let rootDirHandle: FileSystemDirectoryHandle | null = null;
-      if (supportsFS) {
-        rootDirHandle = await pickOrReuseRootDir();
+      if (supportsFS && folder !== 'skip') {
+        // Without a click, the browser refuses both the picker and a permission
+        // prompt, so 'ask' only reuses a folder that is already granted.
+        rootDirHandle = folder === 'pick' ? await pickOrReuseRootDir() : await reuseGrantedRootDir();
         if (!rootDirHandle) {
-          // User canceled folder picker.
-          setState('idle');
+          setState('needs_folder');
           return;
         }
       }
@@ -472,7 +485,7 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
       setError(err instanceof Error ? err.message : 'Download failed');
       setState('error');
     }
-  }, [ingestToLocalDataset, pickOrReuseRootDir, tryOpenLocalDataset]);
+  }, [ingestToLocalDataset, pickOrReuseRootDir, reuseGrantedRootDir, tryOpenLocalDataset]);
 
   return {
     state,

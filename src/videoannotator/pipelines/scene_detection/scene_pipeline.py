@@ -210,9 +210,8 @@ class SceneDetectionPipeline(BasePipeline):
             return segments
 
         except Exception as e:
-            self.logger.error(f"Scene detection failed: {e}")
-            # Fallback to single scene
-            return [{"start": start_time, "end": end_time or 0.0}]
+            # Not a single whole-video scene: that would look like a real result.
+            raise RuntimeError(f"Scene detection failed: {e}") from e
 
     def _classify_scenes(
         self, video_path: str, segments: list[dict[str, Any]]
@@ -312,8 +311,7 @@ class SceneDetectionPipeline(BasePipeline):
             return classified_segments
 
         except Exception as e:
-            self.logger.error(f"Scene classification failed: {e}")
-            return segments
+            raise RuntimeError(f"Scene classification failed: {e}") from e
 
     def _initialize_clip(self):
         """Initialize CLIP model."""

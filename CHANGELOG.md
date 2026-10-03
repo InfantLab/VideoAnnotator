@@ -7,6 +7,199 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Python 3.13 support** (spec 012). VideoAnnotator now installs and runs on Python 3.12 and 3.13;
+  3.13 is the default for the dev container and the Docker images. No library version changed:
+  on 3.13 the install adds only backports of standard-library audio modules that 3.13 removed.
+  Every pipeline was checked on a real video: identical results on both versions, except
+  OpenFace 3, whose GPU results vary slightly from run to run on either version (3.13 stayed
+  within that variation). Python
+  3.12 stays supported through v1.6.x and is planned to be dropped in v1.7.0. Python 3.14 waits
+  for TensorFlow, which the planned replacement of `face_analysis` removes.
+- The CLI and server log a warning when started on an unsupported Python. pip and `uv sync`
+  refuse unsupported versions, but `uv pip install .` from a checkout doesn't check.
+- `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
+  the outputs with another (for Python and library upgrades).
+
+### Removed
+
+- **The LAION pipelines** (spec 014, from the v1.6.0 pipeline review): `laion_voice` (16–32 GB of
+  models, unmaintained upstream, trained on adult acted speech) and `face_laion_clip`
+  (unmaintained upstream, unvalidated on infants), with the `audio-laion` and `face-laion`
+  extras. `transformers` is no longer installed by any extra. A job naming either pipeline is
+  rejected with the reason and an alternative (HTTP 422, `PIPELINE_REMOVED`). They can return as
+  v1.7.0 plugins.
+- `configs/laion_pipelines.yaml` and `examples/test_laion_voice_pipeline.py`.
+
+### Deprecated
+
+- **`audio_processing`**: it duplicates `speech_recognition` + `speaker_diarization`. It still runs
+  and gives the same output, but it's no longer listed, job submissions using it get a
+  `warnings` entry, and it will be removed in v1.7.0. The `audio_processing:` sections of the
+  bundled configs had no effect and are gone.
+
+### Changed
+
+- **One directory for model weights** (spec 016): `VIDEOANNOTATOR_MODELS_DIR`, by default the
+  per-user data directory (`~/.local/share/videoannotator/models` on Linux,
+  `~/Library/Application Support/videoannotator/models` on macOS,
+  `%LOCALAPPDATA%\videoannotator\models` on Windows), with one folder per source. Whisper and YOLO
+  used to download relative to wherever the server was started, so starting it elsewhere meant
+  downloading again. **Upgrading installs download their models once more**; the server says so
+  on start if it finds weights in the old places, and `videoannotator diagnose models` lists them
+  with sizes. `HF_HOME` (and your Hugging Face login) is left alone. The dev container uses
+  `<repo>/models` as before (no re-download); the Docker images use `/app/models`, a named volume in
+  docker-compose.
+- **The database moves to the per-user data folder** instead of `./videoannotator.db` under
+  wherever the server was started (so starting it elsewhere showed an empty job list):
+  `videoannotator.db` next to the models folder's default (`~/.local/share/videoannotator/` on
+  Linux), or `VIDEOANNOTATOR_DB_PATH`; `DATABASE_URL` still overrides both. The server prints it at
+  start (`[INFO] Database: ...`). Both database layers now use the same setting: before,
+  `VIDEOANNOTATOR_DB_PATH` moved job storage but users, API keys, datasets and presets stayed in
+  `./videoannotator.db`. **An existing `./videoannotator.db` is not moved**: copy it to the new
+  location (or point `VIDEOANNOTATOR_DB_PATH` at it) to keep its jobs and API keys. The Docker
+  images use `/app/database/videoannotator.db`, a named volume (`videoannotator-database`) in
+  docker-compose, so jobs and keys now survive a rebuild; the dev container keeps
+  `<repo>/videoannotator.db`.
+- **One Dockerfile for CPU and GPU** replaces `Dockerfile.cpu`, `Dockerfile.gpu` and
+  `Dockerfile.dev`: `docker build -t videoannotator .` (slim) or `--build-arg EXTRAS=all`, run with
+  `--gpus all` to use a GPU. It builds on `ubuntu:24.04` instead of a 2024 `nvidia/cuda` snapshot
+  (torch's wheels bring their own CUDA). Fixed on the way: the CPU image replaced torch with 2.6.0
+  after installing extras, which broke pyannote.audio 4; the GPU image didn't install
+  VideoAnnotator itself; both shipped the dev tools and uv's download cache. The image now starts
+  `videoannotator server` on 0.0.0.0. `Dockerfile.dev` (copied local models into the image) and
+  compose's `videoannotator-dev-gpu` service are gone: use the dev container, or a models volume.
+  Sizes (2026-10-02): slim 1.35 GB (347 MB compressed), every pipeline 14.9 GB (4.78 GB), against
+  26.1 GB (8.89 GB) for v1.4.3. A `.dockerignore` keeps the build context to what the image needs
+  (and `.env`, which can hold tokens, out of it).
+- **Logs go to one per-user folder** instead of `./logs` under wherever the server was started:
+  `VIDEOANNOTATOR_LOG_DIR`, by default `~/.local/state/videoannotator/logs` on Linux,
+  `~/Library/Logs/videoannotator` on macOS and `%LOCALAPPDATA%\videoannotator\logs` on Windows.
+  The server prints the folder at start (`[INFO] Logs: ...`). The Docker images keep `/app/logs`
+  (docker-compose's `./logs` mount still works) and the dev container keeps `<repo>/logs`. Old
+  `./logs` folders are left where they are. The documented `LOG_DIR` setting never did anything
+  and is gone.
+- **OpenFace 3 works outside a source checkout.** Its face detector loaded a backbone file from
+  `./weights/`, relative to the working directory, which only a source checkout has (it's committed
+  to this repository). That load is skipped: the detector's full checkpoint replaces those weights
+  anyway (outputs unchanged).
+- **torch 2.6 → 2.11, pyannote.audio 3 → 4, CUDA 12.4 → 12.6 wheels** (spec 015). torch 2.11 is
+  as far as it can go for now: pyannote.audio 4 imports torchaudio, which was discontinued at 2.11
+  and won't load on a newer torch. **GPU users need NVIDIA driver 560+** (Linux 560.28.03, Windows
+  560.76; 525+ usually works through CUDA's minor-version compatibility). On the demo video every
+  pipeline gives the same results: identical transcript text and speaker turns; person-tracking
+  boxes within 0.08 px and scene scores within 0.003 (numerical differences of the new torch);
+  OpenFace within its known run-to-run sensitivity.
+- **Diarization now also needs `pyannote/speaker-diarization-community-1`'s licence accepted on
+  Hugging Face**, even with the default `speaker-diarization-3.1` model: pyannote.audio 4 loads part
+  of every diarization pipeline from it. The pipeline's setup checklist lists it.
+- **pyannote.audio's telemetry is off by default.** pyannote.audio 4 sends anonymous usage data
+  (pipeline, file durations, speaker counts) to `otel.pyannote.ai` unless told not to; VideoAnnotator
+  sets `PYANNOTE_METRICS_ENABLED=0` unless you set it yourself (constitution principle I,
+  local-first).
+- Diarization hands pyannote the audio in memory, so it doesn't need FFmpeg's shared libraries
+  (pyannote.audio 4's own file decoding does).
+- **Short family names are predictable** (spec 014): `audio` and `face` resolve to the family's
+  declared default (`family_default` in pipeline metadata), not to whichever "stable" pipeline
+  sorted first. Before, `audio` meant the 16–32 GB LAION voice model whenever its extra was
+  installed, and `speaker_diarization` otherwise; it now means `audio_processing` (speech +
+  diarization) until v1.7.0. `face` means `face_analysis`.
+- Job responses have a `warnings` list (empty unless something deprecated was used).
+- **Core install is 82% smaller** (spec 013): 40 packages and 135 MB instead of 73 and 746 MB.
+  Removed from core because nothing in VideoAnnotator imports them: `moviepy`, `matplotlib`,
+  `tqdm`, `openpyxl`, `pandas`, `imageio`, `imageio-ffmpeg`, `av`, `alembic`, `rich`,
+  `click` (still installed, via `typer`), `scikit-image`, `cryptography`. `numba` moved to the
+  `audio` extra, its only user. **If your own scripts used one of these because it arrived with
+  VideoAnnotator, install it yourself.** Removed from extras: `imutils` (`face`) and
+  `supervision` (`person`), both unused; the empty `annotation` extra is gone.
+- **Each extra now works on its own** (checked by installing core plus one extra in a clean
+  environment and running its pipelines on the demo video). `face-openface3` didn't:
+  `openface-test` imports torch, torchvision, timm, scikit-image, pandas, huggingface-hub, tqdm,
+  matplotlib, seaborn and tensorboardX without declaring them, and they used to arrive with core
+  or with another extra. They're now declared in `face-openface3`.
+- Removed two modules that couldn't be imported: `videoannotator.main` and
+  `videoannotator.visualization` (both still imported `src.*` paths from before the package
+  moved to `src/videoannotator/`).
+- Core libraries upgraded: FastAPI 0.142, SQLAlchemy 2.1, Pydantic 2.13, NumPy 2.5, Pillow 12,
+  and others. Pipeline outputs on the demo video are unchanged.
+- **Development tools**: declared once, in the `dev` dependency group (installed by `uv sync` by
+  default; `pip install -e . --group dev` with pip ≥ 25.1). The `dev` extra is gone, and
+  `uv sync --extra dev` no longer works: use `uv sync`. Jupyter moved to its own `notebooks` group.
+- **Type checking covers the whole package**: mypy used to exclude the pipelines and several
+  storage, utility and exporter modules, and the pre-commit hook used an older mypy than CI on an
+  even smaller subset. Both now run the same check on all 117 modules.
+- Pre-commit hooks upgraded; `pydocstyle` (it pointed at a directory that no longer exists) and
+  `mirrors-prettier` (no stable release since v3) removed. GitHub Actions moved to current
+  versions (Node 20 is deprecated on Actions).
+- **Pipeline outputs are unchanged by this release's upgrades** (Python 3.13, torch 2.11,
+  pyannote.audio 4, the core dependency clean-up). The demo clip was run through v1.5.0 and this
+  release with the same six pipelines on the same GPU (2026-10-02):
+  - Identical: scene detection, person tracks, speaker diarization (every turn, to the
+    millisecond), and the speech transcript with its timings.
+  - Within run-to-run GPU noise: person-tracking scores (up to 0.12% apart; two runs of the same
+    version differ by up to 0.07%) and OpenFace 3 action-unit intensities (up to 1.4%, median
+    0.0004%; two runs of the same version differ by up to 1.6%).
+  - Face analysis (DeepFace) finds no faces in the demo clip in either version.
+  These outputs are now the committed baseline: `tests/integration/test_output_baseline.py` runs
+  the demo clip through a real server and compares every file with
+  `tests/fixtures/viewer_contract/` (real models, about a minute on a GPU; not run in CI).
+
+### Fixed
+
+- **A pipeline that fails now says so.** Several pipelines caught their own errors and returned
+  nothing, so the job showed them as completed with empty results. Each now raises, and the job
+  lists the pipeline as failed with its error:
+  - `speech_recognition`: any transcription error (found through a Triton cache error), or a
+    missing input file.
+  - `speaker_diarization`: a missing input file, or a video with no audio track.
+  - `scene_detection`: a detection failure used to produce one invented scene spanning the whole
+    video; a scene classification failure used to drop the labels silently.
+  - `face_analysis` and `face_openface3_embedding`: when every sampled frame fails. A few bad
+    frames are still skipped, now with a warning counting them. An OpenFace 3 frame that fails
+    partway is dropped whole instead of keeping the faces it had reached.
+  - `person_tracking`: a YOLO model that couldn't be reloaded after corruption.
+  - `vlm_annotation`: a run that stops after repeated model failures, or where no sample point
+    got an answer. What it did get is still written to the job folder.
+  - `audio_processing` (deprecated): a sub-pipeline that fails to load or run. Before, it was
+    dropped silently.
+- **A core install (`pip install videoannotator`, the slim Docker image) failed to start** with
+  `No module named 'httpx'`: the server imports the Ollama client at start, and the v1.6.0 core
+  clean-up dropped `httpx` as unused (every test environment had it through the dev tools). It is
+  a core dependency again, and CI now installs core alone and starts the server.
+- **A brand-new install started with no API key.** The first key was generated before the
+  database tables existed (`no such table: users`), so with authentication on by default a fresh
+  install couldn't be used until it was restarted. Security setup now runs after the tables are
+  created.
+- **`person_tracking` failed on a fresh install** with `No module named 'lap'`: ByteTrack needs
+  `lap`, which ultralytics doesn't declare (it installs it at runtime, which fails offline or in a
+  locked environment). `lap` is now a declared dependency of the `person` extra.
+- **The standalone `speech_recognition` and `speaker_diarization` pipelines wrote no files.**
+  Their results went to the database only, so the viewer, which loads a job from its files, showed
+  no transcript or speaker turns. They now write `<video>_speech_recognition.vtt` and
+  `<video>_speaker_diarization.rttm` like the deprecated `audio_processing` did.
+- **Speech recognition could return an empty transcript after another Python version had run on
+  the same machine.** Triton, which Whisper uses for word timestamps on GPU, caches compiled
+  launchers in `~/.triton/cache` without keying them on the Python version; a launcher built by
+  3.13 then fails under 3.12 (`PY_SSIZE_T_CLEAN macro must be defined`), and the pipeline
+  reported "completed" with no transcript. VideoAnnotator now uses one Triton cache per Python
+  version (`~/.triton/cache/py3.12`, `py3.13`) unless `TRITON_CACHE_DIR` is set.
+- **The Windows dev container was slow, and was running when a Windows machine froze.** Opened
+  from a Windows folder ("Reopen in Container"), every file the container touched crossed the
+  Windows–WSL file bridge and was scanned by Defender. The Python environment and model weights
+  now live in Docker named volumes (`videoannotator-venv`, `videoannotator-models`), the
+  container warns at start when its workspace is on a Windows drive, and the install guide steers
+  Windows users to "Clone Repository in Container Volume", a WSL memory cap, and stopping the
+  container before the machine sleeps (troubleshooting: "Windows freezes or crawls while the dev
+  container is running"). The freeze examined was memory exhaustion, not a test run: the WSL VM,
+  uncapped, can grow by several GB of page cache (installing the extras alone fills ~10 GB), on
+  a machine already near its limit. The dev container is now capped at 12 GB (`--memory=12g` in
+  `devcontainer.json`); under that cap the full test suite peaks at 5.4 GB and a job running every
+  pipeline on the demo clip at 6.5 GB. The dev container's models move from `./models` to
+  `/app/models`, as in the Docker images; the server lists the old folder at start so existing
+  weights can be copied over. `docker-compose.yml` names its models volume
+  `videoannotator-models`, so the dev container and Compose share one copy of the weights.
+
 ### Planned
 
 - Queue position display for pending jobs
@@ -1001,6 +1194,7 @@ The v1.0.0 release introduces significant architectural changes. Here's how to m
 ```python
 # Direct pipeline initialization
 from src.processors.video_processor import VideoProcessor
+
 processor = VideoProcessor(config_dict)
 ```
 
@@ -1009,6 +1203,7 @@ processor = VideoProcessor(config_dict)
 ```python
 # Modern pipeline architecture
 from src.pipelines import SceneDetectionPipeline
+
 pipeline = SceneDetectionPipeline(config)
 ```
 
@@ -1034,10 +1229,7 @@ results = pipeline.process(video_path, start_time=0, end_time=None)
 
 ```python
 # Python dictionary configuration
-config = {
-    'video_settings': {'fps': 30},
-    'audio_settings': {'sample_rate': 16000}
-}
+config = {"video_settings": {"fps": 30}, "audio_settings": {"sample_rate": 16000}}
 ```
 
 **New:**

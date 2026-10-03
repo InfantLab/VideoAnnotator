@@ -201,10 +201,11 @@ COPY . .
 CMD ["uv", "run", "python", "-m", "your_project"]
 ```
 
-### Production vs dev images (this repo)
+### This repo
 
-- `Dockerfile.cpu` and `Dockerfile.gpu` are production images and do NOT copy `models/` or `weights/` into the image; they download what they need at runtime.
-- `Dockerfile.dev` is a development image and intentionally copies your local `models/` and `weights/` so repeated runs do not re-download.
+This repo has one `Dockerfile` for CPU and GPU, on `ubuntu:24.04` rather than an `nvidia/cuda` base
+(torch's wheels bring their own CUDA). Model weights are never copied in; they download into a
+`/app/models` volume. See `docs/deployment/Docker.md`.
 
 **Host requirement:** Install **NVIDIA Container Toolkit** and run with `--gpus all`.
 
@@ -223,7 +224,7 @@ Toolkit docs: install on your distro and Docker integrates GPU runtime. ([NVIDIA
 ```json
 {
   "name": "your-project (GPU)",
-  "build": { "dockerfile": "../Dockerfile.gpu", "context": ".." },
+  "build": { "dockerfile": "../Dockerfile", "context": ".." },
   "runArgs": ["--gpus", "all"],
   "features": {},
   "postCreateCommand": "uv sync && pre-commit install",

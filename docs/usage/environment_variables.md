@@ -33,6 +33,7 @@ Control concurrent job processing and retry behavior:
 | `WORKER_POLL_INTERVAL` | `5` | Seconds between database polls for new jobs |
 | `MAX_JOB_RETRIES` | `3` | Maximum retry attempts for failed jobs |
 | `RETRY_DELAY_BASE` | `2.0` | Base delay (seconds) for exponential backoff |
+| `VIDEOANNOTATOR_BACKGROUND_PROCESSING` | `true` | Run submitted jobs in the API server. `false` accepts jobs but never runs them; the test suite sets it so tests don't run real models |
 
 **Tuning `MAX_CONCURRENT_JOBS`**:
 - **1-2**: 6GB GPU (safe for most models)
@@ -77,14 +78,15 @@ Control database connection:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `sqlite:///./videoannotator.db` | Database connection string |
+| `VIDEOANNOTATOR_DB_PATH` | per-user data folder | SQLite database file. Default: `videoannotator.db` in `~/.local/share/videoannotator/` (Linux), `~/Library/Application Support/videoannotator/` (macOS), `%LOCALAPPDATA%\videoannotator\` (Windows); `/app/database/videoannotator.db` in the Docker images. The server prints it at start (`[INFO] Database: ...`) |
+| `DATABASE_URL` | unset | Database connection string; overrides `VIDEOANNOTATOR_DB_PATH` |
 | `DB_POOL_ENABLED` | `true` | Enable connection pooling |
 | `DB_POOL_SIZE` | `5` | Connection pool size |
 
 **Database URL Examples**:
 ```bash
-# SQLite (default)
-DATABASE_URL=sqlite:///./videoannotator.db
+# SQLite at a chosen path (or set VIDEOANNOTATOR_DB_PATH)
+DATABASE_URL=sqlite:////srv/videoannotator/videoannotator.db
 
 # PostgreSQL
 DATABASE_URL=postgresql://user:password@localhost/dbname
@@ -100,7 +102,7 @@ Control log output and verbosity:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
-| `LOG_DIR` | `./logs` | Directory for log files |
+| `VIDEOANNOTATOR_LOG_DIR` | per-user log folder | Directory for log files. Default: `~/.local/state/videoannotator/logs` (Linux), `~/Library/Logs/videoannotator` (macOS), `%LOCALAPPDATA%\videoannotator\logs` (Windows); `/app/logs` in the Docker images. The server prints it at start (`[INFO] Logs: ...`) |
 | `LOG_JSON` | `false` | Enable structured JSON logging |
 
 ### Model Configuration
@@ -275,7 +277,7 @@ MAX_CONCURRENT_JOBS=1
 **Solution**: Ensure worker is running and polling:
 ```bash
 # Check worker logs
-tail -f logs/videoannotator.log
+tail -f ~/.local/state/videoannotator/logs/api_server.log
 
 # Try reducing poll interval
 WORKER_POLL_INTERVAL=2 videoannotator worker

@@ -76,19 +76,10 @@ face_analysis:
     detector_backend: "opencv"
     enforce_detection: false
 
-# Audio Processing Pipeline
-audio_processing:
-  speech_recognition:
-    model: "openai/whisper-base"
-    language: "auto"
-
-  audio_classification:
-    confidence_threshold: 0.5
-
-  features:
-    sample_rate: 16000
-    hop_length: 512
-    n_mels: 128
+# Audio: configure speech_recognition and speaker_diarization as their own sections
+# (keyed by pipeline name). The old `audio_processing` section here had no effect (its
+# settings were ignored or equal to the defaults); that pipeline is deprecated in v1.6.0
+# and removed in v1.7.0.
 
 # Global Settings
 global:

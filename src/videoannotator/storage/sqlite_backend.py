@@ -49,11 +49,15 @@ class SQLiteStorageBackend(StorageBackend):
 
         Args:
             database_path: Path to SQLite database file.
-                          Defaults to ./videoannotator.db in current directory.
+                          Defaults to the configured database (database_location).
             echo: Whether to log SQL queries (useful for debugging)
         """
         if database_path is None:
-            database_path = Path.cwd() / "videoannotator.db"
+            from videoannotator.database_location import (
+                database_path as configured_path,
+            )
+
+            database_path = configured_path()
 
         self.database_path = Path(database_path)
         # Ensure parent directory exists (common in tests using TemporaryDirectory)

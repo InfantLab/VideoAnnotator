@@ -65,16 +65,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("VideoAnnotator API server starting up...", extra={"event": "startup"})
 
-    # Initialize security (API keys, CORS, authentication)
-    try:
-        from .startup import initialize_security
+    from ..version import warn_if_unsupported_python
 
-        logger.info("Initializing security configuration...")
-        initialize_security()
-        logger.info("Security configuration initialized")
-    except Exception as e:
-        logger.error(f"Security initialization failed: {e}")
-        # Continue startup but log error
+    warn_if_unsupported_python()
+
+    # spec 016: weights moved to one directory in v1.6.0; say so once if an upgraded
+    # install still has them in the old places, rather than silently re-downloading.
+    from ..models_dir import directory_size, legacy_locations, models_dir
+
+    if directory_size(models_dir()) == 0:
+        old = legacy_locations()
+        if old:
+            logger.warning(
+                f"Model weights are now kept in {models_dir()} "
+                f"(set VIDEOANNOTATOR_MODELS_DIR to change it). Found weights in the "
+                f"old locations {', '.join(str(p) for p in old)}: move them there to "
+                "avoid downloading again, or delete them. "
+                "`videoannotator diagnose models` shows sizes."
+            )
 
     # Create any tables not yet present (e.g. saved_datasets/saved_pipeline_presets
     # added by 007-datasets-and-presets) -- idempotent, skips existing tables.
@@ -101,6 +109,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         logger.error(f"Database migration failed: {e}")
         # Don't fail startup if migration fails, but log prominently
+
+    # After the tables exist: on a fresh database the first API key has nowhere to go
+    # before them, and authentication is on by default.
+    try:
+        from .startup import initialize_security
+
+        logger.info("Initializing security configuration...")
+        initialize_security()
+        logger.info("Security configuration initialized")
+    except Exception as e:
+        logger.error(f"Security initialization failed: {e}")
+        # Continue startup but log error
 
     # Resolve any extras-install jobs orphaned by an unclean shutdown/crash of
     # a previous process (specs/005-pipeline-extras-install) -- a job stuck
@@ -143,7 +163,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # Don't fail startup if this cleanup fails, but log prominently
 
     # Log server configuration
-    from ..config_env import CORS_ORIGINS
+    from ..config_env import CORS_ORIGINS, get_bool_env
+
+    # Read at startup rather than import so the test suite's setting always applies:
+    # with it on, jobs other tests submitted get picked up and run real models,
+    # which ran CI out of memory (macOS) and stack (Windows).
+    background_processing = get_bool_env("VIDEOANNOTATOR_BACKGROUND_PROCESSING", True)
 
     logger.info(
         "Server configuration initialized",
@@ -153,17 +178,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "logging": "enhanced",
             "middleware": ["CORS", "RequestLogging", "ErrorLogging"],
             "cors_origins": CORS_ORIGINS,
-            "background_processing": "enabled",
+            "background_processing": (
+                "enabled" if background_processing else "disabled"
+            ),
         },
     )
 
-    # Start background job processing
-    from .background_tasks import start_background_processing
+    if background_processing:
+        from .background_tasks import start_background_processing
 
-    await start_background_processing()
-    logger.info(
-        "Background job processing started", extra={"component": "background_tasks"}
-    )
+        await start_background_processing()
+        logger.info(
+            "Background job processing started",
+            extra={"component": "background_tasks"},
+        )
+    else:
+        logger.warning(
+            "Background job processing disabled (VIDEOANNOTATOR_BACKGROUND_PROCESSING)",
+            extra={"component": "background_tasks"},
+        )
 
     # Warm up torch/CUDA in the background so the first client request to
     # /api/v1/system/health (typically the viewer, right after startup)
@@ -189,13 +222,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         "VideoAnnotator API server shutting down...", extra={"event": "shutdown"}
     )
 
-    # Stop background job processing
-    from .background_tasks import stop_background_processing
+    if background_processing:
+        from .background_tasks import stop_background_processing
 
-    await stop_background_processing()
-    logger.info(
-        "Background job processing stopped", extra={"component": "background_tasks"}
-    )
+        await stop_background_processing()
+        logger.info(
+            "Background job processing stopped",
+            extra={"component": "background_tasks"},
+        )
 
     # TODO: Cleanup pipeline resources
 
@@ -316,10 +350,10 @@ def create_app() -> FastAPI:
 </body></html>"""
         return HTMLResponse(content=html)
 
-    # The viewer pins its API URL to 127.0.0.1 (and rewrites a saved
-    # `localhost` to it), and the browser keeps the API token per origin. A
-    # page opened at `localhost` therefore either can't reach the API or
-    # reaches it without the token. Send browsers to the one origin that works.
+    # The browser keeps the viewer's saved API key per origin, and every link
+    # the server prints (viewer-connect included) uses 127.0.0.1, so a viewer
+    # opened at `localhost` would start with no key. Send browsers to the one
+    # origin the key is saved under.
     @app.middleware("http")
     async def viewer_on_loopback_ip(request: Request, call_next):
         path = request.url.path

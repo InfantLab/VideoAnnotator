@@ -29,6 +29,7 @@ import { JobCancelButton } from '@/components/JobCancelButton';
 import { JobDeleteButton } from '@/components/JobDeleteButton';
 import { canCancelJob } from '@/hooks/useJobCancellation';
 import { canDeleteJob } from '@/hooks/useJobDeletion';
+import { jobErrorSummary } from '@/lib/jobOutcome';
 
 const STATUS_CLASSES: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200',
@@ -177,6 +178,7 @@ export function JobsTable({
         ) : (
           jobs.map((job) => {
             const { videoName, videoDuration, videoSize } = videoFieldsOf(job);
+            const errorSummary = jobErrorSummary(job);
             // Real per-pipeline progress from the server (spec 006/008), not a
             // status-to-number guess.
             const progress =
@@ -191,7 +193,19 @@ export function JobsTable({
                 <TableCell className="max-w-[220px] truncate font-medium" title={videoName}>
                   {videoName}
                 </TableCell>
-                <TableCell>{getStatusBadge(job.status, job.error_message)}</TableCell>
+                <TableCell>
+                  {getStatusBadge(job.status, job.error_message)}
+                  {errorSummary && (
+                    <p
+                      className={`mt-1 max-w-[280px] line-clamp-2 text-xs ${
+                        job.status === 'failed' ? 'text-red-700' : 'text-orange-800'
+                      }`}
+                      title={errorSummary}
+                    >
+                      {errorSummary}
+                    </p>
+                  )}
+                </TableCell>
                 {showProgress && (
                   <TableCell>
                     <div className="flex items-center gap-2">

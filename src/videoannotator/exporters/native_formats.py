@@ -8,7 +8,7 @@ This module uses established FOSS libraries directly instead of custom schema wr
 - audformat: Comprehensive audio annotation library
 
 Usage:
-    from src.exporters.native_formats import (
+    from videoannotator.exporters.native_formats import (
         export_coco_json,
         export_webvtt_captions,
         export_rttm_diarization,

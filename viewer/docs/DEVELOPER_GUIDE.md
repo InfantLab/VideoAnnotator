@@ -84,20 +84,17 @@ node --version  # Should be 18+
 ### Getting Started
 ```bash
 # Clone the repository
-git clone https://github.com/InfantLab/video-annotation-viewer.git
-cd video-annotation-viewer
+git clone https://github.com/InfantLab/VideoAnnotator.git
+cd VideoAnnotator/viewer
 
 # Install dependencies
 bun install
-# or: npm install
 
 # Start development server
 bun run dev
-# or: npm run dev
 
 # Build for production
 bun run build
-# or: npm run build
 ```
 
 ### Available Scripts
@@ -565,4 +562,4 @@ git push origin feature/your-feature
 3. Add demo data if adding new parsers
 4. Follow semantic commit messages
 
-For questions or support, check the [GitHub repository](https://github.com/InfantLab/video-annotation-viewer) or contact the development team.
+For questions or support, check the [GitHub repository](https://github.com/InfantLab/VideoAnnotator) or contact the development team.

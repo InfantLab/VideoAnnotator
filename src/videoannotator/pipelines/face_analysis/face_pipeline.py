@@ -21,7 +21,7 @@ from videoannotator.exporters.native_formats import (
     export_coco_json,
     validate_coco_json,
 )
-from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.pipelines.base_pipeline import BasePipeline, FrameFailures
 from videoannotator.utils.person_identity import PersonIdentityManager
 from videoannotator.version import __version__
 
@@ -35,7 +35,7 @@ def _disable_tensorflow_gpu() -> None:
     the venv). These two pins can never both be satisfied in one venv, so
     TensorFlow's GPU ops fail at runtime (`No DNN in stream executor`) instead
     of erroring at install time. Forcing TF onto CPU sidesteps that entirely;
-    torch itself (scene/person/face-laion's CLIP/YOLO models) is untouched —
+    torch itself (scene/person's CLIP/YOLO models) is untouched —
     this only calls TensorFlow's own device-visibility API, not the
     `CUDA_VISIBLE_DEVICES` env var, which both frameworks would otherwise read.
     Set `VIDEOANNOTATOR_DEEPFACE_GPU=1` to skip this if you've resolved the
@@ -323,6 +323,7 @@ class FaceAnalysisPipeline(BasePipeline):
         frame_step = max(1, int(fps / pps))  # Process every Nth frame
 
         annotation_id = 1
+        frame_failures = FrameFailures(self.logger)
 
         try:
             for frame_num in range(
@@ -337,15 +338,19 @@ class FaceAnalysisPipeline(BasePipeline):
                 timestamp = frame_num / fps
                 height, width = frame.shape[:2]
 
-                # Detect faces in frame
-                face_annotations = self._detect_faces_in_frame(
-                    frame,
-                    timestamp,
-                    video_metadata["video_id"],
-                    frame_num,
-                    width,
-                    height,
-                )
+                try:
+                    face_annotations = self._detect_faces_in_frame(
+                        frame,
+                        timestamp,
+                        video_metadata["video_id"],
+                        frame_num,
+                        width,
+                        height,
+                    )
+                except Exception as e:
+                    frame_failures.failed_on(frame_num, e)
+                    continue
+                frame_failures.succeeded()
 
                 # Link faces to persons if identity manager is available
                 if self.identity_manager is not None and face_annotations:
@@ -384,6 +389,8 @@ class FaceAnalysisPipeline(BasePipeline):
 
         finally:
             cap.release()
+
+        frame_failures.check()
 
         # Save results if output directory specified
         if output_dir and annotations:
@@ -800,8 +807,7 @@ class FaceAnalysisPipeline(BasePipeline):
             return annotations
 
         except Exception as e:
-            self.logger.warning(f"DeepFace detection failed completely: {e}")
-            return []
+            raise RuntimeError(f"DeepFace detection failed: {e}") from e
 
     def _save_coco_annotations(
         self,

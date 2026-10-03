@@ -265,6 +265,7 @@ def _extract_video_frames(
         )
 
     try:
+        _context_offsets: list[int] | None
         if sampling_mode == "frame_burst":
             offsets = (
                 json.loads(burst_offsets)

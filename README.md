@@ -2,7 +2,7 @@
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-REST%20API-009688?logo=fastapi&logoColor=white)](http://localhost:18011/docs)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12 | 3.13](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/badge/uv-package%20manager-FF4B4B?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
 [![Docker](https://img.shields.io/badge/Docker-GPU%20Ready-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/)
 [![CI](https://github.com/InfantLab/VideoAnnotator/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/InfantLab/VideoAnnotator/actions/workflows/ci-cd.yml)
@@ -34,9 +34,9 @@ VideoAnnotator provides both **automated processing** and **interactive visualiz
 - REST API for integration with research workflows
 - Supports batch processing and custom configurations
 - Outputs standardized JSON data
-- Bundles **[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)**, served at `/viewer`
+- Includes the **[Video Annotation Viewer](viewer/)**, served at `/viewer`
 
-### 🌐 **[Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)** (companion project, bundled here)
+### 🌐 **[Video Annotation Viewer](viewer/)** (in `viewer/`, served at `/viewer`)
 
 **Interactive web-based visualization tool**
 
@@ -50,15 +50,15 @@ VideoAnnotator provides both **automated processing** and **interactive visualiz
   <summary>Running Video Annotation Viewer standalone (without VideoAnnotator)</summary>
 
   ```bash
-  git clone https://github.com/InfantLab/video-annotation-viewer.git
-  cd video-annotation-viewer
-  npm install
-  npm run dev
+  git clone https://github.com/InfantLab/VideoAnnotator.git
+  cd VideoAnnotator/viewer
+  bun install
+  bun run dev
   ```
 
-  Note: Ensure Node and NPM are installed. On macOS with Homebrew: `brew install node`. Open
-  http://localhost:3000 and load your files, or connect it to a VideoAnnotator server via `.env` or
-  the in-app Settings page — see that repo's README for details.
+  Needs [Bun](https://bun.sh). Open http://127.0.0.1:19011 and load your files, or connect it to a
+  VideoAnnotator server in the in-app Settings page; see [`viewer/README.md`](viewer/README.md).
+  (The viewer was a separate repository, `InfantLab/video-annotation-viewer`, until v1.5.0.)
 
   </details>
 
@@ -85,7 +85,7 @@ scripts/start_server.sh
 ```
 
 This syncs dependencies, sets up the local database and an admin API key (prompting for an admin email
-the first time), starts the API server, and — since [Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer)
+the first time), starts the API server, and — since [Video Annotation Viewer](viewer/)
 is bundled and served by this same process, not a separate frontend to start — prints a one-click viewer
 login link once the server is actually up. Safe to re-run any time (e.g. after a container/VS Code
 restart). Pass `--background` to keep it running after this terminal closes, or `--help` for all options
@@ -211,12 +211,11 @@ Additional Specs:
 |----------|-----------|---------|-----------|
 | **Person Tracking & Pose** | YOLO11 + ByteTrack | COCO bounding boxes, 17-point pose keypoints, persistent person IDs | beta |
 
-### Face Analysis (3 pipelines)
+### Face Analysis (2 pipelines)
 
 | Pipeline | Technology | Outputs | Stability |
 |----------|-----------|---------|-----------|
 | **Face Analysis** | DeepFace (TensorFlow/OpenCV) | Emotion labels, age/gender, action units | stable |
-| **LAION CLIP Face Embedding** | LAION CLIP-derived model | 512-D semantic embeddings, zero-shot attribute & emotion tagging | experimental |
 | **OpenFace3 Face Embedding** | OpenFace 3.0 (ONNX/PyTorch) | 512-D face embeddings for recognition or clustering | experimental |
 
 ### Scene Detection (1 pipeline)
@@ -225,14 +224,13 @@ Additional Specs:
 |----------|-----------|---------|-----------|
 | **Scene Detection** | PySceneDetect + CLIP | Scene boundaries, environment classification, temporal segmentation | beta |
 
-### Audio Processing (4 pipelines + 1 combined)
+### Audio Processing (2 pipelines)
 
 | Pipeline | Technology | Outputs | Stability |
 |----------|-----------|---------|-----------|
 | **Speech Recognition** | OpenAI Whisper | WebVTT transcripts with word-level timestamps | stable |
 | **Speaker Diarization** | pyannote.audio | RTTM speaker turns with timestamps | stable |
-| **Audio Processing** | Whisper + pyannote (combined) | WebVTT transcripts + RTTM speaker turns | beta |
-| **LAION Empathic Voice** | LAION Empathic Insight + Whisper embeddings | Emotion segments, empathic scores, emotion timeline | stable |
+| **Audio Processing** | Whisper + pyannote (combined) | **Deprecated in v1.6.0** (removed in v1.7.0): select Speech Recognition and Speaker Diarization instead | deprecated |
 | **Voice Emotion Baseline** | Spectral CNN over Whisper embeddings | _(planned — not yet implemented)_ | experimental |
 
 ## 💡 Why VideoAnnotator?
@@ -317,7 +315,7 @@ VideoAnnotator produces machine-readable outputs (primarily JSON files and API r
 
 - **Python**: Load JSON into pandas / numpy for analysis (see [examples/](examples/))
 - **R / MATLAB**: Not currently supported with official helper packages, but the JSON outputs can be consumed using standard JSON readers
-- **Visualization**: Bundled [Video Annotation Viewer](https://github.com/InfantLab/video-annotation-viewer) at `/viewer` for interactive playback + overlays; also runs standalone against output from other tools
+- **Visualization**: Bundled [Video Annotation Viewer](viewer/) at `/viewer` for interactive playback + overlays; also runs standalone against output from other tools
 
 ## 🛠️ Installation Options
 
@@ -325,18 +323,16 @@ The quickstart above covers the recommended local install via `uv`. For more det
 
 ### **Docker (CPU/GPU)**
 
+One image for CPU and GPU machines; add `--gpus all` to use a GPU.
+
 ```bash
-# CPU version (lightweight)
-docker build -f Dockerfile.cpu -t videoannotator:cpu .
-docker run -p 18011:18011 videoannotator:cpu
+# Slim: core only; install pipelines from the viewer
+docker build -t videoannotator .
+docker run -p 18011:18011 -v videoannotator-models:/app/models videoannotator
 
-# GPU version (faster processing)
-docker build -f Dockerfile.gpu -t videoannotator:gpu .
-docker run -p 18011:18011 --gpus all videoannotator:gpu
-
-# Development version (pre-cached models)
-docker build -f Dockerfile.dev -t videoannotator:dev .
-docker run -p 18011:18011 --gpus all videoannotator:dev
+# Every pipeline built in
+docker build --build-arg EXTRAS=all -t videoannotator:all .
+docker run -p 18011:18011 --gpus all -v videoannotator-models:/app/models videoannotator:all
 ```
 
 ## 📚 Documentation & Resources
@@ -376,10 +372,9 @@ docker run -p 18011:18011 --gpus all videoannotator:dev
 
 - **FastAPI** - High-performance REST API with automatic documentation
 - **YOLO11** - State-of-the-art object detection and pose estimation
-- **DeepFace / OpenFace 3.0 / LAION CLIP** - Facial analysis, embeddings, and emotion recognition
+- **DeepFace / OpenFace 3.0** - Facial analysis, action units, gaze and emotion recognition
 - **Whisper** - Robust speech recognition and transcription
 - **pyannote.audio** - Speaker diarization and segmentation
-- **LAION Empathic Insight** - Voice emotion analysis from Whisper embeddings
 - **PySceneDetect + CLIP** - Scene boundary detection and environment classification
 - **PyTorch** - GPU-accelerated machine learning inference
 
@@ -453,7 +448,7 @@ Built with and grateful to:
 - **[YOLO & Ultralytics](https://ultralytics.com/)** - Object detection, tracking, and pose estimation
 - **[DeepFace](https://github.com/serengil/deepface)** - Face detection and emotion recognition
 - **[OpenFace 3.0](https://github.com/CMU-MultiComp-Lab/OpenFace-3.0)** - Facial behavior analysis and embeddings
-- **[LAION](https://laion.ai/)** - CLIP face embeddings and empathic voice emotion models
+- **[LAION](https://laion.ai/)** - LAION-2B, the dataset the scene-labelling CLIP weights were trained on
 - **[OpenAI Whisper](https://github.com/openai/whisper)** - Speech recognition
 - **[pyannote.audio](https://github.com/pyannote/pyannote-audio)** - Speaker diarization
 - **[PySceneDetect](https://www.scenedetect.com/)** - Scene boundary detection

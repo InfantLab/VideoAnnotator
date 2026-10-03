@@ -140,8 +140,13 @@ class VLMAnnotationPipeline(BasePipeline):
 
         annotations: list[dict[str, Any]] = []
         consecutive_failures = 0
+        answered = 0
+        last_call_error: str | None = None
+        last_frame_error: str | None = None
+        abort_reason: str | None = None
         try:
             for i, anchor_t in enumerate(sample_points):
+                context_offsets: list[int] | None
                 if sampling_mode == "frame_burst":
                     offsets = self.config["burst_offsets"]
                     frame_numbers, images, context_offsets = self._read_burst(
@@ -158,14 +163,15 @@ class VLMAnnotationPipeline(BasePipeline):
                         f"{video_metadata['video_id']}; skipping sample point"
                     )
                     consecutive_failures += 1
+                    last_frame_error = f"no readable frame at t={anchor_t:.2f}s"
                     if (
                         consecutive_failures
                         >= self.config["abort_after_consecutive_failures"]
                     ):
-                        self.logger.error(
-                            f"Aborting: {consecutive_failures} consecutive "
-                            "unreadable frames."
+                        abort_reason = (
+                            f"{consecutive_failures} consecutive unreadable frames"
                         )
+                        self.logger.error(f"Aborting: {abort_reason}.")
                         break
                     continue
 
@@ -182,9 +188,11 @@ class VLMAnnotationPipeline(BasePipeline):
 
                 if result.error:
                     consecutive_failures += 1
+                    last_call_error = result.error
                     label = f"ERROR: {result.error}"
                 else:
                     consecutive_failures = 0
+                    answered += 1
                     label = _parse_label(result.raw_text)
 
                 center_frame = frame_numbers[len(frame_numbers) // 2]
@@ -219,15 +227,27 @@ class VLMAnnotationPipeline(BasePipeline):
                     consecutive_failures
                     >= self.config["abort_after_consecutive_failures"]
                 ):
-                    self.logger.error(
-                        f"Aborting: {consecutive_failures} consecutive call failures."
-                    )
+                    abort_reason = f"{consecutive_failures} consecutive call failures"
+                    self.logger.error(f"Aborting: {abort_reason}.")
                     break
         finally:
             cap.release()
 
         if output_dir and annotations:
             self._save_coco_annotations(annotations, output_dir, video_metadata)
+
+        # Kept in the output folder above for diagnosis, but a run that stopped
+        # early or got no answer at all is a failure, not a result.
+        last_error = last_call_error or last_frame_error
+        if abort_reason:
+            raise RuntimeError(
+                f"VLM annotation aborted after {abort_reason}; last error: {last_error}"
+            )
+        if sample_points and answered == 0:
+            raise RuntimeError(
+                f"No sample point got an answer from the model; last error: "
+                f"{last_error}"
+            )
 
         self.logger.info(
             f"VLM annotation complete: {len(annotations)} sample points "

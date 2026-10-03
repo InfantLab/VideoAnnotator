@@ -12,6 +12,8 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
+    # Normally 4-5 minutes; a stuck apt mirror once held a job for an hour.
+    timeout-minutes: 45
     # Windows has known SQLite file-locking issues during test teardown
     # (tracked separately); keep it informational so it doesn't block CI.
     continue-on-error: ${{ matrix.os == 'windows-latest' }}
@@ -19,18 +21,21 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.12"]
+        python-version: ["3.12", "3.13"]
+    env:
+      # Otherwise uv follows .python-version (3.13) and the 3.12 jobs test 3.13.
+      UV_PYTHON: ${{ matrix.python-version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.2.0  # no moving major tags since v8
         with:
           enable-cache: true
 
@@ -56,15 +61,17 @@ jobs:
           uv sync --dev --all-extras
 
       - name: Lint with ruff
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: |
           uv run ruff check src/videoannotator tests
 
       - name: Check formatting with ruff
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: |
           uv run ruff format --check src/videoannotator tests
 
       - name: Type check with mypy
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: |
           uv run mypy src/videoannotator
 
@@ -78,15 +85,69 @@ jobs:
           # note. No-op on Linux/Windows.
           KMP_DUPLICATE_LIB_OK: "TRUE"
         run: |
-          uv run pytest -q --cov=src/videoannotator --cov-report=xml --cov-report=term-missing --cov-fail-under=45
+          uv run pytest -q -m "not real_models and not performance" --cov=src/videoannotator --cov-report=xml --cov-report=term-missing --cov-fail-under=45
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
-          file: ./coverage.xml
+          files: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
+
+  viewer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: viewer
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.x"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Unit tests
+        run: bun run test:run
+
+      # Fails when src/videoannotator/viewer_static/ doesn't match a fresh build of viewer/.
+      - name: Bundle matches source
+        working-directory: .
+        run: bash scripts/build_viewer.sh --check
+
+  # Every other job installs the dev group and every extra, which hid a core
+  # dependency missing from `pip install videoannotator` (httpx, 2026-10-02).
+  core-install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.2.0  # no moving major tags since v8
+        with:
+          enable-cache: true
+
+      - name: Install core only (no dev group, no extras)
+        run: |
+          uv sync --frozen --no-dev
+
+      - name: Server starts on a fresh database and serves the API
+        run: |
+          export VIDEOANNOTATOR_DB_PATH="$RUNNER_TEMP/va.db" VIDEOANNOTATOR_LOG_DIR="$RUNNER_TEMP/logs"
+          uv run --no-sync videoannotator server --port 18011 > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 60); do curl -sf localhost:18011/health && break; sleep 2; done
+          curl -sf localhost:18011/health
+          curl -sf "localhost:18011/api/v1/pipelines/?include_unavailable=true" > /dev/null
+          ! grep -E "ERROR|Traceback" "$RUNNER_TEMP/server.log" || { cat "$RUNNER_TEMP/server.log"; exit 1; }
 
   integration-test:
     runs-on: ubuntu-latest
@@ -94,15 +155,15 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.2.0  # no moving major tags since v8
         with:
           enable-cache: true
 
@@ -118,7 +179,7 @@ jobs:
 
       - name: Run integration tests
         run: |
-          uv run pytest -q -m integration
+          uv run pytest -q -m "integration and not real_models"
 
       - name: Test CLI interface
         run: |
@@ -131,15 +192,15 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.2.0  # no moving major tags since v8
         with:
           enable-cache: true
 
@@ -170,16 +231,16 @@ jobs:
     runs-on: ubuntu-latest
     name: Draft JOSS paper
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build draft PDF
-        uses: openjournals/openjournals-draft-action@master
+        uses: openjournals/openjournals-draft-action@af22ceb4b8f9eff6b3a13c05747ccc2f573cf2e6  # master, 2026-10-01
         with:
           journal: joss
           paper-path: paper/paper.md
 
       - name: Upload paper PDF
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: paper
           path: paper/paper.pdf
@@ -192,10 +253,10 @@ jobs:
       security-events: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: "fs"
           scan-ref: "."
@@ -203,22 +264,22 @@ jobs:
           output: "trivy-results.sarif"
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: "trivy-results.sarif"
 
   build-and-publish:
     runs-on: ubuntu-latest
-    needs: [test, integration-test]
+    needs: [test, viewer, integration-test]
     if: github.event_name == 'release' && github.event.action == 'published'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Install build dependencies
         run: |
@@ -248,10 +309,10 @@ jobs:
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Check Docker Hub secrets
         run: |
@@ -263,14 +324,14 @@ jobs:
 
       - name: Login to Docker Hub
         if: ${{ env.DOCKER_USERNAME != '' && env.DOCKER_PASSWORD != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: videoannotator/videoannotator
           tags: |
@@ -282,7 +343,7 @@ jobs:
 
       - name: Build and push Docker image
         if: ${{ env.DOCKER_USERNAME != '' && env.DOCKER_PASSWORD != '' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true

@@ -251,7 +251,7 @@ const BatchDetail = () => {
         <Alert className="border-orange-300">
           <AlertDescription>
             {withErrors} video{withErrors === 1 ? '' : 's'} finished without results from every
-            pipeline. The reason is on each video&apos;s row; open a video for details.
+            pipeline. Each video&apos;s row says which pipelines and why; open a video for details.
           </AlertDescription>
         </Alert>
       )}

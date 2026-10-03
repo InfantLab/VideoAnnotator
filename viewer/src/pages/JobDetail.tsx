@@ -42,12 +42,13 @@ const CreateJobDetail = () => {
   });
 
   // Which pipelines produced nothing, and why: only worth asking once the job
-  // has finished with an error message.
+  // has finished with an error message, or failed outright.
   const withErrors = !!job && isCompletedWithErrors(job);
+  const failed = job?.status === "failed";
   const { data: results } = useQuery({
     queryKey: ["job-results", jobId],
     queryFn: () => apiClient.getJobResults(jobId!),
-    enabled: !!jobId && withErrors,
+    enabled: !!jobId && (withErrors || failed),
     staleTime: 60_000,
   });
   const failedPipelines = Object.entries(failedPipelinesOf(results));
@@ -323,11 +324,17 @@ const CreateJobDetail = () => {
                 <AlertDescription>
                   <div className="space-y-2">
                     <p className="font-semibold">Job failed during processing</p>
-                    {job.error_message && (
-                      <p className="text-sm">
-                        <span className="font-medium">Error:</span> {job.error_message}
-                      </p>
-                    )}
+                    {failedPipelines.length > 0
+                      ? failedPipelines.map(([name, reason]) => (
+                          <p key={name} className="text-sm">
+                            <span className="font-mono font-medium">{name}</span>: {reason}
+                          </p>
+                        ))
+                      : job.error_message && (
+                          <p className="text-sm">
+                            <span className="font-medium">Error:</span> {job.error_message}
+                          </p>
+                        )}
                   </div>
                 </AlertDescription>
               </Alert>

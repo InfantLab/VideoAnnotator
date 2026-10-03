@@ -16,12 +16,9 @@ import librosa
 # from .emotion_pipeline import EmotionPipeline
 # from .f0_pipeline import F0Pipeline
 # from .timbre_pipeline import TimbrePipeline
-from videoannotator.exporters.native_formats import (
-    export_rttm_diarization,
-)
-
 from ..base_pipeline import BasePipeline
 from .diarization_pipeline import DiarizationPipeline
+from .native_files import write_rttm, write_webvtt
 from .speech_pipeline import SpeechPipeline
 
 
@@ -111,21 +108,13 @@ class AudioPipelineModular(BasePipeline):
 
         self.logger.info("Initializing AudioPipeline coordinator...")
 
-        # Initialize all configured pipelines
-        failed_pipelines = []
         for pipeline_name, pipeline in self.audio_pipelines.items():
+            self.logger.info(f"Initializing {pipeline_name}")
             try:
-                self.logger.info(f"Initializing {pipeline_name}")
                 pipeline.initialize()
-                self.logger.info(f"{pipeline_name} initialized successfully")
             except Exception as e:
-                self.logger.error(f"Failed to initialize {pipeline_name}: {e}")
-                # Mark for removal instead of deleting during iteration
-                failed_pipelines.append(pipeline_name)
-
-        # Remove failed pipelines after iteration
-        for pipeline_name in failed_pipelines:
-            del self.audio_pipelines[pipeline_name]
+                raise RuntimeError(f"Failed to initialize {pipeline_name}: {e}") from e
+            self.logger.info(f"{pipeline_name} initialized successfully")
 
         self.is_initialized = True
         self.logger.info(
@@ -154,6 +143,7 @@ class AudioPipelineModular(BasePipeline):
 
         try:
             results = []
+            errors: list[str] = []
 
             # Process through each enabled pipeline
             for pipeline_name, pipeline in self.audio_pipelines.items():
@@ -186,12 +176,16 @@ class AudioPipelineModular(BasePipeline):
 
                 except Exception as e:
                     self.logger.error(f"Error in {pipeline_name}: {e}")
-                    # Continue with other pipelines even if one fails
-                    continue
+                    errors.append(f"{pipeline_name}: {e}")
 
             # Save results if output directory specified
             if output_dir:
                 self._save_results(results, output_dir, metadata)
+
+            # The others' outputs are saved above; the job still has to see
+            # that part of this pipeline failed.
+            if errors:
+                raise RuntimeError("; ".join(errors))
 
             # Return all pipeline results as separate streams
             return results
@@ -270,29 +264,11 @@ class AudioPipelineModular(BasePipeline):
 
             try:
                 if output_format == "webvtt" and data:
-                    # Save speech recognition as WebVTT manually to avoid library append issues
                     webvtt_path = output_path / f"{video_id}_{pipeline_name}.vtt"
                     try:
-                        # Extract segments list
-                        speech_result = (
-                            data[0] if isinstance(data, list) and data else {}
+                        write_webvtt(
+                            data if isinstance(data, list) else [], webvtt_path
                         )
-                        segments = speech_result.get("metadata", {}).get("segments", [])
-
-                        # Helper to format time to WebVTT
-                        def _fmt(t: float) -> str:
-                            hours = int(t // 3600)
-                            minutes = int((t % 3600) // 60)
-                            secs = t % 60
-                            return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
-
-                        # Write WebVTT file
-                        with open(webvtt_path, "w", encoding="utf-8") as f:
-                            f.write("WEBVTT\n\n")
-                            for idx, seg in enumerate(segments, start=1):
-                                start = _fmt(seg["start"])
-                                end = _fmt(seg["end"])
-                                f.write(f"{idx}\n{start} --> {end}\n{seg['text']}\n\n")
                         self.logger.info(f"Saved {pipeline_name} to {webvtt_path}")
                     except Exception as e:
                         self.logger.error(
@@ -300,22 +276,9 @@ class AudioPipelineModular(BasePipeline):
                         )
 
                 elif output_format == "rttm" and data:
-                    # Save diarization as RTTM; transform to segments with start, end, speaker_id
                     rttm_path = output_path / f"{video_id}_{pipeline_name}.rttm"
                     try:
-                        diarization_data = [
-                            {
-                                "start": seg.get("start_time", 0.0),
-                                "end": seg.get(
-                                    "end_time",
-                                    seg.get("start_time", 0.0)
-                                    + seg.get("duration", 0.0),
-                                ),
-                                "speaker_id": seg.get("speaker_id"),
-                            }
-                            for seg in data
-                        ]
-                        export_rttm_diarization(diarization_data, str(rttm_path))
+                        write_rttm(data, rttm_path)
                         self.logger.info(f"Saved {pipeline_name} to {rttm_path}")
                     except Exception as e:
                         self.logger.error(

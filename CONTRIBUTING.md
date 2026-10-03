@@ -71,7 +71,9 @@ This will:
 2. Install dependencies:
 
    ```bash
-   pip install -e .[dev]
+   uv sync              # installs the dev tools (dependency group `dev`) by default
+   # or, with pip >= 25.1:
+   pip install -e . --group dev
    ```
 
 3. Set up pre-commit hooks:

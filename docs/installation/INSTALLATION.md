@@ -6,10 +6,12 @@ VideoAnnotator is a modern video analysis toolkit that uses AI models for compre
 
 ## Prerequisites
 
-- **Python 3.12+** (required)
+- **Python 3.12 or 3.13** (required; 3.13 recommended. Python 3.14 isn't supported yet.)
 - **Git** for cloning repositories
 - **uv** package manager (fast, modern Python dependency management)
-- **CUDA Toolkit 12.4+** (recommended for GPU acceleration)
+- **NVIDIA driver 560 or newer** for GPU acceleration (Linux ≥ 560.28.03, Windows ≥ 560.76: the CUDA 12.6
+  level). Drivers from 525 usually work through CUDA's minor-version compatibility. No CUDA Toolkit
+  install is needed: the PyTorch wheels bring their own CUDA libraries.
 - **NVIDIA GPU** with CUDA support (GTX 1060 6GB+ or better recommended)
 
 ## System Requirements
@@ -93,13 +95,12 @@ install that matches what you're doing:
 | Run only speech/diarization            | `uv sync --extra audio`                         | torch, torchaudio, librosa, openai-whisper, pyannote.audio |
 | Mix a few families                     | `uv sync --extra scene --extra person`          | union of the groups listed |
 | Run a slim API server (no local pipelines) | `uv sync`                                   | core only — useful if pipelines run on separate workers/nodes |
-| Reproduce the old "everything installed" behaviour | `uv sync --all-extras` (or `uv sync --extra all`) | every pipeline family, dev tools, and annotation extras |
+| Reproduce the old "everything installed" behaviour | `uv sync --all-extras` (or `uv sync --extra all`) | every pipeline family |
 
-Available extras groups: `face`, `face-laion`, `face-openface3`, `audio`,
-`audio-laion`, `scene`, `person`, plus the meta-group `all`. `face-laion`,
-`face-openface3`, and `audio-laion` are **not** included by a plain
-`--extra face`/`--extra audio` — they're separate, deliberately opt-in
-groups (see "LAION / OpenFace3 pipelines" below). `videoannotator pipelines
+Available extras groups: `face`, `face-openface3`, `audio`, `scene`, `person`,
+`llm`, plus the meta-group `all`. `face-openface3` is **not** included by a plain
+`--extra face`: it's a separate, deliberately opt-in group (see "OpenFace 3"
+below). `videoannotator pipelines
 --all` shows every pipeline the registry knows about, including ones your
 current install doesn't have the extras for (each with an install hint).
 
@@ -110,8 +111,8 @@ uv sync --extra scene
 # Example: everything, matching pre-v1.5.0 behaviour
 uv sync --all-extras
 
-# Install development dependencies (add to any of the above)
-uv sync --extra dev
+# Development tools (ruff, mypy, pytest, pre-commit) come with any `uv sync` by default
+# (dependency group `dev`); `--no-dev` leaves them out.
 
 # Initialize the local SQLite database (creates tables + admin API key)
 uv run videoannotator setup-db --admin-email you@example.com --admin-username you
@@ -119,28 +120,27 @@ uv run videoannotator setup-db --admin-email you@example.com --admin-username yo
 
 > The `setup-db` command is idempotent. Re-run it after pulling new schema changes or use `--force` when you want to drop and recreate tables. Pass `--skip-admin` if you prefer to manage API keys yourself later with `videoannotator generate-token`.
 
-#### LAION / OpenFace3 pipelines (separate opt-in extras groups)
+#### OpenFace 3 (separate opt-in extras group)
 
-`face-laion` (LAION CLIP face embeddings), `audio-laion` (LAION empathic
-voice), and `face-openface3` (OpenFace3 embeddings) are separate extras
-groups from `face`/`audio` because they pull in different, heavier
-dependency sets (`transformers`, `huggingface-hub`, or `openface-test`).
-They're included in `--all-extras`/`--extra all`, but not in a plain
-`--extra face` or `--extra audio`. If you're upgrading from a v1.4.x
-install that used a LAION or OpenFace3 pipeline, see "Upgrading from
-v1.4.x" below.
+`face-openface3` (landmarks, action units, gaze) is separate from `face` because it
+pulls in a different, heavier dependency set (`openface-test`, torch). It's included
+in `--all-extras`/`--extra all`, but not in a plain `--extra face`. **OpenFace 3.0 is
+licensed for academic or non-profit, non-commercial research use only.**
+
+The LAION pipelines (`face_laion_clip`, `laion_voice`) and their extras groups
+(`face-laion`, `audio-laion`) were removed in v1.6.0; a job naming one gets a message
+saying so and what to use instead.
 
 ### Upgrading from v1.4.x
 
 v1.4.x installed every pipeline by default. If your config references
-`face_laion_clip`, `laion_voice`, or `face_openface3_embedding` and you
-install anything less than `--all-extras`, job submission returns a clear
-message rather than a crash:
+`face_openface3_embedding` and you install anything less than `--all-extras`, job
+submission returns a clear message rather than a crash:
 
 ```
-Error: pipeline 'face_laion_clip' is not available in this install.
-As of v1.5.0, pipelines requiring the 'face-laion' extras group are no longer installed by default.
-Install it with: pip install videoannotator[face-laion]
+Error: pipeline 'face_openface3_embedding' is not available in this install.
+As of v1.5.0, pipelines requiring the 'face-openface3' extras group are no longer installed by default.
+Install it with: pip install videoannotator[face-openface3]
 ```
 
 Run `uv sync --all-extras` to restore full v1.4.x-equivalent behaviour, or
@@ -149,12 +149,11 @@ add just the extras group named in the message.
 ### 3. Install CUDA-enabled PyTorch (GPU acceleration)
 
 ```bash
-# Note: This repo pins Torch sources via `pyproject.toml` to the CUDA 12.4 wheel index.
-# In most cases `uv sync` is sufficient.
-# If you need to force a reinstall of CUDA wheels in your local environment:
-uv pip install --upgrade \
-   "torch==2.8.*+cu124" "torchvision==0.21.*+cu124" "torchaudio==2.8.*+cu124" \
-   --index-url https://download.pytorch.org/whl/cu124
+# `uv sync` installs torch 2.11 from the CUDA 12.6 wheel index on Linux (see
+# [tool.uv.sources] in pyproject.toml); macOS and Windows get PyPI's builds.
+# torch stays at 2.11 because pyannote.audio 4 needs torchaudio, discontinued at 2.11.
+uv sync --all-extras
+uv run python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
 ```
 
 ### 4. Install Native Dependencies (if needed)
@@ -216,6 +215,28 @@ cd ../python
 python setup.py install
 ```
 
+## Where model weights are stored
+
+Pipelines download their models on first use (the viewer's pipeline cards say how much). Since
+v1.6.0 every pipeline keeps them in **one directory**:
+
+| Platform | Default |
+| --- | --- |
+| Linux | `~/.local/share/videoannotator/models` (or `$XDG_DATA_HOME/videoannotator/models`) |
+| macOS | `~/Library/Application Support/videoannotator/models` |
+| Windows | `%LOCALAPPDATA%\videoannotator\models` |
+| Dev container, Docker images | `/app/models` or `<repo>/models` (a mounted directory or volume) |
+
+Set `VIDEOANNOTATOR_MODELS_DIR` to put them somewhere else (a shared data disk, for example).
+Inside it there's one folder per source: `huggingface/`, `pyannote/`, `torch/`, `deepface/`,
+`whisper/`, `yolo/`. VideoAnnotator points the libraries' own variables (`HF_HUB_CACHE`,
+`TORCH_HOME`, `PYANNOTE_CACHE`, `DEEPFACE_HOME`) there unless you've set them yourself; it never
+changes `HF_HOME`, so a `huggingface-cli login` token stays where it is.
+
+`uv run videoannotator diagnose models` shows the directory, its size per source, and any weights
+left in the pre-v1.6.0 locations (`~/.cache/huggingface`, `~/.cache/whisper`, `~/.deepface`,
+`./models`). Moving those into the new directory saves downloading them again.
+
 ## Verify Installation
 
 ```bash
@@ -230,7 +251,7 @@ uv run videoannotator server --host 0.0.0.0 --port 18011
 ```
 
 If you installed a torch-backed extras group (`scene`, `person`, `audio`,
-`face-laion`, `audio-laion`), you can additionally confirm the GPU/CPU
+`face-openface3`), you can additionally confirm the GPU/CPU
 build:
 
 ```bash
@@ -274,38 +295,63 @@ uv run python api_server.py
 
 ## Docker Installation (Alternative)
 
-### CPU Container
-
-By default these images build **slim** (no pipeline extras, no torch),
-matching the core-only install above. Pass `--build-arg EXTRAS=...` to
-include one or more pipeline families, or `EXTRAS=all` to reproduce the
-pre-v1.5.0 "everything installed" image.
+One `Dockerfile` builds the image for CPU and GPU machines. It builds **slim** by default (no
+pipeline extras, no torch), matching the core-only install above; install pipelines from the viewer,
+or build them in with `--build-arg EXTRAS=...`. torch's wheels bring their own CUDA, so the same image
+uses an NVIDIA GPU when run with `--gpus all` (needs the NVIDIA Container Toolkit, or Docker Desktop
+with WSL 2 on Windows) and runs on the CPU otherwise.
 
 ```bash
 # Slim (no extras, no torch)
-docker build -f Dockerfile.cpu -t videoannotator:cpu .
+docker build -t videoannotator .
 
 # One or more pipeline families
-docker build -f Dockerfile.cpu --build-arg EXTRAS=scene,person -t videoannotator:cpu-scene-person .
+docker build --build-arg EXTRAS=scene,person -t videoannotator:scene-person .
 
-# Everything (pre-v1.5.0 equivalent)
-docker build -f Dockerfile.cpu --build-arg EXTRAS=all -t videoannotator:cpu-all .
+# Every pipeline
+docker build --build-arg EXTRAS=all -t videoannotator:all .
 
-docker run --rm -v $(pwd)/data:/app/data videoannotator:cpu
-```
-
-### GPU Container (Requires NVIDIA Container Toolkit)
-
-```bash
-# Build and run GPU version (SKIP_IMAGE_UV_SYNC=false performs the install
-# at build time; EXTRAS works the same as the CPU image above)
-docker build -f Dockerfile.gpu --build-arg SKIP_IMAGE_UV_SYNC=false --build-arg EXTRAS=all -t videoannotator:gpu .
-docker run --gpus all --rm -v $(pwd)/data:/app/data videoannotator:gpu
+# Run; the models volume keeps downloaded weights across containers
+docker run --rm -p 18011:18011 --gpus all \
+  -v videoannotator-models:/app/models -v $(pwd)/data:/app/data videoannotator:all
 ```
 
 ### Dev Container (VS Code)
 
-Open the project in VS Code and use "Reopen in Container" for a complete GPU-enabled development environment.
+The dev container is a complete GPU-enabled development environment.
+
+- **Linux and macOS**: clone the repository, open it in VS Code and run **Dev Containers: Reopen in
+  Container**.
+- **Windows**: run **Dev Containers: Clone Repository in Container Volume…** and give it
+  `https://github.com/InfantLab/VideoAnnotator`. Don't clone to `C:\` and reopen: the container would
+  then read every file through the Windows–WSL file bridge, with Defender scanning each one, which
+  makes tests and model loading slow. The container prints a warning at start if it finds itself
+  on a Windows drive.
+
+  Also cap the memory WSL may take, in `%USERPROFILE%\.wslconfig` (then run `wsl --shutdown`):
+
+  ```ini
+  [wsl2]
+  memory=12GB
+  swap=8GB
+  ```
+
+  WSL's default is half your RAM. Leave Windows enough to stay responsive. Stop the container before
+  the machine sleeps: one Windows machine froze on waking with it running. Optional extras, if you
+  administer the machine: a [Dev Drive](https://learn.microsoft.com/windows/dev-drive/) or a
+  Defender exclusion for your code folder.
+
+Creating the container installs every pipeline's dependencies (`uv sync --all-extras`, as CI
+tests): allow 5–10 minutes and about 9 GB the first time. The container is capped at 12 GB of
+memory (`--memory=12g` in `devcontainer.json`).
+
+On every platform, the Python environment (`.venv`) and the model weights live in Docker named
+volumes (`videoannotator-venv`, `videoannotator-models`, the latter shared with
+`docker-compose.yml`). They survive container rebuilds and `docker system prune --volumes`, which
+removes only anonymous volumes (Docker 23 and later). They are deleted only by `docker volume rm`,
+`docker volume prune --all`, or resetting Docker Desktop. See
+[troubleshooting](troubleshooting.md#windows-freezes-or-crawls-while-the-dev-container-is-running)
+to back them up or wipe them.
 
 ## Troubleshooting
 
@@ -338,9 +384,9 @@ Open the project in VS Code and use "Reopen in Container" for a complete GPU-ena
    uv run python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
    ```
 
-3. **CUDA version mismatch**: Ensure CUDA Toolkit matches PyTorch CUDA version:
-   - Check CUDA Toolkit: `nvcc --version`
-   - Check PyTorch CUDA: `uv run python -c "import torch; print(torch.version.cuda)"`
+3. **Driver too old**: torch's CUDA 12.6 wheels need NVIDIA driver 560+ (525+ with CUDA's
+   minor-version compatibility). `nvidia-smi` shows the driver version; update it if
+   `torch.cuda.is_available()` is False on a machine with a GPU. The pipelines fall back to CPU.
 
 ### Native Dependencies
 
@@ -357,19 +403,17 @@ VideoAnnotator uses:
 - **FastAPI** - Modern API framework
 - **Hatchling/setuptools** - Modern build backend
 - **Docker** - CPU and GPU containerization
-- **Python 3.12+** - Latest Python with performance improvements
+- **Python 3.12 or 3.13**
 
 ## Dependencies Overview
 
 | Extras group      | Tools                          | Purpose                             | Needs torch |
 | ------------------ | ------------------------------ | ------------------------------------ | ----------- |
-| `person`           | YOLO11, ByteTrack, supervision | Person detection & tracking          | ✅          |
+| `person`           | YOLO11, ByteTrack              | Person detection & tracking          | ✅          |
 | `scene`            | PySceneDetect, OpenCLIP        | Scene segmentation & classification  | ✅          |
 | `face`             | DeepFace                       | Face detection, emotion, age/gender  | ❌          |
-| `face-laion`       | LAION CLIP face embeddings     | Semantic face embeddings             | ✅          |
-| `face-openface3`   | OpenFace 3.0                   | 512-D face embeddings                | ✅ (lazy)   |
+| `face-openface3`   | OpenFace 3.0                   | Landmarks, action units, gaze        | ✅          |
 | `audio`            | Whisper, pyannote.audio        | Speech transcription & diarization   | ✅          |
-| `audio-laion`      | LAION empathic voice           | Nuanced audio emotion analysis       | ✅          |
 | *(core, always on)* | FastAPI, uvicorn, SQLAlchemy   | REST API server, job/storage state   | N/A         |
 
 `face` is the only pipeline family that doesn't need torch at all — see the
