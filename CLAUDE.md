@@ -55,7 +55,8 @@ against it.
 
 ## Current Plan
 <!-- SPECKIT START -->
-`specs/012-python-313-support/plan.md`: support Python 3.13 alongside 3.12 (no library upgrades).
+`specs/017-output-provenance/plan.md`: every output records what made it (pipeline, version,
+model revisions, settings, determinism); the viewer labels each overlay with its source.
 <!-- SPECKIT END -->
 
 ## Recent Changes
