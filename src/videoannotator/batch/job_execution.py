@@ -22,6 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ..prompt_library import record_use_quietly
 from ..provenance import build_record, file_sha256, stamp_file
 from ..registry.pipeline_loader import (
     deprecation_message,
@@ -212,6 +213,13 @@ def _run_one_pipeline(
             if settings:
                 logger.info(f"{pipeline_name} runs with torch settings {settings}")
             record = _provenance(job, pipeline_name, pipeline, settings, deterministic)
+            if record.get("vlm"):  # spec 020: every prompt that runs is kept
+                record_use_quietly(
+                    pipeline.config["prompt"],
+                    pipeline.config["model"],
+                    "job",
+                    job_id=job.job_id,
+                )
             try:
                 annotations = _process(pipeline, pipeline_name, pipeline_class, job)
                 # Some load a model only when it's first needed (scene's CLIP).

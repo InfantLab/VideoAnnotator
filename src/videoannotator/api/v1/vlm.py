@@ -26,6 +26,7 @@ from ...pipelines.vlm_annotation.vlm_pipeline import (
     VLMAnnotationPipeline,
     _parse_label,
 )
+from ...prompt_library import record_use_quietly
 from ...registry.pipeline_loader import extras_available
 from ..errors import APIError
 from ..middleware.auth import validate_api_key
@@ -81,6 +82,14 @@ async def list_vlm_models(
     return VlmModelsResponse(base_url=base_url, models=models)
 
 
+class PreviewFrame(BaseModel):
+    """A frame the model was shown, small, so a client can show it too."""
+
+    frame_number: int | None = None
+    timestamp_sec: float | None = None
+    jpeg_base64: str
+
+
 class VlmPreviewResponse(BaseModel):
     label: str
     reasoning: str
@@ -90,6 +99,7 @@ class VlmPreviewResponse(BaseModel):
     prompt_tokens: int
     resp_tokens: int
     tokens_per_sec: float
+    frames: list[PreviewFrame] = []
 
 
 def _throwaway_pipeline(base_url: str) -> VLMAnnotationPipeline:
@@ -173,11 +183,14 @@ async def preview_vlm_prompt(
         )
 
     images: list[bytes]
+    frame_numbers: list[int | None]
+    fps = 0.0
     if have_image:
         assert image is not None
         images = [await image.read()]
+        frame_numbers = [None]
     else:
-        images = _extract_video_frames(
+        frame_numbers, images, fps = _extract_video_frames(
             video_path=video_path,  # type: ignore[arg-type]
             timestamp_sec=timestamp_sec,  # type: ignore[arg-type]
             sampling_mode=sampling_mode,
@@ -208,8 +221,22 @@ async def preview_vlm_prompt(
             f"{base_url} is reachable.",
         )
 
+    record_use_quietly(
+        prompt,
+        model,
+        "preview",
+        user_id=str(_user["id"]) if _user and _user.get("id") else None,
+    )
     label = _parse_label(result.raw_text)
     return VlmPreviewResponse(
+        frames=[
+            PreviewFrame(
+                frame_number=n,
+                timestamp_sec=round(n / fps, 3) if n is not None and fps else None,
+                jpeg_base64=_thumbnail(image),
+            )
+            for n, image in zip(frame_numbers, images, strict=True)
+        ],
         label=label,
         reasoning=result.thinking or result.raw_text,
         raw_response=result.raw_text,
@@ -229,7 +256,7 @@ def _extract_video_frames(
     frame_interval_sec: float,
     burst_offsets: str | None,
     base_url: str,
-) -> list[bytes]:
+) -> tuple[list[int | None], list[bytes], float]:
     """Extract the frame(s) for a preview from an already-uploaded video,
     reusing VLMAnnotationPipeline's own extraction methods exactly (FR-002,
     edge cases around out-of-range timestamps and burst clamping)."""
@@ -272,11 +299,11 @@ def _extract_video_frames(
                 if burst_offsets
                 else VLMAnnotationPipeline({}).config["burst_offsets"]
             )
-            _frame_numbers, images, _context_offsets = pipeline._read_burst(
+            frame_numbers, images, _context_offsets = pipeline._read_burst(
                 cap, video_metadata, timestamp_sec, frame_interval_sec, offsets
             )
         else:
-            _frame_numbers, images, _context_offsets = pipeline._read_single(
+            frame_numbers, images, _context_offsets = pipeline._read_single(
                 cap, video_metadata, timestamp_sec
             )
     finally:
@@ -289,4 +316,21 @@ def _extract_video_frames(
             message=f"Could not read any frame at t={timestamp_sec:.2f}s "
             f"in '{video_path}'",
         )
-    return images
+    return list(frame_numbers), images, video_metadata["fps"]
+
+
+def _thumbnail(jpeg: bytes, width: int = 320) -> str:
+    """`jpeg` scaled down to `width` px wide, base64-encoded."""
+    import base64
+
+    import cv2
+    import numpy as np
+
+    frame = cv2.imdecode(np.frombuffer(jpeg, np.uint8), cv2.IMREAD_COLOR)
+    if frame is not None and frame.shape[1] > width:
+        height = round(frame.shape[0] * width / frame.shape[1])
+        frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
+        ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        if ok:
+            jpeg = buf.tobytes()
+    return base64.b64encode(jpeg).decode("ascii")

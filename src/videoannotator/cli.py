@@ -678,7 +678,8 @@ def _api_request(method: str, url: str, api_key: str | None, **kwargs: Any) -> A
 
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     try:
-        resp = requests.request(method, url, headers=headers, timeout=30, **kwargs)
+        kwargs.setdefault("timeout", 30)
+        resp = requests.request(method, url, headers=headers, **kwargs)
     except requests.RequestException as e:
         typer.echo(f"[ERROR] Cannot reach the server: {e}", err=True)
         raise typer.Exit(code=1) from e
@@ -786,6 +787,115 @@ def dataset_delete(
         raise typer.Exit(code=1)
     _api_request("DELETE", f"{server}/api/v1/datasets/{dataset_id}", api_key)
     typer.echo(f"[OK] Deleted {dataset_id}")
+
+
+prompts_app = typer.Typer(
+    name="prompts", help="The prompt library: every VLM prompt that ran (spec 020)"
+)
+app.add_typer(prompts_app, name="prompts")
+vlm_app = typer.Typer(name="vlm", help="Try VLM prompts without creating a job")
+app.add_typer(vlm_app, name="vlm")
+
+
+@prompts_app.command("list")
+def prompts_list(
+    search: str | None = typer.Option(
+        None, "--search", "-s", help="Words in the text or name"
+    ),
+    model: str | None = typer.Option(None, help="Only prompts run with this model"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """List prompts, starred first, then most recently used."""
+    params = {k: v for k, v in {"q": search, "model": model}.items() if v}
+    body = _api_request("GET", f"{server}/api/v1/prompts/", api_key, params=params)
+    if not body["prompts"]:
+        typer.echo("No prompts yet: they are added when a VLM job or preview runs.")
+    for p in body["prompts"]:
+        star = "*" if p["starred"] else " "
+        title = p["name"] or p["text"].strip().splitlines()[0][:60]
+        typer.echo(
+            f"{star} {p['sha256'][:12]}  {title}  ({p['use_count']} uses; "
+            f"{', '.join(p['models'])})"
+        )
+
+
+@prompts_app.command("show")
+def prompts_show(
+    sha: str = typer.Argument(..., help="Hash, or its first characters"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """Show a prompt's full text, models and jobs."""
+    p = _api_request("GET", f"{server}/api/v1/prompts/{sha}", api_key)
+    typer.echo(f"{p['name'] or '(unnamed)'}  sha256 {p['sha256']}")
+    typer.echo(f"Models: {', '.join(p['models'])}")
+    typer.echo(f"Jobs: {', '.join(p['job_ids']) or 'none'}")
+    typer.echo(f"First used {p['first_used_at']}, last used {p['last_used_at']}")
+    typer.echo("")
+    typer.echo(p["text"])
+
+
+@prompts_app.command("diff")
+def prompts_diff(
+    a: str,
+    b: str,
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """Show how two prompts differ, word by word."""
+    import difflib
+
+    first = _api_request("GET", f"{server}/api/v1/prompts/{a}", api_key)["text"]
+    second = _api_request("GET", f"{server}/api/v1/prompts/{b}", api_key)["text"]
+    if first.split() == second.split():
+        typer.echo("Same words; they differ only in whitespace.")
+        return
+    for token in difflib.ndiff(first.split(), second.split()):
+        if token.startswith(("- ", "+ ")):
+            typer.echo(token)
+
+
+@vlm_app.command("preview")
+def vlm_preview(
+    video: Path = typer.Argument(
+        ..., help="A video the server can read (same machine)"
+    ),
+    at: float = typer.Option(..., "--at", help="Seconds into the video"),
+    model: str = typer.Option(..., help="An Ollama model (videoannotator vlm models)"),
+    prompt_file: Path | None = typer.Option(
+        None, help="Prompt text; default: the pipeline's"
+    ),
+    burst: bool = typer.Option(False, help="Send a burst of frames around --at"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """Ask a model about one moment of a video. The prompt is kept in the library."""
+    data: dict[str, Any] = {
+        "video_path": str(video.resolve()),
+        "timestamp_sec": at,
+        "model": model,
+        "sampling_mode": "frame_burst" if burst else "single_frame",
+    }
+    if prompt_file is not None:
+        data["prompt"] = prompt_file.read_text(encoding="utf-8")
+    result = _api_request(
+        "POST", f"{server}/api/v1/vlm/preview", api_key, data=data, timeout=300
+    )
+    typer.echo(f"Label: {result['label']}")
+    typer.echo(f"Frames: {[f['frame_number'] for f in result.get('frames', [])]}")
+    typer.echo(f"Time: {result['total_time']}s")
+    typer.echo("")
+    typer.echo(result["reasoning"])
+
+
+@vlm_app.command("models")
+def vlm_models(server: str = _SERVER_OPTION, api_key: str | None = _KEY_OPTION):
+    """List the models the server's Ollama has."""
+    body = _api_request("GET", f"{server}/api/v1/vlm/models", api_key)
+    typer.echo(f"Ollama at {body['base_url']}:")
+    for name in body["models"]:
+        typer.echo(f"  {name}")
 
 
 pipelines_app = typer.Typer(

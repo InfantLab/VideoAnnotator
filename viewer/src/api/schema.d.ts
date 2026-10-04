@@ -1262,6 +1262,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/prompts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search the prompt library
+         * @description Starred first, then most recently used. `q` matches text and name.
+         */
+        get: operations["list_prompts_api_v1_prompts__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/prompts/{sha256}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a prompt */
+        get: operations["get_prompt_api_v1_prompts__sha256__get"];
+        /** Name, tag, star or hide a prompt */
+        put: operations["update_prompt_api_v1_prompts__sha256__put"];
+        post?: never;
+        /**
+         * Delete a prompt no job used
+         * @description 409 PROMPT_USED_BY_JOBS once any job ran it: it is part of their provenance. Hide it instead.
+         */
+        delete: operations["delete_prompt_api_v1_prompts__sha256__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/vlm/models": {
         parameters: {
             query?: never;
@@ -2706,6 +2748,95 @@ export interface components {
             } | null;
         };
         /**
+         * PreviewFrame
+         * @description A frame the model was shown, small, so a client can show it too.
+         */
+        PreviewFrame: {
+            /** Frame Number */
+            frame_number?: number | null;
+            /** Timestamp Sec */
+            timestamp_sec?: number | null;
+            /** Jpeg Base64 */
+            jpeg_base64: string;
+        };
+        /** PromptListResponse */
+        PromptListResponse: {
+            /** Prompts */
+            prompts: components["schemas"]["PromptResponse"][];
+            /** Total */
+            total: number;
+        };
+        /** PromptResponse */
+        PromptResponse: {
+            /** Sha256 */
+            sha256: string;
+            /** Text */
+            text: string;
+            /** Name */
+            name?: string | null;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: string[];
+            /**
+             * Starred
+             * @default false
+             */
+            starred: boolean;
+            /**
+             * Hidden
+             * @default false
+             */
+            hidden: boolean;
+            /**
+             * First Used At
+             * Format: date-time
+             */
+            first_used_at: string;
+            /**
+             * Last Used At
+             * Format: date-time
+             */
+            last_used_at: string;
+            /** First User Id */
+            first_user_id?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Updated By */
+            updated_by?: string | null;
+            /**
+             * Models
+             * @default []
+             */
+            models: string[];
+            /**
+             * Job Ids
+             * @default []
+             */
+            job_ids: string[];
+            /**
+             * Use Count
+             * @default 0
+             */
+            use_count: number;
+        };
+        /**
+         * PromptUpdateRequest
+         * @description Only provided fields change. The text never does: a different text is a
+         *     different prompt.
+         */
+        PromptUpdateRequest: {
+            /** Name */
+            name?: string | null;
+            /** Tags */
+            tags?: string[] | null;
+            /** Starred */
+            starred?: boolean | null;
+            /** Hidden */
+            hidden?: boolean | null;
+        };
+        /**
          * ReadinessItem
          * @description A blocker or note on a pipeline's readiness (spec 011 contract §1).
          */
@@ -2805,6 +2936,11 @@ export interface components {
             resp_tokens: number;
             /** Tokens Per Sec */
             tokens_per_sec: number;
+            /**
+             * Frames
+             * @default []
+             */
+            frames: components["schemas"]["PreviewFrame"][];
         };
         /**
          * ConfigValidationRequest
@@ -4038,6 +4174,138 @@ export interface operations {
             path: {
                 /** @description The saved preset's id */
                 preset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_prompts_api_v1_prompts__get: {
+        parameters: {
+            query?: {
+                /** @description Words in the text or name */
+                q?: string | null;
+                /** @description Only prompts run with this model */
+                model?: string | null;
+                tag?: string | null;
+                include_hidden?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromptListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_prompt_api_v1_prompts__sha256__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description SHA-256 of the text, or a unique prefix */
+                sha256: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromptResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_prompt_api_v1_prompts__sha256__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sha256: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromptUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromptResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_prompt_api_v1_prompts__sha256__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sha256: string;
             };
             cookie?: never;
         };

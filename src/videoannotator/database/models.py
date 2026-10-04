@@ -360,6 +360,51 @@ class SavedPipelinePreset(Base):
         return f"<SavedPipelinePreset(id={self.id}, name={self.name!r})>"
 
 
+class Prompt(Base):
+    """A VLM prompt as it was run, once per distinct text (spec 020).
+
+    Keyed by the SHA-256 of the exact text, the hash spec 017's provenance
+    records with every VLM output, so a job, its files and the library agree.
+    Shared by everyone on the server, like presets and datasets.
+    """
+
+    __tablename__ = "prompts"
+
+    sha256 = Column(String(64), primary_key=True)
+    text = Column(Text, nullable=False)
+    name = Column(String(200), nullable=True)
+    tags = Column(JSON, nullable=False, default=list)
+    starred = Column(Boolean, nullable=False, default=False)
+    hidden = Column(Boolean, nullable=False, default=False)
+    first_used_at = Column(DateTime(timezone=True), nullable=False)
+    last_used_at = Column(DateTime(timezone=True), nullable=False)
+    first_user_id = Column(String(64), nullable=True)
+    updated_at = Column(DateTime(timezone=True), nullable=True)
+    updated_by = Column(String(64), nullable=True)
+
+    uses = relationship(
+        "PromptUse", back_populates="prompt", cascade="all, delete-orphan"
+    )
+
+
+class PromptUse(Base):
+    """One run of a prompt with one model: in a job, a preview or the CLI."""
+
+    __tablename__ = "prompt_uses"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    prompt_sha256 = Column(
+        String(64), ForeignKey("prompts.sha256"), nullable=False, index=True
+    )
+    model = Column(String(200), nullable=False)
+    kind = Column(String(20), nullable=False)  # job | preview
+    job_id = Column(String(64), nullable=True, index=True)
+    user_id = Column(String(64), nullable=True)
+    used_at = Column(DateTime(timezone=True), nullable=False)
+
+    prompt = relationship("Prompt", back_populates="uses")
+
+
 class ExtrasInstallJobStatus:
     """Status constants for ExtrasInstallJob."""
 

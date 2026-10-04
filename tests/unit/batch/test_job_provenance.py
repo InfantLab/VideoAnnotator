@@ -111,3 +111,33 @@ def test_a_failed_pipeline_keeps_what_was_known(tmp_path):
     result = job.pipeline_results["scene_detection"]
     assert result.status == JobStatus.FAILED
     assert result.provenance["models"][0]["name"] == "m"
+
+
+def test_a_vlm_job_records_its_prompt_in_the_library(tmp_path):
+    from unittest.mock import patch as mock_patch
+
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"x")
+
+    class _Vlm(_Fake):
+        suffix = "vlm_annotation.json"
+        content = json.dumps({"annotations": []})
+
+        def __init__(self, config):
+            self.config = {"prompt": "Touch?", "model": "gemma4:e4b"}
+
+        def provenance_vlm(self):
+            return {
+                "prompt_sha256": "x",
+                "model_digest": None,
+                "quantization": None,
+                "base_url": "u",
+            }
+
+    with mock_patch("videoannotator.batch.job_execution.record_use_quietly") as record:
+        job = run_job_pipelines(
+            BatchJob(video_path=video, output_dir=tmp_path, selected_pipelines=["vlm_annotation"]),
+            _storage(),
+            {"vlm_annotation": _Vlm},
+        )  # fmt: skip
+    record.assert_called_once_with("Touch?", "gemma4:e4b", "job", job_id=job.job_id)
