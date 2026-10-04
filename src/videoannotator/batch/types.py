@@ -111,6 +111,7 @@ class BatchJob:
                     if result.output_file
                     else None,
                     "error_message": result.error_message,
+                    "provenance": result.provenance,
                 }
                 for name, result in self.pipeline_results.items()
             },
@@ -150,6 +151,7 @@ class BatchJob:
                 if result_data["output_file"]
                 else None,
                 error_message=result_data["error_message"],
+                provenance=result_data.get("provenance"),  # absent before spec 017
             )
 
         return cls(

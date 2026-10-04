@@ -48,6 +48,7 @@ def finished_job():
             pipeline_name="person_tracking",
             status=JobStatus.COMPLETED,
             output_file=Path(f"database:/annotations/{job_id}/person_tracking"),
+            provenance={"schema_version": 1, "videoannotator_version": "x"},
         ),
         "speech_recognition": PipelineResult(
             pipeline_name="speech_recognition",
@@ -102,3 +103,31 @@ def test_missing_file_is_a_404_with_a_hint(finished_job, path):
     error = response.json()["error"]
     assert error["code"] == "OUTPUT_FILE_MISSING"
     assert "/artifacts" in error["hint"]
+
+
+def test_results_include_each_pipelines_provenance(finished_job):
+    job_id, _ = finished_job
+    results = client.get(f"/api/v1/jobs/{job_id}/results").json()["pipeline_results"]
+    assert results["person_tracking"]["provenance"]["videoannotator_version"] == "x"
+    # A result from before spec 017 has none, and says so.
+    assert results["speech_recognition"]["provenance"] is None
+
+
+def test_companion_provenance_is_listed_with_its_file(finished_job):
+    job_id, stem = finished_job
+    job = get_storage_backend().load_job_metadata(job_id)
+    folder = Path(job.storage_path)
+    (folder / f"{stem}_speaker_diarization.rttm").write_text("SPEAKER x\n")
+    (folder / f"{stem}_speaker_diarization.rttm.provenance.json").write_text("{}")
+    job.pipeline_results["speaker_diarization"] = PipelineResult(
+        pipeline_name="speaker_diarization", status=JobStatus.COMPLETED
+    )
+    get_storage_backend().save_job_metadata(job)
+
+    files = client.get(f"/api/v1/jobs/{job_id}/results").json()["pipeline_results"][
+        "speaker_diarization"
+    ]["files"]
+    assert [f["name"] for f in files] == [
+        f"{stem}_speaker_diarization.rttm",
+        f"{stem}_speaker_diarization.rttm.provenance.json",
+    ]

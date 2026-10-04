@@ -525,6 +525,13 @@ def job_results(
                     typer.echo(f"    Output File: {result['output_file']}")
                 if result.get("error_message"):
                     typer.echo(f"    Error: {result['error_message']}")
+                provenance = result.get("provenance")
+                if provenance:
+                    version = provenance.get("videoannotator_version")
+                    typer.echo(f"    Made by: VideoAnnotator {version}")
+                    for model in provenance.get("models", []):
+                        revision = model.get("revision") or "revision not recorded"
+                        typer.echo(f"    Model: {model['name']} ({revision})")
                 typer.echo("")
         elif response.status_code == 404:
             typer.echo(f"[ERROR] Job {job_id} not found", err=True)

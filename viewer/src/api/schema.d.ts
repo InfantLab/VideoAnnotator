@@ -2454,6 +2454,13 @@ export interface components {
             files?: components["schemas"]["ResultFileResponse"][];
             /** Error Message */
             error_message?: string | null;
+            /**
+             * Provenance
+             * @description What made this pipeline's outputs (spec 017); null for older jobs
+             */
+            provenance?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** PipelineSchemaDescriptor */
         PipelineSchemaDescriptor: {

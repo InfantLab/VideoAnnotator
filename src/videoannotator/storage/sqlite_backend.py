@@ -139,7 +139,8 @@ class SQLiteStorageBackend(StorageBackend):
             raise
 
     def _ensure_batch_columns(self) -> None:
-        """Add jobs.batch_id/batch_name/dataset_id if this is an older database."""
+        """Add columns newer than an existing database: jobs.batch_id/
+        batch_name/dataset_id (spec 008), pipeline_results.provenance (017)."""
         from sqlalchemy import text
 
         with self.engine.connect() as conn:
@@ -154,6 +155,15 @@ class SQLiteStorageBackend(StorageBackend):
                     continue
                 self.logger.info(f"[MIGRATION] Adding jobs.{column} column")
                 conn.execute(text(f"ALTER TABLE jobs ADD COLUMN {column} {ddl}"))
+            # spec 017
+            result = conn.execute(text("PRAGMA table_info('pipeline_results')"))
+            if "provenance" not in {row[1] for row in result}:
+                self.logger.info(
+                    "[MIGRATION] Adding pipeline_results.provenance column"
+                )
+                conn.execute(
+                    text("ALTER TABLE pipeline_results ADD COLUMN provenance JSON")
+                )
             conn.execute(
                 text("CREATE INDEX IF NOT EXISTS ix_jobs_batch_id ON jobs (batch_id)")
             )
@@ -221,6 +231,7 @@ class SQLiteStorageBackend(StorageBackend):
                 annotation_count=result.annotation_count,
                 output_file=Path(result.output_file) if result.output_file else None,
                 error_message=result.error_message,
+                provenance=result.provenance,
             )
             batch_job.pipeline_results[result.pipeline_name] = pipeline_result
 
@@ -268,6 +279,7 @@ class SQLiteStorageBackend(StorageBackend):
                             if result.output_file
                             else None,
                             error_message=result.error_message,
+                            provenance=result.provenance,
                         )
                         session.add(db_result)
 
@@ -293,6 +305,7 @@ class SQLiteStorageBackend(StorageBackend):
                             if result.output_file
                             else None,
                             error_message=result.error_message,
+                            provenance=result.provenance,
                         )
                         session.add(db_result)
 

@@ -202,6 +202,10 @@ class PipelineResultResponse(BaseModel):
     download_url: str | None = None
     files: list[ResultFileResponse] = Field(default_factory=list)
     error_message: str | None = None
+    provenance: dict[str, Any] | None = Field(
+        default=None,
+        description="What made this pipeline's outputs (spec 017); null for older jobs",
+    )
 
 
 class JobResultsResponse(BaseModel):
@@ -1334,6 +1338,7 @@ async def get_job_results(
                 annotation_count=result.annotation_count,
                 output_file=str(result.output_file) if result.output_file else None,
                 error_message=result.error_message,
+                provenance=result.provenance,
             )
 
         # Relative URLs: the client prepends the server origin. Advertised only

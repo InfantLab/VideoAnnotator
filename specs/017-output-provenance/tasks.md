@@ -66,11 +66,11 @@ surface, and FR-006/FR-007/FR-014 are test-defined.
 **Goal**: results API and CLI return the record per pipeline.
 **Independent Test**: after a job, `GET /jobs/{id}/results` and `videoannotator job results` show records equal to the files'.
 
-- [ ] T030 [US4] `PipelineResult.provenance` in `src/videoannotator/batch/types.py`; set in `job_execution.py` on success and on failure after initialise
-- [ ] T031 [US4] `provenance` JSON column on `pipeline_results` in `src/videoannotator/storage/models.py`; additive migration in `sqlite_backend.py` (like `_ensure_batch_columns`); read/write in both backends (`sqlite_backend.py`, `file_backend.py`)
-- [ ] T032 [US4] `PipelineResultResponse.provenance` in `src/videoannotator/api/v1/jobs.py`; regenerate viewer API types (`scripts/gen_viewer_api_types.sh`)
-- [ ] T033 [US4] Show model and VideoAnnotator version per pipeline in `videoannotator job results` (`src/videoannotator/cli.py`)
-- [ ] T034 [P] [US4] Tests: migration adds the column to an old DB (`tests/unit/storage/`); API returns provenance and `null` for an old job (`tests/api/test_result_files.py`)
+- [x] T030 [US4] `PipelineResult.provenance` in `src/videoannotator/batch/types.py`; set in `job_execution.py` on success and on failure after initialise
+- [x] T031 [US4] `provenance` JSON column on `pipeline_results` in `src/videoannotator/storage/models.py`; additive migration in `sqlite_backend.py` (like `_ensure_batch_columns`); read/write in both backends (`sqlite_backend.py`, `file_backend.py`)
+- [x] T032 [US4] `PipelineResultResponse.provenance` in `src/videoannotator/api/v1/jobs.py`; regenerate viewer API types (`scripts/gen_viewer_api_types.sh`)
+- [x] T033 [US4] Show model and VideoAnnotator version per pipeline in `videoannotator job results` (`src/videoannotator/cli.py`)
+- [x] T034 [P] [US4] Tests: migration adds the column to an old DB (`tests/unit/storage/`); API returns provenance and `null` for an old job (`tests/api/test_result_files.py`)
 
 ## Phase 7: Polish
 
