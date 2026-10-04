@@ -1,4 +1,4 @@
-import { Dispatch, ReactNode, SetStateAction, useEffect, useMemo, useState } from "react";
+import { Dispatch, ReactNode, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ServerFolderPicker, type ServerFolderSelection } from "@/components/ServerFolderPicker";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw, FolderOpen, HardDrive } from "lucide-react";
+import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw, FolderOpen, HardDrive, Database } from "lucide-react";
+import { DatasetPicker, type PickedFile } from "@/components/DatasetPicker";
+import { SaveDatasetDialog } from "@/components/SaveDatasetDialog";
+import { manifestFrom, relativePathOf, scanCandidates } from "@/lib/datasetMatch";
+import { rememberFolder, supportsFolderHandles, videosIn } from "@/lib/datasetHandles";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { apiClient } from "@/api/client";
 import { handleAPIError } from "@/api/handleError";
@@ -143,8 +147,12 @@ const CreateNewJob = () => {
   // is explicit state rather than derived from `serverFolder`: you can't pick
   // a folder before switching to the server tab, so deriving it would make the
   // tab impossible to open.
-  const [videoSource, setVideoSource] = useState<'upload' | 'server'>('upload');
+  const [videoSource, setVideoSource] = useState<VideoSource>('upload');
   const [serverFolder, setServerFolder] = useState<ServerFolderSelection | null>(null);
+  // The saved dataset the chosen videos are (spec 018); cleared by any manual change.
+  const [fromDataset, setFromDataset] = useState<{ id: string; name: string } | null>(null);
+  const [relativePaths, setRelativePaths] = useState<Map<File, string | null>>(new Map());
+  const [folderHandle, setFolderHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const usingServerFolder = videoSource === 'server' && serverFolder !== null;
 
   // The catalog (`pipelines` above) never carries per-field parameters —
@@ -307,6 +315,7 @@ const CreateNewJob = () => {
         selected_pipelines: selectedPipelines,
         config: effectiveConfig,
         batch_name: batchName.trim() || undefined,
+        dataset_id: fromDataset?.id,
       });
 
       setSubmitSuccess(response.created);
@@ -398,7 +407,7 @@ const CreateNewJob = () => {
             file,
             selectedPipelines,
             effectiveConfig,
-            { id: batchId, name: effectiveBatchName }
+            { id: batchId, name: effectiveBatchName, datasetId: fromDataset?.id }
           );
           console.log(`✅ Job created successfully: ${response.id}`);
           jobIds.push(response.id);
@@ -471,6 +480,7 @@ const CreateNewJob = () => {
             setVideoSource={setVideoSource}
             serverFolder={serverFolder}
             setServerFolder={setServerFolder}
+            dataset={{ fromDataset, setFromDataset, relativePaths, setRelativePaths, folderHandle, setFolderHandle }}
           />
         );
       case 2:
@@ -702,29 +712,104 @@ const CreateNewJob = () => {
 };
 
 // Step Components
+type VideoSource = 'upload' | 'server' | 'dataset';
+
+interface DatasetSelectionState {
+  fromDataset: { id: string; name: string } | null;
+  setFromDataset: (dataset: { id: string; name: string } | null) => void;
+  relativePaths: Map<File, string | null>;
+  setRelativePaths: (paths: Map<File, string | null>) => void;
+  folderHandle: FileSystemDirectoryHandle | null;
+  setFolderHandle: (handle: FileSystemDirectoryHandle | null) => void;
+}
+
 const VideoUploadStep = ({
   selectedFiles,
   setSelectedFiles,
   videoSource,
   setVideoSource,
   serverFolder,
-  setServerFolder
+  setServerFolder,
+  dataset
 }: {
   selectedFiles: File[];
   setSelectedFiles: (files: File[]) => void;
-  videoSource: 'upload' | 'server';
-  setVideoSource: (source: 'upload' | 'server') => void;
+  videoSource: VideoSource;
+  setVideoSource: (source: VideoSource) => void;
   serverFolder: ServerFolderSelection | null;
   setServerFolder: (selection: ServerFolderSelection | null) => void;
+  dataset: DatasetSelectionState;
 }) => {
+  const [saving, setSaving] = useState(false);
+  const folderInput = useRef<HTMLInputElement>(null);
+
+  // The selection no longer equals the dataset it came from.
+  const changedByHand = () => dataset.setFromDataset(null);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    const paths = new Map(dataset.relativePaths);
+    for (const file of files) paths.set(file, relativePathOf(file));
+    dataset.setRelativePaths(paths);
     setSelectedFiles([...selectedFiles, ...files]);
+    changedByHand();
+  };
+
+  const applyFolder = (picked: PickedFile[], handle: FileSystemDirectoryHandle | null) => {
+    dataset.setRelativePaths(new Map(picked.map((p) => [p.file, p.relativePath])));
+    dataset.setFolderHandle(handle);
+    setSelectedFiles(picked.map((p) => p.file));
+  };
+
+  const chooseFolder = async () => {
+    if (!supportsFolderHandles()) {
+      folderInput.current?.click();
+      return;
+    }
+    try {
+      const handle = await (window as unknown as { showDirectoryPicker: (o: object) => Promise<FileSystemDirectoryHandle> })
+        .showDirectoryPicker({ mode: 'read' });
+      const found = await videosIn(handle);
+      applyFolder(found.map((c) => ({ file: c.item, relativePath: c.relativePath })), handle);
+      changedByHand();
+    } catch {
+      // Picker cancelled or refused: keep the current selection.
+    }
   };
 
   const removeFile = (index: number) => {
     setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
+    changedByHand();
   };
+
+  const selectServerFolder = (selection: ServerFolderSelection | null) => {
+    setServerFolder(selection);
+    changedByHand();
+  };
+
+  const buildDataset = async () => {
+    if (videoSource === 'server' && serverFolder) {
+      const scan = await apiClient.scanServerFolder(serverFolder.path, serverFolder.recursive);
+      return {
+        video_manifest: manifestFrom(scanCandidates(scan.videos)),
+        server_folder: scan.path,
+        server_folder_recursive: scan.recursive,
+      };
+    }
+    return {
+      video_manifest: manifestFrom(
+        selectedFiles.map((file) => ({
+          name: file.name,
+          size: file.size,
+          relativePath: dataset.relativePaths.get(file) ?? null,
+          item: file,
+        })),
+      ),
+    };
+  };
+
+  const hasSelection = videoSource === 'server' ? serverFolder !== null : selectedFiles.length > 0;
 
   const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
 
@@ -732,16 +817,18 @@ const VideoUploadStep = ({
   // folder would make "what is this run?" ambiguous, so switching clears the
   // one being left behind.
   const onSourceChange = (next: string) => {
-    const mode = next === 'server' ? 'server' : 'upload';
+    const mode: VideoSource = next === 'server' || next === 'dataset' ? next : 'upload';
     setVideoSource(mode);
+    if (mode === 'dataset') return; // nothing changes until a dataset is chosen
     if (mode === 'upload') setServerFolder(null);
     else setSelectedFiles([]);
+    changedByHand();
   };
 
   return (
     <div className="space-y-6">
       <Tabs value={videoSource} onValueChange={onSourceChange}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="upload">
             <Upload className="h-4 w-4 mr-2" />
             Upload from this computer
@@ -749,6 +836,10 @@ const VideoUploadStep = ({
           <TabsTrigger value="server">
             <HardDrive className="h-4 w-4 mr-2" />
             Folder on the server
+          </TabsTrigger>
+          <TabsTrigger value="dataset">
+            <Database className="h-4 w-4 mr-2" />
+            Saved dataset
           </TabsTrigger>
         </TabsList>
 
@@ -760,6 +851,20 @@ const VideoUploadStep = ({
               Select video files to process. Formats: MP4, WebM, AVI, MOV
             </p>
 
+            <div className="mb-3">
+              <Button variant="outline" size="sm" onClick={chooseFolder}>
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Choose a folder
+              </Button>
+              <input
+                ref={folderInput}
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+                {...{ webkitdirectory: '', directory: '' }}
+              />
+              <span className="text-xs text-muted-foreground ml-2">or pick files:</span>
+            </div>
             <input
               type="file"
               accept="video/*"
@@ -786,9 +891,62 @@ const VideoUploadStep = ({
               in one step.
             </p>
           </div>
-          <ServerFolderPicker selection={serverFolder} onSelect={setServerFolder} />
+          <ServerFolderPicker selection={serverFolder} onSelect={selectServerFolder} />
+        </TabsContent>
+
+        <TabsContent value="dataset" className="mt-4">
+          <DatasetPicker
+            onUseFiles={(picked, chosen, handle) => {
+              applyFolder(picked, handle);
+              setServerFolder(null);
+              setVideoSource('upload');
+              dataset.setFromDataset({ id: chosen.id, name: chosen.name });
+            }}
+            onUseServerFolder={(selection, chosen) => {
+              setSelectedFiles([]);
+              setServerFolder(selection);
+              setVideoSource('server');
+              dataset.setFromDataset({ id: chosen.id, name: chosen.name });
+            }}
+          />
         </TabsContent>
       </Tabs>
+
+      {hasSelection && videoSource !== 'dataset' && (
+        <div className="flex items-center justify-between gap-2 rounded-md border p-3 text-sm">
+          {dataset.fromDataset ? (
+            <>
+              <span>
+                <Database className="h-4 w-4 inline mr-1" />
+                From saved dataset <strong>{dataset.fromDataset.name}</strong>
+              </span>
+              <Button variant="ghost" size="sm" onClick={changedByHand}>
+                Don't link to it
+              </Button>
+            </>
+          ) : (
+            <>
+              <span className="text-muted-foreground">Running these videos again later?</span>
+              <Button variant="outline" size="sm" onClick={() => setSaving(true)}>
+                Save as dataset
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+      {saving && (
+        <SaveDatasetDialog
+          open
+          defaultName={videoSource === 'server' && serverFolder ? serverFolder.path.split(/[\\/]/).filter(Boolean).pop() ?? '' : defaultBatchName(selectedFiles)}
+          build={buildDataset}
+          onSaved={async (saved) => {
+            if (dataset.folderHandle) await rememberFolder(saved.id, dataset.folderHandle);
+            dataset.setFromDataset({ id: saved.id, name: saved.name });
+            setSaving(false);
+          }}
+          onClose={() => setSaving(false)}
+        />
+      )}
 
       {videoSource === 'upload' && selectedFiles.length > 0 && (
         <div className="p-4 bg-green-50 rounded-lg">

@@ -9,17 +9,17 @@
 - [x] T002 In `src/videoannotator/api/v1/datasets.py`: `VideoManifestEntry.relative_path`; request/response `server_folder`, `server_folder_recursive`; response `owner_name`; 409 `DATASET_NAME_CONFLICT` (exists since spec 007) on duplicate name (create, update)
 - [x] T003 `GET /api/v1/ingest/scan` in `src/videoannotator/api/v1/ingest.py` (reuse `find_videos`, same guards as ingest)
 - [x] T004 [P] Tests: new fields round-trip, spec-007 export imports unchanged, owner_name, 409, migration on an old database (`tests/api/test_dataset_preset_endpoints.py`); scan guards and listing (`tests/api/test_ingest_endpoints.py`)
-- [ ] T005 Regenerate viewer API types (`scripts/gen_viewer_api_types.sh`); dataset types and client methods (`list/get/create/update/deleteDataset`, `scanServerFolder`) in `viewer/src/api/client.ts`, `viewer/src/types/datasets.ts`
+- [x] T005 Regenerate viewer API types (`scripts/gen_viewer_api_types.sh`); dataset types and client methods (`list/get/create/update/deleteDataset`, `scanServerFolder`) in `viewer/src/api/client.ts`, `viewer/src/types/datasets.ts`
 
 ## Phase 2: US1 - Save the videos I chose, and reuse them (P1)
 
-- [ ] T006 [US1] `viewer/src/lib/datasetMatch.ts`: `manifestFromFiles(files)`, `matchDataset(manifest, files)` per research R3
-- [ ] T007 [P] [US1] `viewer/src/test/lib/datasetMatch.test.ts`: matched/missing/added/changed/ambiguous, relative paths vs names, 5,000-file timing
-- [ ] T008 [US1] `viewer/src/lib/datasetHandles.ts`: store/get a folder handle per dataset; re-request read permission; walk to `File`s with relative paths
-- [ ] T009 [US1] `viewer/src/components/DatasetDriftDialog.tsx`: lists differences; Continue with matching / Update dataset / Cancel
-- [ ] T010 [US1] `viewer/src/components/DatasetPicker.tsx`: list datasets; on choose → server folder (scan, drift, set wizard server folder) or files (handle or re-pick, match, drift, set selected files)
-- [ ] T011 [US1] `viewer/src/pages/NewJob.tsx`: "Use a saved dataset" source; "Save as dataset" (name dialog, manifest from files or server scan, store handle); submit with `dataset_id`
-- [ ] T012 [P] [US1] Component tests for picker + drift dialog with mocked client and files (`viewer/src/test/components/DatasetPicker.test.tsx`)
+- [x] T006 [US1] `viewer/src/lib/datasetMatch.ts`: `manifestFromFiles(files)`, `matchDataset(manifest, files)` per research R3
+- [x] T007 [P] [US1] `viewer/src/test/lib/datasetMatch.test.ts`: matched/missing/added/changed/ambiguous, relative paths vs names, 5,000-file timing
+- [x] T008 [US1] `viewer/src/lib/datasetHandles.ts`: store/get a folder handle per dataset; re-request read permission; walk to `File`s with relative paths
+- [x] T009 [US1] `viewer/src/components/DatasetDriftDialog.tsx`: lists differences; Continue with matching / Update dataset / Cancel
+- [x] T010 [US1] `viewer/src/components/DatasetPicker.tsx`: list datasets; on choose → server folder (scan, drift, set wizard server folder) or files (handle or re-pick, match, drift, set selected files)
+- [x] T011 [US1] `viewer/src/pages/NewJob.tsx`: "Use a saved dataset" source; "Save as dataset" (name dialog, manifest from files or server scan, store handle); submit with `dataset_id`
+- [x] T012 [P] [US1] Component tests for picker + drift dialog with mocked client and files (`viewer/src/test/components/DatasetPicker.test.tsx`)
 
 ## Phase 3: US2 - See and manage my datasets (P1)
 

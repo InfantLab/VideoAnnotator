@@ -33,6 +33,13 @@ import type {
 import type { CurrentUser } from '@/types/api';
 import type { JobResults } from '@/lib/jobOutcome';
 import type { Preset, PresetCreateRequest, PresetListResponse } from '@/types/presets';
+import type {
+  DatasetCreateRequest,
+  DatasetListResponse,
+  DatasetUpdateRequest,
+  SavedDataset,
+  ServerFolderScan,
+} from '@/types/datasets';
 import { APIError } from './handleError';
 import { API_TOKEN_STORAGE_KEY, API_URL_STORAGE_KEY, defaultApiUrl, normalizeApiUrl } from '@/lib/apiConnection';
 
@@ -599,6 +606,42 @@ class APIClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+  }
+
+  /** Saved datasets (specs 007, 018), shared by everyone on the server. */
+  async listDatasets(): Promise<DatasetListResponse> {
+    return this.request('/api/v1/datasets/');
+  }
+
+  async getDataset(id: string): Promise<SavedDataset> {
+    return this.request(`/api/v1/datasets/${encodeURIComponent(id)}`);
+  }
+
+  /** Also the import path: POST an exported dataset as it is. 409 on a name the caller already uses. */
+  async createDataset(body: DatasetCreateRequest): Promise<SavedDataset> {
+    return this.request('/api/v1/datasets/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  async updateDataset(id: string, body: DatasetUpdateRequest): Promise<SavedDataset> {
+    return this.request(`/api/v1/datasets/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  async deleteDataset(id: string): Promise<void> {
+    return this.request(`/api/v1/datasets/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  }
+
+  /** The videos a server-folder ingest would use, with sizes (admin, same machine). */
+  async scanServerFolder(path: string, recursive: boolean): Promise<ServerFolderScan> {
+    const query = new URLSearchParams({ path, recursive: String(recursive) });
+    return this.request(`/api/v1/ingest/scan?${query}`);
   }
 
   /** Per-pipeline outcome of a job, including why a pipeline failed. */
