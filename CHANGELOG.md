@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The viewer type-checks cleanly (`bun run typecheck`, 24 errors before), and CI now runs it. Its
   API types are generated from the server's OpenAPI schema by `scripts/gen_viewer_api_types.sh`.
   They were months stale, and looked up paths without the trailing slash the server uses.
+- The viewer loads faster on first visit: each page is downloaded when first opened, so the
+  initial download fell from about 315 KB to 180 KB gzipped (the constitution's budget is 300 KB).
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 

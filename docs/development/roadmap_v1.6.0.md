@@ -409,6 +409,9 @@ half-built page.
 - [ ] Viewer: the constitution's other two open Engineering Standards. A 300 KB gzipped initial
       bundle (304 KB on 2026-10-02), and overlays naming the pipeline and version that drew them
       (Principle VI).
+      Bundle done 2026-10-04: every page but Home is lazy-loaded (`App.tsx`). The initial download
+      fell from 301 KB JS + 14 KB CSS gzipped to 165 + 14 KB. Every route was checked in Chromium
+      against the production build. Overlay labels are still open.
 - [x] Viewer: one function decides which pipeline produced a file. Today there are four
       (`merger.ts`, `fileUtils.ts`, and two arrays in `FileUploader.tsx`) and they disagree.
       Start from `merger.ts`'s `detectJSONStructure` (2026-10-01), which classifies a parsed file by
