@@ -508,16 +508,19 @@ export function useSSE(jobId?: string) {
 }
 ```
 
-#### Route Structure (v0.3.0)
+#### Route Structure (`src/App.tsx`)
 
 ```
-/                     - Main annotation viewer
-/create               - Job management layout
-/create/jobs          - List all jobs
-/create/jobs/:id      - Job detail page
-/create/new           - Job creation wizard
-/create/settings      - API configuration
-/create/datasets      - Dataset management
+/                     - Home
+/getting-started      - First-run guide
+/library              - Datasets in the local library (downloaded jobs, demos)
+/jobs                 - Jobs and runs (batches)
+/jobs/new             - Job creation wizard
+/jobs/:jobId          - Job detail page
+/batches/:batchId     - One run (batch) of jobs
+/settings             - Server connection and API key
+/viewer               - Annotation viewer (standalone: drop in files)
+/view/:jobId          - Annotation viewer for a server job
 ```
 
 #### Job Creation Workflow

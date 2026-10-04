@@ -16,7 +16,6 @@ import Jobs from "./pages/Jobs";
 import BatchDetail from "./pages/BatchDetail";
 import JobDetail from "./pages/JobDetail";
 import NewJob from "./pages/NewJob";
-import Datasets from "./pages/Datasets";
 import Settings from "./pages/Settings";
 import JobResultsViewer from "./pages/JobResultsViewer";
 import Library from "./pages/Library";
@@ -52,7 +51,8 @@ const App = () => (
                     {/* Runs (batches) are listed on the Jobs page. */}
                     <Route path="/batches" element={<Navigate to="/jobs" replace />} />
                     <Route path="/batches/:batchId" element={<BatchDetail />} />
-                    <Route path="/datasets" element={<Datasets />} />
+                    {/* Was a "Coming Soon" placeholder; datasets the viewer has are in the Library. */}
+                    <Route path="/datasets" element={<Navigate to="/library" replace />} />
                     <Route path="/settings" element={<Settings />} />
                   </Route>
 

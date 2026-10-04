@@ -43,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The viewer's **Datasets page**, a "Coming Soon" placeholder with example cards and disabled
+  buttons, reachable only by its URL. `/datasets` now opens the Library.
 - **The LAION pipelines** (spec 014, from the v1.6.0 pipeline review): `laion_voice` (16–32 GB of
   models, unmaintained upstream, trained on adult acted speech) and `face_laion_clip`
   (unmaintained upstream, unvalidated on infants), with the `audio-laion` and `face-laion`

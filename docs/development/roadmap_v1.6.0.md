@@ -386,10 +386,15 @@ half-built page.
 - [ ] Docs site (mkdocs-material on GitHub Pages) built from `docs/`, archive excluded.
 - [ ] Docs have one entry page (`docs/README.md`) and a link check in CI, so moving files can't
       leave dead links. (Unfinished since spec 001: T055, T056, T059.)
-- [ ] No placeholder pages. The Datasets page says "Coming Soon" behind a disabled button, although
+- [x] No placeholder pages. The Datasets page says "Coming Soon" behind a disabled button, although
       spec 007's backend shipped in v1.5.0: wire it up or hide it.
       (Preset load/save in the job wizard landed in v1.5.0; the Datasets page, saved datasets and
       import/export from spec 007's viewer handoff are what's left.)
+      Done 2026-10-04: hidden. The page had no menu link, only a URL; `/datasets` now goes to the
+      Library. Wiring up saved datasets is a feature, so it gets a spec (below).
+- [ ] **Saved datasets in the viewer** (spec 007's viewer handoff): list, create, rename and delete
+      the server's saved datasets (`/api/v1/datasets`, shipped in v1.5.0), start a job from one,
+      and import/export them. Write a spec first. Decide with Caspar whether it's before rc1.
 - [x] Viewer: zero `tsc --noEmit` errors (24 on 2026-09-26), with typechecking in CI.
       Constitution 1.1.0 makes this an Engineering Standard, as are a 300 KB gzipped initial bundle
       (304 KB on 2026-10-02) and overlays naming the pipeline and version that drew them
