@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..provenance import companion_path
 from ..registry.pipeline_registry import get_registry
 from .types import BatchJob
 
@@ -28,4 +29,6 @@ def pipeline_result_files(job: BatchJob, pipeline_name: str) -> list[Path]:
     folder = job_folder(job)
     stem = Path(job.video_path).stem
     files = [folder / f"{stem}_{o.file}" for o in meta.outputs if o.file]
+    # A format that can't hold its provenance record ships it beside it (spec 017).
+    files += [companion_path(f) for f in files]
     return [f for f in files if f.is_file()]

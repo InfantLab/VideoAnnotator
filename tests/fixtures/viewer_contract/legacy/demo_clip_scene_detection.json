@@ -1,0 +1,63 @@
+{
+  "info": {
+    "description": "VideoAnnotator COCO Export",
+    "version": "1.5.0",
+    "year": 2025,
+    "contributor": "VideoAnnotator",
+    "date_created": "2025-01-01T00:00:00Z"
+  },
+  "licenses": [],
+  "images": [
+    {
+      "id": "demo_clip_frame_000075",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000000.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 0,
+      "timestamp": 5.258
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": "demo_clip_frame_000075",
+      "category_id": 1,
+      "bbox": [
+        0,
+        0,
+        640,
+        480
+      ],
+      "area": 307200,
+      "iscrowd": 0,
+      "score": 0.6352394819259644,
+      "video_id": "demo_clip",
+      "timestamp": 5.258,
+      "start_time": 0,
+      "end_time": 10.516,
+      "duration": 10.516,
+      "scene_type": "clinic",
+      "frame_start": 0,
+      "frame_end": 150,
+      "all_scores": {
+        "living room": 5.1578467719082255e-06,
+        "kitchen": 2.3050792151479982e-05,
+        "bedroom": 3.7164772948017344e-05,
+        "outdoor": 0.0006947257206775248,
+        "clinic": 0.6352394819259644,
+        "nursery": 0.36217230558395386,
+        "office": 0.0018206459935754538,
+        "playground": 7.494638339267112e-06
+      }
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "scene",
+      "supercategory": "video_segment",
+      "description": "Video scene segment with temporal bounds"
+    }
+  ]
+}

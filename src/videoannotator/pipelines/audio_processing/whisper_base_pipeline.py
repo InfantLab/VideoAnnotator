@@ -23,6 +23,7 @@ from videoannotator.pipelines.base_pipeline import BasePipeline
 from videoannotator.utils.model_loader import log_model_download
 
 from ...models_dir import source_dir
+from ...provenance import whisper_ref
 from .ffmpeg_utils import check_ffmpeg_available
 from .ffmpeg_utils import extract_audio_from_video as ffmpeg_extract
 
@@ -321,6 +322,7 @@ class WhisperBasePipeline(BasePipeline):
                 in_memory=True,
             )
 
+            self._model_refs.append(whisper_ref(whisper_module, model_size))
             self.logger.info(
                 f"Standard Whisper model '{model_size}' loaded successfully to {self.device}"
             )

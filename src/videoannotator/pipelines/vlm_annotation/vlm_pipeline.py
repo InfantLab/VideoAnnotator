@@ -10,6 +10,7 @@ roadmap treats the choice between those two sampling modes as an open
 question, so both are supported here rather than picking one.
 """
 
+import hashlib
 import logging
 import re
 from pathlib import Path
@@ -23,6 +24,7 @@ from videoannotator.exporters.native_formats import (
     validate_coco_json,
 )
 from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.provenance import ModelRef
 
 from .ollama_client import OllamaVLMClient
 
@@ -103,11 +105,34 @@ class VLMAnnotationPipeline(BasePipeline):
         )
         self._client.preflight(self.config["model"])
         self.set_model_info(self.config["model"])
+        details = self._client.model_details(self.config["model"])
+        self._vlm_details = details
+        self._model_refs.append(
+            ModelRef(
+                self.config["model"],
+                "ollama",
+                details["digest"],
+                "ollama-digest" if details["digest"] else "unknown",
+                None if details["digest"] else "the server reported no digest",
+            )
+        )
         self.is_initialized = True
         self.logger.info(
             f"VLM Annotation Pipeline initialized: model={self.config['model']} "
             f"backend=ollama base_url={self.config['base_url']}"
         )
+
+    def provenance_vlm(self) -> dict[str, Any]:
+        """The VLM-specific provenance fields (spec 017 FR-003)."""
+        details = getattr(self, "_vlm_details", {})
+        return {
+            "prompt_sha256": hashlib.sha256(
+                self.config["prompt"].encode("utf-8")
+            ).hexdigest(),
+            "model_digest": details.get("digest"),
+            "quantization": details.get("quantization"),
+            "base_url": self.config["base_url"],
+        }
 
     def cleanup(self) -> None:
         self._client = None

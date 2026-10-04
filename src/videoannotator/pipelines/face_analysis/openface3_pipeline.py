@@ -25,6 +25,7 @@ from videoannotator.exporters.native_formats import (
     validate_coco_json,
 )
 from videoannotator.pipelines.base_pipeline import BasePipeline, FrameFailures
+from videoannotator.provenance import weights_ref
 from videoannotator.utils.person_identity import PersonIdentityManager
 from videoannotator.utils.torch_settings import restored_torch_settings
 from videoannotator.version import __version__
@@ -267,6 +268,9 @@ class OpenFace3Pipeline(BasePipeline):
             face_detector_path = self.config.get("model_path") or _weight_path(
                 "Alignment_RetinaFace.pth"
             )
+            self._model_refs.append(
+                weights_ref("RetinaFace", "openface", face_detector_path)
+            )
             _skip_retinaface_backbone_pretrain()
             self.face_detector = FaceDetector(
                 model_path=face_detector_path,
@@ -286,6 +290,9 @@ class OpenFace3Pipeline(BasePipeline):
             # Configure device IDs for CUDA
             device_ids = [0] if device == "cuda" else [-1]
 
+            self._model_refs.append(
+                weights_ref(f"STAR {model_type}", "openface", landmark_model_path)
+            )
             with _without_star_training_setup():
                 self.landmark_detector = LandmarkDetector(
                     model_path=landmark_model_path,
@@ -303,6 +310,9 @@ class OpenFace3Pipeline(BasePipeline):
                 ]
             ):
                 mtl_model_path = _weight_path("MTL_backbone.pth")
+                self._model_refs.append(
+                    weights_ref("MTL backbone", "openface", mtl_model_path)
+                )
                 self.multitask_predictor = MultitaskPredictor(
                     model_path=mtl_model_path, device=device
                 )

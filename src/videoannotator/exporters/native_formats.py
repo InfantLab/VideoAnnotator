@@ -18,6 +18,7 @@ Usage:
 
 import json
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 
@@ -171,13 +172,14 @@ def export_coco_json(
         categories = [{"id": 1, "name": "person", "supercategory": "person"}]
 
     # Create native COCO format
+    created = datetime.now(UTC)
     coco_data = {
         "info": {
             "description": "VideoAnnotator COCO Export",
             "version": __version__,
-            "year": 2025,
+            "year": created.year,
             "contributor": "VideoAnnotator",
-            "date_created": "2025-01-01T00:00:00Z",
+            "date_created": created.isoformat(),
         },
         "licenses": [],
         "images": images,

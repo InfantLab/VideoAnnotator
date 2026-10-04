@@ -16,6 +16,7 @@ import librosa
 # from .emotion_pipeline import EmotionPipeline
 # from .f0_pipeline import F0Pipeline
 # from .timbre_pipeline import TimbrePipeline
+from ...provenance import ModelRef
 from ..base_pipeline import BasePipeline
 from .diarization_pipeline import DiarizationPipeline
 from .native_files import write_rttm, write_webvtt
@@ -100,6 +101,10 @@ class AudioPipelineModular(BasePipeline):
         # if pipeline_configs.get("emotion_recognition", {}).get("enabled", False):
         #     emotion_config = pipeline_configs["emotion_recognition"]
         #     self.audio_pipelines["emotion_recognition"] = EmotionPipeline(emotion_config)
+
+    def provenance_models(self) -> list[ModelRef]:
+        """Its sub-pipelines' models."""
+        return [m for p in self.audio_pipelines.values() for m in p.provenance_models()]
 
     def initialize(self) -> None:
         """Initialize all enabled audio pipelines."""

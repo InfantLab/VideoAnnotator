@@ -18,7 +18,10 @@ from videoannotator.exporters.native_formats import (
     validate_coco_json,
 )
 from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.provenance import clip_ref
 from videoannotator.version import __version__
+
+_CLIP_PRETRAINED = "laion2b_s34b_b79k"
 
 # Optional imports
 try:
@@ -324,11 +327,12 @@ class SceneDetectionPipeline(BasePipeline):
         self.clip_model, _, self.clip_preprocess = (
             open_clip.create_model_and_transforms(
                 self.config["clip_model"],
-                pretrained="laion2b_s34b_b79k",
+                pretrained=_CLIP_PRETRAINED,
                 device=self.device,
             )
         )
         self.clip_tokenizer = open_clip.get_tokenizer(self.config["clip_model"])
+        self._model_refs.append(clip_ref(self.config["clip_model"], _CLIP_PRETRAINED))
         self.logger.info(
             f"CLIP model loaded: {self.config['clip_model']} on {self.device}"
         )

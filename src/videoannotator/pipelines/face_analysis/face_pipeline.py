@@ -22,6 +22,7 @@ from videoannotator.exporters.native_formats import (
     validate_coco_json,
 )
 from videoannotator.pipelines.base_pipeline import BasePipeline, FrameFailures
+from videoannotator.provenance import weights_ref
 from videoannotator.utils.person_identity import PersonIdentityManager
 from videoannotator.version import __version__
 
@@ -545,6 +546,14 @@ class FaceAnalysisPipeline(BasePipeline):
                     f"{sum(mb for _, mb in missing)} MB, one-off) to {weights_dir}"
                 )
             for model in models:
+                if model in _DEEPFACE_WEIGHT_FILES:
+                    self._model_refs.append(
+                        weights_ref(
+                            f"DeepFace {model}",
+                            "deepface",
+                            weights_dir / _DEEPFACE_WEIGHT_FILES[model][0],
+                        )
+                    )
                 try:
                     DeepFace.build_model(model_name=model, task="facial_attribute")
                 except Exception as e:

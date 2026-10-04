@@ -26,6 +26,8 @@ from pathlib import Path
 import pytest
 import requests
 
+from videoannotator.provenance import COMPANION_SUFFIX, VTT_MARKER, read_record
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BASELINE_DIR = REPO_ROOT / "tests" / "fixtures" / "viewer_contract"
 DEMO_VIDEO = (
@@ -149,11 +151,32 @@ def current_outputs(tmp_path_factory) -> dict[str, str]:
     for path in (work / "storage" / job["id"]).iterdir():
         if path.suffix not in (".json", ".rttm", ".vtt"):
             continue
+        if path.name.endswith(COMPANION_SUFFIX):
+            continue
+        assert read_record(path) is not None, f"{path.name} has no provenance record"
         name, text = path.name, path.read_text()
         for old, new in RENAMES:
             name, text = name.replace(old, new), text.replace(old, new)
         outputs[name.removeprefix("demo_clip_")] = text
     return outputs
+
+
+def _without_run_details(suffix: str, text: str):
+    """The annotations only: provenance and creation times differ every run."""
+    if suffix.endswith(".json"):
+        data = json.loads(text)
+        if isinstance(data, dict):
+            data.pop("provenance", None)
+            if isinstance(data.get("info"), dict):
+                data["info"].pop("date_created", None)
+                data["info"].pop("year", None)
+        return data
+    if suffix.endswith(".vtt"):
+        text = "\n\n".join(
+            b for b in text.split("\n\n") if not b.startswith(VTT_MARKER)
+        )
+    # The fixtures went through pre-commit's end-of-file fixer.
+    return text.rstrip("\n")
 
 
 @pytest.mark.parametrize("suffix", EXACT)
@@ -163,8 +186,9 @@ def current_outputs(tmp_path_factory) -> dict[str, str]:
 def test_output_matches_baseline_exactly(current_outputs, suffix):
     golden = (BASELINE_DIR / f"demo_clip_{suffix}").read_text()
     assert suffix in current_outputs, f"no {suffix} written"
-    # The fixtures went through pre-commit's end-of-file fixer.
-    assert current_outputs[suffix].rstrip("\n") == golden.rstrip("\n")
+    assert _without_run_details(suffix, current_outputs[suffix]) == (
+        _without_run_details(suffix, golden)
+    )
 
 
 @pytest.mark.parametrize("suffix", sorted(TOLERANCE))
@@ -172,10 +196,15 @@ def test_output_matches_baseline_exactly(current_outputs, suffix):
 @pytest.mark.real_models
 @pytest.mark.slow
 def test_output_matches_baseline_within_tolerance(current_outputs, suffix):
-    golden = json.loads((BASELINE_DIR / f"demo_clip_{suffix}").read_text())
+    golden = (BASELINE_DIR / f"demo_clip_{suffix}").read_text()
     assert suffix in current_outputs, f"no {suffix} written"
     rel, abs_ = TOLERANCE[suffix]
-    _assert_within_tolerance(json.loads(current_outputs[suffix]), golden, rel, abs_)
+    _assert_within_tolerance(
+        _without_run_details(suffix, current_outputs[suffix]),
+        _without_run_details(suffix, golden),
+        rel,
+        abs_,
+    )
 
 
 class TestToleranceComparisonHelper:

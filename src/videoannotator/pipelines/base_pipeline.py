@@ -7,6 +7,7 @@ from typing import Any
 
 # Note: After standards migration, base schemas are no longer used
 # Pipelines now return native format dictionaries (COCO, WebVTT, RTTM, etc.)
+from videoannotator.provenance import ModelRef
 from videoannotator.version import create_annotation_metadata, get_model_info
 
 
@@ -22,6 +23,8 @@ class BasePipeline(ABC):
         self._model_info: dict[str, Any] | None = (
             None  # Will be set by individual pipelines
         )
+        # Appended where each model's weights are loaded (spec 017 provenance).
+        self._model_refs: list[ModelRef] = []
 
     @abstractmethod
     def initialize(self) -> None:
@@ -48,6 +51,13 @@ class BasePipeline(ABC):
         Returns:
             List of annotation dictionaries in native formats (COCO, WebVTT, RTTM, etc.)
         """
+
+    def provenance_models(self) -> list[ModelRef]:
+        """The models this run loaded, with their weight revisions."""
+        refs: dict[tuple[str, str | None], ModelRef] = {}
+        for ref in getattr(self, "_model_refs", []):  # a re-initialise appends again
+            refs.setdefault((ref.name, ref.revision), ref)
+        return list(refs.values())
 
     @abstractmethod
     def cleanup(self) -> None:

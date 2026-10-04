@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from ...config_env import huggingface_token
+from ...provenance import hub_ref
 from ..base_pipeline import BasePipeline
 from .ffmpeg_utils import extract_audio_from_video
 from .native_files import write_rttm
@@ -93,6 +94,7 @@ class DiarizationPipeline(BasePipeline):
             self.logger.error(f"Failed to load diarization model: {e}")
             raise
 
+        self._model_refs.append(hub_ref(self.config["model"]))
         self.is_initialized = True
         self.logger.info("DiarizationPipeline initialized")
 

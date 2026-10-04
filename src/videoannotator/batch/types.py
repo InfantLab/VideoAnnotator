@@ -31,6 +31,8 @@ class PipelineResult:
     annotation_count: int | None = None
     output_file: Path | None = None
     error_message: str | None = None
+    # What made this pipeline's outputs (spec 017); None for older jobs.
+    provenance: dict[str, Any] | None = None
 
     @property
     def duration(self) -> float | None:

@@ -10,35 +10,35 @@ surface, and FR-006/FR-007/FR-014 are test-defined.
 
 ## Phase 1: Setup
 
-- [ ] T001 Copy the current viewer contract fixtures (no provenance) to `tests/fixtures/viewer_contract/legacy/` with a README line saying they are pre-provenance outputs kept for backward-compatibility tests
+- [x] T001 Copy the current viewer contract fixtures (no provenance) to `tests/fixtures/viewer_contract/legacy/` with a README line saying they are pre-provenance outputs kept for backward-compatibility tests
 
 ## Phase 2: Foundational (blocks every story)
 
-- [ ] T002 Create `src/videoannotator/provenance.py`: `ModelRef` and `build_record(pipeline_name, *, models, settings, determinism, job_id, input_name, input_sha256, vlm=None, sub_pipeline=None) -> dict` (schema_version 1, `created_at` UTC with `+00:00`, `videoannotator_version`), per data-model.md
-- [ ] T003 In `src/videoannotator/provenance.py` add `redact(settings)` (keys matching token|secret|password|api_key|apikey|auth at any depth → `"<redacted>"`) and `file_sha256(path)` with a per-process cache keyed by (resolved path, size, mtime)
-- [ ] T004 In `src/videoannotator/provenance.py` add `stamp_file(path, record)`: JSON → top-level `provenance` key (rewrite preserving the rest, `indent=2` as written today); `.vtt` → insert `NOTE videoannotator-provenance <json>` block after the header with `-->` escaped as `-->`, replacing an existing one; `.rttm` → write `<name>.provenance.json` beside it; and `read_record(path)` for all three
-- [ ] T005 [P] Unit tests for T002–T004 in `tests/unit/test_provenance.py` (record fields, redaction at depth, hash cache hit, each format round-trips, re-stamping replaces rather than duplicates, `-->` escaping)
-- [ ] T006 Add `provenance_models(self) -> list[ModelRef]` returning `[]` to `src/videoannotator/pipelines/base_pipeline.py`
+- [x] T002 Create `src/videoannotator/provenance.py`: `ModelRef` and `build_record(pipeline_name, *, models, settings, determinism, job_id, input_name, input_sha256, vlm=None, sub_pipeline=None) -> dict` (schema_version 1, `created_at` UTC with `+00:00`, `videoannotator_version`), per data-model.md
+- [x] T003 In `src/videoannotator/provenance.py` add `redact(settings)` (keys matching token|secret|password|api_key|apikey|auth at any depth → `"<redacted>"`) and `file_sha256(path)` with a per-process cache keyed by (resolved path, size, mtime)
+- [x] T004 In `src/videoannotator/provenance.py` add `stamp_file(path, record)`: JSON → top-level `provenance` key (rewrite preserving the rest, `indent=2` as written today); `.vtt` → insert `NOTE videoannotator-provenance <json>` block after the header with `-->` escaped as `-->`, replacing an existing one; `.rttm` → write `<name>.provenance.json` beside it; and `read_record(path)` for all three
+- [x] T005 [P] Unit tests for T002–T004 in `tests/unit/test_provenance.py` (record fields, redaction at depth, hash cache hit, each format round-trips, re-stamping replaces rather than duplicates, `-->` escaping)
+- [x] T006 Add `provenance_models(self) -> list[ModelRef]` returning `[]` to `src/videoannotator/pipelines/base_pipeline.py`
 
 ## Phase 3: User Story 1 - A result file says what made it (P1) 🎯 MVP
 
 **Goal**: every output file of a job carries a complete record; standard readers still work.
 **Independent Test**: run the demo clip through all pipelines; each file has a record with every FR-002 field; pycocotools, a WebVTT parser and pyannote's RTTM loader read the files as before.
 
-- [ ] T007 [P] [US1] `provenance_models()` for YOLO in `src/videoannotator/pipelines/person_tracking/person_pipeline.py` (sha256 of the loaded `.pt`)
-- [ ] T008 [P] [US1] `provenance_models()` for OpenFace 3's three weights in `src/videoannotator/pipelines/face_analysis/openface3_pipeline.py`
-- [ ] T009 [P] [US1] `provenance_models()` for DeepFace attribute models and detector backend in `src/videoannotator/pipelines/face_analysis/face_pipeline.py`
-- [ ] T010 [P] [US1] `provenance_models()` for open_clip (model, pretrained tag, checkpoint sha256) in `src/videoannotator/pipelines/scene_detection/scene_pipeline.py`
-- [ ] T011 [P] [US1] `provenance_models()` for Whisper (size, checkpoint sha256) in `src/videoannotator/pipelines/audio_processing/speech_pipeline.py`
-- [ ] T012 [P] [US1] `provenance_models()` for pyannote (repo, Hub commit from the cached snapshot) in `src/videoannotator/pipelines/audio_processing/diarization_pipeline.py`
-- [ ] T013 [P] [US1] `provenance_models()` for `audio_processing` (union of its sub-pipelines) in `src/videoannotator/pipelines/audio_processing/audio_pipeline_modular.py`
-- [ ] T014 [US1] VLM: add `model_details(model)` (digest, quantisation) to `src/videoannotator/pipelines/vlm_annotation/ollama_client.py`; `provenance_models()` and a `provenance_vlm()` (prompt sha256, digest, quantisation, base_url) in `vlm_pipeline.py`
-- [ ] T015 [US1] In `src/videoannotator/batch/job_execution.py`: hash the input video once per job; after `initialize()` build the record (models, `redact(pipeline.config)`, determinism from `apply_torch_settings`, job id); after `process()` stamp every file from the registry `outputs[].file` list that exists (for `audio_processing`, set `sub_pipeline` per file)
-- [ ] T016 [US1] Real `date_created`/`year` in `src/videoannotator/exporters/native_formats.py`
-- [ ] T017 [US1] Include companion `.provenance.json` files in `pipeline_result_files()` in `src/videoannotator/batch/result_files.py`
-- [ ] T018 [P] [US1] Contract tests in `tests/contract/test_output_readers.py`: stamped COCO loads with `pycocotools.COCO`; stamped VTT parses (cue count/text unchanged) with the `webvtt` reader used by the exporters' tests, or a strict line parser if none is installed; RTTM loads with pyannote's `load_rttm` when installed (skip otherwise)
-- [ ] T019 [US1] Update `tests/integration/test_output_baseline.py` to drop `provenance`, `info.date_created`, `info.year`, the VTT provenance NOTE and companion files before comparing; check every compared file has a record
-- [ ] T020 [P] [US1] Job-path test in `tests/unit/batch/test_job_execution.py`: a fake pipeline writing a JSON, a VTT and an RTTM file per a fake registry entry gets all three stamped, with deterministic flag and redacted secret
+- [x] T007 [P] [US1] `provenance_models()` for YOLO in `src/videoannotator/pipelines/person_tracking/person_pipeline.py` (sha256 of the loaded `.pt`)
+- [x] T008 [P] [US1] `provenance_models()` for OpenFace 3's three weights in `src/videoannotator/pipelines/face_analysis/openface3_pipeline.py`
+- [x] T009 [P] [US1] `provenance_models()` for DeepFace attribute models and detector backend in `src/videoannotator/pipelines/face_analysis/face_pipeline.py`
+- [x] T010 [P] [US1] `provenance_models()` for open_clip (model, pretrained tag, checkpoint sha256) in `src/videoannotator/pipelines/scene_detection/scene_pipeline.py`
+- [x] T011 [P] [US1] `provenance_models()` for Whisper (size, checkpoint sha256) in `src/videoannotator/pipelines/audio_processing/speech_pipeline.py`
+- [x] T012 [P] [US1] `provenance_models()` for pyannote (repo, Hub commit from the cached snapshot) in `src/videoannotator/pipelines/audio_processing/diarization_pipeline.py`
+- [x] T013 [P] [US1] `provenance_models()` for `audio_processing` (union of its sub-pipelines) in `src/videoannotator/pipelines/audio_processing/audio_pipeline_modular.py`
+- [x] T014 [US1] VLM: add `model_details(model)` (digest, quantisation) to `src/videoannotator/pipelines/vlm_annotation/ollama_client.py`; `provenance_models()` and a `provenance_vlm()` (prompt sha256, digest, quantisation, base_url) in `vlm_pipeline.py`
+- [x] T015 [US1] In `src/videoannotator/batch/job_execution.py`: hash the input video once per job; after `initialize()` build the record (models, `redact(pipeline.config)`, determinism from `apply_torch_settings`, job id); after `process()` stamp every file from the registry `outputs[].file` list that exists (for `audio_processing`, set `sub_pipeline` per file)
+- [x] T016 [US1] Real `date_created`/`year` in `src/videoannotator/exporters/native_formats.py`
+- [x] T017 [US1] Include companion `.provenance.json` files in `pipeline_result_files()` in `src/videoannotator/batch/result_files.py`
+- [x] T018 [P] [US1] Contract tests in `tests/contract/test_output_readers.py`: stamped COCO loads with `pycocotools.COCO`; stamped VTT parses (cue count/text unchanged) with the `webvtt` reader used by the exporters' tests, or a strict line parser if none is installed; RTTM loads with pyannote's `load_rttm` when installed (skip otherwise)
+- [x] T019 [US1] Update `tests/integration/test_output_baseline.py` to drop `provenance`, `info.date_created`, `info.year`, the VTT provenance NOTE and companion files before comparing; check every compared file has a record
+- [x] T020 [P] [US1] Job-path test in `tests/unit/batch/test_job_execution.py`: a fake pipeline writing a JSON, a VTT and an RTTM file per a fake registry entry gets all three stamped, with deterministic flag and redacted secret
 
 ## Phase 4: User Story 2 - Every overlay in the viewer names its source (P1)
 

@@ -20,6 +20,7 @@ from videoannotator.exporters.native_formats import (
 )
 from videoannotator.models_dir import resolve_yolo_model
 from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.provenance import weights_ref
 from videoannotator.utils.automatic_labeling import infer_person_labels_from_tracks
 from videoannotator.utils.model_loader import log_model_download
 from videoannotator.utils.person_identity import PersonIdentityManager
@@ -340,6 +341,9 @@ class PersonTrackingPipeline(BasePipeline):
             # Load model with enhanced download logging
             # Load from the models directory; provenance keeps the configured name.
             model_path = resolve_yolo_model(self.config["model"])
+            self._model_refs.append(
+                weights_ref(self.config["model"], "ultralytics", model_path)
+            )
             self.model = log_model_download(
                 "YOLO11 Pose Detection Model",
                 model_path,

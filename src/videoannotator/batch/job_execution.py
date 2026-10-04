@@ -22,6 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ..provenance import build_record, file_sha256, stamp_file
 from ..registry.pipeline_loader import (
     deprecation_message,
     import_error_for,
@@ -30,6 +31,7 @@ from ..registry.pipeline_loader import (
 from ..registry.pipeline_registry import get_registry
 from ..storage.base import StorageBackend
 from ..utils.torch_settings import apply_torch_settings, restored_torch_settings
+from .result_files import job_folder
 from .types import BatchJob, JobStatus, PipelineResult
 
 logger = logging.getLogger(__name__)
@@ -200,6 +202,7 @@ def _run_one_pipeline(
         bool(job.config.get("deterministic", False)) if job.config else False
     )
 
+    record: dict[str, Any] | None = None
     try:
         with restored_torch_settings():
             apply_torch_settings(deterministic)
@@ -208,13 +211,17 @@ def _run_one_pipeline(
             settings = apply_torch_settings(deterministic)
             if settings:
                 logger.info(f"{pipeline_name} runs with torch settings {settings}")
+            record = _provenance(job, pipeline_name, pipeline, settings, deterministic)
             try:
                 annotations = _process(pipeline, pipeline_name, pipeline_class, job)
+                # Some load a model only when it's first needed (scene's CLIP).
+                record["models"] = [m.to_dict() for m in _models(pipeline)]
             finally:
                 try:
                     pipeline.cleanup()
                 except Exception as cleanup_error:
                     logger.warning(f"Pipeline cleanup error: {cleanup_error}")
+        _stamp_outputs(job, pipeline_name, pipeline, record)
 
         end_time = datetime.now()
         processing_time = (end_time - start_time).total_seconds()
@@ -230,6 +237,7 @@ def _run_one_pipeline(
             if isinstance(annotations, list)
             else None,
             output_file=Path(output_file) if isinstance(output_file, str) else None,
+            provenance=record,
         )
         logger.info(
             f"Completed {pipeline_name} for job {job.job_id} in {processing_time:.2f}s"
@@ -245,7 +253,64 @@ def _run_one_pipeline(
             start_time=start_time,
             end_time=datetime.now(),
             error_message=str(e),
+            provenance=record,
         )
+
+
+def _provenance(
+    job: BatchJob,
+    pipeline_name: str,
+    pipeline: Any,
+    torch_settings: dict[str, Any],
+    deterministic: bool,
+) -> dict[str, Any]:
+    video = Path(job.video_path) if job.video_path else None
+    provenance_vlm = getattr(pipeline, "provenance_vlm", None)
+    return build_record(
+        pipeline_name,
+        models=_models(pipeline),
+        settings=getattr(pipeline, "config", {}),
+        determinism={"deterministic": deterministic, **torch_settings}
+        if torch_settings
+        else {},
+        job_id=job.job_id,
+        input_name=video.name if video else None,
+        input_sha256=file_sha256(video) if video and video.is_file() else None,
+        vlm=provenance_vlm() if callable(provenance_vlm) else None,
+    )
+
+
+def _models(pipeline: Any) -> list[Any]:
+    # Pipelines that don't subclass BasePipeline (plugins) may not report any.
+    provenance_models = getattr(pipeline, "provenance_models", None)
+    return list(provenance_models()) if callable(provenance_models) else []
+
+
+def _stamp_outputs(
+    job: BatchJob, pipeline_name: str, pipeline: Any, record: dict[str, Any] | None
+) -> None:
+    """Record `record` in every file the pipeline wrote (spec 017)."""
+    meta = get_registry().get(pipeline_name)
+    if record is None or meta is None or job.video_path is None:
+        return
+    stem = Path(job.video_path).stem
+    sub_pipelines = getattr(pipeline, "audio_pipelines", {})
+    for output in meta.outputs:
+        if not output.file:
+            continue
+        path = job_folder(job) / f"{stem}_{output.file}"
+        if not path.is_file():
+            continue
+        sub = Path(output.file).stem
+        file_record = (
+            {**record, "pipeline": {"name": pipeline_name, "sub_pipeline": sub}}
+            if sub in sub_pipelines
+            else record
+        )
+        try:
+            stamp_file(path, file_record)
+        except Exception as e:  # a good result shouldn't fail on its label
+            logger.error(f"Could not record provenance in {path}: {e}")
 
 
 def _process(pipeline: Any, pipeline_name: str, pipeline_class: type, job: BatchJob):
