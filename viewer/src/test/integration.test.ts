@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { detectFileType as mergerDetect } from '../lib/parsers/merger'
-import { detectFileType as fileUtilsDetect, detectJSONType } from '../lib/fileUtils'
 
 // Mock fetch for file loading tests
 global.fetch = vi.fn()
@@ -27,12 +26,6 @@ describe('Integration Tests', () => {
       
       const file = new File([cocoContent], 'person_tracking.json', { type: 'application/json' })
       
-      // Test detectJSONType first
-      const jsonResult = await detectJSONType(file)
-      expect(jsonResult.type).toBe('person_tracking')
-      expect(jsonResult.confidence).toBe('high')
-      
-      // Test merger detection as fallback
       const mergerResult = await mergerDetect(file)
       expect(mergerResult.type).toBe('person_tracking')
       expect(mergerResult.confidence).toBeGreaterThan(0.7)
@@ -46,9 +39,9 @@ describe('Integration Tests', () => {
       
       const file = new File([sceneContent], 'scenes.json', { type: 'application/json' })
       
-      const jsonResult = await detectJSONType(file)
-      expect(jsonResult.type).toBe('scene_detection')
-      expect(jsonResult.confidence).toBe('high')
+      const result = await mergerDetect(file)
+      expect(result.type).toBe('scene_detection')
+      expect(result.confidence).toBeGreaterThan(0.7)
     })
 
     it('should detect VideoAnnotator complete results', async () => {
@@ -78,6 +71,7 @@ describe('Integration Tests', () => {
       const faceContent = JSON.stringify([
         {
           id: 1,
+          face_id: 0,
           image_id: "frame_001", 
           category_id: 100, // Face category
           bbox: [250, 103, 110, 110],
@@ -104,23 +98,9 @@ describe('Integration Tests', () => {
       
       const file = new File([unknownJsonContent], 'mystery.json', { type: 'application/json' })
       
-      // Step 1: fileUtils detection
-      let detected = fileUtilsDetect(file)
-      expect(detected.type).toBe('unknown')
-      expect(detected.extension).toBe('json')
-      
-      // Step 2: JSON content analysis 
-      if (detected.type === 'unknown' && detected.extension === 'json') {
-        detected = await detectJSONType(file)
-        expect(detected.type).toBe('unknown') // Should still be unknown for this content
-        
-        // Step 3: Merger fallback
-        if (detected.type === 'unknown') {
-          const mergerResult = await mergerDetect(file)
-          expect(mergerResult.type).toBe('unknown')
-          expect(mergerResult.confidence).toBeLessThan(0.5) // Low confidence for unknown format
-        }
-      }
+      const mergerResult = await mergerDetect(file)
+      expect(mergerResult.type).toBe('unknown')
+      expect(mergerResult.confidence).toBeLessThan(0.5)
     })
   })
 
@@ -130,15 +110,14 @@ describe('Integration Tests', () => {
       const file = new File([malformedJson], 'broken.json', { type: 'application/json' })
       
       // Should not throw errors
-      const jsonResult = await detectJSONType(file)
+      const jsonResult = await mergerDetect(file)
       expect(jsonResult.type).toBe('unknown')
-      expect(jsonResult.reason).toContain('parsing error')
     })
 
     it('should handle empty files', async () => {
       const file = new File([''], 'empty.json', { type: 'application/json' })
       
-      const jsonResult = await detectJSONType(file)
+      const jsonResult = await mergerDetect(file)
       expect(jsonResult.type).toBe('unknown')
     })
 
@@ -146,7 +125,7 @@ describe('Integration Tests', () => {
       const binaryData = new ArrayBuffer(100)
       const file = new File([binaryData], 'binary.json', { type: 'application/json' })
       
-      const jsonResult = await detectJSONType(file)
+      const jsonResult = await mergerDetect(file)
       expect(jsonResult.type).toBe('unknown')
     })
   })

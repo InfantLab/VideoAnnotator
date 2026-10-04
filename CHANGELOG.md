@@ -202,6 +202,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The viewer's job page updates by itself again** while a job runs. Its polling read the job's
   status from the wrong argument (React Query 5 passes the query, not its data), so it never
   polled and a running job's page looked frozen until reloaded. Found by turning on type checking.
+- **The viewer's upload screen agrees with its loader about what each file is.** It had its own
+  detector, which called every JSON result "unknown". So every set of JSON results warned "No
+  annotation files detected" and "N file(s) could not be identified", and a video with only an
+  ELAN `.eaf` file couldn't be opened. One detector (`viewer/src/lib/fileDetection.ts`) now
+  classifies every file: by extension, then by the fields in the whole JSON, then by
+  VideoAnnotator's file name when the JSON is empty. JSON results are no longer subject to a
+  10 MB upload cap they were never meant to have.
 - **A core install (`pip install videoannotator`, the slim Docker image) failed to start** with
   `No module named 'httpx'`: the server imports the Ollama client at start, and the v1.6.0 core
   clean-up dropped `httpx` as unused (every test environment had it through the dev tools). It is

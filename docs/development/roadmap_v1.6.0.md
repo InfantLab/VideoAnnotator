@@ -404,10 +404,15 @@ half-built page.
 - [ ] Viewer: the constitution's other two open Engineering Standards. A 300 KB gzipped initial
       bundle (304 KB on 2026-10-02), and overlays naming the pipeline and version that drew them
       (Principle VI).
-- [ ] Viewer: one function decides which pipeline produced a file. Today there are four
+- [x] Viewer: one function decides which pipeline produced a file. Today there are four
       (`merger.ts`, `fileUtils.ts`, and two arrays in `FileUploader.tsx`) and they disagree.
       Start from `merger.ts`'s `detectJSONStructure` (2026-10-01), which classifies a parsed file by
       its fields and is covered by the contract test against real outputs.
+      Done 2026-10-04: `lib/fileDetection.ts` (`detectFileType`, re-exported from `merger.ts`).
+      `fileUtils.ts` and merger's prefix-sampling checks are gone. A file-name suffix is used only
+      when the JSON is valid but says nothing (no annotations). Fixed along the way: the upload
+      screen called every JSON "unknown", so it warned on every result set, and it couldn't open
+      a video with only ELAN ground truth.
 - [ ] A structural pass along the one path users take: install → add videos → run → review →
       export. Anything off that path moves or goes. A Playwright "first-time user" run on a clean
       machine files each point of friction as an issue.
