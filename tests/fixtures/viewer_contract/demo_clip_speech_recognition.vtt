@@ -1,5 +1,7 @@
 WEBVTT
 
+NOTE videoannotator-provenance {"schema_version":1,"pipeline":{"name":"speech_recognition","sub_pipeline":null},"videoannotator_version":"1.5.0","models":[{"name":"whisper base","source":"openai-whisper","revision":"ed3a0b6b1c0edf879ad9b11b1af5a0e6ab5db9205f891f668f8b0e6c6326e34e","revision_kind":"sha256"}],"settings":{"whisper_model":"base","sample_rate":16000,"device":"auto","use_fp16":true,"cache_dir":"/app/models/whisper","use_auth_token":"<redacted>","normalize_audio":true,"language":null,"task":"transcribe","beam_size":5,"best_of":5,"temperature":0.0,"patience":1.0,"length_penalty":1.0,"word_timestamps":true,"prepend_punctuations":"\"'\"\u00bf([{-","append_punctuations":"\"'..,!?:\")]},","suppress_tokens":null,"min_segment_duration":1.0},"determinism":{"deterministic":false,"cudnn_benchmark":false,"cudnn_deterministic":false,"deterministic_algorithms":false,"anomaly_detection":false,"cublas_workspace_config":":4096:8"},"created_at":"2026-10-04T14:03:17.201142+00:00","job_id":"3abaf9e3-14d4-458c-af01-734863dcb97a","input":{"name":"demo_clip.mp4","sha256":"0b809c13772c8cdff2a5355f958b5b70115cf8d5d7b461199d36056d3a8295b0"}}
+
 1
 00:00:00.000 --> 00:00:01.320
 Ready, baby girl?

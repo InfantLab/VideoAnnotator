@@ -25,6 +25,8 @@ import { parseCOCOOpenFace3Data } from './cocoOpenface3';
 // import { parseFaceAnalysis } from './face'; // Using local implementation
 
 import type { DetectedFile } from '../fileDetection';
+import { COMPANION_SUFFIX, provenanceFromCompanion, provenanceOfFile } from '../provenance';
+import type { ProvenanceTrack } from '@/types/annotations';
 
 // Detection lives in lib/fileDetection.ts; re-exported for existing importers.
 export { detectFileType, detectJSONStructure, type DetectedFile } from '../fileDetection';
@@ -166,6 +168,19 @@ export async function mergeAnnotationData(
     let faceAnalysis: LAIONFaceAnnotation[] = [];
     let openface3Faces: StandardFaceAnnotation[] = []; // OpenFace3 faces data
 
+    // What made each track (spec 017); RTTM's record is in a companion file.
+    const provenance: NonNullable<StandardAnnotationData['provenance']> = {};
+    const companions = new Map<string, File>();
+    for (const d of detectedFiles) {
+        if (d.type === 'provenance') companions.set(d.file.name.slice(0, -COMPANION_SUFFIX.length), d.file);
+    }
+    const record = async (track: ProvenanceTrack, file: File) => {
+        const companion = companions.get(file.name);
+        provenance[track] = companion
+            ? provenanceFromCompanion(await companion.text())
+            : await provenanceOfFile(file);
+    };
+
     // Processing metadata from VideoAnnotator v1.1.1
     let processingConfig: VideoAnnotatorCompleteResults['config'] | undefined;
     let processingTime: number | undefined;
@@ -228,6 +243,7 @@ export async function mergeAnnotationData(
                     if (personTracking.length === 0) { // Only if not from complete results
                         personTracking = await parseCOCOPersonData(detectedFile.file);
                         pipelinesFound.push('person_tracking');
+                        await record('person_tracking', detectedFile.file);
                     }
                     break;
 
@@ -235,6 +251,7 @@ export async function mergeAnnotationData(
                     if (faceAnalysis.length === 0) { // Only if not from complete results
                         faceAnalysis = await parseFaceAnalysis(detectedFile.file);
                         pipelinesFound.push('face_analysis');
+                        await record('face_analysis', detectedFile.file);
                     }
                     break;
 
@@ -254,23 +271,27 @@ export async function mergeAnnotationData(
                             openface3Faces = parser.parseOpenFace3Data(data);
                         }
                         pipelinesFound.push('openface3');
+                        await record('openface3_faces', detectedFile.file);
                     }
                     break;
 
                 case 'speech_recognition':
                     speechRecognition = await parseWebVTT(detectedFile.file);
                     pipelinesFound.push('speech_recognition');
+                    await record('speech_recognition', detectedFile.file);
                     break;
 
                 case 'speaker_diarization':
                     speakerDiarization = await parseRTTM(detectedFile.file);
                     pipelinesFound.push('speaker_diarization');
+                    await record('speaker_diarization', detectedFile.file);
                     break;
 
                 case 'scene_detection':
                     if (sceneDetection.length === 0) { // Only if not from complete results
                         sceneDetection = await parseSceneDetection(detectedFile.file);
                         pipelinesFound.push('scene_detection');
+                        await record('scene_detection', detectedFile.file);
                     }
                     break;
 
@@ -278,6 +299,7 @@ export async function mergeAnnotationData(
                     if (vlmAnnotations.length === 0) {
                         vlmAnnotations = await parseVlmAnnotations(detectedFile.file);
                         pipelinesFound.push('vlm_annotation');
+                        await record('vlm_annotations', detectedFile.file);
                     }
                     break;
 
@@ -285,8 +307,12 @@ export async function mergeAnnotationData(
                     if (elanGroundTruth.length === 0) {
                         elanGroundTruth = await parseElanFile(detectedFile.file);
                         pipelinesFound.push('elan_ground_truth');
+                        provenance.elan_ground_truth = { kind: 'ground_truth', fileName: detectedFile.file.name };
                     }
                     break;
+
+                case 'provenance':
+                    break; // read with the output it describes
 
                 case 'unknown':
                     warnings.push(`Could not determine type of file: ${detectedFile.file.name}`);
@@ -321,6 +347,8 @@ export async function mergeAnnotationData(
             total_duration: totalDuration
         }
     };
+
+    if (Object.keys(provenance).length > 0) data.provenance = provenance;
 
     // Add pipeline data if available
     if (personTracking.length > 0) {

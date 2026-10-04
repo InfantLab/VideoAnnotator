@@ -407,11 +407,14 @@ half-built page.
       types are regenerated from the server (`scripts/gen_viewer_api_types.sh`). One was a real bug:
       the job page's `refetchInterval` read `.status` off the query, so the page never polled.
       The bundle size and overlay labels are split into the next item.
-- [ ] Viewer: the constitution's other two open Engineering Standards. A 300 KB gzipped initial
+- [x] Viewer: the constitution's other two open Engineering Standards. A 300 KB gzipped initial
       bundle (304 KB on 2026-10-02), and overlays naming the pipeline and version that drew them
       (Principle VI).
       Overlay labels: spec `specs/017-output-provenance/` (2026-10-04), which also records the
       provenance Phase 3's methods paragraph needs.
+      Done 2026-10-04 (spec 017): every output carries a provenance record, the job keeps it per
+      pipeline, and the viewer labels every overlay with its pipeline and version (details on
+      demand). Older files say "version not recorded".
       Bundle done 2026-10-04: every page but Home is lazy-loaded (`App.tsx`). The initial download
       fell from 301 KB JS + 14 KB CSS gzipped to 165 + 14 KB. Every route was checked in Chromium
       against the production build. Overlay labels are still open.

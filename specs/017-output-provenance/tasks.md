@@ -45,21 +45,21 @@ surface, and FR-006/FR-007/FR-014 are test-defined.
 **Goal**: each overlay shows "<pipeline> · VideoAnnotator <version>", details on demand.
 **Independent Test**: open the regenerated fixtures in the viewer: every overlay labelled; details show the record verbatim.
 
-- [ ] T021 [US2] Types `ProvenanceRecord`, `ProvenanceInfo` in `viewer/src/types/annotations.ts`; `StandardAnnotationData.provenance?`
-- [ ] T022 [US2] `viewer/src/lib/provenance.ts`: `fromJSON(data)` (top-level `provenance`, else COCO `info.version` → partial, else none), `fromWebVTT(text)`, `fromCompanion(text)`, `attributionLabel(info, pipeline)`
-- [ ] T023 [US2] In `viewer/src/lib/parsers/merger.ts` collect provenance per track: JSON and VTT from the file being parsed; for RTTM, a file named `<rttm name>.provenance.json` in the same set (detectFileType classifies `*.provenance.json` as `unknown` with confidence 0.9 so it's never parsed as annotations)
-- [ ] T024 [US2] Attribution line and info popover per overlay in `viewer/src/components/UnifiedControls.tsx`; ELAN shows "Ground truth · <file>"
-- [ ] T025 [P] [US2] Vitest: `viewer/src/test/lib/provenance.test.ts` (each source, partial, none, `-->` in VTT JSON)
-- [ ] T026 [P] [US2] Vitest: `viewer/src/test/components/UnifiedControls.provenance.test.tsx` (labels for recorded, partial, none; popover values verbatim)
-- [ ] T027 [US2] Regenerate `tests/fixtures/viewer_contract/` from a real job (README procedure) so fixtures carry provenance; update the README provenance note
+- [x] T021 [US2] Types `ProvenanceRecord`, `ProvenanceInfo` in `viewer/src/types/annotations.ts`; `StandardAnnotationData.provenance?`
+- [x] T022 [US2] `viewer/src/lib/provenance.ts`: `fromJSON(data)` (top-level `provenance`, else COCO `info.version` → partial, else none), `fromWebVTT(text)`, `fromCompanion(text)`, `attributionLabel(info, pipeline)`
+- [x] T023 [US2] In `viewer/src/lib/parsers/merger.ts` collect provenance per track: JSON and VTT from the file being parsed; for RTTM, a file named `<rttm name>.provenance.json` in the same set (detectFileType classifies `*.provenance.json` as `unknown` with confidence 0.9 so it's never parsed as annotations)
+- [x] T024 [US2] Attribution line and info popover per overlay in `viewer/src/components/UnifiedControls.tsx`; ELAN shows "Ground truth · <file>"
+- [x] T025 [P] [US2] Vitest: `viewer/src/test/lib/provenance.test.ts` (each source, partial, none, `-->` in VTT JSON)
+- [x] T026 [P] [US2] Vitest: `viewer/src/test/components/UnifiedControls.provenance.test.tsx` (labels for recorded, partial, none; popover values verbatim)
+- [x] T027 [US2] Regenerate `tests/fixtures/viewer_contract/` from a real job (README procedure) so fixtures carry provenance; update the README provenance note
 
 ## Phase 5: User Story 3 - Older files still open, honestly labelled (P2)
 
 **Goal**: pre-provenance files open unchanged and say "version not recorded".
 **Independent Test**: the contract test passes on both fixture sets.
 
-- [ ] T028 [US3] Extend `viewer/src/test/contract/videoannotator-outputs.test.ts` to run over `legacy/` too, asserting identical annotation parsing and `partial`/`none` provenance
-- [ ] T029 [P] [US3] Python contract test `tests/contract/test_viewer_contract.py`: legacy fixtures still pass every existing check
+- [x] T028 [US3] Extend `viewer/src/test/contract/videoannotator-outputs.test.ts` to run over `legacy/` too, asserting identical annotation parsing and `partial`/`none` provenance
+- [x] T029 [P] [US3] Python contract test `tests/contract/test_viewer_contract.py`: legacy fixtures still pass every existing check
 
 ## Phase 6: User Story 4 - The job keeps each pipeline's provenance (P2)
 
@@ -74,8 +74,8 @@ surface, and FR-006/FR-007/FR-014 are test-defined.
 
 ## Phase 7: Polish
 
-- [ ] T035 CHANGELOG `[Unreleased]` entries; roadmap tick (overlay labels) with notes
-- [ ] T036 Run quickstart.md end to end; full pytest, viewer lint/typecheck/tests, bundle rebuild; push
+- [x] T035 CHANGELOG `[Unreleased]` entries; roadmap tick (overlay labels) with notes
+- [x] T036 Run quickstart.md end to end; full pytest, viewer lint/typecheck/tests, bundle rebuild; push
 
 ## Dependencies & Execution Order
 

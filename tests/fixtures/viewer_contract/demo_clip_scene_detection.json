@@ -2,9 +2,9 @@
   "info": {
     "description": "VideoAnnotator COCO Export",
     "version": "1.5.0",
-    "year": 2025,
+    "year": 2026,
     "contributor": "VideoAnnotator",
-    "date_created": "2025-01-01T00:00:00Z"
+    "date_created": "2026-10-04T14:03:14.053080+00:00"
   },
   "licenses": [],
   "images": [
@@ -59,5 +59,52 @@
       "supercategory": "video_segment",
       "description": "Video scene segment with temporal bounds"
     }
-  ]
+  ],
+  "provenance": {
+    "schema_version": 1,
+    "pipeline": {
+      "name": "scene_detection",
+      "sub_pipeline": null
+    },
+    "videoannotator_version": "1.5.0",
+    "models": [
+      {
+        "name": "ViT-B-32 (laion2b_s34b_b79k)",
+        "source": "open_clip",
+        "revision": "ac4f8c4b88af6d963118cbf40ad93176d092abbedfcb752601ae1866352656e6",
+        "revision_kind": "sha256"
+      }
+    ],
+    "settings": {
+      "threshold": 30.0,
+      "min_scene_length": 2.0,
+      "scene_prompts": [
+        "living room",
+        "kitchen",
+        "bedroom",
+        "outdoor",
+        "clinic",
+        "nursery",
+        "office",
+        "playground"
+      ],
+      "clip_model": "ViT-B-32",
+      "use_gpu": true,
+      "keyframe_extraction": "middle"
+    },
+    "determinism": {
+      "deterministic": false,
+      "cudnn_benchmark": false,
+      "cudnn_deterministic": false,
+      "deterministic_algorithms": false,
+      "anomaly_detection": false,
+      "cublas_workspace_config": ":4096:8"
+    },
+    "created_at": "2026-10-04T14:03:12.097940+00:00",
+    "job_id": "3abaf9e3-14d4-458c-af01-734863dcb97a",
+    "input": {
+      "name": "demo_clip.mp4",
+      "sha256": "0b809c13772c8cdff2a5355f958b5b70115cf8d5d7b461199d36056d3a8295b0"
+    }
+  }
 }

@@ -359,6 +359,8 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                     annotations={annotationData.vlm_annotations}
                     currentTime={currentTime}
                     elanGroundTruth={annotationData.elan_ground_truth}
+                    provenance={annotationData.provenance?.vlm_annotations}
+                    elanProvenance={annotationData.provenance?.elan_ground_truth}
                   />
                 </div>
               )}
@@ -387,6 +389,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                   onChange={setOpenface3Settings}
                   faceData={annotationData?.openface3_faces}
                   jobPipelines={jobPipelines}
+                  provenance={annotationData?.provenance?.openface3_faces}
                 />
               </div>
             </div>

@@ -27,6 +27,17 @@ varied between runs and with pipeline order. They now reproduce exactly on the s
 scene's top score moved from 0.6340 to 0.6352; OpenFace values moved by a median of 0.001, and by
 up to 2.8 for the one face whose box shifted by a pixel. Every other file is unchanged.
 
+Re-captured 2026-10-04 again with provenance (spec 017): every file from the demo clip run now
+records what made it: a top-level `provenance` key in JSON, a `NOTE videoannotator-provenance`
+block in the `.vtt`, and `demo_clip_speaker_diarization.rttm.provenance.json` beside the `.rttm`.
+`demo_clip_face_detections.json` and `demo_clip_vlm_annotation.json` (another take, see above)
+predate it and carry only COCO's `info.version`. Person tracking's coordinates moved by about
+0.005 px from the previous capture: that one was made with OpenFace's leaked cuDNN benchmark
+mode still on when YOLO ran (within the baseline test's tolerance, so it went unnoticed).
+
+`legacy/` keeps the previous set, without provenance, so both contract tests prove that older
+outputs still open, parse the same, and are labelled "version not recorded".
+
 To regenerate after an intended output change: run the same job, take the files from the job's
 storage folder, replace these keeping the `demo_clip_` names (and the participant-code
 replacement above), then run `pytest tests/integration/test_output_baseline.py` and

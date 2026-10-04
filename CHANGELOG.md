@@ -40,6 +40,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   They were months stale, and looked up paths without the trailing slash the server uses.
 - The viewer loads faster on first visit: each page is downloaded when first opened, so the
   initial download fell from about 315 KB to 180 KB gzipped (the constitution's budget is 300 KB).
+- **Every output records what made it** (spec 017). Each file a job writes now carries a
+  provenance record: the pipeline, VideoAnnotator's version, every model with the exact weights
+  used (sha256 of the weights file, the Hugging Face commit, or the Ollama digest), the effective
+  settings (secrets redacted), the numerical settings in force (deterministic mode, cuDNN), when
+  it was made, the job, and the input video's name and sha256. For VLM output it also holds the
+  prompt's sha256 and the model's quantisation. Where it goes:
+  - JSON outputs: a top-level `provenance` key.
+  - WebVTT transcripts: a `NOTE` block that subtitle readers skip.
+  - RTTM: a companion `<file>.provenance.json`, shipped wherever the RTTM goes.
+
+  Standard readers (pycocotools, WebVTT parsers, pyannote's RTTM loader) read the files exactly
+  as before. Each pipeline's record is also on the job: in `GET /api/v1/jobs/{id}/results` and in
+  `videoannotator job results`.
+- **The viewer names the source of every overlay**: "person_tracking · VideoAnnotator 1.6.0"
+  under each annotation control, and on the OpenFace 3 and VLM panels; the info button shows the
+  full record as recorded. Older files open as before and say "version not recorded" (or only the
+  version, for COCO files that carried it). ELAN tiers are labelled as ground truth from their
+  file.
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 
@@ -213,6 +231,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   classifies every file: by extension, then by the fields in the whole JSON, then by
   VideoAnnotator's file name when the JSON is empty. JSON results are no longer subject to a
   10 MB upload cap they were never meant to have.
+- COCO outputs' `info.date_created` was always `2025-01-01T00:00:00Z`; it is now the real UTC
+  time (and `info.year` the real year).
 - **A core install (`pip install videoannotator`, the slim Docker image) failed to start** with
   `No module named 'httpx'`: the server imports the Ollama client at start, and the v1.6.0 core
   clean-up dropped `httpx` as unused (every test environment had it through the dev tools). It is

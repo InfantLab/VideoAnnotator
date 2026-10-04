@@ -12,6 +12,7 @@
  */
 
 import { isValidElanFile } from './parsers/elan';
+import { COMPANION_SUFFIX } from './provenance';
 
 export type DetectedFileType =
   | 'video'
@@ -25,6 +26,8 @@ export type DetectedFileType =
   | 'face_analysis'
   | 'openface3_faces'
   | 'complete_results'
+  /** A companion `<output>.provenance.json` (spec 017): read with its output, never drawn. */
+  | 'provenance'
   | 'unknown';
 
 export interface DetectedFile {
@@ -78,6 +81,9 @@ export async function detectFileType(file: File): Promise<DetectedFile> {
     const valid = await isValidElanFile(file);
     return { file, type: 'elan_ground_truth', pipeline: 'elan_ground_truth', confidence: valid ? 0.9 : 0.3 };
   }
+  if (name.endsWith(COMPANION_SUFFIX)) {
+    return { file, type: 'provenance', confidence: 0.95 };
+  }
   if (extension === 'json' || mimeType === 'application/json') {
     return detectJSONFile(file);
   }
@@ -86,7 +92,7 @@ export async function detectFileType(file: File): Promise<DetectedFile> {
 
 type JSONStructureType = Exclude<
   DetectedFileType,
-  'video' | 'audio' | 'unknown' | 'speech_recognition' | 'speaker_diarization' | 'elan_ground_truth'
+  'video' | 'audio' | 'unknown' | 'speech_recognition' | 'speaker_diarization' | 'elan_ground_truth' | 'provenance'
 >;
 
 const STRUCTURE_CONFIDENCE: Record<JSONStructureType, number> = {
@@ -189,6 +195,7 @@ export function describeFileType(type: DetectedFileType): string {
     case 'face_analysis': return 'Face Analysis (COCO)';
     case 'openface3_faces': return 'OpenFace3 Analysis (JSON)';
     case 'complete_results': return 'Complete Results (VideoAnnotator)';
+    case 'provenance': return 'Provenance Record';
     default: return 'Unknown File Type';
   }
 }

@@ -29,5 +29,78 @@
       "unique_persons": 2,
       "labeled_persons": 2
     }
+  },
+  "provenance": {
+    "schema_version": 1,
+    "pipeline": {
+      "name": "person_tracking",
+      "sub_pipeline": null
+    },
+    "videoannotator_version": "1.5.0",
+    "models": [
+      {
+        "name": "models/yolo/yolo11n-pose.pt",
+        "source": "ultralytics",
+        "revision": "869e83fcdffdc7371fa4e34cd8e51c838cc729571d1635e5141e3075e9319dc0",
+        "revision_kind": "sha256"
+      }
+    ],
+    "settings": {
+      "model": "models/yolo/yolo11n-pose.pt",
+      "conf_threshold": 0.4,
+      "iou_threshold": 0.7,
+      "track_mode": true,
+      "tracker": "bytetrack",
+      "pose_format": "coco_17",
+      "min_keypoint_confidence": 0.3,
+      "size_analysis": {
+        "enabled": true,
+        "height_threshold": 0.4,
+        "confidence": 0.7,
+        "adult_label": "parent",
+        "child_label": "infant"
+      },
+      "person_identity": {
+        "enabled": true,
+        "id_format": "semantic",
+        "automatic_labeling": {
+          "enabled": true,
+          "confidence_threshold": 0.7,
+          "size_based": {
+            "enabled": true,
+            "height_threshold": 0.4,
+            "confidence": 0.7,
+            "adult_label": "parent",
+            "child_label": "infant"
+          },
+          "position_based": {
+            "enabled": true,
+            "center_bias_threshold": 0.7,
+            "confidence": 0.6,
+            "primary_label": "infant",
+            "secondary_label": "parent"
+          },
+          "temporal_consistency": {
+            "enabled": true,
+            "min_detections": 3,
+            "consistency_threshold": 0.6
+          }
+        }
+      }
+    },
+    "determinism": {
+      "deterministic": false,
+      "cudnn_benchmark": false,
+      "cudnn_deterministic": false,
+      "deterministic_algorithms": false,
+      "anomaly_detection": false,
+      "cublas_workspace_config": ":4096:8"
+    },
+    "created_at": "2026-10-04T14:03:10.879146+00:00",
+    "job_id": "3abaf9e3-14d4-458c-af01-734863dcb97a",
+    "input": {
+      "name": "demo_clip.mp4",
+      "sha256": "0b809c13772c8cdff2a5355f958b5b70115cf8d5d7b461199d36056d3a8295b0"
+    }
   }
 }

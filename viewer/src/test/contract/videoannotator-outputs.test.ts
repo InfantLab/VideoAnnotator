@@ -12,14 +12,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { detectFileType, mergeAnnotationData } from '@/lib/parsers/merger';
 
-const FIXTURES = path.resolve(__dirname, '../../../../tests/fixtures/viewer_contract');
+const CURRENT = path.resolve(__dirname, '../../../../tests/fixtures/viewer_contract');
+// The same outputs as made before spec 017 added provenance records.
+const LEGACY = path.join(CURRENT, 'legacy');
 
 // jsdom's File drops Node Buffers (size 0), so read fixtures as strings.
-function fixture(name: string): File {
-  return new File([readFileSync(path.join(FIXTURES, name), 'utf8')], name);
+function fixtureIn(dir: string, name: string): File {
+  return new File([readFileSync(path.join(dir, name), 'utf8')], name);
 }
 
-const OUTPUTS = readdirSync(FIXTURES).filter((name) => name.startsWith('demo_clip_')).sort();
+const outputsIn = (dir: string) =>
+  readdirSync(dir).filter((name) => name.startsWith('demo_clip_')).sort();
 
 const EXPECTED_TYPE: Record<string, string> = {
   'demo_clip_face_detections.json': 'face_analysis',
@@ -33,19 +36,37 @@ const EXPECTED_TYPE: Record<string, string> = {
   'demo_clip_vlm_annotation.json': 'vlm_annotation',
 };
 
+// Re-captured with provenance (2026-10-04); the face-detection and VLM fixtures
+// come from another take and predate it (README).
+const RECORDED_TRACKS = [
+  'person_tracking',
+  'openface3_faces',
+  'scene_detection',
+  'speech_recognition',
+  'speaker_diarization',
+] as const;
+
 // As useZipDownloader does: detect each file in archive order, drop unknowns,
 // merge. No sorting, so the first file detected as a type is the one shown.
-async function loadLikeArtifactsZip() {
+async function loadLikeArtifactsZipFrom(dir: string) {
   const detected = [];
-  for (const name of OUTPUTS) {
-    const result = await detectFileType(fixture(name));
+  for (const name of outputsIn(dir)) {
+    const result = await detectFileType(fixtureIn(dir, name));
     if (result.type !== 'unknown') detected.push(result);
   }
   detected.push({ file: new File(['video'], 'demo_clip.mp4', { type: 'video/mp4' }), type: 'video' as const, confidence: 1 });
   return mergeAnnotationData(detected);
 }
 
-describe('VideoAnnotator outputs → viewer', () => {
+describe.each([
+  ['current', CURRENT],
+  ['legacy (no provenance)', LEGACY],
+])('VideoAnnotator outputs → viewer: %s', (setName, FIXTURES) => {
+  const OUTPUTS = outputsIn(FIXTURES);
+  const fixture = (name: string) => fixtureIn(FIXTURES, name);
+  const loadLikeArtifactsZip = () => loadLikeArtifactsZipFrom(FIXTURES);
+  const isLegacy = FIXTURES === LEGACY;
+
   beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
     // jsdom can't decode video; report metadata as soon as a source is set.
@@ -111,5 +132,42 @@ describe('VideoAnnotator outputs → viewer', () => {
     expect(cue.endTime).toBeGreaterThan(cue.startTime);
     const turn = data.speaker_diarization![0];
     expect(turn.end_time).toBeGreaterThan(turn.start_time);
+  });
+
+  it('labels every track with what made it, and never invents it', async () => {
+    const { data } = await loadLikeArtifactsZip();
+    for (const track of RECORDED_TRACKS) {
+      const info = data.provenance?.[track];
+      if (isLegacy) {
+        expect(info?.kind, track).not.toBe('recorded');
+      } else {
+        expect(info?.kind, track).toBe('recorded');
+        if (info?.kind === 'recorded') {
+          expect(info.record.videoannotator_version).toBeTruthy();
+          expect(info.record.models?.length, track).toBeGreaterThan(0);
+        }
+      }
+    }
+    // Older COCO files carry only VideoAnnotator's version.
+    expect(data.provenance?.face_analysis).toEqual({ kind: 'partial', videoannotatorVersion: '1.5.0' });
+    expect(data.provenance?.vlm_annotations?.kind).toBe('partial');
+  });
+
+  it.runIf(!isLegacy)('parses to the same annotations as the legacy fixtures', async () => {
+    const strip = (d: Awaited<ReturnType<typeof loadLikeArtifactsZipFrom>>['data']) => {
+      const { provenance: _p, metadata: _m, ...rest } = d;
+      return rest;
+    };
+    const { data: current } = await loadLikeArtifactsZipFrom(CURRENT);
+    const { data: legacy } = await loadLikeArtifactsZipFrom(LEGACY);
+    // Exact where the outputs are; GPU-sampled tracks moved slightly with the
+    // 2026-10-04 torch-settings fix (README), so for those compare their shape.
+    for (const track of ['speech_recognition', 'speaker_diarization', 'face_analysis', 'vlm_annotations'] as const) {
+      expect(current[track], track).toEqual(legacy[track]);
+    }
+    for (const track of ['person_tracking', 'openface3_faces', 'scene_detection'] as const) {
+      expect(current[track]?.length, track).toBe(legacy[track]?.length);
+    }
+    expect(Object.keys(strip(current)).sort()).toEqual(Object.keys(strip(legacy)).sort());
   });
 });

@@ -47,6 +47,7 @@ def test_secrets_are_redacted_at_any_depth():
         "nested": {"api_key": "k", "auth": "a", "author": "Ada"},
         "list": [{"password": "p"}],
         "empty_token": "",
+        "use_auth_token": True,
         "threshold": 0.5,
     }
     assert redact(settings) == {
@@ -54,6 +55,7 @@ def test_secrets_are_redacted_at_any_depth():
         "nested": {"api_key": "<redacted>", "auth": "<redacted>", "author": "Ada"},
         "list": [{"password": "<redacted>"}],
         "empty_token": "",
+        "use_auth_token": True,
         "threshold": 0.5,
     }
 

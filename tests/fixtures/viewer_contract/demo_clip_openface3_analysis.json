@@ -2,9 +2,9 @@
   "info": {
     "description": "VideoAnnotator COCO Export",
     "version": "1.5.0",
-    "year": 2025,
+    "year": 2026,
     "contributor": "VideoAnnotator",
-    "date_created": "2025-01-01T00:00:00Z"
+    "date_created": "2026-10-04T14:03:10.803523+00:00"
   },
   "licenses": [],
   "images": [
@@ -13857,5 +13857,67 @@
       ],
       "skeleton": []
     }
-  ]
+  ],
+  "provenance": {
+    "schema_version": 1,
+    "pipeline": {
+      "name": "face_openface3_embedding",
+      "sub_pipeline": null
+    },
+    "videoannotator_version": "1.5.0",
+    "models": [
+      {
+        "name": "RetinaFace",
+        "source": "openface",
+        "revision": "2979b33ffafda5d74b6948cd7a5b9a7a62f62b949cef24e95fd15d2883a65220",
+        "revision_kind": "sha256"
+      },
+      {
+        "name": "STAR 98_point",
+        "source": "openface",
+        "revision": "b49eb62de453fbc3ef278c52b8f85630b536d0a43b82a92d6ff7a11485f12c2a",
+        "revision_kind": "sha256"
+      },
+      {
+        "name": "MTL backbone",
+        "source": "openface",
+        "revision": "72f45843c7a3ed9500835c507467f32e864a23971160f733aeb23797a05a5bcd",
+        "revision_kind": "sha256"
+      }
+    ],
+    "settings": {
+      "detection_confidence": 0.7,
+      "landmark_model": "98_point",
+      "enable_3d_landmarks": true,
+      "enable_action_units": true,
+      "enable_head_pose": true,
+      "enable_gaze": true,
+      "enable_emotions": false,
+      "batch_size": 1,
+      "device": "auto",
+      "model_path": null,
+      "max_faces": 5,
+      "track_faces": true,
+      "person_identity": {
+        "enabled": true,
+        "link_to_persons": true,
+        "iou_threshold": 0.5,
+        "require_person_id": false
+      }
+    },
+    "determinism": {
+      "deterministic": false,
+      "cudnn_benchmark": false,
+      "cudnn_deterministic": false,
+      "deterministic_algorithms": false,
+      "anomaly_detection": false,
+      "cublas_workspace_config": null
+    },
+    "created_at": "2026-10-04T14:03:08.644441+00:00",
+    "job_id": "3abaf9e3-14d4-458c-af01-734863dcb97a",
+    "input": {
+      "name": "demo_clip.mp4",
+      "sha256": "0b809c13772c8cdff2a5355f958b5b70115cf8d5d7b461199d36056d3a8295b0"
+    }
+  }
 }

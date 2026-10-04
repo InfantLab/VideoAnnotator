@@ -94,8 +94,9 @@ def redact(value: Any) -> Any:
     """`value` with every secret-looking key's value replaced, at any depth."""
     if isinstance(value, dict):
         return {
+            # Strings only: a flag like use_auth_token=True is a setting, not a secret.
             k: REDACTED
-            if isinstance(k, str) and _SECRET_KEY.search(k) and v not in (None, "")
+            if isinstance(k, str) and _SECRET_KEY.search(k) and isinstance(v, str) and v
             else redact(v)
             for k, v in value.items()
         }
