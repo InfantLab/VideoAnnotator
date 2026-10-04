@@ -1,5 +1,6 @@
 """`videoannotator prompts ...` and `vlm preview` (spec 020)."""
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
@@ -62,6 +63,5 @@ def test_vlm_preview_sends_the_absolute_path_and_prompt(tmp_path):
     assert "Label: TOUCH" in result.output
     data = req.call_args.kwargs["data"]
     assert data["prompt"] == "Touch?" and data["sampling_mode"] == "frame_burst"
-    assert data["video_path"].endswith("clip.mp4") and data["video_path"].startswith(
-        "/"
-    )
+    assert Path(data["video_path"]).is_absolute()
+    assert Path(data["video_path"]).name == "clip.mp4"
