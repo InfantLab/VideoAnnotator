@@ -1,4 +1,4 @@
-import type { paths } from './schema';
+import type { components, paths } from './schema';
 import type {
   PipelineCatalog,
   PipelineCatalogCacheEntry,
@@ -121,10 +121,11 @@ const isValidToken = (token: string): boolean => {
 };
 
 // Type definitions from OpenAPI schema
-export type JobResponse = paths['/api/v1/jobs']['get']['responses']['200']['content']['application/json']['jobs'][0];
-export type JobListResponse = paths['/api/v1/jobs']['get']['responses']['200']['content']['application/json'];
-export type PipelineResponse = paths['/api/v1/pipelines']['get']['responses']['200']['content']['application/json'][0];
-export type SubmitJobRequest = paths['/api/v1/jobs']['post']['requestBody']['content']['multipart/form-data'];
+// Regenerate with scripts/gen_viewer_api_types.sh after changing the server's API.
+export type JobResponse = components['schemas']['JobResponse'];
+export type JobListResponse = components['schemas']['JobListResponse'];
+export type PipelineResponse = components['schemas']['PipelineInfo'];
+export type SubmitJobRequest = NonNullable<paths['/api/v1/jobs/']['post']['requestBody']>['content']['multipart/form-data'];
 
 // HTTP client with authentication and error handling
 class APIClient {

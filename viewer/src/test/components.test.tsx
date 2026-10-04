@@ -97,11 +97,20 @@ describe('Components', () => {
       scene_detection: [
         {
           id: 1,
+          image_id: 'demo_frame_000075',
+          category_id: 1,
+          bbox: [0, 0, 640, 480],
+          area: 640 * 480,
+          iscrowd: 0,
           start_time: 0.0,
           end_time: 5.0,
           duration: 5.0,
+          timestamp: 2.5,
+          frame_start: 0,
+          frame_end: 150,
           scene_type: 'indoor',
           score: 1,
+          all_scores: { indoor: 1 },
           video_id: 'demo'
         }
       ],

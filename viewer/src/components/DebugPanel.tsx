@@ -140,21 +140,25 @@ export const DebugPanel = ({ isOpen, onClose }: DebugPanelProps) => {
     
     try {
       // Access the function from the global window object
-      const debugUtils = (window as unknown as { debugUtils?: unknown }).debugUtils;
-      if (!debugUtils || !debugUtils.checkDataIntegrity) {
+      const debugUtils = (
+        window as unknown as {
+          debugUtils?: {
+            checkDataIntegrity?: (key: string) => Promise<{ valid: boolean; issues: string[] }>;
+          };
+        }
+      ).debugUtils;
+      if (!debugUtils?.checkDataIntegrity) {
         addLog('❌ debugUtils.checkDataIntegrity not available');
         addLog('Make sure debug utilities are loaded');
         setIsRunning(false);
         return;
       }
 
-      const debugUtilsWithIntegrity = debugUtils as {
-        checkDataIntegrity: (key: string) => Promise<{ valid: boolean; issues: string[] }>;
-      };
-      
+      const { checkDataIntegrity } = debugUtils;
+
       for (const [key, _] of Object.entries(DEMO_DATA_SETS)) {
         addLog(`Checking ${key}...`);
-        const result = await debugUtilsWithIntegrity.checkDataIntegrity(key);
+        const result = await checkDataIntegrity(key);
         addLog(`${key}: ${result.valid ? '✅ Valid' : '❌ Issues found'}`);
         if (!result.valid) {
           result.issues.forEach(issue => addLog(`  - ${issue}`));

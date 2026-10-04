@@ -115,6 +115,10 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      # Plain `tsc --noEmit` compiles nothing here (tsconfig.json only references).
+      - name: Typecheck
+        run: bun run typecheck
+
       - name: Unit tests
         run: bun run test:run
 

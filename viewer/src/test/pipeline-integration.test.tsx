@@ -74,6 +74,7 @@ describe('Pipeline Data Hooks', () => {
                     }
                 ]
             },
+            restartRequired: false,
             server: {
                 version: '1.2.1',
                 features: {
@@ -110,6 +111,7 @@ describe('Pipeline Data Hooks', () => {
                     }
                 ]
             },
+            restartRequired: false,
             server: {
                 version: '1.2.1',
                 features: {

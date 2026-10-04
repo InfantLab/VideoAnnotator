@@ -390,7 +390,8 @@ changelog (the root `CHANGELOG.md`; `viewer/CHANGELOG.md` is frozen history). St
 ```bash
 bash scripts/dev.sh                      # API server + Vite dev server (port 19011, proxies to 18011)
 cd viewer && bun run lint && bun run test:run
-cd viewer && bunx tsc --noEmit -p tsconfig.app.json   # 24 known errors (roadmap); add none
+cd viewer && bun run typecheck           # zero errors, checked in CI (plain `tsc` checks nothing)
+bash scripts/gen_viewer_api_types.sh    # after an API change: regenerate src/api/schema.d.ts
 cd viewer && bun run e2e                 # Playwright smoke (bun run e2e:install first)
 bash scripts/build_viewer.sh             # rebuild into src/videoannotator/viewer_static/
 ```

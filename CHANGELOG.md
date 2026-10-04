@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   It is recorded with the job's config and in the job log. On the demo clip, normal mode also
   reproduces exactly now (see Fixed), so this is for runs that must match on other GPUs and
   drivers too.
+- The viewer type-checks cleanly (`bun run typecheck`, 24 errors before), and CI now runs it. Its
+  API types are generated from the server's OpenAPI schema by `scripts/gen_viewer_api_types.sh`.
+  They were months stale, and looked up paths without the trailing slash the server uses.
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 
@@ -196,6 +199,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   runs and any pipeline order give identical files. **OpenFace 3 and scene detection results
   shift slightly once** (OpenFace values by a median of 0.001; scene scores in the third
   decimal); the output baseline was re-captured.
+- **The viewer's job page updates by itself again** while a job runs. Its polling read the job's
+  status from the wrong argument (React Query 5 passes the query, not its data), so it never
+  polled and a running job's page looked frozen until reloaded. Found by turning on type checking.
 - **A core install (`pip install videoannotator`, the slim Docker image) failed to start** with
   `No module named 'httpx'`: the server imports the Ollama client at start, and the v1.6.0 core
   clean-up dropped `httpx` as unused (every test environment had it through the dev tools). It is

@@ -379,7 +379,7 @@ export interface StandardAnnotationData {
     created: string;
     version: string;
     pipelines: string[];
-    source: 'videoannotator' | 'custom';
+    source: 'videoannotator' | 'custom' | 'demo';
     // NEW: Processing information from VideoAnnotator
     processing_config?: VideoAnnotatorCompleteResults['config'];
     processing_time?: number;

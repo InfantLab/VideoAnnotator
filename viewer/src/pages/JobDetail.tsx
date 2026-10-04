@@ -34,9 +34,10 @@ const CreateJobDetail = () => {
       return apiClient.getJob(jobId);
     },
     enabled: !!jobId,
-    refetchInterval: (data) => {
-      if (!data) return false;
-      const status = data.status;
+    // React Query 5 passes the query, not its data: reading `.status` off the
+    // argument meant this page never polled, so a running job looked frozen.
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
       // Poll while job is active or cancelling
       return status === "running" || status === "pending" || status === "cancelling" ? 2000 : false;
     },

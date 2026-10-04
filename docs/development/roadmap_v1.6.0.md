@@ -390,13 +390,20 @@ half-built page.
       spec 007's backend shipped in v1.5.0: wire it up or hide it.
       (Preset load/save in the job wizard landed in v1.5.0; the Datasets page, saved datasets and
       import/export from spec 007's viewer handoff are what's left.)
-- [ ] Viewer: zero `tsc --noEmit` errors (24 on 2026-09-26), with typechecking in CI.
+- [x] Viewer: zero `tsc --noEmit` errors (24 on 2026-09-26), with typechecking in CI.
       Constitution 1.1.0 makes this an Engineering Standard, as are a 300 KB gzipped initial bundle
       (304 KB on 2026-10-02) and overlays naming the pipeline and version that drew them
       (Principle VI; not shown yet). All three are open follow-ups in its Sync Impact Report.
       Note (2026-10-01): plain `bunx tsc --noEmit`, the documented check, compiles nothing (the root
       `tsconfig.json` has `"files": []` and only references); run `-p tsconfig.app.json`. Still 24
       errors in 13 files, e.g. the OpenAPI `paths` type in `src/api/client.ts` lacks `/api/v1/jobs`.
+      Done 2026-10-04: zero errors (`bun run typecheck`, app and node configs) and a CI step. The
+      types are regenerated from the server (`scripts/gen_viewer_api_types.sh`). One was a real bug:
+      the job page's `refetchInterval` read `.status` off the query, so the page never polled.
+      The bundle size and overlay labels are split into the next item.
+- [ ] Viewer: the constitution's other two open Engineering Standards. A 300 KB gzipped initial
+      bundle (304 KB on 2026-10-02), and overlays naming the pipeline and version that drew them
+      (Principle VI).
 - [ ] Viewer: one function decides which pipeline produced a file. Today there are four
       (`merger.ts`, `fileUtils.ts`, and two arrays in `FileUploader.tsx`) and they disagree.
       Start from `merger.ts`'s `detectJSONStructure` (2026-10-01), which classifies a parsed file by
@@ -442,6 +449,10 @@ half-built page.
       usual. Jobs run in an executor thread (`background_tasks.py`), so the likely cause is CPU or
       GIL starvation. Reproduce on an idle machine, and make the status route stay responsive. It
       is what the viewer polls.
+      2026-10-04: not reproduced. The same test passed through the server in 32 s with the host
+      still holding 5.3 GB of the GPU. STAR's anomaly detection, which the job used to inherit,
+      was measured and doesn't slow inference. Keep this open until the Playwright run (E) has
+      polled during a long job.
 - [x] **`GET /api/v1/jobs/{id}/results/files/{pipeline}` returns `OUTPUT_FILE_MISSING`** for
       every result stored in the database (`output_file: database:/annotations/...`), which is
       what each job's results list advertises as its `download_url`. Same in v1.5.0 (found

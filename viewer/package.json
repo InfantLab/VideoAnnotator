@@ -16,6 +16,7 @@
     "build:embedded": "vite build --base=/viewer/ --mode embedded",
     "lint": "eslint .",
     "lint:strict": "eslint . --max-warnings 0",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
