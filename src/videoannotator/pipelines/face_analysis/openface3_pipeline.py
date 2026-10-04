@@ -26,6 +26,7 @@ from videoannotator.exporters.native_formats import (
 )
 from videoannotator.pipelines.base_pipeline import BasePipeline, FrameFailures
 from videoannotator.utils.person_identity import PersonIdentityManager
+from videoannotator.utils.torch_settings import restored_torch_settings
 from videoannotator.version import __version__
 
 logger = logging.getLogger(__name__)
@@ -140,6 +141,11 @@ def _skip_retinaface_backbone_pretrain() -> None:
 def _without_star_training_setup() -> Iterator[None]:
     """Build a LandmarkDetector without STAR's training-time setup.
 
+    STAR's `set_environment()` also changes process-wide torch settings:
+    `cudnn.benchmark` on (convolution algorithms chosen by timing, so results
+    vary between runs and leak into every later pipeline), denormals flushed
+    to zero, and autograd anomaly detection on. They are put back.
+
     Every LandmarkDetector calls `Base.init_instance()`, which adds a console
     and a log.txt handler to the *root* logger and sets it to NOTSET (so each
     OpenFace job made every server log line, DEBUG included, print once
@@ -156,7 +162,8 @@ def _without_star_training_setup() -> Iterator[None]:
     init_instance = Base.init_instance
     Base.init_instance = lambda self: None
     try:
-        yield
+        with restored_torch_settings():
+            yield
     finally:
         Base.init_instance = init_instance
         for handler in root.handlers[:]:

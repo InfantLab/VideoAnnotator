@@ -20,6 +20,13 @@ detection, person tracks, `.rttm` and `.vtt`; within GPU noise for person-tracki
 OpenFace 3). Rechecked 2026-10-02 against a fresh run on Python 3.13 / torch 2.11 and against
 v1.5.0: unchanged up to that noise.
 
+Re-baselined 2026-10-04: `scene_detection.json` and both OpenFace 3 files, after each pipeline
+started running with the same torch settings (`utils/torch_settings.py`). OpenFace 3 used to turn
+on `cudnn.benchmark` for the rest of the process, so its results, and scene detection's after it,
+varied between runs and with pipeline order. They now reproduce exactly on the same machine:
+scene's top score moved from 0.6340 to 0.6352; OpenFace values moved by a median of 0.001, and by
+up to 2.8 for the one face whose box shifted by a pixel. Every other file is unchanged.
+
 To regenerate after an intended output change: run the same job, take the files from the job's
 storage folder, replace these keeping the `demo_clip_` names (and the participant-code
 replacement above), then run `pytest tests/integration/test_output_baseline.py` and

@@ -404,7 +404,7 @@ half-built page.
 - [ ] A structural pass along the one path users take: install → add videos → run → review →
       export. Anything off that path moves or goes. A Playwright "first-time user" run on a clean
       machine files each point of friction as an issue.
-- [ ] **OpenFace 3 results are sensitive to GPU nondeterminism** (found 2026-10-01, spec 013): a
+- [x] **OpenFace 3 results are sensitive to GPU nondeterminism** (found 2026-10-01, spec 013): a
       1-pixel difference in RetinaFace's box between two runs of the same video changes that
       face's gaze and action-unit intensities by up to ~2.4. Offer a deterministic mode
       (`torch.use_deterministic_algorithms`, cuDNN deterministic) and record it in provenance, and
@@ -414,6 +414,15 @@ half-built page.
       `person_tracking` in the same job, but differ in the third decimal (0.6352 vs 0.6340) when
       it runs alone. Something an earlier pipeline loads changes global torch/cuDNN state. A
       deterministic mode should pin those settings at the start of each pipeline.
+      Done 2026-10-04. The cause of both was OpenFace's STAR `set_environment()`, which turned on
+      `cudnn.benchmark` (also anomaly detection and denormal flushing) for the whole process.
+      `utils/torch_settings.py`: every pipeline starts from the same settings, re-applied after
+      its `initialize()`, and restored afterwards. `"deterministic": true` in the job config adds
+      cuDNN deterministic and `use_deterministic_algorithms(warn_only=True)`. It is recorded in the
+      job config and logged per pipeline. Not yet in the output files: that comes with Phase 3's
+      provenance. Measured on the demo clip: two normal runs, two deterministic runs, and
+      single-pipeline vs five-pipeline jobs all give identical files. Scene and OpenFace fixtures
+      re-baselined (README). Still to do: spread across GPUs and drivers, in the Phase 5 benchmark.
 - [x] **A pipeline that fails must say so.** `speech_recognition` catches errors in transcription,
       logs them only to the pipeline log, and returns no annotations, so the job reports the
       pipeline as completed with an empty transcript (found 2026-10-01 through a Triton cache

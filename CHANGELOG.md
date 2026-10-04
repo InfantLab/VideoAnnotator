@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "3rd in queue") under its status in the job and batch lists and on its page, so a queued job no
   longer looks the same as a stuck one. The server already reported `queue_position`; the viewer
   didn't show it.
+- **Deterministic mode**: `"deterministic": true` in a job's config (or in a `--config` file for
+  `videoannotator process`) asks cuDNN and torch for deterministic algorithms in every pipeline.
+  It is recorded with the job's config and in the job log. On the demo clip, normal mode also
+  reproduces exactly now (see Fixed), so this is for runs that must match on other GPUs and
+  drivers too.
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 
@@ -182,6 +187,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   each downloadable with `?name=`. A URL is listed only when its file exists, and a missing file
   is a 404 pointing at the job's ZIP (`/artifacts`). The file names come from a new optional
   `file` on each pipeline's registry `outputs` entry.
+- **Results no longer depend on run or pipeline order.** OpenFace 3's landmark code turned on
+  cuDNN's benchmark mode, which picks convolution algorithms by timing them, for the rest of the
+  process. OpenFace's own results varied between runs (one face's action-unit intensities by up
+  to 2.4), and scene detection's scores differed depending on whether OpenFace ran first in the
+  job. It also turned on autograd anomaly detection and denormal flushing. Each pipeline now
+  starts from the same torch settings and can't leave its own behind; on the demo clip, repeated
+  runs and any pipeline order give identical files. **OpenFace 3 and scene detection results
+  shift slightly once** (OpenFace values by a median of 0.001; scene scores in the third
+  decimal); the output baseline was re-captured.
 - **A core install (`pip install videoannotator`, the slim Docker image) failed to start** with
   `No module named 'httpx'`: the server imports the Ollama client at start, and the v1.6.0 core
   clean-up dropped `httpx` as unused (every test environment had it through the dev tools). It is

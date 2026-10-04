@@ -29,6 +29,7 @@ from ..registry.pipeline_loader import (
 )
 from ..registry.pipeline_registry import get_registry
 from ..storage.base import StorageBackend
+from ..utils.torch_settings import apply_torch_settings, restored_torch_settings
 from .types import BatchJob, JobStatus, PipelineResult
 
 logger = logging.getLogger(__name__)
@@ -195,15 +196,25 @@ def _run_one_pipeline(
     pipeline_class = pipeline_classes[pipeline_name]
     pipeline = pipeline_class(pipeline_config)
 
+    deterministic = (
+        bool(job.config.get("deterministic", False)) if job.config else False
+    )
+
     try:
-        pipeline.initialize()
-        try:
-            annotations = _process(pipeline, pipeline_name, pipeline_class, job)
-        finally:
+        with restored_torch_settings():
+            apply_torch_settings(deterministic)
+            pipeline.initialize()
+            # Again: a library's setup can change them (OpenFace 3 did).
+            settings = apply_torch_settings(deterministic)
+            if settings:
+                logger.info(f"{pipeline_name} runs with torch settings {settings}")
             try:
-                pipeline.cleanup()
-            except Exception as cleanup_error:
-                logger.warning(f"Pipeline cleanup error: {cleanup_error}")
+                annotations = _process(pipeline, pipeline_name, pipeline_class, job)
+            finally:
+                try:
+                    pipeline.cleanup()
+                except Exception as cleanup_error:
+                    logger.warning(f"Pipeline cleanup error: {cleanup_error}")
 
         end_time = datetime.now()
         processing_time = (end_time - start_time).total_seconds()
