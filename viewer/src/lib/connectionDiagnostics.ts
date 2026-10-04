@@ -20,7 +20,7 @@ export interface DiagnosticReport {
 
 // Helper for timeout signal (safe for older browsers)
 function timeoutSignal(ms: number): AbortSignal {
-    // Use AbortController explicitly to match test_strict_connection.html behavior
+    // AbortController explicitly: AbortSignal.timeout is missing in older browsers.
     const controller = new AbortController();
     setTimeout(() => controller.abort(), ms);
     return controller.signal;
