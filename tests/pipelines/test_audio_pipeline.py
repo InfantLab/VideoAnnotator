@@ -200,14 +200,29 @@ class TestAudioPipeline:
             pytest.fail(f"Process method signature issue: {e}")
 
     def test_error_handling_robustness(self):
-        """Test error handling for various failure scenarios."""
+        """Each sub-pipeline's failure is collected and raised, so the job
+        reports the pipeline as failed rather than completed and empty."""
         pipeline = AudioPipeline()
+        # No models: CI has no Hugging Face token for pyannote's gated model.
+        for sub in pipeline.audio_pipelines.values():
+            sub.initialize = Mock()
         pipeline.initialize()
 
-        # Each sub-pipeline's failure is collected and raised, so the job
-        # reports the pipeline as failed rather than completed and empty.
         with pytest.raises(RuntimeError, match="speech_recognition"):
             pipeline.process("non_existent_file.mp4")
+
+    def test_sub_pipeline_that_cannot_load_fails_the_pipeline(self):
+        """It used to be dropped silently, leaving the other one's output."""
+        pipeline = AudioPipeline()
+        for name, sub in pipeline.audio_pipelines.items():
+            sub.initialize = Mock(
+                side_effect=RuntimeError("401 gated repo")
+                if name == "speaker_diarization"
+                else None
+            )
+
+        with pytest.raises(RuntimeError, match="initialize speaker_diarization"):
+            pipeline.initialize()
 
     def test_modular_output_format_consistency(self):
         """Test that modular outputs follow consistent format."""
