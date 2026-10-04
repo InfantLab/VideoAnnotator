@@ -395,6 +395,7 @@ half-built page.
 - [ ] **Saved datasets in the viewer** (spec 007's viewer handoff): list, create, rename and delete
       the server's saved datasets (`/api/v1/datasets`, shipped in v1.5.0), start a job from one,
       and import/export them. Write a spec first. Decide with Caspar whether it's before rc1.
+      Spec: `specs/018-saved-datasets-viewer/` (2026-10-04). Caspar: before rc1.
 - [x] Viewer: zero `tsc --noEmit` errors (24 on 2026-09-26), with typechecking in CI.
       Constitution 1.1.0 makes this an Engineering Standard, as are a 300 KB gzipped initial bundle
       (304 KB on 2026-10-02) and overlays naming the pipeline and version that drew them
@@ -409,6 +410,8 @@ half-built page.
 - [ ] Viewer: the constitution's other two open Engineering Standards. A 300 KB gzipped initial
       bundle (304 KB on 2026-10-02), and overlays naming the pipeline and version that drew them
       (Principle VI).
+      Overlay labels: spec `specs/017-output-provenance/` (2026-10-04), which also records the
+      provenance Phase 3's methods paragraph needs.
       Bundle done 2026-10-04: every page but Home is lazy-loaded (`App.tsx`). The initial download
       fell from 301 KB JS + 14 KB CSS gzipped to 165 + 14 KB. Every route was checked in Chromium
       against the production build. Overlay labels are still open.
@@ -492,6 +495,7 @@ job in the wizard from memory, although every job already stores its `selected_p
 `config`.
 - [ ] **Rerun a job**: same videos, same settings, one click, as a new job that links back to the
       original (`rerun_of`). "Edit and rerun" opens the wizard prefilled.
+      Spec (with the next two items): `specs/019-run-it-again/`.
 - [ ] **Reuse settings on new videos**: "Use these settings" on a job or batch opens the wizard at
       "Choose videos" with pipelines and config filled in; "Save as preset" writes the existing
       `saved_pipeline_presets` table.
@@ -504,6 +508,7 @@ job in the wizard from memory, although every job already stores its `selected_p
       (deduplicated by SHA-256, the same hash as the methods paragraph's provenance) with its
       model, first/last used and the jobs that used it. A browser to search, view, diff, name,
       star and reuse them; reusing one fills the prompt field.
+      Spec (with the workbench): `specs/020-prompt-library-workbench/`.
 - [ ] **Prompt workbench**: the "test prompt" panel from inside the VLM pipeline config as a
       standalone page, since prompt design is iterative and deserves more room than a wizard step.
       Pick a video and frame (or burst), a model and a prompt; run; compare responses side by side
@@ -514,6 +519,7 @@ job in the wizard from memory, although every job already stores its `selected_p
       where they disagree listed, and ELAN ground truth as a third row when there is one. The
       workbench compares prompts on single frames; this compares whole runs. Asked for in spec
       009's viewer handoff; comparing across a whole dataset stays in Phase 6.
+      Spec: `specs/021-compare-vlm-jobs/`.
 
 **Not in this phase**: a visual redesign. Decide on one after the pilot, from what outside users
 say.
