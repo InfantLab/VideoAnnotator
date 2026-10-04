@@ -56,6 +56,7 @@ class Job(Base):
     batch_id = Column(String, index=True)
     batch_name = Column(String)
     dataset_id = Column(String)
+    rerun_of = Column(String, index=True)  # 019: the job this one runs again
 
     # Timestamps
     created_at = Column(DateTime, nullable=False, default=_utcnow_naive)

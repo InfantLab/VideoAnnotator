@@ -8,11 +8,12 @@ reuses spec 006's single-job retry semantics per job.
 """
 
 import logging
+import uuid
 from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Path, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from ...batch.batch_summary import compute_batch_summary
 from ...storage.base import StorageBackend
@@ -24,7 +25,14 @@ from .exceptions import (
     JobNotFoundException,
     JobNotRetryableException,
 )
-from .jobs import cancel_job_by_id, retry_job
+from .jobs import (
+    RerunNotPossibleException,
+    RerunRequest,
+    cancel_job_by_id,
+    create_rerun,
+    retry_job,
+    validate_pipeline_selection,
+)
 
 logger = logging.getLogger("videoannotator.api")
 
@@ -289,3 +297,63 @@ async def retry_batch(
             message=f"Failed to retry batch: {e!s}",
             hint="Check server logs for details",
         ) from e
+
+
+class BatchRerunResponse(BaseModel):
+    batch_id: str = Field(description="The new batch")
+    rerun_of_batch: str
+    created: list[str]
+    skipped: list[BatchJobSkipped]
+
+
+@router.post(
+    "/{batch_id}/rerun",
+    response_model=BatchRerunResponse,
+    status_code=201,
+    summary="Run a batch again",
+    description="""
+Runs every finished job of a batch again (spec 019) as a new batch named
+"<name> (rerun)", each job linked to its original by `rerun_of`. The original
+batch is not changed. Optional `selected_pipelines` / `config` replace every
+job's ("Edit and run again"); they are checked before any job is created. Jobs
+still running, or whose video is gone, are reported in `skipped`.
+""",
+)
+async def rerun_batch(
+    request: RerunRequest | None = None,
+    batch_id: str = Path(..., description="The batch to run again"),
+    storage: StorageBackend = Depends(get_storage),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> BatchRerunResponse:
+    """Run a batch's finished jobs again as a new batch."""
+    jobs = _load_batch_jobs(storage, batch_id)
+    if not jobs:
+        raise APIError(
+            status_code=404,
+            code="BATCH_NOT_FOUND",
+            message=f"Batch '{batch_id}' not found",
+            hint="Check the batch ID, or use GET /api/v1/batches.",
+        )
+    request = request or RerunRequest()
+    for job in jobs:
+        validate_pipeline_selection(
+            request.selected_pipelines
+            if request.selected_pipelines is not None
+            else job.selected_pipelines,
+            request.config if request.config is not None else job.config,
+        )
+
+    new_batch_id = str(uuid.uuid4())
+    name = next((j.batch_name for j in jobs if j.batch_name), None)
+    new_name = f"{name} (rerun)" if name else "Rerun"
+    created: list[str] = []
+    skipped: list[BatchJobSkipped] = []
+    for job in jobs:
+        try:
+            new = create_rerun(job, storage, request, new_batch_id, new_name)
+            created.append(new.job_id)
+        except RerunNotPossibleException as e:
+            skipped.append(BatchJobSkipped(job_id=job.job_id, reason=e.message))
+    return BatchRerunResponse(
+        batch_id=new_batch_id, rerun_of_batch=batch_id, created=created, skipped=skipped
+    )

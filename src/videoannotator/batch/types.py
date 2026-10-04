@@ -65,6 +65,7 @@ class BatchJob:
     batch_id: str | None = None  # 008: client-supplied submission-batch tag
     batch_name: str | None = None  # 008: human label for that batch, if given
     dataset_id: str | None = None  # 008: saved dataset (007) this job came from
+    rerun_of: str | None = None  # 019: the job this one runs again
 
     @property
     def video_id(self) -> str:
@@ -128,6 +129,7 @@ class BatchJob:
             "batch_id": self.batch_id,
             "batch_name": self.batch_name,
             "dataset_id": self.dataset_id,
+            "rerun_of": self.rerun_of,
         }
 
     @classmethod
@@ -178,6 +180,7 @@ class BatchJob:
             batch_id=data.get("batch_id"),
             batch_name=data.get("batch_name"),
             dataset_id=data.get("dataset_id"),
+            rerun_of=data.get("rerun_of"),
         )
 
 

@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import tempfile
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -154,6 +155,13 @@ class JobResponse(BaseModel):
     dataset_id: str | None = Field(
         default=None,
         description="Saved dataset (spec 007) this job was submitted from, if any",
+    )
+    rerun_of: str | None = Field(
+        default=None, description="The job this one runs again (spec 019)"
+    )
+    reruns: list[str] = Field(
+        default_factory=list,
+        description="Jobs that run this one again, oldest first (single-job reads only)",
     )
     warnings: list[str] = Field(
         default_factory=list,
@@ -528,6 +536,7 @@ async def submit_job(
             batch_id=batch_job.batch_id,
             batch_name=batch_job.batch_name,
             dataset_id=batch_job.dataset_id,
+            rerun_of=batch_job.rerun_of,
             warnings=deprecation_warnings(batch_job.selected_pipelines),
         )
 
@@ -690,6 +699,8 @@ async def get_job_status(
             batch_id=job.batch_id,
             batch_name=job.batch_name,
             dataset_id=job.dataset_id,
+            rerun_of=job.rerun_of,
+            reruns=storage.list_reruns(job.job_id),
         )
 
     except FileNotFoundError as e:
@@ -874,6 +885,7 @@ async def list_jobs(
                         batch_id=job.batch_id,
                         batch_name=job.batch_name,
                         dataset_id=job.dataset_id,
+                        rerun_of=job.rerun_of,
                     )
                 )
             except FileNotFoundError:
@@ -1037,6 +1049,7 @@ async def cancel_job_endpoint(
             batch_id=job_data.batch_id,
             batch_name=job_data.batch_name,
             dataset_id=job_data.dataset_id,
+            rerun_of=job_data.rerun_of,
         )
 
     except (JobNotFoundException, JobAlreadyCompletedException, APIError):
@@ -1212,6 +1225,7 @@ async def retry_job_endpoint(
             batch_id=job_data.batch_id,
             batch_name=job_data.batch_name,
             dataset_id=job_data.dataset_id,
+            rerun_of=job_data.rerun_of,
         )
 
     except (JobNotFoundException, JobNotRetryableException, APIError):
@@ -1224,6 +1238,144 @@ async def retry_job_endpoint(
             message=f"Failed to retry job: {e!s}",
             hint="Check server logs for details",
         ) from e
+
+
+class RerunRequest(BaseModel):
+    """Body for running a job (or batch) again. Omitted fields keep the
+    original's; given ones replace it (spec 019's "Edit and run again")."""
+
+    selected_pipelines: list[str] | None = None
+    config: dict[str, Any] | None = None
+
+
+class RerunNotPossibleException(APIError):
+    def __init__(self, job_id: str, code: str, reason: str, hint: str):
+        super().__init__(
+            status_code=409,
+            code=code,
+            message=f"Cannot run job {job_id} again: {reason}",
+            hint=hint,
+        )
+
+
+def create_rerun(
+    original: BatchJob,
+    storage: StorageBackend,
+    request: RerunRequest | None = None,
+    batch_id: str | None = None,
+    batch_name: str | None = None,
+) -> BatchJob:
+    """A new pending job that runs `original` again, linked by `rerun_of`.
+
+    The original is not changed. A video stored in the original's folder (an
+    upload) is hard-linked, or copied where linking fails, into the new job's
+    folder so deleting either job can't break the other; one outside it (a
+    server-folder ingest) is used in place, as ingest does.
+    """
+    finished = (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED)
+    if original.status not in finished:
+        raise RerunNotPossibleException(
+            original.job_id,
+            "JOB_NOT_FINISHED",
+            f"it is {original.status.value}",
+            "Wait for it to finish, or cancel it first.",
+        )
+    video = Path(original.video_path) if original.video_path else None
+    if video is None or not video.is_file():
+        raise RerunNotPossibleException(
+            original.job_id,
+            "RERUN_VIDEO_MISSING",
+            "its video is no longer stored",
+            "Use 'Edit and run again' and choose the video again.",
+        )
+
+    request = request or RerunRequest()
+    pipelines = (
+        request.selected_pipelines
+        if request.selected_pipelines is not None
+        else original.selected_pipelines
+    )
+    config = request.config if request.config is not None else original.config
+    validate_pipeline_selection(pipelines, config)
+
+    job = BatchJob(
+        config=config or {},
+        status=JobStatus.PENDING,
+        selected_pipelines=pipelines,
+        batch_id=batch_id or str(uuid.uuid4()),
+        batch_name=batch_name or original.batch_name,
+        dataset_id=original.dataset_id,
+        rerun_of=original.job_id,
+    )
+    provider = get_storage_provider()
+    provider.create_job_dir(job.job_id)
+    job.storage_path = provider.get_absolute_path(job.job_id, "")
+    original_folder = Path(original.storage_path) if original.storage_path else None
+    if original_folder is not None and video.resolve().is_relative_to(
+        original_folder.resolve()
+    ):
+        target = Path(job.storage_path) / video.name
+        try:
+            os.link(video, target)
+        except OSError:
+            shutil.copy2(video, target)
+        job.video_path = target
+    else:
+        job.video_path = video
+    storage.save_job_metadata(job)
+    return job
+
+
+@router.post(
+    "/{job_id}/rerun",
+    response_model=JobResponse,
+    status_code=201,
+    summary="Run a job again",
+    description="""
+Creates a new job with the same video, pipelines and settings as a finished job
+(completed, failed or cancelled), linked to it by `rerun_of`. The original and
+its results are not changed. Pass `selected_pipelines` and/or `config` to change
+them for the new job ("Edit and run again"). Unlike `/retry`, which resets a
+failed job in place, both runs are kept so they can be compared.
+
+409 `JOB_NOT_FINISHED` while the job is running; 409 `RERUN_VIDEO_MISSING` when
+its video is no longer stored.
+""",
+)
+async def rerun_job_endpoint(
+    job_id: str,
+    request: RerunRequest | None = None,
+    storage: StorageBackend = Depends(get_storage),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> JobResponse:
+    """Run a finished job again as a new, linked job."""
+    original = storage.load_job_metadata(job_id)
+    if original is None:
+        raise JobNotFoundException(
+            job_id=job_id,
+            hint="Check job ID or use GET /api/v1/jobs to list all jobs",
+        )
+    job = create_rerun(original, storage, request)
+    video_filename, video_size_bytes, video_duration_seconds = extract_video_metadata(
+        job.video_path
+    )
+    return JobResponse(
+        id=job.job_id,
+        status=job.status.value,
+        video_path=str(job.video_path),
+        video_filename=video_filename,
+        video_size_bytes=video_size_bytes,
+        video_duration_seconds=video_duration_seconds,
+        config=job.config,
+        selected_pipelines=job.selected_pipelines,
+        created_at=job.created_at,
+        storage_path=str(job.storage_path),
+        batch_id=job.batch_id,
+        batch_name=job.batch_name,
+        dataset_id=job.dataset_id,
+        rerun_of=job.rerun_of,
+        warnings=deprecation_warnings(job.selected_pipelines),
+    )
 
 
 @router.get(

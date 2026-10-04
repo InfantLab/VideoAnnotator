@@ -608,6 +608,33 @@ class APIClient {
     });
   }
 
+  /**
+   * Run a finished job again as a new job linked to it (spec 019). Omitted
+   * settings keep the original's. 409 when it's still running or its video is gone.
+   */
+  async rerunJob(
+    jobId: string,
+    overrides: { selected_pipelines?: string[]; config?: Record<string, unknown> } = {}
+  ): Promise<JobResponse> {
+    return this.request(`/api/v1/jobs/${encodeURIComponent(jobId)}/rerun`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(overrides),
+    });
+  }
+
+  /** Run a batch's finished jobs again as a new batch (spec 019). */
+  async rerunBatch(
+    batchId: string,
+    overrides: { selected_pipelines?: string[]; config?: Record<string, unknown> } = {}
+  ): Promise<{ batch_id: string; rerun_of_batch: string; created: string[]; skipped: { job_id: string; reason: string }[] }> {
+    return this.request(`/api/v1/batches/${encodeURIComponent(batchId)}/rerun`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(overrides),
+    });
+  }
+
   /** Saved datasets (specs 007, 018), shared by everyone on the server. */
   async listDatasets(): Promise<DatasetListResponse> {
     return this.request('/api/v1/datasets/');

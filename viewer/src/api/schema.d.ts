@@ -454,6 +454,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/rerun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a job again
+         * @description Creates a new job with the same video, pipelines and settings as a finished job
+         *     (completed, failed or cancelled), linked to it by `rerun_of`. The original and
+         *     its results are not changed. Pass `selected_pipelines` and/or `config` to change
+         *     them for the new job ("Edit and run again"). Unlike `/retry`, which resets a
+         *     failed job in place, both runs are kept so they can be compared.
+         *
+         *     409 `JOB_NOT_FINISHED` while the job is running; 409 `RERUN_VIDEO_MISSING` when
+         *     its video is no longer stored.
+         */
+        post: operations["rerun_job_endpoint_api_v1_jobs__job_id__rerun_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}/results": {
         parameters: {
             query?: never;
@@ -684,6 +711,30 @@ export interface paths {
          *     request because of jobs that simply don't need retrying (FR-005).
          */
         post: operations["retry_batch_api_v1_batches__batch_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/batches/{batch_id}/rerun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a batch again
+         * @description Runs every finished job of a batch again (spec 019) as a new batch named
+         *     "<name> (rerun)", each job linked to its original by `rerun_of`. The original
+         *     batch is not changed. Optional `selected_pipelines` / `config` replace every
+         *     job's ("Edit and run again"); they are checked before any job is created. Jobs
+         *     still running, or whose video is gone, are reported in `skipped`.
+         */
+        post: operations["rerun_batch_api_v1_batches__batch_id__rerun_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1801,6 +1852,20 @@ export interface components {
             /** Per Page */
             per_page: number;
         };
+        /** BatchRerunResponse */
+        BatchRerunResponse: {
+            /**
+             * Batch Id
+             * @description The new batch
+             */
+            batch_id: string;
+            /** Rerun Of Batch */
+            rerun_of_batch: string;
+            /** Created */
+            created: string[];
+            /** Skipped */
+            skipped: components["schemas"]["BatchJobSkipped"][];
+        };
         /** BatchRetryResponse */
         BatchRetryResponse: {
             /** Batch Id */
@@ -2313,6 +2378,16 @@ export interface components {
              */
             dataset_id?: string | null;
             /**
+             * Rerun Of
+             * @description The job this one runs again (spec 019)
+             */
+            rerun_of?: string | null;
+            /**
+             * Reruns
+             * @description Jobs that run this one again, oldest first (single-job reads only)
+             */
+            reruns?: string[];
+            /**
              * Warnings
              * @description Non-fatal notices about the submission, e.g. a deprecated pipeline (spec 014)
              */
@@ -2645,6 +2720,19 @@ export interface components {
             help_url?: string | null;
             /** Approx Mb */
             approx_mb?: number | null;
+        };
+        /**
+         * RerunRequest
+         * @description Body for running a job (or batch) again. Omitted fields keep the
+         *     original's; given ones replace it (spec 019's "Edit and run again").
+         */
+        RerunRequest: {
+            /** Selected Pipelines */
+            selected_pipelines?: string[] | null;
+            /** Config */
+            config?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * ResultFileResponse
@@ -3060,6 +3148,41 @@ export interface operations {
             };
         };
     };
+    rerun_job_endpoint_api_v1_jobs__job_id__rerun_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RerunRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_job_results_api_v1_jobs__job_id__results_get: {
         parameters: {
             query?: never;
@@ -3242,6 +3365,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BatchRetryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rerun_batch_api_v1_batches__batch_id__rerun_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The batch to run again */
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RerunRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchRerunResponse"];
                 };
             };
             /** @description Validation Error */

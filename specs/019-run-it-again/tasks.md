@@ -4,11 +4,11 @@
 
 ## Phase 1: Backend (blocks all stories)
 
-- [ ] T001 `rerun_of` on `BatchJob` (`batch/types.py`, to_dict/from_dict), `jobs.rerun_of` column + migration + read/write (`storage/models.py`, `sqlite_backend.py`), `list_reruns` on base, sqlite and file backends
-- [ ] T002 `create_rerun(original, storage, overrides, batch)` and `POST /api/v1/jobs/{id}/rerun` in `api/v1/jobs.py`; `JobResponse.rerun_of`, `reruns`
-- [ ] T003 `POST /api/v1/batches/{id}/rerun` in `api/v1/batches.py`
-- [ ] T004 [P] Tests `tests/api/test_rerun.py`: new job same video/pipelines/config; overrides; original byte-for-byte unchanged (metadata, files); upload video linked into new folder and survives deleting the original; ingest video referenced in place; missing video 409; running job 409; reruns listed; batch rerun with a skipped job; migration on old DB
-- [ ] T005 CLI `job rerun` (`cli.py`) + `tests/unit/cli/test_cli_rerun.py`; regenerate viewer API types; client methods `rerunJob`, `rerunBatch`
+- [x] T001 `rerun_of` on `BatchJob` (`batch/types.py`, to_dict/from_dict), `jobs.rerun_of` column + migration + read/write (`storage/models.py`, `sqlite_backend.py`), `list_reruns` on base, sqlite and file backends
+- [x] T002 `create_rerun(original, storage, overrides, batch)` and `POST /api/v1/jobs/{id}/rerun` in `api/v1/jobs.py`; `JobResponse.rerun_of`, `reruns`
+- [x] T003 `POST /api/v1/batches/{id}/rerun` in `api/v1/batches.py`
+- [x] T004 [P] Tests `tests/api/test_rerun.py`: new job same video/pipelines/config; overrides; original byte-for-byte unchanged (metadata, files); upload video linked into new folder and survives deleting the original; ingest video referenced in place; missing video 409; running job 409; reruns listed; batch rerun with a skipped job; migration on old DB
+- [x] T005 CLI `job rerun` (`cli.py`) + `tests/unit/cli/test_cli_rerun.py`; regenerate viewer API types; client methods `rerunJob`, `rerunBatch`
 
 ## Phase 2: US1 Rerun (P1)
 

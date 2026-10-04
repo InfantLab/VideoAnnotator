@@ -320,6 +320,19 @@ def worker(
 
 
 # Create a sub-app for job management
+_SERVER_OPTION = typer.Option("http://127.0.0.1:18011", help="API server URL")
+_KEY_OPTION = typer.Option(
+    None,
+    "--api-key",
+    envvar="VIDEOANNOTATOR_API_KEY",
+    help="API key (or set VIDEOANNOTATOR_API_KEY); not needed with auth off",
+)
+
+
+def _auth_headers(api_key: str | None) -> dict[str, str]:
+    return {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
+
 job_app = typer.Typer(name="job", help="Manage remote processing jobs")
 app.add_typer(job_app, name="job")
 
@@ -331,7 +344,8 @@ def submit_job(
         None, help="Comma-separated list of pipelines to run"
     ),
     config: Path | None = typer.Option(None, help="Path to configuration file"),
-    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
 ):
     """Submit a video processing job to the API server."""
     import json
@@ -360,7 +374,11 @@ def submit_job(
 
             # Submit job
             response = requests.post(
-                f"{server}/api/v1/jobs/", files=files, data=data, timeout=30
+                f"{server}/api/v1/jobs/",
+                files=files,
+                data=data,
+                headers=_auth_headers(api_key),
+                timeout=30,
             )
 
         if response.status_code == 201:
@@ -416,7 +434,8 @@ def download_annotations(
     output: Path = typer.Option(
         Path("."), "--output", "-o", help="Directory to save the annotations to"
     ),
-    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
 ):
     """Download all annotations for a specific job."""
     import requests
@@ -425,7 +444,7 @@ def download_annotations(
     typer.echo(f"[INFO] Downloading annotations for job {job_id} from {url}...")
 
     try:
-        with requests.get(url, stream=True) as r:
+        with requests.get(url, stream=True, headers=_auth_headers(api_key)) as r:
             if r.status_code == 404:
                 typer.echo(
                     f"[ERROR] Job {job_id} not found or has no artifacts.", err=True
@@ -459,7 +478,8 @@ def download_annotations(
 @job_app.command("status")
 def job_status(
     job_id: str = typer.Argument(..., help="Job ID to check status for"),
-    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
 ):
     """Check the status of a processing job."""
     import requests
@@ -467,7 +487,9 @@ def job_status(
     typer.echo(f"[STATUS] Checking status for job: {job_id}")
 
     try:
-        response = requests.get(f"{server}/api/v1/jobs/{job_id}", timeout=10)
+        response = requests.get(
+            f"{server}/api/v1/jobs/{job_id}", headers=_auth_headers(api_key), timeout=10
+        )
 
         if response.status_code == 200:
             job_data = response.json()
@@ -495,7 +517,8 @@ def job_status(
 @job_app.command("results")
 def job_results(
     job_id: str = typer.Argument(..., help="Job ID to get results for"),
-    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
     download: str | None = typer.Option(
         None, help="Pipeline name to download results for"
     ),
@@ -506,7 +529,11 @@ def job_results(
     typer.echo(f"[RESULTS] Getting results for job: {job_id}")
 
     try:
-        response = requests.get(f"{server}/api/v1/jobs/{job_id}/results", timeout=10)
+        response = requests.get(
+            f"{server}/api/v1/jobs/{job_id}/results",
+            headers=_auth_headers(api_key),
+            timeout=10,
+        )
 
         if response.status_code == 200:
             results = response.json()
@@ -548,7 +575,8 @@ def job_results(
 
 @job_app.command("list")
 def list_jobs(
-    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
     status_filter: str | None = typer.Option(
         None, help="Filter by status (pending, running, completed, failed)"
     ),
@@ -565,7 +593,12 @@ def list_jobs(
         if status_filter:
             params["status_filter"] = status_filter
 
-        response = requests.get(f"{server}/api/v1/jobs/", params=params, timeout=10)
+        response = requests.get(
+            f"{server}/api/v1/jobs/",
+            params=params,
+            headers=_auth_headers(api_key),
+            timeout=10,
+        )
 
         if response.status_code == 200:
             data = response.json()
@@ -597,22 +630,49 @@ def list_jobs(
         raise typer.Exit(code=1)
 
 
+@job_app.command("rerun")
+def rerun_job(
+    job_id: str = typer.Argument(
+        ..., help="A finished job (completed, failed or cancelled)"
+    ),
+    pipelines: str | None = typer.Option(
+        None, help="Comma-separated pipelines to run instead of the original's"
+    ),
+    config: Path | None = typer.Option(
+        None, help="Settings (YAML or JSON) to use instead of the original's"
+    ),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """Run a finished job again as a new job linked to it; the original is kept."""
+    import yaml
+
+    body: dict[str, Any] = {}
+    if pipelines:
+        body["selected_pipelines"] = [
+            p.strip() for p in pipelines.split(",") if p.strip()
+        ]
+    if config is not None:
+        try:
+            body["config"] = yaml.safe_load(config.read_text())  # JSON is YAML too
+        except (OSError, yaml.YAMLError) as e:
+            typer.echo(f"[ERROR] Cannot read config {config}: {e}", err=True)
+            raise typer.Exit(code=1) from e
+    job = _api_request(
+        "POST", f"{server}/api/v1/jobs/{job_id}/rerun", api_key, json=body
+    )
+    typer.echo(f"[OK] Job {job['id']} runs {job_id} again ({job['status']})")
+    typer.echo(f"[INFO] Track it with: videoannotator job status {job['id']}")
+
+
 dataset_app = typer.Typer(
     name="dataset",
     help="Saved datasets: named lists of videos to run jobs on (shared on the server)",
 )
 app.add_typer(dataset_app, name="dataset")
 
-_SERVER_OPTION = typer.Option("http://127.0.0.1:18011", help="API server URL")
-_KEY_OPTION = typer.Option(
-    None,
-    "--api-key",
-    envvar="VIDEOANNOTATOR_API_KEY",
-    help="API key (or set VIDEOANNOTATOR_API_KEY); not needed with auth off",
-)
 
-
-def _dataset_request(method: str, url: str, api_key: str | None, **kwargs: Any) -> Any:
+def _api_request(method: str, url: str, api_key: str | None, **kwargs: Any) -> Any:
     """Call the datasets API; print the server's message and exit 1 on an error."""
     import requests
 
@@ -643,7 +703,7 @@ def _dataset_request(method: str, url: str, api_key: str | None, **kwargs: Any) 
 @dataset_app.command("list")
 def dataset_list(server: str = _SERVER_OPTION, api_key: str | None = _KEY_OPTION):
     """List the server's saved datasets."""
-    body = _dataset_request("GET", f"{server}/api/v1/datasets/", api_key)
+    body = _api_request("GET", f"{server}/api/v1/datasets/", api_key)
     if not body["datasets"]:
         typer.echo("No saved datasets.")
     for d in body["datasets"]:
@@ -664,7 +724,7 @@ def dataset_show(
     dataset_id: str, server: str = _SERVER_OPTION, api_key: str | None = _KEY_OPTION
 ):
     """Show a dataset and its videos."""
-    d = _dataset_request("GET", f"{server}/api/v1/datasets/{dataset_id}", api_key)
+    d = _api_request("GET", f"{server}/api/v1/datasets/{dataset_id}", api_key)
     typer.echo(f"{d['name']}  ({d['id']})")
     if d.get("description"):
         typer.echo(d["description"])
@@ -686,7 +746,7 @@ def dataset_export(
     api_key: str | None = _KEY_OPTION,
 ):
     """Write a dataset's definition as JSON, to share or import elsewhere."""
-    d = _dataset_request("GET", f"{server}/api/v1/datasets/{dataset_id}", api_key)
+    d = _api_request("GET", f"{server}/api/v1/datasets/{dataset_id}", api_key)
     for field in ("id", "owner_user_id", "owner_name"):
         d.pop(field, None)
     text = json.dumps(d, indent=2)
@@ -710,7 +770,7 @@ def dataset_import(
     if not isinstance(body, dict) or "name" not in body:
         typer.echo(f"[ERROR] {file} is not an exported dataset", err=True)
         raise typer.Exit(code=1)
-    d = _dataset_request("POST", f"{server}/api/v1/datasets/", api_key, json=body)
+    d = _api_request("POST", f"{server}/api/v1/datasets/", api_key, json=body)
     typer.echo(f"[OK] Imported {d['name']} ({d['id']})")
 
 
@@ -724,7 +784,7 @@ def dataset_delete(
     """Delete a dataset (yours, or any as an admin). Videos and past jobs stay."""
     if not yes and not typer.confirm(f"Delete dataset {dataset_id}?"):
         raise typer.Exit(code=1)
-    _dataset_request("DELETE", f"{server}/api/v1/datasets/{dataset_id}", api_key)
+    _api_request("DELETE", f"{server}/api/v1/datasets/{dataset_id}", api_key)
     typer.echo(f"[OK] Deleted {dataset_id}")
 
 

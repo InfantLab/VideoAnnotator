@@ -150,6 +150,7 @@ class SQLiteStorageBackend(StorageBackend):
                 ("batch_id", "VARCHAR"),
                 ("batch_name", "VARCHAR"),
                 ("dataset_id", "VARCHAR"),
+                ("rerun_of", "VARCHAR"),
             ):
                 if column in existing_cols:
                     continue
@@ -190,6 +191,7 @@ class SQLiteStorageBackend(StorageBackend):
             batch_id=batch_job.batch_id,
             batch_name=batch_job.batch_name,
             dataset_id=batch_job.dataset_id,
+            rerun_of=batch_job.rerun_of,
         )
 
     def _db_job_to_batch_job(self, db_job: Job) -> "BatchJob":
@@ -216,6 +218,7 @@ class SQLiteStorageBackend(StorageBackend):
             batch_id=db_job.batch_id,
             batch_name=db_job.batch_name,
             dataset_id=db_job.dataset_id,
+            rerun_of=db_job.rerun_of,
         )
 
         # Load pipeline results
@@ -256,6 +259,7 @@ class SQLiteStorageBackend(StorageBackend):
                     existing.progress_percentage = round(job.progress_percentage)
                     existing.batch_id = job.batch_id
                     existing.dataset_id = job.dataset_id
+                    existing.rerun_of = job.rerun_of
                     # v1.3.0: Update storage_path if present
                     if job.storage_path:
                         existing.storage_path = str(job.storage_path)
@@ -423,6 +427,16 @@ class SQLiteStorageBackend(StorageBackend):
 
         except SQLAlchemyError as e:
             self.logger.error(f"[ERROR] Failed to list jobs: {e}")
+            return []
+
+    def list_reruns(self, job_id: str) -> list[str]:
+        """Jobs that run `job_id` again, oldest first (spec 019)."""
+        try:
+            with self.SessionLocal() as session:
+                query = session.query(Job.id).filter(Job.rerun_of == job_id)
+                return [row[0] for row in query.order_by(Job.created_at.asc()).all()]
+        except SQLAlchemyError as e:
+            self.logger.error(f"[ERROR] Failed to list reruns of {job_id}: {e}")
             return []
 
     def list_jobs_by_batch(self, batch_id: str) -> list[str]:
