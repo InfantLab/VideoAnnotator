@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for TensorFlow, which the planned replacement of `face_analysis` removes.
 - The CLI and server log a warning when started on an unsupported Python. pip and `uv sync`
   refuse unsupported versions, but `uv pip install .` from a checkout doesn't check.
+- **`videoannotator process <video> --pipelines a,b`** runs pipelines on one video without a
+  server. It was a stub that printed "not yet implemented". It goes through the same job path as
+  the server, records the job in the same database (so it shows in the viewer), prints each
+  pipeline's result files or error, and exits 1 if any pipeline failed. `--config` takes the
+  bundled YAML/JSON configs; `--output` also copies the result files to a folder. An unknown
+  pipeline name is rejected at once with the valid names. The video is hard-linked into the job
+  folder where possible, so it isn't copied.
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 

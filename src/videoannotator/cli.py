@@ -206,23 +206,69 @@ def server(
 @app.command()
 def process(
     video: Path = typer.Argument(..., help="Path to video file to process"),
-    output: Path | None = typer.Option(None, help="Output directory for results"),
-    pipelines: str | None = typer.Option(
-        None, help="Comma-separated list of pipelines to run"
+    pipelines: str = typer.Option(
+        ...,
+        help="Comma-separated pipelines to run (see 'videoannotator pipelines list')",
     ),
-    config: Path | None = typer.Option(None, help="Path to configuration file"),
+    output: Path | None = typer.Option(
+        None, help="Also copy the result files to this folder"
+    ),
+    config: Path | None = typer.Option(
+        None, help="Pipeline settings, YAML or JSON keyed by pipeline name"
+    ),
 ):
-    """Process a single video file (legacy mode)."""
-    typer.echo(f"[PROCESS] Processing video: {video}")
+    """Run pipelines on one video here and now, without a server.
 
-    if not video.exists():
+    The job is recorded like a submitted one, so it appears in the viewer and
+    in 'videoannotator job list'. Exits 1 if any pipeline failed.
+    """
+    import shutil
+
+    import yaml
+
+    from .batch.local_job import LocalJobError, result_files, run_local_job
+    from .batch.types import JobStatus
+
+    if not video.is_file():
         typer.echo(f"[ERROR] Video file not found: {video}", err=True)
         raise typer.Exit(code=1)
 
-    # TODO: Implement direct video processing using existing pipelines
-    typer.echo("[WARNING] Direct processing is not yet implemented")
-    typer.echo("[INFO] Use 'videoannotator server' and submit jobs via API")
-    typer.echo("[INFO] See API docs at http://localhost:18011/docs")
+    config_data = None
+    if config is not None:
+        try:
+            config_data = yaml.safe_load(config.read_text())  # JSON is YAML too
+        except (OSError, yaml.YAMLError) as e:
+            typer.echo(f"[ERROR] Cannot read config {config}: {e}", err=True)
+            raise typer.Exit(code=1) from e
+
+    selected = [p.strip() for p in pipelines.split(",") if p.strip()]
+    typer.echo(f"[PROCESS] {video.name}: {', '.join(selected)}")
+    try:
+        job = run_local_job(video, selected, config_data)
+    except LocalJobError as e:
+        typer.echo(f"[ERROR] {e}", err=True)
+        if e.hint:
+            typer.echo(f"Hint: {e.hint}", err=True)
+        raise typer.Exit(code=1) from e
+
+    files = result_files(job)
+    for name, result in job.pipeline_results.items():
+        if result.status == JobStatus.COMPLETED:
+            typer.echo(f"[OK] {name}")
+            for f in files.get(name, []):
+                typer.echo(f"     {f}")
+        else:
+            typer.echo(f"[FAILED] {name}: {result.error_message}", err=True)
+
+    if output is not None:
+        output.mkdir(parents=True, exist_ok=True)
+        for f in (f for fs in files.values() for f in fs):
+            shutil.copy2(f, output / f.name)
+        typer.echo(f"[INFO] Result files copied to {output}")
+
+    typer.echo(f"[INFO] Job {job.job_id}: {job.status.value}")
+    if job.status != JobStatus.COMPLETED or job.error_message:
+        raise typer.Exit(code=1)
 
 
 @app.command()

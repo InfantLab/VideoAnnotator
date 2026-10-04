@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from ...batch.result_files import pipeline_result_files
 from ...batch.types import BatchJob, JobStatus
 from ...database.crud import SavedDatasetCRUD
 from ...database.database import get_db
@@ -1221,28 +1222,6 @@ async def retry_job_endpoint(
         ) from e
 
 
-def _job_folder(job: BatchJob) -> Path:
-    from ...storage.config import get_job_storage_path
-
-    return Path(job.output_dir or job.storage_path or get_job_storage_path(job.job_id))
-
-
-def _pipeline_result_files(job: BatchJob, pipeline_name: str) -> list[Path]:
-    """The files `pipeline_name` wrote to the job folder, main output first.
-
-    Pipelines write `<video stem>_<suffix>` there; the suffixes come from each
-    pipeline's registry metadata (`outputs[].file`). The storage backend's
-    `output_file` can't be used: for the database backend it isn't a path.
-    """
-    meta = get_registry().get(pipeline_name)
-    if meta is None or job.video_path is None:
-        return []
-    folder = _job_folder(job)
-    stem = Path(job.video_path).stem
-    files = [folder / f"{stem}_{o.file}" for o in meta.outputs if o.file]
-    return [f for f in files if f.is_file()]
-
-
 @router.get(
     "/{job_id}/results",
     response_model=JobResultsResponse,
@@ -1361,7 +1340,7 @@ async def get_job_results(
         # for files that exist, so a listed URL always downloads.
         for name, result in pipeline_results.items():
             url = f"/api/v1/jobs/{job.job_id}/results/files/{name}"
-            files = _pipeline_result_files(job, name)
+            files = pipeline_result_files(job, name)
             if files:
                 result.download_url = url
                 result.files = [
@@ -1431,7 +1410,7 @@ async def download_result_file(
                 hint=f"Check pipeline name or use GET /api/v1/jobs/{job_id}/results to see available results",
             )
 
-        files = _pipeline_result_files(job, pipeline_name)
+        files = pipeline_result_files(job, pipeline_name)
         if name is not None:
             files = [f for f in files if f.name == name]
         if not files:

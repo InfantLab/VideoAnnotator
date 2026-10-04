@@ -409,6 +409,11 @@ half-built page.
       face's gaze and action-unit intensities by up to ~2.4. Offer a deterministic mode
       (`torch.use_deterministic_algorithms`, cuDNN deterministic) and record it in provenance, and
       measure run-to-run spread for every pipeline in the Phase 5 benchmark.
+      Also order-dependent (found 2026-10-04): `scene_detection`'s CLIP scores on the demo clip
+      match the baseline exactly when it runs after `face_openface3_embedding` and
+      `person_tracking` in the same job, but differ in the third decimal (0.6352 vs 0.6340) when
+      it runs alone. Something an earlier pipeline loads changes global torch/cuDNN state. A
+      deterministic mode should pin those settings at the start of each pipeline.
 - [x] **A pipeline that fails must say so.** `speech_recognition` catches errors in transcription,
       logs them only to the pipeline log, and returns no annotations, so the job reports the
       pipeline as completed with an empty transcript (found 2026-10-01 through a Triton cache
@@ -435,9 +440,12 @@ half-built page.
       Done 2026-10-04: served from the job folder by the suffix in each pipeline's registry
       `outputs[].file`; results list every file (`files`, `?name=`) and advertise only files that
       exist. Tests: `tests/api/test_result_files.py`.
-- [ ] `videoannotator process <video>` is listed in `--help` but only prints "Direct processing
+- [x] `videoannotator process <video>` is listed in `--help` but only prints "Direct processing
       is not yet implemented" (found 2026-10-01). Implement it on the shared job-execution path,
       or remove it.
+      Done 2026-10-04 (`batch/local_job.py`): validated as a submission is, recorded in the
+      server's database, run through `run_job_pipelines`. `--pipelines` is required: a default of
+      every pipeline would be slow and need every extra. Tests: `tests/unit/cli/test_cli_process.py`.
 - [ ] **Queue position**: a pending job shows how many jobs are ahead of it ("3rd in queue"), in
       the job list, the job page and `GET /api/v1/jobs/{id}`. Today a queued job looks the same as
       a stuck one. (Planned since spec 001's T066.)
