@@ -12,6 +12,8 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Loader2, RefreshCw, RotateCcw, XCircle } from 'lucide-react';
 import { JobsTable } from '@/components/JobsTable';
+import { RunAgainActions } from '@/components/RunAgainActions';
+import { settingsOf } from '@/lib/wizardStart';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { parseApiError } from '@/lib/errorHandling';
 import { formatUptime } from '@/lib/formatters';
@@ -199,7 +201,7 @@ const BatchDetail = () => {
               ) : (
                 <RotateCcw className="h-4 w-4 mr-1" />
               )}
-              Retry {batch.by_status.failed + batch.by_status.cancelled}
+              Retry {batch.by_status.failed + batch.by_status.cancelled} in place
             </Button>
           )}
         </div>
@@ -302,6 +304,31 @@ const BatchDetail = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Spec 019: the next step, where the decision is made */}
+      {batch.by_status.pending + batch.by_status.running === 0 && jobs.length > 0 && (
+        <Card>
+          <div className="px-6 py-4 space-y-3">
+            <div>
+              <h3 className="font-medium">
+                {batch.by_status.completed === batch.total ? 'Run on more videos, or run it again' : 'Run it again'}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Settings from this run&apos;s first video. Running again makes a new run; this one is kept.
+              </p>
+            </div>
+            <RunAgainActions
+              target={{
+                kind: 'batch',
+                id: batchId,
+                label: batchDisplayName(batch),
+                videoCount: batch.total,
+                settings: settingsOf(jobs[0]),
+              }}
+            />
+          </div>
+        </Card>
+      )}
 
       <Card>
         <div className="px-6 pt-4 pb-2">

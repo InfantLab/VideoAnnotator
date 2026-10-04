@@ -31,6 +31,7 @@ import { canCancelJob } from '@/hooks/useJobCancellation';
 import { canDeleteJob } from '@/hooks/useJobDeletion';
 import { jobErrorSummary } from '@/lib/jobOutcome';
 import { queueLabel } from '@/lib/queuePosition';
+import { settingsOf, wizardState } from '@/lib/wizardStart';
 
 const STATUS_CLASSES: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200',
@@ -142,16 +143,10 @@ export function JobsTable({
 }: JobsTableProps) {
   const navigate = useNavigate();
 
+  // "Fix and run again" (spec 019): the job's own video, its settings to change.
   const handleRetryJob = (job: JobResponse) => {
-    navigate('/jobs/new', {
-      state: {
-        retryJobId: job.id,
-        retryJobConfig: job.config,
-        retryJobPipelines: job.selected_pipelines,
-        retryJobVideoFilename: (job as JobResponse & Record<string, unknown>)
-          .video_filename as string | undefined,
-      },
-    });
+    const label = ((job as JobResponse & Record<string, unknown>).video_filename as string | undefined) ?? `job ${job.id.slice(0, 8)}`;
+    navigate('/jobs/new', { state: wizardState({ mode: 'rerun', jobId: job.id, label, ...settingsOf(job) }) });
   };
 
   const columnCount = showProgress ? 7 : 6;
@@ -257,7 +252,7 @@ export function JobsTable({
                         }}
                       >
                         <RotateCcw className="h-4 w-4 mr-1" />
-                        Retry
+                        Fix and run again
                       </Button>
                     )}
                     {canDeleteJob(job.status as JobStatus) && (

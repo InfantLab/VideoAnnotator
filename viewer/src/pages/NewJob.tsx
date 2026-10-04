@@ -11,7 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw, FolderOpen, HardDrive, Database } from "lucide-react";
 import { DatasetPicker, type PickedFile } from "@/components/DatasetPicker";
 import { SaveDatasetDialog } from "@/components/SaveDatasetDialog";
-import type { StartFromDatasetState } from "@/pages/Datasets";
+import { settingsOf, wizardStartOf, type WizardStart } from "@/lib/wizardStart";
+import { StartFromRecent } from "@/components/StartFromRecent";
 import { manifestFrom, relativePathOf, scanCandidates } from "@/lib/datasetMatch";
 import { rememberFolder, supportsFolderHandles, videosIn } from "@/lib/datasetHandles";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -118,21 +119,15 @@ const defaultBatchName = (files: File[]): string => {
     : `${files.length} videos — ${stamp}`;
 };
 
-// Type for retry state passed via React Router
-interface RetryJobState {
-  retryJobId: string;
-  retryJobConfig?: Record<string, unknown>;
-  retryJobPipelines?: string[];
-  retryJobVideoFilename?: string;
-}
 
 const CreateNewJob = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  // Other pages pass other state (e.g. Datasets' startFromDataset): only a retry has a job id.
-  const retryState = (location.state as Partial<RetryJobState> | null)?.retryJobId
-    ? (location.state as RetryJobState)
-    : undefined;
+  // How the wizard was opened (spec 019): read once, since the state is
+  // cleared from history after use. "Choose other videos instead" turns a
+  // rerun into a settings start.
+  const [start, setStart] = useState<WizardStart | null>(() => wizardStartOf(location.state));
+  const rerunning = start?.mode === 'rerun' || start?.mode === 'rerunBatch' ? start : null;
 
   const { data: catalogData, isLoading: catalogLoading, error: catalogError } = usePipelineCatalog();
   const refreshPipelineCatalog = useRefreshPipelineCatalog();
@@ -152,7 +147,7 @@ const CreateNewJob = () => {
   // a folder before switching to the server tab, so deriving it would make the
   // tab impossible to open.
   // "Start a job" on the Datasets page opens on the Saved dataset tab.
-  const startFromDataset = (location.state as Partial<StartFromDatasetState> | null)?.startFromDataset;
+  const startFromDataset = start?.mode === 'dataset' ? start : null;
   const [videoSource, setVideoSource] = useState<VideoSource>(startFromDataset ? 'dataset' : 'upload');
   const [serverFolder, setServerFolder] = useState<ServerFolderSelection | null>(null);
   // The saved dataset the chosen videos are (spec 018); cleared by any manual change.
@@ -231,21 +226,21 @@ const CreateNewJob = () => {
     });
   }, [pipelines, defaultSelectedPipelines]);
 
-  // Handle retry state - pre-fill form with failed job's configuration
+  // Pre-fill a job's or batch's settings once (rerun, "Use these settings").
+  // Pipelines this server can't run now are left out and said so.
+  const [startApplied, setStartApplied] = useState(false);
   useEffect(() => {
-    if (retryState && pipelines.length) {
-      if (retryState.retryJobPipelines) {
-        const { kept, leftOut } = partitionSelection(retryState.retryJobPipelines, pipelines);
-        setSelectedPipelines(kept);
-        setSelectionNotices(leftOut);
-      }
-      if (retryState.retryJobConfig) {
-        setConfig(retryState.retryJobConfig);
-      }
-      // Clear the state after using it to prevent re-filling on navigation
-      window.history.replaceState({}, document.title);
+    if (startApplied || !start || start.mode === 'dataset' || !pipelines.length) return;
+    if (start.selectedPipelines) {
+      const { kept, leftOut } = partitionSelection(start.selectedPipelines, pipelines);
+      setSelectedPipelines(kept);
+      setSelectionNotices(leftOut);
     }
-  }, [retryState, pipelines]);
+    if (start.config) setConfig(start.config);
+    setStartApplied(true);
+    // Clear the state after using it to prevent re-filling on navigation
+    window.history.replaceState({}, document.title);
+  }, [start, startApplied, pipelines]);
 
   // A preset is applied like a retried job: its pipelines through the same
   // readiness filter (left-out ones are named), its settings over the current ones.
@@ -350,10 +345,51 @@ const CreateNewJob = () => {
     }
   };
 
+  /** "Edit and run again": the original's videos, these settings (spec 019). */
+  const submitRerun = async () => {
+    if (!rerunning) return;
+    if (selectedPipelines.length === 0) {
+      setSubmitError(parseApiError("No pipelines selected"));
+      return;
+    }
+    setIsSubmitting(true);
+    setSubmitError(null);
+    const overrides = {
+      selected_pipelines: selectedPipelines,
+      config: Object.fromEntries(Object.entries(config).filter(([id]) => selectedPipelines.includes(id))),
+    };
+    try {
+      if (rerunning.mode === 'rerun') {
+        const job = await apiClient.rerunJob(rerunning.jobId, overrides);
+        setSubmitSuccess([job.id]);
+        setTimeout(() => navigate(`/jobs/${job.id}`), 1500);
+      } else {
+        const result = await apiClient.rerunBatch(rerunning.batchId, overrides);
+        setSubmitSuccess(result.created);
+        if (result.skipped.length > 0) {
+          setSubmitError(parseApiError({
+            error: `${result.skipped.length} job(s) were not run again`,
+            hint: result.skipped.map((s) => s.reason).join('\n'),
+          }));
+        }
+        if (result.created.length > 0) setTimeout(() => navigate(`/batches/${result.batch_id}`), 1500);
+      }
+    } catch (error) {
+      setSubmitError(parseApiError(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const performActualSubmission = async () => {
     console.log('🚀 Submit button clicked - starting job submission');
     console.log('Selected pipelines:', selectedPipelines);
     console.log('Config:', config);
+
+    if (rerunning) {
+      await submitRerun();
+      return;
+    }
 
     if (!usingServerFolder && selectedFiles.length === 0) {
       setSubmitError(parseApiError("No videos selected"));
@@ -478,7 +514,35 @@ const CreateNewJob = () => {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
+        if (rerunning) {
+          return (
+            <div className="rounded-md border p-4 text-sm">
+              <p className="font-medium">
+                {rerunning.mode === 'rerunBatch'
+                  ? `The ${rerunning.videoCount} videos of ${rerunning.label}`
+                  : `The video of ${rerunning.label}`}
+              </p>
+              <p className="text-muted-foreground">Already on the server; nothing is uploaded again.</p>
+            </div>
+          );
+        }
         return (
+          <>
+          {!start && (
+            <div className="mb-4">
+              <StartFromRecent
+                onUseJob={(job, label) => {
+                  setStart({ mode: 'settings', label, ...settingsOf(job) });
+                  setStartApplied(false);
+                }}
+                onApplyPreset={(preset) => {
+                  applyPreset(preset);
+                  setStart({ mode: 'settings', label: `preset “${preset.name}”`, selectedPipelines: preset.selected_pipelines, config: preset.config });
+                  setStartApplied(true);
+                }}
+              />
+            </div>
+          )}
           <VideoUploadStep
             selectedFiles={selectedFiles}
             setSelectedFiles={setSelectedFiles}
@@ -487,8 +551,9 @@ const CreateNewJob = () => {
             serverFolder={serverFolder}
             setServerFolder={setServerFolder}
             dataset={{ fromDataset, setFromDataset, relativePaths, setRelativePaths, folderHandle, setFolderHandle }}
-            highlightDatasetId={startFromDataset?.id}
+            highlightDatasetId={startFromDataset?.datasetId}
           />
+          </>
         );
       case 2:
         return (
@@ -524,6 +589,11 @@ const CreateNewJob = () => {
           <ReviewStep
             serverFolder={usingServerFolder ? serverFolder : null}
             selectedFiles={selectedFiles}
+            rerunSource={
+              rerunning
+                ? { label: rerunning.label, videoCount: rerunning.mode === 'rerunBatch' ? rerunning.videoCount : 1 }
+                : undefined
+            }
             selectedPipelines={selectedPipelines}
             config={config}
             onSubmit={handleSubmitJobs}
@@ -544,6 +614,7 @@ const CreateNewJob = () => {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
+        if (rerunning) return true;
         return videoSource === 'server' ? serverFolder !== null : selectedFiles.length > 0;
       case 2:
         return (
@@ -590,23 +661,34 @@ const CreateNewJob = () => {
         </div>
       </div>
 
-      {/* Retry Banner */}
-      {retryState && (
+      {rerunning && (
         <Alert>
           <RotateCcw className="h-4 w-4" />
-          <AlertTitle>Retrying Failed Job</AlertTitle>
+          <AlertTitle>Running {rerunning.label} again</AlertTitle>
           <AlertDescription>
-            <div className="space-y-1">
-              <p>Job ID: <span className="font-mono text-sm">{retryState.retryJobId}</span></p>
-              <p>Pipeline settings and configuration have been pre-filled.</p>
-              <p className="font-semibold">
-                {retryState.retryJobVideoFilename
-                  ? `Please upload "${retryState.retryJobVideoFilename}" again to retry the job.`
-                  : 'Please upload the same video file to retry the job.'
-                }
-              </p>
-            </div>
+            <p>
+              {rerunning.mode === 'rerunBatch'
+                ? `Its ${rerunning.videoCount} videos are used again`
+                : 'Its video is used again'}
+              : nothing to upload. Change pipelines or settings, then start. The original and its results are kept.
+            </p>
+            <Button
+              variant="link"
+              className="h-auto p-0"
+              onClick={() =>
+                setStart({ mode: 'settings', label: rerunning.label, selectedPipelines, config })
+              }
+            >
+              Choose other videos instead
+            </Button>
           </AlertDescription>
+        </Alert>
+      )}
+      {start?.mode === 'settings' && (
+        <Alert>
+          <RotateCcw className="h-4 w-4" />
+          <AlertTitle>Settings from {start.label}</AlertTitle>
+          <AlertDescription>Its pipelines and settings are filled in. Choose the videos to run them on.</AlertDescription>
         </Alert>
       )}
 
@@ -1517,6 +1599,7 @@ const ConfigurationStep = ({
 const ReviewStep = ({
   serverFolder,
   selectedFiles,
+  rerunSource,
   selectedPipelines,
   config,
   onSubmit,
@@ -1530,6 +1613,7 @@ const ReviewStep = ({
 }: {
   serverFolder: ServerFolderSelection | null;
   selectedFiles: File[];
+  rerunSource?: { label: string; videoCount: number };
   selectedPipelines: string[];
   config: Record<string, unknown>;
   onSubmit: () => void;
@@ -1546,10 +1630,14 @@ const ReviewStep = ({
   const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
   // A server-folder run has no File objects to describe, and its exact video
   // count is the server's to report -- so describe the source, not a list.
-  const runLabel = serverFolder
+  const runLabel = rerunSource
+    ? `${rerunSource.label} (rerun)`
+    : serverFolder
     ? serverFolder.path.split(/[/\\]/).filter(Boolean).pop() || serverFolder.path
     : defaultBatchName(selectedFiles);
-  const videoCountLabel = serverFolder
+  const videoCountLabel = rerunSource
+    ? `${rerunSource.videoCount} video${rerunSource.videoCount === 1 ? '' : 's'}, used again`
+    : serverFolder
     ? serverFolder.recursive
       ? 'Every video in that folder and its subfolders'
       : `${serverFolder.videoCount} video${serverFolder.videoCount === 1 ? '' : 's'}`

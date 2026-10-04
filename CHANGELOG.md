@@ -73,6 +73,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   Datasets can now record a server folder, and paths within it. `GET /api/v1/ingest/scan` lists
   a server folder's videos without starting anything.
+- **Run it again** (spec 019). From a finished job's or run's page:
+  - **Run again**: same videos and settings, as a new job (or run) linked to the original, which
+    is kept with its results so the two can be compared.
+  - **Edit and run again**: the wizard opens with the same videos, nothing to upload; change
+    pipelines or settings, then start. A failed job offers it as "Fix settings and run again".
+  - **Use these settings on other videos**, and **Save as preset**.
+  - The wizard's first step offers your recent jobs' settings and presets, and a completed run
+    suggests running on more videos.
+
+  API: `POST /api/v1/jobs/{id}/rerun` and `POST /api/v1/batches/{id}/rerun`; jobs carry
+  `rerun_of` and `reruns`. CLI: `videoannotator job rerun`.
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 
@@ -246,6 +257,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   10 MB upload cap they were never meant to have.
 - COCO outputs' `info.date_created` was always `2025-01-01T00:00:00Z`; it is now the real UTC
   time (and `info.year` the real year).
+- **`videoannotator job submit|status|results|list|download-annotations` work with
+  authentication on**: they sent no API key, so on a default install every call got 401. They
+  take `--api-key` (or `VIDEOANNOTATOR_API_KEY`), and default to `127.0.0.1`.
+- The job wizard's "Retry Job" for a failed job asked for the video to be uploaded again. It is
+  now "Fix settings and run again" and reuses the stored video.
 - **A core install (`pip install videoannotator`, the slim Docker image) failed to start** with
   `No module named 'httpx'`: the server imports the Ollama client at start, and the v1.6.0 core
   clean-up dropped `httpx` as unused (every test environment had it through the dev tools). It is

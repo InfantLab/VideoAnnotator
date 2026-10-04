@@ -399,9 +399,10 @@ half-built page.
       Done 2026-10-04: Datasets page, wizard save/reuse with differences shown, export/import for
       datasets and presets, `videoannotator dataset` CLI, `GET /ingest/scan`. Checked in Chromium
       against a real server.
-- [ ] **`videoannotator job submit|status|results|list` send no API key** (found 2026-10-04): with
+- [x] **`videoannotator job submit|status|results|list` send no API key** (found 2026-10-04): with
       authentication on, the default, they get 401. Give them `--api-key`/`VIDEOANNOTATOR_API_KEY`
       like `pipelines install` and `dataset`, and default `--server` to `127.0.0.1`.
+      Done 2026-10-04 with spec 019.
 - [x] Viewer: zero `tsc --noEmit` errors (24 on 2026-09-26), with typechecking in CI.
       Constitution 1.1.0 makes this an Engineering Standard, as are a 300 KB gzipped initial bundle
       (304 KB on 2026-10-02) and overlays naming the pipeline and version that drew them
@@ -502,13 +503,16 @@ half-built page.
 settings on more videos; one who doesn't wants to tweak and rerun. Today both mean rebuilding the
 job in the wizard from memory, although every job already stores its `selected_pipelines` and
 `config`.
-- [ ] **Rerun a job**: same videos, same settings, one click, as a new job that links back to the
+- [x] **Rerun a job**: same videos, same settings, one click, as a new job that links back to the
       original (`rerun_of`). "Edit and rerun" opens the wizard prefilled.
       Spec (with the next two items): `specs/019-run-it-again/`.
-- [ ] **Reuse settings on new videos**: "Use these settings" on a job or batch opens the wizard at
+      Done 2026-10-04 (all three items): rerun endpoints and CLI, job/batch page actions, wizard
+      edit/settings modes, recent jobs and presets on the first step. Checked in Chromium against a
+      real server. The Playwright first-time-user run (E) still has to confirm the cues are found.
+- [x] **Reuse settings on new videos**: "Use these settings" on a job or batch opens the wizard at
       "Choose videos" with pipelines and config filled in; "Save as preset" writes the existing
       `saved_pipeline_presets` table.
-- [ ] **UX cues that lead there**, not only buttons in a menu: the actions sit on the job/batch
+- [x] **UX cues that lead there**, not only buttons in a menu: the actions sit on the job/batch
       result page where the user is looking when they decide; the wizard's first step offers
       "Start from a previous job" and recent presets before the blank form; a failed or partial job
       says "Fix settings and rerun"; a completed batch suggests "Run on more videos". Check each

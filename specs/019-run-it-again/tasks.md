@@ -12,22 +12,22 @@
 
 ## Phase 2: US1 Rerun (P1)
 
-- [ ] T006 [US1] `viewer/src/lib/wizardStart.ts`: typed wizard navigation state (`fromJob` with mode `edit`|`settings`, `fromBatch`, `startFromDataset`)
-- [ ] T007 [US1] `viewer/src/components/RunAgainActions.tsx`: Run again (confirm → rerun → navigate to new job), Edit and run again, Use these settings, Save as preset; video-missing message
-- [ ] T008 [US1] JobDetail: actions near results; "Rerun of" / "Reruns" links; Retry labelled "Retry in place"
-- [ ] T009 [US1] NewJob: `edit` mode with read-only "Videos from job …" source, prefilled settings, submit via rerun endpoint (job or batch)
+- [x] T006 [US1] `viewer/src/lib/wizardStart.ts`: typed wizard navigation state (`fromJob` with mode `edit`|`settings`, `fromBatch`, `startFromDataset`)
+- [x] T007 [US1] `viewer/src/components/RunAgainActions.tsx`: Run again (confirm → rerun → navigate to new job), Edit and run again, Use these settings, Save as preset; video-missing message
+- [x] T008 [US1] JobDetail: actions near results; "Rerun of" / "Reruns" links; Retry labelled "Retry in place"
+- [x] T009 [US1] NewJob: `edit` mode with read-only "Videos from job …" source, prefilled settings, submit via rerun endpoint (job or batch)
 
 ## Phase 3: US2 Reuse settings (P1)
 
-- [ ] T010 [US2] NewJob: `settings` mode prefills pipelines/config at Choose videos, names the source; unavailable pipelines reported (existing partitionSelection)
-- [ ] T011 [US2] BatchDetail: the same actions (batch rerun, Use these settings from the batch's first job)
+- [x] T010 [US2] NewJob: `settings` mode prefills pipelines/config at Choose videos, names the source; unavailable pipelines reported (existing partitionSelection)
+- [x] T011 [US2] BatchDetail: the same actions (batch rerun, Use these settings from the batch's first job)
 
 ## Phase 4: US3 Cues (P2)
 
-- [ ] T012 [US3] Wizard first step: recent finished jobs ("Use settings") and recent presets ("Apply")
-- [ ] T013 [US3] Failed/partial job alert: "Fix settings and run again"; completed batch: "Run on more videos"
-- [ ] T014 [P] [US3] Vitest for RunAgainActions, wizard modes and recent strip
+- [x] T012 [US3] Wizard first step: recent finished jobs ("Use settings") and recent presets ("Apply")
+- [x] T013 [US3] Failed/partial job alert: "Fix settings and run again"; completed batch: "Run on more videos"
+- [x] T014 [P] [US3] Vitest for RunAgainActions, wizard modes and recent strip
 
 ## Phase 5: Polish
 
-- [ ] T015 Playwright check against a real server (rerun a job; edit and run again; reuse settings); CHANGELOG, roadmap, bundle, full suites, push
+- [x] T015 Playwright check against a real server (rerun a job; edit and run again; reuse settings); CHANGELOG, roadmap, bundle, full suites, push

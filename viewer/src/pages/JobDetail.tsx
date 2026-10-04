@@ -18,6 +18,8 @@ import { canDeleteJob } from "@/hooks/useJobDeletion";
 import type { JobStatus } from "@/types/api";
 import { failedPipelinesOf, isCompletedWithErrors } from "@/lib/jobOutcome";
 import { queueLabel } from "@/lib/queuePosition";
+import { RunAgainActions } from "@/components/RunAgainActions";
+import { settingsOf, wizardState } from "@/lib/wizardStart";
 
 const CreateJobDetail = () => {
   const { jobId } = useParams<{ jobId: string }>();
@@ -130,22 +132,19 @@ const CreateJobDetail = () => {
     }
   };
 
-  const handleRetryJob = () => {
-    if (!job) return;
-
-    // Extract video filename with fallback
+  // The video's name, to label this job in the wizard and in actions.
+  const jobLabel = (() => {
+    if (!job) return '';
     const record = job as JobResponse & Record<string, unknown>;
-    const getString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
-    const videoFilename = getString(record.video_filename) ?? getString(record.filename) ?? getString(record.video_name);
+    const name = [record.video_filename, record.filename, record.video_name].find((v) => typeof v === 'string');
+    return (name as string | undefined) ?? `job ${job.id.slice(0, 8)}`;
+  })();
 
-    // Navigate to create new job with pre-filled settings
+  /** "Fix settings and run again": the wizard with this job's video and settings (spec 019). */
+  const handleEditAndRunAgain = () => {
+    if (!job) return;
     navigate('/jobs/new', {
-      state: {
-        retryJobId: job.id,
-        retryJobConfig: job.config,
-        retryJobPipelines: job.selected_pipelines,
-        retryJobVideoFilename: videoFilename,
-      }
+      state: wizardState({ mode: 'rerun', jobId: job.id, label: jobLabel, ...settingsOf(job) }),
     });
   };
 
@@ -247,9 +246,9 @@ const CreateJobDetail = () => {
           )}
 
           {job.status === "failed" && (
-            <Button onClick={handleRetryJob} variant="outline" size="sm">
+            <Button onClick={handleEditAndRunAgain} variant="outline" size="sm">
               <RotateCcw className="h-4 w-4 mr-2" />
-              Retry Job
+              Fix settings and run again
             </Button>
           )}
 
@@ -287,8 +286,46 @@ const CreateJobDetail = () => {
                 <span className="font-mono font-medium">{name}</span>: {reason}
               </p>
             ))}
+            <Button variant="link" className="h-auto p-0 text-orange-800" onClick={handleEditAndRunAgain}>
+              Fix settings and run again
+            </Button>
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Links between a job and its reruns, whatever their status */}
+      {(job.rerun_of || (job.reruns?.length ?? 0) > 0) && (
+        <div className="text-sm space-y-1 rounded-md border p-3">
+          {job.rerun_of && (
+            <p>
+              Runs again <Link className="underline" to={`/jobs/${job.rerun_of}`}>job {job.rerun_of.slice(0, 8)}</Link>.
+            </p>
+          )}
+          {(job.reruns?.length ?? 0) > 0 && (
+            <p>
+              Run again as{' '}
+              {job.reruns!.map((id, i) => (
+                <span key={id}>
+                  {i > 0 && ', '}
+                  <Link className="underline" to={`/jobs/${id}`}>job {id.slice(0, 8)}</Link>
+                </span>
+              ))}
+              .
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Run it again (spec 019): where the decision is made, not in a menu */}
+      {['completed', 'failed', 'cancelled'].includes(job.status) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Run it again</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <RunAgainActions target={{ kind: 'job', id: job.id, label: jobLabel, settings: settingsOf(job) }} />
+          </CardContent>
+        </Card>
       )}
 
       {/* Status Card */}
