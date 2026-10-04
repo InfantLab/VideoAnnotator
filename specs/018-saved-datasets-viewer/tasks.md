@@ -5,10 +5,10 @@
 
 ## Phase 1: Foundational (backend)
 
-- [ ] T001 Add `server_folder` (String, nullable) and `server_folder_recursive` (Boolean, default false) to `SavedDataset` in `src/videoannotator/database/models.py`; add both to `ensure_columns("saved_datasets", …)` in `src/videoannotator/database/migrations.py`
-- [ ] T002 In `src/videoannotator/api/v1/datasets.py`: `VideoManifestEntry.relative_path`; request/response `server_folder`, `server_folder_recursive`; response `owner_name`; 409 `DATASET_NAME_TAKEN` on duplicate name (create, update)
-- [ ] T003 `GET /api/v1/ingest/scan` in `src/videoannotator/api/v1/ingest.py` (reuse `find_videos`, same guards as ingest)
-- [ ] T004 [P] Tests: new fields round-trip, spec-007 export imports unchanged, owner_name, 409, migration on an old database (`tests/api/test_dataset_preset_endpoints.py`); scan guards and listing (`tests/api/test_ingest_endpoints.py`)
+- [x] T001 Add `server_folder` (String, nullable) and `server_folder_recursive` (Boolean, default false) to `SavedDataset` in `src/videoannotator/database/models.py`; add both to `ensure_columns("saved_datasets", …)` in `src/videoannotator/database/migrations.py`
+- [x] T002 In `src/videoannotator/api/v1/datasets.py`: `VideoManifestEntry.relative_path`; request/response `server_folder`, `server_folder_recursive`; response `owner_name`; 409 `DATASET_NAME_CONFLICT` (exists since spec 007) on duplicate name (create, update)
+- [x] T003 `GET /api/v1/ingest/scan` in `src/videoannotator/api/v1/ingest.py` (reuse `find_videos`, same guards as ingest)
+- [x] T004 [P] Tests: new fields round-trip, spec-007 export imports unchanged, owner_name, 409, migration on an old database (`tests/api/test_dataset_preset_endpoints.py`); scan guards and listing (`tests/api/test_ingest_endpoints.py`)
 - [ ] T005 Regenerate viewer API types (`scripts/gen_viewer_api_types.sh`); dataset types and client methods (`list/get/create/update/deleteDataset`, `scanServerFolder`) in `viewer/src/api/client.ts`, `viewer/src/types/datasets.ts`
 
 ## Phase 2: US1 - Save the videos I chose, and reuse them (P1)

@@ -690,6 +690,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ingest/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the videos a folder ingest would use
+         * @description Every video `POST /api/v1/ingest` would create a job for, with its path within
+         *     the folder and its size, without creating anything. Used to save a server
+         *     folder as a dataset and to show what changed in it since (spec 018).
+         *
+         *     Admin-only, and only for callers on the server's own machine, as ingest is.
+         */
+        get: operations["scan_api_v1_ingest_scan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ingest/browse": {
         parameters: {
             query?: never;
@@ -1950,6 +1974,13 @@ export interface components {
              * @default []
              */
             video_manifest: components["schemas"]["VideoManifestEntry"][];
+            /** Server Folder */
+            server_folder?: string | null;
+            /**
+             * Server Folder Recursive
+             * @default false
+             */
+            server_folder_recursive: boolean;
         };
         /** DatasetListResponse */
         DatasetListResponse: {
@@ -1972,8 +2003,17 @@ export interface components {
             description?: string | null;
             /** Owner User Id */
             owner_user_id: string;
+            /** Owner Name */
+            owner_name?: string | null;
             /** Video Manifest */
             video_manifest: components["schemas"]["VideoManifestEntry"][];
+            /** Server Folder */
+            server_folder?: string | null;
+            /**
+             * Server Folder Recursive
+             * @default false
+             */
+            server_folder_recursive: boolean;
             /**
              * Created At
              * Format: date-time
@@ -2164,6 +2204,15 @@ export interface components {
             created: string[];
             /** Skipped */
             skipped: components["schemas"]["IngestSkipped"][];
+        };
+        /** IngestScanResponse */
+        IngestScanResponse: {
+            /** Path */
+            path: string;
+            /** Recursive */
+            recursive: boolean;
+            /** Videos */
+            videos: components["schemas"]["ScannedVideo"][];
         };
         /** IngestSkipped */
         IngestSkipped: {
@@ -2607,6 +2656,15 @@ export interface components {
             /** Download Url */
             download_url: string;
         };
+        /** ScannedVideo */
+        ScannedVideo: {
+            /** Relative Path */
+            relative_path: string;
+            /** Name */
+            name: string;
+            /** Size Bytes */
+            size_bytes: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -2631,6 +2689,8 @@ export interface components {
             size_bytes: number;
             /** Last Seen At */
             last_seen_at?: string | null;
+            /** Relative Path */
+            relative_path?: string | null;
         };
         /** VlmModelsResponse */
         VlmModelsResponse: {
@@ -3182,6 +3242,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BatchRetryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_api_v1_ingest_scan_get: {
+        parameters: {
+            query: {
+                /** @description Folder on the server */
+                path: string;
+                /** @description Include subfolders */
+                recursive?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestScanResponse"];
                 };
             };
             /** @description Validation Error */

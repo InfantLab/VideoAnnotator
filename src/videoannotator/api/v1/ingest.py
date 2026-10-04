@@ -232,6 +232,57 @@ def find_videos(directory: Path, recursive: bool = False) -> list[Path]:
     return sorted(videos, key=lambda p: str(p).lower())
 
 
+class ScannedVideo(BaseModel):
+    relative_path: str
+    name: str
+    size_bytes: int
+
+
+class IngestScanResponse(BaseModel):
+    path: str
+    recursive: bool
+    videos: list[ScannedVideo]
+
+
+@router.get(
+    "/scan",
+    response_model=IngestScanResponse,
+    summary="List the videos a folder ingest would use",
+    description="""
+Every video `POST /api/v1/ingest` would create a job for, with its path within
+the folder and its size, without creating anything. Used to save a server
+folder as a dataset and to show what changed in it since (spec 018).
+
+Admin-only, and only for callers on the server's own machine, as ingest is.
+""",
+)
+async def scan(
+    request: Request,
+    path: str = Query(..., description="Folder on the server"),
+    recursive: bool = Query(False, description="Include subfolders"),
+    _user: dict[str, Any] = Depends(require_admin),
+) -> IngestScanResponse:
+    """List a server folder's videos with sizes."""
+    require_local_caller(request)
+    resolved = resolve_within_roots(path)
+    if not resolved.is_dir():
+        raise APIError(
+            status_code=422,
+            code="INGEST_PATH_NOT_A_FOLDER",
+            message=f"Not a folder: {resolved}",
+            hint="Choose the folder that contains the videos.",
+        )
+    videos = [
+        ScannedVideo(
+            relative_path=video.relative_to(resolved).as_posix(),
+            name=video.name,
+            size_bytes=video.stat().st_size,
+        )
+        for video in find_videos(resolved, recursive=recursive)
+    ]
+    return IngestScanResponse(path=str(resolved), recursive=recursive, videos=videos)
+
+
 @router.get(
     "/browse",
     response_model=IngestBrowseResponse,

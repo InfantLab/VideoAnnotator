@@ -387,6 +387,8 @@ class SavedDatasetCRUD:
         name: str,
         video_manifest: list[dict[str, Any]],
         description: str | None = None,
+        server_folder: str | None = None,
+        server_folder_recursive: bool = False,
     ) -> SavedDataset | None:
         """Create a saved dataset. Returns None on a name collision for this
         owner (FR-007) rather than raising, so the route can turn that into
@@ -396,6 +398,8 @@ class SavedDatasetCRUD:
             name=name,
             description=description,
             video_manifest=video_manifest,
+            server_folder=server_folder,
+            server_folder_recursive=server_folder_recursive,
         )
         db.add(dataset)
         try:

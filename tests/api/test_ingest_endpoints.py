@@ -327,3 +327,37 @@ class TestIngestIsLocalOnly:
         scope = {"type": "http", "client": ("203.0.113.7", 1234), "headers": []}
         with pytest.raises(APIError):
             ingest_module.require_local_caller(Request(scope))
+
+
+class TestScan:
+    """GET /ingest/scan: what an ingest would use, without creating jobs (spec 018)."""
+
+    def test_lists_videos_with_relative_paths_and_sizes(self, corpus):
+        before = len(get_storage_backend().list_jobs())
+        body = client.get(
+            "/api/v1/ingest/scan", params={"path": str(corpus), "recursive": True}
+        ).json()
+        paths = [v["relative_path"] for v in body["videos"]]
+        assert "session_two/dyad_13.mp4" in paths
+        assert "notes.txt" not in [v["name"] for v in body["videos"]]
+        assert {
+            v["size_bytes"] for v in body["videos"] if v["name"] != "empty.mp4"
+        } == {len(b"fake video bytes")}
+        assert len(get_storage_backend().list_jobs()) == before
+
+    def test_not_recursive_by_default(self, corpus):
+        body = client.get("/api/v1/ingest/scan", params={"path": str(corpus)}).json()
+        assert all("/" not in v["relative_path"] for v in body["videos"])
+
+    def test_same_guards_as_ingest(self, corpus, tmp_path):
+        outside = tmp_path / "elsewhere"
+        outside.mkdir()
+        assert (
+            client.get("/api/v1/ingest/scan", params={"path": str(outside)}).status_code
+            == 403
+        )
+        app.dependency_overrides[validate_required_api_key] = lambda: NON_ADMIN_USER
+        assert (
+            client.get("/api/v1/ingest/scan", params={"path": str(corpus)}).status_code
+            == 403
+        )

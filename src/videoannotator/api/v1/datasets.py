@@ -30,6 +30,9 @@ class VideoManifestEntry(BaseModel):
     filename: str
     size_bytes: int
     last_seen_at: datetime | None = None
+    # Path within the dataset's folder, so same-named files in subfolders stay
+    # distinct (spec 018). Absent in datasets saved before it.
+    relative_path: str | None = None
 
 
 class DatasetCreateRequest(BaseModel):
@@ -41,6 +44,8 @@ class DatasetCreateRequest(BaseModel):
     name: str
     description: str | None = None
     video_manifest: list[VideoManifestEntry] = []
+    server_folder: str | None = None
+    server_folder_recursive: bool = False
 
 
 class DatasetUpdateRequest(BaseModel):
@@ -59,7 +64,10 @@ class DatasetResponse(BaseModel):
     name: str
     description: str | None = None
     owner_user_id: str
+    owner_name: str | None = None
     video_manifest: list[VideoManifestEntry]
+    server_folder: str | None = None
+    server_folder_recursive: bool = False
     created_at: datetime
     updated_at: datetime | None = None
     last_used_at: datetime | None = None
@@ -70,13 +78,21 @@ class DatasetListResponse(BaseModel):
     total: int
 
 
+def _owner_name(dataset: Any) -> str | None:
+    owner = getattr(dataset, "owner", None)
+    return (owner.username or owner.email) if owner is not None else None
+
+
 def _to_response(dataset: Any) -> DatasetResponse:
     return DatasetResponse(
         id=str(dataset.id),
         name=dataset.name,
         description=dataset.description,
         owner_user_id=str(dataset.owner_user_id),
+        owner_name=_owner_name(dataset),
         video_manifest=dataset.video_manifest or [],
+        server_folder=dataset.server_folder,
+        server_folder_recursive=bool(dataset.server_folder_recursive),
         created_at=dataset.created_at,
         updated_at=dataset.updated_at,
         last_used_at=dataset.last_used_at,
@@ -171,6 +187,8 @@ async def create_dataset(
         name=request.name,
         description=request.description,
         video_manifest=[e.model_dump(mode="json") for e in request.video_manifest],
+        server_folder=request.server_folder,
+        server_folder_recursive=request.server_folder_recursive,
     )
     if dataset is None:
         raise APIError(

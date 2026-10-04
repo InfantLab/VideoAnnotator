@@ -19,7 +19,7 @@ Request and response bodies gain optional fields:
 ```
 
 Responses also carry `owner_name` (string or null). A duplicate `(owner, name)` on create or
-rename returns 409 `DATASET_NAME_TAKEN`.
+rename returns 409 `DATASET_NAME_CONFLICT` (exists since spec 007).
 
 ## Scan a server folder
 

@@ -228,6 +228,23 @@ def migrate_to_v1_3_0() -> bool:
                 migrations_applied.append("retry_count")
                 logger.info("[MIGRATION] ✓ Added jobs.retry_count column")
 
+            # spec 018: server-folder datasets
+            if "saved_datasets" in tables:
+                result = conn.execute(text("PRAGMA table_info('saved_datasets')"))
+                dataset_cols = {row[1] for row in result}
+                for column, ddl in (
+                    ("server_folder", "VARCHAR(1000)"),
+                    ("server_folder_recursive", "BOOLEAN NOT NULL DEFAULT 0"),
+                ):
+                    if column not in dataset_cols:
+                        logger.info(f"[MIGRATION] Adding saved_datasets.{column}")
+                        conn.execute(
+                            text(
+                                f"ALTER TABLE saved_datasets ADD COLUMN {column} {ddl}"
+                            )
+                        )
+                        migrations_applied.append(f"saved_datasets.{column}")
+
             conn.commit()
 
             if migrations_applied:

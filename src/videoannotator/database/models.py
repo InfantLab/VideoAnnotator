@@ -312,11 +312,17 @@ class SavedDataset(Base):
     description = Column(Text, nullable=True)
     owner_user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
     video_manifest = Column(JSON, nullable=False, default=list)
+    # A folder the server reads the videos from (spec 018); null when the
+    # videos are uploaded from the browser.
+    server_folder = Column(String(1000), nullable=True)
+    server_folder_recursive = Column(Boolean, nullable=False, default=False)
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     last_used_at = Column(DateTime(timezone=True), nullable=True)
+
+    owner = relationship("User", lazy="joined")
 
     def __repr__(self):
         """Return a concise representation of the SavedDataset."""
