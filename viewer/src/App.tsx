@@ -24,6 +24,8 @@ const Settings = lazy(() => import("./pages/Settings"));
 const JobResultsViewer = lazy(() => import("./pages/JobResultsViewer"));
 const Library = lazy(() => import("./pages/Library"));
 const Datasets = lazy(() => import("./pages/Datasets"));
+const Prompts = lazy(() => import("./pages/Prompts"));
+const Workbench = lazy(() => import("./pages/Workbench"));
 
 /** Per page, so the navigation stays on screen while a page loads. */
 const page = (element: ReactNode) => (
@@ -62,6 +64,8 @@ const App = () => (
                     <Route path="/batches" element={<Navigate to="/jobs" replace />} />
                     <Route path="/batches/:batchId" element={page(<BatchDetail />)} />
                     <Route path="/datasets" element={page(<Datasets />)} />
+                    <Route path="/prompts" element={page(<Prompts />)} />
+                    <Route path="/workbench" element={page(<Workbench />)} />
                     <Route path="/settings" element={page(<Settings />)} />
                   </Route>
 

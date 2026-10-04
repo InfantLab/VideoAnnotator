@@ -131,3 +131,26 @@ def test_a_preview_is_recorded_and_returns_the_frames_it_used():
 
     prompts = client.get("/api/v1/prompts/").json()["prompts"]
     assert [(p["text"], p["models"]) for p in prompts] == [("Touch?", ["gemma4:e4b"])]
+
+
+def test_a_previews_form_line_endings_dont_make_a_different_prompt():
+    """A multipart form sends newlines as CRLF; the job's copy has LF."""
+    _use("Classify:\nTOUCH or NO_TOUCH", kind="job", job_id="j1")
+    fake = VLMCallResult(
+        raw_text="TOUCH", thinking="", total_time=1, load_time=0,
+        prompt_tokens=1, resp_tokens=1, tokens_per_sec=1,
+    )  # fmt: skip
+    with (
+        patch("videoannotator.api.v1.vlm.OllamaVLMClient.__init__", return_value=None),
+        patch(
+            "videoannotator.api.v1.vlm.OllamaVLMClient.chat", return_value=fake
+        ) as chat,
+    ):
+        client.post(
+            "/api/v1/vlm/preview",
+            files={"image": ("f.jpg", io.BytesIO(b"\xff\xd8\xff\xd9"), "image/jpeg")},
+            data={"prompt": "Classify:\r\nTOUCH or NO_TOUCH", "model": "gemma4:e4b"},
+        )
+    assert chat.call_args.kwargs["prompt"] == "Classify:\nTOUCH or NO_TOUCH"
+    prompts = client.get("/api/v1/prompts/").json()["prompts"]
+    assert len(prompts) == 1 and prompts[0]["use_count"] == 2

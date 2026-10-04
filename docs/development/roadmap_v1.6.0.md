@@ -517,12 +517,16 @@ job in the wizard from memory, although every job already stores its `selected_p
       "Start from a previous job" and recent presets before the blank form; a failed or partial job
       says "Fix settings and rerun"; a completed batch suggests "Run on more videos". Check each
       in the Playwright first-time-user run.
-- [ ] **Prompt library**: every VLM prompt used, in a job or a preview, saved to the database once
+- [x] **Prompt library**: every VLM prompt used, in a job or a preview, saved to the database once
       (deduplicated by SHA-256, the same hash as the methods paragraph's provenance) with its
       model, first/last used and the jobs that used it. A browser to search, view, diff, name,
       star and reuse them; reusing one fills the prompt field.
       Spec (with the workbench): `specs/020-prompt-library-workbench/`.
-- [ ] **Prompt workbench**: the "test prompt" panel from inside the VLM pipeline config as a
+      Done 2026-10-04 (with the workbench): library tables and API, recording from jobs and
+      previews, Prompts page, Workbench page, CLI. Tested for real with Ollama (gemma4:e4b,
+      qwen3.5:9b): a VLM job's provenance carries the model digest and quantisation, and a
+      2 × 2 × 2 workbench round ran in 109 s. That test found the CRLF bug above.
+- [x] **Prompt workbench**: the "test prompt" panel from inside the VLM pipeline config as a
       standalone page, since prompt design is iterative and deserves more room than a wizard step.
       Pick a video and frame (or burst), a model and a prompt; run; compare responses side by side
       across prompt versions or models; send the winner to a job or preset. Backend exists

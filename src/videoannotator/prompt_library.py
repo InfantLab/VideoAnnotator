@@ -69,12 +69,23 @@ def record_use(
     return prompt
 
 
+_tables_checked = False
+
+
 def record_use_quietly(text: str, model: str, kind: str, **kwargs: Any) -> None:
     """record_use in its own session, never raising: a library hiccup must not
     fail the job or preview that used the prompt."""
     try:
-        from .database.database import SessionLocal
+        from .database.database import SessionLocal, engine
 
+        global _tables_checked
+        if not _tables_checked:
+            # `videoannotator process` runs without the server, which is
+            # what creates tables; an older database may not have these yet.
+            Prompt.metadata.create_all(
+                bind=engine, tables=[Prompt.__table__, PromptUse.__table__]
+            )
+            _tables_checked = True
         with SessionLocal() as db:
             record_use(db, text, model, kind, **kwargs)
     except Exception as e:

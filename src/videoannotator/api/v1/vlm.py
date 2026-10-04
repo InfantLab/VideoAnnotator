@@ -153,6 +153,10 @@ async def preview_vlm_prompt(
         raise PipelineUnavailableException("vlm_annotation", VLM_REQUIRES_EXTRAS)
 
     base_url = base_url or default_ollama_base_url()
+    # Browsers send every newline of a multipart form field as CRLF, so the
+    # same prompt typed in the viewer would otherwise reach the model (and
+    # the prompt library) as different text from the one a job runs.
+    prompt = prompt.replace("\r\n", "\n")
 
     if sampling_mode not in ("single_frame", "frame_burst"):
         raise APIError(

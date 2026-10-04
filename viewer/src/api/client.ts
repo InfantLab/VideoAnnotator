@@ -33,6 +33,7 @@ import type {
 import type { CurrentUser } from '@/types/api';
 import type { JobResults } from '@/lib/jobOutcome';
 import type { Preset, PresetCreateRequest, PresetListResponse } from '@/types/presets';
+import type { LibraryPrompt, PromptListResponse, PromptUpdateRequest } from '@/types/prompts';
 import type {
   DatasetCreateRequest,
   DatasetListResponse,
@@ -635,6 +636,28 @@ class APIClient {
     });
   }
 
+  /** The prompt library (spec 020): every VLM prompt that ran, once each. */
+  async listPrompts(params: { q?: string; model?: string; tag?: string; includeHidden?: boolean } = {}): Promise<PromptListResponse> {
+    const query = new URLSearchParams();
+    if (params.q) query.set('q', params.q);
+    if (params.model) query.set('model', params.model);
+    if (params.tag) query.set('tag', params.tag);
+    if (params.includeHidden) query.set('include_hidden', 'true');
+    return this.request(`/api/v1/prompts/?${query}`);
+  }
+
+  async updatePrompt(sha256: string, body: PromptUpdateRequest): Promise<LibraryPrompt> {
+    return this.request(`/api/v1/prompts/${sha256}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  async deletePrompt(sha256: string): Promise<void> {
+    return this.request(`/api/v1/prompts/${sha256}`, { method: 'DELETE' });
+  }
+
   /** Saved datasets (specs 007, 018), shared by everyone on the server. */
   async listDatasets(): Promise<DatasetListResponse> {
     return this.request('/api/v1/datasets/');
@@ -917,6 +940,7 @@ class APIClient {
       prompt_tokens: number;
       resp_tokens: number;
       tokens_per_sec: number;
+      frames?: Array<{ frame_number: number | null; timestamp_sec: number | null; jpeg_base64: string }>;
     }>(
       '/api/v1/vlm/preview',
       { method: 'POST', body: formData },
@@ -935,7 +959,12 @@ class APIClient {
       loadTime: response.load_time,
       promptTokens: response.prompt_tokens,
       respTokens: response.resp_tokens,
-      tokensPerSec: response.tokens_per_sec
+      tokensPerSec: response.tokens_per_sec,
+      frames: (response.frames ?? []).map((f) => ({
+        frameNumber: f.frame_number,
+        timestampSec: f.timestamp_sec,
+        jpegBase64: f.jpeg_base64,
+      })),
     };
   }
 

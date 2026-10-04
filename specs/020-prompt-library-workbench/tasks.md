@@ -13,15 +13,15 @@
 
 ## Phase 2: US1 Library page (P1)
 
-- [ ] T007 [US1] types, client methods; `lib/wordDiff.ts` + tests
-- [ ] T008 [US1] `pages/Prompts.tsx`: search, starred first, detail (text, models, jobs, first/last, who), name/star/tag/hide, diff two, Use in a new job, Open in workbench; route + nav
+- [x] T007 [US1] types, client methods; `lib/wordDiff.ts` + tests
+- [x] T008 [US1] `pages/Prompts.tsx`: search, starred first, detail (text, models, jobs, first/last, who), name/star/tag/hide, diff two, Use in a new job, Open in workbench; route + nav
 
 ## Phase 3: US2 Workbench (P1)
 
-- [ ] T009 [US2] `pages/Workbench.tsx`: video (past job or server folder), moments, single/burst, prompts (edit, load from library), models; run grid prompt × model × moment; rounds kept; per-cell errors; frames shown; Send to job / Save as preset; Local-First notice
-- [ ] T010 [US2] Wizard test panel links to the workbench with its prompt and model
-- [ ] T011 [P] [US2] Vitest for the workbench grid with a mocked client
+- [x] T009 [US2] `pages/Workbench.tsx`: video (past job or server folder), moments, single/burst, prompts (edit, load from library), models; run grid prompt × model × moment; rounds kept; per-cell errors; frames shown; Send to job / Save as preset; Local-First notice
+- [x] T010 [US2] Wizard test panel links to the workbench with its prompt and model
+- [x] T011 [P] [US2] Vitest for the workbench grid with a mocked client
 
 ## Phase 4: Polish
 
-- [ ] T012 Real end-to-end with Ollama: a VLM job and workbench previews recorded once each; provenance VLM fields present; Chromium check; CHANGELOG, roadmap, bundle, suites, push
+- [x] T012 Real end-to-end with Ollama: a VLM job and workbench previews recorded once each; provenance VLM fields present; Chromium check; CHANGELOG, roadmap, bundle, suites, push

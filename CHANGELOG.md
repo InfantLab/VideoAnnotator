@@ -84,6 +84,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   API: `POST /api/v1/jobs/{id}/rerun` and `POST /api/v1/batches/{id}/rerun`; jobs carry
   `rerun_of` and `reruns`. CLI: `videoannotator job rerun`.
+- **Prompt library and workbench** (spec 020).
+  - **The library**: every VLM prompt that runs, in a job or a preview, is kept once per exact
+    text. It's identified by the same SHA-256 the output's provenance records, with the models,
+    jobs and times it was used. The **Prompts** page searches them (starred first), names, stars,
+    tags and hides them, compares two word by word, and starts a job or a workbench session from
+    one.
+  - **The workbench**: tries several prompts × models × moments of a video side by side, showing
+    the frames the model saw. Earlier rounds stay on screen to compare, and any result can be sent
+    to a job or saved as a preset. The wizard's "Test this prompt" panel opens it in a new tab.
+  - **Under the hood**: previews now return the frames they used. A note says when the model
+    server isn't on this machine.
+  - **From the terminal**: `videoannotator prompts list|show|diff`, `vlm preview` and
+    `vlm models`.
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 
@@ -262,6 +275,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   take `--api-key` (or `VIDEOANNOTATOR_API_KEY`), and default to `127.0.0.1`.
 - The job wizard's "Retry Job" for a failed job asked for the video to be uploaded again. It is
   now "Fix settings and run again" and reuses the stored video.
+- **A prompt tested in the viewer reached the model with Windows line endings**: browsers send
+  multipart form newlines as CRLF, so a preview ran slightly different text from the job using
+  the same prompt. The server now restores plain newlines.
 - **A core install (`pip install videoannotator`, the slim Docker image) failed to start** with
   `No module named 'httpx'`: the server imports the Ollama client at start, and the v1.6.0 core
   clean-up dropped `httpx` as unused (every test environment had it through the dev tools). It is
