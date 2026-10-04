@@ -23,20 +23,20 @@
 
 ## Phase 3: US2 - See and manage my datasets (P1)
 
-- [ ] T013 [US2] `viewer/src/pages/Datasets.tsx` + `components/datasets/DatasetList.tsx`, `DatasetDetail.tsx`: list (name, count, owner, created, last used), detail (manifest), rename/description/remove videos/delete (owner or admin only, using `/auth/me`), Start a job (→ wizard with dataset), empty state
-- [ ] T014 [US2] Route `/datasets` (replace the Library redirect) and nav link in `viewer/src/App.tsx` / `AppLayout`
-- [ ] T015 [P] [US2] `viewer/src/test/components/Datasets.test.tsx`: list, owner-only actions, delete confirmation text, empty state
+- [x] T013 [US2] `viewer/src/pages/Datasets.tsx` + `components/datasets/DatasetList.tsx`, `DatasetDetail.tsx`: list (name, count, owner, created, last used), detail (manifest), rename/description/remove videos/delete (owner or admin only, using `/auth/me`), Start a job (→ wizard with dataset), empty state
+- [x] T014 [US2] Route `/datasets` (replace the Library redirect) and nav link in `viewer/src/App.tsx` / `AppLayout`
+- [x] T015 [P] [US2] `viewer/src/test/components/Datasets.test.tsx`: list, owner-only actions, delete confirmation text, empty state
 
 ## Phase 4: US3 - Share a dataset or preset (P2)
 
-- [ ] T016 [US3] Export/Import for datasets (`components/datasets/ImportExport.tsx`) and presets (`PresetBar.tsx`): download JSON named after it; import with clash renaming (R4) and invalid-file message
-- [ ] T017 [P] [US3] Tests for import/export (clash, invalid file) in `viewer/src/test/components/ImportExport.test.tsx`
-- [ ] T018 [US3] CLI `videoannotator dataset list|show|export|import|delete` in `src/videoannotator/cli.py`; tests `tests/unit/cli/test_cli_dataset.py`
+- [x] T016 [US3] Export/Import for datasets (`components/datasets/ImportExport.tsx`) and presets (`PresetBar.tsx`): download JSON named after it; import with clash renaming (R4) and invalid-file message
+- [x] T017 [P] [US3] Tests for import/export (clash, invalid file) in `viewer/src/test/components/ImportExport.test.tsx`
+- [x] T018 [US3] CLI `videoannotator dataset list|show|export|import|delete` in `src/videoannotator/cli.py`; tests `tests/unit/cli/test_cli_dataset.py`
 
 ## Phase 5: Polish
 
-- [ ] T019 Playwright check of the Datasets page and wizard flow against the production build (scratch script; uploaded-files path with re-pick)
-- [ ] T020 CHANGELOG, roadmap tick, bundle rebuild, full test suites, push
+- [x] T019 Playwright check of the Datasets page and wizard flow against the production build (scratch script; uploaded-files path with re-pick)
+- [x] T020 CHANGELOG, roadmap tick, bundle rebuild, full test suites, push
 
 ## Dependencies
 

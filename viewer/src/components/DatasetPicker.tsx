@@ -29,6 +29,8 @@ export interface PickedFile {
 interface DatasetPickerProps {
   onUseFiles: (files: PickedFile[], dataset: SavedDataset, folder: FileSystemDirectoryHandle | null) => void;
   onUseServerFolder: (selection: ServerFolderSelection, dataset: SavedDataset) => void;
+  /** A dataset to point out (opened from the Datasets page's "Start a job"). */
+  highlightId?: string;
 }
 
 type Pending =
@@ -43,7 +45,7 @@ const picked = (candidates: Candidate<File>[]): PickedFile[] =>
  * videos again (the folder this browser remembers, the user re-picking it, or
  * the server folder) and shows any differences before anything runs.
  */
-export const DatasetPicker = ({ onUseFiles, onUseServerFolder }: DatasetPickerProps) => {
+export const DatasetPicker = ({ onUseFiles, onUseServerFolder, highlightId }: DatasetPickerProps) => {
   const queryClient = useQueryClient();
   const { currentUser } = useCurrentUser();
   const { data, isLoading, error } = useQuery({
@@ -204,7 +206,10 @@ export const DatasetPicker = ({ onUseFiles, onUseServerFolder }: DatasetPickerPr
       )}
       <ul className="divide-y rounded-md border">
         {datasets.map((dataset) => (
-          <li key={dataset.id} className="flex items-center justify-between gap-3 p-3">
+          <li
+            key={dataset.id}
+            className={`flex items-center justify-between gap-3 p-3 ${dataset.id === highlightId ? 'ring-2 ring-inset ring-primary' : ''}`}
+          >
             <div className="min-w-0">
               <div className="flex items-center gap-2 font-medium">
                 {dataset.server_folder ? <HardDrive className="h-4 w-4" /> : <Database className="h-4 w-4" />}

@@ -23,6 +23,7 @@ const NewJob = lazy(() => import("./pages/NewJob"));
 const Settings = lazy(() => import("./pages/Settings"));
 const JobResultsViewer = lazy(() => import("./pages/JobResultsViewer"));
 const Library = lazy(() => import("./pages/Library"));
+const Datasets = lazy(() => import("./pages/Datasets"));
 
 /** Per page, so the navigation stays on screen while a page loads. */
 const page = (element: ReactNode) => (
@@ -60,8 +61,7 @@ const App = () => (
                     {/* Runs (batches) are listed on the Jobs page. */}
                     <Route path="/batches" element={<Navigate to="/jobs" replace />} />
                     <Route path="/batches/:batchId" element={page(<BatchDetail />)} />
-                    {/* Was a "Coming Soon" placeholder; datasets the viewer has are in the Library. */}
-                    <Route path="/datasets" element={<Navigate to="/library" replace />} />
+                    <Route path="/datasets" element={page(<Datasets />)} />
                     <Route path="/settings" element={page(<Settings />)} />
                   </Route>
 

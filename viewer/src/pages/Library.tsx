@@ -101,7 +101,8 @@ const Library = () => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Library</h1>
         <p className="text-muted-foreground mt-2">
-          Browse and open your video annotation datasets.
+          Results you've downloaded from jobs, and the demos, kept in a folder on this computer. Lists of videos to
+          run jobs on are under Datasets.
         </p>
       </div>
 

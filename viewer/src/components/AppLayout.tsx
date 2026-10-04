@@ -6,10 +6,11 @@ import { ConnectionErrorBanner } from '@/components/ConnectionErrorBanner';
 import { useServerCapabilitiesContext } from '@/contexts/ServerCapabilitiesContext';
 import { isCorsOrNetworkError } from '@/lib/connectionUtils';
 import { APP_NAME } from '@/utils/version';
-import { BookOpen, Briefcase, MonitorPlay, Settings } from 'lucide-react';
+import { BookOpen, Briefcase, Database, MonitorPlay, Settings } from 'lucide-react';
 import vavIcon from '@/assets/v-a-v.icon.png';
 
 const navItems = [
+  { path: '/datasets', label: 'Datasets', icon: Database },
   { path: '/library', label: 'Library', icon: BookOpen },
   { path: '/jobs', label: 'Jobs', icon: Briefcase },
   { path: '/viewer', label: 'View Files', icon: MonitorPlay },

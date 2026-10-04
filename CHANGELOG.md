@@ -58,13 +58,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   full record as recorded. Older files open as before and say "version not recorded" (or only the
   version, for COCO files that carried it). ELAN tiers are labelled as ground truth from their
   file.
+- **Saved datasets in the viewer** (spec 018). The server has kept named lists of videos since
+  v1.5.0; the viewer now uses them:
+  - **In the job wizard**: "Save as dataset" for the videos you chose, and a "Saved dataset" tab
+    to choose them again. Uploaded videos are found in the folder this browser remembers, or one
+    you pick. A server folder is scanned. Missing, new or resized videos are listed before
+    anything runs, and you choose whether to continue or update the dataset. "Choose a folder"
+    on the upload tab keeps subfolder paths.
+  - **On the new Datasets page**: every dataset on the server, with who saved it, its videos and
+    when it was last used. Rename, edit, remove videos, delete (yours only), start a job, and
+    export or import.
+  - **Presets** can be exported and imported too.
+  - **From the terminal**: `videoannotator dataset list|show|export|import|delete`.
+
+  Datasets can now record a server folder, and paths within it. `GET /api/v1/ingest/scan` lists
+  a server folder's videos without starting anything.
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 
 ### Removed
 
-- The viewer's **Datasets page**, a "Coming Soon" placeholder with example cards and disabled
-  buttons, reachable only by its URL. `/datasets` now opens the Library.
 - **The LAION pipelines** (spec 014, from the v1.6.0 pipeline review): `laion_voice` (16–32 GB of
   models, unmaintained upstream, trained on adult acted speech) and `face_laion_clip`
   (unmaintained upstream, unvalidated on infants), with the `audio-laion` and `face-laion`

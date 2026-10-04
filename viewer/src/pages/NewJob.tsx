@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw, FolderOpen, HardDrive, Database } from "lucide-react";
 import { DatasetPicker, type PickedFile } from "@/components/DatasetPicker";
 import { SaveDatasetDialog } from "@/components/SaveDatasetDialog";
+import type { StartFromDatasetState } from "@/pages/Datasets";
 import { manifestFrom, relativePathOf, scanCandidates } from "@/lib/datasetMatch";
 import { rememberFolder, supportsFolderHandles, videosIn } from "@/lib/datasetHandles";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -128,7 +129,10 @@ interface RetryJobState {
 const CreateNewJob = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const retryState = location.state as RetryJobState | undefined;
+  // Other pages pass other state (e.g. Datasets' startFromDataset): only a retry has a job id.
+  const retryState = (location.state as Partial<RetryJobState> | null)?.retryJobId
+    ? (location.state as RetryJobState)
+    : undefined;
 
   const { data: catalogData, isLoading: catalogLoading, error: catalogError } = usePipelineCatalog();
   const refreshPipelineCatalog = useRefreshPipelineCatalog();
@@ -147,7 +151,9 @@ const CreateNewJob = () => {
   // is explicit state rather than derived from `serverFolder`: you can't pick
   // a folder before switching to the server tab, so deriving it would make the
   // tab impossible to open.
-  const [videoSource, setVideoSource] = useState<VideoSource>('upload');
+  // "Start a job" on the Datasets page opens on the Saved dataset tab.
+  const startFromDataset = (location.state as Partial<StartFromDatasetState> | null)?.startFromDataset;
+  const [videoSource, setVideoSource] = useState<VideoSource>(startFromDataset ? 'dataset' : 'upload');
   const [serverFolder, setServerFolder] = useState<ServerFolderSelection | null>(null);
   // The saved dataset the chosen videos are (spec 018); cleared by any manual change.
   const [fromDataset, setFromDataset] = useState<{ id: string; name: string } | null>(null);
@@ -481,6 +487,7 @@ const CreateNewJob = () => {
             serverFolder={serverFolder}
             setServerFolder={setServerFolder}
             dataset={{ fromDataset, setFromDataset, relativePaths, setRelativePaths, folderHandle, setFolderHandle }}
+            highlightDatasetId={startFromDataset?.id}
           />
         );
       case 2:
@@ -730,7 +737,8 @@ const VideoUploadStep = ({
   setVideoSource,
   serverFolder,
   setServerFolder,
-  dataset
+  dataset,
+  highlightDatasetId
 }: {
   selectedFiles: File[];
   setSelectedFiles: (files: File[]) => void;
@@ -739,6 +747,7 @@ const VideoUploadStep = ({
   serverFolder: ServerFolderSelection | null;
   setServerFolder: (selection: ServerFolderSelection | null) => void;
   dataset: DatasetSelectionState;
+  highlightDatasetId?: string;
 }) => {
   const [saving, setSaving] = useState(false);
   const folderInput = useRef<HTMLInputElement>(null);
@@ -896,6 +905,7 @@ const VideoUploadStep = ({
 
         <TabsContent value="dataset" className="mt-4">
           <DatasetPicker
+            highlightId={highlightDatasetId}
             onUseFiles={(picked, chosen, handle) => {
               applyFolder(picked, handle);
               setServerFolder(null);

@@ -392,10 +392,16 @@ half-built page.
       import/export from spec 007's viewer handoff are what's left.)
       Done 2026-10-04: hidden. The page had no menu link, only a URL; `/datasets` now goes to the
       Library. Wiring up saved datasets is a feature, so it gets a spec (below).
-- [ ] **Saved datasets in the viewer** (spec 007's viewer handoff): list, create, rename and delete
+- [x] **Saved datasets in the viewer** (spec 007's viewer handoff): list, create, rename and delete
       the server's saved datasets (`/api/v1/datasets`, shipped in v1.5.0), start a job from one,
       and import/export them. Write a spec first. Decide with Caspar whether it's before rc1.
       Spec: `specs/018-saved-datasets-viewer/` (2026-10-04). Caspar: before rc1.
+      Done 2026-10-04: Datasets page, wizard save/reuse with differences shown, export/import for
+      datasets and presets, `videoannotator dataset` CLI, `GET /ingest/scan`. Checked in Chromium
+      against a real server.
+- [ ] **`videoannotator job submit|status|results|list` send no API key** (found 2026-10-04): with
+      authentication on, the default, they get 401. Give them `--api-key`/`VIDEOANNOTATOR_API_KEY`
+      like `pipelines install` and `dataset`, and default `--server` to `127.0.0.1`.
 - [x] Viewer: zero `tsc --noEmit` errors (24 on 2026-09-26), with typechecking in CI.
       Constitution 1.1.0 makes this an Engineering Standard, as are a 300 KB gzipped initial bundle
       (304 KB on 2026-10-02) and overlays naming the pipeline and version that drew them

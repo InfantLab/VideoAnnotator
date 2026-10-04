@@ -1,5 +1,6 @@
 """VideoAnnotator CLI - Unified command-line interface."""
 
+import json
 import os
 from collections.abc import Callable
 from pathlib import Path
@@ -594,6 +595,137 @@ def list_jobs(
     except requests.RequestException as e:
         typer.echo(f"[ERROR] Failed to connect to API server: {e}", err=True)
         raise typer.Exit(code=1)
+
+
+dataset_app = typer.Typer(
+    name="dataset",
+    help="Saved datasets: named lists of videos to run jobs on (shared on the server)",
+)
+app.add_typer(dataset_app, name="dataset")
+
+_SERVER_OPTION = typer.Option("http://127.0.0.1:18011", help="API server URL")
+_KEY_OPTION = typer.Option(
+    None,
+    "--api-key",
+    envvar="VIDEOANNOTATOR_API_KEY",
+    help="API key (or set VIDEOANNOTATOR_API_KEY); not needed with auth off",
+)
+
+
+def _dataset_request(method: str, url: str, api_key: str | None, **kwargs: Any) -> Any:
+    """Call the datasets API; print the server's message and exit 1 on an error."""
+    import requests
+
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    try:
+        resp = requests.request(method, url, headers=headers, timeout=30, **kwargs)
+    except requests.RequestException as e:
+        typer.echo(f"[ERROR] Cannot reach the server: {e}", err=True)
+        raise typer.Exit(code=1) from e
+    if resp.status_code == 401:
+        typer.echo(
+            "[ERROR] Authentication required: pass --api-key or set "
+            "VIDEOANNOTATOR_API_KEY (create one with: videoannotator generate-token)",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    if not resp.ok:
+        try:
+            error = resp.json().get("error", {})
+            message = error.get("message") or resp.text
+        except ValueError:
+            message = resp.text
+        typer.echo(f"[ERROR] {message}", err=True)
+        raise typer.Exit(code=1)
+    return resp.json() if resp.content else None
+
+
+@dataset_app.command("list")
+def dataset_list(server: str = _SERVER_OPTION, api_key: str | None = _KEY_OPTION):
+    """List the server's saved datasets."""
+    body = _dataset_request("GET", f"{server}/api/v1/datasets/", api_key)
+    if not body["datasets"]:
+        typer.echo("No saved datasets.")
+    for d in body["datasets"]:
+        source = (
+            f"server folder {d['server_folder']}"
+            if d.get("server_folder")
+            else "uploaded"
+        )
+        owner = d.get("owner_name") or d["owner_user_id"]
+        typer.echo(
+            f"{d['id']}  {d['name']}  ({len(d['video_manifest'])} videos, {source}, "
+            f"saved by {owner})"
+        )
+
+
+@dataset_app.command("show")
+def dataset_show(
+    dataset_id: str, server: str = _SERVER_OPTION, api_key: str | None = _KEY_OPTION
+):
+    """Show a dataset and its videos."""
+    d = _dataset_request("GET", f"{server}/api/v1/datasets/{dataset_id}", api_key)
+    typer.echo(f"{d['name']}  ({d['id']})")
+    if d.get("description"):
+        typer.echo(d["description"])
+    if d.get("server_folder"):
+        recursive = " (with subfolders)" if d.get("server_folder_recursive") else ""
+        typer.echo(f"Server folder: {d['server_folder']}{recursive}")
+    for entry in d["video_manifest"]:
+        typer.echo(
+            f"  {entry.get('relative_path') or entry['filename']}  "
+            f"{entry['size_bytes']} bytes"
+        )
+
+
+@dataset_app.command("export")
+def dataset_export(
+    dataset_id: str,
+    output: Path | None = typer.Option(None, "-o", "--output", help="File to write"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """Write a dataset's definition as JSON, to share or import elsewhere."""
+    d = _dataset_request("GET", f"{server}/api/v1/datasets/{dataset_id}", api_key)
+    for field in ("id", "owner_user_id", "owner_name"):
+        d.pop(field, None)
+    text = json.dumps(d, indent=2)
+    if output is None:
+        typer.echo(text)
+    else:
+        output.write_text(text + "\n", encoding="utf-8")
+        typer.echo(f"[OK] Exported to {output}")
+
+
+@dataset_app.command("import")
+def dataset_import(
+    file: Path, server: str = _SERVER_OPTION, api_key: str | None = _KEY_OPTION
+):
+    """Import an exported dataset, as yours. A name you already use is an error."""
+    try:
+        body = json.loads(file.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        typer.echo(f"[ERROR] Cannot read {file}: {e}", err=True)
+        raise typer.Exit(code=1) from e
+    if not isinstance(body, dict) or "name" not in body:
+        typer.echo(f"[ERROR] {file} is not an exported dataset", err=True)
+        raise typer.Exit(code=1)
+    d = _dataset_request("POST", f"{server}/api/v1/datasets/", api_key, json=body)
+    typer.echo(f"[OK] Imported {d['name']} ({d['id']})")
+
+
+@dataset_app.command("delete")
+def dataset_delete(
+    dataset_id: str,
+    yes: bool = typer.Option(False, "--yes", help="Don't ask for confirmation"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """Delete a dataset (yours, or any as an admin). Videos and past jobs stay."""
+    if not yes and not typer.confirm(f"Delete dataset {dataset_id}?"):
+        raise typer.Exit(code=1)
+    _dataset_request("DELETE", f"{server}/api/v1/datasets/{dataset_id}", api_key)
+    typer.echo(f"[OK] Deleted {dataset_id}")
 
 
 pipelines_app = typer.Typer(

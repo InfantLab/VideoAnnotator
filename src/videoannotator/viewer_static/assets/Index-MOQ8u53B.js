@@ -1,0 +1,1 @@
+import{j as o}from"./index-CoAHDNlG.js";import{V as t}from"./VideoAnnotationViewer-CiBQXLkd.js";import"./switch-BFRv88CF.js";import"./tabs-CmaZIFuD.js";import"./separator-CARZI7X9.js";import"./input-ngHZPPPS.js";import"./download-BChpY7_x.js";import"./users-y4Qun0AJ.js";import"./installDemoDataset-C4R5MPVn.js";const d=()=>o.jsx(t,{});export{d as default};
