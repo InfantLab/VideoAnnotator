@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bundled YAML/JSON configs; `--output` also copies the result files to a folder. An unknown
   pipeline name is rejected at once with the valid names. The video is hard-linked into the job
   folder where possible, so it isn't copied.
+- **Queue position in the viewer**: a pending job says where it is in the queue ("Next in queue",
+  "3rd in queue") under its status in the job and batch lists and on its page, so a queued job no
+  longer looks the same as a stuck one. The server already reported `queue_position`; the viewer
+  didn't show it.
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 

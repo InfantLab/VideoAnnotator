@@ -446,9 +446,12 @@ half-built page.
       Done 2026-10-04 (`batch/local_job.py`): validated as a submission is, recorded in the
       server's database, run through `run_job_pipelines`. `--pipelines` is required: a default of
       every pipeline would be slow and need every extra. Tests: `tests/unit/cli/test_cli_process.py`.
-- [ ] **Queue position**: a pending job shows how many jobs are ahead of it ("3rd in queue"), in
+- [x] **Queue position**: a pending job shows how many jobs are ahead of it ("3rd in queue"), in
       the job list, the job page and `GET /api/v1/jobs/{id}`. Today a queued job looks the same as
       a stuck one. (Planned since spec 001's T066.)
+      Done 2026-10-04. The API already returned `queue_position` (oldest pending first, the order
+      the worker takes them) on submit, status and list; the viewer now shows it
+      (`lib/queuePosition.ts`) in `JobsTable` (job and batch lists) and on the job page.
 
 **Run it again**: the path doesn't end at review. A researcher who likes a result wants the same
 settings on more videos; one who doesn't wants to tweak and rerun. Today both mean rebuilding the

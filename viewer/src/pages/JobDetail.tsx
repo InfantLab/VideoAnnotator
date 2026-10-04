@@ -17,6 +17,7 @@ import { canCancelJob } from "@/hooks/useJobCancellation";
 import { canDeleteJob } from "@/hooks/useJobDeletion";
 import type { JobStatus } from "@/types/api";
 import { failedPipelinesOf, isCompletedWithErrors } from "@/lib/jobOutcome";
+import { queueLabel } from "@/lib/queuePosition";
 
 const CreateJobDetail = () => {
   const { jobId } = useParams<{ jobId: string }>();
@@ -52,6 +53,7 @@ const CreateJobDetail = () => {
     staleTime: 60_000,
   });
   const failedPipelines = Object.entries(failedPipelinesOf(results));
+  const queued = job ? queueLabel(job as JobResponse & Record<string, unknown>) : null;
 
   const getStatusClassName = (status: string, errorMessage?: string | null) => {
     const statusMap = {
@@ -293,12 +295,15 @@ const CreateJobDetail = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Job Status</span>
-            <Badge variant="outline" className={getStatusClassName(job.status, job.error_message)}>
-              {job.status.toUpperCase()}
-              {job.status === 'completed' && job.error_message && (
-                <AlertCircle className="ml-1 h-3 w-3 inline" />
-              )}
-            </Badge>
+            <span className="flex items-center gap-2">
+              {queued && <span className="text-sm font-normal text-muted-foreground">{queued}</span>}
+              <Badge variant="outline" className={getStatusClassName(job.status, job.error_message)}>
+                {job.status.toUpperCase()}
+                {job.status === 'completed' && job.error_message && (
+                  <AlertCircle className="ml-1 h-3 w-3 inline" />
+                )}
+              </Badge>
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>

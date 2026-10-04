@@ -30,6 +30,7 @@ import { JobDeleteButton } from '@/components/JobDeleteButton';
 import { canCancelJob } from '@/hooks/useJobCancellation';
 import { canDeleteJob } from '@/hooks/useJobDeletion';
 import { jobErrorSummary } from '@/lib/jobOutcome';
+import { queueLabel } from '@/lib/queuePosition';
 
 const STATUS_CLASSES: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200',
@@ -179,6 +180,7 @@ export function JobsTable({
           jobs.map((job) => {
             const { videoName, videoDuration, videoSize } = videoFieldsOf(job);
             const errorSummary = jobErrorSummary(job);
+            const queued = queueLabel(job as JobResponse & Record<string, unknown>);
             // Real per-pipeline progress from the server (spec 006/008), not a
             // status-to-number guess.
             const progress =
@@ -195,6 +197,7 @@ export function JobsTable({
                 </TableCell>
                 <TableCell>
                   {getStatusBadge(job.status, job.error_message)}
+                  {queued && <p className="mt-1 text-xs text-muted-foreground">{queued}</p>}
                   {errorSummary && (
                     <p
                       className={`mt-1 max-w-[280px] line-clamp-2 text-xs ${
