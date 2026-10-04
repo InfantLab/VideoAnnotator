@@ -19,6 +19,7 @@ capabilities:
 outputs:
   - format: COCO
     types: [face_detections, emotions, demographics]
+    file: face_detections.json
 config_schema:
   detection_backend:
     type: string

@@ -16,6 +16,7 @@ capabilities:
 outputs:
   - format: RTTM
     types: [speaker_turns]
+    file: speaker_diarization.rttm
 config_schema:
   model:
     type: string

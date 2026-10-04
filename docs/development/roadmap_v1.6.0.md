@@ -428,10 +428,13 @@ half-built page.
       usual. Jobs run in an executor thread (`background_tasks.py`), so the likely cause is CPU or
       GIL starvation. Reproduce on an idle machine, and make the status route stay responsive. It
       is what the viewer polls.
-- [ ] **`GET /api/v1/jobs/{id}/results/files/{pipeline}` returns `OUTPUT_FILE_MISSING`** for
+- [x] **`GET /api/v1/jobs/{id}/results/files/{pipeline}` returns `OUTPUT_FILE_MISSING`** for
       every result stored in the database (`output_file: database:/annotations/...`), which is
       what each job's results list advertises as its `download_url`. Same in v1.5.0 (found
       2026-10-02). Serve the file from the job folder, or stop advertising the URL.
+      Done 2026-10-04: served from the job folder by the suffix in each pipeline's registry
+      `outputs[].file`; results list every file (`files`, `?name=`) and advertise only files that
+      exist. Tests: `tests/api/test_result_files.py`.
 - [ ] `videoannotator process <video>` is listed in `--help` but only prints "Direct processing
       is not yet implemented" (found 2026-10-01). Implement it on the shared job-execution path,
       or remove it.

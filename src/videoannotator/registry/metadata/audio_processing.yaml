@@ -23,8 +23,10 @@ capabilities:
 outputs:
   - format: WebVTT
     types: [transcript]
+    file: speech_recognition.vtt
   - format: RTTM
     types: [speaker_turns]
+    file: speaker_diarization.rttm
 config_schema:
   whisper_model:
     type: string

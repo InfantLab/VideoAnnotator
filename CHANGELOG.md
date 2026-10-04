@@ -163,6 +163,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     got an answer. What it did get is still written to the job folder.
   - `audio_processing` (deprecated): a sub-pipeline that fails to load or run. Before, it was
     dropped silently.
+- **Result downloads work.** `GET /api/v1/jobs/{id}/results/files/{pipeline}`, the
+  `download_url` every job's results listed, returned `OUTPUT_FILE_MISSING` (HTTP 500) for every
+  job (also in v1.5.0): it looked for the database's internal annotation reference as if it were a
+  file. It now serves the file the pipeline wrote to the job folder (`clip_speech_recognition.vtt`,
+  `clip_person_tracking.json`, …). Each pipeline's results also list `files`, every file it wrote,
+  each downloadable with `?name=`. A URL is listed only when its file exists, and a missing file
+  is a 404 pointing at the job's ZIP (`/artifacts`). The file names come from a new optional
+  `file` on each pipeline's registry `outputs` entry.
 - **A core install (`pip install videoannotator`, the slim Docker image) failed to start** with
   `No module named 'httpx'`: the server imports the Ollama client at start, and the v1.6.0 core
   clean-up dropped `httpx` as unused (every test environment had it through the dev tools). It is

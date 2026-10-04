@@ -1,6 +1,5 @@
 """Job management endpoints for VideoAnnotator API."""
 
-import contextlib
 import json
 import logging
 import os
@@ -182,6 +181,13 @@ class JobListResponse(BaseModel):
     per_page: int
 
 
+class ResultFileResponse(BaseModel):
+    """One file a pipeline wrote to the job folder."""
+
+    name: str
+    download_url: str
+
+
 class PipelineResultResponse(BaseModel):
     """Response model for individual pipeline results."""
 
@@ -193,6 +199,7 @@ class PipelineResultResponse(BaseModel):
     annotation_count: int | None = None
     output_file: str | None = None
     download_url: str | None = None
+    files: list[ResultFileResponse] = Field(default_factory=list)
     error_message: str | None = None
 
 
@@ -1214,6 +1221,28 @@ async def retry_job_endpoint(
         ) from e
 
 
+def _job_folder(job: BatchJob) -> Path:
+    from ...storage.config import get_job_storage_path
+
+    return Path(job.output_dir or job.storage_path or get_job_storage_path(job.job_id))
+
+
+def _pipeline_result_files(job: BatchJob, pipeline_name: str) -> list[Path]:
+    """The files `pipeline_name` wrote to the job folder, main output first.
+
+    Pipelines write `<video stem>_<suffix>` there; the suffixes come from each
+    pipeline's registry metadata (`outputs[].file`). The storage backend's
+    `output_file` can't be used: for the database backend it isn't a path.
+    """
+    meta = get_registry().get(pipeline_name)
+    if meta is None or job.video_path is None:
+        return []
+    folder = _job_folder(job)
+    stem = Path(job.video_path).stem
+    files = [folder / f"{stem}_{o.file}" for o in meta.outputs if o.file]
+    return [f for f in files if f.is_file()]
+
+
 @router.get(
     "/{job_id}/results",
     response_model=JobResultsResponse,
@@ -1224,8 +1253,10 @@ Retrieve detailed results for a completed video processing job.
 Returns pipeline-specific outputs, annotation counts, processing times, and download URLs
 for generated files. Only available after job completes successfully.
 
-**Result Files**: Each pipeline generates output files (e.g., person_tracking.json,
-face_recognition.json) that can be downloaded using the provided download_url.
+**Result Files**: each pipeline writes files to the job folder (e.g.
+`<video>_person_tracking.json`, `<video>_speech_recognition.vtt`). `download_url` downloads a
+pipeline's main file and `files` lists every file it wrote. Both are relative to the server.
+`GET /api/v1/jobs/{job_id}/artifacts` downloads everything as one ZIP.
 
 **curl Example**:
 ```bash
@@ -1246,20 +1277,31 @@ curl -X GET "http://localhost:18011/api/v1/jobs/abc123-def456/results" \\
       "end_time": "2025-10-22T10:03:12Z",
       "processing_time": 187.3,
       "annotation_count": 1245,
-      "output_file": "/storage/jobs/abc123-def456/person_tracking.json",
+      "output_file": "database:/annotations/abc123-def456/person_tracking",
       "download_url": "/api/v1/jobs/abc123-def456/results/files/person_tracking",
+      "files": [
+        {
+          "name": "clip_person_tracking.json",
+          "download_url": "/api/v1/jobs/abc123-def456/results/files/person_tracking?name=clip_person_tracking.json"
+        },
+        {
+          "name": "clip_person_tracks.json",
+          "download_url": "/api/v1/jobs/abc123-def456/results/files/person_tracking?name=clip_person_tracks.json"
+        }
+      ],
       "error_message": null
     },
-    "face_recognition": {
-      "pipeline_name": "face_recognition",
-      "status": "completed",
+    "speech_recognition": {
+      "pipeline_name": "speech_recognition",
+      "status": "failed",
       "start_time": "2025-10-22T10:03:15Z",
-      "end_time": "2025-10-22T10:05:23Z",
-      "processing_time": 128.1,
-      "annotation_count": 423,
-      "output_file": "/storage/jobs/abc123-def456/face_recognition.json",
-      "download_url": "/api/v1/jobs/abc123-def456/results/files/face_recognition",
-      "error_message": null
+      "end_time": "2025-10-22T10:03:20Z",
+      "processing_time": null,
+      "annotation_count": null,
+      "output_file": null,
+      "download_url": null,
+      "files": [],
+      "error_message": "No audio could be extracted from clip.mp4: ..."
     }
   },
   "created_at": "2025-10-22T10:00:00Z",
@@ -1315,15 +1357,17 @@ async def get_job_results(
                 error_message=result.error_message,
             )
 
-        # Build full pipeline results with download URLs
+        # Relative URLs: the client prepends the server origin. Advertised only
+        # for files that exist, so a listed URL always downloads.
         for name, result in pipeline_results.items():
-            if result.output_file:
-                with contextlib.suppress(Exception):
-                    # Construct a download URL for convenience; client may use server base URL
-                    # Note: This is a relative path; frontend should prepend server origin
-                    result.download_url = (
-                        f"/api/v1/jobs/{job.job_id}/results/files/{name}"
-                    )
+            url = f"/api/v1/jobs/{job.job_id}/results/files/{name}"
+            files = _pipeline_result_files(job, name)
+            if files:
+                result.download_url = url
+                result.files = [
+                    ResultFileResponse(name=f.name, download_url=f"{url}?name={f.name}")
+                    for f in files
+                ]
 
         return JobResultsResponse(
             job_id=job.job_id,
@@ -1355,14 +1399,17 @@ async def get_job_results(
 async def download_result_file(
     job_id: str,
     pipeline_name: str,
+    name: str | None = None,
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> Any:
-    """Download a specific result file from a job.
+    """Download a file a pipeline wrote for a job.
 
     Args:
         job_id: Job ID
         pipeline_name: Name of pipeline to download results for
+        name: Which of the pipeline's files (as listed in `files` by
+            GET /jobs/{job_id}/results); default its main output
 
     Returns:
         File download response
@@ -1384,30 +1431,26 @@ async def download_result_file(
                 hint=f"Check pipeline name or use GET /api/v1/jobs/{job_id}/results to see available results",
             )
 
-        result = job.pipeline_results[pipeline_name]
-
-        # Check if output file exists
-        if not result.output_file:
-            raise InvalidRequestException(
-                message=f"No output file for pipeline '{pipeline_name}' in job {job_id}",
-                hint="This pipeline may not generate an output file",
-            )
-
-        output_file_path = Path(result.output_file)
-
-        # Verify file exists on disk
-        if not output_file_path.exists():
+        files = _pipeline_result_files(job, pipeline_name)
+        if name is not None:
+            files = [f for f in files if f.name == name]
+        if not files:
             raise APIError(
-                status_code=500,
+                status_code=404,
                 code="OUTPUT_FILE_MISSING",
-                message=f"Output file not found: {output_file_path}",
-                hint="File may have been deleted or storage may be corrupt",
+                message=(
+                    f"No output file{f' named {name!r}' if name else ''} for "
+                    f"pipeline '{pipeline_name}' in job {job_id}"
+                ),
+                hint=(
+                    f"GET /api/v1/jobs/{job_id}/results lists each pipeline's "
+                    f"files; GET /api/v1/jobs/{job_id}/artifacts downloads them all"
+                ),
             )
 
-        # Return file
         return FileResponse(
-            path=str(output_file_path),
-            filename=output_file_path.name,
+            path=str(files[0]),
+            filename=files[0].name,
             media_type="application/octet-stream",
         )
 

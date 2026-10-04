@@ -162,7 +162,7 @@ curl -H "Authorization: Bearer $API_KEY" \
 
 # Download specific pipeline result files
 curl -H "Authorization: Bearer $API_KEY" \
-  "http://localhost:18011/api/v1/jobs/{job_id}/results/files/scene_detection" -O
+  "http://localhost:18011/api/v1/jobs/{job_id}/results/files/scene_detection" -OJ
 ```
 
 ### Using the Python API

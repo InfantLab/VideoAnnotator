@@ -47,6 +47,9 @@ VALID_OUTPUT_FORMATS = {"COCO", "RTTM", "WebVTT", "JSON"}
 class PipelineOutputFormat:
     format: str
     types: list[str] = field(default_factory=list)
+    # Suffix of the file this output is written to in the job folder, after
+    # "<video stem>_" (e.g. "speech_recognition.vtt"); serves result downloads.
+    file: str | None = None
 
 
 @dataclass
@@ -193,7 +196,9 @@ class PipelineRegistry:
                 )
                 continue
             outputs.append(
-                PipelineOutputFormat(format=fmt, types=o.get("types", []) or [])
+                PipelineOutputFormat(
+                    format=fmt, types=o.get("types", []) or [], file=o.get("file")
+                )
             )
         if not outputs:
             LOGGER.warning("Metadata %s has no valid outputs; skipping", source.name)
