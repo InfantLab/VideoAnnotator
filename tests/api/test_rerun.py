@@ -135,3 +135,19 @@ def test_batch_rerun_makes_a_new_batch_and_reports_skips():
         body["batch_id"],
         "Session 1 (rerun)",
     )
+
+
+def test_a_jobs_video_streams_with_range_requests():
+    job = _finished_job()
+    full = client.get(f"/api/v1/jobs/{job.job_id}/video")
+    assert full.status_code == 200
+    assert full.content == b"video bytes"
+    part = client.get(
+        f"/api/v1/jobs/{job.job_id}/video", headers={"Range": "bytes=0-4"}
+    )
+    assert part.status_code == 206
+    assert part.content == b"video"
+    Path(job.video_path).unlink()
+    gone = client.get(f"/api/v1/jobs/{job.job_id}/video")
+    assert gone.status_code == 404
+    assert gone.json()["error"]["code"] == "VIDEO_NOT_STORED"

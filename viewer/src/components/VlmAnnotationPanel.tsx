@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import type { ElanTierAnnotation, ProvenanceInfo, VLMFrameAnnotation } from '@/types/annotations';
 import { ProvenanceAttribution } from './ProvenanceAttribution';
 import { getVlmAnnotationAtTime } from '@/lib/parsers/vlm';
+import { isPositiveLabel } from '@/lib/vlmLabels';
 import { getElanFourwayAtTime } from '@/lib/parsers/elan';
 
 interface VlmAnnotationPanelProps {
@@ -26,8 +27,6 @@ const labelVariant = (label: string): 'default' | 'secondary' | 'destructive' =>
 // at the same instant — not a general-purpose label parser. Works for the
 // touch-detection vocabulary (TOUCH/NO_TOUCH/MATERNAL_TOUCH/etc, YES/NO);
 // a differently-worded prompt's labels won't binarize meaningfully here.
-const isPositiveLabel = (label: string): boolean =>
-  !label.startsWith('ERROR') && label !== 'NO_TOUCH' && label !== 'NO' && label !== 'EMPTY';
 
 export const VlmAnnotationPanel = ({
   annotations,

@@ -1113,6 +1113,37 @@ class APIClient {
    * @param jobId - Job ID to download artifacts for
    * @returns Response object that can be used to stream the ZIP file
    */
+  /** Fetch with this client's server and key, keeping the raw Response (files, videos). */
+  private async fetchRaw(path: string): Promise<Response> {
+    this.baseURL = getApiBaseUrl().replace(/\/$/, '');
+    this.token = getApiToken();
+    const headers: Record<string, string> = {};
+    if (this.token && isValidToken(this.token)) headers['Authorization'] = `Bearer ${this.token}`;
+    const response = await fetch(`${this.baseURL}${path}`, { headers });
+    if (!response.ok) {
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch {
+        body = undefined;
+      }
+      const message = (body as { error?: { message?: string } } | undefined)?.error?.message ?? `HTTP ${response.status}`;
+      throw new APIError(message, response.status, response, body);
+    }
+    return response;
+  }
+
+  /** A pipeline's main output file for a job, as text (spec 021). */
+  async getResultFileText(jobId: string, pipeline: string): Promise<string> {
+    return (await this.fetchRaw(`/api/v1/jobs/${encodeURIComponent(jobId)}/results/files/${pipeline}`)).text();
+  }
+
+  /** The job's video as a blob URL (a <video> can't send the API key itself). Revoke it when done. */
+  async getJobVideoUrl(jobId: string): Promise<string> {
+    const blob = await (await this.fetchRaw(`/api/v1/jobs/${encodeURIComponent(jobId)}/video`)).blob();
+    return URL.createObjectURL(blob);
+  }
+
   async getJobArtifacts(jobId: string): Promise<Response> {
     // Always get fresh values from localStorage
     this.baseURL = getApiBaseUrl().replace(/\/$/, '');

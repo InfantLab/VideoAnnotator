@@ -97,6 +97,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     server isn't on this machine.
   - **From the terminal**: `videoannotator prompts list|show|diff`, `vlm preview` and
     `vlm models`.
+- **Compare two VLM jobs** (spec 021): "Compare with…" on a VLM job's page (and "Compare with
+  original" on a rerun) opens both runs' labels on one timeline. It lists the moments where they
+  disagree, summarises the agreement and which label each run gave, and seeks the video to any
+  moment to show both runs' reasoning.
+  - Runs with different sampling intervals are paired by time, and every sample is counted:
+    compared, unpaired or error.
+  - Labels are compared exactly as recorded, unless you choose to ignore case.
+  - An ELAN `.eaf` adds a ground-truth row and each run's agreement with it.
+  - The comparison exports as CSV, and has its own link to share.
+  - Jobs of different videos are refused, using the input hash from provenance.
+  - New endpoint: `GET /api/v1/jobs/{id}/video` streams a job's video (with seeking).
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 

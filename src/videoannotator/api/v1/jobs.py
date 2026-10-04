@@ -2,6 +2,7 @@
 
 import json
 import logging
+import mimetypes
 import os
 import shutil
 import tempfile
@@ -1529,6 +1530,34 @@ async def get_job_results(
             message=f"Failed to get job results: {e!s}",
             hint="Check server logs for details",
         ) from e
+
+
+@router.get(
+    "/{job_id}/video",
+    summary="Stream a job's video",
+    description="The video a job ran on, with range requests so a browser can seek "
+    "(spec 021). 404 VIDEO_NOT_STORED when it is no longer on the server.",
+)
+async def get_job_video(
+    job_id: str,
+    storage: StorageBackend = Depends(get_storage),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Any:
+    job = storage.load_job_metadata(job_id)
+    if job is None:
+        raise JobNotFoundException(
+            job_id=job_id,
+            hint="Check job ID or use GET /api/v1/jobs to list all jobs",
+        )
+    video = Path(job.video_path) if job.video_path else None
+    if video is None or not video.is_file():
+        raise APIError(
+            status_code=404,
+            code="VIDEO_NOT_STORED",
+            message=f"Job {job_id}'s video is no longer on the server",
+        )
+    media_type = mimetypes.guess_type(video.name)[0] or "application/octet-stream"
+    return FileResponse(path=str(video), media_type=media_type, filename=video.name)
 
 
 @router.get("/{job_id}/results/files/{pipeline_name}")

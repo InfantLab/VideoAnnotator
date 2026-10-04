@@ -19,6 +19,7 @@ import type { JobStatus } from "@/types/api";
 import { failedPipelinesOf, isCompletedWithErrors } from "@/lib/jobOutcome";
 import { queueLabel } from "@/lib/queuePosition";
 import { RunAgainActions } from "@/components/RunAgainActions";
+import { CompareWith } from "@/components/CompareWith";
 import { settingsOf, wizardState } from "@/lib/wizardStart";
 
 const CreateJobDetail = () => {
@@ -324,6 +325,7 @@ const CreateJobDetail = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             <RunAgainActions target={{ kind: 'job', id: job.id, label: jobLabel, settings: settingsOf(job) }} />
+            <CompareWith job={job} />
           </CardContent>
         </Card>
       )}

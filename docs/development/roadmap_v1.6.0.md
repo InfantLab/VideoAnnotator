@@ -532,11 +532,14 @@ job in the wizard from memory, although every job already stores its `selected_p
       across prompt versions or models; send the winner to a job or preset. Backend exists
       (`POST /api/v1/vlm/preview`, `GET /api/v1/vlm/models`); new work is the page, the prompt
       table and its endpoints. Also through the CLI/MCP (Phase 4).
-- [ ] **Compare two VLM jobs** on the same video: their labels on one timeline, with the frames
+- [x] **Compare two VLM jobs** on the same video: their labels on one timeline, with the frames
       where they disagree listed, and ELAN ground truth as a third row when there is one. The
       workbench compares prompts on single frames; this compares whole runs. Asked for in spec
       009's viewer handoff; comparing across a whole dataset stays in Phase 6.
       Spec: `specs/021-compare-vlm-jobs/`.
+      Done 2026-10-04. Tested for real: gemma4:e4b every 5 s vs qwen3.5:9b every 2 s on the demo
+      clip. 3 moments paired, 3 unpaired, all 3 disagreeing (TOUCH vs NO_TOUCH); the video seeks
+      to a selected moment.
 
 **Not in this phase**: a visual redesign. Decide on one after the pilot, from what outside users
 say.

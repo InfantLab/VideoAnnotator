@@ -26,6 +26,7 @@ const Library = lazy(() => import("./pages/Library"));
 const Datasets = lazy(() => import("./pages/Datasets"));
 const Prompts = lazy(() => import("./pages/Prompts"));
 const Workbench = lazy(() => import("./pages/Workbench"));
+const Compare = lazy(() => import("./pages/Compare"));
 
 /** Per page, so the navigation stays on screen while a page loads. */
 const page = (element: ReactNode) => (
@@ -66,6 +67,7 @@ const App = () => (
                     <Route path="/datasets" element={page(<Datasets />)} />
                     <Route path="/prompts" element={page(<Prompts />)} />
                     <Route path="/workbench" element={page(<Workbench />)} />
+                    <Route path="/compare" element={page(<Compare />)} />
                     <Route path="/settings" element={page(<Settings />)} />
                   </Route>
 
