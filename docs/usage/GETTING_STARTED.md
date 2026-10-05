@@ -251,7 +251,6 @@ All pipelines are fully integrated with the API server and process through the b
 - Explore [Pipeline Specifications](pipeline_specs.md) for detailed pipeline documentation
 - Learn about [Demo Commands](demo_commands.md) for complete usage examples
 - Check out [Testing Overview](../testing/testing_overview.md) for QA information
-- See [Examples CLI Update Plan](../development/EXAMPLES_CLI_UPDATE_CHECKLIST.md) for updated CLI patterns
 
 ## Common Issues
 

@@ -1,0 +1,48 @@
+name: Docs site
+
+# Publishes docs/ (without the archive) to GitHub Pages from master.
+# CI's `docs` job builds the same site on every push, so a broken build is caught before here.
+on:
+  push:
+    branches: [master]
+    paths: [docs/**, mkdocs.yml, scripts/mkdocs_hooks.py]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.2.0  # no moving major tags since v8
+        with:
+          enable-cache: true
+
+      - name: Build
+        run: |
+          uv sync --frozen --only-group docs
+          uv run --no-sync mkdocs build --strict
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

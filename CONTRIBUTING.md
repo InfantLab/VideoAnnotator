@@ -97,7 +97,7 @@ docker-compose --profile dev up --build
 
 ## Testing Standards
 
-Please follow our comprehensive testing standards outlined in [TESTING_STANDARDS.md](docs/TESTING_STANDARDS.md).
+Please follow our comprehensive testing standards outlined in [testing standards](docs/testing/testing_standards.md).
 
 ### Running Tests
 

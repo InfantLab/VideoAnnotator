@@ -380,12 +380,18 @@ half-built page.
 **Solution**:
 - [ ] README rewritten for researchers: what it does, one screenshot, install in three steps per
       OS, open the viewer.
-- [ ] Internal material out of the public docs: `docs/testing/` team handoffs (`Jerry-issues.md`,
+- [x] Internal material out of the public docs: `docs/testing/` team handoffs (`Jerry-issues.md`,
       `Issues for Server Team.md`, `TEAM_HANDOFF_PACKAGE.md` and others) and `docs/Figure 1.docx`
-      move to `docs/archive/` or go.
-- [ ] Docs site (mkdocs-material on GitHub Pages) built from `docs/`, archive excluded.
-- [ ] Docs have one entry page (`docs/README.md`) and a link check in CI, so moving files can't
-      leave dead links. (Unfinished since spec 001: T055, T056, T059.)
+      move to `docs/archive/` or go. Done 2026-10-05: those, the dated fix notes, the coding-agent
+      setup guide and the v1.3 scripts audit are in `docs/archive/`.
+- [x] Docs site (mkdocs-material on GitHub Pages) built from `docs/`, archive excluded.
+      `mkdocs.yml`; CI's `docs` job builds it with `--strict`, `docs-site.yml` publishes it from
+      master. Links that leave `docs/` become GitHub links in the site (`scripts/mkdocs_hooks.py`).
+      Pages must be switched on once (Settings → Pages → Source: GitHub Actions).
+- [x] Docs have one entry page (`docs/README.md`) and a link check in CI, so moving files can't
+      leave dead links. (Unfinished since spec 001: T055, T056, T059.) `docs/README.md` rewritten
+      by task (install, use, run it for a group, contribute); `scripts/validate_docs_links.py`
+      checks relative links in README, CONTRIBUTING and `docs/` (archive aside).
 - [x] No placeholder pages. The Datasets page says "Coming Soon" behind a disabled button, although
       spec 007's backend shipped in v1.5.0: wire it up or hide it.
       (Preset load/save in the job wizard landed in v1.5.0; the Datasets page, saved datasets and

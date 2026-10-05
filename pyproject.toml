@@ -356,6 +356,10 @@ dev = [
     "types-PyYAML>=6.0.0",
     "types-requests>=2.31.0",
 ]
+# The documentation site: `uv run --group docs mkdocs serve`.
+docs = [
+    "mkdocs-material>=9.5",
+]
 # The docker-compose Jupyter service: `uv sync --group notebooks`.
 notebooks = [
     "jupyter>=1.0.0",

@@ -237,3 +237,4 @@ videoannotator.db
 test_*.db
 *.sqlite
 *.sqlite3
+site/

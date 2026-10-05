@@ -118,10 +118,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A first-run checklist on a new install (connect, install a pipeline, run a job, open its
     results), which can be hidden.
   - Recent datasets (run one in a click), starred prompts, and the results kept on this computer.
+- **A documentation site** built from `docs/` with mkdocs-material, published to GitHub Pages from
+  master. `docs/README.md` is the one entry page, arranged by task: install, use, run it for a
+  group, contribute. CI checks every relative link in the README, CONTRIBUTING and `docs/`
+  (`scripts/validate_docs_links.py`) and builds the site in strict mode, so moving a file can't
+  leave a dead link. Preview locally with `uv sync --inexact --group docs` then `mkdocs serve`.
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 
 ### Removed
+
+- Internal working documents moved out of the public docs into `docs/archive/`: the 2025
+  client/server team handoffs and QA reports from `docs/testing/`, `docs/Figure 1.docx`, dated
+  fix notes, the coding-agent setup guide and the v1.3 scripts audit.
 
 - **The LAION pipelines** (spec 014, from the v1.6.0 pipeline review): `laion_voice` (16–32 GB of
   models, unmaintained upstream, trained on adult acted speech) and `face_laion_clip`

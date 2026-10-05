@@ -153,6 +153,26 @@ jobs:
           curl -sf "localhost:18011/api/v1/pipelines/?include_unavailable=true" > /dev/null
           ! grep -E "ERROR|Traceback" "$RUNNER_TEMP/server.log" || { cat "$RUNNER_TEMP/server.log"; exit 1; }
 
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.2.0  # no moving major tags since v8
+        with:
+          enable-cache: true
+
+      - name: Relative links resolve
+        run: python3 scripts/validate_docs_links.py
+
+      # The site Pages publishes (docs-site.yml); --strict fails on a broken link or anchor.
+      - name: Site builds
+        run: |
+          uv sync --frozen --only-group docs
+          uv run --no-sync mkdocs build --strict
+
   integration-test:
     runs-on: ubuntu-latest
     needs: test
