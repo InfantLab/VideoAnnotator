@@ -28,6 +28,7 @@ services:
     volumes:
       - models:/app/models  # model weights persist across rebuilds (spec 016)
       - database:/app/database  # jobs, users and API keys persist across rebuilds
+      - storage:/app/storage  # each job's video and results, which the database points to
       - ./data:/app/data:ro
       - ./output:/app/output
     environment:
@@ -50,6 +51,7 @@ services:
     volumes:
       - models:/app/models  # model weights persist across rebuilds (spec 016)
       - database:/app/database  # jobs, users and API keys persist across rebuilds
+      - storage:/app/storage  # each job's video and results, which the database points to
       - ./data:/app/data:ro
       - ./output:/app/output
     environment:
@@ -122,6 +124,8 @@ volumes:
     name: videoannotator-models
   database:
     name: videoannotator-database
+  storage:
+    name: videoannotator-storage
 
 networks:
   default:

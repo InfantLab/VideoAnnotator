@@ -43,7 +43,8 @@ install → add videos → run → review → export, and note every point of fr
 
 ## Not fixed: for a decision or a later pass
 
-1. **Job files live in the folder the server was started from** (`./storage/jobs/...`, inside
+1. *(Done 2026-10-05: per-user default, old jobs still open, Docker volume.)*
+   **Job files live in the folder the server was started from** (`./storage/jobs/...`, inside
    the clone here). The database, models and logs live in the per-user data folder (spec 016).
    Start the server from another folder and earlier jobs lose their videos and results. Suggest:
    the same per-user default as the database, with `STORAGE_ROOT` still overriding it. That needs

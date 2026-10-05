@@ -113,6 +113,9 @@ def server(
         else "DATABASE_URL"
     )
     typer.echo(f"[INFO] Database: {db_shown}")
+    from .storage.config import get_storage_root
+
+    typer.echo(f"[INFO] Jobs: {get_storage_root()}")
 
     from .config_env import ENABLE_VIEWER
 

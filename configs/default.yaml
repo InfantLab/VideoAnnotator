@@ -4,7 +4,8 @@
 # Storage Configuration
 storage:
   provider: "local"
-  root_path: "./storage/jobs"
+  # root_path: where job folders go. Default: `jobs` in the per-user data
+  # directory, beside the database. The STORAGE_ROOT environment variable wins.
   options:
     create_dirs: true
 

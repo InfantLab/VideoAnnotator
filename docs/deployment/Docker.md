@@ -42,6 +42,7 @@ loading the models takes most of the time.
 docker run --rm -p 18011:18011 --gpus all \
   -v videoannotator-models:/app/models \
   -v videoannotator-database:/app/database \
+  -v videoannotator-storage:/app/storage \
   -v "${PWD}/data:/app/data" \
   -v "${PWD}/output:/app/output" \
   videoannotator:all
@@ -56,6 +57,7 @@ viewer at http://localhost:18011/viewer.
 |---|---|---|
 | `/app/models` | Model weights (`VIDEOANNOTATOR_MODELS_DIR`) | A named volume, so weights download once |
 | `/app/database` | Jobs, users and API keys (`VIDEOANNOTATOR_DB_PATH`) | A named volume, so they survive a new container |
+| `/app/storage` | Each job's video and results (`STORAGE_ROOT` is `/app/storage/jobs`) | A named volume, alongside the database |
 | `/app/data` | Input videos | Your video folder |
 | `/app/output` | Exported results | A host folder |
 | `/app/logs` | Logs (`VIDEOANNOTATOR_LOG_DIR`) | Optional |
@@ -63,7 +65,7 @@ viewer at http://localhost:18011/viewer.
 ### Windows PowerShell
 
 ```powershell
-docker run --rm -p 18011:18011 --gpus all -v videoannotator-models:/app/models -v "${PWD}\data:/app/data" videoannotator:all
+docker run --rm -p 18011:18011 --gpus all -v videoannotator-models:/app/models -v videoannotator-database:/app/database -v videoannotator-storage:/app/storage -v "${PWD}\data:/app/data" videoannotator:all
 ```
 
 ## Docker Compose
@@ -104,6 +106,9 @@ docker run --gpus all --rm videoannotator:all python -c "import torch; print('CU
   NVIDIA Container Toolkit.
 - **Models download on every run**: mount a volume at `/app/models`.
 - **Jobs or API keys gone after recreating the container**: mount a volume at `/app/database`.
+- **Jobs listed but their videos or results missing after recreating the container**: mount a
+  volume at `/app/storage` too. Before v1.6.0 the image didn't say so, and job folders were lost
+  with the container.
 - **Permission denied on a mounted folder**: check the host folder's permissions.
 
 ## What's in the image

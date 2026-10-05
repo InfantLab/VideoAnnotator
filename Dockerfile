@@ -72,7 +72,8 @@ ENV PATH="/app/.venv/bin:${PATH}" \
     NVIDIA_DRIVER_CAPABILITIES=compute,utility \
     VIDEOANNOTATOR_MODELS_DIR=/app/models \
     VIDEOANNOTATOR_LOG_DIR=/app/logs \
-    VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator.db
+    VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator.db \
+    STORAGE_ROOT=/app/storage/jobs
 
 RUN mkdir -p /app/data /app/output /app/logs /app/database /app/models
 

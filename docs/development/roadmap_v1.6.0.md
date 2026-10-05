@@ -449,9 +449,10 @@ half-built page.
       machine files each point of friction as an issue.
       2026-10-05: first run done (Linux, fresh clone and home, README steps, Scene Detection):
       `docs/development/handover_first_time_user_run.md`. It found two blockers, both fixed: the
-      first-start key wasn't admin, and Linux extras installs couldn't resolve torch. Ten points
-      remain, some for a decision (job storage location, results-folder prompt, what moves or
-      goes); filing them as issues waits for Caspar. Windows, macOS, GPU, a long video and the
+      first-start key wasn't admin, and Linux extras installs couldn't resolve torch. Job folders
+      then moved beside the database (they followed the start directory). The other points are
+      tracked in that note, not as GitHub issues, while the work is in-house (Caspar,
+      2026-10-05); some need a decision (results-folder prompt, what moves or goes). Windows, macOS, GPU, a long video and the
       VLM and datasets paths are still to run.
 - [x] **OpenFace 3 results are sensitive to GPU nondeterminism** (found 2026-10-01, spec 013): a
       1-pixel difference in RetinaFace's box between two runs of the same video changes that

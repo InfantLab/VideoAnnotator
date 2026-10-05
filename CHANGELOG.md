@@ -149,6 +149,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Job folders move to the per-user data folder**, beside the database: `jobs` in
+  `~/.local/share/videoannotator/` (Linux), `~/Library/Application Support/videoannotator/`
+  (macOS) or `%LOCALAPPDATA%\videoannotator\` (Windows). They were in `./storage/jobs` under the
+  folder the server started in, so starting it from somewhere else lost every earlier job's video
+  and results. `STORAGE_ROOT` still overrides it, and the server prints it at start
+  (`[INFO] Jobs: ...`). Jobs made before keep working from where they are: each recorded its
+  folder, which viewing, the results zip and deleting now use. When old job folders are found,
+  the server says so at start.
+- **Docker: job folders get a volume.** The images set `STORAGE_ROOT=/app/storage/jobs`, and
+  `docker-compose.yml` and the documented `docker run` mount `videoannotator-storage` there.
+  Before, job folders were inside the container, lost when it was recreated while the database
+  still listed the jobs.
+
 - **README rewritten for researchers**: what VideoAnnotator does and for whom, a screenshot, the
   pipelines and their file formats, installing in three steps on Windows, macOS and Linux, and
   opening the viewer. Developer and API detail moved to the docs.

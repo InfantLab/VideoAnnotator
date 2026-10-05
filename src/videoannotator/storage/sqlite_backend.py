@@ -489,6 +489,8 @@ class SQLiteStorageBackend(StorageBackend):
 
         try:
             with self.SessionLocal() as session:
+                db_job = session.query(Job).filter_by(id=job_id).first()
+                recorded = db_job.storage_path if db_job else None
                 # Foreign key constraints will cascade delete annotations and pipeline_results
                 deleted_count = session.query(Job).filter_by(id=job_id).delete()
 
@@ -503,7 +505,12 @@ class SQLiteStorageBackend(StorageBackend):
 
             # Delete persistent storage directory (video files, outputs)
             try:
+                # The folder the job recorded: jobs made before v1.6.0 live
+                # under ./storage/jobs, not today's storage root. Only a
+                # folder named after the job is ever removed.
                 storage_path = get_job_storage_path(job_id)
+                if recorded and Path(recorded).name == job_id:
+                    storage_path = Path(recorded)
                 if storage_path.exists():
                     shutil.rmtree(storage_path)
                     self.logger.debug(

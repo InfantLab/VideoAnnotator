@@ -5,7 +5,9 @@ supporting both local filesystem and future cloud storage backends.
 
 Environment Variables:
     STORAGE_ROOT: Root directory for persistent job storage
-                  Default: ./storage/jobs
+                  Default: `jobs` in the per-user data directory, next to the
+                  database (it was ./storage/jobs, under whatever directory the
+                  server started in, before v1.6.0)
 """
 
 import os
@@ -20,7 +22,7 @@ def get_storage_root() -> Path:
     Priority:
     1. STORAGE_ROOT environment variable
     2. 'storage.root_path' in configs/default.yaml
-    3. Default: ./storage/jobs
+    3. Default: `jobs` in the per-user data directory
 
     Returns:
         Path: Absolute path to the storage root directory
@@ -46,8 +48,23 @@ def get_storage_root() -> Path:
         # Fallback if config parsing fails
         pass
 
-    # 3. Default
-    return Path("./storage/jobs").expanduser().resolve()
+    # 3. Default: beside the database, so jobs don't depend on where the server
+    # was started (spec 016 did the same for weights, logs and the database).
+    from videoannotator.models_dir import user_data_dir
+
+    return (user_data_dir() / "jobs").resolve()
+
+
+def legacy_storage_root() -> Path | None:
+    """`./storage/jobs`, the pre-v1.6.0 default, if it holds jobs and isn't the
+    storage root. Those jobs still open: each records its own folder."""
+    old = Path("storage/jobs").resolve()
+    try:
+        if old == get_storage_root() or not old.is_dir():
+            return None
+        return old if any(child.is_dir() for child in old.iterdir()) else None
+    except OSError:
+        return None
 
 
 def get_job_storage_path(job_id: str) -> Path:
@@ -119,5 +136,6 @@ __all__ = [
     "STORAGE_ROOT",
     "ensure_job_storage_path",
     "get_job_storage_path",
+    "legacy_storage_root",
     "get_storage_root",
 ]

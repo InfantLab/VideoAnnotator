@@ -88,7 +88,9 @@ def _run(
     if job.output_dir is None and job.storage_path:
         job.output_dir = job.storage_path
     if job.output_dir is None:
-        job.output_dir = Path.cwd() / "storage" / "jobs" / job.job_id / "output"
+        from ..storage.config import get_job_storage_path
+
+        job.output_dir = get_job_storage_path(job.job_id) / "output"
     job.output_dir.mkdir(parents=True, exist_ok=True)
 
     pipelines_to_run = _resolve_pipelines(job, pipeline_classes)

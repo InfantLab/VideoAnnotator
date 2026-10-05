@@ -23,8 +23,10 @@ class TestGetStorageRoot:
 
         assert isinstance(root, Path)
         assert root.is_absolute()
-        # Should resolve to absolute path based on ./storage/jobs
-        assert root.name == "jobs" or "storage" in str(root)
+        # Beside the database, not under the directory the server started in.
+        from videoannotator.models_dir import user_data_dir
+
+        assert root == (user_data_dir() / "jobs").resolve()
 
     def test_custom_storage_root_from_env(self, monkeypatch):
         """Test custom storage root from environment variable."""

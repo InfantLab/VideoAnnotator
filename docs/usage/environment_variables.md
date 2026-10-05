@@ -47,7 +47,7 @@ Control where job data is stored and how long it's retained:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STORAGE_ROOT` | `./storage/jobs` | **(New)** Root directory for persistent job storage |
+| `STORAGE_ROOT` | per-user data folder | Where each job's folder (its video and results) goes. Default: `jobs` beside the database in the per-user data folder; `/app/storage/jobs` in the Docker images. Before v1.6.0 it was `./storage/jobs` under the folder the server started in; jobs made then still open from there. The server prints it at start (`[INFO] Jobs: ...`) |
 | `STORAGE_BASE_DIR` | `./batch_results` | **(Deprecated)** Base directory for legacy batch outputs |
 | `STORAGE_RETENTION_DAYS` | _(none)_ | Days to retain completed jobs (empty = never delete) |
 

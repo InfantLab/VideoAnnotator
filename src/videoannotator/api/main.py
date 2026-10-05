@@ -84,6 +84,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 "`videoannotator diagnose models` shows sizes."
             )
 
+    # Job folders moved the same way in v1.6.0 (from ./storage/jobs); old jobs
+    # still open from where they are, since each recorded its folder.
+    from ..storage.config import get_storage_root, legacy_storage_root
+
+    old_jobs = legacy_storage_root()
+    if old_jobs:
+        logger.info(
+            f"New jobs are kept in {get_storage_root()} (set STORAGE_ROOT to change "
+            f"it). Jobs from earlier versions stay in {old_jobs} and still open; "
+            "to keep using that folder for new jobs, set STORAGE_ROOT to it."
+        )
+
     # Create any tables not yet present (e.g. saved_datasets/saved_pipeline_presets
     # added by 007-datasets-and-presets) -- idempotent, skips existing tables.
     # ALTER-TABLE-style column migrations for already-existing tables are
