@@ -271,6 +271,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A new install couldn't install pipelines from the viewer** (found in the first-time-user run,
+  2026-10-05). Two faults, each enough on its own:
+  - The API key the server makes on first start asked for admin rights, but they were never
+    given: the user it created wasn't an admin, so the viewer said "requires an administrator API
+    key" on every pipeline. Keys asking for `admin` now make their user one. On an install made
+    before this fix, run `uv run videoannotator generate-token --user admin@localhost --admin` once.
+  - On Linux, every pipeline needing torch failed to install in about a second ("No solution
+    found when resolving dependencies"). The lock takes torch from the CUDA 12.6 index, but the
+    install looked only on PyPI, whose Linux torch 2.11 is a CUDA 13 build. The install now adds
+    the project's index when the locked versions need it.
+- The one-click viewer link the server prints on first start named port 18011 even when the
+  server was started with `--port`, so it failed, or logged into a different server.
+- A job's results zip left out the video when it wasn't MP4, AVI, MOV or MKV (a WebM upload,
+  for instance). The job page no longer promises a job log in the zip; none is written.
+- The pipeline list showed the method variant twice, once as a version ("vpyscenedetect-clip").
+- Starting the server without the audio extra no longer warns that `pyannote.core` is missing
+  and suggests `pip install`.
+
 - **A pipeline that fails now says so.** Several pipelines caught their own errors and returned
   nothing, so the job showed them as completed with empty results. Each now raises, and the job
   lists the pipeline as failed with its error:

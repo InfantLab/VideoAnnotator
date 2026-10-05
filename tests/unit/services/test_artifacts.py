@@ -38,3 +38,12 @@ def test_get_annotation_artifacts_includes_video():
 
         # Verify count (4 expected: video, annotation, report, log)
         assert len(artifacts) == 4
+
+
+def test_every_accepted_video_format_counts_as_the_video(tmp_path):
+    """A WebM job's zip used to leave its video out."""
+    from videoannotator.storage.providers.local import LocalStorageProvider
+
+    provider = LocalStorageProvider(root_path=tmp_path)
+    for name in ("a.webm", "b.MP4", "c.mov", "d.avi", "e.mkv", "f.m4v"):
+        assert provider._determine_artifact_type(name) == ArtifactType.VIDEO, name

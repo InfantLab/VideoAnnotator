@@ -106,7 +106,7 @@ const CreateJobDetail = () => {
     navigate(`/view/${job.id}`);
   };
 
-  // The job's artifacts zip: source video, every pipeline's output and the job log.
+  // The job's artifacts zip: source video and every pipeline's output.
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const handleDownloadResults = async () => {
@@ -489,7 +489,7 @@ const CreateJobDetail = () => {
                 <p className="text-sm text-destructive">Couldn&apos;t download the results: {downloadError}</p>
               )}
               <p className="text-xs text-muted-foreground">
-                The zip holds the video, each pipeline&apos;s output and the job log.
+                The zip holds the video and each pipeline&apos;s output.
               </p>
             </div>
           </CardContent>

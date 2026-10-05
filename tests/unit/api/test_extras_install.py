@@ -141,6 +141,32 @@ class TestResolveInstallCommand:
             command, _ = extras_install.resolve_install_command("face-openface3")
         assert command[-3:] == ["--constraint", str(constraints), "a>=1"]
 
+    def test_a_locked_local_build_adds_the_projects_index(self, tmp_path):
+        """PyPI's Linux torch 2.11 is a CUDA 13 build; the lock's is +cu126 from
+        the project's index, so the install must search that index too."""
+        constraints = tmp_path / "c.txt"
+        constraints.write_text("torch==2.11.0+cu126 ; sys_platform == 'linux'\n")
+        with (
+            patch.object(extras_install, "extra_requirements", return_value=["a>=1"]),
+            patch.object(extras_install.shutil, "which", return_value="/usr/bin/uv"),
+            patch.object(extras_install, "_lock_constraints", return_value=constraints),
+            patch.object(
+                extras_install, "_project_indexes", return_value=["https://idx/cu126"]
+            ),
+        ):
+            command, _ = extras_install.resolve_install_command("audio")
+        assert command[5:9] == [
+            "--extra-index-url",
+            "https://idx/cu126",
+            "--index-strategy",
+            "unsafe-best-match",
+        ]
+
+    def test_the_projects_indexes_come_from_pyproject(self):
+        assert extras_install._project_indexes() == [
+            "https://download.pytorch.org/whl/cu126"
+        ]
+
 
 class TestLockConstraints:
     def test_exports_the_extras_locked_versions(self, tmp_path):
@@ -161,6 +187,23 @@ class TestLockConstraints:
         assert "--frozen" in args
         assert args[args.index("--extra") + 1] == "face-openface3"
 
+    def test_local_builds_keep_their_label_when_the_index_is_known(self, tmp_path):
+        exported = subprocess.CompletedProcess(
+            [], 0, "torch==2.11.0+cu126 ; sys_platform == 'linux'\n", ""
+        )
+        with (
+            patch.object(
+                extras_install, "_source_checkout_root", return_value=tmp_path
+            ),
+            patch.object(extras_install.shutil, "which", return_value="/usr/bin/uv"),
+            patch.object(extras_install.subprocess, "run", return_value=exported),
+            patch.object(
+                extras_install, "_project_indexes", return_value=["https://idx"]
+            ),
+        ):
+            path = extras_install._lock_constraints("audio")
+        assert path.read_text() == "torch==2.11.0+cu126 ; sys_platform == 'linux'\n"
+
     def test_local_version_labels_are_dropped(self, tmp_path):
         exported = subprocess.CompletedProcess(
             [],
@@ -177,6 +220,7 @@ class TestLockConstraints:
             ),
             patch.object(extras_install.shutil, "which", return_value="/usr/bin/uv"),
             patch.object(extras_install.subprocess, "run", return_value=exported),
+            patch.object(extras_install, "_project_indexes", return_value=[]),
         ):
             path = extras_install._lock_constraints("audio")
         assert path.read_text() == (

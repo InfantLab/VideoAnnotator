@@ -356,10 +356,8 @@ class APIClient {
           (typeof family === 'string' && family) ||
           (typeof category === 'string' && category) ||
           undefined,
-        version:
-          (typeof version === 'string' && version) ||
-          (typeof variant === 'string' && variant) ||
-          'unknown',
+        // The variant names the method, not a version; it's shown as the model.
+        version: (typeof version === 'string' && version) || undefined,
         model:
           (typeof modelName === 'string' && modelName) ||
           (typeof variant === 'string' && variant) ||

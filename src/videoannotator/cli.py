@@ -96,6 +96,8 @@ def server(
         typer.echo("")
         raise typer.Exit(code=1)
 
+    # The first-start API key message builds the viewer link from this.
+    os.environ["API_PORT"] = str(port)
     typer.echo(f"[START] Starting VideoAnnotator API server on http://{host}:{port}")
     typer.echo(f"[INFO] API documentation available at http://{host}:{port}/docs")
     from videoannotator.utils.logging_config import logs_dir

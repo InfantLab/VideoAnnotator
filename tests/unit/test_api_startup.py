@@ -169,3 +169,19 @@ def test_first_start_on_a_fresh_database_creates_an_api_key(tmp_path):
     )
     with sqlite3.connect(db) as conn:
         assert conn.execute("select count(*) from api_keys").fetchone()[0] == 1
+        # The first key must be able to install pipelines from the viewer.
+        assert conn.execute("select is_admin from users").fetchall() == [(1,)]
+
+
+def test_first_key_link_uses_the_port_the_server_was_started_on(capsys, monkeypatch):
+    """`videoannotator server --port 18111` sets API_PORT; the link must follow it."""
+    monkeypatch.setenv("API_PORT", "18111")
+    with patch("videoannotator.api.startup.get_token_manager") as mock_get_manager:
+        mock_manager = MagicMock()
+        mock_manager.list_all_tokens.return_value = []
+        mock_manager.generate_api_key.return_value = ("va_key", MagicMock())
+        mock_get_manager.return_value = mock_manager
+        ensure_api_key_exists()
+    assert (
+        "http://127.0.0.1:18111/viewer-connect?token=va_key" in capsys.readouterr().out
+    )

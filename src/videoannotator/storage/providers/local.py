@@ -93,7 +93,8 @@ class LocalStorageProvider(StorageProvider):
     def _determine_artifact_type(self, filename: str) -> ArtifactType:
         """Determine artifact type based on filename extension."""
         ext = filename.lower().split(".")[-1] if "." in filename else ""
-        if ext in ["mp4", "avi", "mov", "mkv"]:
+        # Every format a job accepts; a WebM job's zip used to leave its video out.
+        if ext in ["mp4", "avi", "mov", "mkv", "webm", "m4v", "mpg", "mpeg", "wmv"]:
             return ArtifactType.VIDEO
         elif ext in ["json", "csv", "srt", "vtt", "rttm"]:
             return ArtifactType.ANNOTATION

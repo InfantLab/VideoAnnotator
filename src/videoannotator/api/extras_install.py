@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import tomllib
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -171,10 +172,12 @@ def resolve_install_command(extra_name: str) -> tuple[list[str], Path | None]:
     environment, and reinstalled videoannotator itself (the locked
     `videoannotator.exe` on Windows).
 
-    `[tool.uv.sources]` isn't consulted this way. The only source there is
-    the cu124 torch index on Linux, and PyPI's Linux torch 2.6.0 wheels are
-    already cu124 builds -- which is why `_lock_constraints` drops the lock's
-    `+cu124` local-version labels.
+    `[tool.uv.sources]` isn't consulted this way, so when the locked versions
+    include a local build (`torch==2.11.0+cu126` on Linux, from the
+    project's CUDA index) that index is added for the install
+    (`_project_indexes`). Without it the install looked only on PyPI, whose
+    Linux torch 2.11 is a CUDA 13 build that conflicts with the rest of the
+    lock, and every torch-using group failed to resolve on Linux.
 
     In a source checkout, the group's `uv.lock` versions are passed as
     constraints (`_lock_constraints`), so an install gets what CI tested
@@ -192,8 +195,19 @@ def resolve_install_command(extra_name: str) -> tuple[list[str], Path | None]:
 
     constraints = _lock_constraints(extra_name)
     constraint_args = ["--constraint", str(constraints)] if constraints else []
+    indexes = []
+    if (
+        constraints
+        and constraints.is_file()
+        and _LOCAL_VERSION.search(constraints.read_text())
+    ):
+        indexes = _project_indexes()
+    index_args = [arg for url in indexes for arg in ("--extra-index-url", url)]
 
     if shutil.which("uv"):
+        # uv otherwise takes each package from the first index that has it,
+        # which can lack the pinned version; the pins decide here.
+        strategy = ["--index-strategy", "unsafe-best-match"] if indexes else []
         return (
             [
                 "uv",
@@ -201,13 +215,23 @@ def resolve_install_command(extra_name: str) -> tuple[list[str], Path | None]:
                 "install",
                 "--python",
                 sys.executable,
+                *index_args,
+                *strategy,
                 *constraint_args,
                 *requirements,
             ],
             None,
         )
     return (
-        [sys.executable, "-m", "pip", "install", *constraint_args, *requirements],
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            *index_args,
+            *constraint_args,
+            *requirements,
+        ],
         None,
     )
 
@@ -258,18 +282,36 @@ def _lock_constraints(extra_name: str) -> Path | None:
         )
         return None
     path = Path(tempfile.gettempdir()) / f"videoannotator-{extra_name}-constraints.txt"
-    path.write_text(_strip_local_versions(result.stdout))
+    locked = (
+        result.stdout if _project_indexes() else _strip_local_versions(result.stdout)
+    )
+    path.write_text(locked)
     return path
+
+
+def _project_indexes() -> list[str]:
+    """URLs of the package indexes `pyproject.toml` names (`[[tool.uv.index]]`),
+    where the lock's local builds (`+cu126`) come from. Empty outside a source
+    checkout or if pyproject can't be read."""
+    root = _source_checkout_root()
+    if root is None:
+        return []
+    try:
+        with (root / "pyproject.toml").open("rb") as f:
+            indexes = tomllib.load(f).get("tool", {}).get("uv", {}).get("index", [])
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        LOGGER.warning("Could not read package indexes from pyproject.toml: %s", exc)
+        return []
+    return [i["url"] for i in indexes if isinstance(i, dict) and i.get("url")]
 
 
 _LOCAL_VERSION = re.compile(r"^(\S+==[^\s;+]+)\+[^\s;]+", re.MULTILINE)
 
 
 def _strip_local_versions(constraints: str) -> str:
-    """`torch==2.6.0+cu124` -> `torch==2.6.0`. The lock resolves torch from
-    the cu124 index (`[tool.uv.sources]`), but the install only searches
-    PyPI, which never publishes local versions -- so a `+cu124` pin makes
-    every torch-using group unsatisfiable on Linux."""
+    """`torch==2.11.0+cu126` -> `torch==2.11.0`, for when the index those
+    builds come from isn't known: PyPI never publishes local versions, so the
+    labelled pin could never be met."""
     return _LOCAL_VERSION.sub(r"\1", constraints)
 
 

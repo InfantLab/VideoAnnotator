@@ -67,9 +67,8 @@ try:
     PYANNOTE_CORE_AVAILABLE = True
 except ImportError:
     PYANNOTE_CORE_AVAILABLE = False
-    logger.warning(
-        "pyannote.core not available. Install with: pip install pyannote.core"
-    )
+    # Normal on an install without the audio extra, which brings it.
+    logger.debug("pyannote.core not installed (comes with the audio extra)")
 
 try:
     from praatio import textgrid as praatio_textgrid

@@ -104,9 +104,10 @@ def ensure_api_key_exists() -> tuple[str | None, bool]:
         print("\nSave this key securely - it will NOT be shown again!")
         from urllib.parse import quote
 
-        from videoannotator.config_env import API_PORT
+        from videoannotator.config_env import get_int_env
 
-        base = f"http://127.0.0.1:{API_PORT}"
+        # Read now, not at import: `videoannotator server --port` sets it.
+        base = f"http://127.0.0.1:{get_int_env('API_PORT', 18011)}"
         print("\nConnect the viewer with one click:")
         print(f"  {base}/viewer-connect?token={quote(api_key)}")
         print("\nOr paste the key into the viewer's Settings page, or use it directly:")
