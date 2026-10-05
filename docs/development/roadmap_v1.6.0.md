@@ -315,9 +315,12 @@ lifted, 2026-09-26):
 - [ ] Follow-ups from the freeze, not blocking:
   - Size the container cap from one long-video job (likely 8g or 10g; 12g until then).
   - Check whether CUDA's "Shared GPU memory" sits outside both caps (Task Manager during a job).
-  - Docs (Phase 2): the volume clone, the `uv sync --inexact --extra all` step a fresh clone needs
+  - ~~Docs (Phase 2): the volume clone, the `uv sync --inexact --extra all` step a fresh clone needs
     (~5 min), the 16 GB-machine guidance, and the OOM symptom (`Killed`, exit 137) with the cap
-    in `devcontainer.json`.
+    in `devcontainer.json`.~~ Done 2026-10-05: `INSTALLATION.md` "Dev Container" and the
+    troubleshooting entry rewritten around the volume clone and the container's own cap, with the
+    measured numbers; `.wslconfig` is now a fallback, not the first step. `Docker.md` has the
+    measured image sizes.
 
 **Also in this phase: one place for model weights.** Today the weights end up wherever each
 library puts them by default. Whisper, YOLO and the LAION pipelines use `./models/<name>`

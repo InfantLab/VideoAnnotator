@@ -318,40 +318,54 @@ docker run --rm -p 18011:18011 --gpus all \
 
 ### Dev Container (VS Code)
 
-The dev container is a complete GPU-enabled development environment.
+The dev container is a complete development environment: every pipeline, the GPU if you have one,
+the viewer's toolchain (Bun) and the pre-commit hooks.
+
+**Opening it**
 
 - **Linux and macOS**: clone the repository, open it in VS Code and run **Dev Containers: Reopen in
   Container**.
 - **Windows**: run **Dev Containers: Clone Repository in Container Volume…** and give it
-  `https://github.com/InfantLab/VideoAnnotator`. Don't clone to `C:\` and reopen: the container would
-  then read every file through the Windows–WSL file bridge, with Defender scanning each one, which
-  makes tests and model loading slow. The container prints a warning at start if it finds itself
-  on a Windows drive.
+  `https://github.com/InfantLab/VideoAnnotator`. The code then lives on the Linux side. If you
+  clone to `C:\` and reopen it in the container instead, every file read crosses the Windows–WSL
+  file bridge and Defender scans each one: in our measurements collecting the tests took 3–4 minutes
+  that way against 10–30 seconds from a volume. The container prints a warning at start if it finds
+  itself on a Windows drive.
 
-  Also cap the memory WSL may take, in `%USERPROFILE%\.wslconfig` (then run `wsl --shutdown`):
+The first time, creating the container installs every pipeline's dependencies
+(`uv sync --inexact --all-extras`): allow 5–10 minutes and about 9 GB of disk.
 
-  ```ini
-  [wsl2]
-  memory=12GB
-  swap=8GB
-  ```
+**Memory**
 
-  WSL's default is half your RAM. Leave Windows enough to stay responsive. Stop the container before
-  the machine sleeps: one Windows machine froze on waking with it running. Optional extras, if you
-  administer the machine: a [Dev Drive](https://learn.microsoft.com/windows/dev-drive/) or a
-  Defender exclusion for your code folder.
+The container caps itself at 12 GB (`--memory=12g` in `.devcontainer/devcontainer.json`), so it
+can't take over the machine. What it actually uses, measured on 2026-10-02:
 
-Creating the container installs every pipeline's dependencies (`uv sync --all-extras`, as CI
-tests): allow 5–10 minutes and about 9 GB the first time. The container is capped at 12 GB of
-memory (`--memory=12g` in `devcontainer.json`).
+| Doing | Peak memory |
+|---|---|
+| VS Code and its extensions, idle | about 2 GB |
+| The full test suite | 5.4 GB |
+| A job running six pipelines on the demo video | 6.5 GB |
 
-On every platform, the Python environment (`.venv`) and the model weights live in Docker named
-volumes (`videoannotator-venv`, `videoannotator-models`, the latter shared with
-`docker-compose.yml`). They survive container rebuilds and `docker system prune --volumes`, which
-removes only anonymous volumes (Docker 23 and later). They are deleted only by `docker volume rm`,
-`docker volume prune --all`, or resetting Docker Desktop. See
-[troubleshooting](troubleshooting.md#windows-freezes-or-crawls-while-the-dev-container-is-running)
-to back them up or wipe them.
+Installing the extras fills the cap with page cache (cached files, not memory any program holds);
+Linux reclaims it when something needs the room, so a full cap during an install is normal.
+
+*On a 16 GB machine*, Docker Desktop's VM gets 8 GB by default (half your RAM), so that is the real
+limit, not the 12 GB cap. Everything above fits. If a long video or several jobs at once need more,
+the sign is a process ending with `Killed` (exit code 137). Raise the VM's memory in Docker Desktop
+(Settings → Resources, or `memory=` in `%USERPROFILE%\.wslconfig` on Windows), and the `--memory`
+value in `devcontainer.json` if the container's own cap is what was hit.
+
+**What survives a rebuild**
+
+The Python environment (`.venv`) and the model weights live in Docker named volumes
+(`videoannotator-venv`, `videoannotator-models`, the latter shared with `docker-compose.yml`). They
+survive container rebuilds and `docker system prune --volumes`, which removes only anonymous
+volumes (Docker 23 and later); only `docker volume rm`, `docker volume prune --all` or resetting
+Docker Desktop deletes them. A rebuild that moves Python (as the move to one `Dockerfile` did)
+leaves the old `.venv` pointing at an interpreter that's gone; `uv` recreates it and the
+post-create step reinstalls everything, which takes the same 5–10 minutes as the first time.
+See [troubleshooting](troubleshooting.md#the-dev-container-is-slow-freezes-or-runs-out-of-memory) to
+back up or wipe the volumes.
 
 ## Troubleshooting
 

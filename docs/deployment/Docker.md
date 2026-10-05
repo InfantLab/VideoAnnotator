@@ -20,8 +20,21 @@ docker build --build-arg EXTRAS=scene,person -t videoannotator:scene-person .
 docker build --build-arg EXTRAS=all -t videoannotator:all .
 ```
 
-Sizes: see `docs/development/roadmap_v1.6.0.md` (Phase 1, "Docker image size") until they are
-measured and recorded here.
+Measured on 2026-10-02 (Docker Desktop on Windows 11 with WSL 2, RTX 4060 Laptop GPU):
+
+| Image | On disk | Download (compressed) | Build time |
+|---|---|---|---|
+| Slim (default) | 1.35 GB | 347 MB | about 1.5 minutes |
+| Every pipeline (`EXTRAS=all`) | 14.9 GB | 4.78 GB | about 12 minutes |
+
+Most of the everything image is the GPU libraries that torch and TensorFlow bring (NVIDIA 3.6 GB,
+TensorFlow 1.8 GB, torch 1.6 GB). The first job then downloads about 2.5 GB of model weights into
+the models volume.
+
+A job running all six default pipelines on the 14-second demo video used at most 5.7 GB of RAM and
+2.4 GB of GPU memory, and took about 78 seconds on the GPU once the weights were downloaded (391
+seconds the first time). On the CPU alone it took 68 seconds with 5.0 GB of RAM: on a clip this short,
+loading the models takes most of the time.
 
 ## Run
 
@@ -102,5 +115,6 @@ docker run --gpus all --rm videoannotator:all python -c "import torch; print('CU
 ## The dev container
 
 `.devcontainer/devcontainer.json` builds the same `Dockerfile` with `SKIP_IMAGE_UV_SYNC=true`; its
-`postCreateCommand` installs the environment into a `.venv` volume instead. See
-`docs/installation/INSTALLATION.md`, "Dev Container (VS Code)".
+`postCreateCommand` installs the environment into a `.venv` volume instead. The image itself is
+1.13 GB. See [Dev Container (VS Code)](../installation/INSTALLATION.md#dev-container-vs-code) for
+setup and memory.

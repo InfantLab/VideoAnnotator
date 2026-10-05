@@ -149,6 +149,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Dev-container docs rewritten** (`docs/installation/INSTALLATION.md` and troubleshooting): they
+  lead with the container volume clone on Windows and the 12 GB cap the container sets itself,
+  give measured memory use (about 2 GB idle, 5.4 GB for the full test suite, 6.5 GB for a
+  six-pipeline job), say what a 16 GB machine should expect and what running out of memory looks
+  like (`Killed`, exit 137). Capping WSL with `.wslconfig` is now a fallback, not the first step.
+  `docs/deployment/Docker.md` gives the measured image sizes.
+
 - **The viewer's Library is now Results**, so it isn't confused with Datasets. Datasets are lists
   of videos to run jobs on, kept on the server; Results are what jobs produced, kept on this
   computer, plus the demos. Old `/library` links redirect. The nav follows the work: New job, Jobs,
