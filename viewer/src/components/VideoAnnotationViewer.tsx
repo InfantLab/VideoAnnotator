@@ -178,8 +178,8 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                 Drop or select a video file and annotation data (JSON, VTT, RTTM) to view them together.
               </p>
               <p className="text-sm text-muted-foreground mt-2">
-                Looking for demo datasets or server jobs? Visit the{' '}
-                <Link to="/library" className="text-primary underline underline-offset-2 hover:text-primary/80">Library</Link>
+                Looking for the demos or a job's results? See{' '}
+                <Link to="/results" className="text-primary underline underline-offset-2 hover:text-primary/80">Results</Link>
                 {' '}or{' '}
                 <Link to="/jobs" className="text-primary underline underline-offset-2 hover:text-primary/80">Jobs</Link>
                 {' '}page.
@@ -190,12 +190,12 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
               onAnnotationLoad={handleAnnotationLoad}
             />
 
-            {/* Library Datasets */}
+            {/* Saved results */}
             {libraryDatasets.length > 0 && (
               <Card className="p-5 mt-6">
-                <h3 className="font-semibold mb-1">Your Library</h3>
+                <h3 className="font-semibold mb-1">Saved results</h3>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Open a previously saved dataset.
+                  Results kept on this computer from earlier jobs, and the demos.
                 </p>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {libraryDatasets.map(({ jobId, entry }) => {

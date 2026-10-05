@@ -511,9 +511,11 @@ export function useSSE(jobId?: string) {
 #### Route Structure (`src/App.tsx`)
 
 ```
-/                     - Home
+/                     - Home: status, recent runs and their next step, first-run checklist
 /getting-started      - First-run guide
-/library              - Datasets in the local library (downloaded jobs, demos)
+/results              - Results kept on this computer (opened jobs, demos); /library redirects here
+/datasets             - Saved datasets: lists of videos to run jobs on (on the server)
+/prompts              - VLM prompt library; /workbench and /compare for prompt work
 /jobs                 - Jobs and runs (batches)
 /jobs/new             - Job creation wizard
 /jobs/:jobId          - Job detail page

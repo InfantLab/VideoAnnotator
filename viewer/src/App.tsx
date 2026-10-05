@@ -22,7 +22,7 @@ const JobDetail = lazy(() => import("./pages/JobDetail"));
 const NewJob = lazy(() => import("./pages/NewJob"));
 const Settings = lazy(() => import("./pages/Settings"));
 const JobResultsViewer = lazy(() => import("./pages/JobResultsViewer"));
-const Library = lazy(() => import("./pages/Library"));
+const Results = lazy(() => import("./pages/Results"));
 const Datasets = lazy(() => import("./pages/Datasets"));
 const Prompts = lazy(() => import("./pages/Prompts"));
 const Workbench = lazy(() => import("./pages/Workbench"));
@@ -57,7 +57,9 @@ const App = () => (
                   <Route element={<AppLayout />}>
                     <Route path="/" element={<Home />} />
                     <Route path="/getting-started" element={page(<GettingStarted />)} />
-                    <Route path="/library" element={page(<Library />)} />
+                    <Route path="/results" element={page(<Results />)} />
+                    {/* Was "Library" until v1.6.0; old links still land. */}
+                    <Route path="/library" element={<Navigate to="/results" replace />} />
                     <Route path="/jobs" element={page(<Jobs />)} />
                     <Route path="/jobs/:jobId" element={page(<JobDetail />)} />
                     <Route path="/jobs/new" element={page(<NewJob />)} />

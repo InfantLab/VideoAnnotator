@@ -108,6 +108,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The comparison exports as CSV, and has its own link to share.
   - Jobs of different videos are refused, using the input hash from provenance.
   - New endpoint: `GET /api/v1/jobs/{id}/video` streams a job's video (with seeking).
+- **A working start page in the viewer.** Home was a product page; it now shows what you need to
+  carry on:
+  - Whether the server is connected, its version, and how many pipelines are ready (with a link to
+    set up the rest).
+  - Three actions: run pipelines on videos, open the latest results, view files from this computer.
+  - Recent runs with their next step: view, run again, or fix and rerun a failed job (its error
+    shown).
+  - A first-run checklist on a new install (connect, install a pipeline, run a job, open its
+    results), which can be hidden.
+  - Recent datasets (run one in a click), starred prompts, and the results kept on this computer.
 - `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
   the outputs with another (for Python and library upgrades).
 
@@ -129,6 +139,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bundled configs had no effect and are gone.
 
 ### Changed
+
+- **The viewer's Library is now Results**, so it isn't confused with Datasets. Datasets are lists
+  of videos to run jobs on, kept on the server; Results are what jobs produced, kept on this
+  computer, plus the demos. Old `/library` links redirect. The nav follows the work: New job, Jobs,
+  Results, Datasets, Prompts (opening local files is on Home and Results).
 
 - **One directory for model weights** (spec 016): `VIDEOANNOTATOR_MODELS_DIR`, by default the
   per-user data directory (`~/.local/share/videoannotator/models` on Linux,

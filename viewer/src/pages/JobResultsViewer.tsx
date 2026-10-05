@@ -55,8 +55,8 @@ const JobResultsViewerForJob = ({ jobId }: { jobId: string | undefined }) => {
     }
   }, [jobId, state, startDownload]);
 
-  const backPath = isDemo ? '/library' : batchId ? `/batches/${batchId}` : '/jobs';
-  const backName = isDemo ? 'Library' : batchId ? 'Batch' : 'Jobs';
+  const backPath = isDemo ? '/results' : batchId ? `/batches/${batchId}` : '/jobs';
+  const backName = isDemo ? 'Results' : batchId ? 'Batch' : 'Jobs';
 
   const handleBack = () => {
     navigate(backPath);
@@ -83,7 +83,7 @@ const JobResultsViewerForJob = ({ jobId }: { jobId: string | undefined }) => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FolderOpen className="h-5 w-5" />
-              Choose a library folder
+              Choose a folder for your results
             </CardTitle>
             <CardDescription>
               The viewer keeps each job&apos;s results (the video and its annotations) in a folder on
