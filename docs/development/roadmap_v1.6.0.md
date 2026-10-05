@@ -381,8 +381,9 @@ replaced by spec 011. Internal team material sits in the public docs. The viewer
 half-built page.
 
 **Solution**:
-- [ ] README rewritten for researchers: what it does, one screenshot, install in three steps per
-      OS, open the viewer.
+- [x] README rewritten for researchers: what it does, one screenshot, install in three steps per
+      OS, open the viewer. Done 2026-10-05 (471 lines to about 190); the start script and shell
+      aliases moved to `docs/usage/GETTING_STARTED.md`, API details to the docs.
 - [x] Internal material out of the public docs: `docs/testing/` team handoffs (`Jerry-issues.md`,
       `Issues for Server Team.md`, `TEAM_HANDOFF_PACKAGE.md` and others) and `docs/Figure 1.docx`
       move to `docs/archive/` or go. Done 2026-10-05: those, the dated fix notes, the coding-agent

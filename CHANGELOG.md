@@ -149,6 +149,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **README rewritten for researchers**: what VideoAnnotator does and for whom, a screenshot, the
+  pipelines and their file formats, installing in three steps on Windows, macOS and Linux, and
+  opening the viewer. Developer and API detail moved to the docs.
+
 - **Dev-container docs rewritten** (`docs/installation/INSTALLATION.md` and troubleshooting): they
   lead with the container volume clone on Windows and the 12 GB cap the container sets itself,
   give measured memory use (about 2 GB idle, 5.4 GB for the full test suite, 6.5 GB for a
