@@ -447,6 +447,12 @@ half-built page.
 - [ ] A structural pass along the one path users take: install → add videos → run → review →
       export. Anything off that path moves or goes. A Playwright "first-time user" run on a clean
       machine files each point of friction as an issue.
+      2026-10-05: first run done (Linux, fresh clone and home, README steps, Scene Detection):
+      `docs/development/handover_first_time_user_run.md`. It found two blockers, both fixed: the
+      first-start key wasn't admin, and Linux extras installs couldn't resolve torch. Ten points
+      remain, some for a decision (job storage location, results-folder prompt, what moves or
+      goes); filing them as issues waits for Caspar. Windows, macOS, GPU, a long video and the
+      VLM and datasets paths are still to run.
 - [x] **OpenFace 3 results are sensitive to GPU nondeterminism** (found 2026-10-01, spec 013): a
       1-pixel difference in RetinaFace's box between two runs of the same video changes that
       face's gaze and action-unit intensities by up to ~2.4. Offer a deterministic mode
@@ -489,6 +495,8 @@ half-built page.
       still holding 5.3 GB of the GPU. STAR's anomaly detection, which the job used to inherit,
       was measured and doesn't slow inference. Keep this open until the Playwright run (E) has
       polled during a long job.
+      2026-10-05, first-time-user run: 344 polls during a scene-detection job, median 25 ms,
+      slowest 349 ms. Still to do with a long video and the heavy pipelines.
 - [x] **`GET /api/v1/jobs/{id}/results/files/{pipeline}` returns `OUTPUT_FILE_MISSING`** for
       every result stored in the database (`output_file: database:/annotations/...`), which is
       what each job's results list advertises as its `download_url`. Same in v1.5.0 (found

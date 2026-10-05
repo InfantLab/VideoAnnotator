@@ -116,6 +116,9 @@ def ensure_api_key_exists() -> tuple[str | None, bool]:
         print("  export AUTH_REQUIRED=false")
         print("\nLost this key, or need one for another user:")
         print("  videoannotator generate-token")
+        print(
+            "  (from a clone of the repository: uv run videoannotator generate-token)"
+        )
         print("=" * 80 + "\n")
 
         logger.info(f"Generated first API key for user '{username}'")
