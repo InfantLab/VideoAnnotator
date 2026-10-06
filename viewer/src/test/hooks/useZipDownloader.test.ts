@@ -49,7 +49,8 @@ describe('useZipDownloader without a library folder', () => {
 
     await act(() => result.current.startDownload('job-1', 'skip'));
 
-    expect(artifacts).toHaveBeenCalledWith('job-1');
+    // The viewer plays the video from this zip, so it asks for it (spec 022).
+    expect(artifacts).toHaveBeenCalledWith('job-1', { includeVideo: true });
     expect(result.current.state).toBe('error');
   });
 });

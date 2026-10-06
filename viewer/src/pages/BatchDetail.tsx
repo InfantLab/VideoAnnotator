@@ -12,6 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Loader2, RefreshCw, RotateCcw, XCircle } from 'lucide-react';
 import { BatchVideosTable } from '@/components/BatchVideosTable';
 import { RunAgainActions } from '@/components/RunAgainActions';
+import { ResultsLocation } from '@/components/ResultsLocation';
+import { RunDeleteButton } from '@/components/RunDeleteButton';
 import { settingsOf } from '@/lib/wizardStart';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { parseApiError } from '@/lib/errorHandling';
@@ -204,6 +206,13 @@ const BatchDetail = () => {
               Retry {batch.by_status.failed + batch.by_status.cancelled} in place
             </Button>
           )}
+          {batchId && (
+            <RunDeleteButton
+              batchId={batchId}
+              videoCount={batch.total}
+              resultsFolder={batch.results_folder?.display_path}
+            />
+          )}
         </div>
       </div>
 
@@ -228,6 +237,12 @@ const BatchDetail = () => {
           }
         />
       </div>
+
+      <ResultsLocation
+        folder={batch.results_folder}
+        label="This run's results"
+        runZip={batchId ? { batchId } : undefined}
+      />
 
       {preparing && (
         <Alert>

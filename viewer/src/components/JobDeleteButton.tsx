@@ -24,6 +24,8 @@ interface JobDeleteButtonProps {
     size?: 'default' | 'sm' | 'lg' | 'icon';
     className?: string;
     onDeleted?: () => void;
+    /** The job's results folder as the researcher sees it (spec 022). */
+    resultsFolder?: string | null;
 }
 
 /**
@@ -49,6 +51,7 @@ export function JobDeleteButton({
     size = 'default',
     className,
     onDeleted,
+    resultsFolder,
 }: JobDeleteButtonProps) {
     const [showDialog, setShowDialog] = useState(false);
     const { deleteJob, isLoading } = useJobDeletion(jobId, jobStatus);
@@ -93,9 +96,20 @@ export function JobDeleteButton({
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete Job?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to delete this job? This action cannot be undone.
-                            All job data and results will be permanently removed from the server.
+                        <AlertDialogDescription asChild>
+                            <div className="space-y-2">
+                                <p>
+                                    This can&apos;t be undone. The job and its results are
+                                    permanently removed.
+                                </p>
+                                {resultsFolder && (
+                                    <p>
+                                        Its results folder will be deleted:{' '}
+                                        <span className="font-mono text-xs break-all">{resultsFolder}</span>
+                                    </p>
+                                )}
+                                <p>The original video is not touched.</p>
+                            </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

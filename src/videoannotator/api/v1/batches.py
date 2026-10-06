@@ -8,16 +8,26 @@ reuses spec 006's single-job retry semantics per job.
 """
 
 import logging
+import shutil
 import uuid
 from datetime import datetime
 from typing import Any
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, Response
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from ...batch.batch_summary import compute_batch_summary
-from ...results_folder import folder_ref, run_folder_of
+from ...results_folder import (
+    folder_ref,
+    is_inside_results,
+    results_root,
+    run_folder_of,
+    run_zip_entries,
+)
 from ...storage.base import StorageBackend
+from ...utils.compression import stream_zip
 from ..database import get_storage_backend
 from ..errors import APIError
 from ..middleware.auth import validate_api_key
@@ -369,3 +379,78 @@ async def rerun_batch(
     return BatchRerunResponse(
         batch_id=new_batch_id, rerun_of_batch=batch_id, created=created, skipped=skipped
     )
+
+
+def _batch_or_404(storage: StorageBackend, batch_id: str) -> list[Any]:
+    jobs = _load_batch_jobs(storage, batch_id)
+    if not jobs:
+        raise APIError(
+            status_code=404,
+            code="BATCH_NOT_FOUND",
+            message=f"Batch '{batch_id}' not found",
+            hint="Check the batch ID, or use GET /api/v1/batches.",
+        )
+    return jobs
+
+
+@router.get(
+    "/{batch_id}/results.zip",
+    summary="Download a run's results as one file",
+    description="""
+Streams every video's results in the run, in the same layout as the run's
+results folder (`<run>/run.json`, then one folder per video), as one zip.
+Never includes a video (spec 022, FR-028). Runs from before results folders
+existed get the same layout, built from each job's own folder.
+""",
+    response_class=StreamingResponse,
+)
+async def batch_results_zip(
+    batch_id: str = Path(..., description="The run's batch identifier"),
+    storage: StorageBackend = Depends(get_storage),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> StreamingResponse:
+    """Stream a run's results, without videos."""
+    top, entries = run_zip_entries(_batch_or_404(storage, batch_id))
+    filename = top.replace('"', "")
+    return StreamingResponse(
+        stream_zip(entries),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}.zip"; '
+            f"filename*=UTF-8''{quote(filename)}.zip"
+        },
+    )
+
+
+@router.delete(
+    "/{batch_id}",
+    status_code=204,
+    summary="Delete a run",
+    description="""
+Deletes every job in the run, their results, and the run's results folder.
+Jobs still running are cancelled first. The original videos are never touched
+(spec 022, FR-030).
+""",
+)
+async def delete_batch(
+    batch_id: str = Path(..., description="The run's batch identifier"),
+    storage: StorageBackend = Depends(get_storage),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Response:
+    """Delete a run and its results."""
+    jobs = _batch_or_404(storage, batch_id)
+    run_folder = next((f for f in map(run_folder_of, jobs) if f is not None), None)
+    for job in jobs:
+        try:
+            cancel_job_by_id(job.job_id, storage)
+        except (JobAlreadyCompletedException, JobNotFoundException):
+            pass
+        storage.delete_job(job.job_id)
+    if (
+        run_folder is not None
+        and run_folder.exists()
+        and is_inside_results(run_folder)
+        and run_folder.resolve() != results_root()
+    ):
+        shutil.rmtree(run_folder, ignore_errors=True)
+    return Response(status_code=204)

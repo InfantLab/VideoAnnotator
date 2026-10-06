@@ -417,7 +417,8 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
       }
 
       // 1. Fetch the artifacts stream
-      const response = await apiClient.getJobArtifacts(jobId);
+      // The viewer plays the video from this zip, so it asks for it.
+      const response = await apiClient.getJobArtifacts(jobId, { includeVideo: true });
       
       if (!response.body) {
         throw new Error('Response body is empty');

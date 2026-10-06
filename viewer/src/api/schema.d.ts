@@ -678,7 +678,13 @@ export interface paths {
         get: operations["get_batch_summary_api_v1_batches__batch_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete a run
+         * @description Deletes every job in the run, their results, and the run's results folder.
+         *     Jobs still running are cancelled first. The original videos are never touched
+         *     (spec 022, FR-030).
+         */
+        delete: operations["delete_batch_api_v1_batches__batch_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -755,6 +761,29 @@ export interface paths {
          *     still running, or whose video is gone, are reported in `skipped`.
          */
         post: operations["rerun_batch_api_v1_batches__batch_id__rerun_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/batches/{batch_id}/results.zip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a run's results as one file
+         * @description Streams every video's results in the run, in the same layout as the run's
+         *     results folder (`<run>/run.json`, then one folder per video), as one zip.
+         *     Never includes a video (spec 022, FR-028). Runs from before results folders
+         *     existed get the same layout, built from each job's own folder.
+         */
+        get: operations["batch_results_zip_api_v1_batches__batch_id__results_zip_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -874,6 +903,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/results/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open a results folder in this computer's file manager
+         * @description Only for callers on the server's own machine (403 `NOT_SAME_MACHINE`), and only
+         *     for folders inside the results folder (422 `PATH_OUTSIDE_RESULTS`), so it can't
+         *     be used to look around the filesystem. 409 `OPEN_FOLDER_UNSUPPORTED` when there
+         *     is no desktop to open it on (a headless server, or Docker): show the location
+         *     for the researcher to copy instead.
+         */
+        post: operations["open_results_folder_api_v1_results_open_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}/artifacts": {
         parameters: {
             query?: never;
@@ -883,10 +936,11 @@ export interface paths {
         };
         /**
          * Download Job Artifacts
-         * @description Download all artifacts for a specific job as a ZIP archive.
+         * @description Download a job's results as a ZIP archive, without its video by default.
          *
          *     Args:
          *         job_id: The unique identifier of the job.
+         *         include_video: Also include the video.
          *         current_user: The authenticated user.
          *
          *     Returns:
@@ -2625,6 +2679,14 @@ export interface components {
             /** Error Message */
             error_message?: string | null;
         };
+        /** OpenFolderRequest */
+        OpenFolderRequest: {
+            /**
+             * Path
+             * @description A folder inside the results folder
+             */
+            path: string;
+        };
         /**
          * PipelineInfo
          * @description Information about an available pipeline (extended taxonomy).
@@ -3672,6 +3734,36 @@ export interface operations {
             };
         };
     };
+    delete_batch_api_v1_batches__batch_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The run's batch identifier */
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     cancel_batch_api_v1_batches__batch_id__cancel_post: {
         parameters: {
             query?: never;
@@ -3760,6 +3852,36 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["BatchRerunResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    batch_results_zip_api_v1_batches__batch_id__results_zip_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The run's batch identifier */
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -3891,9 +4013,43 @@ export interface operations {
             };
         };
     };
-    download_job_artifacts_api_v1_jobs__job_id__artifacts_get: {
+    open_results_folder_api_v1_results_open_post: {
         parameters: {
             query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenFolderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_job_artifacts_api_v1_jobs__job_id__artifacts_get: {
+        parameters: {
+            query?: {
+                /** @description Also include the job's video. Off by default since spec 022: the zip was otherwise one more copy of sensitive video. */
+                include_video?: boolean;
+            };
             header?: never;
             path: {
                 job_id: string;

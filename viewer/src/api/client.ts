@@ -772,6 +772,25 @@ class APIClient {
     return this.request(`/api/v1/batches/${batchId}/cancel`, { method: 'POST' });
   }
 
+  /** A run's results as one zip, without videos (spec 022). */
+  async getBatchResultsZip(batchId: string): Promise<Blob> {
+    return (await this.fetchRaw(`/api/v1/batches/${encodeURIComponent(batchId)}/results.zip`)).blob();
+  }
+
+  /** Delete a run: its jobs and results folder, never the videos (spec 022). */
+  async deleteBatch(batchId: string): Promise<void> {
+    return this.request(`/api/v1/batches/${encodeURIComponent(batchId)}`, { method: 'DELETE' });
+  }
+
+  /** Open a results folder in this computer's file manager (same machine only). */
+  async openResultsFolder(path: string): Promise<void> {
+    return this.request('/api/v1/results/open', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+  }
+
   async retryBatch(batchId: string): Promise<BatchRetryResponse> {
     return this.request(`/api/v1/batches/${batchId}/retry`, { method: 'POST' });
   }
@@ -1165,12 +1184,17 @@ class APIClient {
     return URL.createObjectURL(blob);
   }
 
-  async getJobArtifacts(jobId: string): Promise<Response> {
+  /**
+   * The job's results zip. Without its video unless `includeVideo` (spec 022:
+   * the zip was otherwise one more copy of sensitive video).
+   */
+  async getJobArtifacts(jobId: string, options: { includeVideo?: boolean } = {}): Promise<Response> {
     // Always get fresh values from localStorage
     this.baseURL = getApiBaseUrl().replace(/\/$/, '');
     this.token = getApiToken();
 
-    const url = `${this.baseURL}/api/v1/jobs/${jobId}/artifacts`;
+    const query = options.includeVideo ? '?include_video=true' : '';
+    const url = `${this.baseURL}/api/v1/jobs/${jobId}/artifacts${query}`;
     
     const headers: Record<string, string> = {};
     if (this.token && isValidToken(this.token)) {

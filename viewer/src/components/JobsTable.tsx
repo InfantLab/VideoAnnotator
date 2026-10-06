@@ -174,6 +174,7 @@ export function JobsTable({
                         size="sm"
                         variant="outline"
                         onDeleted={onChanged}
+                        resultsFolder={job.results_folder?.display_path}
                       />
                     )}
                     {job.status === 'completed' && (

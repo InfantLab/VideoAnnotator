@@ -454,3 +454,59 @@ def open_folder(path: Path) -> None:
         stderr=subprocess.DEVNULL,
         start_new_session=True,
     )
+
+
+VIDEO_SUFFIXES = (".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm", ".m4v")
+
+
+def result_files_in(folder: Path) -> list[Path]:
+    """Every file under `folder` except videos, in a stable order."""
+    try:
+        return sorted(
+            p
+            for p in folder.rglob("*")
+            if p.is_file() and p.suffix.lower() not in VIDEO_SUFFIXES
+        )
+    except OSError:
+        return []
+
+
+def run_zip_entries(jobs: list[Any]) -> tuple[str, list[tuple[Path, str]]]:
+    """The run's results as `(file, name in archive)`, and the archive's name.
+
+    The archive has the on-disk layout: `<run>/run.json` and one folder per
+    video, never a video (FR-028). Runs from before results folders existed
+    get the same layout, built from each job's own folder.
+    """
+    from .batch.result_files import job_folder
+
+    run = next((f for f in map(run_folder_of, jobs) if f is not None), None)
+    top = (
+        run.name
+        if run
+        else sanitize_component(
+            next((j.batch_name for j in jobs if j.batch_name), None) or "Run"
+        )
+    )
+    entries: list[tuple[Path, str]] = []
+    if run is not None:
+        entries.append((run / RUN_RECORD, f"{top}/{RUN_RECORD}"))
+    used: set[str] = set()
+    for job in jobs:
+        if run_folder_of(job) is not None:
+            folder = Path(job.output_dir)
+            name = folder.name
+        else:
+            folder = job_folder(job)
+            stem = Path(job.video_path).stem if job.video_path else job.job_id
+            name = sanitize_component(stem, "video")
+            number = 2
+            while name in used:
+                name = f"{sanitize_component(stem, 'video')} {number}"
+                number += 1
+        used.add(name)
+        for path in result_files_in(folder):
+            entries.append(
+                (path, f"{top}/{name}/{path.relative_to(folder).as_posix()}")
+            )
+    return top, entries

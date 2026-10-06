@@ -73,3 +73,24 @@ def create_job_zip_archive(
         except Exception as e:
             logger.error(f"Error creating ZIP archive: {e}")
             raise
+
+
+def stream_zip(
+    entries: list[tuple[Path, str]], chunk_size: int = 1024 * 1024
+) -> Generator[bytes, None, None]:
+    """Zip `(file, name in archive)` pairs and stream the result.
+
+    Built in a temporary file on disk, not in memory: a 100-video run's
+    results can be gigabytes. A file that can't be read is logged and left
+    out rather than failing the whole download.
+    """
+    with tempfile.TemporaryFile(suffix=".zip") as temp_zip:
+        with zipfile.ZipFile(temp_zip, "w", zipfile.ZIP_DEFLATED) as zf:
+            for path, arcname in entries:
+                try:
+                    zf.write(path, arcname=arcname)
+                except OSError as e:
+                    logger.error(f"Failed to add {path} to ZIP: {e}")
+        temp_zip.seek(0)
+        while chunk := temp_zip.read(chunk_size):
+            yield chunk

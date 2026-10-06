@@ -13,6 +13,8 @@ import { parseApiError } from "@/lib/errorHandling";
 import vavIcon from "@/assets/v-a-v.icon.png";
 import { JobCancelButton } from "@/components/JobCancelButton";
 import { JobDeleteButton } from "@/components/JobDeleteButton";
+import { ResultsLocation } from "@/components/ResultsLocation";
+import { Checkbox } from "@/components/ui/checkbox";
 import { canCancelJob } from "@/hooks/useJobCancellation";
 import { canDeleteJob } from "@/hooks/useJobDeletion";
 import type { JobStatus } from "@/types/api";
@@ -106,7 +108,8 @@ const CreateJobDetail = () => {
     navigate(`/view/${job.id}`);
   };
 
-  // The job's artifacts zip: source video and every pipeline's output.
+  // The job's results zip; the video only when asked for (spec 022).
+  const [includeVideo, setIncludeVideo] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const handleDownloadResults = async () => {
@@ -114,7 +117,7 @@ const CreateJobDetail = () => {
     setIsDownloading(true);
     setDownloadError(null);
     try {
-      const response = await apiClient.getJobArtifacts(job.id);
+      const response = await apiClient.getJobArtifacts(job.id, { includeVideo });
       if (!response.ok) throw new Error(`the server answered ${response.status}`);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -259,6 +262,7 @@ const CreateJobDetail = () => {
               jobStatus={job.status as JobStatus}
               size="sm"
               onDeleted={() => navigate('/jobs')}
+              resultsFolder={job.results_folder?.display_path}
             />
           )}
 
@@ -457,6 +461,8 @@ const CreateJobDetail = () => {
         </CardContent>
       </Card>
 
+      <ResultsLocation folder={job.results_folder} label="This video's results" />
+
       {/* Results Section (when completed) */}
       {job.status === "completed" && (
         <Card>
@@ -488,9 +494,10 @@ const CreateJobDetail = () => {
               {downloadError && (
                 <p className="text-sm text-destructive">Couldn&apos;t download the results: {downloadError}</p>
               )}
-              <p className="text-xs text-muted-foreground">
-                The zip holds the video and each pipeline&apos;s output.
-              </p>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Checkbox checked={includeVideo} onCheckedChange={(checked) => setIncludeVideo(checked === true)} />
+                Include the video in the download (it holds each pipeline&apos;s output either way)
+              </label>
             </div>
           </CardContent>
         </Card>
