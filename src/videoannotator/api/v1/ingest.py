@@ -31,6 +31,7 @@ from __future__ import annotations
 import ipaddress
 import logging
 import os
+import shutil
 import uuid
 from pathlib import Path
 from typing import Any
@@ -40,15 +41,16 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ...batch.types import BatchJob, JobStatus
-from ...config_env import INGEST_ROOTS
+from ...config_env import INGEST_ROOTS, published_locally
 from ...database.crud import SavedDatasetCRUD
 from ...database.database import get_db
+from ...results_folder import RunFolder, folder_ref, results_root, run_name
 from ...storage.base import StorageBackend
 from ...storage.manager import get_storage_provider
 from ..database import get_storage_backend
 from ..errors import APIError
 from ..middleware.auth import require_admin
-from .jobs import extract_video_metadata, validate_pipeline_selection
+from .jobs import FolderRef, extract_video_metadata, validate_pipeline_selection
 
 logger = logging.getLogger("videoannotator.api")
 
@@ -92,25 +94,35 @@ def allowed_roots() -> list[Path]:
     return roots
 
 
+def is_same_machine(request: Request) -> bool:
+    """Whether the caller is on the server's own machine.
+
+    Loopback callers are; so is everyone when the server is published on the
+    host's loopback only (Docker, `VIDEOANNOTATOR_PUBLISHED_LOCALLY`), because
+    then nothing but this machine can reach it. Decided here, from how the
+    request arrived -- never from anything the client says about itself.
+    """
+    if published_locally():
+        return True
+    client = request.client
+    host = client.host if client else None
+    if not host:
+        return False
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        # A non-address host (e.g. a unix socket's "testclient") is treated
+        # as local: it cannot have come over the network.
+        return host in ("testclient", "localhost")
+
+
 def require_local_caller(request: Request) -> None:
     """Reject callers that aren't on this machine.
 
     Naming a server-side path only makes sense when the caller *is* the server's
     user. A remote client still has `POST /api/v1/jobs` and its upload.
     """
-    client = request.client
-    host = client.host if client else None
-
-    is_loopback = False
-    if host:
-        try:
-            is_loopback = ipaddress.ip_address(host).is_loopback
-        except ValueError:
-            # A non-address host (e.g. a unix socket's "testclient") is treated
-            # as local: it cannot have come over the network.
-            is_loopback = host in ("testclient", "localhost")
-
-    if not is_loopback:
+    if not is_same_machine(request):
         raise APIError(
             status_code=403,
             code="INGEST_REMOTE_CALLER",
@@ -214,12 +226,15 @@ def _count_videos(directory: Path) -> int:
 
 def find_videos(directory: Path, recursive: bool = False) -> list[Path]:
     """Video files in `directory`, sorted by name for a stable job order."""
+    results = results_root()
     try:
         entries = directory.rglob("*") if recursive else directory.iterdir()
         videos = [
             entry
             for entry in entries
-            if entry.is_file() and entry.suffix.lower() in VIDEO_EXTENSIONS
+            if entry.is_file()
+            and entry.suffix.lower() in VIDEO_EXTENSIONS
+            and not entry.is_relative_to(results)
         ]
     except OSError as e:
         raise APIError(
@@ -428,6 +443,9 @@ class IngestResponse(BaseModel):
     total: int = Field(description="Jobs created")
     created: list[str]
     skipped: list[IngestSkipped]
+    results_folder: FolderRef | None = Field(
+        default=None, description="The run's results folder (spec 022)"
+    )
 
 
 @router.post(
@@ -493,13 +511,23 @@ async def ingest_folder(
     batch_id = body.batch_id or str(uuid.uuid4())
     batch_name = body.batch_name or resolved.name
     provider = get_storage_provider()
+    # Created before any job, so an unwritable results folder refuses the
+    # whole run (FR-026) instead of failing it one job at a time.
+    run = RunFolder.create(
+        run_name(batch_name=batch_name, source_folder=resolved),
+        batch_id=batch_id,
+        pipelines=body.selected_pipelines,
+        config=body.config,
+        source_root=resolved,
+    )
 
     created: list[str] = []
     skipped: list[IngestSkipped] = []
 
     for video_path in videos:
         try:
-            if video_path.stat().st_size == 0:
+            size_bytes = video_path.stat().st_size
+            if size_bytes == 0:
                 skipped.append(
                     IngestSkipped(filename=video_path.name, reason="file is empty")
                 )
@@ -514,7 +542,6 @@ async def ingest_folder(
             job = BatchJob(
                 # The original location, deliberately: ingest never copies.
                 video_path=video_path,
-                output_dir=None,
                 config=body.config or {},
                 status=JobStatus.PENDING,
                 selected_pipelines=body.selected_pipelines,
@@ -522,9 +549,9 @@ async def ingest_folder(
                 batch_name=batch_name,
                 dataset_id=body.dataset_id,
             )
-            # Results still live in this job's own storage directory, which is
-            # what job deletion removes -- so deleting an ingested job never
-            # touches the researcher's video.
+            # Results go to the run's folder, never beside the video; deleting
+            # the job removes them and never touches the researcher's video.
+            run.add_video(job, video_path, size_bytes=size_bytes)
             provider.create_job_dir(job.job_id)
             job.storage_path = provider.get_absolute_path(job.job_id, "")
 
@@ -533,6 +560,9 @@ async def ingest_folder(
         except Exception as e:  # one bad file shouldn't sink the batch
             logger.warning(f"[INGEST] Could not create job for {video_path}: {e}")
             skipped.append(IngestSkipped(filename=video_path.name, reason=str(e)))
+
+    if not created:
+        shutil.rmtree(run.path, ignore_errors=True)
 
     if body.dataset_id:
         try:
@@ -553,6 +583,7 @@ async def ingest_folder(
         total=len(created),
         created=created,
         skipped=skipped,
+        results_folder=folder_ref(run.path) if created else None,
     )
 
 

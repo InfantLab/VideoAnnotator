@@ -2007,6 +2007,8 @@ export interface components {
             completion_percentage: number;
             /** Estimated Seconds Remaining */
             estimated_seconds_remaining?: number | null;
+            /** @description The run's results folder (spec 022); null for runs made before results folders existed */
+            results_folder?: components["schemas"]["FolderRef"] | null;
         };
         /** Body_preview_vlm_prompt_api_v1_vlm_preview_post */
         Body_preview_vlm_prompt_api_v1_vlm_preview_post: {
@@ -2308,6 +2310,16 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** FolderRef */
+        FolderRef: {
+            /** Path */
+            path: string;
+            /**
+             * Display Path
+             * @description The same location as the researcher's own machine shows it (differs from `path` under Docker)
+             */
+            display_path: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2400,6 +2412,8 @@ export interface components {
             created: string[];
             /** Skipped */
             skipped: components["schemas"]["IngestSkipped"][];
+            /** @description The run's results folder (spec 022) */
+            results_folder?: components["schemas"]["FolderRef"] | null;
         };
         /** IngestScanResponse */
         IngestScanResponse: {
@@ -2523,6 +2537,14 @@ export interface components {
              * @description Non-fatal notices about the submission, e.g. a deprecated pipeline (spec 014)
              */
             warnings?: string[];
+            /** @description This video's results folder (spec 022); null for jobs made before results folders existed */
+            results_folder?: components["schemas"]["FolderRef"] | null;
+            /**
+             * Video Available
+             * @description Whether the job's video is still at its location (spec 022)
+             * @default true
+             */
+            video_available: boolean;
         };
         /**
          * JobResultsResponse

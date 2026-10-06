@@ -26,6 +26,13 @@ from ...registry.pipeline_loader import (
     removed_pipeline_message,
 )
 from ...registry.pipeline_registry import get_registry
+from ...results_folder import (
+    ResultsFolderError,
+    RunFolder,
+    folder_ref,
+    run_folder_of,
+    run_name,
+)
 from ...storage.base import StorageBackend
 from ...storage.manager import get_storage_provider
 from ...validation.validator import ConfigValidator
@@ -115,6 +122,23 @@ class JobSubmissionRequest(BaseModel):
     )
 
 
+class FolderRef(BaseModel):
+    path: str
+    display_path: str = Field(
+        description="The same location as the researcher's own machine shows it "
+        "(differs from `path` under Docker)"
+    )
+
+
+def location_fields(job: BatchJob) -> dict[str, Any]:
+    """Where a job's results are, and whether its video still is (spec 022)."""
+    video = Path(job.video_path) if job.video_path else None
+    return {
+        "results_folder": folder_ref(job.output_dir),
+        "video_available": bool(video and video.is_file()),
+    }
+
+
 class JobResponse(BaseModel):
     """Response model for job information (aligned with DB Job model)."""
 
@@ -167,6 +191,15 @@ class JobResponse(BaseModel):
     warnings: list[str] = Field(
         default_factory=list,
         description="Non-fatal notices about the submission, e.g. a deprecated pipeline (spec 014)",
+    )
+    results_folder: FolderRef | None = Field(
+        default=None,
+        description="This video's results folder (spec 022); null for jobs made "
+        "before results folders existed",
+    )
+    video_available: bool = Field(
+        default=True,
+        description="Whether the job's video is still at its location (spec 022)",
     )
 
 
@@ -456,7 +489,6 @@ async def submit_job(
             # Create BatchJob instance to get job_id
             batch_job = BatchJob(
                 video_path=Path(temp_video_path),  # Temporary, will be updated
-                output_dir=None,  # Will be set by processing system
                 config=parsed_config or {},
                 status=JobStatus.PENDING,
                 selected_pipelines=parsed_pipelines,
@@ -465,11 +497,30 @@ async def submit_job(
                 dataset_id=dataset_id,
             )
 
+            # Before the copy is stored, so an unwritable results folder
+            # refuses the job (FR-026). The copy stays in internal storage;
+            # only results go to the results folder (FR-020).
+            def new_run() -> RunFolder:
+                return RunFolder.create(
+                    run_name(batch_name=batch_job.batch_name, video=Path(filename)),
+                    batch_id=batch_id,
+                    pipelines=parsed_pipelines,
+                    config=parsed_config,
+                )
+
+            run = RunFolder.for_batch(batch_id, new_run) if batch_id else new_run()
+            run.add_video(
+                batch_job,
+                Path(filename),
+                uploaded_name=filename,
+                size_bytes=video_size_bytes,
+            )
+
             # Use StorageProvider to save the file
             provider = get_storage_provider()
 
-            with open(temp_video_path, "rb") as f:
-                provider.save_file(batch_job.job_id, filename, f)
+            with open(temp_video_path, "rb") as upload:
+                provider.save_file(batch_job.job_id, filename, upload)
 
             # Update job to use persistent path
             batch_job.storage_path = provider.get_absolute_path(batch_job.job_id, "")
@@ -538,6 +589,7 @@ async def submit_job(
             batch_name=batch_job.batch_name,
             dataset_id=batch_job.dataset_id,
             rerun_of=batch_job.rerun_of,
+            **location_fields(batch_job),
             warnings=deprecation_warnings(batch_job.selected_pipelines),
         )
 
@@ -547,6 +599,7 @@ async def submit_job(
         APIError,
         PipelineRemovedException,
         PipelineUnavailableException,
+        ResultsFolderError,
     ):
         # Let validation errors and other custom exceptions propagate
         raise
@@ -701,6 +754,7 @@ async def get_job_status(
             batch_name=job.batch_name,
             dataset_id=job.dataset_id,
             rerun_of=job.rerun_of,
+            **location_fields(job),
             reruns=storage.list_reruns(job.job_id),
         )
 
@@ -887,6 +941,7 @@ async def list_jobs(
                         batch_name=job.batch_name,
                         dataset_id=job.dataset_id,
                         rerun_of=job.rerun_of,
+                        **location_fields(job),
                     )
                 )
             except FileNotFoundError:
@@ -1051,6 +1106,7 @@ async def cancel_job_endpoint(
             batch_name=job_data.batch_name,
             dataset_id=job_data.dataset_id,
             rerun_of=job_data.rerun_of,
+            **location_fields(job_data),
         )
 
     except (JobNotFoundException, JobAlreadyCompletedException, APIError):
@@ -1159,6 +1215,15 @@ def retry_job(job_id: str, storage: StorageBackend) -> BatchJob:
 
     logger.info(f"[RETRY] Retrying job {job_id} (previous status: {job_data.status})")
 
+    # A retry reruns the same job in its own video folder. What's there is the
+    # failed attempt's partial output, never another run's results.
+    if run_folder_of(job_data) is not None:
+        for leftover in Path(str(job_data.output_dir)).iterdir():
+            if leftover.is_file():
+                leftover.unlink(missing_ok=True)
+            else:
+                shutil.rmtree(leftover, ignore_errors=True)
+
     job_data.status = JobStatus.PENDING
     job_data.retry_count += 1
     job_data.error_message = None
@@ -1227,6 +1292,7 @@ async def retry_job_endpoint(
             batch_name=job_data.batch_name,
             dataset_id=job_data.dataset_id,
             rerun_of=job_data.rerun_of,
+            **location_fields(job_data),
         )
 
     except (JobNotFoundException, JobNotRetryableException, APIError):
@@ -1339,13 +1405,25 @@ def job_from_stored_video(
         dataset_id=dataset_id,
         rerun_of=rerun_of,
     )
+    original_folder = Path(original.storage_path) if original.storage_path else None
+    stored_copy = original_folder is not None and video.resolve().is_relative_to(
+        original_folder.resolve()
+    )
+    name = run_name(batch_name=batch_name, video=video)
+    if rerun_of and not name.endswith("(rerun)"):
+        name = f"{name} (rerun)"
+    run = RunFolder.for_batch(
+        batch_id,
+        lambda: RunFolder.create(
+            name, batch_id=batch_id, pipelines=pipelines, config=config
+        ),
+    )
+    run.add_video(job, video, uploaded_name=video.name if stored_copy else None)
+
     provider = get_storage_provider()
     provider.create_job_dir(job.job_id)
     job.storage_path = provider.get_absolute_path(job.job_id, "")
-    original_folder = Path(original.storage_path) if original.storage_path else None
-    if original_folder is not None and video.resolve().is_relative_to(
-        original_folder.resolve()
-    ):
+    if stored_copy:
         target = Path(job.storage_path) / video.name
         try:
             os.link(video, target)
@@ -1406,6 +1484,7 @@ async def rerun_job_endpoint(
         batch_name=job.batch_name,
         dataset_id=job.dataset_id,
         rerun_of=job.rerun_of,
+        **location_fields(job),
         warnings=deprecation_warnings(job.selected_pipelines),
     )
 

@@ -38,7 +38,7 @@ def finished_job():
 
     storage = get_storage_backend()
     job = storage.load_job_metadata(job_id)
-    folder = Path(job.storage_path)
+    folder = Path(job.output_dir)  # spec 022: results go to the results folder
     stem = Path(job.video_path).stem
     (folder / f"{stem}_person_tracking.json").write_text('{"coco": true}')
     (folder / f"{stem}_person_tracks.json").write_text('{"tracks": true}')
@@ -116,7 +116,7 @@ def test_results_include_each_pipelines_provenance(finished_job):
 def test_companion_provenance_is_listed_with_its_file(finished_job):
     job_id, stem = finished_job
     job = get_storage_backend().load_job_metadata(job_id)
-    folder = Path(job.storage_path)
+    folder = Path(job.output_dir)
     (folder / f"{stem}_speaker_diarization.rttm").write_text("SPEAKER x\n")
     (folder / f"{stem}_speaker_diarization.rttm.provenance.json").write_text("{}")
     job.pipeline_results["speaker_diarization"] = PipelineResult(

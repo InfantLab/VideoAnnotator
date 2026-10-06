@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, Path, Query
 from pydantic import BaseModel, Field
 
 from ...batch.batch_summary import compute_batch_summary
+from ...results_folder import folder_ref, run_folder_of
 from ...storage.base import StorageBackend
 from ..database import get_storage_backend
 from ..errors import APIError
@@ -26,6 +27,7 @@ from .exceptions import (
     JobNotRetryableException,
 )
 from .jobs import (
+    FolderRef,
     RerunNotPossibleException,
     RerunRequest,
     cancel_job_by_id,
@@ -61,6 +63,19 @@ class BatchSummaryResponse(BaseModel):
     by_status: BatchStatusCounts
     completion_percentage: float
     estimated_seconds_remaining: float | None = None
+    results_folder: FolderRef | None = Field(
+        default=None,
+        description="The run's results folder (spec 022); null for runs made "
+        "before results folders existed",
+    )
+
+
+def _summary_response(batch_id: str, jobs: list[Any]) -> BatchSummaryResponse:
+    summary = compute_batch_summary(batch_id, jobs)
+    run_folder = next((f for f in map(run_folder_of, jobs) if f is not None), None)
+    return BatchSummaryResponse(
+        **summary.to_dict(), results_folder=folder_ref(run_folder)
+    )
 
 
 class BatchListResponse(BaseModel):
@@ -145,8 +160,7 @@ async def list_batches(
             if not jobs:
                 # Every member job was deleted between the id listing and here.
                 continue
-            summary = compute_batch_summary(member_batch_id, jobs)
-            batches.append(BatchSummaryResponse(**summary.to_dict()))
+            batches.append(_summary_response(member_batch_id, jobs))
 
         return BatchListResponse(
             batches=batches, total=total, page=page, per_page=per_page
@@ -185,9 +199,7 @@ async def get_batch_summary(
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> BatchSummaryResponse:
     """Get aggregate status for all jobs sharing a batch identifier."""
-    jobs = _load_batch_jobs(storage, batch_id)
-    summary = compute_batch_summary(batch_id, jobs)
-    return BatchSummaryResponse(**summary.to_dict())
+    return _summary_response(batch_id, _load_batch_jobs(storage, batch_id))
 
 
 @router.post(

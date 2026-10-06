@@ -8,8 +8,6 @@ job-execution path.
 
 from __future__ import annotations
 
-import os
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +15,7 @@ from ..api.database import get_storage_backend
 from ..api.v1.jobs import validate_pipeline_selection
 from ..registry.pipeline_loader import get_pipeline_loader, removed_pipeline_message
 from ..registry.pipeline_registry import get_registry
+from ..results_folder import ResultsFolderError, RunFolder, run_name
 from ..storage.manager import get_storage_provider
 from .job_execution import run_job_pipelines
 from .result_files import pipeline_result_files
@@ -54,18 +53,6 @@ def check_pipelines(pipelines: list[str] | None, config: dict[str, Any] | None) 
         raise LocalJobError(e.message, e.hint) from e
 
 
-def _place_video(video: Path, folder: Path) -> Path:
-    """Put the video in the job folder as an uploaded one would be, without
-    a second copy on disk where a hard link is possible. Deleting the job
-    then removes only the link."""
-    target = folder / video.name
-    try:
-        os.link(video, target)
-    except OSError:
-        shutil.copy2(video, target)
-    return target
-
-
 def run_local_job(
     video: Path,
     pipelines: list[str] | None,
@@ -78,14 +65,26 @@ def run_local_job(
     provider = get_storage_provider()
     # Saved as RUNNING, never PENDING: a server sharing this database polls
     # for pending jobs and would otherwise run it a second time.
+    # The video is read where it is (spec 022): no link or copy, and results
+    # go to the results folder, in a run named after the video.
+    video = video.resolve()
     job = BatchJob(
+        video_path=video,
         config=config or {},
         status=JobStatus.RUNNING,
         selected_pipelines=pipelines,
     )
+    try:
+        run = RunFolder.create(
+            run_name(video=video), batch_id=None, pipelines=pipelines, config=config
+        )
+    except ResultsFolderError as e:
+        raise LocalJobError(
+            str(e), hint="Set VIDEOANNOTATOR_RESULTS_DIR to a folder you can write to."
+        ) from e
+    run.add_video(job, video)
     provider.create_job_dir(job.job_id)
     job.storage_path = provider.get_absolute_path(job.job_id, "")
-    job.video_path = _place_video(video.resolve(), job.storage_path)
     storage.save_job_metadata(job)
 
     pipeline_classes = get_pipeline_loader().load_all_pipelines()

@@ -67,6 +67,37 @@ def disable_auth_for_tests(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def results_root(tmp_path_factory, monkeypatch):
+    """Each test's results folder (spec 022), never the real ~/VideoAnnotator.
+
+    Every new job writes its results there, so without this a test run would
+    leave folders in the developer's home.
+    """
+    root = tmp_path_factory.mktemp("results") / "VideoAnnotator"
+    monkeypatch.setenv("VIDEOANNOTATOR_RESULTS_DIR", str(root))
+    monkeypatch.delenv("VIDEOANNOTATOR_PUBLISHED_LOCALLY", raising=False)
+    monkeypatch.delenv("VIDEOANNOTATOR_HOST_PATHS", raising=False)
+    try:
+        from videoannotator import results_folder
+
+        results_folder._batch_run_folders.clear()
+    except ImportError:
+        pass
+    return root
+
+
+@pytest.fixture
+def ingest_root(tmp_path, monkeypatch):
+    """A folder the ingest API may read videos from."""
+    from videoannotator.api.v1 import ingest as ingest_module
+
+    root = tmp_path / "videos"
+    root.mkdir()
+    monkeypatch.setattr(ingest_module, "INGEST_ROOTS", str(root))
+    return root
+
+
+@pytest.fixture(autouse=True)
 def patch_hf_token(monkeypatch):
     """Patch HuggingFace token for tests: use real token if available, else fake."""
     real_token = os.environ.get("HUGGINGFACE_TOKEN") or os.environ.get("HF_AUTH_TOKEN")

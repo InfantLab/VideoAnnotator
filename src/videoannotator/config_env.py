@@ -178,6 +178,42 @@ CORS_ALLOW_CREDENTIALS = get_bool_env("CORS_ALLOW_CREDENTIALS", True)
 # boundary of what an admin on this machine can turn into a job.
 INGEST_ROOTS = get_str_env("VIDEOANNOTATOR_INGEST_ROOTS", "")
 
+# Where every run's results go (spec 022): one visible folder, by run then
+# video. Not ~/Documents, which many Windows installs sync to OneDrive by
+# default. Read per call, like the Ollama URL below, so it follows the
+# environment the server is running in.
+RESULTS_DIR_ENV = "VIDEOANNOTATOR_RESULTS_DIR"
+
+# Docker: set when the port is published on the host's loopback only, so every
+# caller that can reach the server is on this machine (spec 022, R6).
+PUBLISHED_LOCALLY_ENV = "VIDEOANNOTATOR_PUBLISHED_LOCALLY"
+
+# Docker: `container=host` path prefix pairs, `;`-separated, so locations are
+# shown as the researcher's own paths rather than the container's.
+HOST_PATHS_ENV = "VIDEOANNOTATOR_HOST_PATHS"
+
+
+def results_dir() -> Path:
+    """`$VIDEOANNOTATOR_RESULTS_DIR`, else `~/VideoAnnotator`, resolved."""
+    raw = os.environ.get(RESULTS_DIR_ENV, "").strip()
+    path = Path(raw).expanduser() if raw else Path.home() / "VideoAnnotator"
+    return path.resolve()
+
+
+def published_locally() -> bool:
+    """Whether every caller counts as being on this machine (Docker, R6)."""
+    return get_bool_env(PUBLISHED_LOCALLY_ENV, False)
+
+
+def host_paths() -> list[tuple[str, str]]:
+    """`(container prefix, host prefix)` pairs, longest container prefix first."""
+    pairs = []
+    for entry in os.environ.get(HOST_PATHS_ENV, "").split(";"):
+        container, sep, host = entry.partition("=")
+        if sep and container.strip() and host.strip():
+            pairs.append((container.strip().rstrip("/"), host.strip().rstrip("/")))
+    return sorted(pairs, key=lambda pair: len(pair[0]), reverse=True)
+
 
 # =============================================================================
 # Database Configuration
@@ -272,6 +308,11 @@ def print_config() -> None:
     print(f"  API_PORT: {API_PORT}")
     print(f"  ENABLE_VIEWER: {ENABLE_VIEWER}")
     print(f"  CORS_ORIGINS: {CORS_ORIGINS}")
+    print("\nVideos and results:")
+    print(f"  VIDEOANNOTATOR_INGEST_ROOTS: {INGEST_ROOTS or '(home folder)'}")
+    print(f"  {RESULTS_DIR_ENV}: {results_dir()}")
+    print(f"  {PUBLISHED_LOCALLY_ENV}: {published_locally()}")
+    print(f"  {HOST_PATHS_ENV}: {host_paths() or '(none)'}")
     print("\nDatabase:")
     print(f"  DATABASE_URL: {DATABASE_URL}")
     print(f"  DB_POOL_SIZE: {DB_POOL_SIZE}")

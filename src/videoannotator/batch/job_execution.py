@@ -30,6 +30,7 @@ from ..registry.pipeline_loader import (
     removed_pipeline_message,
 )
 from ..registry.pipeline_registry import get_registry
+from ..results_folder import display_path, record_job_finished
 from ..storage.base import StorageBackend
 from ..utils.torch_settings import apply_torch_settings, restored_torch_settings
 from .result_files import job_folder
@@ -53,14 +54,15 @@ def run_job_pipelines(
     implementations already had.
     """
     try:
-        return _run(job, storage, pipeline_classes)
+        _run(job, storage, pipeline_classes)
     except Exception as e:  # top-level safety net, see docstring
         logger.error(f"Unexpected error running job {job.job_id}: {e}", exc_info=True)
         job.status = JobStatus.FAILED
         job.error_message = str(e)
         job.completed_at = datetime.now()
         storage.save_job_metadata(job)
-        return job
+    record_job_finished(job)
+    return job
 
 
 def _run(
@@ -77,6 +79,18 @@ def _run(
     if _cancellation_requested(job.job_id, storage):
         job.status = JobStatus.CANCELLED
         job.error_message = "Job cancelled by user request"
+        job.completed_at = datetime.now()
+        storage.save_job_metadata(job)
+        return job
+
+    # Read in place, a video can move after the job was queued (spec 022).
+    # Say which one and where it was, instead of a decoder error per pipeline.
+    if job.video_path is not None and not Path(job.video_path).is_file():
+        job.status = JobStatus.FAILED
+        job.error_message = (
+            f"Video not found: {display_path(job.video_path)} "
+            "(moved or deleted since the job was created)"
+        )
         job.completed_at = datetime.now()
         storage.save_job_metadata(job)
         return job

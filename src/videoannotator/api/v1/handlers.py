@@ -14,8 +14,10 @@ from datetime import UTC, datetime
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from videoannotator.results_folder import ResultsFolderError
 from videoannotator.utils.logging_config import get_logger
 
+from ..errors import APIError, api_error_handler
 from .errors import ErrorDetail, ErrorEnvelope
 from .exceptions import VideoAnnotatorException
 
@@ -91,6 +93,25 @@ async def videoannotator_exception_handler(
     )
 
 
+async def results_folder_exception_handler(
+    request: Request, exc: ResultsFolderError
+) -> JSONResponse:
+    """A run refused because its results can't be written (spec 022, FR-026)."""
+    return await api_error_handler(
+        request,
+        APIError(
+            status_code=422,
+            code="RESULTS_DIR_UNWRITABLE",
+            message=str(exc),
+            hint=(
+                "Free some space or fix the folder's permissions, or choose another "
+                "results folder with VIDEOANNOTATOR_RESULTS_DIR and restart."
+            ),
+            details={"folder": str(exc.folder)},
+        ),
+    )
+
+
 def register_v1_exception_handlers(app: FastAPI) -> None:
     """Register v1.3.0 exception handlers on the FastAPI app.
 
@@ -111,6 +132,7 @@ def register_v1_exception_handlers(app: FastAPI) -> None:
         will be caught before falling through to generic APIError handling.
     """
     app.add_exception_handler(VideoAnnotatorException, videoannotator_exception_handler)
+    app.add_exception_handler(ResultsFolderError, results_folder_exception_handler)
     logger.info(
         "Registered v1.3.0 exception handlers",
         extra={"handler": "VideoAnnotatorException -> ErrorEnvelope"},

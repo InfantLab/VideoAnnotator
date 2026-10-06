@@ -59,7 +59,7 @@ def _job_id(output: str) -> str:
     return line.split()[2].rstrip(":")
 
 
-def test_runs_the_job_and_records_it(env):
+def test_runs_the_job_and_records_it(env, results_root):
     video, tmp_path = env
     result = runner.invoke(
         app,
@@ -72,7 +72,16 @@ def test_runs_the_job_and_records_it(env):
 
     job = get_storage_backend().load_job_metadata(_job_id(result.output))
     assert job.status.value == "completed"
-    assert job.video_path.parent == job.storage_path
+    # Read in place, results in the results folder (spec 022): no copy anywhere.
+    assert job.video_path == video.resolve()
+    assert (
+        job.output_dir
+        == results_root.resolve()
+        / next(p.name for p in results_root.iterdir())
+        / "clip"
+    )
+    assert (job.output_dir / "clip_scene_detection.json").is_file()
+    assert not list(job.storage_path.glob("*.mp4"))
     assert video.is_file(), "the original video must stay where it was"
 
 

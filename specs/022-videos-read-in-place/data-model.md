@@ -12,10 +12,15 @@ Changes are additive. Existing rows and files keep their meaning (FR-018).
 | `batch_id`, `batch_name` | As before. | `batch_name` also feeds the run folder name. |
 
 **Rules**:
-- `output_dir` is never inside `storage_path`, and never inside an allowed (video) folder (FR-021).
-  This is checked at job creation.
-- The results root must not overlap any allowed root. The server refuses to start in-place reading
-  with a clear message if the two are configured to overlap.
+- `output_dir` is never inside `storage_path`: it is always a new, exclusively created folder
+  under the results root.
+- Results are only ever written into their own run folders, so they never land beside a video
+  (FR-021). The default video folder (home) always contains the default results folder
+  (`~/VideoAnnotator`); that is fine, and folder listing and ingest skip the results root, which
+  never holds videos. When the results root lies inside an explicitly configured video folder
+  (`VIDEOANNOTATOR_INGEST_ROOTS`), the server warns at startup that results would be mixed into
+  raw data. (Implementation note: the planned "refuse on any overlap" rule would have refused the
+  defaults.)
 
 ## Run folder (filesystem; no table)
 

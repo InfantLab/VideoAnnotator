@@ -491,6 +491,7 @@ class SQLiteStorageBackend(StorageBackend):
             with self.SessionLocal() as session:
                 db_job = session.query(Job).filter_by(id=job_id).first()
                 recorded = db_job.storage_path if db_job else None
+                output_dir = db_job.output_dir if db_job else None
                 # Foreign key constraints will cascade delete annotations and pipeline_results
                 deleted_count = session.query(Job).filter_by(id=job_id).delete()
 
@@ -521,6 +522,23 @@ class SQLiteStorageBackend(StorageBackend):
                 self.logger.warning(
                     f"[WARNING] Failed to delete storage for job {job_id}: {storage_error}"
                 )
+
+            # Its results folder too (spec 022) -- only ever inside the results
+            # root, and never the video it was made from.
+            if output_dir:
+                from types import SimpleNamespace
+
+                from ..results_folder import remove_job_results
+
+                try:
+                    remove_job_results(
+                        SimpleNamespace(job_id=job_id, output_dir=Path(output_dir))
+                    )
+                except Exception as results_error:
+                    self.logger.warning(
+                        f"[WARNING] Failed to delete results for job {job_id}: "
+                        f"{results_error}"
+                    )
 
             return deleted_count > 0
 

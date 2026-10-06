@@ -174,6 +174,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error(f"Extras-install orphaned-job cleanup failed: {e}")
         # Don't fail startup if this cleanup fails, but log prominently
 
+    _check_videos_and_results()
+
     # Log server configuration
     from ..config_env import CORS_ORIGINS, get_bool_env
 
@@ -244,6 +246,31 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
 
     # TODO: Cleanup pipeline resources
+
+
+def _check_videos_and_results() -> None:
+    """Say, at startup, what spec 022's settings mean for this server."""
+    from ..config_env import INGEST_ROOTS, PUBLISHED_LOCALLY_ENV, published_locally
+    from ..results_folder import display_path, results_root, results_root_overlaps
+    from .v1.ingest import allowed_roots
+
+    if published_locally():
+        logger.warning(
+            f"{PUBLISHED_LOCALLY_ENV} is set: every caller is treated as being on "
+            "this machine and may read videos in place. That is only true if the "
+            "port is published on 127.0.0.1. If you publish it more widely, unset "
+            f"{PUBLISHED_LOCALLY_ENV}."
+        )
+    if INGEST_ROOTS.strip():
+        inside = results_root_overlaps(allowed_roots())
+        if inside is not None:
+            logger.warning(
+                f"The results folder {display_path(results_root())} is inside the "
+                f"video folder {display_path(inside)}: results will be written "
+                "among your videos. Set VIDEOANNOTATOR_RESULTS_DIR to a folder "
+                "outside it to keep raw data and results apart."
+            )
+    logger.info(f"Results folder: {display_path(results_root())}")
 
 
 def create_app() -> FastAPI:

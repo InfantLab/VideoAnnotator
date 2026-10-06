@@ -116,6 +116,9 @@ def server(
     from .storage.config import get_storage_root
 
     typer.echo(f"[INFO] Jobs: {get_storage_root()}")
+    from .results_folder import display_path, results_root
+
+    typer.echo(f"[INFO] Results: {display_path(results_root())}")
 
     from .config_env import ENABLE_VIEWER
 
@@ -272,6 +275,10 @@ def process(
             shutil.copy2(f, output / f.name)
         typer.echo(f"[INFO] Result files copied to {output}")
 
+    if job.output_dir is not None:
+        from .results_folder import display_path
+
+        typer.echo(f"[INFO] Results: {display_path(job.output_dir)}")
     typer.echo(f"[INFO] Job {job.job_id}: {job.status.value}")
     if job.status != JobStatus.COMPLETED or job.error_message:
         raise typer.Exit(code=1)
