@@ -29,7 +29,13 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
-from .config_env import WINDOWS_PATH, host_paths, results_dir
+from .config_env import (
+    RESULTS_OWNER_ENV,
+    WINDOWS_PATH,
+    host_paths,
+    results_dir,
+    results_owner,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -125,11 +131,31 @@ def run_name(
     return f"Run {(now or datetime.now()).strftime('%Y-%m-%d %H-%M')}"
 
 
+def give_to_owner(*paths: Path) -> None:
+    """Give `paths` to `$VIDEOANNOTATOR_RESULTS_OWNER`, when set (spec 024, R6).
+
+    Rootful Docker on Linux runs the server as root, so without this the
+    researcher couldn't move or delete their own results. Never raises.
+    """
+    owner = results_owner()
+    if owner is None or not hasattr(os, "chown"):
+        return
+    for path in paths:
+        try:
+            os.chown(path, *owner)
+        except OSError as e:
+            logger.warning(
+                f"Could not give {path} to {RESULTS_OWNER_ENV}={owner[0]}:{owner[1]}: {e}"
+            )
+
+
 def check_writable(root: Path | None = None) -> Path:
     """Confirm results can be written under `root` before a run starts (FR-026)."""
     root = root or results_root()
     try:
-        root.mkdir(parents=True, exist_ok=True)
+        if not root.is_dir():
+            root.mkdir(parents=True, exist_ok=True)
+            give_to_owner(root)
         with tempfile.NamedTemporaryFile(dir=root, prefix=".write-check-"):
             pass
     except OSError as e:
@@ -188,6 +214,7 @@ class RunFolder:
             path = root / f"{base} ({suffix})"
             try:
                 path.mkdir()
+                give_to_owner(path)
                 break
             except FileExistsError:
                 number += 1
@@ -265,6 +292,7 @@ class RunFolder:
             folder = self.path / candidate
             try:
                 folder.mkdir()
+                give_to_owner(folder)
                 break
             except FileExistsError:
                 continue
@@ -348,6 +376,11 @@ def record_job_finished(job: Any) -> None:
         _update_record(folder, update)
     except Exception as e:
         logger.warning(f"Could not update {folder / RUN_RECORD}: {e}")
+    if results_owner() is not None:
+        try:
+            give_to_owner(*output_dir.rglob("*"))
+        except OSError as e:
+            logger.warning(f"Could not list {output_dir} to give it to its owner: {e}")
 
 
 def remove_job_results(job: Any) -> None:
@@ -416,6 +449,7 @@ def _write_record(folder: Path, record: dict[str, Any]) -> None:
         except BaseException:
             Path(temp).unlink(missing_ok=True)
             raise
+        give_to_owner(folder / RUN_RECORD)
 
 
 def in_container() -> bool:

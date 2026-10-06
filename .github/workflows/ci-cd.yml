@@ -7,6 +7,8 @@ on:
     branches: [master, main, develop]
   release:
     types: [published]
+  schedule:
+    - cron: "17 4 * * 1"  # Mondays: extras-restore-e2e
   workflow_dispatch:
 
 jobs:
@@ -129,6 +131,104 @@ jobs:
 
   # Every other job installs the dev group and every extra, which hid a core
   # dependency missing from `pip install videoannotator` (httpx, 2026-10-02).
+  launcher:
+    # The launcher's sh script against tests/launcher/cases.json (spec 024). No
+    # engine needed; macOS catches BSD-userland differences (research R12).
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install bats, jq and shellcheck (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y bats jq shellcheck
+      - name: Install bats, jq and shellcheck (macOS)
+        if: runner.os == 'macOS'
+        run: brew install bats-core jq shellcheck
+      - name: shellcheck
+        run: shellcheck launcher/videoannotator-start launcher/install.sh
+      - name: bats
+        run: bats tests/launcher
+
+  launcher-windows:
+    # The PowerShell launcher against the same cases (spec 024).
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install PSScriptAnalyzer and Pester 5
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+          Install-Module Pester -MinimumVersion 5.5 -Force -SkipPublisherCheck -Scope CurrentUser
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: Invoke-ScriptAnalyzer -Path launcher -Recurse -Severity Warning -EnableExit
+      - name: Pester (PowerShell 7)
+        shell: pwsh
+        run: Invoke-Pester tests/launcher -CI
+      - name: Pester (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          Install-Module Pester -MinimumVersion 5.5 -Force -SkipPublisherCheck -Scope CurrentUser
+          Invoke-Pester tests/launcher -CI
+
+  e2e-images:
+    # The slim image, and the CI-only e2e image built from it (Dockerfile.e2e),
+    # saved for the launcher-e2e jobs to load into Docker and Podman.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the slim image
+        run: docker build -t localhost/videoannotator:ci .
+      - name: Build the e2e image
+        run: docker build -f tests/launcher/Dockerfile.e2e -t localhost/videoannotator:e2e .
+      - name: Save
+        run: docker save localhost/videoannotator:e2e | gzip > e2e-image.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-image
+          path: e2e-image.tar.gz
+          retention-days: 2
+
+  launcher-e2e:
+    # The launcher end to end with a real engine (spec 024, research R12).
+    runs-on: ubuntu-latest
+    needs: [e2e-images]
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [docker, podman]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          name: e2e-image
+      - name: Load the image into ${{ matrix.engine }}
+        run: gunzip -c e2e-image.tar.gz | ${{ matrix.engine }} load
+      - name: End to end
+        run: tests/launcher/test_launcher_e2e.sh ${{ matrix.engine }}
+
+  extras-restore-e2e:
+    # Weekly: an installed pipeline group is restored after the container is
+    # recreated, from the download cache (spec 024, research R7). Too heavy
+    # (torch) for every push.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs: [e2e-images]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          name: e2e-image
+      - name: Load the image
+        run: gunzip -c e2e-image.tar.gz | docker load
+      - name: Install scene, recreate, restore
+        run: tests/launcher/test_extras_restore_e2e.sh docker
+
   core-install:
     runs-on: ubuntu-latest
 
@@ -323,6 +423,54 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
+
+  image:
+    # The slim image researchers run through the launcher (spec 024,
+    # contracts/image.md): ghcr.io/infantlab/videoannotator:<version> on
+    # releases, :latest from the default branch. Docker Hub (docker-build
+    # below) stays a mirror where its secrets exist.
+    runs-on: ubuntu-latest
+    needs: [test, integration-test]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || (github.event_name == 'release' && github.event.action == 'published')
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tags and labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/infantlab/videoannotator
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=VideoAnnotator
+            org.opencontainers.image.description=VideoAnnotator, slim: pipelines are installed from the viewer as needed
+
+      - name: Build and push (slim)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          build-args: EXTRAS=
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=ghcr-slim
+          cache-to: type=gha,mode=max,scope=ghcr-slim
 
   docker-build:
     runs-on: ubuntu-latest

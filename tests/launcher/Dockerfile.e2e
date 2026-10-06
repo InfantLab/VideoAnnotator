@@ -1,0 +1,13 @@
+# CI only: the slim image plus a pipeline that finishes in a moment, so the
+# launcher's end-to-end test (test_launcher_e2e.sh) can run a real job.
+# Researchers never get this image.
+ARG BASE=localhost/videoannotator:ci
+# The tag is in BASE.
+# hadolint ignore=DL3006
+FROM ${BASE}
+
+COPY tests/launcher/e2e/launcher_e2e_pipeline.py /app/e2e/
+COPY tests/launcher/e2e/launcher_e2e.yaml /tmp/launcher_e2e.yaml
+RUN cp /tmp/launcher_e2e.yaml "$(python -c 'import pathlib, videoannotator.registry as r; print(pathlib.Path(r.__file__).parent / "metadata")')/" \
+    && rm /tmp/launcher_e2e.yaml
+ENV PYTHONPATH=/app/e2e

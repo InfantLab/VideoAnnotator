@@ -70,6 +70,20 @@ repos:
       - id: shellcheck
         files: ^scripts/
         stages: [manual]
+      # The launcher runs on researchers' machines: checked on every commit.
+      - id: shellcheck
+        name: shellcheck (launcher)
+        files: ^launcher/(videoannotator-start|install\.sh)$
+
+  # Launcher behaviour, from tests/launcher/cases.json (needs bats and jq)
+  - repo: local
+    hooks:
+      - id: bats-launcher
+        name: bats (launcher)
+        entry: bats tests/launcher
+        language: system
+        pass_filenames: false
+        files: ^(launcher/|tests/launcher/)
 
   # Dockerfile linting
   - repo: https://github.com/hadolint/hadolint

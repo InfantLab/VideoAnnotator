@@ -1,0 +1,1534 @@
+{
+  "//": "Expected launcher behaviour, shared by tests/launcher/*.bats (sh) and Launcher.Tests.ps1 (PowerShell). See launcher/README.md.",
+  "paths": [
+    {
+      "name": "a home folder keeps its real path",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/Studies",
+        "n": 1
+      },
+      "expect": {
+        "container": "/home/ada/Studies"
+      }
+    },
+    {
+      "name": "a macOS folder keeps its real path",
+      "os": "any",
+      "input": {
+        "path": "/Users/ada/Movies/Study",
+        "n": 1
+      },
+      "expect": {
+        "container": "/Users/ada/Movies/Study"
+      }
+    },
+    {
+      "name": "an external drive keeps its real path",
+      "os": "any",
+      "input": {
+        "path": "/media/ada/Drive/Study",
+        "n": 1
+      },
+      "expect": {
+        "container": "/media/ada/Drive/Study"
+      }
+    },
+    {
+      "name": "a folder under an image folder goes under /host",
+      "os": "any",
+      "input": {
+        "path": "/opt/data",
+        "n": 1
+      },
+      "expect": {
+        "container": "/host/opt/data"
+      }
+    },
+    {
+      "name": "/srv goes under /host",
+      "os": "any",
+      "input": {
+        "path": "/srv/lab/videos",
+        "n": 2
+      },
+      "expect": {
+        "container": "/host/srv/lab/videos"
+      }
+    },
+    {
+      "name": "/tmp goes under /host",
+      "os": "any",
+      "input": {
+        "path": "/tmp/videos",
+        "n": 1
+      },
+      "expect": {
+        "container": "/host/tmp/videos"
+      }
+    },
+    {
+      "name": "spaces kept",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/My Studies/Day 1",
+        "n": 1
+      },
+      "expect": {
+        "container": "/home/ada/My Studies/Day 1"
+      }
+    },
+    {
+      "name": "accents and non-Latin characters kept",
+      "os": "any",
+      "input": {
+        "path": "/home/zoë/Études/研究",
+        "n": 1
+      },
+      "expect": {
+        "container": "/home/zoë/Études/研究"
+      }
+    },
+    {
+      "name": "a colon means a numbered mount",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/Study: 2024",
+        "n": 1
+      },
+      "expect": {
+        "container": "/host/1"
+      }
+    },
+    {
+      "name": "a comma means a numbered mount",
+      "os": "any",
+      "input": {
+        "path": "/data/a,b",
+        "n": 2
+      },
+      "expect": {
+        "container": "/host/2"
+      }
+    },
+    {
+      "name": "an equals sign means a numbered mount",
+      "os": "any",
+      "input": {
+        "path": "/data/x=y",
+        "n": 3
+      },
+      "expect": {
+        "container": "/host/3"
+      }
+    },
+    {
+      "name": "a semicolon means a numbered mount",
+      "os": "any",
+      "input": {
+        "path": "/data/a;b",
+        "n": 1
+      },
+      "expect": {
+        "container": "/host/1"
+      }
+    },
+    {
+      "name": "results with a colon",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/Results: 2024",
+        "n": "results"
+      },
+      "expect": {
+        "container": "/host/results"
+      }
+    },
+    {
+      "name": "a Windows folder maps to its drive",
+      "os": "windows",
+      "input": {
+        "path": "C:\\Users\\ada\\Studies",
+        "n": 1
+      },
+      "expect": {
+        "container": "/c/Users/ada/Studies"
+      }
+    },
+    {
+      "name": "a Windows drive letter is lower-cased",
+      "os": "windows",
+      "input": {
+        "path": "E:\\Data",
+        "n": 1
+      },
+      "expect": {
+        "container": "/e/Data"
+      }
+    },
+    {
+      "name": "a Windows trailing separator is dropped",
+      "os": "windows",
+      "input": {
+        "path": "D:\\Videos\\",
+        "n": 1
+      },
+      "expect": {
+        "container": "/d/Videos"
+      }
+    },
+    {
+      "name": "Windows spaces kept",
+      "os": "windows",
+      "input": {
+        "path": "C:\\Users\\ada\\My Videos",
+        "n": 1
+      },
+      "expect": {
+        "container": "/c/Users/ada/My Videos"
+      }
+    },
+    {
+      "name": "a Windows comma means a numbered mount",
+      "os": "windows",
+      "input": {
+        "path": "C:\\data\\a,b",
+        "n": 2
+      },
+      "expect": {
+        "container": "/host/2"
+      }
+    }
+  ],
+  "normalise": [
+    {
+      "name": "a trailing separator is dropped",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/Studies/",
+        "home": "/home/ada"
+      },
+      "expect": {
+        "path": "/home/ada/Studies"
+      }
+    },
+    {
+      "name": "several trailing separators",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/Studies//",
+        "home": "/home/ada"
+      },
+      "expect": {
+        "path": "/home/ada/Studies"
+      }
+    },
+    {
+      "name": "the root stays the root",
+      "os": "any",
+      "input": {
+        "path": "/",
+        "home": "/home/ada"
+      },
+      "expect": {
+        "path": "/"
+      }
+    },
+    {
+      "name": "a tilde is the home folder",
+      "os": "any",
+      "input": {
+        "path": "~/Studies",
+        "home": "/home/ada"
+      },
+      "expect": {
+        "path": "/home/ada/Studies"
+      }
+    },
+    {
+      "name": "doubled separators collapse",
+      "os": "any",
+      "input": {
+        "path": "/home//ada/./Studies",
+        "home": "/home/ada"
+      },
+      "expect": {
+        "path": "/home/ada/Studies"
+      }
+    },
+    {
+      "name": "a Windows trailing separator is dropped",
+      "os": "windows",
+      "input": {
+        "path": "C:\\Users\\ada\\Studies\\",
+        "home": "C:\\Users\\ada"
+      },
+      "expect": {
+        "path": "C:\\Users\\ada\\Studies"
+      }
+    },
+    {
+      "name": "a Windows drive root keeps its separator",
+      "os": "windows",
+      "input": {
+        "path": "E:\\",
+        "home": "C:\\Users\\ada"
+      },
+      "expect": {
+        "path": "E:\\"
+      }
+    }
+  ],
+  "classify": [
+    {
+      "name": "an ordinary folder",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/Studies",
+        "home": "/home/ada",
+        "shares": [],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "name": "the home folder is broad",
+      "os": "any",
+      "input": {
+        "path": "/home/ada",
+        "home": "/home/ada",
+        "shares": [],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad home nested_results"
+      }
+    },
+    {
+      "name": "the root is broad",
+      "os": "any",
+      "input": {
+        "path": "/",
+        "home": "/home/ada",
+        "shares": [],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad everything nested_results"
+      }
+    },
+    {
+      "name": "/Volumes is broad",
+      "os": "any",
+      "input": {
+        "path": "/Volumes",
+        "home": "/Users/ada",
+        "shares": [],
+        "results": "/Users/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad drives"
+      }
+    },
+    {
+      "name": "/media/<user> is broad",
+      "os": "any",
+      "input": {
+        "path": "/media/ada",
+        "home": "/home/ada",
+        "shares": [],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad drives"
+      }
+    },
+    {
+      "name": "a drive under /media/<user> is fine",
+      "os": "any",
+      "input": {
+        "path": "/media/ada/Drive",
+        "home": "/home/ada",
+        "shares": [],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "name": "/mnt is broad",
+      "os": "any",
+      "input": {
+        "path": "/mnt",
+        "home": "/home/ada",
+        "shares": [],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad drives"
+      }
+    },
+    {
+      "name": "/Users is broad",
+      "os": "any",
+      "input": {
+        "path": "/Users",
+        "home": "/Users/ada",
+        "shares": [],
+        "results": "/Users/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad users nested_results"
+      }
+    },
+    {
+      "name": "/home is broad",
+      "os": "any",
+      "input": {
+        "path": "/home",
+        "home": "/home/ada",
+        "shares": [],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad users nested_results"
+      }
+    },
+    {
+      "name": "/etc is broad",
+      "os": "any",
+      "input": {
+        "path": "/etc",
+        "home": "/home/ada",
+        "shares": [],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad system"
+      }
+    },
+    {
+      "name": "/usr is broad",
+      "os": "any",
+      "input": {
+        "path": "/usr",
+        "home": "/home/ada",
+        "shares": [],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad system"
+      }
+    },
+    {
+      "name": "the results folder itself is refused",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/VideoAnnotator",
+        "home": "/home/ada",
+        "shares": [],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "refused"
+      }
+    },
+    {
+      "name": "a folder inside the results folder is refused",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/VideoAnnotator/Run 1",
+        "home": "/home/ada",
+        "shares": [],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "refused"
+      }
+    },
+    {
+      "name": "a share holding the results folder is allowed",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/Lab",
+        "home": "/home/ada",
+        "shares": [],
+        "results": "/home/ada/Lab/Results"
+      },
+      "expect": {
+        "result": "ok nested_results"
+      }
+    },
+    {
+      "name": "a folder already shared",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/Studies",
+        "home": "/home/ada",
+        "shares": [
+          "/home/ada/Studies"
+        ],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "duplicate"
+      }
+    },
+    {
+      "name": "a folder inside a share",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/Studies/Day 1",
+        "home": "/home/ada",
+        "shares": [
+          "/home/ada/Studies"
+        ],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "duplicate"
+      }
+    },
+    {
+      "name": "a folder holding shares replaces them",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/Lab",
+        "home": "/home/ada",
+        "shares": [
+          "/home/ada/Lab/A",
+          "/home/ada/Lab/B"
+        ],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "ok replaces"
+      }
+    },
+    {
+      "name": "a sibling with a shared prefix is not inside",
+      "os": "any",
+      "input": {
+        "path": "/home/ada/Studies2",
+        "home": "/home/ada",
+        "shares": [
+          "/home/ada/Studies"
+        ],
+        "results": "/home/ada/VideoAnnotator"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "name": "the home folder holding a share is broad and replaces",
+      "os": "any",
+      "input": {
+        "path": "/home/ada",
+        "home": "/home/ada",
+        "shares": [
+          "/home/ada/Studies"
+        ],
+        "results": "/data/results"
+      },
+      "expect": {
+        "result": "broad home replaces"
+      }
+    },
+    {
+      "name": "a Windows drive root is broad",
+      "os": "windows",
+      "input": {
+        "path": "C:\\",
+        "home": "C:\\Users\\ada",
+        "shares": [],
+        "results": "C:\\Users\\ada\\VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad everything nested_results"
+      }
+    },
+    {
+      "name": "C:\\Users is broad",
+      "os": "windows",
+      "input": {
+        "path": "C:\\Users",
+        "home": "C:\\Users\\ada",
+        "shares": [],
+        "results": "C:\\Users\\ada\\VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad users nested_results"
+      }
+    },
+    {
+      "name": "C:\\Windows is broad",
+      "os": "windows",
+      "input": {
+        "path": "C:\\Windows",
+        "home": "C:\\Users\\ada",
+        "shares": [],
+        "results": "C:\\Users\\ada\\VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad system"
+      }
+    },
+    {
+      "name": "C:\\Program Files is broad",
+      "os": "windows",
+      "input": {
+        "path": "C:\\Program Files",
+        "home": "C:\\Users\\ada",
+        "shares": [],
+        "results": "C:\\Users\\ada\\VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad system"
+      }
+    },
+    {
+      "name": "the Windows home folder is broad",
+      "os": "windows",
+      "input": {
+        "path": "C:\\Users\\ada",
+        "home": "C:\\Users\\ada",
+        "shares": [],
+        "results": "C:\\Users\\ada\\VideoAnnotator"
+      },
+      "expect": {
+        "result": "broad home nested_results"
+      }
+    },
+    {
+      "name": "a Windows folder is fine",
+      "os": "windows",
+      "input": {
+        "path": "C:\\Users\\ada\\Videos\\Study",
+        "home": "C:\\Users\\ada",
+        "shares": [],
+        "results": "C:\\Users\\ada\\VideoAnnotator"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "name": "Windows paths compare without case",
+      "os": "windows",
+      "input": {
+        "path": "c:\\users\\ada\\studies\\day 1",
+        "home": "C:\\Users\\ada",
+        "shares": [
+          "C:\\Users\\ada\\Studies"
+        ],
+        "results": "C:\\Users\\ada\\VideoAnnotator"
+      },
+      "expect": {
+        "result": "duplicate"
+      }
+    }
+  ],
+  "settings": [
+    {
+      "name": "Linux keeps settings in the XDG config folder",
+      "os": "linux",
+      "input": {
+        "home": "/home/ada",
+        "xdg": ""
+      },
+      "expect": {
+        "path": "/home/ada/.config/videoannotator/start.conf"
+      }
+    },
+    {
+      "name": "Linux follows XDG_CONFIG_HOME",
+      "os": "linux",
+      "input": {
+        "home": "/home/ada",
+        "xdg": "/home/ada/.cfg"
+      },
+      "expect": {
+        "path": "/home/ada/.cfg/videoannotator/start.conf"
+      }
+    },
+    {
+      "name": "macOS keeps settings in Application Support",
+      "os": "macos",
+      "input": {
+        "home": "/Users/ada",
+        "xdg": ""
+      },
+      "expect": {
+        "path": "/Users/ada/Library/Application Support/VideoAnnotator/start.conf"
+      }
+    },
+    {
+      "name": "Windows keeps settings in APPDATA",
+      "os": "windows",
+      "input": {
+        "home": "C:\\Users\\ada",
+        "appdata": "C:\\Users\\ada\\AppData\\Roaming"
+      },
+      "expect": {
+        "path": "C:\\Users\\ada\\AppData\\Roaming\\VideoAnnotator\\start.conf"
+      }
+    }
+  ],
+  "run": [
+    {
+      "name": "Linux, Podman, one share (the contract's example)",
+      "os": "linux",
+      "input": {
+        "engine": "podman",
+        "home": "/home/ada",
+        "shares": [
+          "/home/ada/Studies"
+        ],
+        "missing": [],
+        "results": "/home/ada/VideoAnnotator",
+        "port": "18011",
+        "image": "ghcr.io/infantlab/videoannotator:1.6.0",
+        "uid": "1000",
+        "gid": "1000",
+        "gpu": "",
+        "desktop": "no"
+      },
+      "expect": {
+        "args": [
+          "run",
+          "-d",
+          "--name",
+          "videoannotator",
+          "-p",
+          "127.0.0.1:18011:18011",
+          "-v",
+          "videoannotator-models:/app/models",
+          "-v",
+          "videoannotator-database:/app/database",
+          "-v",
+          "videoannotator-storage:/app/storage",
+          "-v",
+          "videoannotator-cache:/app/cache",
+          "--mount",
+          "type=bind,source=/home/ada/Studies,target=/home/ada/Studies,readonly",
+          "--mount",
+          "type=bind,source=/home/ada/VideoAnnotator,target=/home/ada/VideoAnnotator",
+          "--mount",
+          "type=bind,source=/home/ada/.config/videoannotator/requests,target=/app/launcher/requests",
+          "-e",
+          "VIDEOANNOTATOR_INGEST_ROOTS=/home/ada/Studies",
+          "-e",
+          "VIDEOANNOTATOR_MISSING_SHARES=",
+          "-e",
+          "VIDEOANNOTATOR_RESULTS_DIR=/home/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_HOST_PATHS=/home/ada/Studies=/home/ada/Studies;/home/ada/VideoAnnotator=/home/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
+          "-e",
+          "VIDEOANNOTATOR_LAUNCHER=1",
+          "ghcr.io/infantlab/videoannotator:1.6.0"
+        ]
+      }
+    },
+    {
+      "name": "Linux Docker Engine gives results to the researcher",
+      "os": "linux",
+      "input": {
+        "engine": "docker",
+        "home": "/home/ada",
+        "shares": [
+          "/home/ada/Studies"
+        ],
+        "missing": [],
+        "results": "/home/ada/VideoAnnotator",
+        "port": "18011",
+        "image": "ghcr.io/infantlab/videoannotator:1.6.0",
+        "uid": "1000",
+        "gid": "1001",
+        "gpu": "",
+        "desktop": "no"
+      },
+      "expect": {
+        "args": [
+          "run",
+          "-d",
+          "--name",
+          "videoannotator",
+          "-p",
+          "127.0.0.1:18011:18011",
+          "-v",
+          "videoannotator-models:/app/models",
+          "-v",
+          "videoannotator-database:/app/database",
+          "-v",
+          "videoannotator-storage:/app/storage",
+          "-v",
+          "videoannotator-cache:/app/cache",
+          "--mount",
+          "type=bind,source=/home/ada/Studies,target=/home/ada/Studies,readonly",
+          "--mount",
+          "type=bind,source=/home/ada/VideoAnnotator,target=/home/ada/VideoAnnotator",
+          "--mount",
+          "type=bind,source=/home/ada/.config/videoannotator/requests,target=/app/launcher/requests",
+          "-e",
+          "VIDEOANNOTATOR_INGEST_ROOTS=/home/ada/Studies",
+          "-e",
+          "VIDEOANNOTATOR_MISSING_SHARES=",
+          "-e",
+          "VIDEOANNOTATOR_RESULTS_DIR=/home/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_HOST_PATHS=/home/ada/Studies=/home/ada/Studies;/home/ada/VideoAnnotator=/home/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
+          "-e",
+          "VIDEOANNOTATOR_LAUNCHER=1",
+          "-e",
+          "VIDEOANNOTATOR_RESULTS_OWNER=1000:1001",
+          "ghcr.io/infantlab/videoannotator:1.6.0"
+        ]
+      }
+    },
+    {
+      "name": "Docker Desktop on Linux needs no owner",
+      "os": "linux",
+      "input": {
+        "engine": "docker",
+        "home": "/home/ada",
+        "shares": [
+          "/home/ada/Studies"
+        ],
+        "missing": [],
+        "results": "/home/ada/VideoAnnotator",
+        "port": "18011",
+        "image": "ghcr.io/infantlab/videoannotator:1.6.0",
+        "uid": "1000",
+        "gid": "1000",
+        "gpu": "",
+        "desktop": "yes"
+      },
+      "expect": {
+        "args": [
+          "run",
+          "-d",
+          "--name",
+          "videoannotator",
+          "-p",
+          "127.0.0.1:18011:18011",
+          "-v",
+          "videoannotator-models:/app/models",
+          "-v",
+          "videoannotator-database:/app/database",
+          "-v",
+          "videoannotator-storage:/app/storage",
+          "-v",
+          "videoannotator-cache:/app/cache",
+          "--mount",
+          "type=bind,source=/home/ada/Studies,target=/home/ada/Studies,readonly",
+          "--mount",
+          "type=bind,source=/home/ada/VideoAnnotator,target=/home/ada/VideoAnnotator",
+          "--mount",
+          "type=bind,source=/home/ada/.config/videoannotator/requests,target=/app/launcher/requests",
+          "-e",
+          "VIDEOANNOTATOR_INGEST_ROOTS=/home/ada/Studies",
+          "-e",
+          "VIDEOANNOTATOR_MISSING_SHARES=",
+          "-e",
+          "VIDEOANNOTATOR_RESULTS_DIR=/home/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_HOST_PATHS=/home/ada/Studies=/home/ada/Studies;/home/ada/VideoAnnotator=/home/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
+          "-e",
+          "VIDEOANNOTATOR_LAUNCHER=1",
+          "ghcr.io/infantlab/videoannotator:1.6.0"
+        ]
+      }
+    },
+    {
+      "name": "macOS Docker Desktop needs no owner",
+      "os": "macos",
+      "input": {
+        "engine": "docker",
+        "home": "/Users/ada",
+        "shares": [
+          "/Users/ada/Movies/Study"
+        ],
+        "missing": [],
+        "results": "/Users/ada/VideoAnnotator",
+        "port": "18011",
+        "image": "ghcr.io/infantlab/videoannotator:1.6.0",
+        "uid": "501",
+        "gid": "20",
+        "gpu": "",
+        "desktop": "yes"
+      },
+      "expect": {
+        "args": [
+          "run",
+          "-d",
+          "--name",
+          "videoannotator",
+          "-p",
+          "127.0.0.1:18011:18011",
+          "-v",
+          "videoannotator-models:/app/models",
+          "-v",
+          "videoannotator-database:/app/database",
+          "-v",
+          "videoannotator-storage:/app/storage",
+          "-v",
+          "videoannotator-cache:/app/cache",
+          "--mount",
+          "type=bind,source=/Users/ada/Movies/Study,target=/Users/ada/Movies/Study,readonly",
+          "--mount",
+          "type=bind,source=/Users/ada/VideoAnnotator,target=/Users/ada/VideoAnnotator",
+          "--mount",
+          "type=bind,source=/Users/ada/Library/Application Support/VideoAnnotator/requests,target=/app/launcher/requests",
+          "-e",
+          "VIDEOANNOTATOR_INGEST_ROOTS=/Users/ada/Movies/Study",
+          "-e",
+          "VIDEOANNOTATOR_MISSING_SHARES=",
+          "-e",
+          "VIDEOANNOTATOR_RESULTS_DIR=/Users/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_HOST_PATHS=/Users/ada/Movies/Study=/Users/ada/Movies/Study;/Users/ada/VideoAnnotator=/Users/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
+          "-e",
+          "VIDEOANNOTATOR_LAUNCHER=1",
+          "ghcr.io/infantlab/videoannotator:1.6.0"
+        ]
+      }
+    },
+    {
+      "name": "two shares, one under /opt, one missing, another port, GPU",
+      "os": "linux",
+      "input": {
+        "engine": "podman",
+        "home": "/home/ada",
+        "shares": [
+          "/home/ada/Studies",
+          "/opt/lab data"
+        ],
+        "missing": [
+          "/media/ada/Drive"
+        ],
+        "results": "/home/ada/VideoAnnotator",
+        "port": "18012",
+        "image": "ghcr.io/infantlab/videoannotator:1.6.0",
+        "uid": "1000",
+        "gid": "1000",
+        "gpu": "--device nvidia.com/gpu=all",
+        "desktop": "no"
+      },
+      "expect": {
+        "args": [
+          "run",
+          "-d",
+          "--name",
+          "videoannotator",
+          "-p",
+          "127.0.0.1:18012:18011",
+          "--device",
+          "nvidia.com/gpu=all",
+          "-v",
+          "videoannotator-models:/app/models",
+          "-v",
+          "videoannotator-database:/app/database",
+          "-v",
+          "videoannotator-storage:/app/storage",
+          "-v",
+          "videoannotator-cache:/app/cache",
+          "--mount",
+          "type=bind,source=/home/ada/Studies,target=/home/ada/Studies,readonly",
+          "--mount",
+          "type=bind,source=/opt/lab data,target=/host/opt/lab data,readonly",
+          "--mount",
+          "type=bind,source=/home/ada/VideoAnnotator,target=/home/ada/VideoAnnotator",
+          "--mount",
+          "type=bind,source=/home/ada/.config/videoannotator/requests,target=/app/launcher/requests",
+          "-e",
+          "VIDEOANNOTATOR_INGEST_ROOTS=/home/ada/Studies:/host/opt/lab data",
+          "-e",
+          "VIDEOANNOTATOR_MISSING_SHARES=/media/ada/Drive",
+          "-e",
+          "VIDEOANNOTATOR_RESULTS_DIR=/home/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_HOST_PATHS=/home/ada/Studies=/home/ada/Studies;/host/opt/lab data=/opt/lab data;/home/ada/VideoAnnotator=/home/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
+          "-e",
+          "VIDEOANNOTATOR_LAUNCHER=1",
+          "ghcr.io/infantlab/videoannotator:1.6.0"
+        ]
+      }
+    },
+    {
+      "name": "a share with a comma is quoted and numbered",
+      "os": "linux",
+      "input": {
+        "engine": "podman",
+        "home": "/home/ada",
+        "shares": [
+          "/home/ada/Studies",
+          "/data/a,b"
+        ],
+        "missing": [],
+        "results": "/home/ada/VideoAnnotator",
+        "port": "18011",
+        "image": "ghcr.io/infantlab/videoannotator:1.6.0",
+        "uid": "1000",
+        "gid": "1000",
+        "gpu": "",
+        "desktop": "no"
+      },
+      "expect": {
+        "args": [
+          "run",
+          "-d",
+          "--name",
+          "videoannotator",
+          "-p",
+          "127.0.0.1:18011:18011",
+          "-v",
+          "videoannotator-models:/app/models",
+          "-v",
+          "videoannotator-database:/app/database",
+          "-v",
+          "videoannotator-storage:/app/storage",
+          "-v",
+          "videoannotator-cache:/app/cache",
+          "--mount",
+          "type=bind,source=/home/ada/Studies,target=/home/ada/Studies,readonly",
+          "--mount",
+          "type=bind,\"source=/data/a,b\",target=/host/2,readonly",
+          "--mount",
+          "type=bind,source=/home/ada/VideoAnnotator,target=/home/ada/VideoAnnotator",
+          "--mount",
+          "type=bind,source=/home/ada/.config/videoannotator/requests,target=/app/launcher/requests",
+          "-e",
+          "VIDEOANNOTATOR_INGEST_ROOTS=/home/ada/Studies:/host/2",
+          "-e",
+          "VIDEOANNOTATOR_MISSING_SHARES=",
+          "-e",
+          "VIDEOANNOTATOR_RESULTS_DIR=/home/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_HOST_PATHS=/home/ada/Studies=/home/ada/Studies;/host/2=/data/a,b;/home/ada/VideoAnnotator=/home/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
+          "-e",
+          "VIDEOANNOTATOR_LAUNCHER=1",
+          "ghcr.io/infantlab/videoannotator:1.6.0"
+        ]
+      }
+    },
+    {
+      "name": "no shares yet",
+      "os": "linux",
+      "input": {
+        "engine": "podman",
+        "home": "/home/ada",
+        "shares": [],
+        "missing": [
+          "/home/ada/Studies"
+        ],
+        "results": "/home/ada/VideoAnnotator",
+        "port": "18011",
+        "image": "ghcr.io/infantlab/videoannotator:latest",
+        "uid": "1000",
+        "gid": "1000",
+        "gpu": "",
+        "desktop": "no"
+      },
+      "expect": {
+        "args": [
+          "run",
+          "-d",
+          "--name",
+          "videoannotator",
+          "-p",
+          "127.0.0.1:18011:18011",
+          "-v",
+          "videoannotator-models:/app/models",
+          "-v",
+          "videoannotator-database:/app/database",
+          "-v",
+          "videoannotator-storage:/app/storage",
+          "-v",
+          "videoannotator-cache:/app/cache",
+          "--mount",
+          "type=bind,source=/home/ada/VideoAnnotator,target=/home/ada/VideoAnnotator",
+          "--mount",
+          "type=bind,source=/home/ada/.config/videoannotator/requests,target=/app/launcher/requests",
+          "-e",
+          "VIDEOANNOTATOR_INGEST_ROOTS=",
+          "-e",
+          "VIDEOANNOTATOR_MISSING_SHARES=/home/ada/Studies",
+          "-e",
+          "VIDEOANNOTATOR_RESULTS_DIR=/home/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_HOST_PATHS=/home/ada/VideoAnnotator=/home/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
+          "-e",
+          "VIDEOANNOTATOR_LAUNCHER=1",
+          "ghcr.io/infantlab/videoannotator:latest"
+        ]
+      }
+    },
+    {
+      "name": "a results folder inside a share is mounted after it",
+      "os": "linux",
+      "input": {
+        "engine": "podman",
+        "home": "/home/ada",
+        "shares": [
+          "/home/ada/Lab"
+        ],
+        "missing": [],
+        "results": "/home/ada/Lab/Results",
+        "port": "18011",
+        "image": "ghcr.io/infantlab/videoannotator:1.6.0",
+        "uid": "1000",
+        "gid": "1000",
+        "gpu": "",
+        "desktop": "no"
+      },
+      "expect": {
+        "args": [
+          "run",
+          "-d",
+          "--name",
+          "videoannotator",
+          "-p",
+          "127.0.0.1:18011:18011",
+          "-v",
+          "videoannotator-models:/app/models",
+          "-v",
+          "videoannotator-database:/app/database",
+          "-v",
+          "videoannotator-storage:/app/storage",
+          "-v",
+          "videoannotator-cache:/app/cache",
+          "--mount",
+          "type=bind,source=/home/ada/Lab,target=/home/ada/Lab,readonly",
+          "--mount",
+          "type=bind,source=/home/ada/Lab/Results,target=/home/ada/Lab/Results",
+          "--mount",
+          "type=bind,source=/home/ada/.config/videoannotator/requests,target=/app/launcher/requests",
+          "-e",
+          "VIDEOANNOTATOR_INGEST_ROOTS=/home/ada/Lab",
+          "-e",
+          "VIDEOANNOTATOR_MISSING_SHARES=",
+          "-e",
+          "VIDEOANNOTATOR_RESULTS_DIR=/home/ada/Lab/Results",
+          "-e",
+          "VIDEOANNOTATOR_HOST_PATHS=/home/ada/Lab=/home/ada/Lab;/home/ada/Lab/Results=/home/ada/Lab/Results",
+          "-e",
+          "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
+          "-e",
+          "VIDEOANNOTATOR_LAUNCHER=1",
+          "ghcr.io/infantlab/videoannotator:1.6.0"
+        ]
+      }
+    }
+  ],
+  "engine": [
+    {
+      "name": "only Podman",
+      "os": "any",
+      "input": {
+        "docker": "absent",
+        "podman": "running",
+        "saved": "",
+        "option": ""
+      },
+      "expect": {
+        "engine": "podman"
+      }
+    },
+    {
+      "name": "only Docker",
+      "os": "any",
+      "input": {
+        "docker": "running",
+        "podman": "absent",
+        "saved": "",
+        "option": ""
+      },
+      "expect": {
+        "engine": "docker"
+      }
+    },
+    {
+      "name": "both running, Podman used last",
+      "os": "any",
+      "input": {
+        "docker": "running",
+        "podman": "running",
+        "saved": "podman",
+        "option": ""
+      },
+      "expect": {
+        "engine": "podman",
+        "announced": true
+      }
+    },
+    {
+      "name": "both running, nothing saved",
+      "os": "any",
+      "input": {
+        "docker": "running",
+        "podman": "running",
+        "saved": "",
+        "option": ""
+      },
+      "expect": {
+        "engine": "docker",
+        "announced": true
+      }
+    },
+    {
+      "name": "only one running wins over the saved one",
+      "os": "any",
+      "input": {
+        "docker": "stopped",
+        "podman": "running",
+        "saved": "docker",
+        "option": ""
+      },
+      "expect": {
+        "engine": "podman"
+      }
+    },
+    {
+      "name": "the option wins",
+      "os": "any",
+      "input": {
+        "docker": "running",
+        "podman": "running",
+        "saved": "docker",
+        "option": "podman"
+      },
+      "expect": {
+        "engine": "podman"
+      }
+    },
+    {
+      "name": "neither installed",
+      "os": "any",
+      "input": {
+        "docker": "absent",
+        "podman": "absent",
+        "saved": "",
+        "option": ""
+      },
+      "expect": {
+        "message": "VideoAnnotator needs Docker Desktop or Podman Desktop. Install one (see https://github.com/InfantLab/VideoAnnotator/blob/master/docs/installation/troubleshooting.md#install-docker-or-podman), then run this again."
+      }
+    },
+    {
+      "name": "Docker Desktop installed but stopped",
+      "os": "macos",
+      "input": {
+        "docker": "stopped",
+        "podman": "absent",
+        "saved": "",
+        "option": "",
+        "stderr": "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?"
+      },
+      "expect": {
+        "message": "Docker Desktop isn't running. Start it, wait until it says it's running, then run this again."
+      }
+    }
+  ],
+  "gpu": [
+    {
+      "name": "Docker with the NVIDIA runtime",
+      "os": "linux",
+      "input": {
+        "engine": "docker",
+        "nvidia": true,
+        "runtimes": "{\"nvidia\":{},\"runc\":{}}",
+        "cdi": ""
+      },
+      "expect": {
+        "flags": "--gpus all",
+        "note": false
+      }
+    },
+    {
+      "name": "Podman with the NVIDIA CDI spec",
+      "os": "linux",
+      "input": {
+        "engine": "podman",
+        "nvidia": true,
+        "runtimes": "",
+        "cdi": "INFO Found 2 CDI devices\nnvidia.com/gpu=0\nnvidia.com/gpu=all"
+      },
+      "expect": {
+        "flags": "--device nvidia.com/gpu=all",
+        "note": false
+      }
+    },
+    {
+      "name": "a GPU Docker can't use yet",
+      "os": "linux",
+      "input": {
+        "engine": "docker",
+        "nvidia": true,
+        "runtimes": "{\"runc\":{}}",
+        "cdi": ""
+      },
+      "expect": {
+        "flags": "",
+        "note": true
+      }
+    },
+    {
+      "name": "a GPU Podman can't use yet",
+      "os": "linux",
+      "input": {
+        "engine": "podman",
+        "nvidia": true,
+        "runtimes": "",
+        "cdi": ""
+      },
+      "expect": {
+        "flags": "",
+        "note": true
+      }
+    },
+    {
+      "name": "no GPU, nothing to say",
+      "os": "any",
+      "input": {
+        "engine": "docker",
+        "nvidia": false,
+        "runtimes": "",
+        "cdi": ""
+      },
+      "expect": {
+        "flags": "",
+        "note": false
+      }
+    },
+    {
+      "name": "Docker Desktop on Windows: nvidia-smi is enough",
+      "os": "windows",
+      "input": {
+        "engine": "docker",
+        "nvidia": true,
+        "runtimes": "{\"runc\":{}}",
+        "cdi": ""
+      },
+      "expect": {
+        "flags": "--gpus all",
+        "note": false
+      }
+    }
+  ],
+  "messages": [
+    {
+      "name": "Docker Desktop not running",
+      "os": "macos",
+      "input": {
+        "engine": "docker",
+        "stderr": "Cannot connect to the Docker daemon at unix:///Users/ada/.docker/run/docker.sock. Is the docker daemon running?",
+        "code": 1
+      },
+      "expect": {
+        "message": "Docker Desktop isn't running. Start it, wait until it says it's running, then run this again.",
+        "status": 1
+      }
+    },
+    {
+      "name": "Docker Desktop not running on Windows",
+      "os": "windows",
+      "input": {
+        "engine": "docker",
+        "stderr": "error during connect: this error may indicate that the docker daemon is not running",
+        "code": 1
+      },
+      "expect": {
+        "message": "Docker Desktop isn't running. Start it, wait until it says it's running, then run this again.",
+        "status": 1
+      }
+    },
+    {
+      "name": "the Docker service is stopped on Linux",
+      "os": "linux",
+      "input": {
+        "engine": "docker",
+        "stderr": "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?",
+        "code": 1
+      },
+      "expect": {
+        "message": "Docker isn't running. Start it with: sudo systemctl start docker, then run this again.",
+        "status": 1
+      }
+    },
+    {
+      "name": "no permission to use Docker",
+      "os": "linux",
+      "input": {
+        "engine": "docker",
+        "stderr": "permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock",
+        "code": 1
+      },
+      "expect": {
+        "message": "You don't have permission to use Docker yet. Run: sudo usermod -aG docker $USER, log out and back in, then run this again. (Or use Podman, which needs no permission.)",
+        "status": 1
+      }
+    },
+    {
+      "name": "port in use (Podman)",
+      "os": "any",
+      "input": {
+        "engine": "podman",
+        "stderr": "Error: rootlessport listen tcp 127.0.0.1:18011: bind: address already in use",
+        "code": 126
+      },
+      "expect": {
+        "message": "Something else is using port 18011. Close it, or run: videoannotator-start --port 18012",
+        "status": 1
+      }
+    },
+    {
+      "name": "port in use (Docker)",
+      "os": "any",
+      "input": {
+        "engine": "docker",
+        "stderr": "docker: Error response from daemon: driver failed programming external connectivity: Bind for 127.0.0.1:18011 failed: port is already allocated.",
+        "code": 125
+      },
+      "expect": {
+        "message": "Something else is using port 18011. Close it, or run: videoannotator-start --port 18012",
+        "status": 1
+      }
+    },
+    {
+      "name": "download failed: unknown version",
+      "os": "any",
+      "input": {
+        "engine": "docker",
+        "stderr": "Error response from daemon: manifest unknown",
+        "code": 1
+      },
+      "expect": {
+        "message": "Couldn't download VideoAnnotator. Check your internet connection and run this again.",
+        "status": 1
+      }
+    },
+    {
+      "name": "download failed: offline",
+      "os": "any",
+      "input": {
+        "engine": "podman",
+        "stderr": "Error: initializing source docker://ghcr.io/infantlab/videoannotator:1.6.0: pinging container registry ghcr.io: Get \"https://ghcr.io/v2/\": dial tcp: lookup ghcr.io: no such host",
+        "code": 125
+      },
+      "expect": {
+        "message": "Couldn't download VideoAnnotator. Check your internet connection and run this again.",
+        "status": 1
+      }
+    },
+    {
+      "name": "download failed: TLS",
+      "os": "any",
+      "input": {
+        "engine": "docker",
+        "stderr": "Error response from daemon: Get \"https://ghcr.io/v2/\": net/http: TLS handshake timeout",
+        "code": 1
+      },
+      "expect": {
+        "message": "Couldn't download VideoAnnotator. Check your internet connection and run this again.",
+        "status": 1
+      }
+    },
+    {
+      "name": "out of memory (exit 137)",
+      "os": "any",
+      "input": {
+        "engine": "podman",
+        "stderr": "",
+        "code": 137
+      },
+      "expect": {
+        "message": "VideoAnnotator ran out of memory. Give Podman more (see https://github.com/InfantLab/VideoAnnotator/blob/master/docs/installation/troubleshooting.md#memory), then run this again.",
+        "status": 1
+      }
+    },
+    {
+      "name": "out of memory (OOMKilled)",
+      "os": "any",
+      "input": {
+        "engine": "docker",
+        "stderr": "OOMKilled",
+        "code": 1
+      },
+      "expect": {
+        "message": "VideoAnnotator ran out of memory. Give Docker more (see https://github.com/InfantLab/VideoAnnotator/blob/master/docs/installation/troubleshooting.md#memory), then run this again.",
+        "status": 1
+      }
+    },
+    {
+      "name": "a folder Docker Desktop doesn't share",
+      "os": "macos",
+      "input": {
+        "engine": "docker",
+        "stderr": "docker: Error response from daemon: Mounts denied: \nThe path /opt/data is not shared from the host and is not known to Docker.",
+        "code": 125
+      },
+      "expect": {
+        "message": "Docker Desktop can't see /opt/data yet. Add it in Docker Desktop's Settings, Resources, File sharing (see https://github.com/InfantLab/VideoAnnotator/blob/master/docs/installation/troubleshooting.md#docker-desktop-file-sharing), then run this again.",
+        "status": 1
+      }
+    },
+    {
+      "name": "started twice at once",
+      "os": "any",
+      "input": {
+        "engine": "docker",
+        "stderr": "docker: Error response from daemon: Conflict. The container name \"/videoannotator\" is already in use by container \"4f2\".",
+        "code": 125
+      },
+      "expect": {
+        "message": "VideoAnnotator is already running.",
+        "status": 0
+      }
+    },
+    {
+      "name": "started twice at once (Podman)",
+      "os": "any",
+      "input": {
+        "engine": "podman",
+        "stderr": "Error: creating container storage: the container name \"videoannotator\" is already in use by 4f2. You have to remove that container to be able to reuse that name: that name is already in use",
+        "code": 125
+      },
+      "expect": {
+        "message": "VideoAnnotator is already running.",
+        "status": 0
+      }
+    },
+    {
+      "name": "anything else points to the log",
+      "os": "any",
+      "input": {
+        "engine": "docker",
+        "stderr": "something unexpected happened",
+        "code": 1
+      },
+      "expect": {
+        "message": "VideoAnnotator couldn't start. Run: videoannotator-start logs",
+        "detail": "    something unexpected happened",
+        "status": 1
+      }
+    }
+  ]
+}
