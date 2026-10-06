@@ -742,7 +742,13 @@ def dataset_show(
     if d.get("description"):
         typer.echo(d["description"])
     if d.get("server_folder"):
-        recursive = " (with subfolders)" if d.get("server_folder_recursive") else ""
+        recursive = (
+            " (chosen videos)"
+            if d.get("server_selection")
+            else " (with subfolders)"
+            if d.get("server_folder_recursive")
+            else ""
+        )
         typer.echo(f"Server folder: {d['server_folder']}{recursive}")
     for entry in d["video_manifest"]:
         typer.echo(

@@ -230,15 +230,15 @@ no copies.
 
 ### Tests for User Story 5
 
-- [ ] T073 [P] [US5] Add to `tests/api/test_dataset_preset_endpoints.py`: create/update/get round-trip `server_selection`; existing datasets default to false; migration adds the column to an old database (copy the pattern of the existing `server_folder_recursive` migration test, if any)
-- [ ] T074 [P] [US5] Add to `viewer/src/test/components/DatasetPicker.test.tsx` (and `viewer/src/test/lib/datasetMatch.test.ts` if matching lives there): a selection dataset whose files are all present goes straight to pipelines with exactly its files; a new file in the folder is not a difference; a missing file is reported via the drift dialog
+- [X] T073 [P] [US5] Add to `tests/api/test_dataset_preset_endpoints.py`: create/update/get round-trip `server_selection`; existing datasets default to false; migration adds the column to an old database (copy the pattern of the existing `server_folder_recursive` migration test, if any)
+- [X] T074 [P] [US5] Add to `viewer/src/test/components/DatasetPicker.test.tsx` (and `viewer/src/test/lib/datasetMatch.test.ts` if matching lives there): a selection dataset whose files are all present goes straight to pipelines with exactly its files; a new file in the folder is not a difference; a missing file is reported via the drift dialog
 
 ### Implementation for User Story 5
 
-- [ ] T075 [US5] Add `server_selection` (`Boolean, nullable=False, default=False`) to the saved dataset model in `src/videoannotator/database/models.py`, the `ALTER TABLE saved_datasets ADD COLUMN server_selection BOOLEAN NOT NULL DEFAULT 0` entry next to `server_folder_recursive` in `src/videoannotator/database/migrations.py`, and pass-through in `src/videoannotator/database/crud.py`
-- [ ] T076 [US5] Add `server_selection: bool = False` to `DatasetCreateRequest`, `DatasetUpdateRequest` and `DatasetResponse` in `src/videoannotator/api/v1/datasets.py`, and to `_to_response`
-- [ ] T077 [US5] Regenerate `viewer/src/api/schema.d.ts`; in `viewer/src/components/SaveDatasetDialog.tsx` save a My folders selection as `server_folder` + manifest of the selected relative paths + `server_selection: true` (whole folder with nothing unticked stays a folder dataset)
-- [ ] T078 [US5] In `viewer/src/components/DatasetPicker.tsx` and `viewer/src/lib/datasetMatch.ts`, for `server_selection` datasets compare only manifest files (ignore additions), and when all are present submit ingest with `path=server_folder` and `files=<manifest>` without prompting; missing files go through `viewer/src/components/DatasetDriftDialog.tsx` (Story 4 scenario 2)
+- [X] T075 [US5] Add `server_selection` (`Boolean, nullable=False, default=False`) to the saved dataset model in `src/videoannotator/database/models.py`, the `ALTER TABLE saved_datasets ADD COLUMN server_selection BOOLEAN NOT NULL DEFAULT 0` entry next to `server_folder_recursive` in `src/videoannotator/database/migrations.py`, and pass-through in `src/videoannotator/database/crud.py`
+- [X] T076 [US5] Add `server_selection: bool = False` to `DatasetCreateRequest`, `DatasetUpdateRequest` and `DatasetResponse` in `src/videoannotator/api/v1/datasets.py`, and to `_to_response`
+- [X] T077 [US5] Regenerate `viewer/src/api/schema.d.ts`; in `viewer/src/components/SaveDatasetDialog.tsx` save a My folders selection as `server_folder` + manifest of the selected relative paths + `server_selection: true` (whole folder with nothing unticked stays a folder dataset)
+- [X] T078 [US5] In `viewer/src/components/DatasetPicker.tsx` and `viewer/src/lib/datasetMatch.ts`, for `server_selection` datasets compare only manifest files (ignore additions), and when all are present submit ingest with `path=server_folder` and `files=<manifest>` without prompting; missing files go through `viewer/src/components/DatasetDriftDialog.tsx` (Story 4 scenario 2)
 
 **Checkpoint**: quickstart "Story 5" passes. Commit and push.
 

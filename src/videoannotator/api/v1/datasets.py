@@ -56,6 +56,12 @@ class DatasetCreateRequest(BaseModel):
     video_manifest: list[VideoManifestEntry] = []
     server_folder: str | None = None
     server_folder_recursive: bool = False
+    server_selection: bool = Field(
+        default=False,
+        description="The manifest is a chosen subset of server_folder (spec 022): "
+        "using the dataset runs exactly those videos, and files added to the "
+        "folder are not differences",
+    )
 
 
 class DatasetUpdateRequest(BaseModel):
@@ -64,6 +70,7 @@ class DatasetUpdateRequest(BaseModel):
     name: str | None = None
     description: str | None = None
     video_manifest: list[VideoManifestEntry] | None = None
+    server_selection: bool | None = None
 
 
 class DatasetResponse(BaseModel):
@@ -78,6 +85,7 @@ class DatasetResponse(BaseModel):
     video_manifest: list[VideoManifestEntry]
     server_folder: str | None = None
     server_folder_recursive: bool = False
+    server_selection: bool = False
     created_at: datetime
     updated_at: datetime | None = None
     last_used_at: datetime | None = None
@@ -103,6 +111,7 @@ def _to_response(dataset: Any) -> DatasetResponse:
         video_manifest=dataset.video_manifest or [],
         server_folder=dataset.server_folder,
         server_folder_recursive=bool(dataset.server_folder_recursive),
+        server_selection=bool(getattr(dataset, "server_selection", False)),
         created_at=dataset.created_at,
         updated_at=dataset.updated_at,
         last_used_at=dataset.last_used_at,
@@ -199,6 +208,7 @@ async def create_dataset(
         video_manifest=[e.model_dump(mode="json") for e in request.video_manifest],
         server_folder=request.server_folder,
         server_folder_recursive=request.server_folder_recursive,
+        server_selection=request.server_selection,
     )
     if dataset is None:
         raise APIError(
@@ -253,6 +263,7 @@ async def update_dataset(
             if request.video_manifest is not None
             else None
         ),
+        server_selection=request.server_selection,
     )
     if updated is None:
         raise APIError(

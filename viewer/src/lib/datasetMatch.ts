@@ -84,6 +84,15 @@ export function matchDataset<T>(manifest: ManifestEntry[], candidates: Candidate
   return result;
 }
 
+/**
+ * For a dataset of chosen videos (spec 022) the manifest is the truth, not the
+ * folder: other files in the folder were left out on purpose, so they aren't
+ * differences.
+ */
+export function selectionMatch<T>(manifest: ManifestEntry[], candidates: Candidate<T>[]): DatasetMatch<T> {
+  return { ...matchDataset(manifest, candidates), added: [] };
+}
+
 export function hasDifferences(match: DatasetMatch<unknown>): boolean {
   return match.missing.length + match.added.length + match.changed.length + match.ambiguous.length > 0;
 }

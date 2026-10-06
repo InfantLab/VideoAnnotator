@@ -389,6 +389,7 @@ class SavedDatasetCRUD:
         description: str | None = None,
         server_folder: str | None = None,
         server_folder_recursive: bool = False,
+        server_selection: bool = False,
     ) -> SavedDataset | None:
         """Create a saved dataset. Returns None on a name collision for this
         owner (FR-007) rather than raising, so the route can turn that into
@@ -400,6 +401,7 @@ class SavedDatasetCRUD:
             video_manifest=video_manifest,
             server_folder=server_folder,
             server_folder_recursive=server_folder_recursive,
+            server_selection=server_selection,
         )
         db.add(dataset)
         try:
@@ -417,6 +419,7 @@ class SavedDatasetCRUD:
         name: str | None = None,
         description: str | None = None,
         video_manifest: list[dict[str, Any]] | None = None,
+        server_selection: bool | None = None,
     ) -> SavedDataset | None:
         """Update a saved dataset's fields (only those provided). Returns
         None if not found, or if a rename collides with an existing name
@@ -430,6 +433,8 @@ class SavedDatasetCRUD:
             dataset.description = description
         if video_manifest is not None:
             dataset.video_manifest = video_manifest
+        if server_selection is not None:
+            dataset.server_selection = server_selection
         try:
             db.commit()
         except IntegrityError:

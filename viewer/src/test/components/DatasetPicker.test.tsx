@@ -156,4 +156,58 @@ describe('DatasetPicker', () => {
     await userEvent.click((await screen.findAllByRole('button', { name: 'Use' }))[1]);
     expect(await screen.findByRole('button', { name: 'Choose folder' })).toBeInTheDocument();
   });
+
+  describe('a dataset of chosen videos (spec 022)', () => {
+    const pair: SavedDataset = {
+      ...base,
+      id: 'pair',
+      name: 'Pair',
+      server_folder: '/data/s1',
+      server_selection: true,
+      video_manifest: [
+        { filename: 'a.mp4', size_bytes: 1, relative_path: 'a.mp4' },
+        { filename: 'c.mp4', size_bytes: 3, relative_path: 'site_a/c.mp4' },
+      ],
+    };
+    const scanned = (names: [string, number][]) => ({
+      path: '/data/s1',
+      recursive: true,
+      videos: names.map(([rel, size]) => ({ relative_path: rel, name: rel.split('/').pop()!, size_bytes: size })),
+    });
+
+    beforeEach(() => {
+      vi.mocked(apiClient.listDatasets).mockResolvedValue({ datasets: [pair], total: 1 });
+    });
+
+    it('runs exactly its videos, ignoring other files in the folder, without asking', async () => {
+      vi.mocked(apiClient.scanServerFolder).mockResolvedValue(
+        scanned([['a.mp4', 1], ['b.mp4', 2], ['site_a/c.mp4', 3], ['site_a/new.mp4', 4]])
+      );
+      const { onUseServerFolder } = renderPicker();
+      expect(await screen.findByText(/chosen videos in \/data\/s1/)).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /Use/ }));
+      await waitFor(() =>
+        expect(onUseServerFolder).toHaveBeenCalledWith(
+          { path: '/data/s1', recursive: true, videoCount: 2, files: ['a.mp4', 'site_a/c.mp4'] },
+          pair
+        )
+      );
+      expect(apiClient.scanServerFolder).toHaveBeenCalledWith('/data/s1', true);
+      expect(screen.queryByText(/have changed/)).not.toBeInTheDocument();
+    });
+
+    it('says which of its videos moved, then continues with the rest', async () => {
+      vi.mocked(apiClient.scanServerFolder).mockResolvedValue(scanned([['a.mp4', 1], ['b.mp4', 2]]));
+      const { onUseServerFolder } = renderPicker();
+      await userEvent.click(await screen.findByRole('button', { name: /Use/ }));
+      expect(await screen.findByText(/have changed since/)).toBeInTheDocument();
+      expect(screen.getByText('site_a/c.mp4')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Update the dataset/ })).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /Continue with the 1 matching video/ }));
+      expect(onUseServerFolder).toHaveBeenCalledWith(
+        { path: '/data/s1', recursive: false, videoCount: 1, files: ['a.mp4'] },
+        pair
+      );
+    });
+  });
 });

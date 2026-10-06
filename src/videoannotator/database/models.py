@@ -316,6 +316,8 @@ class SavedDataset(Base):
     # videos are uploaded from the browser.
     server_folder = Column(String(1000), nullable=True)
     server_folder_recursive = Column(Boolean, nullable=False, default=False)
+    # Spec 022: the manifest is a chosen subset of server_folder, not the folder.
+    server_selection = Column(Boolean, nullable=False, default=False)
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

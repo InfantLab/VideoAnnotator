@@ -13,6 +13,7 @@ import {
   manifestFrom,
   matchDataset,
   scanCandidates,
+  selectionMatch,
   type Candidate,
   type DatasetMatch,
 } from '@/lib/datasetMatch';
@@ -33,6 +34,14 @@ interface DatasetPickerProps {
   onUseStored: (dataset: SavedDataset, stored: StoredVideosResponse) => void;
   /** A dataset to point out (opened from the Datasets page's "Start a job"). */
   highlightId?: string;
+}
+
+/** The videos of a selection dataset that are still where they were (spec 022). */
+function selectionOf(path: string, match: DatasetMatch<ScannedVideo>): ServerFolderSelection {
+  const files = match.matched.map(({ item }) => item.relative_path);
+  // Reopened in My folders, videos in subfolders are only listed with them.
+  const recursive = files.some((f) => f.includes('/'));
+  return { path, recursive, videoCount: files.length, files };
 }
 
 type Pending =
@@ -85,11 +94,15 @@ export const DatasetPicker = ({ onUseFiles, onUseServerFolder, onUseStored, high
     setBusy(dataset.id);
     try {
       if (dataset.server_folder) {
-        const scan = await apiClient.scanServerFolder(dataset.server_folder, !!dataset.server_folder_recursive);
+        const selection = !!dataset.server_selection;
+        // A selection's videos may be in subfolders, whatever was ticked.
+        const scan = await apiClient.scanServerFolder(dataset.server_folder, selection || !!dataset.server_folder_recursive);
         const candidates = scanCandidates(scan.videos);
-        const match = matchDataset(dataset.video_manifest, candidates);
+        const match = (selection ? selectionMatch : matchDataset)(dataset.video_manifest, candidates);
         if (hasDifferences(match)) {
           setPending({ kind: 'server', dataset, candidates, match });
+        } else if (selection) {
+          onUseServerFolder(selectionOf(scan.path, match), dataset);
         } else {
           onUseServerFolder(
             { path: scan.path, recursive: scan.recursive, videoCount: scan.videos.length },
@@ -164,7 +177,9 @@ export const DatasetPicker = ({ onUseFiles, onUseServerFolder, onUseStored, high
 
   const continuePending = (useEverything = false) => {
     if (!pending) return;
-    if (pending.kind === 'server') {
+    if (pending.kind === 'server' && pending.dataset.server_selection) {
+      onUseServerFolder(selectionOf(pending.dataset.server_folder!, pending.match), pending.dataset);
+    } else if (pending.kind === 'server') {
       onUseServerFolder(
         { path: pending.dataset.server_folder!, recursive: !!pending.dataset.server_folder_recursive, videoCount: pending.candidates.length },
         pending.dataset,
@@ -261,7 +276,11 @@ export const DatasetPicker = ({ onUseFiles, onUseServerFolder, onUseStored, high
               </div>
               <div className="text-xs text-muted-foreground">
                 {dataset.video_manifest.length} video{dataset.video_manifest.length === 1 ? '' : 's'}
-                {dataset.server_folder ? ` · server folder ${dataset.server_folder}` : ' · uploaded from a browser'}
+                {dataset.server_folder
+                  ? dataset.server_selection
+                    ? ` · chosen videos in ${dataset.server_folder}`
+                    : ` · server folder ${dataset.server_folder}`
+                  : ' · uploaded from a browser'}
                 {dataset.owner_name ? ` · saved by ${dataset.owner_name}` : ''}
               </div>
             </div>
@@ -281,8 +300,8 @@ export const DatasetPicker = ({ onUseFiles, onUseServerFolder, onUseStored, high
               ? (pending.candidates as Candidate<unknown>[]).find((c) => c.item === item)?.relativePath ?? item.name
               : (item as ScannedVideo).relative_path
           }
-          serverFolder={pending.kind === 'server'}
-          canUpdate={canEdit(pending.dataset.owner_user_id, currentUser)}
+          serverFolder={pending.kind === 'server' && !pending.dataset.server_selection}
+          canUpdate={canEdit(pending.dataset.owner_user_id, currentUser) && !pending.dataset.server_selection}
           onContinue={() => continuePending()}
           onUpdate={updateAndUse}
           onCancel={() => setPending(null)}

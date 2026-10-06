@@ -235,6 +235,7 @@ def migrate_to_v1_3_0() -> bool:
                 for column, ddl in (
                     ("server_folder", "VARCHAR(1000)"),
                     ("server_folder_recursive", "BOOLEAN NOT NULL DEFAULT 0"),
+                    ("server_selection", "BOOLEAN NOT NULL DEFAULT 0"),  # spec 022
                 ):
                     if column not in dataset_cols:
                         logger.info(f"[MIGRATION] Adding saved_datasets.{column}")

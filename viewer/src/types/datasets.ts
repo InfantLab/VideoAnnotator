@@ -20,6 +20,8 @@ export interface SavedDataset {
   video_manifest: ManifestEntry[];
   server_folder?: string | null;
   server_folder_recursive?: boolean;
+  /** The manifest is a chosen subset of `server_folder`, not the folder (spec 022). */
+  server_selection?: boolean;
   created_at: string;
   updated_at?: string | null;
   last_used_at?: string | null;
@@ -36,6 +38,8 @@ export interface DatasetCreateRequest {
   video_manifest: ManifestEntry[];
   server_folder?: string | null;
   server_folder_recursive?: boolean;
+  /** The manifest is a chosen subset of `server_folder`, not the folder (spec 022). */
+  server_selection?: boolean;
 }
 
 export type DatasetUpdateRequest = Partial<Pick<DatasetCreateRequest, 'name' | 'description' | 'video_manifest'>>;

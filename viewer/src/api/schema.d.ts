@@ -2235,6 +2235,12 @@ export interface components {
              * @default false
              */
             server_folder_recursive: boolean;
+            /**
+             * Server Selection
+             * @description The manifest is a chosen subset of server_folder (spec 022): using the dataset runs exactly those videos, and files added to the folder are not differences
+             * @default false
+             */
+            server_selection: boolean;
         };
         /** DatasetListResponse */
         DatasetListResponse: {
@@ -2268,6 +2274,11 @@ export interface components {
              * @default false
              */
             server_folder_recursive: boolean;
+            /**
+             * Server Selection
+             * @default false
+             */
+            server_selection: boolean;
             /**
              * Created At
              * Format: date-time
@@ -2318,6 +2329,8 @@ export interface components {
             description?: string | null;
             /** Video Manifest */
             video_manifest?: components["schemas"]["VideoManifestEntry"][] | null;
+            /** Server Selection */
+            server_selection?: boolean | null;
         };
         /**
          * ExtrasGroupInfo

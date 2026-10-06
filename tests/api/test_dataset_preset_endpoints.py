@@ -366,6 +366,34 @@ class TestServerFolderDatasets:
         assert got["server_folder_recursive"] is True
         assert got["video_manifest"][0]["relative_path"] == "p01/a.mp4"
 
+    def test_a_selection_round_trips(self, owner_client):
+        """Spec 022: a dataset of chosen videos, not the whole folder."""
+        created = owner_client.post(
+            "/api/v1/datasets/",
+            json={
+                "name": "Pair",
+                "server_folder": "/data/session1",
+                "server_selection": True,
+                "video_manifest": [
+                    {"filename": "a.mp4", "size_bytes": 1, "relative_path": "a.mp4"}
+                ],
+            },
+        ).json()
+        assert created["server_selection"] is True
+        got = owner_client.get(f"/api/v1/datasets/{created['id']}").json()
+        assert got["server_selection"] is True
+        updated = owner_client.put(
+            f"/api/v1/datasets/{created['id']}", json={"server_selection": False}
+        ).json()
+        assert updated["server_selection"] is False
+
+    def test_folder_datasets_are_not_selections_by_default(self, owner_client):
+        created = owner_client.post(
+            "/api/v1/datasets/",
+            json={"name": "Whole", "server_folder": "/data/session1"},
+        ).json()
+        assert created["server_selection"] is False
+
     def test_a_spec_007_export_still_imports(self, owner_client):
         export = {
             "id": "x",
@@ -404,8 +432,9 @@ def test_an_older_database_gains_the_dataset_columns(temp_db, monkeypatch):
         conn.execute(
             text("ALTER TABLE saved_datasets DROP COLUMN server_folder_recursive")
         )
+        conn.execute(text("ALTER TABLE saved_datasets DROP COLUMN server_selection"))
     monkeypatch.setattr(migrations, "engine", temp_db)
     assert migrations.migrate_to_v1_3_0()
     with temp_db.connect() as conn:
         cols = {r[1] for r in conn.execute(text("PRAGMA table_info('saved_datasets')"))}
-    assert {"server_folder", "server_folder_recursive"} <= cols
+    assert {"server_folder", "server_folder_recursive", "server_selection"} <= cols

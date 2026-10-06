@@ -964,6 +964,17 @@ export const VideoUploadStep = ({
   };
 
   const buildDataset = async () => {
+    if (videoSource === 'server' && serverFolder?.files) {
+      // Spec 022: the chosen videos, not the folder.
+      const chosen = new Set(serverFolder.files);
+      const scan = await apiClient.scanServerFolder(serverFolder.path, true);
+      return {
+        video_manifest: manifestFrom(scanCandidates(scan.videos.filter((v) => chosen.has(v.relative_path)))),
+        server_folder: scan.path,
+        server_folder_recursive: false,
+        server_selection: true,
+      };
+    }
     if (videoSource === 'server' && serverFolder) {
       const scan = await apiClient.scanServerFolder(serverFolder.path, serverFolder.recursive);
       return {
