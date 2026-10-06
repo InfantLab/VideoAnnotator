@@ -13,7 +13,7 @@ New fields: `in_container`, `managed_by_launcher`, `shares` (see data-model.md).
   "reason": null,
   "in_container": true,
   "managed_by_launcher": true,
-  "shares": [{"path": "/c/Users/ada/Studies", "display_path": "C:\\Users\\ada\\Studies", "stop_requested": false}],
+  "shares": [{"path": "/c/Users/ada/Studies", "display_path": "C:\\Users\\ada\\Studies", "present": true, "stop_requested": false}],
   "allowed_folders": [{"path": "/c/Users/ada/Studies", "display_path": "C:\\Users\\ada\\Studies"}],
   "places": [{"label": "Studies", "path": "/c/Users/ada/Studies", "display_path": "C:\\Users\\ada\\Studies", "has_videos": true}],
   "results_root": {"path": "/c/Users/ada/VideoAnnotator", "display_path": "C:\\Users\\ada\\VideoAnnotator"},
@@ -27,7 +27,8 @@ New fields: `in_container`, `managed_by_launcher`, `shares` (see data-model.md).
 - With the launcher: "VideoAnnotator can only see folders you share with it. To share one, run:
   videoannotator-start share".
 - Without it (compose): "VideoAnnotator can only see folders you share with it. Set VIDEOS_DIR
-  when starting it (see the installation guide)."
+  when starting it (see the installation guide)." Compose reaches this state when `VIDEOS_DIR`
+  is unset, because it then sets `VIDEOANNOTATOR_INGEST_ROOTS` empty (research.md R8).
 
 ## New: `POST /api/v1/ingest/shares/stop`
 
@@ -39,6 +40,8 @@ New fields: `in_container`, `managed_by_launcher`, `shares` (see data-model.md).
 - 404 `SHARE_NOT_FOUND` if the path isn't a current share.
 - 409 `NOT_MANAGED_BY_LAUNCHER` without the launcher (`VIDEOANNOTATOR_LAUNCHER` unset).
 - 200 with the share, now `"stop_requested": true`. Takes effect when VideoAnnotator next starts.
+- Appends the host path to `stop-sharing.txt` once (a repeated request doesn't duplicate it), and
+  chowns the file to `VIDEOANNOTATOR_RESULTS_OWNER` when that is set.
 
 ## Changed messages
 

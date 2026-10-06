@@ -322,8 +322,10 @@ with Docker.
   own filesystem, however the container was started.
 - **FR-017**: With no folder shared, the new-job wizard MUST say that VideoAnnotator can only see
   folders the researcher shares with it, say how to share one, and offer upload.
-- **FR-018**: Settings MUST list the shared folders (read-only) and the results folder, and MUST let
-  the researcher stop sharing a folder, saying when that takes effect.
+- **FR-018**: Settings MUST list the shared folders (read-only), including any not found at the
+  last start, and the results folder. When VideoAnnotator was started by the start-up program,
+  Settings MUST let the researcher stop sharing a folder, saying when that takes effect; otherwise
+  it MUST say how shared folders are changed.
 - **FR-019**: Messages about an unavailable video MUST distinguish a folder that is no longer shared
   from a video that was moved or deleted.
 

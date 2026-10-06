@@ -56,8 +56,13 @@ surface means twice the drift.
 - **Display**: every share is passed to the server as a `VIDEOANNOTATOR_HOST_PATHS` pair
   (container path = host path). Everything the viewer shows is therefore the researcher's own
   path, whatever the mount point.
-- **Allowed folders**: the shares are also the server's `VIDEOANNOTATOR_INGEST_ROOTS`. Container
-  paths never contain `:`, since we build them.
+- **Mount syntax**: shares use `--mount type=bind,source=…,target=…,readonly`, not `-v`, whose
+  `:`-separated form breaks on paths containing `:`.
+- **Unsafe characters**: a host path containing `:`, `;`, `=` or `,` is mounted under `/host/<n>`
+  (numbered in share order) rather than at its real path. Container paths therefore never contain
+  the separators that `INGEST_ROOTS` (`:`), `HOST_PATHS` (`;`, `=`) and `--mount` (`,`) use; the
+  display path is still the real one, through `HOST_PATHS`.
+- **Allowed folders**: the shares are also the server's `VIDEOANNOTATOR_INGEST_ROOTS`.
 - **Results folder**: the only writable mount (`~/VideoAnnotator`), at its real path by the same
   rule, and set as `VIDEOANNOTATOR_RESULTS_DIR`.
 
@@ -87,6 +92,14 @@ surface means twice the drift.
   narrower folder".
 - **Duplicates**: a folder already shared, or inside a shared folder, is not shared again. A
   folder containing shared folders replaces them, after the same confirmation if it is broad.
+- **Results and shares overlapping**:
+  - *Results folder inside a share*: allowed. The results mount comes after the read-only share
+    in the run, so it stays writable, and spec 022's overlap warning shows.
+  - *A share inside the results folder*: refused: "That folder is inside your results folder,
+    which VideoAnnotator can already read."
+- **macOS with Docker Desktop**: Docker Desktop shares only `/Users`, `/Volumes`, `/private` and
+  `/tmp` by default. A folder outside them gets a plain message pointing to Docker Desktop's
+  file-sharing settings.
 
 **Rationale**: FR-010 and the edge cases. Least access is the easy path, and broad access is
 possible but deliberate.
@@ -189,6 +202,14 @@ access endpoint then reports `can_read_in_place: false`, with the reason "VideoA
 see folders you share with it" plus how to share one (the launcher's command). Places are then
 empty too. This applies however the container was started (compose included, FR-023).
 
+**Compose**: today `docker-compose.yml` always sets `VIDEOANNOTATOR_INGEST_ROOTS=/videos` and
+mounts `${VIDEOS_DIR:-./videos}`. Without `VIDEOS_DIR`, Docker creates an empty `./videos`, which
+counts as a share, so the no-share state is never reached. Compose therefore sets
+`VIDEOANNOTATOR_INGEST_ROOTS=${VIDEOS_DIR:+/videos}`: `/videos` is shared only when `VIDEOS_DIR`
+is set. This makes true what INSTALLATION.md already promises ("Started without `VIDEOS_DIR`,
+the wizard says how to set it"). The cost: anyone who put videos in `./videos` without setting
+`VIDEOS_DIR` must now set it. The CHANGELOG says so.
+
 **Rationale**: FR-016 and FR-017, and the screen that started this spec.
 
 ## R9. "Not shared any more" vs "moved or deleted"
@@ -212,7 +233,9 @@ to keep.
   appends the folder's host path to `stop-sharing.txt` there. The response, and later access
   reads, mark that share "stops when VideoAnnotator next starts".
 - **Applying it**: at the next start, the launcher removes **only** listed paths that are
-  currently shared, then clears the file.
+  currently shared, then deletes the file. It deletes rather than empties it because, under
+  Docker on Linux, the file may belong to root (the server also chowns it to
+  `VIDEOANNOTATOR_RESULTS_OWNER` when set), while the folder is always the researcher's.
 - **What a request can't do**: add a share, or change anything else. The launcher's own
   settings file lives outside the mounted folder (R13).
 - **Without the launcher** (compose), there is no Stop sharing button. Settings says to change
@@ -244,13 +267,19 @@ retried. That's existing, tested behaviour, so the launcher only has to say it.
 **Decision**:
 - **Shared cases**: `tests/launcher/cases.json` lists inputs (OS, engine, shares, results folder,
   GPU, uid) and the expected `run` arguments, classifications (R4) and messages.
-  - **`bats`** runs the `sh` script's pure functions against it (Linux CI, and macOS via the same
-    script).
+  - **`bats`** runs the `sh` script's pure functions against it, on Linux and on a `macos-latest`
+    runner (no engine needed), which catches BSD-userland differences.
   - **Pester** runs the PowerShell functions against it (Windows CI).
 - **End to end, Linux CI**: on the Ubuntu runner, which has Docker and Podman, start a
   locally built image with a shared temp folder through the launcher in non-interactive mode
   (`--share <path> --yes`). Run a job with `stub_pipeline`, and check that the results belong
   to the runner's user and that `/root` is never listed. Do it once with each engine.
+  - `stub_pipeline` is a test fixture that is deliberately not shipped
+    (`test_no_test_fixtures_shipped`), and the slim image has no other pipeline. So CI builds a
+    CI-only image, `tests/launcher/Dockerfile.e2e`, `FROM` the slim image plus the fixture's
+    metadata and module. Researchers never get it.
+  - A weekly job installs the `scene` group through the API, recreates the container, and checks
+    the restore path (R7) for real; too heavy (torch) for every push.
 - **Windows**: GitHub's Windows runners can't run Linux containers, so the Windows end to end is a
   manual walkthrough (quickstart) on the maintainer's machine, with Docker Desktop and Podman
   Desktop.
@@ -269,7 +298,10 @@ retried. That's existing, tested behaviour, so the launcher only has to say it.
   admin API key. Mode 600 on Linux and macOS.
 - **The requests folder** (R10) sits beside it, in `requests/`.
 - **Migration** (FR-024): if no settings file exists but spec 022's `VIDEOS_DIR`/`RESULTS_DIR`
-  are set, or the old named volumes exist, offer to reuse them.
+  are set, or the old named volumes exist, offer to reuse them. Compose users usually set these
+  in a `.env` file beside `docker-compose.yml`, which the launcher can't find on its own. So when
+  the volumes exist but the variables don't, it says "Your jobs and models will be kept" and asks
+  for the video folder with the picker as on any first start.
 
 ## R14. Getting the viewer connected without a key prompt
 
@@ -310,6 +342,16 @@ If the container then fails to start because of the GPU flag, retry once without
   These copy the launcher to `~/.local/bin` (Windows: `%LOCALAPPDATA%\VideoAnnotator`). With
   `--shortcut` (default on), they also add a desktop shortcut "Start VideoAnnotator": a
   `.desktop` file on Linux, a `.command` file on macOS, a `.lnk` to the `.cmd` on Windows.
+
+**Updating**: the launcher pins the image to its own version, so the two always move together.
+`videoannotator-start update` therefore updates the launcher first: it downloads the latest
+release's `install.sh` (Windows: `install.ps1`), runs it with `--no-shortcut --quiet`, then runs
+the new launcher as `videoannotator-start update --continue`, which pulls its own pinned image
+and restarts. Already on the latest release, it says so and changes nothing.
+
+**Development**: a launcher run from a source checkout still has the `@VERSION@` placeholder
+(release CI replaces it). It then uses `:latest`, or `--image`, and prints "development
+launcher".
 
 **Rationale**: the spec's double-click start, matching uv's own installers that researchers may
 already have seen.

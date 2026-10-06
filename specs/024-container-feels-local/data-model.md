@@ -40,8 +40,9 @@ Plain `key=value` lines, one setting per line; `share` repeats. Mode 600 on Linu
 ## Stop-sharing requests (host folder `requests/`, mounted writable at `/app/launcher/requests`; R10)
 
 `stop-sharing.txt`: one host path per line, appended by the server. At the next start the launcher
-removes each listed path that is currently a `share`, ignores anything else, then empties the
-file. A request can never add a share.
+removes each listed path that is currently a `share`, ignores anything else, then deletes the
+file (under Docker on Linux it may belong to root; the folder is the researcher's). A request can
+never add a share.
 
 ## Server settings (environment, set by the launcher; additions to spec 022's table)
 
@@ -53,6 +54,7 @@ file. A request can never add a share.
 | `VIDEOANNOTATOR_PUBLISHED_LOCALLY` | `1` | Every caller is this computer (022) |
 | `VIDEOANNOTATOR_LAUNCHER` | `1` | Started by the launcher: Settings offers Stop sharing (new) |
 | `VIDEOANNOTATOR_RESULTS_OWNER` | `uid:gid` | Docker on Linux only: owner for results (new, R6) |
+| `VIDEOANNOTATOR_MISSING_SHARES` | host paths of shares missing at this start, `;`-separated | Settings lists them as "not found at the last start" (new) |
 
 ## Caller access (computed; additions to `GET /api/v1/ingest/access`)
 
@@ -60,7 +62,7 @@ file. A request can never add a share.
 |---|---|
 | `in_container` | The server runs in a container |
 | `managed_by_launcher` | `VIDEOANNOTATOR_LAUNCHER` is set |
-| `shares` | Each shared folder: `path`, `display_path`, `stop_requested` |
+| `shares` | Each shared folder: `path`, `display_path`, `present`, `stop_requested`. Present ones come from `INGEST_ROOTS`; missing ones from `MISSING_SHARES` (their `path` is the host path) |
 
 `allowed_folders` stays as it is (the shares that are present). In a container with no share, both
 are empty and `reason` explains how to share a folder (R8).

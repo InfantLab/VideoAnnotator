@@ -127,9 +127,9 @@ viewer/src/
 └── types/ingest.ts, api/client.ts       # new access fields, stopSharing()
 
 Dockerfile                               # /app/launcher/requests; UV_CACHE_DIR=/app/cache/uv
-docker-compose.yml                       # videoannotator-cache volume (compose gains restore too)
+docker-compose.yml                       # videoannotator-cache volume; INGEST_ROOTS only with VIDEOS_DIR (R8)
 .github/workflows/ci-cd.yml              # GHCR image job (slim + all); launcher tests; e2e job
-tests/launcher/cases.json, *.bats, *.Tests.ps1, test_launcher_e2e.sh   # NEW
+tests/launcher/cases.json, *.bats, *.Tests.ps1, test_launcher_e2e.sh, Dockerfile.e2e   # NEW
 tests/api/test_shares.py, tests/unit/test_results_owner.py, tests/api/test_extras_restore.py   # NEW
 docs/installation/INSTALLATION.md, docs/usage/GETTING_STARTED.md, docs/troubleshooting
 ```
