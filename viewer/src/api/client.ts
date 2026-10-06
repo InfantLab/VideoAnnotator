@@ -37,9 +37,12 @@ import type { LibraryPrompt, PromptListResponse, PromptUpdateRequest } from '@/t
 import type {
   DatasetCreateRequest,
   DatasetListResponse,
+  DatasetRunRequest,
+  DatasetRunResponse,
   DatasetUpdateRequest,
   SavedDataset,
   ServerFolderScan,
+  StoredVideosResponse,
 } from '@/types/datasets';
 import { APIError } from './handleError';
 import { API_TOKEN_STORAGE_KEY, API_URL_STORAGE_KEY, defaultApiUrl, normalizeApiUrl } from '@/lib/apiConnection';
@@ -677,6 +680,20 @@ class APIClient {
   async updateDataset(id: string, body: DatasetUpdateRequest): Promise<SavedDataset> {
     return this.request(`/api/v1/datasets/${encodeURIComponent(id)}`, {
       method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  /** Which of a browser-uploaded dataset's videos the server still stores (from the jobs that ran on them). */
+  async getStoredVideos(id: string): Promise<StoredVideosResponse> {
+    return this.request(`/api/v1/datasets/${encodeURIComponent(id)}/stored-videos`);
+  }
+
+  /** One batch on the dataset's stored copies: no folder, no upload. */
+  async runDataset(id: string, body: DatasetRunRequest): Promise<DatasetRunResponse> {
+    return this.request(`/api/v1/datasets/${encodeURIComponent(id)}/run`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });

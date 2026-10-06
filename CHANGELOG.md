@@ -149,6 +149,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A saved dataset of uploaded videos runs without asking where they are.** Uploaded videos
+  stay in the folders of the jobs that ran on them, so "Use" on such a dataset now runs from
+  those copies: no folder to choose, nothing to upload again. If some were deleted along with
+  their jobs, the viewer says how many and offers to run the rest or choose the folder. New
+  endpoints: `GET /api/v1/datasets/{id}/stored-videos` and `POST /api/v1/datasets/{id}/run`.
+- **Viewer after an upgrade**: a tab opened before VideoAnnotator was upgraded reloads itself
+  instead of crashing with "Failed to fetch dynamically imported module". The error screen's
+  "Go Home" now opens the viewer (`/viewer/`) instead of the server root.
+
 - **`face_analysis` detects faces with RetinaFace** instead of OpenCV's Haar cascade, which marked
   ceiling lamps and bottles as faces and missed infants. On the sample clips it now finds parent
   and infant in every sampled frame, with no false positives. First use downloads 119 MB of

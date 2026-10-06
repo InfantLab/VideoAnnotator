@@ -9,7 +9,7 @@ import * as handles from '@/lib/datasetHandles';
 import type { SavedDataset } from '@/types/datasets';
 
 vi.mock('@/api/client', () => ({
-  apiClient: { listDatasets: vi.fn(), scanServerFolder: vi.fn(), updateDataset: vi.fn() },
+  apiClient: { listDatasets: vi.fn(), scanServerFolder: vi.fn(), updateDataset: vi.fn(), getStoredVideos: vi.fn() },
   hasConfiguredApiToken: () => false,
 }));
 vi.mock('@/hooks/useCurrentUser', () => ({ useCurrentUser: () => ({ currentUser: null }) }));
@@ -39,15 +39,30 @@ const filesDataset: SavedDataset = {
   ],
 };
 
+const stored = (a: string | null, b: string | null) => {
+  const videos = [
+    { filename: 'a.mp4', size_bytes: 1, job_id: a },
+    { filename: 'b.mp4', size_bytes: 2, job_id: b },
+  ];
+  const count = videos.filter((v) => v.job_id).length;
+  return { dataset_id: 'up', videos, stored: count, missing: videos.length - count };
+};
+
 const renderPicker = (props: Partial<React.ComponentProps<typeof DatasetPicker>> = {}) => {
   const onUseFiles = vi.fn();
   const onUseServerFolder = vi.fn();
+  const onUseStored = vi.fn();
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <DatasetPicker onUseFiles={onUseFiles} onUseServerFolder={onUseServerFolder} {...props} />
+      <DatasetPicker
+        onUseFiles={onUseFiles}
+        onUseServerFolder={onUseServerFolder}
+        onUseStored={onUseStored}
+        {...props}
+      />
     </QueryClientProvider>,
   );
-  return { onUseFiles, onUseServerFolder };
+  return { onUseFiles, onUseServerFolder, onUseStored };
 };
 
 const file = (name: string, size: number) => {
@@ -58,7 +73,10 @@ const file = (name: string, size: number) => {
 
 describe('DatasetPicker', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(apiClient.listDatasets).mockResolvedValue({ datasets: [serverDataset, filesDataset], total: 2 });
+    // By default the server has none of the uploaded videos any more.
+    vi.mocked(apiClient.getStoredVideos).mockResolvedValue(stored(null, null));
   });
 
   it('lists datasets with their source and owner', async () => {
@@ -104,6 +122,38 @@ describe('DatasetPicker', () => {
     vi.mocked(handles.rememberedFolder).mockResolvedValue(null);
     renderPicker();
     await userEvent.click((await screen.findAllByRole('button', { name: 'Use' }))[1]);
-    expect(await screen.findByText(/Choose the folder the videos of “Pilot” are in/)).toBeInTheDocument();
+    expect(await screen.findByText(/server no longer has the videos of “Pilot”/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /on the server/ })).not.toBeInTheDocument();
+  });
+
+  it('uses the server\'s stored copies without asking for anything', async () => {
+    vi.mocked(apiClient.getStoredVideos).mockResolvedValue(stored('job-a', 'job-b'));
+    const { onUseStored, onUseFiles } = renderPicker();
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Use' }))[1]);
+
+    await waitFor(() => expect(onUseStored).toHaveBeenCalledWith(filesDataset, stored('job-a', 'job-b')));
+    expect(handles.rememberedFolder).not.toHaveBeenCalled();
+    expect(onUseFiles).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Choose folder' })).not.toBeInTheDocument();
+  });
+
+  it('offers the stored ones, or the folder, when some were deleted', async () => {
+    vi.mocked(handles.rememberedFolder).mockResolvedValue(null);
+    vi.mocked(apiClient.getStoredVideos).mockResolvedValue(stored('job-a', null));
+    const { onUseStored } = renderPicker();
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Use' }))[1]);
+
+    expect(await screen.findByText(/1 of the 2 videos of “Pilot” are still on/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Choose folder' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Run the 1 on the server' }));
+    expect(onUseStored).toHaveBeenCalledWith(filesDataset, stored('job-a', null));
+  });
+
+  it('falls back to the folder on a server without stored-video lookup', async () => {
+    vi.mocked(handles.rememberedFolder).mockResolvedValue(null);
+    vi.mocked(apiClient.getStoredVideos).mockRejectedValue(new Error('404'));
+    renderPicker();
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Use' }))[1]);
+    expect(await screen.findByRole('button', { name: 'Choose folder' })).toBeInTheDocument();
   });
 });

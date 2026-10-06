@@ -19,7 +19,7 @@ import {
 import { rememberFolder, rememberedFolder, supportsFolderHandles, videosIn } from '@/lib/datasetHandles';
 import { canEdit } from '@/lib/datasets';
 import { parseApiError } from '@/lib/errorHandling';
-import type { SavedDataset, ScannedVideo } from '@/types/datasets';
+import type { SavedDataset, ScannedVideo, StoredVideosResponse } from '@/types/datasets';
 
 export interface PickedFile {
   file: File;
@@ -29,6 +29,8 @@ export interface PickedFile {
 interface DatasetPickerProps {
   onUseFiles: (files: PickedFile[], dataset: SavedDataset, folder: FileSystemDirectoryHandle | null) => void;
   onUseServerFolder: (selection: ServerFolderSelection, dataset: SavedDataset) => void;
+  /** Run on the copies the server kept when these videos were uploaded: no folder, no upload. */
+  onUseStored: (dataset: SavedDataset, stored: StoredVideosResponse) => void;
   /** A dataset to point out (opened from the Datasets page's "Start a job"). */
   highlightId?: string;
 }
@@ -36,6 +38,15 @@ interface DatasetPickerProps {
 type Pending =
   | { kind: 'files'; dataset: SavedDataset; candidates: Candidate<File>[]; match: DatasetMatch<File>; folder: FileSystemDirectoryHandle | null }
   | { kind: 'server'; dataset: SavedDataset; candidates: Candidate<ScannedVideo>[]; match: DatasetMatch<ScannedVideo> };
+
+/** Null when the server can't say (one older than this endpoint): fall back to the folder. */
+async function storedVideosOf(dataset: SavedDataset): Promise<StoredVideosResponse | null> {
+  try {
+    return await apiClient.getStoredVideos(dataset.id);
+  } catch {
+    return null;
+  }
+}
 
 const picked = (candidates: Candidate<File>[]): PickedFile[] =>
   candidates.map((c) => ({ file: c.item, relativePath: c.relativePath }));
@@ -45,7 +56,7 @@ const picked = (candidates: Candidate<File>[]): PickedFile[] =>
  * videos again (the folder this browser remembers, the user re-picking it, or
  * the server folder) and shows any differences before anything runs.
  */
-export const DatasetPicker = ({ onUseFiles, onUseServerFolder, highlightId }: DatasetPickerProps) => {
+export const DatasetPicker = ({ onUseFiles, onUseServerFolder, onUseStored, highlightId }: DatasetPickerProps) => {
   const queryClient = useQueryClient();
   const { currentUser } = useCurrentUser();
   const { data, isLoading, error } = useQuery({
@@ -55,6 +66,8 @@ export const DatasetPicker = ({ onUseFiles, onUseServerFolder, highlightId }: Da
   const [busy, setBusy] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [needsFolder, setNeedsFolder] = useState<SavedDataset | null>(null);
+  // Some of needsFolder's videos are still on the server: offer to run those.
+  const [partlyStored, setPartlyStored] = useState<StoredVideosResponse | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
   const folderInput = useRef<HTMLInputElement>(null);
 
@@ -85,8 +98,16 @@ export const DatasetPicker = ({ onUseFiles, onUseServerFolder, highlightId }: Da
         }
         return;
       }
+      // Uploaded videos stay in the folders of the jobs that ran on them, so
+      // while those jobs exist the dataset runs from the server's copies.
+      const stored = await storedVideosOf(dataset);
+      if (stored && stored.stored > 0 && stored.missing === 0) {
+        onUseStored(dataset, stored);
+        return;
+      }
       const folder = await rememberedFolder(dataset.id);
       if (!folder) {
+        setPartlyStored(stored && stored.stored > 0 ? stored : null);
         setNeedsFolder(dataset);
         return;
       }
@@ -190,13 +211,36 @@ export const DatasetPicker = ({ onUseFiles, onUseServerFolder, highlightId }: Da
           <FolderOpen className="h-4 w-4" />
           <AlertDescription className="flex items-center justify-between gap-2">
             <span>
-              Choose the folder the videos of “{needsFolder.name}” are in. They're read here in the browser; the dataset
-              only remembers their names and sizes.
+              {partlyStored ? (
+                <>
+                  {partlyStored.stored} of the {partlyStored.videos.length} videos of “{needsFolder.name}” are still on
+                  the server; {partlyStored.missing === 1 ? 'one was' : `${partlyStored.missing} were`} deleted with
+                  {partlyStored.missing === 1 ? ' its job' : ' their jobs'}. Run the {partlyStored.stored} on the server,
+                  or choose the folder they are all in.
+                </>
+              ) : (
+                <>
+                  The server no longer has the videos of “{needsFolder.name}” (their jobs were deleted). Choose the
+                  folder they are in; they're read here in the browser.
+                </>
+              )}
             </span>
             <span className="flex gap-2 shrink-0">
               <Button size="sm" variant="ghost" onClick={() => setNeedsFolder(null)}>
                 Cancel
               </Button>
+              {partlyStored && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    onUseStored(needsFolder, partlyStored);
+                    setNeedsFolder(null);
+                  }}
+                >
+                  Run the {partlyStored.stored} on the server
+                </Button>
+              )}
               <Button size="sm" onClick={pickFolder}>
                 Choose folder
               </Button>

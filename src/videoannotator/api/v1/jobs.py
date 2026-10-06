@@ -1299,14 +1299,45 @@ def create_rerun(
     config = request.config if request.config is not None else original.config
     validate_pipeline_selection(pipelines, config)
 
-    job = BatchJob(
-        config=config or {},
-        status=JobStatus.PENDING,
-        selected_pipelines=pipelines,
+    return job_from_stored_video(
+        original,
+        storage,
+        pipelines,
+        config,
         batch_id=batch_id or str(uuid.uuid4()),
         batch_name=batch_name or original.batch_name,
         dataset_id=original.dataset_id,
         rerun_of=original.job_id,
+    )
+
+
+def job_from_stored_video(
+    original: BatchJob,
+    storage: StorageBackend,
+    pipelines: list[str] | None,
+    config: dict[str, Any] | None,
+    *,
+    batch_id: str,
+    batch_name: str | None,
+    dataset_id: str | None,
+    rerun_of: str | None = None,
+) -> BatchJob:
+    """A new pending job on the video `original` has stored, with these settings.
+
+    A video stored in the original's folder (an upload) is hard-linked, or
+    copied where linking fails, into the new job's folder so deleting either
+    job can't break the other; one outside it (a server-folder ingest) is used
+    in place, as ingest does. The caller checks the video exists.
+    """
+    video = Path(str(original.video_path))
+    job = BatchJob(
+        config=config or {},
+        status=JobStatus.PENDING,
+        selected_pipelines=pipelines,
+        batch_id=batch_id,
+        batch_name=batch_name,
+        dataset_id=dataset_id,
+        rerun_of=rerun_of,
     )
     provider = get_storage_provider()
     provider.create_job_dir(job.job_id)

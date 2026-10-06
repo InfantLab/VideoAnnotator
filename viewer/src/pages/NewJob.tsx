@@ -154,7 +154,11 @@ const CreateNewJob = () => {
   const [fromDataset, setFromDataset] = useState<{ id: string; name: string } | null>(null);
   const [relativePaths, setRelativePaths] = useState<Map<File, string | null>>(new Map());
   const [folderHandle, setFolderHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  // A browser-uploaded dataset whose videos the server still stores: it runs
+  // from those copies, so there is nothing to pick or upload.
+  const [storedRun, setStoredRun] = useState<StoredRun | null>(null);
   const usingServerFolder = videoSource === 'server' && serverFolder !== null;
+  const usingStored = videoSource === 'dataset' && storedRun !== null;
 
   // The catalog (`pipelines` above) never carries per-field parameters —
   // apiClient.getPipelineCatalog()'s mapLegacyPipelineResponse always sets
@@ -345,6 +349,39 @@ const CreateNewJob = () => {
     }
   };
 
+  /** A saved dataset from the server's stored copies: one request, no upload. */
+  const submitStoredDataset = async () => {
+    if (!storedRun) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess([]);
+    const effectiveConfig = Object.fromEntries(
+      Object.entries(config).filter(([pipelineId]) => selectedPipelines.includes(pipelineId))
+    );
+    try {
+      const response = await apiClient.runDataset(storedRun.id, {
+        selected_pipelines: selectedPipelines,
+        config: Object.keys(effectiveConfig).length > 0 ? effectiveConfig : undefined,
+        batch_name: batchName.trim() || undefined,
+      });
+      setSubmitSuccess(response.created);
+      rememberRunSetup(response.batch_id, weightsNotesFor(pipelines, selectedPipelines));
+      if (response.skipped.length > 0) {
+        setSubmitError(parseApiError({
+          error: `${response.skipped.length} video(s) were not run`,
+          hint: response.skipped.map((s) => `${s.filename}: ${s.reason}`).join('\n'),
+        }));
+      }
+      if (response.created.length > 0) {
+        setTimeout(() => navigate(`/batches/${response.batch_id}`), 2000);
+      }
+    } catch (error) {
+      setSubmitError(parseApiError(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   /** "Edit and run again": the original's videos, these settings (spec 019). */
   const submitRerun = async () => {
     if (!rerunning) return;
@@ -391,7 +428,7 @@ const CreateNewJob = () => {
       return;
     }
 
-    if (!usingServerFolder && selectedFiles.length === 0) {
+    if (!usingServerFolder && !usingStored && selectedFiles.length === 0) {
       setSubmitError(parseApiError("No videos selected"));
       return;
     }
@@ -411,6 +448,11 @@ const CreateNewJob = () => {
 
     if (usingServerFolder) {
       await submitServerFolder();
+      return;
+    }
+
+    if (usingStored) {
+      await submitStoredDataset();
       return;
     }
 
@@ -551,6 +593,8 @@ const CreateNewJob = () => {
             serverFolder={serverFolder}
             setServerFolder={setServerFolder}
             dataset={{ fromDataset, setFromDataset, relativePaths, setRelativePaths, folderHandle, setFolderHandle }}
+            storedRun={storedRun}
+            setStoredRun={setStoredRun}
             highlightDatasetId={startFromDataset?.datasetId}
           />
           </>
@@ -588,6 +632,7 @@ const CreateNewJob = () => {
         return (
           <ReviewStep
             serverFolder={usingServerFolder ? serverFolder : null}
+            storedSource={usingStored ? storedRun ?? undefined : undefined}
             selectedFiles={selectedFiles}
             rerunSource={
               rerunning
@@ -615,6 +660,7 @@ const CreateNewJob = () => {
     switch (currentStep) {
       case 1:
         if (rerunning) return true;
+        if (videoSource === 'dataset') return storedRun !== null;
         return videoSource === 'server' ? serverFolder !== null : selectedFiles.length > 0;
       case 2:
         return (
@@ -812,6 +858,15 @@ interface DatasetSelectionState {
   setFolderHandle: (handle: FileSystemDirectoryHandle | null) => void;
 }
 
+/** A saved dataset run from the server's stored copies of its videos. */
+interface StoredRun {
+  id: string;
+  name: string;
+  videoCount: number;
+  /** Dataset videos the server no longer has, left out of the run. */
+  missing: string[];
+}
+
 const VideoUploadStep = ({
   selectedFiles,
   setSelectedFiles,
@@ -820,7 +875,9 @@ const VideoUploadStep = ({
   serverFolder,
   setServerFolder,
   dataset,
-  highlightDatasetId
+  highlightDatasetId,
+  storedRun,
+  setStoredRun
 }: {
   selectedFiles: File[];
   setSelectedFiles: (files: File[]) => void;
@@ -830,12 +887,17 @@ const VideoUploadStep = ({
   setServerFolder: (selection: ServerFolderSelection | null) => void;
   dataset: DatasetSelectionState;
   highlightDatasetId?: string;
+  storedRun: StoredRun | null;
+  setStoredRun: (run: StoredRun | null) => void;
 }) => {
   const [saving, setSaving] = useState(false);
   const folderInput = useRef<HTMLInputElement>(null);
 
   // The selection no longer equals the dataset it came from.
-  const changedByHand = () => dataset.setFromDataset(null);
+  const changedByHand = () => {
+    dataset.setFromDataset(null);
+    setStoredRun(null);
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -988,13 +1050,26 @@ const VideoUploadStep = ({
         <TabsContent value="dataset" className="mt-4">
           <DatasetPicker
             highlightId={highlightDatasetId}
+            onUseStored={(chosen, stored) => {
+              setSelectedFiles([]);
+              setServerFolder(null);
+              dataset.setFromDataset({ id: chosen.id, name: chosen.name });
+              setStoredRun({
+                id: chosen.id,
+                name: chosen.name,
+                videoCount: stored.stored,
+                missing: stored.videos.filter((v) => !v.job_id).map((v) => v.filename),
+              });
+            }}
             onUseFiles={(picked, chosen, handle) => {
+              setStoredRun(null);
               applyFolder(picked, handle);
               setServerFolder(null);
               setVideoSource('upload');
               dataset.setFromDataset({ id: chosen.id, name: chosen.name });
             }}
             onUseServerFolder={(selection, chosen) => {
+              setStoredRun(null);
               setSelectedFiles([]);
               setServerFolder(selection);
               setVideoSource('server');
@@ -1003,6 +1078,23 @@ const VideoUploadStep = ({
           />
         </TabsContent>
       </Tabs>
+
+      {videoSource === 'dataset' && storedRun && (
+        <div className="flex items-start gap-2 rounded-md border p-3 text-sm">
+          <Database className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+          <div>
+            <p>
+              <span className="font-medium">{storedRun.videoCount} video{storedRun.videoCount === 1 ? '' : 's'}</span>{' '}
+              from &ldquo;{storedRun.name}&rdquo;, already on the server: nothing to upload.
+            </p>
+            {storedRun.missing.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Not included (no longer on the server): {storedRun.missing.join(', ')}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {hasSelection && videoSource !== 'dataset' && (
         <div className="flex items-center justify-between gap-2 rounded-md border p-3 text-sm">
@@ -1598,6 +1690,7 @@ const ConfigurationStep = ({
 
 const ReviewStep = ({
   serverFolder,
+  storedSource,
   selectedFiles,
   rerunSource,
   selectedPipelines,
@@ -1612,6 +1705,7 @@ const ReviewStep = ({
   notReadySelected = []
 }: {
   serverFolder: ServerFolderSelection | null;
+  storedSource?: StoredRun;
   selectedFiles: File[];
   rerunSource?: { label: string; videoCount: number };
   selectedPipelines: string[];
@@ -1632,11 +1726,15 @@ const ReviewStep = ({
   // count is the server's to report -- so describe the source, not a list.
   const runLabel = rerunSource
     ? `${rerunSource.label} (rerun)`
+    : storedSource
+    ? storedSource.name
     : serverFolder
     ? serverFolder.path.split(/[/\\]/).filter(Boolean).pop() || serverFolder.path
     : defaultBatchName(selectedFiles);
   const videoCountLabel = rerunSource
     ? `${rerunSource.videoCount} video${rerunSource.videoCount === 1 ? '' : 's'}, used again`
+    : storedSource
+    ? `${storedSource.videoCount} video${storedSource.videoCount === 1 ? '' : 's'}, already on the server`
     : serverFolder
     ? serverFolder.recursive
       ? 'Every video in that folder and its subfolders'

@@ -576,6 +576,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/video": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream a job's video
+         * @description The video a job ran on, with range requests so a browser can seek (spec 021). 404 VIDEO_NOT_STORED when it is no longer on the server.
+         */
+        get: operations["get_job_video_api_v1_jobs__job_id__video_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}/results/files/{pipeline_name}": {
         parameters: {
             query?: never;
@@ -1205,6 +1225,46 @@ export interface paths {
          * @description Owner or administrator only. Does not affect the historical record of any job previously submitted using this dataset (FR-008).
          */
         delete: operations["delete_dataset_api_v1_datasets__dataset_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasets/{dataset_id}/stored-videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which of a dataset's videos the server still has
+         * @description For each video in the dataset, a job whose stored copy (uploaded with that job) can be reused, matched by filename and size. Null when no job has it any more, e.g. its jobs were deleted.
+         */
+        get: operations["stored_videos_api_v1_datasets__dataset_id__stored_videos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasets/{dataset_id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a dataset from the server's stored copies
+         * @description Creates one job per dataset video the server still stores (see `/stored-videos`), as one batch, with no upload: each video is hard-linked from the job that has it. Videos with no stored copy are listed in `skipped`. 422 `DATASET_NOT_STORED` when none are stored.
+         */
+        post: operations["run_dataset_api_v1_datasets__dataset_id__run_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2131,6 +2191,35 @@ export interface components {
             /** Last Used At */
             last_used_at?: string | null;
         };
+        /** DatasetRunRequest */
+        DatasetRunRequest: {
+            /** Selected Pipelines */
+            selected_pipelines?: string[] | null;
+            /** Config */
+            config?: {
+                [key: string]: unknown;
+            } | null;
+            /** Batch Name */
+            batch_name?: string | null;
+        };
+        /** DatasetRunResponse */
+        DatasetRunResponse: {
+            /** Batch Id */
+            batch_id: string;
+            /** Batch Name */
+            batch_name: string | null;
+            /** Created */
+            created: string[];
+            /** Skipped */
+            skipped: components["schemas"]["DatasetRunSkipped"][];
+        };
+        /** DatasetRunSkipped */
+        DatasetRunSkipped: {
+            /** Filename */
+            filename: string;
+            /** Reason */
+            reason: string;
+        };
         /**
          * DatasetUpdateRequest
          * @description Body for `PUT /datasets/{id}`. Only provided fields are changed.
@@ -2884,6 +2973,29 @@ export interface components {
             /** Size Bytes */
             size_bytes: number;
         };
+        /** StoredVideo */
+        StoredVideo: {
+            /** Filename */
+            filename: string;
+            /** Size Bytes */
+            size_bytes: number | null;
+            /**
+             * Job Id
+             * @description A job whose stored copy of this video can be reused, or null when no job still has it
+             */
+            job_id: string | null;
+        };
+        /** StoredVideosResponse */
+        StoredVideosResponse: {
+            /** Dataset Id */
+            dataset_id: string;
+            /** Videos */
+            videos: components["schemas"]["StoredVideo"][];
+            /** Stored */
+            stored: number;
+            /** Missing */
+            missing: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -3337,6 +3449,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobResultsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_video_api_v1_jobs__job_id__video_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -4034,6 +4177,74 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stored_videos_api_v1_datasets__dataset_id__stored_videos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The saved dataset's id */
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoredVideosResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_dataset_api_v1_datasets__dataset_id__run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The saved dataset's id */
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasetRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetRunResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

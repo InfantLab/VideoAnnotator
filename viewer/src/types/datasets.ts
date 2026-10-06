@@ -51,3 +51,30 @@ export interface ServerFolderScan {
   recursive: boolean;
   videos: ScannedVideo[];
 }
+
+/** A dataset video and the job whose stored copy can be reused (null: not on the server any more). */
+export interface StoredVideo {
+  filename: string;
+  size_bytes: number | null;
+  job_id: string | null;
+}
+
+export interface StoredVideosResponse {
+  dataset_id: string;
+  videos: StoredVideo[];
+  stored: number;
+  missing: number;
+}
+
+export interface DatasetRunRequest {
+  selected_pipelines: string[];
+  config?: Record<string, unknown>;
+  batch_name?: string;
+}
+
+export interface DatasetRunResponse {
+  batch_id: string;
+  batch_name: string | null;
+  created: string[];
+  skipped: { filename: string; reason: string }[];
+}
