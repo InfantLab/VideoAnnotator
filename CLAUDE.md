@@ -55,12 +55,11 @@ against it.
 
 ## Current Plan
 <!-- SPECKIT START -->
-Spec 022 (`specs/022-videos-read-in-place/`) is implemented: videos read where they are ("My
-folders"), results in `~/VideoAnnotator/<run> (<date>)/<video>/` via each job's `output_dir`
-(every naming and layout rule is in `results_folder.py`), Docker on loopback with
-`VIDEOANNOTATOR_PUBLISHED_LOCALLY`. Next: `specs/024-container-feels-local` (start-up program,
-folders shared with the container read-only at their real paths, Docker and Podman), then
-`specs/023-viewer-overhaul` (placeholder; needs research first).
+`specs/024-container-feels-local/plan.md`: researchers start VideoAnnotator with `launcher/
+videoannotator-start` (sh, plus a PowerShell twin), which finds Docker or Podman, shares chosen
+folders read-only at their real paths (remembered in a host `start.conf`), runs the GHCR `-all`
+image on 127.0.0.1 and opens the viewer connected; inside a container the server never lists its
+own filesystem. Spec 022 is done. After 024: `specs/023-viewer-overhaul` (needs research first).
 <!-- SPECKIT END -->
 
 ## Recent Changes
