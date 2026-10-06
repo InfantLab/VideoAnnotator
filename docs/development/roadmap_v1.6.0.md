@@ -729,7 +729,9 @@ failed, where the pipelines disagree, what the whole dataset looks like.
 
 - Plugin ecosystem: entry-point discovery, `Dispatcher` ABC, `videoannotator-utils`
   ([`roadmap_v1.7.0.md`](roadmap_v1.7.0.md)).
-- A visual redesign of the viewer: decided after the pilot.
+- A visual redesign of the viewer was here as "decided after the pilot". It is now planned as the
+  spec after 022: placeholder [`specs/023-viewer-overhaul`](../../specs/023-viewer-overhaul/spec.md)
+  (timeline, movement metric, reaching the data, multiple videos, researcher notes).
 - Remote and HPC dispatch ([`roadmap_v1.7_to_v2.0.md`](roadmap_v1.7_to_v2.0.md)).
 - Pose, hand and motion specialist pipelines, unless pilot labs ask.
 
