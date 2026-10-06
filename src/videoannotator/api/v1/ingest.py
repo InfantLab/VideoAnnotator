@@ -41,7 +41,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ...batch.types import BatchJob, JobStatus
-from ...config_env import INGEST_ROOTS, managed_by_launcher, published_locally
+from ...config_env import (
+    INGEST_ROOTS,
+    LAUNCHER_REQUESTS_DIR,
+    managed_by_launcher,
+    missing_shares,
+    published_locally,
+)
 from ...database.crud import SavedDatasetCRUD
 from ...database.database import get_db
 from ...results_folder import (
@@ -49,6 +55,7 @@ from ...results_folder import (
     display_path,
     folder_opener,
     folder_ref,
+    give_to_owner,
     in_container,
     not_shared_message,
     results_root,
@@ -239,6 +246,65 @@ def places_in(folders: list[Path]) -> list[Place]:
     return places
 
 
+class Share(BaseModel):
+    """A folder shared with VideoAnnotator when it started (spec 024)."""
+
+    path: str = Field(
+        description="Where the server sees it; the host path when not present"
+    )
+    display_path: str = Field(description="As the researcher's computer shows it")
+    present: bool = Field(description="Found when VideoAnnotator last started")
+    stop_requested: bool = Field(
+        default=False,
+        description="Stop sharing was asked for: it stops at the next start",
+    )
+
+
+# One host path per line; the launcher applies and deletes it at the next start.
+STOP_SHARING_FILE = "stop-sharing.txt"
+
+
+def _stop_requests() -> set[str]:
+    try:
+        text = (LAUNCHER_REQUESTS_DIR / STOP_SHARING_FILE).read_text(encoding="utf-8")
+    except OSError:
+        return set()
+    return {line.strip() for line in text.splitlines() if line.strip()}
+
+
+def current_shares() -> list[Share]:
+    """Every shared folder: those configured, then those missing at this start.
+
+    Only folders shared on purpose; the home folder a plain install reads by
+    default isn't a share.
+    """
+    requested = _stop_requests()
+    shares = []
+    for entry in INGEST_ROOTS.split(os.pathsep):
+        if not entry.strip():
+            continue
+        folder = Path(entry.strip()).expanduser().resolve()
+        shown = display_path(folder)
+        shares.append(
+            Share(
+                path=str(folder),
+                display_path=shown,
+                present=folder.is_dir(),
+                stop_requested=shown in requested,
+            )
+        )
+    for host in missing_shares():
+        shares.append(
+            Share(
+                path=host,
+                display_path=host,
+                present=False,
+                stop_requested=host in requested,
+            )
+        )
+    return shares
+
+
 class IngestAccessResponse(BaseModel):
     same_machine: bool = Field(
         description="The caller is on the server's own machine (loopback, or "
@@ -268,6 +334,10 @@ class IngestAccessResponse(BaseModel):
         default=False,
         description="Started by videoannotator-start, which can stop sharing a "
         "folder (spec 024)",
+    )
+    shares: list[Share] = Field(
+        default_factory=list,
+        description="Folders shared with VideoAnnotator, present or not (spec 024)",
     )
 
 
@@ -344,7 +414,72 @@ async def access(
         places=places_in(folders) if reason is None else [],
         in_container=in_container(),
         managed_by_launcher=managed_by_launcher(),
+        shares=current_shares(),
     )
+
+
+class StopSharingRequest(BaseModel):
+    path: str = Field(
+        description="The shared folder, as shown or as the server sees it"
+    )
+
+
+@router.post(
+    "/shares/stop",
+    response_model=Share,
+    summary="Stop sharing a folder, from the next start",
+    description="""
+Asks `videoannotator-start` to stop sharing a folder (spec 024): the request is
+left in its requests folder and applied the next time VideoAnnotator starts.
+The server can't change what is shared itself, and a request can only ever
+make sharing narrower.
+
+Administrator only, on this computer only. 404 `SHARE_NOT_FOUND` for a folder
+that isn't shared; 409 `NOT_MANAGED_BY_LAUNCHER` when VideoAnnotator wasn't
+started by `videoannotator-start` (change the compose settings instead).
+""",
+)
+async def stop_sharing(
+    request: Request,
+    body: StopSharingRequest,
+    _user: dict[str, Any] = Depends(require_admin),
+) -> Share:
+    """Record a request to stop sharing a folder."""
+    require_local_caller(request)
+    if not managed_by_launcher():
+        raise APIError(
+            status_code=409,
+            code="NOT_MANAGED_BY_LAUNCHER",
+            message="Shared folders are set when VideoAnnotator starts.",
+            hint="Change VIDEOS_DIR in the compose settings (see the installation "
+            "guide), then restart.",
+        )
+    wanted = body.path.strip()
+    share = next(
+        (s for s in current_shares() if wanted in (s.display_path, s.path)), None
+    )
+    if share is None:
+        raise APIError(
+            status_code=404,
+            code="SHARE_NOT_FOUND",
+            message=f"{wanted} isn't a shared folder.",
+            hint="GET /api/v1/ingest/access lists the shared folders.",
+        )
+    if not share.stop_requested:
+        requests = LAUNCHER_REQUESTS_DIR / STOP_SHARING_FILE
+        try:
+            with requests.open("a", encoding="utf-8") as f:
+                f.write(share.display_path + "\n")
+        except OSError as e:
+            raise APIError(
+                status_code=500,
+                code="STOP_SHARING_FAILED",
+                message="Couldn't record the request to stop sharing.",
+                hint=f"Run: videoannotator-start unshare ({e}).",
+            ) from e
+        # Under rootful Docker the server is root; the launcher deletes it.
+        give_to_owner(requests)
+    return share.model_copy(update={"stop_requested": True})
 
 
 # ---------------------------------------------------------------------------

@@ -92,6 +92,16 @@ export interface IngestAccess {
   in_container?: boolean;
   /** Started by `videoannotator-start`, which shares folders and can stop sharing them (spec 024). */
   managed_by_launcher?: boolean;
+  /** Folders shared with VideoAnnotator, present or not (spec 024); absent on older servers. */
+  shares?: Share[];
+}
+
+/** A folder shared with VideoAnnotator when it started (spec 024). */
+export interface Share extends FolderRef {
+  /** Found when VideoAnnotator last started; a missing one may be an unplugged drive. */
+  present: boolean;
+  /** Stop sharing was asked for: it stops when VideoAnnotator next starts. */
+  stop_requested: boolean;
 }
 
 export interface Place extends FolderRef {

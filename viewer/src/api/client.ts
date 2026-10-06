@@ -30,6 +30,7 @@ import type {
   IngestBrowseResponse,
   IngestRequest,
   IngestResponse,
+  Share,
 } from '@/types/ingest';
 import type { CurrentUser } from '@/types/api';
 import type { JobResults } from '@/lib/jobOutcome';
@@ -823,6 +824,15 @@ class APIClient {
   /** What this browser may do with videos on the server's machine (spec 022). */
   async getIngestAccess(): Promise<IngestAccess> {
     return this.request('/api/v1/ingest/access');
+  }
+
+  /** Stop sharing a folder from the next start (spec 024; admin, same machine, launcher only). */
+  async stopSharing(path: string): Promise<Share> {
+    return this.request('/api/v1/ingest/shares/stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
   }
 
   /** List server-side folders. Omit `path` to list the allowed roots. */

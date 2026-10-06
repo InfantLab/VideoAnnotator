@@ -48,6 +48,16 @@ _activation: dict[str, dict[str, Any]] = {}  # job_id -> outcome
 # Extras groups installed in this process whose activation needs a restart.
 _restart_pending_extras: set[str] = set()
 
+# --- Restoring installed groups in a new container (spec 024, research R7) ---
+# A container's Python environment is replaced whenever the container is
+# recreated (every update, every change of shared folders); completed installs
+# are remembered in the database and installed again at start.
+_restoring: set[str] = set()
+_restore_failed: dict[str, str] = {}  # extra_name -> why
+RESTORE_NOTE = (
+    "Restoring pipelines installed before VideoAnnotator was updated or restarted."
+)
+
 
 def restart_required() -> bool:
     """Whether any install completed since this process started needs a
@@ -407,6 +417,80 @@ def _activate_live() -> None:
     pipeline_loader.clear_import_errors()
 
 
+def remembered_groups() -> list[str]:
+    """Extras groups with a completed install: the ones the researcher added."""
+    db = _db_module.SessionLocal()
+    try:
+        rows = (
+            db.query(ExtrasInstallJob.extra_name)
+            .filter(ExtrasInstallJob.status == ExtrasInstallJobStatus.COMPLETED)
+            .distinct()
+            .all()
+        )
+    finally:
+        db.close()
+    return sorted(row[0] for row in rows)
+
+
+def group_importable(extra_name: str) -> bool:
+    """Whether every package of `extra_name` is installed in this environment."""
+    return pipeline_loader.extras_available([extra_name])
+
+
+def restoring(extra_name: str) -> bool:
+    """Whether `extra_name` (or every group, `all`) is being restored."""
+    return extra_name in _restoring or "all" in _restoring
+
+
+def restore_failure(extra_name: str) -> str | None:
+    """Why restoring `extra_name` failed in this process, if it did."""
+    return _restore_failed.get(extra_name) or _restore_failed.get("all")
+
+
+def restore_missing_groups() -> list[str]:
+    """Install again each remembered group whose packages are missing.
+
+    In the background, through the same installer as a researcher's install,
+    from uv's download cache when the cache volume kept it. Returns the groups
+    being restored; never raises, so it can't stop the server starting.
+    """
+    try:
+        missing = [g for g in remembered_groups() if not group_importable(g)]
+    except Exception as e:
+        LOGGER.error("Could not check which pipelines to restore: %s", e)
+        return []
+    restored = []
+    for extra_name in missing:
+        db = _db_module.SessionLocal()
+        try:
+            job = ExtrasInstallJob(
+                extra_name=extra_name,
+                status=ExtrasInstallJobStatus.PENDING,
+                command_output=RESTORE_NOTE,
+            )
+            db.add(job)
+            db.commit()
+            job_id = str(job.id)
+        finally:
+            db.close()
+        if try_begin_install(extra_name, job_id) is not None:
+            continue
+        _restoring.add(extra_name)
+        LOGGER.info("Restoring the %r pipelines installed earlier", extra_name)
+        start_install(job_id, extra_name)
+        restored.append(extra_name)
+    return restored
+
+
+def _settle_restore(extra_name: str, status: str, output: str | None) -> None:
+    if status == ExtrasInstallJobStatus.COMPLETED:
+        _restore_failed.pop(extra_name, None)
+    elif extra_name in _restoring:
+        lines = [line for line in (output or "").splitlines() if line.strip()]
+        _restore_failed[extra_name] = lines[-1] if lines else "the install failed"
+    _restoring.discard(extra_name)
+
+
 def run_install(job_id: str, extra_name: str) -> None:
     """Run the install for `extra_name` and update the `ExtrasInstallJob`
     row identified by `job_id` as it progresses.
@@ -478,9 +562,11 @@ def run_install(job_id: str, extra_name: str) -> None:
         job.status = status
         job.finished_at = datetime.now()
         db.commit()
+        _settle_restore(extra_name, status, job.command_output)
     finally:
         db.close()
         _end_install(extra_name)
+        _restoring.discard(extra_name)
 
 
 def start_install(job_id: str, extra_name: str) -> None:

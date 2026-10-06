@@ -816,6 +816,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ingest/shares/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop sharing a folder, from the next start
+         * @description Asks `videoannotator-start` to stop sharing a folder (spec 024): the request is
+         *     left in its requests folder and applied the next time VideoAnnotator starts.
+         *     The server can't change what is shared itself, and a request can only ever
+         *     make sharing narrower.
+         *
+         *     Administrator only, on this computer only. 404 `SHARE_NOT_FOUND` for a folder
+         *     that isn't shared; 409 `NOT_MANAGED_BY_LAUNCHER` when VideoAnnotator wasn't
+         *     started by `videoannotator-start` (change the compose settings instead).
+         */
+        post: operations["stop_sharing_api_v1_ingest_shares_stop_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ingest/scan": {
         parameters: {
             query?: never;
@@ -2465,6 +2492,11 @@ export interface components {
              * @default false
              */
             managed_by_launcher: boolean;
+            /**
+             * Shares
+             * @description Folders shared with VideoAnnotator, present or not (spec 024)
+             */
+            shares?: components["schemas"]["Share"][];
         };
         /** IngestBrowseResponse */
         IngestBrowseResponse: {
@@ -2867,7 +2899,8 @@ export interface components {
          * PipelineReadiness
          * @description Where a pipeline stands and the one next step (spec 011 contract §1).
          *
-         *     `state`: installing | not_installed | restart_required | needs_setup | ready.
+         *     `state`: installing | restoring | not_installed | restart_required |
+         *     needs_setup | ready.
          *     `next_action`: wait | install | restart | setup | none. Clients must
          *     tolerate values they don't know.
          */
@@ -3202,6 +3235,41 @@ export interface components {
             name: string;
             /** Size Bytes */
             size_bytes: number;
+        };
+        /**
+         * Share
+         * @description A folder shared with VideoAnnotator when it started (spec 024).
+         */
+        Share: {
+            /**
+             * Path
+             * @description Where the server sees it; the host path when not present
+             */
+            path: string;
+            /**
+             * Display Path
+             * @description As the researcher's computer shows it
+             */
+            display_path: string;
+            /**
+             * Present
+             * @description Found when VideoAnnotator last started
+             */
+            present: boolean;
+            /**
+             * Stop Requested
+             * @description Stop sharing was asked for: it stops at the next start
+             * @default false
+             */
+            stop_requested: boolean;
+        };
+        /** StopSharingRequest */
+        StopSharingRequest: {
+            /**
+             * Path
+             * @description The shared folder, as shown or as the server sees it
+             */
+            path: string;
         };
         /** StoredVideo */
         StoredVideo: {
@@ -4006,6 +4074,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IngestAccessResponse"];
+                };
+            };
+        };
+    };
+    stop_sharing_api_v1_ingest_shares_stop_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StopSharingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Share"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

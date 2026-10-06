@@ -41,7 +41,7 @@ import {
 } from "@/hooks/usePipelineCatalog";
 import { DynamicPipelineParameters } from "@/components/DynamicPipelineParameters";
 import { findUrlFieldErrors } from "@/lib/pipelineUrlFields";
-import { LockedPipelineCard, ExtrasInstallStatus, ReadinessDetails } from "@/components/LockedPipelineCard";
+import { LockedPipelineCard, ExtrasInstallStatus, ReadinessDetails, RestoringStatus } from "@/components/LockedPipelineCard";
 import { RestartRequiredBanner } from "@/components/RestartRequiredBanner";
 import type { PipelineDescriptor } from "@/types/pipelines";
 import type { IngestAccess } from "@/types/ingest";
@@ -1315,7 +1315,7 @@ export const PipelineSelectionStep = ({
     pipelines.forEach((pipeline) => {
       const readiness = pipeline.readiness;
       const extraName = extrasGroupOf(pipeline);
-      if (readiness?.state === 'installing' && readiness.installJobId && extraName) {
+      if ((readiness?.state === 'installing' || readiness?.state === 'restoring') && readiness.installJobId && extraName) {
         adoptJob(extraName, readiness.installJobId, lockedPipelineIdsByExtra.get(extraName) ?? [pipeline.id]);
       }
     });
@@ -1486,6 +1486,7 @@ export const PipelineSelectionStep = ({
                           </Button>
                         </div>
                       )}
+                      {mode === 'restoring' && <RestoringStatus />}
                       {mode === 'restart' && (!job || job.status !== 'completed') && (
                         <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-500">
                           Installed. Restart the server to activate it.

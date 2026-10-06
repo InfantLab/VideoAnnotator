@@ -51,6 +51,7 @@ _TORCH_MB = 3000 if sys.platform.startswith("linux") else 250
 
 _NEXT_ACTION = {
     "installing": "wait",
+    "restoring": "wait",
     "not_installed": "install",
     "restart_required": "restart",
     "needs_setup": "setup",
@@ -433,7 +434,13 @@ def pipeline_readiness(meta: PipelineMetadata) -> dict[str, Any]:
 
     blockers: list[dict[str, Any]] = []
     notes: list[dict[str, Any]] = []
-    if install_job_id:
+    restore = not extras_available(meta.requires_extras) and any(
+        extras_install.restoring(e) for e in meta.requires_extras
+    )
+    if restore:
+        # Installed before the container was recreated; coming back (spec 024).
+        state = "restoring"
+    elif install_job_id:
         state = "installing"
     elif not extras_available(meta.requires_extras):
         state = "not_installed"

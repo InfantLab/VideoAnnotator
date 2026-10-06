@@ -174,6 +174,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error(f"Extras-install orphaned-job cleanup failed: {e}")
         # Don't fail startup if this cleanup fails, but log prominently
 
+    # A container's Python environment is new whenever the container is
+    # recreated (an update, a change of shared folders): install again what
+    # the researcher installed before (spec 024, R7). Not outside a container,
+    # where a missing package is the researcher's own doing.
+    from ..results_folder import in_container
+
+    if in_container():
+        from .extras_install import restore_missing_groups
+
+        for extra in restore_missing_groups():
+            logger.info(
+                f"[STARTUP] Restoring the '{extra}' pipelines installed earlier"
+            )
+
     _check_videos_and_results()
 
     # Log server configuration
