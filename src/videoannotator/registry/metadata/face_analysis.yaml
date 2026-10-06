@@ -66,7 +66,7 @@ config_schema:
     default:
       emotion_model: VGG-Face
       age_gender_model: VGG-Face
-      detector_backend: opencv
+      detector_backend: retinaface
       enforce_detection: false
     description: DeepFace-specific configuration
   person_identity:
@@ -105,9 +105,12 @@ requirements:
   packages:
     - deepface
     - opencv-python
-# Attribute models DeepFace fetches on first use (emotion/age/gender all on by
-# default); the default `opencv` detector backend needs no download.
+# Models DeepFace fetches on first use: the default `retinaface` detector plus
+# the attribute models (emotion/age/gender all on by default).
 weights:
+  - id: retinaface.h5
+    approx_mb: 119
+    cache: deepface
   - id: facial_expression_model_weights.h5
     approx_mb: 6
     cache: deepface

@@ -74,7 +74,7 @@ face_analysis:
   deepface:
     emotion_model: "VGG-Face"
     age_gender_model: "VGG-Face"
-    detector_backend: "opencv"
+    detector_backend: "retinaface" # opencv is faster but flags lamps/objects as faces
     enforce_detection: false
 
 # Audio: configure speech_recognition and speaker_diarization as their own sections

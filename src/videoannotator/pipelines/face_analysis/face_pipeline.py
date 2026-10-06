@@ -42,6 +42,10 @@ def _disable_tensorflow_gpu() -> None:
     Set `VIDEOANNOTATOR_DEEPFACE_GPU=1` to skip this if you've resolved the
     cuDNN mismatch yourself (e.g. a matching system-wide CUDA/cuDNN install).
     """
+    # deepface/retinaface set this on their own import, but importing TF here
+    # first binds `tf.keras` to Keras 3, and RetinaFace's model then fails to
+    # build ("A KerasTensor cannot be used as input to a TensorFlow function").
+    os.environ["TF_USE_LEGACY_KERAS"] = "1"
     if os.environ.get("VIDEOANNOTATOR_DEEPFACE_GPU") == "1":
         return
     try:
@@ -80,6 +84,12 @@ _DEEPFACE_WEIGHT_FILES = {
     "Age": ("age_model_weights.h5", 540),
     "Gender": ("gender_model_weights.h5", 540),
 }
+# Detector weights, keyed by `deepface.detector_backend`. OpenCV's Haar cascade
+# ships with cv2 but mistakes lamps and bottles for faces (with ~0.97
+# "confidence") and misses infants, so it is no longer the default.
+_DEEPFACE_DETECTOR_WEIGHT_FILES = {
+    "retinaface": ("retinaface.h5", 119),
+}
 
 
 def _is_no_face_placeholder(
@@ -105,6 +115,11 @@ def _is_no_face_placeholder(
         and w >= frame_width - 1
         and h >= frame_height - 1
     )
+
+
+def _detection_score(confidence: float | None) -> float:
+    # Some DeepFace detectors report no confidence; keep the old 1.0 for those.
+    return 1.0 if confidence is None else float(confidence)
 
 
 class FaceAnalysisPipeline(BasePipeline):
@@ -136,7 +151,7 @@ class FaceAnalysisPipeline(BasePipeline):
             "deepface": {
                 "emotion_model": "VGG-Face",
                 "age_gender_model": "VGG-Face",
-                "detector_backend": "opencv",
+                "detector_backend": "retinaface",
                 "enforce_detection": False,
             },
             # Person identity configuration
@@ -531,13 +546,14 @@ class FaceAnalysisPipeline(BasePipeline):
         from deepface.commons.folder_utils import get_deepface_home
 
         models = [action.capitalize() for action in self._deepface_actions()]
+        detector = self.config.get("deepface", {}).get("detector_backend", "retinaface")
         weights_dir = Path(get_deepface_home()) / ".deepface" / "weights"
-        missing = [
-            _DEEPFACE_WEIGHT_FILES[m]
-            for m in models
-            if m in _DEEPFACE_WEIGHT_FILES
-            and not (weights_dir / _DEEPFACE_WEIGHT_FILES[m][0]).exists()
+        wanted = [
+            _DEEPFACE_WEIGHT_FILES[m] for m in models if m in _DEEPFACE_WEIGHT_FILES
         ]
+        if detector in _DEEPFACE_DETECTOR_WEIGHT_FILES:
+            wanted.append(_DEEPFACE_DETECTOR_WEIGHT_FILES[detector])
+        missing = [w for w in wanted if not (weights_dir / w[0]).exists()]
         with _DEEPFACE_MODELS_LOCK:
             if missing:
                 self.logger.info(
@@ -560,6 +576,20 @@ class FaceAnalysisPipeline(BasePipeline):
                     # Left to fail (and be reported) per frame, as before.
                     self.logger.warning(
                         f"Could not prepare DeepFace {model} model: {e}"
+                    )
+            if detector in _DEEPFACE_DETECTOR_WEIGHT_FILES:
+                self._model_refs.append(
+                    weights_ref(
+                        f"DeepFace detector {detector}",
+                        "deepface",
+                        weights_dir / _DEEPFACE_DETECTOR_WEIGHT_FILES[detector][0],
+                    )
+                )
+                try:
+                    DeepFace.build_model(model_name=detector, task="face_detector")
+                except Exception as e:
+                    self.logger.warning(
+                        f"Could not prepare DeepFace {detector} detector: {e}"
                     )
 
     def _detect_faces_in_frame(
@@ -642,25 +672,14 @@ class FaceAnalysisPipeline(BasePipeline):
 
             # Get DeepFace configuration
             deepface_config = self.config.get("deepface", {})
-            detector_backend = deepface_config.get("detector_backend", "opencv")
+            detector_backend = deepface_config.get("detector_backend", "retinaface")
             enforce_detection = deepface_config.get("enforce_detection", False)
 
             annotations = []
 
-            # First, detect faces and get their regions
+            min_confidence = self.config["confidence_threshold"]
+
             try:
-                face_objs = DeepFace.extract_faces(
-                    rgb_frame,
-                    detector_backend=detector_backend,
-                    enforce_detection=enforce_detection,
-                    align=True,
-                    grayscale=False,
-                )
-
-                if not face_objs:
-                    return []
-
-                # Get face regions with coordinates using DeepFace.analyze
                 analyze_results = DeepFace.analyze(
                     rgb_frame,
                     actions=self._deepface_actions(),
@@ -680,9 +699,12 @@ class FaceAnalysisPipeline(BasePipeline):
                     w = region.get("w", 100)
                     h = region.get("h", 100)
 
+                    face_confidence = analysis.get("face_confidence")
                     if _is_no_face_placeholder(
-                        x, y, w, h, analysis.get("face_confidence"), width, height
+                        x, y, w, h, face_confidence, width, height
                     ):
+                        continue
+                    if face_confidence is not None and face_confidence < min_confidence:
                         continue
 
                     # Skip faces that are too small
@@ -750,12 +772,13 @@ class FaceAnalysisPipeline(BasePipeline):
                         image_id=f"{video_id}_frame_{frame_number}",
                         category_id=100,  # Face category
                         bbox=[float(x), float(y), float(w), float(h)],
-                        score=1.0,
+                        score=_detection_score(face_confidence),
                         # VideoAnnotator extensions
                         face_id=i,
                         timestamp=timestamp,
                         frame_number=frame_number,
                         backend="deepface",
+                        detector=detector_backend,
                         **analysis_data,  # Add all analysis results
                     )
                     annotations.append(annotation)
@@ -780,15 +803,12 @@ class FaceAnalysisPipeline(BasePipeline):
                             area = face_obj.get("facial_area", {})
                             fx, fy = area.get("x", 0), area.get("y", 0)
                             fw, fh = area.get("w", width), area.get("h", height)
+                            confidence = face_obj.get("confidence")
                             if _is_no_face_placeholder(
-                                fx,
-                                fy,
-                                fw,
-                                fh,
-                                face_obj.get("confidence"),
-                                width,
-                                height,
+                                fx, fy, fw, fh, confidence, width, height
                             ):
+                                continue
+                            if confidence is not None and confidence < min_confidence:
                                 continue
                             # Create basic annotation without analysis
                             annotation = create_coco_annotation(
@@ -796,12 +816,13 @@ class FaceAnalysisPipeline(BasePipeline):
                                 image_id=f"{video_id}_frame_{frame_number}",
                                 category_id=100,  # Face category
                                 bbox=[float(fx), float(fy), float(fw), float(fh)],
-                                score=1.0,
+                                score=_detection_score(confidence),
                                 # VideoAnnotator extensions
                                 face_id=i,
                                 timestamp=timestamp,
                                 frame_number=frame_number,
                                 backend="deepface",
+                                detector=detector_backend,
                             )
                             annotations.append(annotation)
 
