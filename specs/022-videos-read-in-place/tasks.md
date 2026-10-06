@@ -206,15 +206,15 @@ loopback only.
 
 ### Tests for User Story 3
 
-- [ ] T066 [P] [US3] Add to `tests/api/test_ingest_access.py`: with `PUBLISHED_LOCALLY` and `HOST_PATHS="/videos=/home/ada/Studies;/results=/home/ada/VideoAnnotator"`, `allowed_folders[0].display_path` and `results_root.display_path` are host paths, and `can_open_folders` is false inside a container (patch the container check); with `/videos` empty, `reason` mentions `VIDEOS_DIR`
-- [ ] T067 [P] [US3] Add a static test (e.g. `tests/unit/test_docker_compose_contract.py`, parsing `docker-compose.yml` with `yaml.safe_load`) asserting `videoannotator-prod` and `videoannotator-gpu` publish `127.0.0.1:18011:18011`, mount `/videos` read-only and `/results`, and set the four env vars from contracts/docker.md
+- [X] T066 [P] [US3] Add to `tests/api/test_ingest_access.py`: with `PUBLISHED_LOCALLY` and `HOST_PATHS="/videos=/home/ada/Studies;/results=/home/ada/VideoAnnotator"`, `allowed_folders[0].display_path` and `results_root.display_path` are host paths, and `can_open_folders` is false inside a container (patch the container check); with `/videos` empty, `reason` mentions `VIDEOS_DIR`
+- [X] T067 [P] [US3] Add a static test (e.g. `tests/unit/test_docker_compose_contract.py`, parsing `docker-compose.yml` with `yaml.safe_load`) asserting `videoannotator-prod` and `videoannotator-gpu` publish `127.0.0.1:18011:18011`, mount `/videos` read-only and `/results`, and set the four env vars from contracts/docker.md
 
 ### Implementation for User Story 3
 
-- [ ] T068 [US3] Update `docker-compose.yml` services `videoannotator-prod` and `videoannotator-gpu` per contracts/docker.md (loopback port, `${VIDEOS_DIR:-./videos}:/videos:ro`, `${RESULTS_DIR:-~/VideoAnnotator}:/results`, the four env vars); keep existing volumes, including `./data:/app/data:ro`; check whether `~` expands in compose interpolation and use `${HOME}/VideoAnnotator` if it doesn't
-- [ ] T069 [US3] Treat an allowed folder that is missing or empty as unusable for `can_read_in_place` in `src/videoannotator/api/v1/ingest.py`, with the `VIDEOS_DIR` reason when running in a container (FR-012)
-- [ ] T070 [US3] In `viewer/src/pages/NewJob.tsx` / `viewer/src/components/ServerFolderPicker.tsx`, when `same_machine` but not `can_read_in_place`, show `reason` with a link to the Docker docs section, and keep upload working
-- [ ] T071 [US3] Update `docs/installation/INSTALLATION.md` Docker section: `VIDEOS_DIR` / `RESULTS_DIR`, the `docker run` equivalent, the loopback guarantee and the "remove `VIDEOANNOTATOR_PUBLISHED_LOCALLY` if you publish more widely" warning, no Open folder under Docker, and root-owned results with the `--user "$(id -u):$(id -g)"` option
+- [X] T068 [US3] Update `docker-compose.yml` services `videoannotator-prod` and `videoannotator-gpu` per contracts/docker.md (loopback port, `${VIDEOS_DIR:-./videos}:/videos:ro`, `${RESULTS_DIR:-~/VideoAnnotator}:/results`, the four env vars); keep existing volumes, including `./data:/app/data:ro`; check whether `~` expands in compose interpolation and use `${HOME}/VideoAnnotator` if it doesn't
+- [X] T069 [US3] Treat an allowed folder that is missing or empty as unusable for `can_read_in_place` in `src/videoannotator/api/v1/ingest.py`, with the `VIDEOS_DIR` reason when running in a container (FR-012)
+- [X] T070 [US3] In `viewer/src/pages/NewJob.tsx` / `viewer/src/components/ServerFolderPicker.tsx`, when `same_machine` but not `can_read_in_place`, show `reason` with a link to the Docker docs section, and keep upload working
+- [X] T071 [US3] Update `docs/installation/INSTALLATION.md` Docker section: `VIDEOS_DIR` / `RESULTS_DIR`, the `docker run` equivalent, the loopback guarantee and the "remove `VIDEOANNOTATOR_PUBLISHED_LOCALLY` if you publish more widely" warning, no Open folder under Docker, and root-owned results with the `--user "$(id -u):$(id -g)"` option
 - [ ] T072 [US3] Run quickstart "Story 3" against a locally built image (`docker compose build videoannotator-prod`), record the outcome in the commit message; if Docker is unavailable in the dev container, say so explicitly and leave this task unchecked
 
 **Checkpoint**: quickstart "Story 3" passes. Commit and push.

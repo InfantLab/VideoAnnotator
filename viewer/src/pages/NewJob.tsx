@@ -864,6 +864,9 @@ const CreateNewJob = () => {
 // Step Components
 type VideoSource = 'upload' | 'server' | 'dataset';
 
+const MY_FOLDERS_DOCS_URL =
+  'https://github.com/InfantLab/VideoAnnotator/blob/master/docs/installation/INSTALLATION.md#choosing-videos-on-your-own-computer';
+
 interface DatasetSelectionState {
   fromDataset: { id: string; name: string } | null;
   setFromDataset: (dataset: { id: string; name: string } | null) => void;
@@ -1084,7 +1087,14 @@ export const VideoUploadStep = ({
           ) : (
             <Alert>
               <AlertTitle>Choosing videos on this computer isn&apos;t available</AlertTitle>
-              <AlertDescription>{access?.reason ?? 'The server did not say why.'}</AlertDescription>
+              <AlertDescription className="space-y-1">
+                <p>{access?.reason ?? 'The server did not say why.'}</p>
+                <p className="text-xs">
+                  <a className="underline" href={MY_FOLDERS_DOCS_URL} target="_blank" rel="noreferrer">
+                    Setting up the folders VideoAnnotator may read
+                  </a>
+                </p>
+              </AlertDescription>
             </Alert>
           )}
           <Button variant="link" size="sm" className="h-auto p-0" onClick={() => onSourceChange('upload')}>

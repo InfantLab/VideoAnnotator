@@ -31,9 +31,21 @@ services:
       - storage:/app/storage  # each job's video and results, which the database points to
       - ./data:/app/data:ro
       - ./output:/app/output
+      # Spec 022: your videos, read where they are and never changed...
+      - ${VIDEOS_DIR:-./videos}:/videos:ro
+      # ...and your results, in a folder on your own machine.
+      - ${RESULTS_DIR:-~/VideoAnnotator}:/results
+    ports:
+      # This machine only: VIDEOANNOTATOR_PUBLISHED_LOCALLY below relies on it.
+      # Publishing more widely (e.g. "18011:18011") means removing that line.
+      - "127.0.0.1:18011:18011"
     environment:
       - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
       - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
+      - VIDEOANNOTATOR_INGEST_ROOTS=/videos
+      - VIDEOANNOTATOR_RESULTS_DIR=/results
+      - VIDEOANNOTATOR_PUBLISHED_LOCALLY=1  # every caller is this machine: the port is on 127.0.0.1
+      - VIDEOANNOTATOR_HOST_PATHS=/videos=${VIDEOS_DIR:-./videos};/results=${RESULTS_DIR:-~/VideoAnnotator}
       - UV_NO_SYNC=1  # keep pipeline extras installed from the viewer across restarts (spec 011 FR-009)
       - PYTHONPATH=/app
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}  # Ollama on the host (vlm_annotation)
@@ -54,9 +66,21 @@ services:
       - storage:/app/storage  # each job's video and results, which the database points to
       - ./data:/app/data:ro
       - ./output:/app/output
+      # Spec 022: your videos, read where they are and never changed...
+      - ${VIDEOS_DIR:-./videos}:/videos:ro
+      # ...and your results, in a folder on your own machine.
+      - ${RESULTS_DIR:-~/VideoAnnotator}:/results
+    ports:
+      # This machine only: VIDEOANNOTATOR_PUBLISHED_LOCALLY below relies on it.
+      # Publishing more widely (e.g. "18011:18011") means removing that line.
+      - "127.0.0.1:18011:18011"
     environment:
       - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
       - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
+      - VIDEOANNOTATOR_INGEST_ROOTS=/videos
+      - VIDEOANNOTATOR_RESULTS_DIR=/results
+      - VIDEOANNOTATOR_PUBLISHED_LOCALLY=1  # every caller is this machine: the port is on 127.0.0.1
+      - VIDEOANNOTATOR_HOST_PATHS=/videos=${VIDEOS_DIR:-./videos};/results=${RESULTS_DIR:-~/VideoAnnotator}
       - UV_NO_SYNC=1  # keep pipeline extras installed from the viewer across restarts (spec 011 FR-009)
       - PYTHONPATH=/app
       - CUDA_VISIBLE_DEVICES=0

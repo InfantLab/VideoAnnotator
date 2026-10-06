@@ -237,6 +237,54 @@ changes `HF_HOME`, so a `huggingface-cli login` token stays where it is.
 left in the pre-v1.6.0 locations (`~/.cache/huggingface`, `~/.cache/whisper`, `~/.deepface`,
 `./models`). Moving those into the new directory saves downloading them again.
 
+## Choosing videos on your own computer
+
+When the viewer and VideoAnnotator run on the same computer, the new-job wizard opens on
+**My folders**: open a folder, tick the videos (or **Select all**, optionally with subfolders), and
+the run starts at once. Videos are read where they are. Nothing is uploaded or copied, and deleting
+a job never touches the original video.
+
+My folders shows only the folders VideoAnnotator may read:
+
+| Install | Default |
+| --- | --- |
+| Plain install | your home folder |
+| Docker (below) | the folder you set as `VIDEOS_DIR` |
+
+To allow others (an external drive, a shared data disk), set `VIDEOANNOTATOR_INGEST_ROOTS` to the
+folders, separated by `:` (`;` on Windows), and restart the server. Only an administrator may read
+videos in place; the first user is one by default.
+
+When VideoAnnotator runs on another computer (a lab server), its folders aren't yours, so the
+wizard offers **Upload videos** instead. Uploading copies each video into VideoAnnotator's own
+storage.
+
+## Where results go
+
+Every run's results go to one visible folder, **`~/VideoAnnotator`** by default
+(`C:\Users\<you>\VideoAnnotator` on Windows): one folder per run, named after the run and its
+date, then one folder per video, named after the video.
+
+```
+~/VideoAnnotator/
+  BabyJokes wave 2 (2026-10-06)/
+    run.json                 what ran: pipelines, settings, versions, and each video's source
+    child01/
+      child01_face_detections.json
+      child01_speech_recognition.vtt
+      ...
+```
+
+Result files keep their usual names (`<video>_<output>`). Folders are never overwritten: a second
+run with the same name and date gets `(2026-10-06 2)`. These folders hold results only, never a
+copy of a video. `videoannotator server` prints the folder when it starts, and the viewer shows it
+on each run's and job's page, with **Open folder**, **Copy location** and, for a run,
+**Download results** (one zip, without videos).
+
+To put results somewhere else (an encrypted or backed-up drive), set `VIDEOANNOTATOR_RESULTS_DIR`,
+in the environment or in `.env`, and restart. Runs from before the change stay where they were
+written. Deleting a job or run in the viewer deletes its results folder.
+
 ## Verify Installation
 
 ```bash
@@ -311,10 +359,43 @@ docker build --build-arg EXTRAS=scene,person -t videoannotator:scene-person .
 # Every pipeline
 docker build --build-arg EXTRAS=all -t videoannotator:all .
 
-# Run; the models volume keeps downloaded weights across containers
-docker run --rm -p 18011:18011 --gpus all \
-  -v videoannotator-models:/app/models -v $(pwd)/data:/app/data videoannotator:all
+# Run on this computer: your videos read in place, results in ~/VideoAnnotator
+docker run --rm -p 127.0.0.1:18011:18011 --gpus all \
+  -v videoannotator-models:/app/models \
+  -v "$HOME/Studies":/videos:ro -v "$HOME/VideoAnnotator":/results \
+  -e VIDEOANNOTATOR_INGEST_ROOTS=/videos -e VIDEOANNOTATOR_RESULTS_DIR=/results \
+  -e VIDEOANNOTATOR_PUBLISHED_LOCALLY=1 \
+  -e VIDEOANNOTATOR_HOST_PATHS="/videos=$HOME/Studies;/results=$HOME/VideoAnnotator" \
+  videoannotator:all
 ```
+
+### Your videos and results under Docker
+
+The compose services `videoannotator-prod` and `videoannotator-gpu` need two folders from you:
+
+| Variable | Default | What it is |
+| --- | --- | --- |
+| `VIDEOS_DIR` | `./videos` | Your video folder. Mounted read-only: VideoAnnotator never changes it. |
+| `RESULTS_DIR` | `~/VideoAnnotator` | Where results go, on your own computer. |
+
+```bash
+VIDEOS_DIR=~/Studies RESULTS_DIR=~/VideoAnnotator docker compose --profile prod up videoannotator-prod
+```
+
+Then open `http://127.0.0.1:18011/viewer/`. My folders shows your video folder, and run and job
+pages show the results' location as your computer sees it, with **Copy location** (Docker can't
+open folders on your computer, so there is no **Open folder**). Started without `VIDEOS_DIR`, the
+wizard says how to set it, and uploading still works.
+
+**This machine only.** The port is published on `127.0.0.1`, so nothing else on your network can
+reach the server, and `VIDEOANNOTATOR_PUBLISHED_LOCALLY=1` tells the server that every caller is
+therefore on this computer. If you publish the port more widely (for example `18011:18011`, to share
+the server with a colleague), you **must** remove `VIDEOANNOTATOR_PUBLISHED_LOCALLY`: otherwise
+anyone who can reach the port can read the files in your video folder. The server warns at startup
+whenever the variable is set.
+
+**File ownership (Linux).** The container runs as root, so result files in `RESULTS_DIR` belong to
+root on the host. Adding `--user "$(id -u):$(id -g)"` to `docker run` makes them yours instead.
 
 ### Dev Container (VS Code)
 
