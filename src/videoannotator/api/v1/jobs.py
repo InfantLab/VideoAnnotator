@@ -131,11 +131,21 @@ class FolderRef(BaseModel):
     )
 
 
+class JobResultsFolder(FolderRef):
+    exists: bool = Field(
+        description="Whether the folder is still there: false when it was moved, "
+        "renamed or deleted outside VideoAnnotator"
+    )
+
+
 def location_fields(job: BatchJob) -> dict[str, Any]:
     """Where a job's results are, and whether its video still is (spec 022)."""
     video = Path(job.video_path) if job.video_path else None
+    results = folder_ref(job.output_dir)
+    if results is not None:
+        results["exists"] = Path(results["path"]).is_dir()
     return {
-        "results_folder": folder_ref(job.output_dir),
+        "results_folder": results,
         "video_available": bool(video and video.is_file()),
     }
 
@@ -193,7 +203,7 @@ class JobResponse(BaseModel):
         default_factory=list,
         description="Non-fatal notices about the submission, e.g. a deprecated pipeline (spec 014)",
     )
-    results_folder: FolderRef | None = Field(
+    results_folder: JobResultsFolder | None = Field(
         default=None,
         description="This video's results folder (spec 022); null for jobs made "
         "before results folders existed",

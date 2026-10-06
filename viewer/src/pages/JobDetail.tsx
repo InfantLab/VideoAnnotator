@@ -471,6 +471,17 @@ const CreateJobDetail = () => {
         </Alert>
       )}
 
+      {job.results_folder?.exists === false && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Results not found at{' '}
+            <span className="font-mono text-xs break-all">{job.results_folder.display_path}</span>. The folder
+            was moved, renamed or deleted outside VideoAnnotator; put it back to see this job&apos;s files.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <ResultsLocation folder={job.results_folder} label="This video's results" />
 
       {/* Results Section (when completed) */}

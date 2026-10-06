@@ -282,3 +282,16 @@ class TestChangingTheResultsFolder:
         monkeypatch.delenv("VIDEOANNOTATOR_RESULTS_DIR")
         load_env_file()
         assert results_dir() == (tmp_path / "from-dotenv").resolve()
+
+
+def test_a_results_folder_moved_outside_videoannotator_is_reported(study, results_root):
+    import shutil
+
+    body = _ingest(study, batch_name="Renamed later")
+    job_id = body["created"][0]
+    assert client.get(f"/api/v1/jobs/{job_id}").json()["results_folder"]["exists"]
+    run = Path(body["results_folder"]["path"])
+    shutil.move(run, run.with_name("Renamed by hand"))
+    job = client.get(f"/api/v1/jobs/{job_id}").json()
+    assert job["results_folder"]["exists"] is False
+    assert job["results_folder"]["path"].startswith(str(run))

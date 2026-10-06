@@ -80,7 +80,7 @@ def display_path(path: Path | str) -> str:
     return text
 
 
-def folder_ref(path: Path | str | None) -> dict[str, str] | None:
+def folder_ref(path: Path | str | None) -> dict[str, Any] | None:
     """`{"path", "display_path"}` for API responses, or None."""
     if path is None:
         return None

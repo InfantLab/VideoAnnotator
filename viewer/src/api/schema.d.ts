@@ -2667,13 +2667,28 @@ export interface components {
              */
             warnings?: string[];
             /** @description This video's results folder (spec 022); null for jobs made before results folders existed */
-            results_folder?: components["schemas"]["FolderRef"] | null;
+            results_folder?: components["schemas"]["JobResultsFolder"] | null;
             /**
              * Video Available
              * @description Whether the job's video is still at its location (spec 022)
              * @default true
              */
             video_available: boolean;
+        };
+        /** JobResultsFolder */
+        JobResultsFolder: {
+            /** Path */
+            path: string;
+            /**
+             * Display Path
+             * @description The same location as the researcher's own machine shows it (differs from `path` under Docker)
+             */
+            display_path: string;
+            /**
+             * Exists
+             * @description Whether the folder is still there: false when it was moved, renamed or deleted outside VideoAnnotator
+             */
+            exists: boolean;
         };
         /**
          * JobResultsResponse

@@ -251,9 +251,9 @@ no copies.
 **Independent test**: restart with `VIDEOANNOTATOR_RESULTS_DIR=~/elsewhere`, run a video, confirm its
 results there and that earlier runs still open.
 
-- [ ] T079 [P] [US8] Add to `tests/api/test_results_folder.py`: create a run, change `RESULTS_DIR` (fixture), create another; the second lands in the new root; the first job's results and `results_folder` still resolve to the old location; a `VIDEOANNOTATOR_RESULTS_DIR` line in `.env` is honoured when the variable isn't set in the environment
-- [ ] T080 [US8] Show the results folder (`results_root.display_path` from `useIngestAccess`) on `viewer/src/pages/Settings.tsx`, with a short note on how to change it (`VIDEOANNOTATOR_RESULTS_DIR`, or `RESULTS_DIR` under Docker) and that earlier runs stay where they were written
-- [ ] T081 [US8] Make sure result lookup (`src/videoannotator/batch/result_files.py: job_folder`) and the run zip use each job's stored `output_dir`, never `results_root()`, so a root change doesn't hide old runs (FR-025); show the R10-style "Results not found at <folder>" message on JobDetail when `output_dir` no longer exists (edge case: run folder renamed outside VideoAnnotator)
+- [X] T079 [P] [US8] Add to `tests/api/test_results_folder.py`: create a run, change `RESULTS_DIR` (fixture), create another; the second lands in the new root; the first job's results and `results_folder` still resolve to the old location; a `VIDEOANNOTATOR_RESULTS_DIR` line in `.env` is honoured when the variable isn't set in the environment
+- [X] T080 [US8] Show the results folder (`results_root.display_path` from `useIngestAccess`) on `viewer/src/pages/Settings.tsx`, with a short note on how to change it (`VIDEOANNOTATOR_RESULTS_DIR`, or `RESULTS_DIR` under Docker) and that earlier runs stay where they were written
+- [X] T081 [US8] Make sure result lookup (`src/videoannotator/batch/result_files.py: job_folder`) and the run zip use each job's stored `output_dir`, never `results_root()`, so a root change doesn't hide old runs (FR-025); show the R10-style "Results not found at <folder>" message on JobDetail when `output_dir` no longer exists (edge case: run folder renamed outside VideoAnnotator)
 
 **Checkpoint**: quickstart "Story 8" passes. Commit and push.
 

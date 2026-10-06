@@ -13,6 +13,7 @@ import {
 
 import { TokenSetup } from '@/components/TokenSetup';
 import { ServerDiagnostics } from '@/components/ServerDiagnostics';
+import { VideosAndResultsCard } from '@/components/VideosAndResultsCard';
 import { GPUInfo } from '@/components/GPUInfo';
 import { WorkerInfo } from '@/components/WorkerInfo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -360,6 +361,8 @@ const CreateSettings = () => {
               </div>
             </CardContent>
           </Card>
+
+          <VideosAndResultsCard />
 
           {/* Server Diagnostics */}
           <ServerDiagnostics className="mt-6" defaultOpen={false} />
