@@ -398,12 +398,28 @@ class SPAStaticFiles(StaticFiles):
         try:
             response = await super().get_response(path, scope)
         except StarletteHTTPException as exc:
-            if exc.status_code != 404 or scope["method"] not in ("GET", "HEAD"):
+            if (
+                exc.status_code != 404
+                or scope["method"] not in ("GET", "HEAD")
+                or _is_build_asset(path)
+            ):
                 raise
-            return await super().get_response("index.html", scope)
-        if response.status_code == 404:
-            return await super().get_response("index.html", scope)
+            response = await super().get_response("index.html", scope)
+        if response.status_code == 404 and not _is_build_asset(path):
+            response = await super().get_response("index.html", scope)
+        if not _is_build_asset(path):
+            # The app shell names the current build's hashed assets; a cached
+            # copy after an upgrade asks for files that no longer exist.
+            response.headers["Cache-Control"] = "no-cache"
         return response
+
+
+def _is_build_asset(path: str) -> bool:
+    """A hashed file from the viewer build. A missing one must stay a 404: a
+    tab opened before an upgrade asks for the old build's files, and getting
+    index.html back (as HTML, status 200) breaks the page with "Failed to fetch
+    dynamically imported module" instead of letting it reload."""
+    return path.replace("\\", "/").startswith("assets/")
 
 
 def _mount_viewer(app: FastAPI) -> None:
