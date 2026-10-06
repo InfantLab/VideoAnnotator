@@ -101,16 +101,18 @@ data stays apart from derived results, as most data-management plans require.
   BabyJokes wave 2 (2026-10-06)/
     run.json                       what ran: pipelines, settings, versions, videos
     4JDccE.joke5.rep3.take1/
-      face_detections.json
-      person_tracking.json
-      speech_recognition.vtt
-      speaker_diarization.rttm
+      4JDccE.joke5.rep3.take1_face_detections.json
+      4JDccE.joke5.rep3.take1_person_tracking.json
+      4JDccE.joke5.rep3.take1_speech_recognition.vtt
       ...
     6c6MZQ.joke1.rep1.take1/
       ...
-  BabyJokes wave 2 (rerun, 2026-10-09)/
+  BabyJokes wave 2 (rerun) (2026-10-09)/
     ...
 ```
+
+Result files keep the names they have today (`<video>_<output>`), so scripts that already read
+them keep working.
 
 The viewer says where this is. The run's page and each job page show the results folder's
 location, and offer to open it on this computer and to download the whole run's results.

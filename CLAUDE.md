@@ -55,8 +55,10 @@ against it.
 
 ## Current Plan
 <!-- SPECKIT START -->
-`specs/017-output-provenance/plan.md`: every output records what made it (pipeline, version,
-model revisions, settings, determinism); the viewer labels each overlay with its source.
+`specs/022-videos-read-in-place/plan.md`: on a laptop install, videos are read where they are
+("My folders", no copies) and results go to one visible folder (`~/VideoAnnotator/<run>/<video>/`,
+via each job's `output_dir`, plus `run.json`); Docker publishes on loopback with
+`VIDEOANNOTATOR_PUBLISHED_LOCALLY`. Next spec: `specs/023-viewer-overhaul` (placeholder).
 <!-- SPECKIT END -->
 
 ## Recent Changes
