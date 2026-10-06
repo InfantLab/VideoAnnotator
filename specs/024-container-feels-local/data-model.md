@@ -1,7 +1,22 @@
 # Data Model: A Container That Feels Local
 
-Nothing new in the database. The new state lives on the researcher's computer, in the launcher's
-settings; the server learns it from environment variables at each start.
+No new tables. The new state lives on the researcher's computer, in the launcher's settings; the
+server learns it from environment variables at each start.
+
+## What persists where (research.md R7)
+
+| Kind | Store | Survives app update | Survives share change | Reset by |
+|---|---|---|---|---|
+| App | image `ghcr.io/infantlab/videoannotator:<version>` | replaced | kept | `update` |
+| Add-ons (installed pipeline groups) | completed `extras_install_jobs` rows + `videoannotator-cache` volume | restored | restored | removing the database or cache volume |
+| Model weights | `videoannotator-models` volume | yes | yes | removing that volume |
+| Activity and settings | `videoannotator-database`, `videoannotator-storage` volumes | yes | yes | removing those volumes |
+| Shared folders, results | host disk; launcher's `start.conf` | yes | as changed | the researcher |
+
+**Installed groups**: a group is installed when it has an `extras_install_jobs` row with status
+`completed` (spec 005). At server start, each such group whose packages aren't importable is
+reinstalled in the background (state `restoring` on the readiness card). Jobs needing it stay
+pending until it is ready.
 
 ## Start-up settings (host file, `start.conf`; research.md R13)
 
@@ -10,7 +25,7 @@ Plain `key=value` lines, one setting per line; `share` repeats. Mode 600 on Linu
 | Key | Example | Meaning |
 |---|---|---|
 | `engine` | `podman` | Engine used last; chosen first when both are running |
-| `image` | `ghcr.io/infantlab/videoannotator:1.6.0-all` | Image this launcher runs (pinned to its version) |
+| `image` | `ghcr.io/infantlab/videoannotator:1.6.0` | Image this launcher runs (pinned to its version) |
 | `results` | `/home/ada/VideoAnnotator` | Results folder on the host (writable) |
 | `share` | `/home/ada/Studies` | One per shared folder, as the host path; read-only |
 | `key` | `va_…` | Admin API key the launcher created (R14) |

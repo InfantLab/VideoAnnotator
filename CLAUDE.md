@@ -57,9 +57,11 @@ against it.
 <!-- SPECKIT START -->
 `specs/024-container-feels-local/plan.md`: researchers start VideoAnnotator with `launcher/
 videoannotator-start` (sh, plus a PowerShell twin), which finds Docker or Podman, shares chosen
-folders read-only at their real paths (remembered in a host `start.conf`), runs the GHCR `-all`
-image on 127.0.0.1 and opens the viewer connected; inside a container the server never lists its
-own filesystem. Spec 022 is done. After 024: `specs/023-viewer-overhaul` (needs research first).
+folders read-only at their real paths (remembered in a host `start.conf`), runs the slim GHCR
+image on 127.0.0.1 and opens the viewer connected. App, installed pipelines (restored after
+updates and restarts), model weights, activity and the researcher's files each persist on their
+own. Inside a container the server never lists its own filesystem. After 024:
+`specs/023-viewer-overhaul` (needs research first).
 <!-- SPECKIT END -->
 
 ## Recent Changes

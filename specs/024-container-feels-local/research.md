@@ -126,38 +126,60 @@ VideoAnnotator writes.
 **Alternatives considered**:
 - *The linuxserver.io `PUID/PGID` entrypoint* (start as root, chown `/app`, drop privileges):
   the standard pattern, but it means chowning a multi-gigabyte Python environment on first start
-  and on every update, and it fights the runtime extras installs of spec 005.
+  and on every update, and runtime extras installs (R7) would need the same treatment.
 - *`--userns=keep-id`*: see above.
 
 **Known gap**: on Linux Docker, files of a job still running are root-owned until the job ends.
 They are readable meanwhile; deleting them needs the job to finish first.
 
-## R7. The image the launcher runs
+## R7. Five things, each persistent and updatable on its own
 
-**Decision**:
-- **Variant**: the launcher runs the **every-pipeline image** (`EXTRAS=all`).
-- **Registry**: published to **GHCR** as `ghcr.io/infantlab/videoannotator`, with tags
-  `<version>-all` and `latest-all` (plus the slim `<version>` and `latest` for labs). It's built
-  in CI with `GITHUB_TOKEN`, and is a public, OCI-compliant multi-arch-ready image (amd64 now;
-  arm64 later, see Assumptions).
-- **Versions**: the launcher pins the image to its own version, so a given launcher and image
-  match. `videoannotator-start --update` moves both forward.
+**Decision**: VideoAnnotator is treated like any installed app. Five kinds of thing each live in
+their own place, so each can be updated, reset or kept independently:
 
-**Rationale**:
-- Pipelines installed from the viewer at runtime go into the image's own environment
-  (`api/extras_install.py`: `uv pip install --python sys.executable`). They are lost whenever
-  the container is recreated, and adding or removing a share recreates it (mounts are fixed at
-  creation). With every pipeline in the image there is nothing to lose (FR-021).
-- The image is large (GBs). It downloads once, and the spec excludes downloads from SC-001's time.
-- GHCR needs no extra secrets and has no anonymous pull limits for public images, unlike the
-  Docker Hub job, whose secrets may be unset and which publishes only from
-  `master`/`main`/`develop`.
+| Like any app | In VideoAnnotator | Where it lives | Changes when |
+|---|---|---|---|
+| The app | the **slim** image | `ghcr.io/infantlab/videoannotator:<version>` | the researcher updates (`videoannotator-start update`) |
+| Add-ons | pipeline groups they installed (spec 005) | remembered in the database (completed `extras_install_jobs`); downloads cached in the `videoannotator-cache` volume | they install one |
+| Big downloads | model weights | `videoannotator-models` volume (unchanged) | a pipeline first needs them |
+| Activity and settings | jobs, keys, datasets, presets, prompts | `videoannotator-database` and `videoannotator-storage` volumes (unchanged) | they use it |
+| Their files | shared folders (read-only), results folder | their own disk | they share a folder, or a run finishes |
+
+**Add-ons survive the app being replaced.**
+- **The problem**: pipelines installed from the viewer go into the container's own Python
+  environment (`api/extras_install.py`), which is lost whenever the container is recreated: on
+  every update, and on every share change, since mounts are fixed at creation. Compose has the
+  same latent problem whenever it recreates its container.
+- **Remembering**: a group counts as installed when it has a completed install record in the
+  database. No new table.
+- **Restoring**: at server start, each remembered group whose packages aren't importable is
+  reinstalled in the background through the existing installer. The pipeline card shows
+  "Restoring…", the same progress display as installing.
+- **Caching**: `UV_CACHE_DIR=/app/cache/uv` points at the `videoannotator-cache` volume. A
+  restore copies from the cache rather than downloading, about a minute for the largest group;
+  after an update, only changed packages download.
+- **Waiting jobs**: jobs that need a group being restored stay queued until it is ready, not
+  failed.
+- **Versions**: because restore reinstalls against the *current* app, an update never leaves add-ons
+  built for the old one.
+
+**The app image**: published to **GHCR**, slim, tags `<version>` and `latest`, built in CI with
+`GITHUB_TOKEN`; OCI-compliant, `linux/amd64` (arm64 later). The launcher pins the image to its own
+version. Docker Hub stays a mirror if its secrets exist. An every-pipeline image (`EXTRAS=all`)
+remains buildable for labs that want one, but is not what researchers get.
+
+**Rationale**: researchers already think of software this way: install the app once, update it,
+download big model files, keep an internal record of activity and settings, and do each
+independently with as much persistence as possible. Mapping each to its own place delivers that.
+It keeps VideoAnnotator modular (constitution IV): only what a researcher uses is downloaded.
 
 **Alternatives considered**:
-- *Slim image plus a volume for runtime-installed extras*: a smaller download, but an extras
-  volume built against one image version breaks silently on update. Revisit with the plugin
-  packaging of v1.7.
-- *Keep Docker Hub*: kept as a mirror if its secrets exist. Not the launcher's source.
+- *An every-pipeline image* (the first draft of this decision): survives recreation by having
+  nothing to install, but downloads every pipeline whether used or not, against the project's move
+  away from a monolithic image.
+- *The whole Python environment on a volume*: survives recreation, but after an update the volume
+  still holds the old app's environment, and add-ons built for the old core break silently.
+- *Never recreating the container*: impossible, since adding a share needs new mounts.
 
 ## R8. Inside a container, no shared folder means no folders
 

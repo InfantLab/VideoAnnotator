@@ -12,7 +12,7 @@ The same behaviour from `videoannotator-start` (POSIX `sh`; Linux, macOS) and
 | `videoannotator-start unshare [PATH]` | Stop sharing (list to choose from if no PATH), then restart |
 | `videoannotator-start list` | Print shared folders, results folder, engine, image |
 | `videoannotator-start stop` | Stop VideoAnnotator |
-| `videoannotator-start update` | Pull the image matching a newer launcher; restart |
+| `videoannotator-start update` | Update the app only: pull the image matching a newer launcher, restart. Installed pipelines are restored; weights, jobs and settings are untouched |
 | `videoannotator-start logs` | Show the server's recent log |
 
 Options for scripted and CI use: `--share PATH` (repeatable), `--results PATH`, `--engine
@@ -32,7 +32,7 @@ Results go to:
   /home/ada/VideoAnnotator
 Share this folder? [Y/n]
 
-Downloading VideoAnnotator (first time only, about 9 GB)...
+Downloading VideoAnnotator (first time only, about 1 GB)...
 Starting... ready.
 VideoAnnotator can read: /home/ada/Studies. Results: /home/ada/VideoAnnotator.
 Opening http://127.0.0.1:18011/viewer in your browser.
@@ -49,6 +49,7 @@ podman run -d --name videoannotator \
   -v videoannotator-models:/app/models \
   -v videoannotator-database:/app/database \
   -v videoannotator-storage:/app/storage \
+  -v videoannotator-cache:/app/cache \
   -v /home/ada/Studies:/home/ada/Studies:ro \
   -v /home/ada/VideoAnnotator:/home/ada/VideoAnnotator \
   -v /home/ada/.config/videoannotator/requests:/app/launcher/requests \
@@ -57,13 +58,13 @@ podman run -d --name videoannotator \
   -e VIDEOANNOTATOR_HOST_PATHS='/home/ada/Studies=/home/ada/Studies;/home/ada/VideoAnnotator=/home/ada/VideoAnnotator' \
   -e VIDEOANNOTATOR_PUBLISHED_LOCALLY=1 \
   -e VIDEOANNOTATOR_LAUNCHER=1 \
-  ghcr.io/infantlab/videoannotator:1.6.0-all
+  ghcr.io/infantlab/videoannotator:1.6.0
 ```
 
 Docker on Linux adds `-e VIDEOANNOTATOR_RESULTS_OWNER=<uid>:<gid>`; GPU flags per research.md R15.
 Windows maps `C:\Users\ada\Studies` to `/c/Users/ada/Studies` with the host path in `HOST_PATHS`.
-Named volumes are the same as `docker-compose.yml`'s, so a compose install's jobs and models carry
-over (FR-024).
+Named volumes are the same as `docker-compose.yml`'s (plus the new cache volume, which compose
+gains too), so a compose install's jobs, models and installed pipelines carry over (FR-024).
 
 ## Messages (each one line, plus the next step)
 

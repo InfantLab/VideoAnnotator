@@ -23,8 +23,12 @@ drive or folder a second one (`D:\Pilot`).
 ## Story 2: again, with no questions
 
 1. Close everything, start VideoAnnotator again: no question; it says which folder it can read.
-2. Run `videoannotator-start update` (or install a newer launcher): same folders, jobs and results.
-3. Rename `D:\Pilot` after sharing it (Story 3), start again: it says it couldn't find it and starts.
+2. Install a pipeline group from the viewer (e.g. Person Tracking). Then `videoannotator-start share`
+   a second folder (this recreates the container): the card shows "Restoring…" briefly, then Person
+   Tracking is ready again, without downloading it again. A job submitted meanwhile waits, then runs.
+3. Run `videoannotator-start update` (or install a newer launcher): same folders, jobs, results,
+   model weights and installed pipelines (restored for the new version).
+4. Rename `D:\Pilot` after sharing it (Story 3), start again: it says it couldn't find it and starts.
 
 ## Story 3: share another folder, stop sharing one
 
