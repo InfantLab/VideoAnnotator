@@ -2,7 +2,113 @@
 
 > 📖 **Navigation**: [Getting Started](../usage/GETTING_STARTED.md) | [Demo Commands](../usage/demo_commands.md) | [Pipeline Specs](../usage/pipeline_specs.md) | [Main Documentation](../README.md)
 
-VideoAnnotator is a modern video analysis toolkit that uses AI models for comprehensive behavioral annotation. This guide covers installation using our modern **uv-based workflow** for fast, reliable dependency management.
+VideoAnnotator is a modern video analysis toolkit that uses AI models for comprehensive behavioral annotation.
+
+There are three ways to run it:
+
+- **[Start VideoAnnotator](#start-videoannotator-researchers)**: for researchers on their own
+  computer. Install Docker Desktop or Podman Desktop and the start-up program; it asks which folder
+  your videos are in and opens VideoAnnotator in your browser. No Python, no terminal commands
+  after the first.
+- **[Docker Compose](#docker-installation-alternative)**: for labs and servers.
+- **[Install with uv](#prerequisites)**: for developers, and for anyone who wants VideoAnnotator in
+  their own Python environment.
+
+## Start VideoAnnotator (researchers)
+
+### 1. Install Docker Desktop or Podman Desktop
+
+Either one; VideoAnnotator runs inside it. If you have one already, skip this step.
+
+- **Docker Desktop**: [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/)
+  (Windows, macOS, Linux). On Linux, Docker Engine works too.
+- **Podman Desktop**: [podman-desktop.io](https://podman-desktop.io/) (Windows, macOS, Linux). Free
+  for any use, including at large organisations. On Linux, plain `podman` works too.
+
+Start it once, and on Windows and macOS let it finish setting up.
+
+### 2. Install the start-up program
+
+Copy one line into a terminal (Windows: PowerShell).
+
+```bash
+# Linux and macOS
+curl -LsSf https://github.com/InfantLab/VideoAnnotator/releases/latest/download/install.sh | sh
+```
+
+```powershell
+# Windows
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/InfantLab/VideoAnnotator/releases/latest/download/install.ps1 | iex"
+```
+
+This adds a **Start VideoAnnotator** shortcut (desktop on Windows and macOS, applications menu on
+Linux) and the command `videoannotator-start`. Nothing else is installed on your computer.
+
+### 3. Start it
+
+Double-click **Start VideoAnnotator** (or run `videoannotator-start`). The first time it asks
+**which folder your videos are in**, with a folder picker, then confirms in plain words:
+
+```
+VideoAnnotator will be able to read, but never change:
+  /home/ada/Studies   (and everything inside it)
+Results go to:
+  /home/ada/VideoAnnotator
+Share this folder? [Y/n]
+```
+
+It then downloads VideoAnnotator (about 1 GB, first time only) and opens it in your browser, ready
+to use. Next time it asks nothing: it starts with the same folders and opens the browser.
+
+**What VideoAnnotator can access**, in one sentence for an ethics application: *VideoAnnotator
+can read only the folders I chose to share with it, without changing them, and writes its results
+only to its own results folder; it runs entirely on my computer and is reachable from this
+computer only.*
+
+### Sharing more folders, or fewer
+
+```bash
+videoannotator-start share            # share another folder (a picker opens), then restart
+videoannotator-start share D:\Pilot   # or name it
+videoannotator-start unshare          # stop sharing one (choose from a list)
+videoannotator-start list             # what is shared, where results go
+videoannotator-start stop             # stop VideoAnnotator
+videoannotator-start update           # the newest version; folders, results, models and
+                                      # installed pipelines are kept
+videoannotator-start logs             # VideoAnnotator's recent log, for a bug report
+```
+
+Settings in the viewer lists the shared folders too, with **Stop sharing** (it takes effect the next
+time VideoAnnotator starts). If videos are being processed when a change needs a restart, it asks
+whether to wait for them.
+
+Shared folders are read-only, at their own paths: job pages, saved datasets and each run's
+`run.json` name your videos as your computer does. A folder that is missing when VideoAnnotator
+starts (an unplugged drive) is skipped with a note and comes back when it is there again. Sharing
+your whole home folder, a whole drive or a system folder asks first, and defaults to No.
+
+Pipelines you install from the viewer stay installed through updates and restarts: VideoAnnotator
+restores them by itself (the pipeline card says **Restoring...** for a minute), and videos that
+need one wait for it.
+
+### Using the GPU
+
+The start-up program uses an NVIDIA GPU when the engine can, and otherwise runs on the CPU and says
+how to enable it:
+
+| Engine | What it needs |
+| --- | --- |
+| Docker Desktop (Windows) | A current NVIDIA driver; WSL 2 (Docker Desktop's default) |
+| Docker Engine (Linux) | The [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), configured for Docker (`nvidia-ctk runtime configure --runtime=docker`) |
+| Podman (Linux) | The NVIDIA Container Toolkit's CDI spec: `sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml` |
+| Podman Desktop (Windows) | The same CDI spec, inside Podman's machine (`podman machine ssh`) |
+| macOS | No GPU in containers: VideoAnnotator runs on the CPU |
+
+**macOS** is supported and community-tested (we test Windows and Linux ourselves); it runs on the
+CPU only.
+
+If something goes wrong, the start-up program says what in one line, with the next step;
+[troubleshooting](troubleshooting.md#the-start-up-program) has each message.
 
 ## Prerequisites
 
@@ -60,7 +166,7 @@ These tips address the most common macOS installation issues.
 - Viewer: available at `/viewer` on the running VideoAnnotator server, no separate setup. For
   standalone development of the viewer repo itself, use `npm run dev` (not `npm start`).
 
-## Quick Start (Recommended)
+## Install with uv (developers)
 
 ### 1. Install uv Package Manager
 
@@ -255,7 +361,11 @@ My folders shows only the folders VideoAnnotator may read:
 | Install | Default |
 | --- | --- |
 | Plain install | your home folder |
-| Docker (below) | the folder you set as `VIDEOS_DIR` |
+| Start VideoAnnotator | the folders you shared |
+| Docker Compose (below) | the folder you set as `VIDEOS_DIR` |
+
+In a container nothing else is ever listed: with no folder shared, the wizard says how to share
+one, and upload still works.
 
 To allow others (an external drive, a shared data disk), set `VIDEOANNOTATOR_INGEST_ROOTS` to the
 folders, separated by `:` (`;` on Windows), and restart the server. Only an administrator may read
@@ -349,6 +459,10 @@ uv run python api_server.py
 
 ## Docker Installation (Alternative)
 
+For labs and servers. On your own computer, [Start VideoAnnotator](#start-videoannotator-researchers)
+does all of this for you. The image it runs is `ghcr.io/infantlab/videoannotator:<version>` (slim);
+`docker compose` below builds its own.
+
 One `Dockerfile` builds the image for CPU and GPU machines. It builds **slim** by default (no
 pipeline extras, no torch), matching the core-only install above; install pipelines from the viewer,
 or build them in with `--build-arg EXTRAS=...`. torch's wheels bring their own CUDA, so the same image
@@ -390,8 +504,16 @@ VIDEOS_DIR=~/Studies RESULTS_DIR=~/VideoAnnotator docker compose --profile prod 
 
 Then open `http://127.0.0.1:18011/viewer/`. My folders shows your video folder, and run and job
 pages show the results' location as your computer sees it, with **Copy location** (Docker can't
-open folders on your computer, so there is no **Open folder**). Started without `VIDEOS_DIR`, the
-wizard says how to set it, and uploading still works.
+open folders on your computer, so there is no **Open folder**). Started without `VIDEOS_DIR`,
+nothing is shared (since v1.6.0, even if a `./videos` folder exists): the wizard says how to set
+`VIDEOS_DIR`, and uploading still works.
+
+Compose keeps its data in named volumes: `videoannotator-models` (model weights),
+`videoannotator-database` and `videoannotator-storage` (jobs, keys, settings) and
+`videoannotator-cache` (downloads, so pipelines installed from the viewer are restored quickly
+after the container is recreated). They are the same volumes the start-up program uses, so
+switching from compose to Start VideoAnnotator keeps your jobs, models and pipelines; it also
+offers to reuse `VIDEOS_DIR` and `RESULTS_DIR` when they are set.
 
 **This machine only.** The port is published on `127.0.0.1`, so nothing else on your network can
 reach the server, and `VIDEOANNOTATOR_PUBLISHED_LOCALLY=1` tells the server that every caller is
@@ -400,8 +522,11 @@ the server with a colleague), you **must** remove `VIDEOANNOTATOR_PUBLISHED_LOCA
 anyone who can reach the port can read the files in your video folder. The server warns at startup
 whenever the variable is set.
 
-**File ownership (Linux).** The container runs as root, so result files in `RESULTS_DIR` belong to
-root on the host. Adding `--user "$(id -u):$(id -g)"` to `docker run` makes them yours instead.
+**File ownership (Linux).** The container runs as root, so under Docker Engine result files in
+`RESULTS_DIR` would belong to root on the host. Set `VIDEOANNOTATOR_RESULTS_OWNER="$(id -u):$(id -g)"`
+(for `docker run`, `-e VIDEOANNOTATOR_RESULTS_OWNER=...`) and the server gives every results folder
+and file to you. Not `--user`: the image's own folders belong to root. Podman and Docker Desktop
+need neither.
 
 ### Dev Container (VS Code)
 

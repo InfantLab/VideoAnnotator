@@ -20,9 +20,13 @@ Both scripts are small named functions plus a `main`:
 - **sh**: functions are `va_*`. Sourcing the script with `VA_SOURCE_ONLY=1` defines them without
   running `main`, which is how the tests call them one at a time.
 - **PowerShell**: functions are `Verb-Va*` (`Get-VaSettingsPath`, `ConvertTo-VaContainerPath`,
-  ...). Dot-sourcing with `$env:VA_SOURCE_ONLY = '1'` defines them without running `Main`.
+  ...), named as PSScriptAnalyzer wants (singular nouns, no `New-`/`Start-` verbs without
+  ShouldProcess). Dot-sourcing with `$env:VA_SOURCE_ONLY = '1'` defines them without running
+  `Invoke-VaMain`. The file is ASCII only: Windows PowerShell 5.1 reads a file without a BOM as
+  ANSI.
 - Every call to the engine goes through one wrapper (`va_engine` / `Invoke-VaEngine`), so tests
-  replace it and record what would have run.
+  replace it and record what would have run. `Invoke-VaEngine` starts the process itself rather
+  than using PowerShell's native call, which mangles arguments holding quotes in 5.1.
 - Messages are worded exactly as in the contract's Messages table: one line, plus the next step.
   Exit codes: 0 started or already running, 1 a problem, 2 the researcher cancelled.
 
@@ -38,7 +42,7 @@ suites, so the two scripts can't drift apart. Change behaviour by changing a row
 It is an object of named groups, each a list of rows:
 
 ```json
-{ "name": "what this row shows", "os": "any|linux|macos|windows",
+{ "name": "what this row shows", "os": "any|posix|linux|macos|windows",
   "input": { ... }, "expect": { ... } }
 ```
 
@@ -48,13 +52,13 @@ It is an object of named groups, each a list of rows:
 | `normalise` | `va_normalise` / `ConvertTo-VaNormalPath` | `path`, `home` | `path` |
 | `classify` | `va_classify` / `Get-VaClassification` | `path`, `home`, `shares`, `results` | `result` (`ok`, `broad <kind>`, `refused`, `duplicate`, then flags `replaces`, `nested_results`) |
 | `settings` | `va_settings_path` / `Get-VaSettingsPath` | `home`, `xdg` (`appdata` on Windows) | `path` |
-| `run` | `va_build_run` / `New-VaRunArgs` | engine, OS, shares, missing shares, results, port, image, uid/gid, GPU flags, Docker Desktop | `args`, one per element |
+| `run` | `va_build_run` / `Get-VaRunCommand` | engine, OS, shares, missing shares, results, port, image, uid/gid, GPU flags, Docker Desktop | `args`, one per element |
 | `engine` | `va_engine_detect` / `Get-VaEngine` | each engine `running`/`stopped`/`absent`, `saved`, `option` | `engine` (and `announced`), or `message` |
-| `gpu` | `va_gpu_flags` / `Get-VaGpuFlags` | `engine`, `nvidia`, `runtimes`, `cdi` | `flags`, `note` |
+| `gpu` | `va_gpu_flags` / `Get-VaGpuFlag` | `engine`, `nvidia`, `runtimes`, `cdi` | `flags`, `note` |
 | `messages` | `va_explain_error` / `Get-VaErrorMessage` | `engine`, `stderr`, `code` | `message` (first line), `status`, optional `detail` |
 
-Rows with `"os": "windows"` run only under Pester; the others run under both (`any`) or under
-`bats` with that OS set. Whole-command behaviour (first start, restart, share, update) is tested
+`any` rows run under both suites; `posix`, `linux` and `macos` rows only under `bats` (`posix`:
+Linux and macOS paths, which the Windows script never sees); `windows` rows only under Pester. Whole-command behaviour (first start, restart, share, update) is tested
 in the `.bats` files with a pretend engine and server (`flow_setup` in `helpers.bash`).
 
 ## Running the tests
@@ -66,7 +70,7 @@ bats tests/launcher                       # needs bats and jq
 
 ```powershell
 Invoke-ScriptAnalyzer -Path launcher -Recurse -Severity Warning
-Invoke-Pester tests/launcher
+Invoke-Pester tests/launcher            # Pester 5; pwsh on Linux runs it too
 ```
 
 The end-to-end test, `tests/launcher/test_launcher_e2e.sh`, starts a real container with Docker or

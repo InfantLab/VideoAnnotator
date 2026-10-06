@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Start VideoAnnotator: a container that feels local** (spec 024). For researchers on their
+  own computer, with Docker Desktop or Podman Desktop and no Python.
+  - **`videoannotator-start`** (sh for Linux and macOS, PowerShell for Windows, with a one-line
+    installer and a "Start VideoAnnotator" shortcut) finds Docker or Podman, asks once which
+    folder the videos are in (a folder picker), confirms in plain words, and shares it read-only
+    at its real path, so job pages, datasets and `run.json` name videos as the computer does.
+    It starts VideoAnnotator on 127.0.0.1 and opens the viewer already connected. Later starts
+    ask nothing. `share`, `unshare`, `list`, `stop`, `update` and `logs`; broad shares (a home
+    folder, a whole drive) ask first; a missing share (an unplugged drive) is skipped with a
+    note; every failure is one plain line with the next step.
+  - **The slim image on GHCR**, `ghcr.io/infantlab/videoannotator:<version>`, which the
+    launcher pins to its own version. Docker Hub stays a mirror.
+  - **Installed pipelines survive updates and restarts.** Pipelines installed from the viewer
+    live in the container, which is replaced on every update and every change of shared
+    folders: completed installs are now remembered and restored at start (the card says
+    "Restoring..."), from a new `videoannotator-cache` volume so nothing downloads again.
+    Jobs that need one wait for it. Compose gets this too.
+  - **Settings lists the shared folders**, read-only, and those not found at the last start,
+    with Stop sharing (`POST /api/v1/ingest/shares/stop`), applied at the next start. A request
+    can only make sharing narrower.
+  - **Results belong to the researcher** under Docker Engine on Linux too:
+    `VIDEOANNOTATOR_RESULTS_OWNER=uid:gid` makes the server give every results folder and file
+    to that user.
+  - Windows paths are shown with backslashes (`C:\Users\...`), and jobs report their video's
+    path as the computer shows it (`video_display_path`).
+
 - **Videos are read where they are, and results go to one folder you can find** (spec 022).
   - **My folders.** On the server's own computer, the new-job wizard opens on "My folders": open
     a folder, tick videos (or Select all, with or without subfolders) and the run starts at once.
@@ -173,6 +199,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bundled configs had no effect and are gone.
 
 ### Changed
+
+- **A container never shows its own folders** (spec 024). In a container with no folder shared,
+  My folders lists nothing (it used to list the container's home, `/root`) and says how to share
+  a folder; upload still works. Plain installs keep the home-folder default.
+- **Compose shares `/videos` only when `VIDEOS_DIR` is set** (spec 024). Before, an empty
+  `./videos` was shared when it wasn't. If you kept videos in `./videos` without setting
+  `VIDEOS_DIR`, set `VIDEOS_DIR=./videos`.
+- **"Isn't shared any more", not "moved or deleted"** (spec 024): a job whose video is in a folder
+  that is no longer shared says so, at job start, on the job page, in "Run again" and in dataset
+  runs (`video_unavailable_reason` on jobs).
 
 - **A job's results download leaves the video out** (spec 022). The zip from "Download Results"
   and `GET /api/v1/jobs/{id}/artifacts` was one more copy of sensitive video each time; it now

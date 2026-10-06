@@ -1,6 +1,35 @@
 # Getting Started with VideoAnnotator
 
-This guide helps you get up and running with VideoAnnotator using Docker (recommended) or a local `uv` install.
+This guide helps you get up and running with VideoAnnotator: with the start-up program
+(recommended), with Docker Compose (labs and servers), or with a local `uv` install.
+
+## Recommended: Start VideoAnnotator
+
+With [Docker Desktop](https://www.docker.com/products/docker-desktop/) or
+[Podman Desktop](https://podman-desktop.io/) installed and started once:
+
+```bash
+# Linux and macOS: install the start-up program
+curl -LsSf https://github.com/InfantLab/VideoAnnotator/releases/latest/download/install.sh | sh
+
+# then
+videoannotator-start
+```
+
+On Windows, install it from PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/InfantLab/VideoAnnotator/releases/latest/download/install.ps1 | iex"
+```
+
+and double-click **Start VideoAnnotator** on your desktop.
+
+It asks which folder your videos are in, confirms that VideoAnnotator can read it but never change
+it, and opens the viewer in your browser, connected. Choose **New job**: My folders shows the
+folder you shared. Results go to `VideoAnnotator` in your home folder. Next time it asks nothing.
+`videoannotator-start share` shares another folder; the
+[installation guide](../installation/INSTALLATION.md#start-videoannotator-researchers) has the rest,
+and [troubleshooting](../installation/troubleshooting.md#the-start-up-program) explains each message.
 
 ## Prerequisites
 
@@ -11,9 +40,9 @@ This guide helps you get up and running with VideoAnnotator using Docker (recomm
 
 ## Quick Installation
 
-## Recommended: Run in Docker
+## Labs and servers: Docker Compose
 
-For the most reliable setup (consistent dependencies, easier GPU support), run VideoAnnotator in Docker:
+To run VideoAnnotator from a checkout with Docker Compose:
 
 ```bash
 # CPU: your videos in ~/Studies, results in ~/VideoAnnotator

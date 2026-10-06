@@ -2,7 +2,120 @@
 
 This guide helps you resolve common installation and runtime issues. Most issues can be resolved in 5-10 minutes.
 
-> **Quick Links**: [Common Issues](#common-issues) | [GPU/CUDA](#gpu-and-cuda-issues) | [Database](#database-issues) | [Network](#network-issues) | [Diagnostics](#diagnostic-commands)
+> **Quick Links**: [The start-up program](#the-start-up-program) | [Common Issues](#common-issues) | [GPU/CUDA](#gpu-and-cuda-issues) | [Database](#database-issues) | [Network](#network-issues) | [Diagnostics](#diagnostic-commands)
+
+## The start-up program
+
+`videoannotator-start` (and the **Start VideoAnnotator** shortcut) says what went wrong in one line,
+with the next step. Each message, and more about what to do:
+
+### Install Docker or Podman
+
+> VideoAnnotator needs Docker Desktop or Podman Desktop. Install one (see ...), then run this again.
+
+Neither is installed (or neither is on your `PATH`). Install
+[Docker Desktop](https://www.docker.com/products/docker-desktop/) or
+[Podman Desktop](https://podman-desktop.io/), start it once so it can finish setting up, then start
+VideoAnnotator again.
+
+### Docker isn't running
+
+> Docker Desktop isn't running. Start it, wait until it says it's running, then run this again.
+
+Open Docker Desktop and wait until its status says it is running (the whale icon stops animating).
+
+> Docker isn't running. Start it with: sudo systemctl start docker, then run this again.
+
+Linux, Docker Engine: the service is stopped. `sudo systemctl enable --now docker` also starts it at
+every boot.
+
+> You don't have permission to use Docker yet. Run: sudo usermod -aG docker $USER, log out and back in, then run this again. (Or use Podman, which needs no permission.)
+
+Linux: only members of the `docker` group may use Docker Engine. Logging out and back in is what
+makes the new group count. Podman needs no such permission.
+
+### Podman's machine
+
+> Starting Podman's virtual machine (first time takes a minute)...
+
+On Windows and macOS, Podman runs containers in a small virtual machine; the start-up program starts
+it (and creates it, the first time). Nothing to do. If it fails, open Podman Desktop and start the
+machine there.
+
+### Port in use
+
+> Something else is using port 18011. Close it, or run: videoannotator-start --port 18012
+
+Another program (perhaps another VideoAnnotator, started without the start-up program) is using the
+port. Close it, or start with `--port 18012`; the start-up program remembers the port.
+
+### Download failed
+
+> Couldn't download VideoAnnotator. Check your internet connection and run this again.
+
+The first start downloads about 1 GB from `ghcr.io`. Behind a proxy, set it in Docker Desktop
+(Settings, Resources, Proxies) or for Podman (`HTTPS_PROXY` in the machine).
+
+### Memory
+
+> VideoAnnotator ran out of memory. Give Docker/Podman more (see ...), then run this again.
+
+On Windows and macOS, containers get a share of your computer's memory. Give them at least 8 GB
+(16 GB for face and speech pipelines): Docker Desktop, Settings, Resources; Podman Desktop,
+Settings, Resources, or `podman machine set --memory 8192` with the machine stopped. On Windows with
+WSL 2, Docker Desktop's memory is set in `%UserProfile%\.wslconfig` (`[wsl2]` then `memory=8GB`).
+
+### GPU
+
+> Running without the GPU: Docker can't use it yet. To enable it, see ...
+
+You have an NVIDIA GPU, but the engine can't pass it to VideoAnnotator yet; it runs on the CPU
+meanwhile. What each engine needs is in the
+[installation guide](INSTALLATION.md#using-the-gpu). If a start with the GPU fails, the start-up
+program starts once more without it and says so.
+
+### Docker Desktop file sharing
+
+> Docker Desktop can't see /opt/data yet. Add it in Docker Desktop's Settings, Resources, File sharing (see ...), then run this again.
+
+macOS: Docker Desktop shares `/Users`, `/Volumes`, `/private` and `/tmp` by default. To share a
+folder elsewhere, add it under Settings, Resources, File sharing, then apply and restart.
+
+### Already running
+
+> VideoAnnotator is already running.
+
+Started twice: the browser opens on the one already running. Nothing to do.
+
+### Shared folders
+
+> Couldn't find E:\Data (an unplugged drive?), so it isn't shared this time.
+
+A shared folder wasn't there at start. Plug the drive in and start again; it is still remembered.
+To forget it: `videoannotator-start unshare`.
+
+> This shares everything in your home folder, including documents unrelated to your research. Share it anyway? [y/N]
+
+Sharing a very broad folder lets VideoAnnotator read much more than your videos. Choose the folder
+your videos are in instead, unless you really mean it.
+
+> That folder is inside your results folder, which VideoAnnotator can already read.
+
+Results are already readable (and writable); there's no need to share them.
+
+### Running videos and restarts
+
+> 2 videos are being processed. [W]ait for them, or [r]estart now (they'll be marked failed and can be retried)?
+
+Sharing a folder, stopping sharing one, and updating all restart VideoAnnotator. Waiting is the
+default. Videos still queued keep their place either way.
+
+### Anything else
+
+> VideoAnnotator couldn't start. Run: videoannotator-start logs
+
+The lines after it are the engine's own words. `videoannotator-start logs` shows VideoAnnotator's
+log; include both when you [report a problem](https://github.com/InfantLab/VideoAnnotator/issues).
 
 ## Common Issues
 

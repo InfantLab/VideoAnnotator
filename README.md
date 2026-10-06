@@ -48,6 +48,33 @@ VideoAnnotator itself needs about 1 GB of disk. Each pipeline adds its libraries
 allow about 12 GB if you install every one. A job running every pipeline used about 6 GB of
 memory, so 16 GB of RAM is comfortable. A GPU is optional.
 
+### Start VideoAnnotator (the easy way)
+
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or
+   [Podman Desktop](https://podman-desktop.io/), and start it once.
+2. Install the start-up program with one line:
+
+   ```bash
+   # Linux and macOS
+   curl -LsSf https://github.com/InfantLab/VideoAnnotator/releases/latest/download/install.sh | sh
+   ```
+
+   ```powershell
+   # Windows (PowerShell)
+   powershell -ExecutionPolicy Bypass -c "irm https://github.com/InfantLab/VideoAnnotator/releases/latest/download/install.ps1 | iex"
+   ```
+
+3. Double-click **Start VideoAnnotator**. It asks which folder your videos are in, shares it
+   read-only, and opens VideoAnnotator in your browser. Results go to a `VideoAnnotator` folder in
+   your home folder.
+
+No Python and no further commands; next time it just starts. Labs and servers can use
+[Docker Compose](docs/installation/INSTALLATION.md#docker-installation-alternative) instead. See the
+[installation guide](docs/installation/INSTALLATION.md#start-videoannotator-researchers) for sharing
+more folders, the GPU, and what VideoAnnotator can access.
+
+To install it in your own Python environment instead (developers, or to change the code):
+
 ### Windows
 
 In PowerShell:
@@ -66,7 +93,7 @@ uv sync
 uv run videoannotator server
 ```
 
-On Windows the pipelines run on the CPU. To use an NVIDIA GPU, run the [Docker image](docs/deployment/Docker.md) instead.
+On Windows the pipelines run on the CPU. To use an NVIDIA GPU, use Start VideoAnnotator (above) with Docker Desktop.
 
 ### macOS
 

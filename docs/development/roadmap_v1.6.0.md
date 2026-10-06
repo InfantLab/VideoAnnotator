@@ -569,6 +569,10 @@ job in the wizard from memory, although every job already stores its `selected_p
 - [ ] **A container that feels local**: a start-up program for Docker and Podman that asks which
       folder the videos are in, shares it read-only at its real path, remembers it, and never shows
       the container's own folders. Spec: `specs/024-container-feels-local/`.
+      Built 2026-10-06 (`videoannotator-start` for Linux/macOS and Windows, the slim image on GHCR,
+      installed pipelines restored after recreation, Settings' Stop sharing); open: the CI
+      end-to-end runs with Docker and Podman (first run on a push to `master`), the quickstart
+      walkthroughs on Linux and Windows, and a pilot researcher on macOS (T082-T084).
 
 **Not in this phase**: a visual redesign. Decide on one after the pilot, from what outside users
 say.

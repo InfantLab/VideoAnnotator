@@ -3,7 +3,7 @@
   "paths": [
     {
       "name": "a home folder keeps its real path",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/Studies",
         "n": 1
@@ -14,7 +14,7 @@
     },
     {
       "name": "a macOS folder keeps its real path",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/Users/ada/Movies/Study",
         "n": 1
@@ -25,7 +25,7 @@
     },
     {
       "name": "an external drive keeps its real path",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/media/ada/Drive/Study",
         "n": 1
@@ -36,7 +36,7 @@
     },
     {
       "name": "a folder under an image folder goes under /host",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/opt/data",
         "n": 1
@@ -47,7 +47,7 @@
     },
     {
       "name": "/srv goes under /host",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/srv/lab/videos",
         "n": 2
@@ -58,7 +58,7 @@
     },
     {
       "name": "/tmp goes under /host",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/tmp/videos",
         "n": 1
@@ -69,7 +69,7 @@
     },
     {
       "name": "spaces kept",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/My Studies/Day 1",
         "n": 1
@@ -80,7 +80,7 @@
     },
     {
       "name": "accents and non-Latin characters kept",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/zoë/Études/研究",
         "n": 1
@@ -91,7 +91,7 @@
     },
     {
       "name": "a colon means a numbered mount",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/Study: 2024",
         "n": 1
@@ -102,7 +102,7 @@
     },
     {
       "name": "a comma means a numbered mount",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/data/a,b",
         "n": 2
@@ -113,7 +113,7 @@
     },
     {
       "name": "an equals sign means a numbered mount",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/data/x=y",
         "n": 3
@@ -124,7 +124,7 @@
     },
     {
       "name": "a semicolon means a numbered mount",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/data/a;b",
         "n": 1
@@ -135,7 +135,7 @@
     },
     {
       "name": "results with a colon",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/Results: 2024",
         "n": "results"
@@ -203,7 +203,7 @@
   "normalise": [
     {
       "name": "a trailing separator is dropped",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/Studies/",
         "home": "/home/ada"
@@ -214,7 +214,7 @@
     },
     {
       "name": "several trailing separators",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/Studies//",
         "home": "/home/ada"
@@ -225,7 +225,7 @@
     },
     {
       "name": "the root stays the root",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/",
         "home": "/home/ada"
@@ -236,7 +236,7 @@
     },
     {
       "name": "a tilde is the home folder",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "~/Studies",
         "home": "/home/ada"
@@ -247,7 +247,7 @@
     },
     {
       "name": "doubled separators collapse",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home//ada/./Studies",
         "home": "/home/ada"
@@ -282,7 +282,7 @@
   "classify": [
     {
       "name": "an ordinary folder",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/Studies",
         "home": "/home/ada",
@@ -295,7 +295,7 @@
     },
     {
       "name": "the home folder is broad",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada",
         "home": "/home/ada",
@@ -308,7 +308,7 @@
     },
     {
       "name": "the root is broad",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/",
         "home": "/home/ada",
@@ -321,7 +321,7 @@
     },
     {
       "name": "/Volumes is broad",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/Volumes",
         "home": "/Users/ada",
@@ -334,7 +334,7 @@
     },
     {
       "name": "/media/<user> is broad",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/media/ada",
         "home": "/home/ada",
@@ -347,7 +347,7 @@
     },
     {
       "name": "a drive under /media/<user> is fine",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/media/ada/Drive",
         "home": "/home/ada",
@@ -360,7 +360,7 @@
     },
     {
       "name": "/mnt is broad",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/mnt",
         "home": "/home/ada",
@@ -373,7 +373,7 @@
     },
     {
       "name": "/Users is broad",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/Users",
         "home": "/Users/ada",
@@ -386,7 +386,7 @@
     },
     {
       "name": "/home is broad",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home",
         "home": "/home/ada",
@@ -399,7 +399,7 @@
     },
     {
       "name": "/etc is broad",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/etc",
         "home": "/home/ada",
@@ -412,7 +412,7 @@
     },
     {
       "name": "/usr is broad",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/usr",
         "home": "/home/ada",
@@ -425,7 +425,7 @@
     },
     {
       "name": "the results folder itself is refused",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/VideoAnnotator",
         "home": "/home/ada",
@@ -438,7 +438,7 @@
     },
     {
       "name": "a folder inside the results folder is refused",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/VideoAnnotator/Run 1",
         "home": "/home/ada",
@@ -451,7 +451,7 @@
     },
     {
       "name": "a share holding the results folder is allowed",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/Lab",
         "home": "/home/ada",
@@ -464,7 +464,7 @@
     },
     {
       "name": "a folder already shared",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/Studies",
         "home": "/home/ada",
@@ -479,7 +479,7 @@
     },
     {
       "name": "a folder inside a share",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/Studies/Day 1",
         "home": "/home/ada",
@@ -494,7 +494,7 @@
     },
     {
       "name": "a folder holding shares replaces them",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/Lab",
         "home": "/home/ada",
@@ -510,7 +510,7 @@
     },
     {
       "name": "a sibling with a shared prefix is not inside",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada/Studies2",
         "home": "/home/ada",
@@ -525,7 +525,7 @@
     },
     {
       "name": "the home folder holding a share is broad and replaces",
-      "os": "any",
+      "os": "posix",
       "input": {
         "path": "/home/ada",
         "home": "/home/ada",
@@ -1136,6 +1136,132 @@
           "ghcr.io/infantlab/videoannotator:1.6.0"
         ]
       }
+    },
+    {
+      "name": "Windows, Docker Desktop, two drives, one missing, GPU",
+      "os": "windows",
+      "input": {
+        "engine": "docker",
+        "home": "C:\\Users\\ada",
+        "appdata": "C:\\Users\\ada\\AppData\\Roaming",
+        "shares": [
+          "C:\\Users\\ada\\Studies",
+          "E:\\Lab data"
+        ],
+        "missing": [
+          "F:\\Unplugged"
+        ],
+        "results": "C:\\Users\\ada\\VideoAnnotator",
+        "port": "18011",
+        "image": "ghcr.io/infantlab/videoannotator:1.6.0",
+        "uid": "",
+        "gid": "",
+        "gpu": "--gpus all",
+        "desktop": "yes"
+      },
+      "expect": {
+        "args": [
+          "run",
+          "-d",
+          "--name",
+          "videoannotator",
+          "-p",
+          "127.0.0.1:18011:18011",
+          "--gpus",
+          "all",
+          "-v",
+          "videoannotator-models:/app/models",
+          "-v",
+          "videoannotator-database:/app/database",
+          "-v",
+          "videoannotator-storage:/app/storage",
+          "-v",
+          "videoannotator-cache:/app/cache",
+          "--mount",
+          "type=bind,source=C:\\Users\\ada\\Studies,target=/c/Users/ada/Studies,readonly",
+          "--mount",
+          "type=bind,source=E:\\Lab data,target=/e/Lab data,readonly",
+          "--mount",
+          "type=bind,source=C:\\Users\\ada\\VideoAnnotator,target=/c/Users/ada/VideoAnnotator",
+          "--mount",
+          "type=bind,source=C:\\Users\\ada\\AppData\\Roaming\\VideoAnnotator\\requests,target=/app/launcher/requests",
+          "-e",
+          "VIDEOANNOTATOR_INGEST_ROOTS=/c/Users/ada/Studies:/e/Lab data",
+          "-e",
+          "VIDEOANNOTATOR_MISSING_SHARES=F:\\Unplugged",
+          "-e",
+          "VIDEOANNOTATOR_RESULTS_DIR=/c/Users/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_HOST_PATHS=/c/Users/ada/Studies=C:\\Users\\ada\\Studies;/e/Lab data=E:\\Lab data;/c/Users/ada/VideoAnnotator=C:\\Users\\ada\\VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
+          "-e",
+          "VIDEOANNOTATOR_LAUNCHER=1",
+          "ghcr.io/infantlab/videoannotator:1.6.0"
+        ]
+      }
+    },
+    {
+      "name": "Windows, Podman: no owner either",
+      "os": "windows",
+      "input": {
+        "engine": "podman",
+        "home": "C:\\Users\\ada",
+        "appdata": "C:\\Users\\ada\\AppData\\Roaming",
+        "shares": [
+          "C:\\Users\\ada\\Studies",
+          "E:\\Lab data"
+        ],
+        "missing": [
+          "F:\\Unplugged"
+        ],
+        "results": "C:\\Users\\ada\\VideoAnnotator",
+        "port": "18011",
+        "image": "ghcr.io/infantlab/videoannotator:1.6.0",
+        "uid": "",
+        "gid": "",
+        "gpu": "",
+        "desktop": "no"
+      },
+      "expect": {
+        "args": [
+          "run",
+          "-d",
+          "--name",
+          "videoannotator",
+          "-p",
+          "127.0.0.1:18011:18011",
+          "-v",
+          "videoannotator-models:/app/models",
+          "-v",
+          "videoannotator-database:/app/database",
+          "-v",
+          "videoannotator-storage:/app/storage",
+          "-v",
+          "videoannotator-cache:/app/cache",
+          "--mount",
+          "type=bind,source=C:\\Users\\ada\\Studies,target=/c/Users/ada/Studies,readonly",
+          "--mount",
+          "type=bind,source=E:\\Lab data,target=/e/Lab data,readonly",
+          "--mount",
+          "type=bind,source=C:\\Users\\ada\\VideoAnnotator,target=/c/Users/ada/VideoAnnotator",
+          "--mount",
+          "type=bind,source=C:\\Users\\ada\\AppData\\Roaming\\VideoAnnotator\\requests,target=/app/launcher/requests",
+          "-e",
+          "VIDEOANNOTATOR_INGEST_ROOTS=/c/Users/ada/Studies:/e/Lab data",
+          "-e",
+          "VIDEOANNOTATOR_MISSING_SHARES=F:\\Unplugged",
+          "-e",
+          "VIDEOANNOTATOR_RESULTS_DIR=/c/Users/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_HOST_PATHS=/c/Users/ada/Studies=C:\\Users\\ada\\Studies;/e/Lab data=E:\\Lab data;/c/Users/ada/VideoAnnotator=C:\\Users\\ada\\VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
+          "-e",
+          "VIDEOANNOTATOR_LAUNCHER=1",
+          "ghcr.io/infantlab/videoannotator:1.6.0"
+        ]
+      }
     }
   ],
   "engine": [
@@ -1241,6 +1367,20 @@
         "saved": "",
         "option": "",
         "stderr": "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?"
+      },
+      "expect": {
+        "message": "Docker Desktop isn't running. Start it, wait until it says it's running, then run this again."
+      }
+    },
+    {
+      "name": "Docker Desktop installed but stopped on Windows",
+      "os": "windows",
+      "input": {
+        "docker": "stopped",
+        "podman": "absent",
+        "saved": "",
+        "option": "",
+        "stderr": "error during connect: this error may indicate that the docker daemon is not running"
       },
       "expect": {
         "message": "Docker Desktop isn't running. Start it, wait until it says it's running, then run this again."
