@@ -361,3 +361,76 @@ class TestScan:
             client.get("/api/v1/ingest/scan", params={"path": str(corpus)}).status_code
             == 403
         )
+
+
+class TestChosenFiles:
+    """Spec 022: tick some videos in a folder and run exactly those."""
+
+    def test_only_the_chosen_videos_become_jobs(self, corpus):
+        body = _ingest(
+            corpus,
+            selected_pipelines=["stub_pipeline"],
+            files=["dyad_01.mp4", "session_two/dyad_13.mp4", "dyad_05.mp4"],
+        ).json()
+        storage = get_storage_backend()
+        names = sorted(
+            storage.load_job_metadata(job_id).video_path.name
+            for job_id in body["created"]
+        )
+        assert names == ["dyad_01.mp4", "dyad_05.mp4", "dyad_13.mp4"]
+        assert body["skipped"] == []
+
+    def test_recursive_is_ignored_when_files_are_given(self, corpus):
+        body = _ingest(
+            corpus,
+            selected_pipelines=["stub_pipeline"],
+            files=["dyad_02.mp4"],
+            recursive=True,
+        ).json()
+        assert body["total"] == 1
+
+    def test_a_file_outside_the_allowed_folders_is_skipped(self, corpus, tmp_path):
+        outside = tmp_path / "elsewhere"
+        outside.mkdir()
+        (outside / "secret.mp4").write_bytes(b"v")
+        (corpus / "link.mp4").symlink_to(outside / "secret.mp4")
+        body = _ingest(
+            corpus,
+            selected_pipelines=["stub_pipeline"],
+            files=["dyad_01.mp4", "../../elsewhere/secret.mp4", "link.mp4"],
+        ).json()
+        assert body["total"] == 1
+        skipped = {s["filename"]: s["reason"] for s in body["skipped"]}
+        assert set(skipped) == {"../../elsewhere/secret.mp4", "link.mp4"}
+        assert all("outside" in reason for reason in skipped.values())
+
+    def test_a_video_chosen_twice_runs_once(self, corpus):
+        body = _ingest(
+            corpus,
+            selected_pipelines=["stub_pipeline"],
+            files=["dyad_03.mp4", "session_two/../dyad_03.mp4", "dyad_03.mp4"],
+        ).json()
+        assert body["total"] == 1
+
+    def test_non_videos_are_reported(self, corpus):
+        response = _ingest(
+            corpus, selected_pipelines=["stub_pipeline"], files=["notes.txt"]
+        )
+        assert response.status_code == 422
+        assert "notes.txt: not a video file" in response.json()["error"]["hint"]
+
+
+class TestLargeFolders:
+    def test_scan_lists_a_thousand_files_in_under_a_second(self, tmp_path, monkeypatch):
+        import time
+
+        folder = tmp_path / "big"
+        folder.mkdir()
+        for i in range(1000):
+            (folder / f"v{i:04d}.mp4").write_bytes(b"")
+        monkeypatch.setattr(ingest_module, "INGEST_ROOTS", str(tmp_path))
+        start = time.monotonic()
+        response = client.get("/api/v1/ingest/scan", params={"path": str(folder)})
+        assert response.status_code == 200
+        assert len(response.json()["videos"]) == 1000
+        assert time.monotonic() - start < 1

@@ -19,6 +19,8 @@ import logging
 import os
 import re
 import shutil
+import subprocess
+import sys
 import tempfile
 import threading
 from collections.abc import Callable
@@ -411,3 +413,44 @@ def _write_record(folder: Path, record: dict[str, Any]) -> None:
         except BaseException:
             Path(temp).unlink(missing_ok=True)
             raise
+
+
+def in_container() -> bool:
+    """Whether the server runs in a container (Docker or Podman)."""
+    return Path("/.dockerenv").exists() or Path("/run/.containerenv").exists()
+
+
+def folder_opener() -> list[str] | None:
+    """The command that opens a folder in this machine's file manager, if any.
+
+    None where nothing could show it: in a container, or on a Linux machine
+    with no desktop session (a headless server).
+    """
+    if in_container():
+        return None
+    if sys.platform == "win32":
+        return ["explorer"]
+    if sys.platform == "darwin":
+        return ["open"]
+    if (
+        os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
+    ) and shutil.which("xdg-open"):
+        return ["xdg-open"]
+    return None
+
+
+def open_folder(path: Path) -> None:
+    """Open `path` in the file manager. Raises OSError when that can't happen."""
+    opener = folder_opener()
+    if opener is None:
+        raise OSError("no desktop to open folders on")
+    if sys.platform == "win32":
+        os.startfile(path)  # type: ignore[attr-defined]  # Windows only
+        return
+    subprocess.Popen(
+        [*opener, str(path)],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )

@@ -26,6 +26,7 @@ import type {
   BatchSummary,
 } from '@/types/batches';
 import type {
+  IngestAccess,
   IngestBrowseResponse,
   IngestRequest,
   IngestResponse,
@@ -780,6 +781,11 @@ class APIClient {
   // server's disk, instead of uploading a corpus one file at a time.
   // Admin-only and local-callers-only server-side; see src/types/ingest.ts.
   // ==========================================================================
+
+  /** What this browser may do with videos on the server's machine (spec 022). */
+  async getIngestAccess(): Promise<IngestAccess> {
+    return this.request('/api/v1/ingest/access');
+  }
 
   /** List server-side folders. Omit `path` to list the allowed roots. */
   async browseServerFolders(path?: string): Promise<IngestBrowseResponse> {

@@ -761,6 +761,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ingest/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What this caller may do with videos on the server's machine
+         * @description Tells a client, for the caller making the request, whether it counts as being
+         *     on the server's own machine and so may choose videos where they are (spec
+         *     022): the viewer offers "My folders" only when `can_read_in_place` is true,
+         *     and otherwise explains `reason` and offers upload. Decided by the server from
+         *     how the request arrived; the client can't claim it.
+         *
+         *     Any authenticated caller may ask.
+         */
+        get: operations["access_api_v1_ingest_access_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ingest/scan": {
         parameters: {
             query?: never;
@@ -2325,6 +2351,32 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** IngestAccessResponse */
+        IngestAccessResponse: {
+            /**
+             * Same Machine
+             * @description The caller is on the server's own machine (loopback, or VIDEOANNOTATOR_PUBLISHED_LOCALLY under Docker)
+             */
+            same_machine: boolean;
+            /**
+             * Can Read In Place
+             * @description The caller may choose videos on this machine (My folders)
+             */
+            can_read_in_place: boolean;
+            /**
+             * Reason
+             * @description Why `can_read_in_place` is false, for researchers
+             */
+            reason?: string | null;
+            /** Allowed Folders */
+            allowed_folders: components["schemas"]["FolderRef"][];
+            results_root: components["schemas"]["FolderRef"];
+            /**
+             * Can Open Folders
+             * @description `POST /api/v1/results/open` can show a folder on this machine
+             */
+            can_open_folders: boolean;
+        };
         /** IngestBrowseResponse */
         IngestBrowseResponse: {
             /**
@@ -2376,6 +2428,11 @@ export interface components {
              * @default false
              */
             recursive: boolean;
+            /**
+             * Files
+             * @description Only these videos, as paths relative to `path` (spec 022). Omit for every video in the folder; `recursive` is ignored when set.
+             */
+            files?: string[] | null;
             /** Selected Pipelines */
             selected_pipelines?: string[] | null;
             /** Config */
@@ -3711,6 +3768,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    access_api_v1_ingest_access_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestAccessResponse"];
                 };
             };
         };

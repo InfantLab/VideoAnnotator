@@ -38,6 +38,8 @@ export interface IngestBrowseResponse {
 export interface IngestRequest {
   path: string;
   recursive?: boolean;
+  /** Spec 022: only these videos, as paths relative to `path`. Omit for the whole folder. */
+  files?: string[];
   selected_pipelines?: string[];
   config?: Record<string, unknown>;
   batch_id?: string;
@@ -58,6 +60,30 @@ export interface IngestResponse {
   total: number;
   created: string[];
   skipped: IngestSkipped[];
+  /** The run's results folder (spec 022); absent on older servers. */
+  results_folder?: FolderRef | null;
+}
+
+/** A location, and the same location as the researcher's own machine shows it. */
+export interface FolderRef {
+  path: string;
+  /** Differs from `path` under Docker, where the server sees `/results/...`. */
+  display_path: string;
+}
+
+/**
+ * What this browser may do with videos on the server's machine (spec 022),
+ * from `GET /api/v1/ingest/access`. The server decides "same machine" from how
+ * the request reached it; the viewer never guesses from its own URL.
+ */
+export interface IngestAccess {
+  same_machine: boolean;
+  can_read_in_place: boolean;
+  /** Why `can_read_in_place` is false, written for researchers. */
+  reason: string | null;
+  allowed_folders: FolderRef[];
+  results_root: FolderRef;
+  can_open_folders: boolean;
 }
 
 /**

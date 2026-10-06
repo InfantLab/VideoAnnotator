@@ -44,12 +44,20 @@ from ...batch.types import BatchJob, JobStatus
 from ...config_env import INGEST_ROOTS, published_locally
 from ...database.crud import SavedDatasetCRUD
 from ...database.database import get_db
-from ...results_folder import RunFolder, folder_ref, results_root, run_name
+from ...results_folder import (
+    RunFolder,
+    display_path,
+    folder_opener,
+    folder_ref,
+    in_container,
+    results_root,
+    run_name,
+)
 from ...storage.base import StorageBackend
 from ...storage.manager import get_storage_provider
 from ..database import get_storage_backend
 from ..errors import APIError
-from ..middleware.auth import require_admin
+from ..middleware.auth import require_admin, validate_api_key
 from .jobs import FolderRef, extract_video_metadata, validate_pipeline_selection
 
 logger = logging.getLogger("videoannotator.api")
@@ -178,6 +186,96 @@ def resolve_within_roots(raw_path: str) -> Path:
         )
 
     return resolved
+
+
+# ---------------------------------------------------------------------------
+# Access
+# ---------------------------------------------------------------------------
+
+
+class IngestAccessResponse(BaseModel):
+    same_machine: bool = Field(
+        description="The caller is on the server's own machine (loopback, or "
+        "VIDEOANNOTATOR_PUBLISHED_LOCALLY under Docker)"
+    )
+    can_read_in_place: bool = Field(
+        description="The caller may choose videos on this machine (My folders)"
+    )
+    reason: str | None = Field(
+        default=None,
+        description="Why `can_read_in_place` is false, for researchers",
+    )
+    allowed_folders: list[FolderRef]
+    results_root: FolderRef
+    can_open_folders: bool = Field(
+        description="`POST /api/v1/results/open` can show a folder on this machine"
+    )
+
+
+NO_VIDEO_FOLDER_DOCKER = (
+    "No video folder is set up. Set VIDEOS_DIR to your video folder when "
+    "starting Docker (see the installation guide), then restart."
+)
+
+
+def _ref(folder: Path) -> FolderRef:
+    return FolderRef(path=str(folder), display_path=display_path(folder))
+
+
+def _usable(folder: Path) -> bool:
+    try:
+        return folder.is_dir() and any(folder.iterdir())
+    except OSError:
+        return False
+
+
+@router.get(
+    "/access",
+    response_model=IngestAccessResponse,
+    summary="What this caller may do with videos on the server's machine",
+    description="""
+Tells a client, for the caller making the request, whether it counts as being
+on the server's own machine and so may choose videos where they are (spec
+022): the viewer offers "My folders" only when `can_read_in_place` is true,
+and otherwise explains `reason` and offers upload. Decided by the server from
+how the request arrived; the client can't claim it.
+
+Any authenticated caller may ask.
+""",
+)
+async def access(
+    request: Request,
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> IngestAccessResponse:
+    """Report this caller's access to in-place reading."""
+    same_machine = is_same_machine(request)
+    folders = [root for root in allowed_roots() if _usable(root)]
+    reason = None
+    if not same_machine:
+        reason = (
+            "This server is on another computer, so its folders aren't yours. "
+            "Upload your videos instead."
+        )
+    elif not (user or {}).get("is_admin", False):
+        reason = (
+            "Only an administrator can choose videos on this computer. Use an "
+            "administrator key (see Settings), or upload the videos."
+        )
+    elif not folders:
+        reason = (
+            NO_VIDEO_FOLDER_DOCKER
+            if in_container()
+            else "None of the allowed video folders exist. Set "
+            "VIDEOANNOTATOR_INGEST_ROOTS to the folders your videos are in."
+        )
+    return IngestAccessResponse(
+        same_machine=same_machine,
+        can_read_in_place=reason is None,
+        reason=reason,
+        allowed_folders=[_ref(f) for f in folders],
+        results_root=_ref(results_root()),
+        can_open_folders=same_machine and folder_opener() is not None,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -418,6 +516,11 @@ class IngestRequest(BaseModel):
     recursive: bool = Field(
         default=False, description="Also include videos in subfolders"
     )
+    files: list[str] | None = Field(
+        default=None,
+        description="Only these videos, as paths relative to `path` (spec 022). "
+        "Omit for every video in the folder; `recursive` is ignored when set.",
+    )
     selected_pipelines: list[str] | None = None
     config: dict[str, Any] | None = None
     batch_id: str | None = Field(
@@ -446,6 +549,37 @@ class IngestResponse(BaseModel):
     results_folder: FolderRef | None = Field(
         default=None, description="The run's results folder (spec 022)"
     )
+
+
+def _chosen_videos(
+    folder: Path, files: list[str], skipped: list[IngestSkipped]
+) -> list[Path]:
+    """The chosen videos, each checked against the allowed folders on its own.
+
+    Every file is resolved before the check, so `..` or a symlink can't reach
+    outside them; a file chosen twice (or by two spellings) runs once.
+    """
+    results = results_root()
+    seen: set[Path] = set()
+    videos: list[Path] = []
+    for relative in files:
+        try:
+            video = resolve_within_roots(str(folder / relative))
+        except APIError as e:
+            skipped.append(IngestSkipped(filename=relative, reason=e.message))
+            continue
+        if not video.is_file() or video.suffix.lower() not in VIDEO_EXTENSIONS:
+            skipped.append(IngestSkipped(filename=relative, reason="not a video file"))
+            continue
+        if video.is_relative_to(results):
+            skipped.append(
+                IngestSkipped(filename=relative, reason="inside the results folder")
+            )
+            continue
+        if video not in seen:
+            seen.add(video)
+            videos.append(video)
+    return videos
 
 
 @router.post(
@@ -495,14 +629,20 @@ async def ingest_folder(
     # half-created batch behind.
     validate_pipeline_selection(body.selected_pipelines, body.config)
 
-    videos = find_videos(resolved, recursive=body.recursive)
+    skipped: list[IngestSkipped] = []
+    if body.files is not None:
+        videos = _chosen_videos(resolved, body.files, skipped)
+    else:
+        videos = find_videos(resolved, recursive=body.recursive)
     if not videos:
         raise APIError(
             status_code=422,
             code="INGEST_NO_VIDEOS",
             message=f"No videos found in {resolved}",
             hint=(
-                "Supported extensions: "
+                "; ".join(f"{s.filename}: {s.reason}" for s in skipped)
+                if skipped
+                else "Supported extensions: "
                 + ", ".join(VIDEO_EXTENSIONS)
                 + ("." if body.recursive else ". Set recursive to search subfolders.")
             ),
@@ -522,7 +662,6 @@ async def ingest_folder(
     )
 
     created: list[str] = []
-    skipped: list[IngestSkipped] = []
 
     for video_path in videos:
         try:

@@ -102,6 +102,7 @@ def current_outputs(tmp_path_factory) -> dict[str, str]:
         "DATABASE_URL": f"sqlite:///{work / 'va.db'}",
         "STORAGE_ROOT": str(work / "storage"),
         "STORAGE_BASE_DIR": str(work / "batch"),
+        "VIDEOANNOTATOR_RESULTS_DIR": str(work / "results"),
         "AUTH_REQUIRED": "false",
         # tests/conftest.py turns this off for the suite; the server must process jobs.
         "VIDEOANNOTATOR_BACKGROUND_PROCESSING": "true",
@@ -148,7 +149,8 @@ def current_outputs(tmp_path_factory) -> dict[str, str]:
         server.wait(timeout=60)
 
     outputs = {}
-    for path in (work / "storage" / job["id"]).iterdir():
+    # Spec 022: results are in the job's folder under the results root.
+    for path in Path(status["results_folder"]["path"]).iterdir():
         if path.suffix not in (".json", ".rttm", ".vtt"):
             continue
         if path.name.endswith(COMPANION_SUFFIX):

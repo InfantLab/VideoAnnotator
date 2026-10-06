@@ -267,6 +267,7 @@ export const QueryKeys = {
   configValidation: (configHash: string) => ['config', 'validation', configHash] as const,
   pipelines: ['pipelines'] as const,
   currentUser: ['auth', 'me'] as const,
+  ingestAccess: ['ingest', 'access'] as const,
 } as const;
 
 // =============================================================================

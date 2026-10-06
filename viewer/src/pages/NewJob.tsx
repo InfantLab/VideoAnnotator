@@ -44,10 +44,12 @@ import { findUrlFieldErrors } from "@/lib/pipelineUrlFields";
 import { LockedPipelineCard, ExtrasInstallStatus, ReadinessDetails } from "@/components/LockedPipelineCard";
 import { RestartRequiredBanner } from "@/components/RestartRequiredBanner";
 import type { PipelineDescriptor } from "@/types/pipelines";
+import type { IngestAccess } from "@/types/ingest";
 import { useConfigValidation } from "@/hooks/useConfigValidation";
 import { ConfigValidationPanel } from "@/components/ConfigValidationPanel";
 import { useExtrasInstall } from "@/hooks/useExtrasInstall";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useIngestAccess } from "@/hooks/useIngestAccess";
 import {
   extrasGroupOf,
   isPipelineSelectable,
@@ -149,6 +151,16 @@ const CreateNewJob = () => {
   // "Start a job" on the Datasets page opens on the Saved dataset tab.
   const startFromDataset = start?.mode === 'dataset' ? start : null;
   const [videoSource, setVideoSource] = useState<VideoSource>(startFromDataset ? 'dataset' : 'upload');
+  // Spec 022: on the server's own machine, videos are chosen in "My folders"
+  // and read where they are; upload is the fallback for another computer.
+  // Only the server can say which this is, so step 1 waits for its answer.
+  const ingestAccess = useIngestAccess();
+  const [sourceDefaulted, setSourceDefaulted] = useState(startFromDataset !== null);
+  useEffect(() => {
+    if (sourceDefaulted || ingestAccess.isLoading) return;
+    if (ingestAccess.sameMachine) setVideoSource('server');
+    setSourceDefaulted(true);
+  }, [sourceDefaulted, ingestAccess.isLoading, ingestAccess.sameMachine]);
   const [serverFolder, setServerFolder] = useState<ServerFolderSelection | null>(null);
   // The saved dataset the chosen videos are (spec 018); cleared by any manual change.
   const [fromDataset, setFromDataset] = useState<{ id: string; name: string } | null>(null);
@@ -317,6 +329,7 @@ const CreateNewJob = () => {
       const response = await apiClient.ingestFolder({
         path: serverFolder.path,
         recursive: serverFolder.recursive,
+        files: serverFolder.files,
         selected_pipelines: selectedPipelines,
         config: effectiveConfig,
         batch_name: batchName.trim() || undefined,
@@ -596,6 +609,8 @@ const CreateNewJob = () => {
             storedRun={storedRun}
             setStoredRun={setStoredRun}
             highlightDatasetId={startFromDataset?.datasetId}
+            access={ingestAccess.access}
+            accessLoading={!sourceDefaulted}
           />
           </>
         );
@@ -867,7 +882,7 @@ interface StoredRun {
   missing: string[];
 }
 
-const VideoUploadStep = ({
+export const VideoUploadStep = ({
   selectedFiles,
   setSelectedFiles,
   videoSource,
@@ -877,7 +892,9 @@ const VideoUploadStep = ({
   dataset,
   highlightDatasetId,
   storedRun,
-  setStoredRun
+  setStoredRun,
+  access,
+  accessLoading
 }: {
   selectedFiles: File[];
   setSelectedFiles: (files: File[]) => void;
@@ -889,6 +906,8 @@ const VideoUploadStep = ({
   highlightDatasetId?: string;
   storedRun: StoredRun | null;
   setStoredRun: (run: StoredRun | null) => void;
+  access: IngestAccess | null;
+  accessLoading: boolean;
 }) => {
   const [saving, setSaving] = useState(false);
   const folderInput = useRef<HTMLInputElement>(null);
@@ -963,6 +982,7 @@ const VideoUploadStep = ({
   };
 
   const hasSelection = videoSource === 'server' ? serverFolder !== null : selectedFiles.length > 0;
+  const sameMachine = access?.same_machine ?? false;
 
   const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
 
@@ -978,25 +998,48 @@ const VideoUploadStep = ({
     changedByHand();
   };
 
+  if (accessLoading) {
+    return (
+      <div className="space-y-3" aria-busy="true">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Tabs value={videoSource} onValueChange={onSourceChange}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="upload">
-            <Upload className="h-4 w-4 mr-2" />
-            Upload from this computer
-          </TabsTrigger>
-          <TabsTrigger value="server">
-            <HardDrive className="h-4 w-4 mr-2" />
-            Folder on the server
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2">
+          {sameMachine ? (
+            <TabsTrigger value="server">
+              <HardDrive className="h-4 w-4 mr-2" />
+              My folders
+            </TabsTrigger>
+          ) : (
+            <TabsTrigger value="upload">
+              <Upload className="h-4 w-4 mr-2" />
+              Upload videos
+            </TabsTrigger>
+          )}
           <TabsTrigger value="dataset">
             <Database className="h-4 w-4 mr-2" />
-            Saved dataset
+            Saved datasets
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="upload" className="mt-4">
+        <TabsContent value="upload" className="mt-4 space-y-3">
+          {sameMachine && (
+            <div className="flex items-start justify-between gap-2 text-sm">
+              <p className="text-muted-foreground">
+                Uploading copies each video to VideoAnnotator&apos;s storage. Use it for videos
+                on another computer.
+              </p>
+              <Button variant="link" size="sm" className="h-auto p-0 shrink-0" onClick={() => onSourceChange('server')}>
+                Back to My folders
+              </Button>
+            </div>
+          )}
           <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 text-center">
             <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">Upload Video Files</h3>
@@ -1025,26 +1068,28 @@ const VideoUploadStep = ({
               onChange={handleFileChange}
               className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
-            {selectedFiles.length > 8 && (
+            {selectedFiles.length > 8 && sameMachine && (
               <p className="text-xs text-muted-foreground mt-4">
                 That&apos;s {selectedFiles.length} uploads, one per video, with this tab kept
-                open. If these files are on the machine running VideoAnnotator, the
-                &ldquo;Folder on the server&rdquo; tab starts them without uploading anything.
+                open. These files are on this computer, so My folders starts them without
+                uploading or copying anything.
               </p>
             )}
           </div>
         </TabsContent>
 
         <TabsContent value="server" className="mt-4 space-y-3">
-          <div className="flex items-start gap-2">
-            <FolderOpen className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-            <p className="text-sm text-muted-foreground">
-              Pick a folder that the VideoAnnotator server can already see. Its videos are
-              read where they are — nothing is uploaded or copied, so a whole corpus starts
-              in one step.
-            </p>
-          </div>
-          <ServerFolderPicker selection={serverFolder} onSelect={selectServerFolder} />
+          {access?.can_read_in_place ? (
+            <ServerFolderPicker selection={serverFolder} onSelect={selectServerFolder} />
+          ) : (
+            <Alert>
+              <AlertTitle>Choosing videos on this computer isn&apos;t available</AlertTitle>
+              <AlertDescription>{access?.reason ?? 'The server did not say why.'}</AlertDescription>
+            </Alert>
+          )}
+          <Button variant="link" size="sm" className="h-auto p-0" onClick={() => onSourceChange('upload')}>
+            Videos on another computer? Upload them &rsaquo;
+          </Button>
         </TabsContent>
 
         <TabsContent value="dataset" className="mt-4">
@@ -1736,9 +1781,7 @@ const ReviewStep = ({
     : storedSource
     ? `${storedSource.videoCount} video${storedSource.videoCount === 1 ? '' : 's'}, already on the server`
     : serverFolder
-    ? serverFolder.recursive
-      ? 'Every video in that folder and its subfolders'
-      : `${serverFolder.videoCount} video${serverFolder.videoCount === 1 ? '' : 's'}`
+    ? `${serverFolder.videoCount} video${serverFolder.videoCount === 1 ? '' : 's'}, read where they are`
     : `${selectedFiles.length} video${selectedFiles.length === 1 ? '' : 's'}`;
   const pipelineNames = selectedPipelines
     .map((pipelineId) => pipelines.find((pipeline) => pipeline.id === pipelineId)?.name || pipelineId)
