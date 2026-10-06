@@ -58,8 +58,9 @@ against it.
 Spec 022 (`specs/022-videos-read-in-place/`) is implemented: videos read where they are ("My
 folders"), results in `~/VideoAnnotator/<run> (<date>)/<video>/` via each job's `output_dir`
 (every naming and layout rule is in `results_folder.py`), Docker on loopback with
-`VIDEOANNOTATOR_PUBLISHED_LOCALLY`. Still open: its Docker walkthrough (T072/T087, needs Docker).
-Next spec: `specs/023-viewer-overhaul` (placeholder).
+`VIDEOANNOTATOR_PUBLISHED_LOCALLY`. Next: `specs/024-container-feels-local` (start-up program,
+folders shared with the container read-only at their real paths, Docker and Podman), then
+`specs/023-viewer-overhaul` (placeholder; needs research first).
 <!-- SPECKIT END -->
 
 ## Recent Changes

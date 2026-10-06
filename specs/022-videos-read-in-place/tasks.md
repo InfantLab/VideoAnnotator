@@ -215,7 +215,7 @@ loopback only.
 - [X] T069 [US3] Treat an allowed folder that is missing or empty as unusable for `can_read_in_place` in `src/videoannotator/api/v1/ingest.py`, with the `VIDEOS_DIR` reason when running in a container (FR-012)
 - [X] T070 [US3] In `viewer/src/pages/NewJob.tsx` / `viewer/src/components/ServerFolderPicker.tsx`, when `same_machine` but not `can_read_in_place`, show `reason` with a link to the Docker docs section, and keep upload working
 - [X] T071 [US3] Update `docs/installation/INSTALLATION.md` Docker section: `VIDEOS_DIR` / `RESULTS_DIR`, the `docker run` equivalent, the loopback guarantee and the "remove `VIDEOANNOTATOR_PUBLISHED_LOCALLY` if you publish more widely" warning, no Open folder under Docker, and root-owned results with the `--user "$(id -u):$(id -g)"` option
-- [ ] T072 [US3] Run quickstart "Story 3" against a locally built image (`docker compose build videoannotator-prod`), record the outcome in the commit message; if Docker is unavailable in the dev container, say so explicitly and leave this task unchecked
+- [X] T072 [US3] *(Replaced by [spec 024](../024-container-feels-local/spec.md), 2026-10-06: researchers start containers through 024's start-up program, whose walkthrough supersedes this one. Not run here.)* Run quickstart "Story 3" against a locally built image (`docker compose build videoannotator-prod`), record the outcome in the commit message; if Docker is unavailable in the dev container, say so explicitly and leave this task unchecked
 
 **Checkpoint**: quickstart "Story 3" passes. Commit and push.
 

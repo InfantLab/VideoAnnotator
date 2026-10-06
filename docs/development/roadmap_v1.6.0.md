@@ -565,8 +565,10 @@ job in the wizard from memory, although every job already stores its `selected_p
       `~/VideoAnnotator/<run> (<date>)/<video>/` with a `run.json`, shown, opened and downloaded
       (one zip per run) from the viewer; moved videos are named and can be located again; Docker
       gets `VIDEOS_DIR`/`RESULTS_DIR` on loopback. Spec: `specs/022-videos-read-in-place/`.
-      Done 2026-10-06, except running the quickstart's Docker section, which needs a machine with
-      Docker (the dev container has none).
+      Done 2026-10-06. Its Docker walkthrough is replaced by spec 024 (below).
+- [ ] **A container that feels local**: a start-up program for Docker and Podman that asks which
+      folder the videos are in, shares it read-only at its real path, remembers it, and never shows
+      the container's own folders. Spec: `specs/024-container-feels-local/`.
 
 **Not in this phase**: a visual redesign. Decide on one after the pilot, from what outside users
 say.
