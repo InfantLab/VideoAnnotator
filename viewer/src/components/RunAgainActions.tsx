@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Bookmark, Copy, Pencil, RotateCcw } from 'lucide-react';
-import { apiClient } from '@/api/client';
+import { apiClient, type BatchRerunResult } from '@/api/client';
 import { APIError } from '@/api/handleError';
 import {
   AlertDialog,
@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { parseApiError } from '@/lib/errorHandling';
 import { wizardState, type StartSettings } from '@/lib/wizardStart';
+import { ServerFolderPicker, type ServerFolderSelection } from '@/components/ServerFolderPicker';
+import { useIngestAccess } from '@/hooks/useIngestAccess';
 
 export type RunAgainTarget =
   | { kind: 'job'; id: string; label: string; settings: StartSettings }
@@ -36,6 +38,46 @@ export const RunAgainActions = ({ target }: { target: RunAgainTarget }) => {
   const [presetName, setPresetName] = useState(target.label);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  // Spec 022: before a batch runs again, which videos aren't where they were,
+  // and (after "Locate…") which of them were found in the chosen folder.
+  const [checked, setChecked] = useState<BatchRerunResult | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [folder, setFolder] = useState<ServerFolderSelection | null>(null);
+  const { canReadInPlace } = useIngestAccess();
+
+  const relocation = () => (folder ? { relocateFolder: folder.path, recursive: folder.recursive } : {});
+
+  const startRunAgain = async () => {
+    if (target.kind === 'job') {
+      setConfirming(true);
+      return;
+    }
+    setBusy(true);
+    setMessage(null);
+    setFolder(null);
+    setLocating(false);
+    try {
+      setChecked(await apiClient.rerunBatch(target.id, {}, { check: true }));
+    } catch {
+      setChecked(null); // an older server: just run it, as before
+    } finally {
+      setBusy(false);
+      setConfirming(true);
+    }
+  };
+
+  const lookInFolder = async () => {
+    if (target.kind !== 'batch' || !folder) return;
+    setBusy(true);
+    try {
+      setChecked(await apiClient.rerunBatch(target.id, {}, { check: true, ...relocation() }));
+      setLocating(false);
+    } catch (error) {
+      setMessage({ ok: false, text: parseApiError(error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const editAndRunAgain = () =>
     navigate('/jobs/new', {
@@ -57,7 +99,7 @@ export const RunAgainActions = ({ target }: { target: RunAgainTarget }) => {
         const job = await apiClient.rerunJob(target.id);
         navigate(`/jobs/${job.id}`);
       } else {
-        const result = await apiClient.rerunBatch(target.id);
+        const result = await apiClient.rerunBatch(target.id, {}, relocation());
         navigate(`/batches/${result.batch_id}`);
       }
     } catch (error) {
@@ -67,7 +109,7 @@ export const RunAgainActions = ({ target }: { target: RunAgainTarget }) => {
       setMessage({
         ok: false,
         text: gone
-          ? 'Its video is no longer on the server. Use "Use these settings" and choose the video again.'
+          ? `${parseApiError(error).message}. Use "Use these settings" and choose the video where it is now.`
           : parseApiError(error).message,
       });
     } finally {
@@ -104,7 +146,7 @@ export const RunAgainActions = ({ target }: { target: RunAgainTarget }) => {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => setConfirming(true)} disabled={busy}>
+        <Button size="sm" onClick={startRunAgain} disabled={busy}>
           <RotateCcw className="h-4 w-4 mr-2" /> Run again
         </Button>
         <Button size="sm" variant="outline" onClick={editAndRunAgain}>
@@ -144,15 +186,57 @@ export const RunAgainActions = ({ target }: { target: RunAgainTarget }) => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Run this {what} again?</AlertDialogTitle>
-            <AlertDialogDescription>
-              A new {what} runs the same {target.kind === 'job' ? 'video' : 'videos'} with the same pipelines and
-              settings. This one and its results are kept, so you can compare them. To change something first, use
-              “Edit and run again”.
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  A new {what} runs the same {target.kind === 'job' ? 'video' : 'videos'} with the same pipelines and
+                  settings. This one and its results are kept, so you can compare them. To change something first,
+                  use “Edit and run again”.
+                </p>
+                {checked && checked.skipped.length > 0 && (
+                  <div className="space-y-1 text-foreground">
+                    <p className="font-medium">
+                      {checked.skipped.length} video{checked.skipped.length === 1 ? ' isn’t' : 's aren’t'} where{' '}
+                      {checked.skipped.length === 1 ? 'it was' : 'they were'}, and won&apos;t run:
+                    </p>
+                    <ul className="list-disc pl-5 text-xs max-h-32 overflow-y-auto" data-testid="missing-videos">
+                      {checked.skipped.map((s) => (
+                        <li key={s.job_id} className="break-all">{s.reason}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {checked?.relocated && checked.relocated.length > 0 && (
+                  <p className="text-foreground">
+                    Found {checked.relocated.length} moved video{checked.relocated.length === 1 ? '' : 's'} in{' '}
+                    <span className="font-mono text-xs break-all">{folder?.path}</span>; they run from there.
+                  </p>
+                )}
+                {locating && (
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    <p className="text-foreground">Open the folder the videos are in now:</p>
+                    <ServerFolderPicker selection={folder} onSelect={setFolder} folderOnly />
+                    <Button size="sm" onClick={lookInFolder} disabled={busy || !folder}>
+                      Look for them here
+                    </Button>
+                  </div>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={runAgain}>Run again</AlertDialogAction>
+            {checked && checked.skipped.length > 0 && canReadInPlace && !locating && (
+              <Button variant="outline" onClick={() => setLocating(true)}>
+                Locate…
+              </Button>
+            )}
+            <AlertDialogAction
+              onClick={runAgain}
+              disabled={target.kind === 'batch' && checked !== null && checked.skipped.length >= target.videoCount}
+            >
+              {checked && checked.skipped.length > 0 ? 'Run the rest' : 'Run again'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

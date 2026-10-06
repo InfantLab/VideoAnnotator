@@ -29,6 +29,7 @@ from ...registry.pipeline_registry import get_registry
 from ...results_folder import (
     ResultsFolderError,
     RunFolder,
+    display_path,
     folder_ref,
     run_folder_of,
     run_name,
@@ -1331,8 +1332,11 @@ def create_rerun(
     request: RerunRequest | None = None,
     batch_id: str | None = None,
     batch_name: str | None = None,
+    video: Path | None = None,
 ) -> BatchJob:
     """A new pending job that runs `original` again, linked by `rerun_of`.
+
+    `video` is where the original's video is now, when it has moved (spec 022).
 
     The original is not changed. A video stored in the original's folder (an
     upload) is hard-linked, or copied where linking fails, into the new job's
@@ -1347,13 +1351,15 @@ def create_rerun(
             f"it is {original.status.value}",
             "Wait for it to finish, or cancel it first.",
         )
-    video = Path(original.video_path) if original.video_path else None
+    if video is None:
+        video = Path(original.video_path) if original.video_path else None
     if video is None or not video.is_file():
+        where = f" at {display_path(video)}" if video is not None else ""
         raise RerunNotPossibleException(
             original.job_id,
             "RERUN_VIDEO_MISSING",
-            "its video is no longer stored",
-            "Use 'Edit and run again' and choose the video again.",
+            f"its video is no longer{where}",
+            "Choose the folder it is in now, or choose the video again.",
         )
 
     request = request or RerunRequest()
@@ -1374,6 +1380,7 @@ def create_rerun(
         batch_name=batch_name or original.batch_name,
         dataset_id=original.dataset_id,
         rerun_of=original.job_id,
+        video=video,
     )
 
 
@@ -1387,6 +1394,7 @@ def job_from_stored_video(
     batch_name: str | None,
     dataset_id: str | None,
     rerun_of: str | None = None,
+    video: Path | None = None,
 ) -> BatchJob:
     """A new pending job on the video `original` has stored, with these settings.
 
@@ -1395,7 +1403,7 @@ def job_from_stored_video(
     job can't break the other; one outside it (a server-folder ingest) is used
     in place, as ingest does. The caller checks the video exists.
     """
-    video = Path(str(original.video_path))
+    video = video or Path(str(original.video_path))
     job = BatchJob(
         config=config or {},
         status=JobStatus.PENDING,

@@ -103,7 +103,10 @@ New optional query parameters `relocate_folder` (a folder inside the allowed fol
 (and its subfolders when `recursive`) for a file with the same name **and** size. Matched jobs
 rerun from the new path; unmatched ones stay in `skipped`. The response gains
 `relocated: [{"job_id", "from", "to"}]`. With `check=true` it reports the matches and creates
-nothing. A `relocate_folder` outside the allowed folders gives 422 (FR-015).
+nothing. Choosing a folder reads the filesystem, so it is gated as ingest is: an administrator
+on the same machine, and a `relocate_folder` outside the allowed folders gives 403
+`INGEST_PATH_NOT_ALLOWED` (FR-015). Missing-video reasons name the location the video was
+expected at (FR-013).
 
 ## Changed (additive): saved datasets
 

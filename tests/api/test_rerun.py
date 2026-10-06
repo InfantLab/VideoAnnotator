@@ -151,3 +151,121 @@ def test_a_jobs_video_streams_with_range_requests():
     gone = client.get(f"/api/v1/jobs/{job.job_id}/video")
     assert gone.status_code == 404
     assert gone.json()["error"]["code"] == "VIDEO_NOT_STORED"
+
+
+# --- Spec 022: missing videos, said before anything starts --------------------
+
+
+@pytest.fixture
+def moved_run(ingest_root):
+    """A finished 3-video run read in place, then one video moved into site_b/."""
+    from videoannotator.api.middleware.auth import validate_required_api_key
+
+    site_a = ingest_root / "site_a"
+    site_a.mkdir()
+    for name in ("child01", "child02", "child03"):
+        (site_a / f"{name}.mp4").write_bytes(b"video " + name.encode())
+    app.dependency_overrides[validate_required_api_key] = lambda: {"is_admin": True}
+    body = client.post(
+        "/api/v1/ingest",
+        json={"path": str(site_a), "selected_pipelines": ["scene_detection"]},
+    ).json()
+    storage = get_storage_backend()
+    for job_id in body["created"]:
+        job = storage.load_job_metadata(job_id)
+        job.status = JobStatus.COMPLETED
+        storage.save_job_metadata(job)
+    site_b = ingest_root / "site_b"
+    site_b.mkdir()
+    (site_a / "child02.mp4").rename(site_b / "child02.mp4")
+    from videoannotator.api.middleware.auth import validate_api_key
+
+    app.dependency_overrides[validate_api_key] = lambda: {"is_admin": True}
+    yield body, site_a, site_b
+    app.dependency_overrides.clear()
+
+
+def _job_for(body, name):
+    storage = get_storage_backend()
+    return next(
+        job_id
+        for job_id in body["created"]
+        if storage.load_job_metadata(job_id).video_path.name == name
+    )
+
+
+def test_check_lists_missing_videos_and_creates_nothing(moved_run):
+    body, site_a, _ = moved_run
+    before = len(get_storage_backend().list_jobs())
+    response = client.post(f"/api/v1/batches/{body['batch_id']}/rerun?check=true")
+    assert response.status_code == 201, response.text
+    result = response.json()
+    assert result["created"] == []
+    assert len(get_storage_backend().list_jobs()) == before
+    [skipped] = result["skipped"]
+    assert skipped["job_id"] == _job_for(body, "child02.mp4")
+    assert str(site_a / "child02.mp4") in skipped["reason"]
+
+
+def test_without_check_the_rest_still_run(moved_run):
+    body, _, _ = moved_run
+    result = client.post(f"/api/v1/batches/{body['batch_id']}/rerun").json()
+    assert len(result["created"]) == 2
+    assert len(result["skipped"]) == 1
+
+
+def test_relocate_finds_a_moved_video_by_name_and_size(moved_run):
+    body, site_a, site_b = moved_run
+    moved = _job_for(body, "child02.mp4")
+    url = f"/api/v1/batches/{body['batch_id']}/rerun"
+    params = {"relocate_folder": str(site_b)}
+
+    checked = client.post(url, params={**params, "check": "true"}).json()
+    assert checked["created"] == []
+    assert checked["skipped"] == []
+    assert checked["relocated"] == [
+        {
+            "job_id": moved,
+            "from": str(site_a / "child02.mp4"),
+            "to": str(site_b / "child02.mp4"),
+        }
+    ]
+
+    result = client.post(url, params=params).json()
+    assert len(result["created"]) == 3
+    storage = get_storage_backend()
+    paths = {storage.load_job_metadata(j).video_path for j in result["created"]}
+    assert site_b / "child02.mp4" in paths
+
+
+def test_relocate_ignores_a_same_named_file_of_another_size(moved_run):
+    body, _, site_b = moved_run
+    (site_b / "child02.mp4").write_bytes(b"a different take, longer")
+    result = client.post(
+        f"/api/v1/batches/{body['batch_id']}/rerun",
+        params={"relocate_folder": str(site_b), "check": "true"},
+    ).json()
+    assert result["relocated"] == []
+    assert len(result["skipped"]) == 1
+
+
+def test_relocate_folder_must_be_allowed(moved_run, tmp_path):
+    body, _, _ = moved_run
+    outside = tmp_path / "elsewhere"
+    outside.mkdir()
+    response = client.post(
+        f"/api/v1/batches/{body['batch_id']}/rerun",
+        params={"relocate_folder": str(outside), "check": "true"},
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "INGEST_PATH_NOT_ALLOWED"
+
+
+def test_a_moved_videos_results_stay_viewable(moved_run):
+    body, _, _ = moved_run
+    job_id = _job_for(body, "child02.mp4")
+    job = client.get(f"/api/v1/jobs/{job_id}").json()
+    assert job["video_available"] is False
+    assert client.get(f"/api/v1/jobs/{job_id}/results").status_code == 200
+    other = client.get(f"/api/v1/jobs/{_job_for(body, 'child01.mp4')}").json()
+    assert other["video_available"] is True

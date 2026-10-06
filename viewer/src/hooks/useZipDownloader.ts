@@ -42,7 +42,7 @@ interface UseZipDownloaderResult {
 const ANNOTATION_PARSER_VERSION = 2;
 
 /** Unzip a job's artifacts and parse every annotation file in it. */
-export async function parseArtifactsZip(blob: Blob): Promise<{ video: File; annotations: StandardAnnotationData }> {
+export async function parseArtifactsZip(blob: Blob): Promise<{ video: File | null; annotations: StandardAnnotationData }> {
   const reader = new zip.BlobReader(blob);
   const zipReader = new zip.ZipReader(reader);
   const entries = await zipReader.getEntries();
@@ -79,7 +79,9 @@ export async function parseArtifactsZip(blob: Blob): Promise<{ video: File; anno
 
   await zipReader.close();
 
-  if (!foundVideo) {
+  // A video read in place can move after its run (spec 022); its results
+  // are still worth showing, so only a zip with neither is an error.
+  if (!foundVideo && candidateFiles.length === 0) {
     throw new Error('No video file found in artifacts ZIP');
   }
 
@@ -132,7 +134,7 @@ export async function parseArtifactsZip(blob: Blob): Promise<{ video: File; anno
     const now = new Date().toISOString();
     foundAnnotations = {
       video_info: {
-        filename: foundVideo.name,
+        filename: foundVideo?.name ?? 'video',
         duration: 0,
         width: 0,
         height: 0,
@@ -470,8 +472,9 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
       setVideoFile(foundVideo);
       setAnnotationData(foundAnnotations);
 
-      // Persist to local library if we have a chosen root folder.
-      if (rootDirHandle) {
+      // Persist to local library if we have a chosen root folder. Not without
+      // its video: the library entry would open as a broken dataset later.
+      if (rootDirHandle && foundVideo) {
         try {
           await ingestToLocalDataset(jobId, rootDirHandle, blob, foundVideo, foundAnnotations);
         } catch (persistErr) {

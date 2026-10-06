@@ -461,6 +461,16 @@ const CreateJobDetail = () => {
         </CardContent>
       </Card>
 
+      {job.video_available === false && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Video not found at <span className="font-mono text-xs break-all">{job.video_path}</span> (moved or
+            deleted since the job ran). Its results are all still here; only playback needs the video.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <ResultsLocation folder={job.results_folder} label="This video's results" />
 
       {/* Results Section (when completed) */}

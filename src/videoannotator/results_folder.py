@@ -510,3 +510,32 @@ def run_zip_entries(jobs: list[Any]) -> tuple[str, list[tuple[Path, str]]]:
                 (path, f"{top}/{name}/{path.relative_to(folder).as_posix()}")
             )
     return top, entries
+
+
+def recorded_size(job: Any) -> int | None:
+    """The size `job`'s video had when the run was created, from `run.json`."""
+    folder = run_folder_of(job)
+    record = read_record(folder) if folder is not None else None
+    for entry in (record or {}).get("videos", []):
+        if entry.get("job_id") == job.job_id:
+            size = entry.get("source", {}).get("size_bytes")
+            return size if isinstance(size, int) else None
+    return None
+
+
+def find_moved_video(
+    name: str, size: int | None, folder: Path, recursive: bool
+) -> Path | None:
+    """The one file in `folder` with this name and size, if there is exactly one.
+
+    Name alone isn't enough: another take saved under the same name must not
+    be picked up silently. Without a recorded size nothing matches.
+    """
+    if size is None:
+        return None
+    try:
+        candidates = folder.rglob(name) if recursive else [folder / name]
+        matches = [p for p in candidates if p.is_file() and p.stat().st_size == size]
+    except OSError:
+        return None
+    return matches[0] if len(matches) == 1 else None

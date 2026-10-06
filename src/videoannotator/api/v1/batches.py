@@ -11,17 +11,22 @@ import logging
 import shutil
 import uuid
 from datetime import datetime
+from pathlib import Path as PathType
 from typing import Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Path, Query, Response
+from fastapi import APIRouter, Depends, Path, Query, Request, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from ...batch.batch_summary import compute_batch_summary
+from ...batch.types import JobStatus
 from ...results_folder import (
+    display_path,
+    find_moved_video,
     folder_ref,
     is_inside_results,
+    recorded_size,
     results_root,
     run_folder_of,
     run_zip_entries,
@@ -36,6 +41,7 @@ from .exceptions import (
     JobNotFoundException,
     JobNotRetryableException,
 )
+from .ingest import require_local_caller, resolve_within_roots
 from .jobs import (
     FolderRef,
     RerunNotPossibleException,
@@ -321,11 +327,23 @@ async def retry_batch(
         ) from e
 
 
+class RelocatedVideo(BaseModel):
+    job_id: str
+    from_path: str = Field(alias="from", serialization_alias="from")
+    to: str
+
+    model_config = {"populate_by_name": True}
+
+
 class BatchRerunResponse(BaseModel):
     batch_id: str = Field(description="The new batch")
     rerun_of_batch: str
     created: list[str]
     skipped: list[BatchJobSkipped]
+    relocated: list[RelocatedVideo] = Field(
+        default_factory=list,
+        description="Videos found in `relocate_folder`, by name and size (spec 022)",
+    )
 
 
 @router.post(
@@ -342,20 +360,26 @@ still running, or whose video is gone, are reported in `skipped`.
 """,
 )
 async def rerun_batch(
+    http_request: Request,
     request: RerunRequest | None = None,
     batch_id: str = Path(..., description="The batch to run again"),
+    check: bool = Query(
+        False,
+        description="Dry run: report what would be skipped or relocated, create nothing",
+    ),
+    relocate_folder: str | None = Query(
+        None,
+        description="Where moved videos are now: each missing video is looked for "
+        "here by name and size (same machine and administrator only)",
+    ),
+    recursive: bool = Query(
+        False, description="Also look in relocate_folder's subfolders"
+    ),
     storage: StorageBackend = Depends(get_storage),
-    _user: dict[str, Any] | None = Depends(validate_api_key),
+    user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> BatchRerunResponse:
     """Run a batch's finished jobs again as a new batch."""
-    jobs = _load_batch_jobs(storage, batch_id)
-    if not jobs:
-        raise APIError(
-            status_code=404,
-            code="BATCH_NOT_FOUND",
-            message=f"Batch '{batch_id}' not found",
-            hint="Check the batch ID, or use GET /api/v1/batches.",
-        )
+    jobs = _batch_or_404(storage, batch_id)
     request = request or RerunRequest()
     for job in jobs:
         validate_pipeline_selection(
@@ -365,6 +389,34 @@ async def rerun_batch(
             request.config if request.config is not None else job.config,
         )
 
+    folder = None
+    if relocate_folder is not None:
+        # Reads the filesystem on the caller's word, so it is gated as ingest is.
+        if not (user or {}).get("is_admin", False):
+            raise APIError(
+                status_code=403,
+                code="ADMIN_REQUIRED",
+                message="Only an administrator can choose a folder on this computer.",
+            )
+        require_local_caller(http_request)
+        folder = resolve_within_roots(relocate_folder)
+
+    relocated: list[RelocatedVideo] = []
+    moved_to: dict[str, PathType] = {}
+    if folder is not None:
+        for job in jobs:
+            video = PathType(job.video_path) if job.video_path else None
+            if video is None or video.is_file():
+                continue
+            found = find_moved_video(video.name, recorded_size(job), folder, recursive)
+            if found is not None:
+                moved_to[job.job_id] = found
+                relocated.append(
+                    RelocatedVideo(
+                        job_id=job.job_id, from_path=str(video), to=str(found)
+                    )
+                )
+
     new_batch_id = str(uuid.uuid4())
     name = next((j.batch_name for j in jobs if j.batch_name), None)
     new_name = f"{name} (rerun)" if name else "Rerun"
@@ -372,13 +424,37 @@ async def rerun_batch(
     skipped: list[BatchJobSkipped] = []
     for job in jobs:
         try:
-            new = create_rerun(job, storage, request, new_batch_id, new_name)
+            if check:
+                _check_rerunnable(job, moved_to.get(job.job_id))
+                continue
+            new = create_rerun(
+                job, storage, request, new_batch_id, new_name, moved_to.get(job.job_id)
+            )
             created.append(new.job_id)
         except RerunNotPossibleException as e:
             skipped.append(BatchJobSkipped(job_id=job.job_id, reason=e.message))
     return BatchRerunResponse(
-        batch_id=new_batch_id, rerun_of_batch=batch_id, created=created, skipped=skipped
+        batch_id=new_batch_id,
+        rerun_of_batch=batch_id,
+        created=created,
+        skipped=skipped,
+        relocated=relocated,
     )
+
+
+def _check_rerunnable(job: Any, moved_to: PathType | None) -> None:
+    """Raise what `create_rerun` would, without creating anything."""
+    finished = (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED)
+    if job.status not in finished:
+        raise RerunNotPossibleException(
+            job.job_id, "JOB_NOT_FINISHED", f"it is {job.status.value}", ""
+        )
+    video = moved_to or (PathType(job.video_path) if job.video_path else None)
+    if video is None or not video.is_file():
+        where = f" at {display_path(video)}" if video is not None else ""
+        raise RerunNotPossibleException(
+            job.job_id, "RERUN_VIDEO_MISSING", f"its video is no longer{where}", ""
+        )
 
 
 def _batch_or_404(storage: StorageBackend, batch_id: str) -> list[Any]:

@@ -23,7 +23,9 @@ const MEDIA_ERROR_NAMES: Record<number, string> = {
 };
 
 interface VideoPlayerProps {
-  videoFile: File;
+  videoFile: File | null;
+  /** The video is gone; say where it was expected instead of playing (spec 022). */
+  missingVideoMessage?: string;
   annotationData: StandardAnnotationData;
   currentTime: number;
   overlaySettings: OverlaySettings;
@@ -34,7 +36,7 @@ interface VideoPlayerProps {
 }
 
 export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
-  ({ videoFile, annotationData, currentTime, overlaySettings, openface3Settings, onTimeUpdate, onDurationChange, onPlayStateChange }, ref) => {
+  ({ videoFile, missingVideoMessage, annotationData, currentTime, overlaySettings, openface3Settings, onTimeUpdate, onDurationChange, onPlayStateChange }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [videoUrl, setVideoUrl] = useState<string>('');
@@ -865,6 +867,17 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           />
           {playbackProblem && (
             <PlaybackProblemNotice problem={playbackProblem} codec={codec} />
+          )}
+          {!videoFile && missingVideoMessage && (
+            <div role="alert" className="absolute inset-0 flex items-center justify-center p-6">
+              <div className="max-w-lg rounded-lg border border-border bg-card/95 p-4 text-sm text-foreground shadow-lg">
+                <p className="font-medium">{missingVideoMessage}</p>
+                <p className="mt-1 text-muted-foreground">
+                  Every annotation this job produced is still shown on the timeline. Put the video
+                  back, or run it again from where it is now, to play it.
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </div>

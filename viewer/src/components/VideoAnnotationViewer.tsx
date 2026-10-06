@@ -32,6 +32,11 @@ interface VideoAnnotationViewerProps {
   failedPipelines?: Record<string, string>;
   /** Shown in the header after the video's name (e.g. batch previous/next). */
   headerNav?: React.ReactNode;
+  /**
+   * Set when the job's video is gone (spec 022): its annotations are still
+   * shown, and the player says where the video was expected.
+   */
+  missingVideoMessage?: string;
 }
 
 export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
@@ -42,6 +47,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   backPath = '/',
   failedPipelines = {},
   headerNav,
+  missingVideoMessage,
 }) => {
   const navigate = useNavigate();
   const [videoFile, setVideoFile] = useState<File | null>(initialVideoFile);
@@ -49,6 +55,12 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
+  // Without a video there's no element to report its length: use the run's.
+  useEffect(() => {
+    if (!videoFile && missingVideoMessage && annotationData?.video_info?.duration) {
+      setDuration(annotationData.video_info.duration);
+    }
+  }, [videoFile, missingVideoMessage, annotationData]);
   const [playbackRate, setPlaybackRate] = useState(1);
 
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
@@ -167,7 +179,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   }, [handleKeyDown]);
 
   // Show file uploader if no files loaded
-  if (!videoFile || !annotationData) {
+  if ((!videoFile && !missingVideoMessage) || !annotationData) {
     return (
       <>
         <div className="min-h-screen bg-background p-6">
@@ -271,7 +283,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
               </Button>
               <div className="min-w-0">
                 <h1 className="text-lg font-semibold truncate">
-                  {annotationData.video_info?.filename || videoFile.name}
+                  {annotationData.video_info?.filename || videoFile?.name}
                 </h1>
               </div>
               {headerNav}
@@ -316,6 +328,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                 <VideoPlayer
                   ref={videoRef}
                   videoFile={videoFile}
+                  missingVideoMessage={missingVideoMessage}
                   annotationData={annotationData}
                   currentTime={currentTime}
                   overlaySettings={overlaySettings}

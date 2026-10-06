@@ -38,6 +38,12 @@ export interface ServerFolderSelection {
 interface ServerFolderPickerProps {
   selection: ServerFolderSelection | null;
   onSelect: (selection: ServerFolderSelection | null) => void;
+  /**
+   * Choose a folder, not videos: reports the folder being shown (with
+   * `videoCount` 0) as the researcher moves around. For "where are these
+   * videos now?" (spec 022).
+   */
+  folderOnly?: boolean;
 }
 
 const DOCS_URL =
@@ -58,7 +64,7 @@ function sameSelection(a: ServerFolderSelection | null, b: ServerFolderSelection
   );
 }
 
-export function ServerFolderPicker({ selection, onSelect }: ServerFolderPickerProps) {
+export function ServerFolderPicker({ selection, onSelect, folderOnly = false }: ServerFolderPickerProps) {
   const { access } = useIngestAccess();
   const allowed = useMemo(() => access?.allowed_folders ?? [], [access]);
   const [path, setPath] = useState<string | null>(selection?.path ?? null);
@@ -103,7 +109,12 @@ export function ServerFolderPicker({ selection, onSelect }: ServerFolderPickerPr
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
   useEffect(() => {
-    if (path === null || !scan.data) return;
+    if (!folderOnly || !browse.data?.path) return;
+    const next = { path: browse.data.path, videoCount: 0, recursive };
+    if (!sameSelection(next, selectionRef.current)) onSelectRef.current(next);
+  }, [folderOnly, browse.data, recursive]);
+  useEffect(() => {
+    if (folderOnly || path === null || !scan.data) return;
     const next: ServerFolderSelection | null =
       selected.length === 0
         ? null
@@ -111,7 +122,7 @@ export function ServerFolderPicker({ selection, onSelect }: ServerFolderPickerPr
         ? { path: scan.data.path, videoCount: selected.length, recursive }
         : { path: scan.data.path, videoCount: selected.length, recursive, files: selected };
     if (!sameSelection(next, selectionRef.current)) onSelectRef.current(next);
-  }, [path, recursive, scan.data, selected, videos.length]);
+  }, [folderOnly, path, recursive, scan.data, selected, videos.length]);
 
   const open = (next: string) => {
     setPath(next);
@@ -202,7 +213,7 @@ export function ServerFolderPicker({ selection, onSelect }: ServerFolderPickerPr
               ))}
 
               {/* Native checkboxes: a corpus folder can list thousands. */}
-              {videos.map((video) => (
+              {!folderOnly && videos.map((video) => (
                 <li key={video.relative_path}>
                   <label className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted/50 cursor-pointer">
                     <input
@@ -243,35 +254,41 @@ export function ServerFolderPicker({ selection, onSelect }: ServerFolderPickerPr
             />
             Include subfolders
           </label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={videos.length === 0}
-            onClick={() => setChosen(allSelected ? new Set() : 'all')}
-          >
-            {allSelected ? 'Clear selection' : 'Select all'}
-          </Button>
+          {!folderOnly && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={videos.length === 0}
+              onClick={() => setChosen(allSelected ? new Set() : 'all')}
+            >
+              {allSelected ? 'Clear selection' : 'Select all'}
+            </Button>
+          )}
         </div>
       )}
 
-      <p className="text-sm" aria-live="polite">
-        <span className="font-medium">
-          {selected.length} video{selected.length === 1 ? '' : 's'} selected
-        </span>
-        <span className="text-muted-foreground">
-          {' '}
-          &ndash; used where they are, never copied. Deleting a job never deletes the original video.
-        </span>
-      </p>
+      {!folderOnly && (
+        <>
+          <p className="text-sm" aria-live="polite">
+            <span className="font-medium">
+              {selected.length} video{selected.length === 1 ? '' : 's'} selected
+            </span>
+            <span className="text-muted-foreground">
+              {' '}
+              &ndash; used where they are, never copied. Deleting a job never deletes the original video.
+            </span>
+          </p>
 
-      <p className="text-xs text-muted-foreground">
-        Videos somewhere else, like an external drive? Add that folder to{' '}
-        <code>VIDEOANNOTATOR_INGEST_ROOTS</code> (Docker: <code>VIDEOS_DIR</code>) and restart.{' '}
-        <a className="underline" href={DOCS_URL} target="_blank" rel="noreferrer">
-          How
-        </a>
-      </p>
+          <p className="text-xs text-muted-foreground">
+            Videos somewhere else, like an external drive? Add that folder to{' '}
+            <code>VIDEOANNOTATOR_INGEST_ROOTS</code> (Docker: <code>VIDEOS_DIR</code>) and restart.{' '}
+            <a className="underline" href={DOCS_URL} target="_blank" rel="noreferrer">
+              How
+            </a>
+          </p>
+        </>
+      )}
     </div>
   );
 }

@@ -126,7 +126,12 @@ const JobResultsViewerForJob = ({ jobId }: { jobId: string | undefined }) => {
     );
   }
 
-  if (state === 'ready' && videoFile && annotationData) {
+  const missingVideoMessage =
+    job && job.video_available === false && !videoFile
+      ? `Video not found at ${job.video_path ?? 'its original location'} (moved or deleted since the job ran).`
+      : undefined;
+
+  if (state === 'ready' && annotationData && (videoFile || missingVideoMessage)) {
     return (
       <ErrorBoundary>
          <VideoAnnotationViewer
@@ -136,6 +141,7 @@ const JobResultsViewerForJob = ({ jobId }: { jobId: string | undefined }) => {
            backPath={backPath}
            failedPipelines={failedPipelines}
            headerNav={batchId && jobId ? <BatchNavigation jobId={jobId} batchId={batchId} /> : undefined}
+           missingVideoMessage={missingVideoMessage}
          />
       </ErrorBoundary>
     );

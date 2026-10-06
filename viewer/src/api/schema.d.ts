@@ -2047,6 +2047,11 @@ export interface components {
             created: string[];
             /** Skipped */
             skipped: components["schemas"]["BatchJobSkipped"][];
+            /**
+             * Relocated
+             * @description Videos found in `relocate_folder`, by name and size (spec 022)
+             */
+            relocated?: components["schemas"]["RelocatedVideo"][];
         };
         /** BatchRetryResponse */
         BatchRetryResponse: {
@@ -3082,6 +3087,15 @@ export interface components {
             /** Approx Mb */
             approx_mb?: number | null;
         };
+        /** RelocatedVideo */
+        RelocatedVideo: {
+            /** Job Id */
+            job_id: string;
+            /** From */
+            from: string;
+            /** To */
+            to: string;
+        };
         /**
          * RerunRequest
          * @description Body for running a job (or batch) again. Omitted fields keep the
@@ -3830,7 +3844,14 @@ export interface operations {
     };
     rerun_batch_api_v1_batches__batch_id__rerun_post: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Dry run: report what would be skipped or relocated, create nothing */
+                check?: boolean;
+                /** @description Where moved videos are now: each missing video is looked for here by name and size (same machine and administrator only) */
+                relocate_folder?: string | null;
+                /** @description Also look in relocate_folder's subfolders */
+                recursive?: boolean;
+            };
             header?: never;
             path: {
                 /** @description The batch to run again */

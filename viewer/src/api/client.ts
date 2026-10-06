@@ -135,6 +135,15 @@ const isValidToken = (token: string): boolean => {
 // Type definitions from OpenAPI schema
 // Regenerate with scripts/gen_viewer_api_types.sh after changing the server's API.
 export type JobResponse = components['schemas']['JobResponse'];
+
+export interface BatchRerunResult {
+  batch_id: string;
+  rerun_of_batch: string;
+  created: string[];
+  skipped: { job_id: string; reason: string }[];
+  /** Moved videos found in the chosen folder (spec 022). */
+  relocated?: { job_id: string; from: string; to: string }[];
+}
 export type JobListResponse = components['schemas']['JobListResponse'];
 export type PipelineResponse = components['schemas']['PipelineInfo'];
 export type SubmitJobRequest = NonNullable<paths['/api/v1/jobs/']['post']['requestBody']>['content']['multipart/form-data'];
@@ -626,12 +635,22 @@ class APIClient {
     });
   }
 
-  /** Run a batch's finished jobs again as a new batch (spec 019). */
+  /**
+   * Run a batch's finished jobs again as a new batch (spec 019). `check` only
+   * reports what would be skipped; `relocateFolder` is where moved videos are
+   * now, matched by name and size (spec 022).
+   */
   async rerunBatch(
     batchId: string,
-    overrides: { selected_pipelines?: string[]; config?: Record<string, unknown> } = {}
-  ): Promise<{ batch_id: string; rerun_of_batch: string; created: string[]; skipped: { job_id: string; reason: string }[] }> {
-    return this.request(`/api/v1/batches/${encodeURIComponent(batchId)}/rerun`, {
+    overrides: { selected_pipelines?: string[]; config?: Record<string, unknown> } = {},
+    options: { check?: boolean; relocateFolder?: string; recursive?: boolean } = {}
+  ): Promise<BatchRerunResult> {
+    const query = new URLSearchParams();
+    if (options.check) query.set('check', 'true');
+    if (options.relocateFolder) query.set('relocate_folder', options.relocateFolder);
+    if (options.recursive) query.set('recursive', 'true');
+    const suffix = query.toString() ? `?${query}` : '';
+    return this.request(`/api/v1/batches/${encodeURIComponent(batchId)}/rerun${suffix}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(overrides),

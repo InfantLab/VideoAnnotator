@@ -378,12 +378,24 @@ class TestUnbatchedJobsFilter:
         """The reason this filter exists: filtering a paginated list
         client-side hides ungrouped jobs whenever batched ones fill the page."""
         batch_id = str(uuid.uuid4())
-        for _ in range(12):
-            _submit_job(batch_id=batch_id)
+        batched = {_submit_job(batch_id=batch_id)["id"] for _ in range(12)}
         standalone = _submit_job()
 
-        body = client.get("/api/v1/jobs/?unbatched_only=true&per_page=10").json()
-        assert standalone["id"] in {job["id"] for job in body["jobs"]}
+        # The session's database also holds other tests' unbatched jobs, oldest
+        # first, so walk every page rather than assume the new one is on page 1.
+        seen: list[str] = []
+        page = 1
+        while True:
+            body = client.get(
+                f"/api/v1/jobs/?unbatched_only=true&per_page=10&page={page}"
+            ).json()
+            ids = [job["id"] for job in body["jobs"]]
+            assert not batched & set(ids), "a batched job took a page slot"
+            seen += ids
+            if len(seen) >= body["total"] or not ids:
+                break
+            page += 1
+        assert standalone["id"] in seen
 
     def test_batch_id_takes_precedence_when_both_are_given(self):
         batch_id = str(uuid.uuid4())

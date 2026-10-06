@@ -8,8 +8,33 @@ import { apiClient } from '@/api/client';
 import { APIError } from '@/api/handleError';
 
 vi.mock('@/api/client', () => ({
-  apiClient: { rerunJob: vi.fn(), rerunBatch: vi.fn(), createPreset: vi.fn() },
+  apiClient: {
+    baseURL: 'http://127.0.0.1:18011',
+    rerunJob: vi.fn(),
+    rerunBatch: vi.fn(),
+    createPreset: vi.fn(),
+    getIngestAccess: vi.fn(),
+    browseServerFolders: vi.fn(),
+    scanServerFolder: vi.fn(),
+  },
 }));
+
+const batchTarget: RunAgainTarget = {
+  kind: 'batch',
+  id: 'b1',
+  label: 'Wave 2',
+  videoCount: 3,
+  settings: { selectedPipelines: ['scene_detection'] },
+};
+
+const result = (overrides: Partial<Awaited<ReturnType<typeof apiClient.rerunBatch>>> = {}) => ({
+  batch_id: 'b2',
+  rerun_of_batch: 'b1',
+  created: [],
+  skipped: [],
+  relocated: [],
+  ...overrides,
+});
 
 const target: RunAgainTarget = {
   kind: 'job',
@@ -70,7 +95,7 @@ describe('RunAgainActions', () => {
     renderActions();
     await userEvent.click(screen.getByRole('button', { name: /^Run again$/ }));
     await userEvent.click(screen.getAllByRole('button', { name: 'Run again' }).at(-1)!);
-    expect(await screen.findByText(/no longer on the server/)).toBeInTheDocument();
+    expect(await screen.findByText(/choose the video where it is now/)).toBeInTheDocument();
   });
 
   it('saves the settings as a preset', async () => {
@@ -84,5 +109,61 @@ describe('RunAgainActions', () => {
       config: { scene_detection: { threshold: 20 } },
     });
     expect(await screen.findByText(/Saved preset/)).toBeInTheDocument();
+  });
+
+  describe('a batch whose videos moved (spec 022)', () => {
+    const missing = {
+      job_id: 'j2',
+      reason: 'Cannot run job j2 again: its video is no longer at /home/ada/Studies/site_a/child02.mp4',
+    };
+
+    beforeEach(() => {
+      vi.mocked(apiClient.getIngestAccess).mockResolvedValue({
+        same_machine: true,
+        can_read_in_place: true,
+        reason: null,
+        allowed_folders: [{ path: '/home/ada', display_path: '/home/ada' }],
+        results_root: { path: '/home/ada/VideoAnnotator', display_path: '/home/ada/VideoAnnotator' },
+        can_open_folders: true,
+      });
+      vi.mocked(apiClient.browseServerFolders).mockImplementation(async (path?: string) => ({
+        path: path ?? null, parent: null, roots: ['/home/ada'], directories: [], videos: [], video_count: 0, truncated: false,
+      }));
+      vi.mocked(apiClient.scanServerFolder).mockResolvedValue({ path: '/home/ada', recursive: false, videos: [] });
+    });
+
+    it('lists missing videos before anything starts, then runs the rest', async () => {
+      vi.mocked(apiClient.rerunBatch)
+        .mockResolvedValueOnce(result({ skipped: [missing] }))
+        .mockResolvedValueOnce(result({ created: ['n1', 'n3'], skipped: [missing] }));
+      renderActions(batchTarget);
+      await userEvent.click(screen.getByRole('button', { name: /^Run again$/ }));
+
+      expect(apiClient.rerunBatch).toHaveBeenCalledWith('b1', {}, { check: true });
+      expect(await screen.findByTestId('missing-videos')).toHaveTextContent('/home/ada/Studies/site_a/child02.mp4');
+      await userEvent.click(screen.getByRole('button', { name: 'Run the rest' }));
+      await waitFor(() => expect(landed?.path).toBe('/batches/b2'));
+      expect(apiClient.rerunBatch).toHaveBeenLastCalledWith('b1', {}, {});
+    });
+
+    it('looks for them in a chosen folder and runs them from there', async () => {
+      vi.mocked(apiClient.rerunBatch)
+        .mockResolvedValueOnce(result({ skipped: [missing] }))
+        .mockResolvedValueOnce(
+          result({ relocated: [{ job_id: 'j2', from: '/home/ada/Studies/site_a/child02.mp4', to: '/home/ada/child02.mp4' }] })
+        )
+        .mockResolvedValueOnce(result({ created: ['n1', 'n2', 'n3'] }));
+      renderActions(batchTarget);
+      await userEvent.click(screen.getByRole('button', { name: /^Run again$/ }));
+      await userEvent.click(await screen.findByRole('button', { name: 'Locate…' }));
+      await waitFor(() => expect(apiClient.browseServerFolders).toHaveBeenCalledWith('/home/ada'));
+      await userEvent.click(await screen.findByRole('button', { name: 'Look for them here' }));
+
+      expect(apiClient.rerunBatch).toHaveBeenLastCalledWith('b1', {}, { check: true, relocateFolder: '/home/ada', recursive: false });
+      expect(await screen.findByText(/Found 1 moved video/)).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Run again' }));
+      await waitFor(() => expect(landed?.path).toBe('/batches/b2'));
+      expect(apiClient.rerunBatch).toHaveBeenLastCalledWith('b1', {}, { relocateFolder: '/home/ada', recursive: false });
+    });
   });
 });
