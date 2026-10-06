@@ -149,6 +149,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`face_analysis` detects faces with RetinaFace** instead of OpenCV's Haar cascade, which marked
+  ceiling lamps and bottles as faces and missed infants. On the sample clips it now finds parent
+  and infant in every sampled frame, with no false positives. First use downloads 119 MB of
+  weights. Its `confidence_threshold` is now applied (it was ignored), and each face's `score` is
+  the detector's confidence instead of a fixed 1.0. Set `deepface.detector_backend: opencv` for
+  the old detector.
+- **Batch page built for large runs**: one compact line per video; the pipelines are listed
+  once for the whole run, not on every row; filters for failed, with errors, running, queued and
+  done; a search box for runs of 10 or more videos. Deleting one video moves to its job page.
+  Runs of more than 50 videos now list every video (only the first 50 showed before).
+
 - **Job folders move to the per-user data folder**, beside the database: `jobs` in
   `~/.local/share/videoannotator/` (Linux), `~/Library/Application Support/videoannotator/`
   (macOS) or `%LOCALAPPDATA%\videoannotator\` (Windows). They were in `./storage/jobs` under the

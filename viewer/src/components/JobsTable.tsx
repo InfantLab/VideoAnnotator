@@ -22,7 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { AlertCircle, Eye, RotateCcw } from 'lucide-react';
+import { Eye, RotateCcw } from 'lucide-react';
 import type { JobResponse } from '@/api/client';
 import type { JobStatus } from '@/types/api';
 import { JobCancelButton } from '@/components/JobCancelButton';
@@ -32,95 +32,8 @@ import { canDeleteJob } from '@/hooks/useJobDeletion';
 import { jobErrorSummary } from '@/lib/jobOutcome';
 import { queueLabel } from '@/lib/queuePosition';
 import { settingsOf, wizardState } from '@/lib/wizardStart';
-
-const STATUS_CLASSES: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200',
-  running: 'bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200',
-  completed: 'bg-green-100 text-green-800 hover:bg-green-100 border-green-200',
-  failed: 'bg-red-100 text-red-800 hover:bg-red-100 border-red-200',
-  cancelled: 'bg-gray-100 text-gray-800 hover:bg-gray-100 border-gray-200',
-  cancelling: 'bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200',
-};
-
-const PARTIAL_SUCCESS_CLASS =
-  'bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200';
-
-function getStatusBadge(status: string, errorMessage?: string | null) {
-  // A job that completed but carries an error message succeeded only partially.
-  const isPartialSuccess = status === 'completed' && !!errorMessage;
-  const className = isPartialSuccess
-    ? PARTIAL_SUCCESS_CLASS
-    : STATUS_CLASSES[status] ?? STATUS_CLASSES.pending;
-
-  const badge = (
-    <Badge variant="outline" className={className}>
-      {status.toUpperCase()}
-      {(isPartialSuccess || (status === 'failed' && errorMessage)) && (
-        <AlertCircle className="ml-1 h-3 w-3 inline" />
-      )}
-    </Badge>
-  );
-
-  if ((status === 'failed' || isPartialSuccess) && errorMessage) {
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>{badge}</TooltipTrigger>
-          <TooltipContent className="max-w-xs">
-            <p className="font-semibold">{isPartialSuccess ? 'Completed with errors:' : 'Error:'}</p>
-            <p>{errorMessage}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
-
-  return badge;
-}
-
-function formatDuration(seconds: number | null) {
-  if (!seconds) return 'N/A';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-function formatFileSize(bytes: number | null) {
-  if (!bytes) return 'N/A';
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-const getString = (value: unknown): string | undefined =>
-  typeof value === 'string' ? value : undefined;
-
-const getNumber = (value: unknown): number | null =>
-  typeof value === 'number' && Number.isFinite(value) ? value : null;
-
-/**
- * Defensive field access — the server has used several names for these over
- * its versions, and a viewer pointed at an older server should still show a
- * filename rather than "N/A".
- */
-function videoFieldsOf(job: JobResponse) {
-  const record = job as JobResponse & Record<string, unknown>;
-
-  let videoName =
-    getString(record.video_filename) ??
-    getString(record.filename) ??
-    getString(record.video_name);
-
-  const videoPath = getString(record.video_path);
-  if (!videoName && videoPath) {
-    videoName = videoPath.split(/[/\\]/).pop() || videoPath;
-  }
-
-  return {
-    videoName: videoName || 'N/A',
-    videoDuration:
-      getNumber(record.video_duration_seconds) ?? getNumber(record.duration_seconds),
-    videoSize: getNumber(record.video_size_bytes) ?? getNumber(record.file_size_bytes),
-  };
-}
+import { formatDuration, formatFileSize, progressOf, videoFieldsOf } from '@/lib/jobRow';
+import { JobStatusBadge } from '@/components/JobStatusBadge';
 
 interface JobsTableProps {
   jobs: JobResponse[];
@@ -178,8 +91,7 @@ export function JobsTable({
             const queued = queueLabel(job as JobResponse & Record<string, unknown>);
             // Real per-pipeline progress from the server (spec 006/008), not a
             // status-to-number guess.
-            const progress =
-              getNumber((job as JobResponse & Record<string, unknown>).progress_percentage) ?? 0;
+            const progress = progressOf(job);
 
             return (
               <TableRow
@@ -191,7 +103,7 @@ export function JobsTable({
                   {videoName}
                 </TableCell>
                 <TableCell>
-                  {getStatusBadge(job.status, job.error_message)}
+                  <JobStatusBadge status={job.status} errorMessage={job.error_message} />
                   {queued && <p className="mt-1 text-xs text-muted-foreground">{queued}</p>}
                   {errorSummary && (
                     <p

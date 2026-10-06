@@ -15,7 +15,7 @@ export const BatchQueryKeys = {
   all: ['batches'] as const,
   list: (page: number) => ['batches', 'list', page] as const,
   detail: (batchId: string) => ['batches', batchId] as const,
-  jobs: (batchId: string, page: number) => ['jobs', 'batch', batchId, page] as const,
+  jobs: (batchId: string) => ['jobs', 'batch', batchId] as const,
 };
 
 /**
@@ -57,10 +57,24 @@ export function useBatch(batchId: string | undefined) {
 }
 
 /** The member jobs of one batch — the per-video detail behind the aggregate. */
-export function useBatchJobs(batchId: string | undefined, page: number = 1, perPage: number = 50) {
+// The server has no cap on page size, but a request per hundred keeps each
+// response small for a run of hundreds of videos.
+const BATCH_JOBS_PAGE = 100;
+
+/** Every video of one batch (all pages: a batch page that shows only some is wrong). */
+export function useBatchJobs(batchId: string | undefined) {
   return useQuery({
-    queryKey: BatchQueryKeys.jobs(batchId ?? '', page),
-    queryFn: () => apiClient.getJobs(page, perPage, { batchId }),
+    queryKey: BatchQueryKeys.jobs(batchId ?? ''),
+    queryFn: async () => {
+      const first = await apiClient.getJobs(1, BATCH_JOBS_PAGE, { batchId });
+      const jobs = [...first.jobs];
+      for (let page = 2; jobs.length < first.total; page++) {
+        const next = await apiClient.getJobs(page, BATCH_JOBS_PAGE, { batchId });
+        if (next.jobs.length === 0) break;
+        jobs.push(...next.jobs);
+      }
+      return { ...first, jobs, page: 1, per_page: jobs.length };
+    },
     enabled: !!batchId,
     refetchInterval: (query) => {
       const jobs = query.state.data?.jobs;
