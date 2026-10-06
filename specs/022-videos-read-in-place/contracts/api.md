@@ -76,16 +76,34 @@ Streams the run's results in their on-disk layout (`run.json`, one folder per vi
 (FR-028). For runs from before this feature, it builds the same layout from each job's folder. 404
 `BATCH_NOT_FOUND` for an unknown batch.
 
+## New: `DELETE /api/v1/batches/{batch_id}`
+
+Deletes every job in the run (as `DELETE /jobs/{id}`), their video folders, and the run folder.
+Original videos are never touched (FR-030). Running jobs are cancelled first. 204 on success, 404
+`BATCH_NOT_FOUND` for an unknown batch.
+
 ## Changed: `GET /api/v1/jobs/{job_id}/artifacts`
 
 New query parameter `include_video` (default **false**). Before, the video was always included.
-`include_video=true` restores that. This user-facing change goes in the CHANGELOG (FR-029).
+`include_video=true` restores that. This user-facing change goes in the CHANGELOG (FR-029). When
+the video is left out, the response carries
+`X-VideoAnnotator-Notice: video excluded; use include_video=true`, so scripts that relied on it
+can notice.
 
 ## New: `POST /api/v1/batches/{batch_id}/rerun?check=true`
 
 A dry run: returns the same `BatchRerunResponse` shape with `created: []`, and `skipped` listing
 every job that couldn't be rerun, such as a video no longer at its location. It creates nothing.
 The viewer calls it before a rerun to show missing videos first (FR-015).
+
+## Changed (additive): `POST /api/v1/batches/{batch_id}/rerun` relocation
+
+New optional query parameters `relocate_folder` (a folder inside the allowed folders) and
+`recursive` (default false). For each job whose video is missing, the server looks in that folder
+(and its subfolders when `recursive`) for a file with the same name **and** size. Matched jobs
+rerun from the new path; unmatched ones stay in `skipped`. The response gains
+`relocated: [{"job_id", "from", "to"}]`. With `check=true` it reports the matches and creates
+nothing. A `relocate_folder` outside the allowed folders gives 422 (FR-015).
 
 ## Changed (additive): saved datasets
 

@@ -81,8 +81,9 @@ long run would have no record until it finishes, and a crash would leave none).
 **Decision**:
 - **Default**: `~/VideoAnnotator`, i.e. `Path.home() / "VideoAnnotator"`. That is
   `C:\Users\<name>\VideoAnnotator` on Windows.
-- **Override**: the `VIDEOANNOTATOR_RESULTS_DIR` environment variable, or `results_dir` in the
-  config file, which `config_env` already reads.
+- **Override**: the `VIDEOANNOTATOR_RESULTS_DIR` environment variable, set in the shell or in
+  `.env`, which `config_env` already loads. There is no config-file key: `config_env` reads only
+  the environment and `.env`.
 - **Visibility**: `videoannotator server` prints the root at startup, as it already does for the
   storage root, and the viewer's Settings page shows it with how to change it.
 - **Changing it**: affects new runs only. Old runs keep their recorded `output_dir` (FR-025).
@@ -202,6 +203,12 @@ Ambiguous: a folder dataset whose folder grew looks the same.
   reason (`RERUN_VIDEO_MISSING`). The viewer calls a new dry run first (`?check=true` on batch
   rerun), which lists the missing videos and creates nothing. It shows them before submitting
   (FR-015).
+- **Relocating**: batch rerun accepts `relocate_folder` (a folder inside the allowed folders) and
+  `recursive`. For each job whose video is missing, the server looks in that folder for a file
+  with the same name and size (`source.size_bytes` in `run.json`). Matches rerun from the new path;
+  unmatched videos stay in `skipped`. With `check=true` it only reports the matches. Matching on
+  name and size, not name alone, means a different take with the same name is never picked up
+  silently (FR-015's "point to the videos' new location").
 - **Folder and selection datasets**: these already scan and show differences
   (`DatasetDriftDialog`), so missing files are listed there.
 - **Results stay viewable**: the job results endpoint keeps serving outputs regardless of the video.
