@@ -36,12 +36,49 @@ with no copies (spec 018). But researchers rarely use it:
 This spec makes reading videos in place the default for that local researcher. Upload remains for
 servers on another machine, and for videos the server isn't allowed to read.
 
+## What the researcher sees
+
+The new-job wizard's first step, "Choose Videos", today has three tabs: "Upload from this
+computer", "Folder on the server" and "Saved dataset". On a laptop, "this computer" and "the
+server" are the same machine, so the first two read as the same thing. Their real difference, that
+upload copies every video and the folder tab doesn't, is not shown anywhere.
+
+After this spec, on a laptop install, "Choose Videos" has two tabs:
+
+- **My folders** (the default): the researcher's own folders. They open a folder, see its videos
+  (name, length, size), and tick the ones to run, or "Select all", optionally including subfolders.
+  A line under the list says the selected videos are used where they are and never copied.
+- **Saved datasets**: as today.
+
+Below the list, a small link reads "Videos on another computer? Upload them". It is for the case
+where VideoAnnotator runs on a different machine from the videos. It is the only route that copies
+videos, and it says so.
+
+When VideoAnnotator runs on a different machine from the researcher's browser (a lab server),
+"My folders" is not offered, because that machine's folders are not the researcher's. Upload is
+the main route there.
+
+```
+Choose Videos
+[ My folders ]  [ Saved datasets ]
+
+Home > Studies > BabyJokes                 [Up]
+  [ ] Include subfolders
+  [x] 4JDccE.joke5.rep3.take1...mp4   0:03  0.5 MB
+  [ ] 6c6MZQ.joke1.rep1.take1...mp4   0:17  2.3 MB
+  [x] 6c6MZQ.joke1.rep2.take1...mp4   0:09  1.3 MB
+  [Select all]
+2 videos selected - used where they are, never copied
+
+Videos on another computer? Upload them >
+```
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Choose videos on my own laptop without copying them (Priority: P1)
 
 A researcher has VideoAnnotator running on their laptop and a folder of study videos on the same
-disk. They start a new job. The wizard opens on "Videos on this computer" and shows their folders.
+disk. They start a new job. Step 1, "Choose Videos", opens on "My folders" and shows their folders.
 They pick the study folder, choose pipelines, and submit. The run starts at once: nothing is
 uploaded, no copy of any video is made, and they can close the tab while it runs.
 
@@ -49,17 +86,17 @@ uploaded, no copy of any video is made, and they can close the tab while it runs
 worst option for them. It is the whole point of the feature, and it delivers value on its own.
 
 **Independent Test**: On a local install with a folder of videos in the user's home folder, start a
-new job with no settings changed. Confirm the in-place source is the one shown, submit, and check
+new job with no settings changed. Confirm "My folders" is the tab shown, submit, and check
 that no video file was created anywhere under the server's storage folder.
 
 **Acceptance Scenarios**:
 
 1. **Given** the viewer is connected to a server on the same machine, **When** the researcher opens
-   the new-job wizard, **Then** the video step opens on choosing videos on this computer, and upload
-   is offered as the secondary option.
-2. **Given** the researcher picked a folder of 100 videos on this computer, **When** they submit,
+   the new-job wizard, **Then** "Choose Videos" opens on "My folders", and upload is offered only as
+   the "Videos on another computer? Upload them" link.
+2. **Given** the researcher picked a folder of 100 videos in My folders, **When** they submit,
    **Then** all 100 jobs exist within seconds, as one run, without any upload.
-3. **Given** a run started from videos on this computer, **When** the jobs run and finish, **Then**
+3. **Given** a run started from videos in My folders, **When** the jobs run and finish, **Then**
    no copy of any video exists in the server's storage, and the results are the same as for an
    uploaded copy of the same video.
 4. **Given** the run has started, **When** the researcher closes the browser tab, **Then** the run
@@ -81,7 +118,7 @@ created, each reading its video in place.
 
 **Acceptance Scenarios**:
 
-1. **Given** a folder of videos on this computer, **When** the researcher opens it, **Then** they see
+1. **Given** a folder of videos in My folders, **When** the researcher opens it, **Then** they see
    its videos (name, size, and duration where known) and can select any of them, or all.
 2. **Given** a selection of videos from one folder, **When** they submit, **Then** exactly those
    videos run, as one run, with no copies.
@@ -106,8 +143,8 @@ viewer from the host's browser, and run Story 1's test.
 **Acceptance Scenarios**:
 
 1. **Given** the documented Docker setup with the researcher's video folder configured, **When** they
-   open the new-job wizard from a browser on the same machine, **Then** that folder is offered as
-   videos on this computer, and Story 1's scenarios hold.
+   open the new-job wizard from a browser on the same machine, **Then** "My folders" shows that folder, and Story 1's
+   scenarios hold.
 2. **Given** the Docker setup, **When** the server is reached from another machine on the network,
    **Then** in-place reading is not offered to that caller (see FR-008).
 3. **Given** the Docker setup with no video folder configured, **When** the researcher opens the
@@ -141,7 +178,7 @@ rerun the run and the dataset.
 
 ---
 
-### User Story 5 - A saved dataset of videos on this computer reruns with no prompts (Priority: P3)
+### User Story 5 - A saved dataset of videos from My folders reruns with no prompts (Priority: P3)
 
 A researcher saved the videos they chose (a folder, or a selection) as a dataset. Next week they
 choose "Use" on that dataset. It goes straight to choosing pipelines: no folder to find, no upload.
@@ -154,7 +191,7 @@ no prompt appears and no copies are made.
 
 **Acceptance Scenarios**:
 
-1. **Given** a dataset saved from a selection of videos on this computer, **When** the researcher
+1. **Given** a dataset saved from a selection of videos from My folders, **When** the researcher
    uses it, **Then** the wizard proceeds with exactly those videos, read in place, without asking
    for a location.
 2. **Given** such a dataset where a video has since moved, **When** it is used, **Then** Story 4's
@@ -187,13 +224,16 @@ no prompt appears and no copies are made.
 **Default and source choice**
 
 - **FR-001**: When the viewer is connected to a server on the same machine, the new-job wizard MUST
-  open the video step on choosing videos on this computer, read in place.
-- **FR-002**: Upload MUST remain available as a secondary option on every install, and MUST be the
-  default when the server is not on the same machine.
+  open "Choose Videos" on "My folders": the researcher's own folders, from which videos are read in
+  place.
+- **FR-002**: Upload MUST remain available on every install. On a same-machine connection it MUST be
+  offered as a secondary link ("Videos on another computer? Upload them"), not a tab. When the
+  server is not on the same machine, "My folders" MUST NOT be offered, and upload MUST be the main
+  route.
 - **FR-003**: The viewer MUST be able to learn from the server whether the current connection counts
   as the same machine (FR-008), so it can choose the default and avoid offering what would be
   refused.
-- **FR-004**: The interface MUST say, where the choice is made, that videos on this computer are
+- **FR-004**: The interface MUST say, where the choice is made, that videos from My folders are
   read where they are and never copied, and that deleting a job never deletes the original video.
 
 **Choosing videos in place**
