@@ -16,12 +16,15 @@ This guide helps you get up and running with VideoAnnotator using Docker (recomm
 For the most reliable setup (consistent dependencies, easier GPU support), run VideoAnnotator in Docker:
 
 ```bash
-# CPU (default)
-docker compose up --build
+# CPU: your videos in ~/Studies, results in ~/VideoAnnotator
+VIDEOS_DIR=~/Studies RESULTS_DIR=~/VideoAnnotator docker compose --profile prod up --build videoannotator-prod
 
 # GPU (requires NVIDIA Container Toolkit)
-docker compose --profile gpu up --build videoannotator-gpu
+VIDEOS_DIR=~/Studies RESULTS_DIR=~/VideoAnnotator docker compose --profile gpu up --build videoannotator-gpu
 ```
+
+Your video folder is mounted read-only and the server is reachable from this computer only; see
+[Your videos and results under Docker](../installation/INSTALLATION.md#your-videos-and-results-under-docker).
 
 Open http://localhost:18011/docs for the interactive API documentation, or
 http://localhost:18011/viewer to review annotated output in the bundled
@@ -109,6 +112,19 @@ this server (same-origin, no setup needed). It also runs on its own — see
 
 **CORS Note**: The official standalone web client (video-annotation-viewer on port 19011) is
 automatically allowed. For custom clients, use `--dev` mode or set `CORS_ORIGINS` environment variable.
+
+### 🎬 Your first run in the viewer
+
+Open http://127.0.0.1:18011/viewer/ and choose **New job**. On the computer the server runs on,
+step 1 opens on **My folders**: open the folder your videos are in, tick the ones to run (or
+**Select all**), choose pipelines and submit. Videos are read where they are; nothing is uploaded
+or copied, and you can close the tab while it runs.
+
+Results go to **`~/VideoAnnotator`**: one folder per run, named after the run and its date, with
+one folder per video and a `run.json` describing the run. The run's page shows the folder, opens
+it, and downloads the whole run as one zip. See
+[Choosing videos](../installation/INSTALLATION.md#choosing-videos-on-your-own-computer) and
+[Where results go](../installation/INSTALLATION.md#where-results-go) to change either folder.
 
 ### 📹 Process Videos via CLI
 

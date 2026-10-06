@@ -145,7 +145,7 @@ export default function GettingStarted() {
             </li>
             <li className="flex items-start gap-2">
               <span className="font-semibold text-primary min-w-[1.5rem]">2.</span>
-              Create annotation jobs by uploading videos
+              Create a job: choose videos in My folders (read where they are, never copied), or upload them from another computer
             </li>
             <li className="flex items-start gap-2">
               <span className="font-semibold text-primary min-w-[1.5rem]">3.</span>

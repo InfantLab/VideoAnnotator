@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Videos are read where they are, and results go to one folder you can find** (spec 022).
+  - **My folders.** On the server's own computer, the new-job wizard opens on "My folders": open
+    a folder, tick videos (or Select all, with or without subfolders) and the run starts at once.
+    Nothing is uploaded or copied. Upload is now a "Videos on another computer?" link, and the
+    main route when the server is on another machine. The server decides which applies
+    (`GET /api/v1/ingest/access`), and `POST /api/v1/ingest` takes the ticked videos as `files`.
+  - **Results folder.** Every run's results go to `~/VideoAnnotator/<run> (<date>)/<video>/`,
+    with a `run.json` listing pipelines, settings, versions and each video's source. Result
+    file names are unchanged. Folders are never overwritten, and hold results only, never a
+    video. Set `VIDEOANNOTATOR_RESULTS_DIR` to put them elsewhere. Jobs from before stay where
+    they are.
+  - **From the viewer.** Run and job pages show the results folder with Open folder (when the
+    server has a desktop to open it on), Copy location and, for a run, Download results: one zip
+    of every video's results without videos (`GET /api/v1/batches/{id}/results.zip`). A whole
+    run can be deleted (`DELETE /api/v1/batches/{id}`); confirmations name the folder, and the
+    original videos are never touched. Settings shows both folders.
+  - **Moved videos.** A queued job whose video has gone fails naming it, and the run goes on.
+    Its results stay viewable, with the player saying where the video was. "Run again" lists
+    missing videos first (`rerun?check=true`), then runs the rest, or finds them in a folder you
+    choose by name and size (`relocate_folder`).
+  - **Datasets of chosen videos** (`server_selection`) rerun exactly those videos, with no
+    prompts while they are where they were.
+  - **Docker.** Compose takes `VIDEOS_DIR` (read-only) and `RESULTS_DIR` (on your computer)
+    and shows host paths in the viewer; see the installation guide.
+
 - **Python 3.13 support** (spec 012). VideoAnnotator now installs and runs on Python 3.12 and 3.13;
   3.13 is the default for the dev container and the Docker images. No library version changed:
   on 3.13 the install adds only backports of standard-library audio modules that 3.13 removed.
@@ -24,8 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the server, records the job in the same database (so it shows in the viewer), prints each
   pipeline's result files or error, and exits 1 if any pipeline failed. `--config` takes the
   bundled YAML/JSON configs; `--output` also copies the result files to a folder. An unknown
-  pipeline name is rejected at once with the valid names. The video is hard-linked into the job
-  folder where possible, so it isn't copied.
+  pipeline name is rejected at once with the valid names. The video is read where it is, and
+  results go to the results folder (spec 022).
 - **Queue position in the viewer**: a pending job says where it is in the queue ("Next in queue",
   "3rd in queue") under its status in the job and batch lists and on its page, so a queued job no
   longer looks the same as a stuck one. The server already reported `queue_position`; the viewer
@@ -149,6 +174,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A job's results download leaves the video out** (spec 022). The zip from "Download Results"
+  and `GET /api/v1/jobs/{id}/artifacts` was one more copy of sensitive video each time; it now
+  holds the results only. Tick "Include the video" in the viewer, or add `include_video=true`,
+  to get the old contents; the response's `X-VideoAnnotator-Notice` header says so.
+- **Docker compose publishes on `127.0.0.1` only** (spec 022). `videoannotator-prod` and
+  `videoannotator-gpu` published no port before; they now publish `127.0.0.1:18011` and set
+  `VIDEOANNOTATOR_PUBLISHED_LOCALLY=1`, so the browser on your computer counts as local. If you
+  publish the port more widely, remove that variable (the server warns at startup while it is
+  set).
 - **A saved dataset of uploaded videos runs without asking where they are.** Uploaded videos
   stay in the folders of the jobs that ran on them, so "Use" on such a dataset now runs from
   those copies: no folder to choose, nothing to upload again. If some were deleted along with

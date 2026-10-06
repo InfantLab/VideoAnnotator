@@ -55,10 +55,11 @@ against it.
 
 ## Current Plan
 <!-- SPECKIT START -->
-`specs/022-videos-read-in-place/plan.md`: on a laptop install, videos are read where they are
-("My folders", no copies) and results go to one visible folder (`~/VideoAnnotator/<run>/<video>/`,
-via each job's `output_dir`, plus `run.json`); Docker publishes on loopback with
-`VIDEOANNOTATOR_PUBLISHED_LOCALLY`. Next spec: `specs/023-viewer-overhaul` (placeholder).
+Spec 022 (`specs/022-videos-read-in-place/`) is implemented: videos read where they are ("My
+folders"), results in `~/VideoAnnotator/<run> (<date>)/<video>/` via each job's `output_dir`
+(every naming and layout rule is in `results_folder.py`), Docker on loopback with
+`VIDEOANNOTATOR_PUBLISHED_LOCALLY`. Still open: its Docker walkthrough (T072/T087, needs Docker).
+Next spec: `specs/023-viewer-overhaul` (placeholder).
 <!-- SPECKIT END -->
 
 ## Recent Changes

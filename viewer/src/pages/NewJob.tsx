@@ -66,7 +66,7 @@ import { APIError, apiErrorEnvelope } from "@/api/handleError";
 
 // Wizard steps
 const STEPS = [
-  { id: 1, title: "Choose Videos", description: "Upload files, or use a folder on the server" },
+  { id: 1, title: "Choose Videos", description: "From My folders, a saved dataset, or an upload" },
   { id: 2, title: "Select Pipelines", description: "Choose annotation pipelines" },
   { id: 3, title: "Configure", description: "Set pipeline parameters" },
   { id: 4, title: "Review & Submit", description: "Review and start jobs" },

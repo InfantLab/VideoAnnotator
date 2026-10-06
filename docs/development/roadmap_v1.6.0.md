@@ -559,6 +559,14 @@ job in the wizard from memory, although every job already stores its `selected_p
       Done 2026-10-04. Tested for real: gemma4:e4b every 5 s vs qwen3.5:9b every 2 s on the demo
       clip. 3 moments paired, 3 unpaired, all 3 disagreeing (TOUCH vs NO_TOUCH); the video seeks
       to a selected moment.
+- [x] **Videos read where they are, results in one visible folder** (the first user is a
+      researcher on their own laptop): "My folders" is the wizard's default on the server's own
+      computer, with individual videos selectable and nothing copied; every run's results go to
+      `~/VideoAnnotator/<run> (<date>)/<video>/` with a `run.json`, shown, opened and downloaded
+      (one zip per run) from the viewer; moved videos are named and can be located again; Docker
+      gets `VIDEOS_DIR`/`RESULTS_DIR` on loopback. Spec: `specs/022-videos-read-in-place/`.
+      Done 2026-10-06, except running the quickstart's Docker section, which needs a machine with
+      Docker (the dev container has none).
 
 **Not in this phase**: a visual redesign. Decide on one after the pilot, from what outside users
 say.

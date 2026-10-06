@@ -261,13 +261,13 @@ results there and that earlier runs still open.
 
 ## Phase 11: Polish & cross-cutting
 
-- [ ] T082 [P] Add a CHANGELOG entry in `CHANGELOG.md`: My folders default and in-place reading, results folder (`~/VideoAnnotator`, `VIDEOANNOTATOR_RESULTS_DIR`), `run.json`, run zip, **changed default**: job artifacts zip omits the video (`include_video=true` restores it), Docker now publishes on loopback only with `VIDEOS_DIR`/`RESULTS_DIR`
-- [ ] T083 [P] Update the getting-started docs (`docs/` getting-started page and `viewer/src/pages/GettingStarted.tsx` if it describes uploading) to describe My folders and where results go
-- [ ] T084 [P] Update `docs/development/handover_walkthrough_rc1.md` with quickstart.md's input/output section (the file already has uncommitted edits — read and merge, don't overwrite)
-- [ ] T085 Rebuild the viewer with `bash scripts/build_viewer.sh` and commit `src/videoannotator/viewer_static/`
-- [ ] T086 Run the full gate: `pytest tests/`, `pytest tests/integration/test_output_baseline.py` (outputs must match baseline — FR-007, results only moved), `ruff check .`, `mypy src/videoannotator`, `cd viewer && bun run lint && bun run test:run`, `cd viewer && bunx tsc --noEmit -p tsconfig.app.json` (no more errors than T001's count), `bash scripts/build_viewer.sh --check` (bundle not larger than T001's size beyond the new components), `pre-commit run --all-files`
-- [ ] T087 Walk through the whole of [quickstart.md](quickstart.md) on a plain install, including "Upload route" (uploaded copy in internal storage, results in `~/VideoAnnotator`), and the SC-002 check `find ~/.local/share/videoannotator/jobs ~/VideoAnnotator -name '*.mp4'`; note results in the commit message
-- [ ] T088 Tick the 022 items in `docs/development/roadmap_v1.6.0.md` (if listed) and update the "Current Plan" line in `CLAUDE.md` to point at the next spec
+- [X] T082 [P] Add a CHANGELOG entry in `CHANGELOG.md`: My folders default and in-place reading, results folder (`~/VideoAnnotator`, `VIDEOANNOTATOR_RESULTS_DIR`), `run.json`, run zip, **changed default**: job artifacts zip omits the video (`include_video=true` restores it), Docker now publishes on loopback only with `VIDEOS_DIR`/`RESULTS_DIR`
+- [X] T083 [P] Update the getting-started docs (`docs/` getting-started page and `viewer/src/pages/GettingStarted.tsx` if it describes uploading) to describe My folders and where results go
+- [X] T084 [P] Update `docs/development/handover_walkthrough_rc1.md` with quickstart.md's input/output section (the file already has uncommitted edits — read and merge, don't overwrite)
+- [X] T085 Rebuild the viewer with `bash scripts/build_viewer.sh` and commit `src/videoannotator/viewer_static/`
+- [X] T086 Run the full gate: `pytest tests/`, `pytest tests/integration/test_output_baseline.py` (outputs must match baseline — FR-007, results only moved), `ruff check .`, `mypy src/videoannotator`, `cd viewer && bun run lint && bun run test:run`, `cd viewer && bunx tsc --noEmit -p tsconfig.app.json` (no more errors than T001's count), `bash scripts/build_viewer.sh --check` (bundle not larger than T001's size beyond the new components), `pre-commit run --all-files`
+- [X] T087 Walk through the whole of [quickstart.md](quickstart.md) on a plain install, including "Upload route" (uploaded copy in internal storage, results in `~/VideoAnnotator`), and the SC-002 check `find ~/.local/share/videoannotator/jobs ~/VideoAnnotator -name '*.mp4'`; note results in the commit message
+- [X] T088 Tick the 022 items in `docs/development/roadmap_v1.6.0.md` (if listed) and update the "Current Plan" line in `CLAUDE.md` to point at the next spec
 
 ---
 
