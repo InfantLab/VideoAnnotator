@@ -269,3 +269,57 @@ def test_a_moved_videos_results_stay_viewable(moved_run):
     assert client.get(f"/api/v1/jobs/{job_id}/results").status_code == 200
     other = client.get(f"/api/v1/jobs/{_job_for(body, 'child01.mp4')}").json()
     assert other["video_available"] is True
+
+
+# --- Spec 024: a folder that isn't shared any more is not "moved" --------------
+
+
+@pytest.fixture
+def unshared_run(moved_run, tmp_path, monkeypatch):
+    """`moved_run`, after its folder stopped being shared: the container no
+    longer sees the videos at all."""
+    import shutil
+
+    from videoannotator.api.v1 import ingest as ingest_module
+
+    body, site_a, site_b = moved_run
+    elsewhere = tmp_path / "other share"
+    elsewhere.mkdir()
+    monkeypatch.setattr(ingest_module, "INGEST_ROOTS", str(elsewhere))
+    shutil.rmtree(site_a)
+    return body, site_a
+
+
+def test_rerun_says_the_folder_isnt_shared_any_more(unshared_run):
+    body, site_a = unshared_run
+    result = client.post(f"/api/v1/batches/{body['batch_id']}/rerun?check=true")
+    skipped = result.json()["skipped"]
+    assert len(skipped) == 3
+    for entry in skipped:
+        assert f"{site_a} isn't shared with VideoAnnotator any more" in entry["reason"]
+
+
+def test_a_job_explains_why_its_video_is_unavailable(unshared_run, moved_run):
+    body, site_a = unshared_run
+    job = client.get(f"/api/v1/jobs/{_job_for(body, 'child01.mp4')}").json()
+    assert job["video_available"] is False
+    assert job["video_unavailable_reason"] == (
+        f"{site_a} isn't shared with VideoAnnotator any more"
+    )
+
+
+def test_a_moved_video_is_still_explained_as_moved(moved_run):
+    body, _, _ = moved_run
+    job = client.get(f"/api/v1/jobs/{_job_for(body, 'child02.mp4')}").json()
+    assert job["video_unavailable_reason"] == (
+        "moved or deleted since the job was created"
+    )
+    other = client.get(f"/api/v1/jobs/{_job_for(body, 'child01.mp4')}").json()
+    assert other["video_unavailable_reason"] is None
+
+
+def test_a_jobs_video_is_shown_as_the_host_shows_it(moved_run, monkeypatch):
+    body, site_a, _ = moved_run
+    monkeypatch.setenv("VIDEOANNOTATOR_HOST_PATHS", f"{site_a}=C:\\Users\\ada\\Site A")
+    job = client.get(f"/api/v1/jobs/{_job_for(body, 'child01.mp4')}").json()
+    assert job["video_display_path"] == "C:\\Users\\ada\\Site A\\child01.mp4"

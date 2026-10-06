@@ -19,7 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronRight, CornerLeftUp, Folder, HardDrive } from 'lucide-react';
 import { parseApiError } from '@/lib/errorHandling';
 import { useIngestAccess } from '@/hooks/useIngestAccess';
-import type { FolderRef, IngestBrowseResponse, Place } from '@/types/ingest';
+import type { FolderRef, IngestAccess, IngestBrowseResponse, Place } from '@/types/ingest';
 import { displayPathOf } from '@/lib/folders';
 import type { ServerFolderScan } from '@/types/datasets';
 
@@ -48,6 +48,35 @@ interface ServerFolderPickerProps {
 
 const DOCS_URL =
   'https://github.com/InfantLab/VideoAnnotator/blob/master/docs/installation/INSTALLATION.md#choosing-videos-on-your-own-computer';
+
+/**
+ * Why My folders isn't offered, in the server's words, with upload one click
+ * away. The server owns the wording (spec 024): in a container with nothing
+ * shared it says how to share a folder, never which folders it can see inside.
+ */
+export function NoFolderAccess({ access, onUpload }: { access: IngestAccess | null; onUpload: () => void }) {
+  const reason = access?.reason ?? 'The server did not say why.';
+  // "Headline. How to fix it." — the first sentence leads, the rest is the next step.
+  const split = reason.indexOf('. ');
+  const headline = split > 0 ? reason.slice(0, split + 1) : reason;
+  const howTo = split > 0 ? reason.slice(split + 2) : null;
+  return (
+    <Alert>
+      <AlertTitle>{headline}</AlertTitle>
+      <AlertDescription className="space-y-2">
+        {howTo && <p>{howTo}</p>}
+        <Button type="button" size="sm" onClick={onUpload}>
+          Upload videos instead
+        </Button>
+        <p className="text-xs">
+          <a className="underline" href={DOCS_URL} target="_blank" rel="noreferrer">
+            Setting up the folders VideoAnnotator may read
+          </a>
+        </p>
+      </AlertDescription>
+    </Alert>
+  );
+}
 
 function formatSize(bytes: number | null | undefined): string {
   if (!bytes) return '';
@@ -384,8 +413,17 @@ export function ServerFolderPicker({ selection, onSelect, folderOnly = false }: 
           </p>
 
           <p className="text-xs text-muted-foreground">
-            Videos somewhere else, like an external drive? Add that folder to{' '}
-            <code>VIDEOANNOTATOR_INGEST_ROOTS</code> (Docker: <code>VIDEOS_DIR</code>) and restart.{' '}
+            Videos somewhere else, like an external drive?{' '}
+            {access?.managed_by_launcher ? (
+              <>
+                Share that folder too: run <code>videoannotator-start share</code>.{' '}
+              </>
+            ) : (
+              <>
+                Add that folder to <code>VIDEOANNOTATOR_INGEST_ROOTS</code> (Docker: <code>VIDEOS_DIR</code>) and
+                restart.{' '}
+              </>
+            )}
             <a className="underline" href={DOCS_URL} target="_blank" rel="noreferrer">
               How
             </a>

@@ -1,10 +1,15 @@
 """`GET /api/v1/ingest/access`: what this caller may do with local videos (spec 022)."""
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
 from videoannotator.api.main import app
-from videoannotator.api.middleware.auth import validate_api_key
+from videoannotator.api.middleware.auth import (
+    validate_api_key,
+    validate_required_api_key,
+)
 from videoannotator.api.v1 import ingest as ingest_module
 from videoannotator.results_folder import results_root
 
@@ -18,6 +23,7 @@ remote = TestClient(app, client=("192.168.1.20", 50000))
 @pytest.fixture(autouse=True)
 def as_admin(monkeypatch):
     app.dependency_overrides[validate_api_key] = lambda: ADMIN
+    app.dependency_overrides[validate_required_api_key] = lambda: ADMIN
     monkeypatch.setattr(ingest_module, "in_container", lambda: False)
     yield
     app.dependency_overrides.clear()
@@ -101,3 +107,63 @@ def test_can_open_folders_needs_a_desktop(videos, monkeypatch):
     assert _access()["can_open_folders"] is True
     monkeypatch.setattr(ingest_module, "folder_opener", lambda: None)
     assert _access()["can_open_folders"] is False
+
+
+# Spec 024: a container never shows its own filesystem (FR-016).
+
+LAUNCHER_REASON = (
+    "VideoAnnotator can only see folders you share with it. To share one, run: "
+    "videoannotator-start share"
+)
+COMPOSE_REASON = (
+    "VideoAnnotator can only see folders you share with it. Set VIDEOS_DIR when "
+    "starting it (see the installation guide)."
+)
+
+
+@pytest.fixture
+def container_without_shares(monkeypatch):
+    monkeypatch.setattr(ingest_module, "in_container", lambda: True)
+    monkeypatch.setattr(ingest_module, "INGEST_ROOTS", "")
+    monkeypatch.delenv("VIDEOANNOTATOR_LAUNCHER", raising=False)
+
+
+def test_a_container_without_shares_allows_no_folders(container_without_shares):
+    assert ingest_module.allowed_roots() == []
+
+
+def test_a_container_without_shares_says_how_to_share_one(container_without_shares):
+    body = _access()
+    assert body["can_read_in_place"] is False
+    assert body["allowed_folders"] == []
+    assert body["places"] == []
+    assert body["in_container"] is True
+    assert body["managed_by_launcher"] is False
+    assert body["reason"] == COMPOSE_REASON
+
+
+def test_the_launcher_wording_names_its_command(container_without_shares, monkeypatch):
+    monkeypatch.setenv("VIDEOANNOTATOR_LAUNCHER", "1")
+    body = _access()
+    assert body["managed_by_launcher"] is True
+    assert body["reason"] == LAUNCHER_REASON
+
+
+def test_compose_without_videos_dir_is_no_share(container_without_shares, monkeypatch):
+    # docker-compose.yml sets VIDEOANNOTATOR_INGEST_ROOTS=${VIDEOS_DIR:+/videos}.
+    monkeypatch.setattr(ingest_module, "INGEST_ROOTS", " ")
+    assert ingest_module.allowed_roots() == []
+    assert _access()["reason"] == COMPOSE_REASON
+
+
+@pytest.mark.parametrize("endpoint", ["browse", "scan"])
+def test_the_container_home_is_never_readable(container_without_shares, endpoint):
+    response = local.get(f"/api/v1/ingest/{endpoint}", params={"path": "/root"})
+    assert response.status_code == 403, response.text
+
+
+def test_outside_a_container_home_is_still_the_default(monkeypatch):
+    # The autouse fixture has in_container() false.
+    monkeypatch.setattr(ingest_module, "INGEST_ROOTS", "")
+    assert ingest_module.allowed_roots() == [Path.home().resolve()]
+    assert _access()["in_container"] is False

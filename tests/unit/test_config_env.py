@@ -232,6 +232,49 @@ class TestConfigIntegration:
         assert manager.max_concurrent_jobs == 6
 
 
+class TestLauncherSettings:
+    """Settings `videoannotator-start` passes to the server (spec 024)."""
+
+    @pytest.mark.parametrize(("value", "expected"), [("1", True), ("0", False)])
+    def test_managed_by_launcher(self, monkeypatch, value, expected):
+        from videoannotator.config_env import managed_by_launcher
+
+        monkeypatch.setenv("VIDEOANNOTATOR_LAUNCHER", value)
+        assert managed_by_launcher() is expected
+
+    def test_not_managed_by_launcher_when_unset(self, monkeypatch):
+        from videoannotator.config_env import managed_by_launcher
+
+        monkeypatch.delenv("VIDEOANNOTATOR_LAUNCHER", raising=False)
+        assert managed_by_launcher() is False
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [("1000:1000", (1000, 1000)), ("", None), ("abc", None), ("1000", None)],
+    )
+    def test_results_owner(self, monkeypatch, value, expected):
+        from videoannotator.config_env import results_owner
+
+        monkeypatch.setenv("VIDEOANNOTATOR_RESULTS_OWNER", value)
+        assert results_owner() == expected
+
+    def test_results_owner_unset(self, monkeypatch):
+        from videoannotator.config_env import results_owner
+
+        monkeypatch.delenv("VIDEOANNOTATOR_RESULTS_OWNER", raising=False)
+        assert results_owner() is None
+
+    def test_missing_shares(self, monkeypatch):
+        from videoannotator.config_env import missing_shares
+
+        monkeypatch.delenv("VIDEOANNOTATOR_MISSING_SHARES", raising=False)
+        assert missing_shares() == []
+        monkeypatch.setenv(
+            "VIDEOANNOTATOR_MISSING_SHARES", r"E:\Data;/media/ada/Drive 2"
+        )
+        assert missing_shares() == [r"E:\Data", "/media/ada/Drive 2"]
+
+
 class TestConfigPrinting:
     """Test configuration printing utility."""
 

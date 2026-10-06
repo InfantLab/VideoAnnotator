@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ServerFolderPicker, type ServerFolderSelection } from "@/components/ServerFolderPicker";
+import { NoFolderAccess, ServerFolderPicker, type ServerFolderSelection } from "@/components/ServerFolderPicker";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw, FolderOpen, HardDrive, Database } from "lucide-react";
@@ -868,9 +868,6 @@ const CreateNewJob = () => {
 // Step Components
 type VideoSource = 'upload' | 'server' | 'dataset';
 
-const MY_FOLDERS_DOCS_URL =
-  'https://github.com/InfantLab/VideoAnnotator/blob/master/docs/installation/INSTALLATION.md#choosing-videos-on-your-own-computer';
-
 interface DatasetSelectionState {
   fromDataset: { id: string; name: string } | null;
   setFromDataset: (dataset: { id: string; name: string } | null) => void;
@@ -1104,23 +1101,15 @@ export const VideoUploadStep = ({
 
         <TabsContent value="server" className="mt-4 space-y-3">
           {access?.can_read_in_place ? (
-            <ServerFolderPicker selection={serverFolder} onSelect={selectServerFolder} />
+            <>
+              <ServerFolderPicker selection={serverFolder} onSelect={selectServerFolder} />
+              <Button variant="link" size="sm" className="h-auto p-0" onClick={() => onSourceChange('upload')}>
+                Videos on another computer? Upload them &rsaquo;
+              </Button>
+            </>
           ) : (
-            <Alert>
-              <AlertTitle>Choosing videos on this computer isn&apos;t available</AlertTitle>
-              <AlertDescription className="space-y-1">
-                <p>{access?.reason ?? 'The server did not say why.'}</p>
-                <p className="text-xs">
-                  <a className="underline" href={MY_FOLDERS_DOCS_URL} target="_blank" rel="noreferrer">
-                    Setting up the folders VideoAnnotator may read
-                  </a>
-                </p>
-              </AlertDescription>
-            </Alert>
+            <NoFolderAccess access={access} onUpload={() => onSourceChange('upload')} />
           )}
-          <Button variant="link" size="sm" className="h-auto p-0" onClick={() => onSourceChange('upload')}>
-            Videos on another computer? Upload them &rsaquo;
-          </Button>
         </TabsContent>
 
         <TabsContent value="dataset" className="mt-4">

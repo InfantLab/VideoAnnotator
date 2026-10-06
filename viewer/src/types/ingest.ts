@@ -88,6 +88,10 @@ export interface IngestAccess {
   can_open_folders: boolean;
   /** Where My folders starts: Home, Videos, Desktop, ... that exist (spec 022). */
   places?: Place[];
+  /** The server runs in a container (spec 024); absent on older servers. */
+  in_container?: boolean;
+  /** Started by `videoannotator-start`, which shares folders and can stop sharing them (spec 024). */
+  managed_by_launcher?: boolean;
 }
 
 export interface Place extends FolderRef {

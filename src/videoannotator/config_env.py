@@ -6,7 +6,9 @@ Values can be overridden via environment variables or .env files.
 v1.3.0: Added concurrent job limiting configuration.
 """
 
+import logging
 import os
+import re
 from pathlib import Path
 
 from dotenv import dotenv_values, find_dotenv, load_dotenv
@@ -193,6 +195,48 @@ PUBLISHED_LOCALLY_ENV = "VIDEOANNOTATOR_PUBLISHED_LOCALLY"
 HOST_PATHS_ENV = "VIDEOANNOTATOR_HOST_PATHS"
 
 
+# Spec 024: set by `videoannotator-start`, which can apply stop-sharing requests
+# the server leaves in LAUNCHER_REQUESTS_DIR.
+LAUNCHER_ENV = "VIDEOANNOTATOR_LAUNCHER"
+LAUNCHER_REQUESTS_DIR = Path("/app/launcher/requests")
+
+# Spec 024: shares the launcher couldn't find at this start (host paths,
+# `;`-separated), so Settings can still list them.
+MISSING_SHARES_ENV = "VIDEOANNOTATOR_MISSING_SHARES"
+
+# Spec 024, R6: `uid:gid` to give results to. Rootful Docker on Linux writes as
+# root on the host otherwise.
+RESULTS_OWNER_ENV = "VIDEOANNOTATOR_RESULTS_OWNER"
+
+
+def managed_by_launcher() -> bool:
+    """Whether `videoannotator-start` started this server."""
+    return get_bool_env(LAUNCHER_ENV, False)
+
+
+def missing_shares() -> list[str]:
+    """Host paths of shared folders missing when the launcher last started."""
+    raw = os.environ.get(MISSING_SHARES_ENV, "")
+    return [entry.strip() for entry in raw.split(";") if entry.strip()]
+
+
+def results_owner() -> tuple[int, int] | None:
+    """`(uid, gid)` from `$VIDEOANNOTATOR_RESULTS_OWNER`, or None."""
+    raw = os.environ.get(RESULTS_OWNER_ENV, "").strip()
+    if not raw:
+        return None
+    uid, sep, gid = raw.partition(":")
+    try:
+        if sep:
+            return int(uid), int(gid)
+    except ValueError:
+        pass
+    logging.getLogger(__name__).warning(
+        f"Ignoring {RESULTS_OWNER_ENV}={raw!r}: expected uid:gid, e.g. 1000:1000"
+    )
+    return None
+
+
 def results_dir() -> Path:
     """`$VIDEOANNOTATOR_RESULTS_DIR`, else `~/VideoAnnotator`, resolved."""
     raw = os.environ.get(RESULTS_DIR_ENV, "").strip()
@@ -205,13 +249,21 @@ def published_locally() -> bool:
     return get_bool_env(PUBLISHED_LOCALLY_ENV, False)
 
 
+WINDOWS_PATH = re.compile(r"^[A-Za-z]:\\")
+
+
 def host_paths() -> list[tuple[str, str]]:
-    """`(container prefix, host prefix)` pairs, longest container prefix first."""
+    """`(container prefix, host prefix)` pairs, longest container prefix first.
+
+    A Windows host prefix (`C:\\...`, spec 024) keeps its backslashes.
+    """
     pairs = []
     for entry in os.environ.get(HOST_PATHS_ENV, "").split(";"):
         container, sep, host = entry.partition("=")
-        if sep and container.strip() and host.strip():
-            pairs.append((container.strip().rstrip("/"), host.strip().rstrip("/")))
+        container, host = container.strip(), host.strip()
+        if sep and container and host:
+            host = host.rstrip("\\" if WINDOWS_PATH.match(host) else "/")
+            pairs.append((container.rstrip("/"), host))
     return sorted(pairs, key=lambda pair: len(pair[0]), reverse=True)
 
 

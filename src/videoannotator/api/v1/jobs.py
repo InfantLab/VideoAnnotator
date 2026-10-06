@@ -31,8 +31,10 @@ from ...results_folder import (
     RunFolder,
     display_path,
     folder_ref,
+    rerun_video_missing,
     run_folder_of,
     run_name,
+    video_unavailable_reason,
 )
 from ...storage.base import StorageBackend
 from ...storage.manager import get_storage_provider
@@ -144,9 +146,14 @@ def location_fields(job: BatchJob) -> dict[str, Any]:
     results = folder_ref(job.output_dir)
     if results is not None:
         results["exists"] = Path(results["path"]).is_dir()
+    available = bool(video and video.is_file())
     return {
         "results_folder": results,
-        "video_available": bool(video and video.is_file()),
+        "video_available": available,
+        "video_display_path": display_path(video) if video else None,
+        "video_unavailable_reason": (
+            video_unavailable_reason(video) if video and not available else None
+        ),
     }
 
 
@@ -211,6 +218,16 @@ class JobResponse(BaseModel):
     video_available: bool = Field(
         default=True,
         description="Whether the job's video is still at its location (spec 022)",
+    )
+    video_display_path: str | None = Field(
+        default=None,
+        description="`video_path` as the researcher's own machine shows it "
+        "(differs under Docker; spec 024)",
+    )
+    video_unavailable_reason: str | None = Field(
+        default=None,
+        description="Why the video isn't available, for researchers: moved or "
+        "deleted, or its folder isn't shared any more (spec 024)",
     )
 
 
@@ -1364,11 +1381,10 @@ def create_rerun(
     if video is None:
         video = Path(original.video_path) if original.video_path else None
     if video is None or not video.is_file():
-        where = f" at {display_path(video)}" if video is not None else ""
         raise RerunNotPossibleException(
             original.job_id,
             "RERUN_VIDEO_MISSING",
-            f"its video is no longer{where}",
+            rerun_video_missing(video),
             "Choose the folder it is in now, or choose the video again.",
         )
 

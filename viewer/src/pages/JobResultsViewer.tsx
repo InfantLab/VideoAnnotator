@@ -128,7 +128,9 @@ const JobResultsViewerForJob = ({ jobId }: { jobId: string | undefined }) => {
 
   const missingVideoMessage =
     job && job.video_available === false && !videoFile
-      ? `Video not found at ${job.video_path ?? 'its original location'} (moved or deleted since the job ran).`
+      ? `Video not found at ${job.video_display_path ?? job.video_path ?? 'its original location'} (${
+          job.video_unavailable_reason ?? 'moved or deleted since the job ran'
+        }).`
       : undefined;
 
   if (state === 'ready' && annotationData && (videoFile || missingVideoMessage)) {

@@ -30,7 +30,11 @@ from ..registry.pipeline_loader import (
     removed_pipeline_message,
 )
 from ..registry.pipeline_registry import get_registry
-from ..results_folder import display_path, record_job_finished
+from ..results_folder import (
+    display_path,
+    record_job_finished,
+    video_unavailable_reason,
+)
 from ..storage.base import StorageBackend
 from ..utils.torch_settings import apply_torch_settings, restored_torch_settings
 from .result_files import job_folder
@@ -89,7 +93,7 @@ def _run(
         job.status = JobStatus.FAILED
         job.error_message = (
             f"Video not found: {display_path(job.video_path)} "
-            "(moved or deleted since the job was created)"
+            f"({video_unavailable_reason(job.video_path)})"
         )
         job.completed_at = datetime.now()
         storage.save_job_metadata(job)

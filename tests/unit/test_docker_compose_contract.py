@@ -33,9 +33,28 @@ def test_videos_read_only_and_results_on_the_host(services, name):
 @pytest.mark.parametrize("name", ["videoannotator-prod", "videoannotator-gpu"])
 def test_server_is_told_where_and_that_callers_are_local(services, name):
     env = dict(e.split("=", 1) for e in services[name]["environment"] if "=" in e)
-    assert env["VIDEOANNOTATOR_INGEST_ROOTS"] == "/videos"
+    # /videos is shared only when VIDEOS_DIR is set (spec 024, R8).
+    assert env["VIDEOANNOTATOR_INGEST_ROOTS"] == "${VIDEOS_DIR:+/videos}"
     assert env["VIDEOANNOTATOR_RESULTS_DIR"] == "/results"
     assert env["VIDEOANNOTATOR_PUBLISHED_LOCALLY"].split()[0] == "1"
     assert env["VIDEOANNOTATOR_HOST_PATHS"] == (
         "/videos=${VIDEOS_DIR:-./videos};/results=${RESULTS_DIR:-~/VideoAnnotator}"
     )
+
+
+@pytest.mark.parametrize(
+    "name", ["videoannotator-dev", "videoannotator-prod", "videoannotator-gpu"]
+)
+def test_download_cache_is_shared_with_the_launcher(services, name):
+    assert "cache:/app/cache" in services[name]["volumes"]
+
+
+def test_volumes_have_the_names_the_launcher_uses():
+    volumes = yaml.safe_load(COMPOSE.read_text())["volumes"]
+    names = {v["name"] for v in volumes.values() if v and "name" in v}
+    assert {
+        "videoannotator-models",
+        "videoannotator-database",
+        "videoannotator-storage",
+        "videoannotator-cache",
+    } <= names

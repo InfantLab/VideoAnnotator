@@ -22,11 +22,11 @@ from pydantic import BaseModel, Field
 from ...batch.batch_summary import compute_batch_summary
 from ...batch.types import JobStatus
 from ...results_folder import (
-    display_path,
     find_moved_video,
     folder_ref,
     is_inside_results,
     recorded_size,
+    rerun_video_missing,
     results_root,
     run_folder_of,
     run_zip_entries,
@@ -451,9 +451,8 @@ def _check_rerunnable(job: Any, moved_to: PathType | None) -> None:
         )
     video = moved_to or (PathType(job.video_path) if job.video_path else None)
     if video is None or not video.is_file():
-        where = f" at {display_path(video)}" if video is not None else ""
         raise RerunNotPossibleException(
-            job.job_id, "RERUN_VIDEO_MISSING", f"its video is no longer{where}", ""
+            job.job_id, "RERUN_VIDEO_MISSING", rerun_video_missing(video), ""
         )
 
 

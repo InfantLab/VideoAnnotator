@@ -139,3 +139,29 @@ def test_deleted_job_video_is_not_offered(client, videos):
     body = client.get(f"/api/v1/datasets/{dataset_id}/stored-videos").json()
 
     assert body["videos"][0]["job_id"] is None
+
+
+def test_a_video_whose_folder_isnt_shared_any_more_says_so(
+    client, videos, ingest_root, tmp_path
+):
+    from videoannotator.batch.types import BatchJob, JobStatus
+
+    A, B = videos
+    dataset_id = _dataset(client, A, B)
+    _upload(client, *A, dataset_id=dataset_id)
+    unshared = tmp_path / "Old study" / B[0]
+    get_storage_backend().save_job_metadata(
+        BatchJob(video_path=unshared, status=JobStatus.COMPLETED)
+    )
+
+    body = client.post(
+        f"/api/v1/datasets/{dataset_id}/run",
+        json={"selected_pipelines": ["scene_detection"]},
+    ).json()
+
+    assert body["skipped"] == [
+        {
+            "filename": B[0],
+            "reason": f"{unshared.parent} isn't shared with VideoAnnotator any more",
+        }
+    ]

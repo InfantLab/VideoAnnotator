@@ -2448,6 +2448,23 @@ export interface components {
              * @description `POST /api/v1/results/open` can show a folder on this machine
              */
             can_open_folders: boolean;
+            /**
+             * Places
+             * @description Where My folders starts: allowed folders and the usual video places under home that exist (empty unless `can_read_in_place`)
+             */
+            places?: components["schemas"]["Place"][];
+            /**
+             * In Container
+             * @description The server runs in a container (spec 024)
+             * @default false
+             */
+            in_container: boolean;
+            /**
+             * Managed By Launcher
+             * @description Started by videoannotator-start, which can stop sharing a folder (spec 024)
+             * @default false
+             */
+            managed_by_launcher: boolean;
         };
         /** IngestBrowseResponse */
         IngestBrowseResponse: {
@@ -2486,6 +2503,12 @@ export interface components {
             path: string;
             /** Video Count */
             video_count: number;
+            /**
+             * Has Videos
+             * @description Videos are in this folder or a few levels below it (spec 022), so a researcher can tell which folders lead somewhere
+             * @default false
+             */
+            has_videos: boolean;
         };
         /** IngestRequest */
         IngestRequest: {
@@ -2674,6 +2697,16 @@ export interface components {
              * @default true
              */
             video_available: boolean;
+            /**
+             * Video Display Path
+             * @description `video_path` as the researcher's own machine shows it (differs under Docker; spec 024)
+             */
+            video_display_path?: string | null;
+            /**
+             * Video Unavailable Reason
+             * @description Why the video isn't available, for researchers: moved or deleted, or its folder isn't shared any more (spec 024)
+             */
+            video_unavailable_reason?: string | null;
         };
         /** JobResultsFolder */
         JobResultsFolder: {
@@ -2910,6 +2943,20 @@ export interface components {
             pipeline: components["schemas"]["PipelineSchemaDescriptor"];
             /** Parameters */
             parameters: components["schemas"]["PipelineParameterSchema"][];
+        };
+        /** Place */
+        Place: {
+            /**
+             * Label
+             * @description What to call it: 'Home', 'Videos', 'Desktop', ...
+             */
+            label: string;
+            /** Path */
+            path: string;
+            /** Display Path */
+            display_path: string;
+            /** Has Videos */
+            has_videos: boolean;
         };
         /**
          * PresetCreateRequest

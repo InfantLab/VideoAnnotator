@@ -381,7 +381,7 @@ The compose services `videoannotator-prod` and `videoannotator-gpu` need two fol
 
 | Variable | Default | What it is |
 | --- | --- | --- |
-| `VIDEOS_DIR` | `./videos` | Your video folder. Mounted read-only: VideoAnnotator never changes it. |
+| `VIDEOS_DIR` | (none: nothing shared) | Your video folder. Mounted read-only: VideoAnnotator never changes it. |
 | `RESULTS_DIR` | `~/VideoAnnotator` | Where results go, on your own computer. |
 
 ```bash

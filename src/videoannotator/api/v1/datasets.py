@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from ...batch.types import BatchJob
 from ...database.crud import SavedDatasetCRUD
 from ...database.database import get_db
+from ...results_folder import VIDEO_MOVED, video_unavailable_reason
 from ...storage.base import StorageBackend
 from ..database import get_storage_backend
 from ..errors import APIError
@@ -336,13 +337,18 @@ class DatasetRunResponse(BaseModel):
     skipped: list[DatasetRunSkipped]
 
 
+NOT_STORED = "no longer stored on the server"
+
+
 def _stored_copies(
     dataset: Any, storage: StorageBackend
-) -> list[tuple[dict[str, Any], BatchJob | None]]:
-    """Each manifest entry with a job that still stores that video, if any.
+) -> list[tuple[dict[str, Any], BatchJob | None, str]]:
+    """Each manifest entry with a job that still stores that video, if any,
+    and otherwise why not.
 
     A copy matches on filename and, where the manifest has one, size. Jobs
-    submitted from this dataset are preferred, then the newest.
+    submitted from this dataset are preferred, then the newest. A video read
+    in place from a folder that isn't shared any more says so (spec 024).
     """
     by_name: dict[str, list[BatchJob]] = {}
     for job_id in storage.list_jobs():
@@ -358,10 +364,14 @@ def _stored_copies(
     result = []
     for entry in dataset.video_manifest or []:
         found = None
+        why = NOT_STORED
         for job in sorted(by_name.get(entry["filename"], []), key=rank, reverse=True):
             video = FilePath(str(job.video_path))
             try:
                 if not video.is_file():
+                    reason = video_unavailable_reason(video)
+                    if why == NOT_STORED and reason != VIDEO_MOVED:
+                        why = reason
                     continue
                 if entry.get("size_bytes") is not None and (
                     video.stat().st_size != entry["size_bytes"]
@@ -371,7 +381,7 @@ def _stored_copies(
                 continue
             found = job
             break
-        result.append((entry, found))
+        result.append((entry, found, why))
     return result
 
 
@@ -399,7 +409,7 @@ async def stored_videos(
             size_bytes=entry.get("size_bytes"),
             job_id=job.job_id if job else None,
         )
-        for entry, job in _stored_copies(dataset, storage)
+        for entry, job, _ in _stored_copies(dataset, storage)
     ]
     stored = sum(1 for v in videos if v.job_id)
     return StoredVideosResponse(
@@ -435,7 +445,7 @@ async def run_dataset(
     dataset = _get_or_404(db, dataset_id)
     validate_pipeline_selection(request.selected_pipelines, request.config)
     copies = _stored_copies(dataset, storage)
-    if not any(job for _, job in copies):
+    if not any(job for _, job, _ in copies):
         raise APIError(
             status_code=422,
             code="DATASET_NOT_STORED",
@@ -447,13 +457,9 @@ async def run_dataset(
     batch_name = request.batch_name or dataset.name
     created: list[str] = []
     skipped: list[DatasetRunSkipped] = []
-    for entry, original in copies:
+    for entry, original, why in copies:
         if original is None:
-            skipped.append(
-                DatasetRunSkipped(
-                    filename=entry["filename"], reason="no longer stored on the server"
-                )
-            )
+            skipped.append(DatasetRunSkipped(filename=entry["filename"], reason=why))
             continue
         try:
             job = job_from_stored_video(

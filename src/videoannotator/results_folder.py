@@ -29,7 +29,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
-from .config_env import host_paths, results_dir
+from .config_env import WINDOWS_PATH, host_paths, results_dir
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,10 @@ def display_path(path: Path | str) -> str:
     text = str(path)
     for container, host in host_paths():
         if text == container or text.startswith(container + "/"):
-            return host + text[len(container) :]
+            rest = text[len(container) :]
+            if WINDOWS_PATH.match(host + "\\"):
+                rest = rest.replace("/", "\\") or ("\\" if host.endswith(":") else "")
+            return host + rest
     return text
 
 
@@ -521,6 +524,46 @@ def recorded_size(job: Any) -> int | None:
             size = entry.get("source", {}).get("size_bytes")
             return size if isinstance(size, int) else None
     return None
+
+
+def not_shared_message(folder: Path | str) -> str:
+    """`folder` is outside every shared folder (spec 024, R9)."""
+    return f"{display_path(folder)} isn't shared with VideoAnnotator any more"
+
+
+VIDEO_MOVED = "moved or deleted since the job was created"
+
+
+def video_unavailable_reason(path: Path | str) -> str:
+    """Why a job's video at `path` can't be read, for researchers (R9).
+
+    Outside every folder VideoAnnotator may read, it isn't shared any more
+    (a container only sees what is shared with it); otherwise it moved. Videos
+    kept with a job (uploads) and results were never in a shared folder.
+    """
+    from .api.v1.ingest import allowed_roots
+    from .storage.config import get_storage_root
+
+    video = Path(path)
+    try:
+        video = video.resolve()
+        kept = [get_storage_root().resolve(), results_root()]
+    except OSError:
+        kept = []
+    inside = [*allowed_roots(), *kept]
+    if any(video == root or video.is_relative_to(root) for root in inside):
+        return VIDEO_MOVED
+    return not_shared_message(video.parent)
+
+
+def rerun_video_missing(video: Path | None) -> str:
+    """Why a job can't run again on `video`, which isn't there (R9)."""
+    if video is None:
+        return "its video is no longer available"
+    reason = video_unavailable_reason(video)
+    if reason == VIDEO_MOVED:
+        return f"its video is no longer at {display_path(video)}"
+    return f"its video can't be read: {reason}"
 
 
 def find_moved_video(

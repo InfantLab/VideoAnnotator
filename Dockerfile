@@ -73,9 +73,16 @@ ENV PATH="/app/.venv/bin:${PATH}" \
     VIDEOANNOTATOR_MODELS_DIR=/app/models \
     VIDEOANNOTATOR_LOG_DIR=/app/logs \
     VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator.db \
-    STORAGE_ROOT=/app/storage/jobs
+    STORAGE_ROOT=/app/storage/jobs \
+    UV_CACHE_DIR=/app/cache/uv
 
-RUN mkdir -p /app/data /app/output /app/logs /app/database /app/models
+# /app/cache: uv's download cache, for a named volume (videoannotator-cache), so
+# pipelines installed from the viewer are restored quickly after the container is
+# recreated (spec 024, R7).
+# /app/launcher/requests: where videoannotator-start mounts its requests folder.
+# No VOLUME: the dev container builds this file too, and would collect anonymous volumes.
+RUN mkdir -p /app/data /app/output /app/logs /app/database /app/models \
+        /app/cache/uv /app/launcher/requests
 
 EXPOSE 18011
 

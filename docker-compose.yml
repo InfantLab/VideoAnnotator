@@ -8,6 +8,7 @@ services:
       - .:/app
       - ./data:/app/data
       - ./output:/app/output
+      - cache:/app/cache
     environment:
       - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
       - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
@@ -29,6 +30,7 @@ services:
       - models:/app/models  # model weights persist across rebuilds (spec 016)
       - database:/app/database  # jobs, users and API keys persist across rebuilds
       - storage:/app/storage  # each job's video and results, which the database points to
+      - cache:/app/cache  # downloads, so installed pipelines are restored quickly (spec 024)
       - ./data:/app/data:ro
       - ./output:/app/output
       # Spec 022: your videos, read where they are and never changed...
@@ -42,7 +44,9 @@ services:
     environment:
       - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
       - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
-      - VIDEOANNOTATOR_INGEST_ROOTS=/videos
+      # /videos only when VIDEOS_DIR is set: otherwise Docker's empty ./videos would count
+      # as a shared folder and the wizard couldn't say how to share one (spec 024, R8).
+      - VIDEOANNOTATOR_INGEST_ROOTS=${VIDEOS_DIR:+/videos}
       - VIDEOANNOTATOR_RESULTS_DIR=/results
       - VIDEOANNOTATOR_PUBLISHED_LOCALLY=1  # every caller is this machine: the port is on 127.0.0.1
       - VIDEOANNOTATOR_HOST_PATHS=/videos=${VIDEOS_DIR:-./videos};/results=${RESULTS_DIR:-~/VideoAnnotator}
@@ -64,6 +68,7 @@ services:
       - models:/app/models  # model weights persist across rebuilds (spec 016)
       - database:/app/database  # jobs, users and API keys persist across rebuilds
       - storage:/app/storage  # each job's video and results, which the database points to
+      - cache:/app/cache  # downloads, so installed pipelines are restored quickly (spec 024)
       - ./data:/app/data:ro
       - ./output:/app/output
       # Spec 022: your videos, read where they are and never changed...
@@ -77,7 +82,9 @@ services:
     environment:
       - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
       - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
-      - VIDEOANNOTATOR_INGEST_ROOTS=/videos
+      # /videos only when VIDEOS_DIR is set: otherwise Docker's empty ./videos would count
+      # as a shared folder and the wizard couldn't say how to share one (spec 024, R8).
+      - VIDEOANNOTATOR_INGEST_ROOTS=${VIDEOS_DIR:+/videos}
       - VIDEOANNOTATOR_RESULTS_DIR=/results
       - VIDEOANNOTATOR_PUBLISHED_LOCALLY=1  # every caller is this machine: the port is on 127.0.0.1
       - VIDEOANNOTATOR_HOST_PATHS=/videos=${VIDEOS_DIR:-./videos};/results=${RESULTS_DIR:-~/VideoAnnotator}
@@ -150,6 +157,8 @@ volumes:
     name: videoannotator-database
   storage:
     name: videoannotator-storage
+  cache:
+    name: videoannotator-cache
 
 networks:
   default:

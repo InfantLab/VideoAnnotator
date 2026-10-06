@@ -79,8 +79,8 @@ def test_jobs_from_before_results_folders_still_use_their_own_folder(tmp_path):
     assert (job.storage_path / "child01_scene_detection.json").is_file()
 
 
-def test_a_missing_video_fails_with_its_location(tmp_path, results_root):
-    video = _video(tmp_path)
+def test_a_missing_video_fails_with_its_location(tmp_path, results_root, ingest_root):
+    video = _video(ingest_root.parent)
     run = rf.RunFolder.create("R", batch_id=None, pipelines=[], config={})
     job = BatchJob(video_path=video, selected_pipelines=["scene_detection"])
     run.add_video(job, video)
@@ -97,6 +97,19 @@ def test_a_missing_video_fails_with_its_location(tmp_path, results_root):
     entry = rf.read_record(run.path)["videos"][0]
     assert entry["status"] == "failed"
     assert entry["error"] == job.error_message
+
+
+def test_a_video_in_a_folder_no_longer_shared_says_so(tmp_path, ingest_root):
+    video = tmp_path / "Old study" / "child01.mp4"
+    job = BatchJob(video_path=video, selected_pipelines=["s"])
+
+    run_job_pipelines(job, _storage(job), {"s": WritingPipeline})
+
+    assert job.status == JobStatus.FAILED
+    assert job.error_message == (
+        f"Video not found: {video} "
+        f"({video.parent} isn't shared with VideoAnnotator any more)"
+    )
 
 
 def test_one_missing_video_does_not_stop_the_next_job(tmp_path):

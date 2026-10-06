@@ -72,6 +72,21 @@ Control network binding and CORS:
 | `CORS_ORIGINS` | `http://localhost,...` | Comma-separated allowed origins |
 | `CORS_ALLOW_CREDENTIALS` | `true` | Enable CORS credentials |
 
+### Videos and Results (containers)
+
+Set by `videoannotator-start` or `docker-compose.yml`; you rarely set these yourself (see the
+[installation guide](../installation/INSTALLATION.md)).
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VIDEOANNOTATOR_INGEST_ROOTS` | home folder; none in a container | Folders videos may be read from, `os.pathsep`-separated |
+| `VIDEOANNOTATOR_RESULTS_DIR` | `~/VideoAnnotator` | Where results are written |
+| `VIDEOANNOTATOR_HOST_PATHS` | unset | `container=host` path pairs, `;`-separated, so paths show as the host's |
+| `VIDEOANNOTATOR_PUBLISHED_LOCALLY` | `false` | Every caller is on this machine (port published on 127.0.0.1 only) |
+| `VIDEOANNOTATOR_LAUNCHER` | `false` | Started by `videoannotator-start`: Settings offers Stop sharing |
+| `VIDEOANNOTATOR_MISSING_SHARES` | unset | Host paths of shared folders not found at this start, `;`-separated |
+| `VIDEOANNOTATOR_RESULTS_OWNER` | unset | `uid:gid` that results are given to (Docker Engine on Linux, where the server runs as root) |
+
 ### Database Configuration
 
 Control database connection:

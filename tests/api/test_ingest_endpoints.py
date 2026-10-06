@@ -197,7 +197,7 @@ class TestIngestPathGuards:
 
         response = _ingest(outside, selected_pipelines=["stub_pipeline"])
         assert response.status_code == 403
-        assert "outside the folders" in response.text
+        assert "isn't shared with VideoAnnotator" in response.text
         # The error says how to allow it rather than leaving the user stuck.
         assert "VIDEOANNOTATOR_INGEST_ROOTS" in response.text
 
@@ -219,6 +219,7 @@ class TestIngestPathGuards:
         assert response.status_code == 201
 
     def test_defaults_to_the_home_directory_when_unconfigured(self, monkeypatch):
+        monkeypatch.setattr(ingest_module, "in_container", lambda: False)
         monkeypatch.setattr(ingest_module, "INGEST_ROOTS", "")
         assert ingest_module.allowed_roots() == [Path.home().resolve()]
 

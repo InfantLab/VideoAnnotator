@@ -22,7 +22,7 @@ gated three ways, each independent:
    machine"; a remote caller has no business naming local paths, and for them
    upload remains the only route.
 3. **Inside an allowed root** -- `VIDEOANNOTATOR_INGEST_ROOTS`, defaulting to
-   the server user's home directory. Paths are fully resolved (symlinks
+   the server user's home directory (none in a container). Paths are fully resolved (symlinks
    included) before the check, so `..` and symlink escapes cannot get out.
 """
 
@@ -41,7 +41,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ...batch.types import BatchJob, JobStatus
-from ...config_env import INGEST_ROOTS, published_locally
+from ...config_env import INGEST_ROOTS, managed_by_launcher, published_locally
 from ...database.crud import SavedDatasetCRUD
 from ...database.database import get_db
 from ...results_folder import (
@@ -50,6 +50,7 @@ from ...results_folder import (
     folder_opener,
     folder_ref,
     in_container,
+    not_shared_message,
     results_root,
     run_name,
 )
@@ -87,11 +88,13 @@ def allowed_roots() -> list[Path]:
 
     Defaults to the server user's home directory: on a single-user research
     install that is where the data lives, and it keeps the feature usable
-    without configuration while still being a real boundary.
+    without configuration while still being a real boundary. Not in a
+    container, whose home is the inside of the box (`/root`), never the
+    researcher's: there, only folders shared with it count (spec 024, FR-016).
     """
     configured = [entry for entry in INGEST_ROOTS.split(os.pathsep) if entry.strip()]
     if not configured:
-        return [Path.home().resolve()]
+        return [] if in_container() else [Path.home().resolve()]
 
     roots = []
     for entry in configured:
@@ -169,7 +172,7 @@ def resolve_within_roots(raw_path: str) -> Path:
         raise APIError(
             status_code=403,
             code="INGEST_PATH_NOT_ALLOWED",
-            message=f"Path is outside the folders this server may read from: {resolved}",
+            message=not_shared_message(resolved),
             hint=(
                 "Allowed: "
                 + ", ".join(str(r) for r in roots)
@@ -258,11 +261,23 @@ class IngestAccessResponse(BaseModel):
         description="Where My folders starts: allowed folders and the usual video "
         "places under home that exist (empty unless `can_read_in_place`)",
     )
+    in_container: bool = Field(
+        default=False, description="The server runs in a container (spec 024)"
+    )
+    managed_by_launcher: bool = Field(
+        default=False,
+        description="Started by videoannotator-start, which can stop sharing a "
+        "folder (spec 024)",
+    )
 
 
-NO_VIDEO_FOLDER_DOCKER = (
-    "No video folder is set up. Set VIDEOS_DIR to your video folder when "
-    "starting Docker (see the installation guide), then restart."
+NO_SHARE_LAUNCHER = (
+    "VideoAnnotator can only see folders you share with it. To share one, run: "
+    "videoannotator-start share"
+)
+NO_SHARE_COMPOSE = (
+    "VideoAnnotator can only see folders you share with it. Set VIDEOS_DIR when "
+    "starting it (see the installation guide)."
 )
 
 
@@ -310,12 +325,15 @@ async def access(
             "administrator key (see Settings), or upload the videos."
         )
     elif not folders:
-        reason = (
-            NO_VIDEO_FOLDER_DOCKER
-            if in_container()
-            else "None of the allowed video folders exist. Set "
-            "VIDEOANNOTATOR_INGEST_ROOTS to the folders your videos are in."
-        )
+        if not in_container():
+            reason = (
+                "None of the allowed video folders exist. Set "
+                "VIDEOANNOTATOR_INGEST_ROOTS to the folders your videos are in."
+            )
+        elif managed_by_launcher():
+            reason = NO_SHARE_LAUNCHER
+        else:
+            reason = NO_SHARE_COMPOSE
     return IngestAccessResponse(
         same_machine=same_machine,
         can_read_in_place=reason is None,
@@ -324,6 +342,8 @@ async def access(
         results_root=_ref(results_root()),
         can_open_folders=same_machine and folder_opener() is not None,
         places=places_in(folders) if reason is None else [],
+        in_container=in_container(),
+        managed_by_launcher=managed_by_launcher(),
     )
 
 

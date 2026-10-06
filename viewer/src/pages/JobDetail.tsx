@@ -465,8 +465,9 @@ const CreateJobDetail = () => {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Video not found at <span className="font-mono text-xs break-all">{job.video_path}</span> (moved or
-            deleted since the job ran). Its results are all still here; only playback needs the video.
+            Video not found at <span className="font-mono text-xs break-all">{job.video_display_path ?? job.video_path}</span> (
+            {job.video_unavailable_reason ?? 'moved or deleted since the job ran'}). Its results are all still
+            here; only playback needs the video.
           </AlertDescription>
         </Alert>
       )}
