@@ -1,8 +1,10 @@
-# Feature Specification: Videos Read Where They Are
+# Feature Specification: Videos and Results Where You Expect Them
 
 **Feature Branch**: `022-videos-read-in-place` (work lands on `1.6-dev`)
 **Created**: 2026-10-06
 **Status**: Draft
+**Scope note**: covers inputs (videos read in place) and, since 2026-10-06, outputs (results in
+one visible folder). The directory keeps its original name.
 **Input**: User description: "Videos are read where they are, by default, for a single researcher
 running VideoAnnotator on their own laptop (the primary first-user case for the v1.6.0 public
 release)." Full description in the conversation that created this spec; summarised in Context.
@@ -35,6 +37,19 @@ with no copies (spec 018). But researchers rarely use it:
 
 This spec makes reading videos in place the default for that local researcher. Upload remains for
 servers on another machine, and for videos the server isn't allowed to read.
+
+### Results are just as hard to find
+
+A run's results go to a hidden application folder (on Linux,
+`~/.local/share/videoannotator/jobs/`). It holds one folder per job, named by a random ID such as
+`1b47a872-ca56-…`. Nothing in the path names the study, the run or the video, and each job folder
+also holds the uploaded copy of the video. The viewer never says where results are. The only way to
+get them out is "Download Results" on each job page: a zip that includes the video again. That is
+one zip per video, 100 for a 100-video run, and the run's page has no download at all.
+
+A researcher's mental model is simple: my videos are in a folder, and my results should be in a
+folder I can find, named so that I recognise them. This spec gives outputs the same treatment as
+inputs.
 
 ## What the researcher sees
 
@@ -72,6 +87,33 @@ Home > Studies > BabyJokes                 [Up]
 
 Videos on another computer? Upload them >
 ```
+
+### Where the results go
+
+Every run's results go to one visible folder, **VideoAnnotator** in the researcher's home folder by
+default. Inside it there is one folder per run, named after the run, then one folder per video,
+named after the video. These folders hold results only, never a copy of a video. VideoAnnotator
+never writes into the researcher's video folders, so read-only and shared data drives work, and raw
+data stays apart from derived results, as most data-management plans require.
+
+```
+~/VideoAnnotator/
+  BabyJokes wave 2 (2026-10-06)/
+    run.json                       what ran: pipelines, settings, versions, videos
+    4JDccE.joke5.rep3.take1/
+      face_detections.json
+      person_tracking.json
+      speech_recognition.vtt
+      speaker_diarization.rttm
+      ...
+    6c6MZQ.joke1.rep1.take1/
+      ...
+  BabyJokes wave 2 (rerun, 2026-10-09)/
+    ...
+```
+
+The viewer says where this is. The run's page and each job page show the results folder's
+location, and offer to open it on this computer and to download the whole run's results.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -199,6 +241,81 @@ no prompt appears and no copies are made.
 
 ---
 
+### User Story 6 - Find a run's results in a folder I recognise (Priority: P1)
+
+A researcher's 100-video run finishes. They open their VideoAnnotator folder and find a folder named
+after the run, with one folder per video named after the video, holding that video's result files.
+They point their analysis scripts at it.
+
+**Why this priority**: Results are the reason for running anything. Today they are behind random IDs
+in a hidden folder, or in 100 separate zips. This is the outputs half of the feature's P1 value and
+stands on its own.
+
+**Independent Test**: Run 3 videos as a named run. Without using the viewer, find the results in the
+default results folder, by run name and video name, and confirm no video file is there.
+
+**Acceptance Scenarios**:
+
+1. **Given** a run named "BabyJokes wave 2", **When** its jobs finish, **Then** each video's results
+   are in `<results folder>/<run folder>/<video name>/`, with the run folder named after the run and
+   its date.
+2. **Given** a finished run, **When** the researcher looks in its run folder, **Then** a run record
+   lists the pipelines, settings, VideoAnnotator and model versions, and each video's original
+   location, so the folder makes sense on its own (spec 017's provenance, gathered per run).
+3. **Given** any run, **When** it finishes, **Then** its results folder holds no copy of any video.
+4. **Given** a run that is still going, **When** the researcher opens its folder, **Then** finished
+   videos' results are already there, and unfinished videos' folders are absent or clearly
+   incomplete.
+
+---
+
+### User Story 7 - Get to the results from the viewer (Priority: P1)
+
+From a run's page, the researcher sees where its results are and opens that folder on their
+computer in one click. Or they download the whole run's results as one file, to move to another
+machine.
+
+**Why this priority**: The viewer is where researchers start. If it doesn't say where results are,
+the folder from Story 6 is still effectively hidden.
+
+**Independent Test**: From a finished run's page, open its results folder, and separately download
+the run's results, then confirm the download holds every video's results and no videos.
+
+**Acceptance Scenarios**:
+
+1. **Given** a finished run on a local install, **When** the researcher opens the run's page,
+   **Then** it shows the run's results folder location, with a way to open it on this computer and
+   to copy the location.
+2. **Given** a finished run, **When** they choose to download its results, **Then** they get one
+   file with every video's results in the same run-and-video layout, without the videos.
+3. **Given** a single job's page, **When** they look for its results, **Then** it shows that video's
+   results folder. Its download holds that job's results without the video, unless they ask to
+   include the video.
+4. **Given** the server is on another machine, **When** the researcher views a run, **Then** opening
+   the folder is not offered, but the location is shown and downloading works.
+
+---
+
+### User Story 8 - Choose where results go (Priority: P3)
+
+A researcher's institution requires derived data on an encrypted or backed-up drive. They set the
+results folder once, and every later run's results go there.
+
+**Why this priority**: The default suits most first users. Changing it matters for some, but is not
+needed for a first run.
+
+**Independent Test**: Change the results folder, run a video, and confirm its results are in the
+new location, with earlier runs still viewable.
+
+**Acceptance Scenarios**:
+
+1. **Given** the researcher changes the results folder, **When** a new run finishes, **Then** its
+   results are in the new folder.
+2. **Given** runs that finished before the change, **When** the researcher views them, **Then** they
+   still open from where they were written.
+
+---
+
 ### Edge Cases
 
 - **Video outside the allowed folders** (e.g. on an external drive, when only the home folder is
@@ -214,6 +331,20 @@ no prompt appears and no copies are made.
   (Story 4, scenario 3).
 - **The researcher deletes a job**: the job's results are deleted; the original video is never
   touched. This is existing behaviour for in-place jobs, and it must be stated in the interface.
+- **Two runs with the same name**: each gets its own run folder (the date, and a number if needed,
+  tells them apart). Nothing is overwritten.
+- **Two videos in one run with the same name** (from different subfolders): each gets its own video
+  folder, named so the two can be told apart and traced to their sources.
+- **Run with no name**: named after the dataset or folder it came from, otherwise "Run" plus its date
+  and time.
+- **Results folder unwritable or full**: the run does not start, with a message naming the folder and
+  the problem, rather than jobs failing one by one.
+- **Deleting a job or run in the viewer**: deletes its results folder after a confirmation that names
+  the folder. Originals are never touched.
+- **The researcher renames or moves a run folder** outside VideoAnnotator: the viewer shows that run's
+  results as missing, naming the folder it expected, like a moved video (User Story 4).
+- **Uploaded videos** (the "Upload them" route): VideoAnnotator keeps its copy in its own internal
+  storage, not in the results folder, so the results folder holds results only on every route.
 - **Very large folders** (thousands of files): listing stays usable. The folder opens without
   waiting for every video's duration to be read.
 
@@ -283,10 +414,47 @@ no prompt appears and no copies are made.
   proceed with exactly those videos in place, with no location prompt while they are where they
   were.
 
+**Results**
+
+- **FR-019**: Every run's results MUST be written to one results folder, by default a visible
+  VideoAnnotator folder in the researcher's home folder. Results MUST be laid out by run, then by
+  video, in folders named after the run and the video.
+- **FR-020**: The results folder MUST hold results only. No copy of any video is placed there on
+  any input route.
+- **FR-021**: VideoAnnotator MUST NOT write into the folders the videos are read from.
+- **FR-022**: Each run folder MUST contain a run record, readable without VideoAnnotator. It lists
+  what ran (pipelines, settings, VideoAnnotator and model versions) and each video's source
+  location.
+- **FR-023**: A video's results MUST appear in its folder as soon as that video finishes, not only
+  when the whole run does.
+- **FR-024**: Run and video folder names MUST be unique within their parent. Existing results MUST
+  never be overwritten.
+- **FR-025**: The results folder MUST be configurable. Runs written before a change MUST stay
+  viewable from where they were written.
+- **FR-026**: Before a run starts, the server MUST confirm it can write to the results folder. If
+  it can't, the run MUST be refused with a message naming the folder.
+
+**Getting to the results**
+
+- **FR-027**: A run's page and a job's page MUST show the location of their results. On a
+  same-machine connection, they MUST offer to open that folder on this computer.
+- **FR-028**: Researchers MUST be able to download a whole run's results as one file, in the same
+  layout, without the videos.
+- **FR-029**: A job's download MUST hold its results without the video by default, with the video
+  included only on request.
+- **FR-030**: Deleting a job or run MUST delete its results after a confirmation that names the
+  folder, and MUST never touch the original videos.
+
+**Docker**
+
+- **FR-031**: The documented Docker setup MUST put the results folder on the researcher's machine
+  (not only inside a container volume), at a clearly named, writable location.
+
 **Compatibility**
 
 - **FR-018**: Upload submission, folder ingest, and saved datasets of every existing kind MUST keep
-  working as before for existing clients and saved data.
+  working as before for existing clients and saved data. Jobs that finished before this feature MUST
+  stay viewable and downloadable where they are. They are not moved.
 
 ### Key Entities
 
@@ -295,6 +463,12 @@ no prompt appears and no copies are made.
   so a moved video can be recognised as missing.
 - **Allowed folder**: a location the server may read videos from in place. It has a default, and
   can be configured.
+- **Results folder**: the one visible location all runs' results go to. Has a default, and can be
+  configured.
+- **Run folder**: one run's results inside the results folder, named after the run and date.
+  Contains a run record and one video folder per video.
+- **Run record**: a readable summary in the run folder: what ran, with which settings and versions,
+  on which videos from where.
 - **In-place selection**: what the researcher chose. Either a folder (with or without subfolders) or
   a set of videos within the allowed folders. It can be saved as a dataset.
 
@@ -308,7 +482,7 @@ no prompt appears and no copies are made.
   zero additional copies of researchers' videos. The server's storage holds only results.
 - **SC-003**: A first-time user on a plain local install or the documented Docker setup completes
   their first run from videos on their own disk without changing any setting other than, under
-  Docker, the documented video folder.
+  Docker, the documented video and results folders.
 - **SC-004**: Picking 5 videos out of a 200-video folder takes no more interactions than picking
   those 5 files in an ordinary file dialog would.
 - **SC-005**: Every missing-video situation in User Story 4 produces a message that names the
@@ -316,6 +490,12 @@ no prompt appears and no copies are made.
   internal error.
 - **SC-006**: Existing upload-based workflows, server-folder runs and saved datasets pass their
   existing tests unchanged.
+- **SC-007**: A researcher who has never used VideoAnnotator finds a finished run's results for a
+  named video, using only their computer's file browser and the location the viewer shows, in under
+  1 minute.
+- **SC-008**: Getting all results of a 100-video run onto another machine takes one download, not
+  one per video.
+- **SC-009**: No result file is ever overwritten by a later run.
 
 ## Assumptions
 
@@ -326,8 +506,13 @@ no prompt appears and no copies are made.
   ever upload. The in-viewer browser shows only allowed folders.
 - **"Same machine" is decided by the server**, from how the request reaches it, plus explicit setup
   under Docker. It is not something the browser can claim on its own.
-- **Read-only access is enough.** VideoAnnotator never writes to, moves, or deletes a researcher's
-  videos. Results always go to the server's own storage.
+- **Read-only access to videos is enough.** VideoAnnotator never writes to, moves, or deletes a
+  researcher's videos or their folders. Results go only to the results folder.
+- **The results folder replaces the hidden job folders for new runs.** VideoAnnotator may still keep
+  internal bookkeeping (and uploaded copies) in its application folder, but nothing a researcher
+  needs lives only there.
+- **Opening a folder "on this computer"** is only possible when the server runs on the researcher's
+  machine, since the server does the opening. Elsewhere, the location is shown for copying.
 - **Duration and other video details are best effort** when listing. A folder must open quickly
   even when there are many videos.
 
@@ -338,3 +523,5 @@ no prompt appears and no copies are made.
 - A multi-user lab mode where authenticated remote users may choose server-side videos.
 - Remote and HPC dispatch (v1.8+).
 - Detecting that a video's content changed (rather than moved) since a run.
+- Moving existing (pre-feature) job folders into the results folder.
+- Writing results into the videos' own folders, as an option.
