@@ -14,6 +14,8 @@ export interface IngestDirectory {
   path: string;
   /** Videos directly inside this folder; not recursive. */
   video_count: number;
+  /** Videos here or a few levels below (spec 022); absent on older servers. */
+  has_videos?: boolean;
 }
 
 export interface IngestVideo {
@@ -84,6 +86,14 @@ export interface IngestAccess {
   allowed_folders: FolderRef[];
   results_root: FolderRef;
   can_open_folders: boolean;
+  /** Where My folders starts: Home, Videos, Desktop, ... that exist (spec 022). */
+  places?: Place[];
+}
+
+export interface Place extends FolderRef {
+  /** "Home", "Videos", "Desktop", ... */
+  label: string;
+  has_videos: boolean;
 }
 
 /**

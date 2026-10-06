@@ -158,9 +158,13 @@ const CreateNewJob = () => {
   const [sourceDefaulted, setSourceDefaulted] = useState(startFromDataset !== null);
   useEffect(() => {
     if (sourceDefaulted || ingestAccess.isLoading) return;
-    if (ingestAccess.sameMachine) setVideoSource('server');
+    // My folders only helps if it can find videos: where none of its places
+    // has any (a fresh container, videos on another drive), start on upload.
+    const places = ingestAccess.access?.places;
+    const findsVideos = places === undefined || places.some((p) => p.has_videos);
+    if (ingestAccess.sameMachine && (findsVideos || !ingestAccess.canReadInPlace)) setVideoSource('server');
     setSourceDefaulted(true);
-  }, [sourceDefaulted, ingestAccess.isLoading, ingestAccess.sameMachine]);
+  }, [sourceDefaulted, ingestAccess.isLoading, ingestAccess.sameMachine, ingestAccess.canReadInPlace, ingestAccess.access]);
   const [serverFolder, setServerFolder] = useState<ServerFolderSelection | null>(null);
   // The saved dataset the chosen videos are (spec 018); cleared by any manual change.
   const [fromDataset, setFromDataset] = useState<{ id: string; name: string } | null>(null);
@@ -1043,6 +1047,12 @@ export const VideoUploadStep = ({
         </TabsList>
 
         <TabsContent value="upload" className="mt-4 space-y-3">
+          {sameMachine && access?.places && access.places.length > 0 && !access.places.some((p) => p.has_videos) && (
+            <p className="text-sm text-muted-foreground">
+              No videos were found in the folders VideoAnnotator can read on this computer, so you&apos;re
+              starting with upload.
+            </p>
+          )}
           {sameMachine && (
             <div className="flex items-start justify-between gap-2 text-sm">
               <p className="text-muted-foreground">

@@ -19,7 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronRight, CornerLeftUp, Folder, HardDrive } from 'lucide-react';
 import { parseApiError } from '@/lib/errorHandling';
 import { useIngestAccess } from '@/hooks/useIngestAccess';
-import type { IngestBrowseResponse } from '@/types/ingest';
+import type { FolderRef, IngestBrowseResponse, Place } from '@/types/ingest';
 import { displayPathOf } from '@/lib/folders';
 import type { ServerFolderScan } from '@/types/datasets';
 
@@ -64,10 +64,58 @@ function sameSelection(a: ServerFolderSelection | null, b: ServerFolderSelection
   );
 }
 
+const LAST_FOLDER_KEY = 'videoannotator.myFolders.lastFolder';
+
+function rememberedFolder(): string | null {
+  try {
+    return localStorage.getItem(LAST_FOLDER_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function rememberFolder(path: string) {
+  try {
+    localStorage.setItem(LAST_FOLDER_KEY, path);
+  } catch {
+    // Private browsing: just start from Places next time.
+  }
+}
+
+interface Crumb {
+  label: string;
+  path: string | null;
+}
+
+/** Places › Home › Studies › BabyJokes, each step clickable. */
+function crumbsFor(path: string, roots: FolderRef[], places: Place[]): Crumb[] {
+  const root = [...roots]
+    .sort((a, b) => b.path.length - a.path.length)
+    .find((r) => path === r.path || path.startsWith(`${r.path}/`));
+  if (!root) return [{ label: 'Places', path: null }, { label: path, path }];
+  const rootLabel = places.find((p) => p.path === root.path)?.label ?? root.display_path;
+  const crumbs: Crumb[] = [
+    { label: 'Places', path: null },
+    { label: rootLabel, path: root.path },
+  ];
+  let current = root.path;
+  for (const part of path.slice(root.path.length).split('/').filter(Boolean)) {
+    current = `${current}/${part}`;
+    crumbs.push({ label: part, path: current });
+  }
+  return crumbs;
+}
+
 export function ServerFolderPicker({ selection, onSelect, folderOnly = false }: ServerFolderPickerProps) {
   const { access } = useIngestAccess();
   const allowed = useMemo(() => access?.allowed_folders ?? [], [access]);
-  const [path, setPath] = useState<string | null>(selection?.path ?? null);
+  const places = useMemo<Place[]>(
+    () => access?.places ?? allowed.map((f) => ({ ...f, label: f.display_path, has_videos: true })),
+    [access, allowed]
+  );
+  // Where the researcher was last time; otherwise Places (null), not a listing
+  // of their home folder, which is mostly clutter.
+  const [path, setPath] = useState<string | null>(selection?.path ?? rememberedFolder());
   const [recursive, setRecursive] = useState(selection?.recursive ?? false);
   // 'all' keeps a whole-folder selection (e.g. from a saved dataset) whole as
   // the list loads or grows with subfolders.
@@ -75,14 +123,10 @@ export function ServerFolderPicker({ selection, onSelect, folderOnly = false }: 
     selection ? (selection.files ? new Set(selection.files) : 'all') : new Set()
   );
 
-  // Open in the researcher's own folder rather than a list of roots.
-  useEffect(() => {
-    if (path === null && allowed.length > 0) setPath(allowed[0].path);
-  }, [path, allowed]);
-
   const browse = useQuery<IngestBrowseResponse>({
     queryKey: ['ingest', 'browse', path],
-    queryFn: () => apiClient.browseServerFolders(path ?? undefined),
+    queryFn: () => apiClient.browseServerFolders(path as string),
+    enabled: path !== null,
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -124,9 +168,10 @@ export function ServerFolderPicker({ selection, onSelect, folderOnly = false }: 
     if (!sameSelection(next, selectionRef.current)) onSelectRef.current(next);
   }, [folderOnly, path, recursive, scan.data, selected, videos.length]);
 
-  const open = (next: string) => {
+  const open = (next: string | null) => {
     setPath(next);
     setChosen(new Set());
+    if (next !== null) rememberFolder(next);
   };
 
   const toggle = (relativePath: string) => {
@@ -147,9 +192,9 @@ export function ServerFolderPicker({ selection, onSelect, folderOnly = false }: 
         <AlertDescription className="space-y-2">
           <p>{parsed.message}</p>
           {parsed.hint && <p className="text-xs">{parsed.hint}</p>}
-          {path !== null && allowed.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => open(allowed[0].path)}>
-              Back to my folders
+          {path !== null && (
+            <Button variant="outline" size="sm" onClick={() => open(null)}>
+              Back to Places
             </Button>
           )}
         </AlertDescription>
@@ -157,20 +202,69 @@ export function ServerFolderPicker({ selection, onSelect, folderOnly = false }: 
     );
   }
 
-  const shown = browse.data?.path ? displayPathOf(browse.data.path, allowed) : 'My folders';
+  const crumbs = path === null ? [] : crumbsFor(path, allowed, places);
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm">
-        <HardDrive className="h-4 w-4 text-muted-foreground shrink-0" />
-        <span className="font-mono text-xs truncate" title={shown}>
-          {shown}
-        </span>
-      </div>
+      <nav aria-label="Folder" className="flex items-center gap-1 text-sm flex-wrap">
+        <HardDrive className="h-4 w-4 text-muted-foreground shrink-0 mr-1" />
+        {path === null ? (
+          <span className="font-medium">Places</span>
+        ) : (
+          crumbs.map((crumb, i) => (
+            <span key={`${crumb.path}-${i}`} className="flex items-center gap-1">
+              {i > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+              {i === crumbs.length - 1 ? (
+                <span className="font-medium" title={displayPathOf(path, allowed)}>
+                  {crumb.label}
+                </span>
+              ) : (
+                <button type="button" className="underline-offset-2 hover:underline" onClick={() => open(crumb.path)}>
+                  {crumb.label}
+                </button>
+              )}
+            </span>
+          ))
+        )}
+      </nav>
 
       <Card>
         <CardContent className="p-0 max-h-80 overflow-y-auto">
-          {browse.isLoading ? (
+          {path === null ? (
+            <ul className="divide-y">
+              {places.length > 0 && !places.some((p) => p.has_videos) && (
+                <li className="px-4 py-3 text-sm text-muted-foreground">
+                  No videos found in these folders. If yours are on another drive, add that folder to{' '}
+                  <code>VIDEOANNOTATOR_INGEST_ROOTS</code> and restart; if they&apos;re on another computer,
+                  upload them.
+                </li>
+              )}
+              {places.map((place) => (
+                <li key={place.path}>
+                  <button
+                    type="button"
+                    onClick={() => open(place.path)}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm hover:bg-muted/50 text-left"
+                  >
+                    <Folder className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className={`flex-1 truncate ${place.has_videos ? '' : 'text-muted-foreground'}`}>
+                      <span className="font-medium">{place.label}</span>{' '}
+                      {/* Home and its usual folders need no path; a configured folder does. */}
+                      {place.label !== 'Home' && allowed.some((f) => f.path === place.path) && (
+                        <span className="font-mono text-xs text-muted-foreground">{place.display_path}</span>
+                      )}
+                    </span>
+                    {place.has_videos && (
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        has videos
+                      </Badge>
+                    )}
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : browse.isLoading ? (
             <div className="p-4 space-y-2">
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
@@ -199,13 +293,22 @@ export function ServerFolderPicker({ selection, onSelect, folderOnly = false }: 
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted/50 text-left"
                   >
                     <Folder className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="truncate flex-1" title={dir.name}>
-                      {path === null ? displayPathOf(dir.path, allowed) : dir.name}
+                    <span
+                      className={`truncate flex-1 ${dir.has_videos === false ? 'text-muted-foreground' : ''}`}
+                      title={dir.name}
+                    >
+                      {dir.name}
                     </span>
-                    {dir.video_count > 0 && (
+                    {dir.video_count > 0 ? (
                       <Badge variant="outline" className="text-xs shrink-0">
                         {dir.video_count} video{dir.video_count === 1 ? '' : 's'}
                       </Badge>
+                    ) : (
+                      dir.has_videos && (
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          videos inside
+                        </Badge>
+                      )
                     )}
                     <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                   </button>

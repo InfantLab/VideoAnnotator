@@ -193,6 +193,49 @@ def resolve_within_roots(raw_path: str) -> Path:
 # ---------------------------------------------------------------------------
 
 
+class Place(BaseModel):
+    label: str = Field(description="What to call it: 'Home', 'Videos', 'Desktop', ...")
+    path: str
+    display_path: str
+    has_videos: bool
+
+
+# Where a researcher's videos usually are, under their home folder, in the
+# order My folders offers them. Only those that exist are listed.
+HOME_PLACES = (
+    "Videos",
+    "Movies",
+    "Desktop",
+    "Documents",
+    "Downloads",
+    "Pictures",
+    "OneDrive",
+)
+
+
+def places_in(folders: list[Path]) -> list[Place]:
+    """Starting points for My folders: each allowed folder, and the usual
+    places under home, so a researcher starts somewhere they recognise
+    rather than in a listing of their home folder (spec 022)."""
+    home = Path.home().resolve()
+    places: list[Place] = []
+    for root in folders:
+        candidates = [("Home" if root == home else root.name or str(root), root)]
+        if root == home:
+            candidates += [(name, root / name) for name in HOME_PLACES]
+        for label, folder in candidates:
+            if folder.is_dir():
+                places.append(
+                    Place(
+                        label=label,
+                        path=str(folder),
+                        display_path=display_path(folder),
+                        has_videos=has_videos_below(folder),
+                    )
+                )
+    return places
+
+
 class IngestAccessResponse(BaseModel):
     same_machine: bool = Field(
         description="The caller is on the server's own machine (loopback, or "
@@ -209,6 +252,11 @@ class IngestAccessResponse(BaseModel):
     results_root: FolderRef
     can_open_folders: bool = Field(
         description="`POST /api/v1/results/open` can show a folder on this machine"
+    )
+    places: list[Place] = Field(
+        default_factory=list,
+        description="Where My folders starts: allowed folders and the usual video "
+        "places under home that exist (empty unless `can_read_in_place`)",
     )
 
 
@@ -275,6 +323,7 @@ async def access(
         allowed_folders=[_ref(f) for f in folders],
         results_root=_ref(results_root()),
         can_open_folders=same_machine and folder_opener() is not None,
+        places=places_in(folders) if reason is None else [],
     )
 
 
@@ -287,6 +336,11 @@ class IngestDirectory(BaseModel):
     name: str
     path: str
     video_count: int
+    has_videos: bool = Field(
+        default=False,
+        description="Videos are in this folder or a few levels below it (spec 022), "
+        "so a researcher can tell which folders lead somewhere",
+    )
 
 
 class IngestVideo(BaseModel):
@@ -307,6 +361,65 @@ class IngestBrowseResponse(BaseModel):
     videos: list[IngestVideo]
     video_count: int = Field(description="Videos directly in this folder")
     truncated: bool = False
+
+
+# Folders a researcher never keeps videos in, hidden from My folders (spec 022):
+# a home folder is otherwise mostly tool and system clutter.
+NOISE_FOLDERS = {
+    "node_modules",
+    "__pycache__",
+    "site-packages",
+    "venv",
+    "AppData",
+    "Application Data",
+    "Library",
+    "Applications",
+    "snap",
+    "go",
+    "miniconda3",
+    "anaconda3",
+    "System Volume Information",
+}
+SEARCH_DEPTH = 3
+SEARCH_BUDGET = 400
+
+
+def is_noise(entry: Path, results: Path) -> bool:
+    """Hidden, system or tool folders, and the results folder (results, not videos)."""
+    name = entry.name
+    return name.startswith((".", "$", "~")) or name in NOISE_FOLDERS or entry == results
+
+
+def has_videos_below(directory: Path) -> bool:
+    """Whether a video is in `directory` or a few levels below.
+
+    Bounded in depth and in entries looked at, so a listing stays quick on a
+    big home folder; past the budget a folder reads as having none.
+    """
+    results = results_root()
+    stack = [(directory, 0)]
+    seen = 0
+    while stack:
+        folder, depth = stack.pop()
+        try:
+            entries = list(os.scandir(folder))
+        except OSError:
+            continue
+        for entry in entries:
+            seen += 1
+            if seen > SEARCH_BUDGET:
+                return False
+            path = Path(entry.path)
+            if is_noise(path, results):
+                continue
+            try:
+                if entry.is_file() and path.suffix.lower() in VIDEO_EXTENSIONS:
+                    return True
+                if entry.is_dir(follow_symlinks=False) and depth + 1 < SEARCH_DEPTH:
+                    stack.append((path, depth + 1))
+            except OSError:
+                continue
+    return False
 
 
 def _count_videos(directory: Path) -> int:
@@ -462,18 +575,23 @@ async def browse(
     directories: list[IngestDirectory] = []
     videos: list[IngestVideo] = []
     truncated = False
+    results = results_root()
 
     for entry in entries:
         if len(directories) + len(videos) >= MAX_LISTING_ENTRIES:
             truncated = True
             break
+        if is_noise(entry, results):
+            continue
         try:
             if entry.is_dir():
+                count = _count_videos(entry)
                 directories.append(
                     IngestDirectory(
                         name=entry.name,
                         path=str(entry),
-                        video_count=_count_videos(entry),
+                        video_count=count,
+                        has_videos=count > 0 or has_videos_below(entry),
                     )
                 )
             elif entry.is_file() and entry.suffix.lower() in VIDEO_EXTENSIONS:
@@ -487,6 +605,9 @@ async def browse(
         except OSError:
             # One unreadable entry shouldn't break browsing the folder.
             continue
+
+    # Folders that lead to videos first: that's what the researcher is after.
+    directories.sort(key=lambda d: not d.has_videos)
 
     # Only offer a parent that is itself browsable.
     parent: str | None = None

@@ -434,3 +434,40 @@ class TestLargeFolders:
         assert response.status_code == 200
         assert len(response.json()["videos"]) == 1000
         assert time.monotonic() - start < 1
+
+
+class TestFindingYourVideos:
+    """Spec 022: My folders leads to videos instead of listing clutter."""
+
+    def test_hidden_tool_and_results_folders_are_not_listed(
+        self, tmp_path, monkeypatch
+    ):
+        home = tmp_path / "home"
+        for name in (".cache", ".bun", "node_modules", "AppData", "Studies", "Empty"):
+            (home / name).mkdir(parents=True)
+        (home / "Studies" / "wave1").mkdir()
+        (home / "Studies" / "wave1" / "child01.mp4").write_bytes(b"v")
+        monkeypatch.setenv("VIDEOANNOTATOR_RESULTS_DIR", str(home / "VideoAnnotator"))
+        (home / "VideoAnnotator").mkdir()
+        monkeypatch.setattr(ingest_module, "INGEST_ROOTS", str(home))
+        body = client.get("/api/v1/ingest/browse", params={"path": str(home)}).json()
+        listed = [(d["name"], d["has_videos"]) for d in body["directories"]]
+        assert listed == [("Studies", True), ("Empty", False)]
+
+    def test_places_start_where_videos_usually_are(self, tmp_path, monkeypatch):
+        from videoannotator.api.middleware.auth import validate_api_key
+
+        home = tmp_path / "home"
+        for name in ("Videos", "Desktop", "Documents"):
+            (home / name).mkdir(parents=True)
+        (home / "Desktop" / "clip.mp4").write_bytes(b"v")
+        monkeypatch.setattr(ingest_module.Path, "home", lambda: home)
+        monkeypatch.setattr(ingest_module, "INGEST_ROOTS", str(home))
+        app.dependency_overrides[validate_api_key] = lambda: ADMIN_USER
+        places = client.get("/api/v1/ingest/access").json()["places"]
+        assert [(p["label"], p["has_videos"]) for p in places] == [
+            ("Home", True),
+            ("Videos", False),
+            ("Desktop", True),
+            ("Documents", False),
+        ]

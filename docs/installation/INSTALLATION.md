@@ -244,6 +244,12 @@ When the viewer and VideoAnnotator run on the same computer, the new-job wizard 
 the run starts at once. Videos are read where they are. Nothing is uploaded or copied, and deleting
 a job never touches the original video.
 
+It starts at **Places**: your home folder and its Videos, Movies, Desktop, Documents and Downloads
+folders, each marked when it holds videos. Inside a folder, the ones that lead to videos come first;
+hidden, system and tool folders aren't shown. Next time it reopens the folder you last used. If
+none of these folders holds any videos (a fresh container, say), the wizard starts on upload
+instead.
+
 My folders shows only the folders VideoAnnotator may read:
 
 | Install | Default |

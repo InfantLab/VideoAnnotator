@@ -125,6 +125,7 @@ describe('RunAgainActions', () => {
         allowed_folders: [{ path: '/home/ada', display_path: '/home/ada' }],
         results_root: { path: '/home/ada/VideoAnnotator', display_path: '/home/ada/VideoAnnotator' },
         can_open_folders: true,
+        places: [{ label: 'Home', path: '/home/ada', display_path: '/home/ada', has_videos: true }],
       });
       vi.mocked(apiClient.browseServerFolders).mockImplementation(async (path?: string) => ({
         path: path ?? null, parent: null, roots: ['/home/ada'], directories: [], videos: [], video_count: 0, truncated: false,
@@ -156,6 +157,7 @@ describe('RunAgainActions', () => {
       renderActions(batchTarget);
       await userEvent.click(screen.getByRole('button', { name: /^Run again$/ }));
       await userEvent.click(await screen.findByRole('button', { name: 'Locate…' }));
+      await userEvent.click(await screen.findByRole('button', { name: /Home/ }));
       await waitFor(() => expect(apiClient.browseServerFolders).toHaveBeenCalledWith('/home/ada'));
       await userEvent.click(await screen.findByRole('button', { name: 'Look for them here' }));
 

@@ -35,6 +35,10 @@ const access = (overrides: Partial<IngestAccess> = {}): IngestAccess => ({
   allowed_folders: [{ path: HOME, display_path: HOME }],
   results_root: { path: `${HOME}/VideoAnnotator`, display_path: `${HOME}/VideoAnnotator` },
   can_open_folders: true,
+  places: [
+    { label: 'Home', path: HOME, display_path: HOME, has_videos: true },
+    { label: 'Videos', path: `${HOME}/Videos`, display_path: `${HOME}/Videos`, has_videos: false },
+  ],
   ...overrides,
 });
 
@@ -73,6 +77,7 @@ const step = (props: Partial<React.ComponentProps<typeof VideoUploadStep>>) => (
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(localStorage.getItem).mockReturnValue(null);
   vi.mocked(apiClient.getIngestAccess).mockResolvedValue(access());
   vi.mocked(apiClient.browseServerFolders).mockImplementation(async (path?: string) => ({
     path: path ?? null,
@@ -132,12 +137,32 @@ describe('Choose Videos, step 1', () => {
 });
 
 describe('My folders picker', () => {
-  it('starts in the first allowed folder and selects nothing until asked', async () => {
-    const onSelect = vi.fn();
-    wrap(<ServerFolderPicker selection={null} onSelect={onSelect} />);
+  it('starts at Places, not a listing of the home folder', async () => {
+    wrap(<ServerFolderPicker selection={null} onSelect={vi.fn()} />);
+    expect(await screen.findByRole('button', { name: /Home/ })).toHaveTextContent('has videos');
+    expect(screen.getByRole('button', { name: /Videos/ })).not.toHaveTextContent('has videos');
+    expect(apiClient.browseServerFolders).not.toHaveBeenCalled();
+  });
+
+  it('opens a place, shows where it is, and selects nothing until asked', async () => {
+    wrap(<ServerFolderPicker selection={null} onSelect={vi.fn()} />);
+    await userEvent.click(await screen.findByRole('button', { name: /Home/ }));
     await waitFor(() => expect(apiClient.browseServerFolders).toHaveBeenCalledWith(HOME));
     expect(await screen.findByText('child01.mp4')).toBeInTheDocument();
     expect(screen.getByText(/0 videos selected/)).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Folder' })).toHaveTextContent('Places');
+  });
+
+  it('reopens the folder used last time, with a breadcrumb back to Places', async () => {
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) =>
+      key === 'videoannotator.myFolders.lastFolder' ? STUDY : null
+    );
+    wrap(<ServerFolderPicker selection={null} onSelect={vi.fn()} />);
+    await waitFor(() => expect(apiClient.browseServerFolders).toHaveBeenCalledWith(STUDY));
+    const crumbs = await screen.findByRole('navigation', { name: 'Folder' });
+    await waitFor(() => expect(crumbs).toHaveTextContent(/Places.*Home.*Studies.*BabyJokes/));
+    await userEvent.click(screen.getByRole('button', { name: 'Studies' }));
+    await waitFor(() => expect(apiClient.browseServerFolders).toHaveBeenCalledWith(`${HOME}/Studies`));
   });
 
   it('runs exactly the ticked videos', async () => {
@@ -189,11 +214,11 @@ describe('My folders picker', () => {
 
   it('shows host paths under Docker', async () => {
     vi.mocked(apiClient.getIngestAccess).mockResolvedValue(
-      access({ allowed_folders: [{ path: '/videos', display_path: '/home/ada/Studies' }] })
+      access({
+        allowed_folders: [{ path: '/videos', display_path: '/home/ada/Studies' }],
+        places: [{ label: 'videos', path: '/videos', display_path: '/home/ada/Studies', has_videos: true }],
+      })
     );
-    vi.mocked(apiClient.browseServerFolders).mockResolvedValue({
-      path: '/videos', parent: null, roots: ['/videos'], directories: [], videos: [], video_count: 0, truncated: false,
-    });
     wrap(<ServerFolderPicker selection={null} onSelect={() => {}} />);
     expect(await screen.findByText('/home/ada/Studies')).toBeInTheDocument();
   });
