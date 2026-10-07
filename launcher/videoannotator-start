@@ -501,11 +501,13 @@ EOF
 }
 
 va_run_engine_with_args() {
+    # Built before IFS changes: va_build_run splits its own lists on spaces.
+    va_args=$(va_build_run)
     va_old_ifs=$IFS
     IFS=$VA_NL
     set -f
-    # shellcheck disable=SC2046  # one argument per line, by construction
-    set -- $(va_build_run)
+    # shellcheck disable=SC2086  # one argument per line, by construction
+    set -- $va_args
     set +f
     IFS=$va_old_ifs
     va_engine "$@"

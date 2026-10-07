@@ -16,7 +16,7 @@ setup() {
     [[ "$output" == *"Restarting VideoAnnotator to share $HOME/Second..."* ]]
     grep -qx "share=$HOME/Second" "$(va_settings_path)"
     grep -q "^stop -t 30 videoannotator" "$ENGINE_LOG"
-    grep -q "source=$HOME/Second,target=$HOME/Second,readonly" "$ENGINE_LOG"
+    grep -q "source=$HOME/Second,target=$(va_container_path "$HOME/Second" 2),readonly" "$ENGINE_LOG"
 }
 
 @test "share of a folder inside a share changes nothing" {

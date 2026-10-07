@@ -15,7 +15,7 @@ setup() {
     [ "$status" -eq 0 ]
     [[ "$output" != *"?"* ]]
     [ "$(engine_runs)" -eq 1 ]
-    grep -q "source=$HOME/Studies,target=$HOME/Studies,readonly" "$ENGINE_LOG"
+    grep -q "source=$HOME/Studies,target=$(va_container_path "$HOME/Studies" 1),readonly" "$ENGINE_LOG"
     [[ "$output" == *"Starting... ready."* ]]
     [[ "$output" == *"VideoAnnotator can read: $HOME/Studies. Results: $HOME/VideoAnnotator."* ]]
     [[ "$output" == *"Opening http://127.0.0.1:18011/viewer in your browser."* ]]
