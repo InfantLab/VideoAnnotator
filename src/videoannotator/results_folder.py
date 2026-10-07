@@ -578,16 +578,17 @@ def video_unavailable_reason(path: Path | str) -> str:
     from .api.v1.ingest import allowed_roots
     from .storage.config import get_storage_root
 
-    video = Path(path)
+    given = Path(path)
     try:
-        video = video.resolve()
+        # Compared resolved, named as given (macOS resolves /home elsewhere).
+        video = given.resolve()
         kept = [get_storage_root().resolve(), results_root()]
     except OSError:
-        kept = []
+        video, kept = given, []
     inside = [*allowed_roots(), *kept]
     if any(video == root or video.is_relative_to(root) for root in inside):
         return VIDEO_MOVED
-    return not_shared_message(video.parent)
+    return not_shared_message(given.parent)
 
 
 def rerun_video_missing(video: Path | None) -> str:

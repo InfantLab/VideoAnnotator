@@ -1,5 +1,6 @@
 """Why a job's video can't be found: not shared any more, or moved (spec 024, R9)."""
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -29,6 +30,11 @@ def test_a_video_inside_a_share_was_moved_or_deleted(shared):
     )
 
 
+# Container paths: the server reading them runs on Linux.
+posix_only = pytest.mark.skipif(sys.platform == "win32", reason="container paths")
+
+
+@posix_only
 def test_the_folder_is_named_as_the_host_shows_it(shared, monkeypatch):
     monkeypatch.setenv(
         "VIDEOANNOTATOR_HOST_PATHS", "/c/Users/ada/Old=C:\\Users\\ada\\Old"
@@ -46,6 +52,7 @@ def test_an_uploaded_video_was_never_shared(shared, tmp_path, monkeypatch):
     )
 
 
+@posix_only
 def test_relative_to_nothing_shared(monkeypatch):
     monkeypatch.setattr(ingest_module, "in_container", lambda: True)
     monkeypatch.setattr(ingest_module, "INGEST_ROOTS", "")

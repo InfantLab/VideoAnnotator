@@ -7,5 +7,7 @@
 !README.md
 !src/
 !configs/
+# CI only: tests/launcher/Dockerfile.e2e adds these; the published image never copies them.
+!tests/launcher/e2e/
 **/__pycache__
 **/*.pyc

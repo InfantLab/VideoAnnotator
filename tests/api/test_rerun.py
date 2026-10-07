@@ -1,6 +1,7 @@
 """Run it again (spec 019): a new, linked job; the original untouched."""
 
 import io
+import sys
 from pathlib import Path
 
 import pytest
@@ -318,6 +319,7 @@ def test_a_moved_video_is_still_explained_as_moved(moved_run):
     assert other["video_unavailable_reason"] is None
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="container paths are POSIX")
 def test_a_jobs_video_is_shown_as_the_host_shows_it(moved_run, monkeypatch):
     body, site_a, _ = moved_run
     monkeypatch.setenv("VIDEOANNOTATOR_HOST_PATHS", f"{site_a}=C:\\Users\\ada\\Site A")

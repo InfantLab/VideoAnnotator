@@ -71,6 +71,14 @@ engines() {
     [ "$PODMAN_STATE" = absent ] || printf '#!/bin/sh\nexit 0\n' > "$STUB_BIN/podman"
     chmod +x "$STUB_BIN"/* 2>/dev/null || true
     PATH="$STUB_BIN:/usr/bin:/bin"
+    # Not from PATH: CI runners have real docker and podman in /usr/bin.
+    va_installed() {
+        case "$1" in
+            docker) [ "$DOCKER_STATE" != absent ] ;;
+            podman) [ "$PODMAN_STATE" != absent ] ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
     va_engine_responds() {
         case "$1" in
             docker) [ "$DOCKER_STATE" = running ] ;;
