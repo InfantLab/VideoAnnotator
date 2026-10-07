@@ -10,7 +10,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from videoannotator.pipelines.face_analysis.face_pipeline import FaceAnalysisPipeline
-from videoannotator.pipelines.face_analysis.laion_face_pipeline import LAIONFacePipeline
 from videoannotator.pipelines.face_analysis.openface3_pipeline import OpenFace3Pipeline
 
 
@@ -173,49 +172,6 @@ def test_openface3_pipeline_personid_integration():
         return
 
 
-def test_laion_face_pipeline_personid_integration():
-    """Test LAIONFacePipeline with PersonID integration."""
-    print("\n" + "=" * 60)
-    print("Testing LAIONFacePipeline PersonID Integration")
-    print("=" * 60)
-
-    # Configure pipeline with PersonID enabled
-    config = {
-        "confidence_threshold": 0.7,
-        "model_size": "small",
-        "person_identity": {
-            "enabled": True,
-            "link_to_persons": True,
-            "iou_threshold": 0.5,
-            "require_person_id": False,
-        },
-    }
-
-    try:
-        pipeline = LAIONFacePipeline(config)
-
-        # Test configuration
-        assert "person_identity" in pipeline.config
-        assert pipeline.config["person_identity"]["enabled"] is True
-        assert pipeline.config["person_identity"]["link_to_persons"] is True
-
-        print("✅ LAIONFacePipeline PersonID configuration verified")
-
-        # Test helper methods exist
-        assert hasattr(pipeline, "_load_person_tracks")
-        assert hasattr(pipeline, "_get_frame_person_annotations")
-        assert hasattr(pipeline, "_link_face_to_person")
-        assert hasattr(pipeline, "_calculate_iou")
-
-        print("✅ LAIONFacePipeline PersonID helper methods present")
-        print("   (Note: Full processing test skipped - requires LAION models)")
-        return
-
-    except Exception as e:
-        print(f"❌ LAIONFacePipeline test failed: {e}")
-        return
-
-
 def main():
     """Run Phase 2 integration tests."""
     print("🚀 Starting Phase 2: PersonID Integration Tests")
@@ -227,7 +183,6 @@ def main():
     tests = [
         ("FaceAnalysisPipeline", test_face_pipeline_personid_integration),
         ("OpenFace3Pipeline", test_openface3_pipeline_personid_integration),
-        ("LAIONFacePipeline", test_laion_face_pipeline_personid_integration),
     ]
 
     results = {}

@@ -6,6 +6,8 @@ import React from 'react';
 import { PresetBar } from '@/components/PresetBar';
 import { apiClient } from '@/api/client';
 import type { Preset } from '@/types/presets';
+import { APIError } from '@/api/handleError';
+import userEvent from '@testing-library/user-event';
 
 vi.mock('@/api/client', () => ({
   apiClient: { listPresets: vi.fn(), createPreset: vi.fn() },
@@ -59,5 +61,33 @@ describe('PresetBar', () => {
     vi.mocked(apiClient.listPresets).mockRejectedValue(new Error('404'));
     const { container } = renderBar();
     await waitFor(() => expect(container).toBeEmptyDOMElement());
+  });
+
+  it('imports an exported preset under a free name', async () => {
+    vi.mocked(apiClient.listPresets).mockResolvedValue({ presets: [preset], total: 1 });
+    vi.mocked(apiClient.createPreset)
+      .mockRejectedValueOnce(new APIError('taken', 409))
+      .mockResolvedValueOnce({ ...preset, id: 'p3', name: 'Faces only (imported)' });
+    renderBar();
+    await screen.findByLabelText('Preset');
+    const { id: _id, owner_user_id: _o, ...exported } = preset;
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await userEvent.upload(input, new File([JSON.stringify(exported)], 'faces.preset.json', { type: 'application/json' }));
+    expect(await screen.findByText(/Imported as “Faces only \(imported\)”/)).toBeInTheDocument();
+    expect(vi.mocked(apiClient.createPreset).mock.calls[1][0]).toMatchObject({
+      name: 'Faces only (imported)',
+      selected_pipelines: ['face_analysis'],
+      config: preset.config,
+    });
+  });
+
+  it('says what is wrong with a file that is not a preset export', async () => {
+    vi.mocked(apiClient.listPresets).mockResolvedValue({ presets: [], total: 0 });
+    renderBar();
+    await screen.findByText('No saved presets yet.');
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await userEvent.upload(input, new File(['not json'], 'x.json', { type: 'application/json' }));
+    expect(await screen.findByText(/isn't a JSON file/)).toBeInTheDocument();
+    await waitFor(() => expect(apiClient.createPreset).not.toHaveBeenCalled());
   });
 });

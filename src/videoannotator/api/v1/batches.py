@@ -8,14 +8,31 @@ reuses spec 006's single-job retry semantics per job.
 """
 
 import logging
+import shutil
+import uuid
 from datetime import datetime
+from pathlib import Path as PathType
 from typing import Any
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Path, Query
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Path, Query, Request, Response
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
 from ...batch.batch_summary import compute_batch_summary
+from ...batch.types import JobStatus
+from ...results_folder import (
+    find_moved_video,
+    folder_ref,
+    is_inside_results,
+    recorded_size,
+    rerun_video_missing,
+    results_root,
+    run_folder_of,
+    run_zip_entries,
+)
 from ...storage.base import StorageBackend
+from ...utils.compression import stream_zip
 from ..database import get_storage_backend
 from ..errors import APIError
 from ..middleware.auth import validate_api_key
@@ -24,7 +41,16 @@ from .exceptions import (
     JobNotFoundException,
     JobNotRetryableException,
 )
-from .jobs import cancel_job_by_id, retry_job
+from .ingest import require_local_caller, resolve_within_roots
+from .jobs import (
+    FolderRef,
+    RerunNotPossibleException,
+    RerunRequest,
+    cancel_job_by_id,
+    create_rerun,
+    retry_job,
+    validate_pipeline_selection,
+)
 
 logger = logging.getLogger("videoannotator.api")
 
@@ -53,6 +79,19 @@ class BatchSummaryResponse(BaseModel):
     by_status: BatchStatusCounts
     completion_percentage: float
     estimated_seconds_remaining: float | None = None
+    results_folder: FolderRef | None = Field(
+        default=None,
+        description="The run's results folder (spec 022); null for runs made "
+        "before results folders existed",
+    )
+
+
+def _summary_response(batch_id: str, jobs: list[Any]) -> BatchSummaryResponse:
+    summary = compute_batch_summary(batch_id, jobs)
+    run_folder = next((f for f in map(run_folder_of, jobs) if f is not None), None)
+    return BatchSummaryResponse(
+        **summary.to_dict(), results_folder=folder_ref(run_folder)
+    )
 
 
 class BatchListResponse(BaseModel):
@@ -137,8 +176,7 @@ async def list_batches(
             if not jobs:
                 # Every member job was deleted between the id listing and here.
                 continue
-            summary = compute_batch_summary(member_batch_id, jobs)
-            batches.append(BatchSummaryResponse(**summary.to_dict()))
+            batches.append(_summary_response(member_batch_id, jobs))
 
         return BatchListResponse(
             batches=batches, total=total, page=page, per_page=per_page
@@ -177,9 +215,7 @@ async def get_batch_summary(
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> BatchSummaryResponse:
     """Get aggregate status for all jobs sharing a batch identifier."""
-    jobs = _load_batch_jobs(storage, batch_id)
-    summary = compute_batch_summary(batch_id, jobs)
-    return BatchSummaryResponse(**summary.to_dict())
+    return _summary_response(batch_id, _load_batch_jobs(storage, batch_id))
 
 
 @router.post(
@@ -289,3 +325,207 @@ async def retry_batch(
             message=f"Failed to retry batch: {e!s}",
             hint="Check server logs for details",
         ) from e
+
+
+class RelocatedVideo(BaseModel):
+    job_id: str
+    from_path: str = Field(alias="from", serialization_alias="from")
+    to: str
+
+    model_config = {"populate_by_name": True}
+
+
+class BatchRerunResponse(BaseModel):
+    batch_id: str = Field(description="The new batch")
+    rerun_of_batch: str
+    created: list[str]
+    skipped: list[BatchJobSkipped]
+    relocated: list[RelocatedVideo] = Field(
+        default_factory=list,
+        description="Videos found in `relocate_folder`, by name and size (spec 022)",
+    )
+
+
+@router.post(
+    "/{batch_id}/rerun",
+    response_model=BatchRerunResponse,
+    status_code=201,
+    summary="Run a batch again",
+    description="""
+Runs every finished job of a batch again (spec 019) as a new batch named
+"<name> (rerun)", each job linked to its original by `rerun_of`. The original
+batch is not changed. Optional `selected_pipelines` / `config` replace every
+job's ("Edit and run again"); they are checked before any job is created. Jobs
+still running, or whose video is gone, are reported in `skipped`.
+""",
+)
+async def rerun_batch(
+    http_request: Request,
+    request: RerunRequest | None = None,
+    batch_id: str = Path(..., description="The batch to run again"),
+    check: bool = Query(
+        False,
+        description="Dry run: report what would be skipped or relocated, create nothing",
+    ),
+    relocate_folder: str | None = Query(
+        None,
+        description="Where moved videos are now: each missing video is looked for "
+        "here by name and size (same machine and administrator only)",
+    ),
+    recursive: bool = Query(
+        False, description="Also look in relocate_folder's subfolders"
+    ),
+    storage: StorageBackend = Depends(get_storage),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> BatchRerunResponse:
+    """Run a batch's finished jobs again as a new batch."""
+    jobs = _batch_or_404(storage, batch_id)
+    request = request or RerunRequest()
+    for job in jobs:
+        validate_pipeline_selection(
+            request.selected_pipelines
+            if request.selected_pipelines is not None
+            else job.selected_pipelines,
+            request.config if request.config is not None else job.config,
+        )
+
+    folder = None
+    if relocate_folder is not None:
+        # Reads the filesystem on the caller's word, so it is gated as ingest is.
+        if not (user or {}).get("is_admin", False):
+            raise APIError(
+                status_code=403,
+                code="ADMIN_REQUIRED",
+                message="Only an administrator can choose a folder on this computer.",
+            )
+        require_local_caller(http_request)
+        folder = resolve_within_roots(relocate_folder)
+
+    relocated: list[RelocatedVideo] = []
+    moved_to: dict[str, PathType] = {}
+    if folder is not None:
+        for job in jobs:
+            video = PathType(job.video_path) if job.video_path else None
+            if video is None or video.is_file():
+                continue
+            found = find_moved_video(video.name, recorded_size(job), folder, recursive)
+            if found is not None:
+                moved_to[job.job_id] = found
+                relocated.append(
+                    RelocatedVideo(
+                        job_id=job.job_id, from_path=str(video), to=str(found)
+                    )
+                )
+
+    new_batch_id = str(uuid.uuid4())
+    name = next((j.batch_name for j in jobs if j.batch_name), None)
+    new_name = f"{name} (rerun)" if name else "Rerun"
+    created: list[str] = []
+    skipped: list[BatchJobSkipped] = []
+    for job in jobs:
+        try:
+            if check:
+                _check_rerunnable(job, moved_to.get(job.job_id))
+                continue
+            new = create_rerun(
+                job, storage, request, new_batch_id, new_name, moved_to.get(job.job_id)
+            )
+            created.append(new.job_id)
+        except RerunNotPossibleException as e:
+            skipped.append(BatchJobSkipped(job_id=job.job_id, reason=e.message))
+    return BatchRerunResponse(
+        batch_id=new_batch_id,
+        rerun_of_batch=batch_id,
+        created=created,
+        skipped=skipped,
+        relocated=relocated,
+    )
+
+
+def _check_rerunnable(job: Any, moved_to: PathType | None) -> None:
+    """Raise what `create_rerun` would, without creating anything."""
+    finished = (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED)
+    if job.status not in finished:
+        raise RerunNotPossibleException(
+            job.job_id, "JOB_NOT_FINISHED", f"it is {job.status.value}", ""
+        )
+    video = moved_to or (PathType(job.video_path) if job.video_path else None)
+    if video is None or not video.is_file():
+        raise RerunNotPossibleException(
+            job.job_id, "RERUN_VIDEO_MISSING", rerun_video_missing(video), ""
+        )
+
+
+def _batch_or_404(storage: StorageBackend, batch_id: str) -> list[Any]:
+    jobs = _load_batch_jobs(storage, batch_id)
+    if not jobs:
+        raise APIError(
+            status_code=404,
+            code="BATCH_NOT_FOUND",
+            message=f"Batch '{batch_id}' not found",
+            hint="Check the batch ID, or use GET /api/v1/batches.",
+        )
+    return jobs
+
+
+@router.get(
+    "/{batch_id}/results.zip",
+    summary="Download a run's results as one file",
+    description="""
+Streams every video's results in the run, in the same layout as the run's
+results folder (`<run>/run.json`, then one folder per video), as one zip.
+Never includes a video (spec 022, FR-028). Runs from before results folders
+existed get the same layout, built from each job's own folder.
+""",
+    response_class=StreamingResponse,
+)
+async def batch_results_zip(
+    batch_id: str = Path(..., description="The run's batch identifier"),
+    storage: StorageBackend = Depends(get_storage),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> StreamingResponse:
+    """Stream a run's results, without videos."""
+    top, entries = run_zip_entries(_batch_or_404(storage, batch_id))
+    filename = top.replace('"', "")
+    return StreamingResponse(
+        stream_zip(entries),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}.zip"; '
+            f"filename*=UTF-8''{quote(filename)}.zip"
+        },
+    )
+
+
+@router.delete(
+    "/{batch_id}",
+    status_code=204,
+    summary="Delete a run",
+    description="""
+Deletes every job in the run, their results, and the run's results folder.
+Jobs still running are cancelled first. The original videos are never touched
+(spec 022, FR-030).
+""",
+)
+async def delete_batch(
+    batch_id: str = Path(..., description="The run's batch identifier"),
+    storage: StorageBackend = Depends(get_storage),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Response:
+    """Delete a run and its results."""
+    jobs = _batch_or_404(storage, batch_id)
+    run_folder = next((f for f in map(run_folder_of, jobs) if f is not None), None)
+    for job in jobs:
+        try:
+            cancel_job_by_id(job.job_id, storage)
+        except (JobAlreadyCompletedException, JobNotFoundException):
+            pass
+        storage.delete_job(job.job_id)
+    if (
+        run_folder is not None
+        and run_folder.exists()
+        and is_inside_results(run_folder)
+        and run_folder.resolve() != results_root()
+    ):
+        shutil.rmtree(run_folder, ignore_errors=True)
+    return Response(status_code=204)

@@ -1,75 +1,79 @@
 {
-    "name":  "VideoAnnotator (GPU)",
-    "build":  {
-                  "dockerfile":  "../Dockerfile.gpu",
-                  "context":  "..",
-                  "args":  {
-                               "SKIP_IMAGE_UV_SYNC":  "true",
-                               "SKIP_TORCH_INSTALL":  "true"
-                           }
-              },
-    "runArgs":  [
-                    "--gpus",
-                    "all"
-                ],
-    "features":  {
-                     "ghcr.io/devcontainers/features/github-cli:1":  {},
-                     "ghcr.io/devcontainers/features/node:1":  {
-                                                                  "version":  "lts"
-                                                              },
-                     "ghcr.io/shyim/devcontainers-features/bun:0":  {}
-                 },
-    "forwardPorts":  [
-                         18011,
-                         19011
-                     ],
-    "portsAttributes":  {
-                            "18011":  {
-                                          "label":  "VideoAnnotator API",
-                                          "onAutoForward":  "notify"
-                                      },
-                            "19011":  {
-                                          "label":  "Viewer dev server (Vite)",
-                                          "onAutoForward":  "notify"
-                                      }
-                        },
-    "onCreateCommand":  "grep -qF scripts/shell_aliases.sh ~/.bashrc || echo \"source ${containerWorkspaceFolder}/scripts/shell_aliases.sh\" >> ~/.bashrc",
-    "postCreateCommand":  "uv sync --inexact --extra dev \u0026\u0026 HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh \u0026\u0026 uv run pre-commit install \u0026\u0026 (cd viewer \u0026\u0026 bun install)",
-    "mounts":  [
-                   "source=videoannotator-claude-home,target=/root/.claude,type=volume",
-                   "source=videoannotator-viewer-node-modules,target=${containerWorkspaceFolder}/viewer/node_modules,type=volume"
-               ],
-    "containerEnv":  {
-                         "UV_LINK_MODE":  "copy",
-                         "UV_NO_SYNC":  "1",
-                         "HUGGINGFACE_TOKEN":  "${localEnv:HUGGINGFACE_TOKEN}",
-                         "HF_AUTH_TOKEN":  "${localEnv:HF_AUTH_TOKEN}",
-                         "OLLAMA_BASE_URL":  "http://host.docker.internal:11434",
-                         "HF_HOME":  "${containerWorkspaceFolder}/models/huggingface",
-                         "TORCH_HOME":  "${containerWorkspaceFolder}/models/torch",
-                         "PYANNOTE_CACHE":  "${containerWorkspaceFolder}/models/pyannote",
-                         "DEEPFACE_HOME":  "${containerWorkspaceFolder}/models/deepface"
-                     },
-    "customizations":  {
-                           "vscode":  {
-                                          "settings":  {
-                                                           "python.defaultInterpreterPath":  "${containerWorkspaceFolder}/.venv/bin/python",
-                                                           "python.formatting.provider":  "none",
-                                                           "[python]":  {
-                                                                            "editor.defaultFormatter":  "charliermarsh.ruff",
-                                                                            "editor.formatOnSave":  true,
-                                                                            "editor.codeActionsOnSave":  {
-                                                                                                             "source.organizeImports":  true
-                                                                                                         }
-                                                                        }
-                                                       },
-                                          "extensions":  [
-                                                             "charliermarsh.ruff",
-                                                             "ms-python.python",
-                                                             "ms-python.vscode-pylance",
-                                                             "anthropic.claude-code"
-                                                         ]
-                                      }
-                       },
-    "shutdownAction":  "stopContainer"
+    "name": "VideoAnnotator (GPU)",
+    "build": {
+        "dockerfile": "../Dockerfile",
+        "context": "..",
+        "args": {
+            "SKIP_IMAGE_UV_SYNC": "true"
+        }
+    },
+    "runArgs": [
+        "--gpus",
+        "all",
+        "--memory=12g"
+    ],
+    "features": {
+        "ghcr.io/devcontainers/features/github-cli:1": {},
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "lts"
+        },
+        "ghcr.io/shyim/devcontainers-features/bun:0": {}
+    },
+    "forwardPorts": [
+        18011,
+        19011
+    ],
+    "portsAttributes": {
+        "18011": {
+            "label": "VideoAnnotator API",
+            "onAutoForward": "notify"
+        },
+        "19011": {
+            "label": "Viewer dev server (Vite)",
+            "onAutoForward": "notify"
+        }
+    },
+    "onCreateCommand": "grep -qF scripts/shell_aliases.sh ~/.bashrc || echo \"source ${containerWorkspaceFolder}/scripts/shell_aliases.sh\" >> ~/.bashrc",
+    "postCreateCommand": "uv sync --inexact --all-extras && HADOLINT_DEST_DIR=/usr/local/bin bash scripts/install_hadolint.sh && uv run pre-commit install && (cd viewer && bun install)",
+    "postStartCommand": "bash scripts/check_workspace_mount.sh",
+    "mounts": [
+        "source=videoannotator-claude-home,target=/root/.claude,type=volume",
+        "source=videoannotator-gh-config,target=/root/.config/gh,type=volume",
+        "source=videoannotator-viewer-node-modules,target=${containerWorkspaceFolder}/viewer/node_modules,type=volume",
+        "source=videoannotator-venv,target=${containerWorkspaceFolder}/.venv,type=volume",
+        "source=videoannotator-models,target=/app/models,type=volume"
+    ],
+    "containerEnv": {
+        "UV_LINK_MODE": "copy",
+        "UV_NO_SYNC": "1",
+        "HUGGINGFACE_TOKEN": "${localEnv:HUGGINGFACE_TOKEN}",
+        "HF_AUTH_TOKEN": "${localEnv:HF_AUTH_TOKEN}",
+        "OLLAMA_BASE_URL": "http://host.docker.internal:11434",
+        "VIDEOANNOTATOR_MODELS_DIR": "/app/models",
+        "VIDEOANNOTATOR_LOG_DIR": "${containerWorkspaceFolder}/logs",
+        "VIDEOANNOTATOR_DB_PATH": "${containerWorkspaceFolder}/videoannotator.db",
+        "STORAGE_ROOT": "${containerWorkspaceFolder}/storage/jobs"
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
+                "python.formatting.provider": "none",
+                "[python]": {
+                    "editor.defaultFormatter": "charliermarsh.ruff",
+                    "editor.formatOnSave": true,
+                    "editor.codeActionsOnSave": {
+                        "source.organizeImports": true
+                    }
+                }
+            },
+            "extensions": [
+                "charliermarsh.ruff",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "anthropic.claude-code"
+            ]
+        }
+    },
+    "shutdownAction": "stopContainer"
 }

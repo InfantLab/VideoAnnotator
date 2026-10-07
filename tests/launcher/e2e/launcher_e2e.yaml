@@ -1,0 +1,22 @@
+# CI only (tests/launcher/Dockerfile.e2e): a pipeline that finishes in a moment,
+# so the launcher's end-to-end test can run a real job in the slim image. Never
+# in the published image (tests/unit/registry/test_no_test_fixtures_shipped.py).
+name: launcher_e2e
+display_name: Launcher end-to-end test
+description: Writes one small JSON file per video. CI only.
+pipeline_family: stub
+variant: launcher-e2e
+module_path: launcher_e2e_pipeline:LauncherE2EPipeline
+requires_extras: []
+backends:
+  - cpu
+outputs:
+  - format: JSON
+    types: [stub]
+config_schema:
+  seconds:
+    type: number
+    default: 0
+    description: How long each video takes.
+version: 1
+stability: experimental

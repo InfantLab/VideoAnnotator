@@ -56,6 +56,7 @@ class Job(Base):
     batch_id = Column(String, index=True)
     batch_name = Column(String)
     dataset_id = Column(String)
+    rerun_of = Column(String, index=True)  # 019: the job this one runs again
 
     # Timestamps
     created_at = Column(DateTime, nullable=False, default=_utcnow_naive)
@@ -108,6 +109,7 @@ class PipelineResult(Base):
     annotation_count = Column(Integer)
     output_file = Column(String)  # Path to result file
     error_message = Column(Text)
+    provenance = Column(JSON)  # spec 017; null for jobs before it
 
     # Relationships
     job = relationship("Job", back_populates="pipeline_results")

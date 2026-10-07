@@ -4,8 +4,36 @@ A comprehensive toolkit for video analysis including scene detection,
 person tracking, face analysis, and audio processing.
 """
 
+import os
 import sys
+from pathlib import Path
 from typing import Any
+
+# Triton (used by Whisper's word timestamps on GPU) caches compiled C launchers in
+# ~/.triton/cache without keying them on the Python version, so a launcher built
+# by one interpreter fails in another ("PY_SSIZE_T_CLEAN macro must be defined").
+# With 3.12 and 3.13 both supported, keep one cache per Python version.
+os.environ.setdefault(
+    "TRITON_CACHE_DIR",
+    str(
+        Path.home()
+        / ".triton"
+        / "cache"
+        / f"py{sys.version_info.major}.{sys.version_info.minor}"
+    ),
+)
+
+# pyannote.audio 4 sends anonymous usage telemetry (pipeline, file durations,
+# speaker counts) to otel.pyannote.ai unless told not to; local-first means off
+# unless the user opts in (constitution principle I).
+os.environ.setdefault("PYANNOTE_METRICS_ENABLED", "0")
+# huggingface_hub lets libraries send usage pings (send_telemetry); same rule.
+os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
+
+# Before any model library is imported: point their caches into one directory.
+from .models_dir import configure_model_caches
+
+configure_model_caches()
 
 from .version import (
     __author__,

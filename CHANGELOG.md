@@ -7,6 +7,481 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Start VideoAnnotator: a container that feels local** (spec 024). For researchers on their
+  own computer, with Docker Desktop or Podman Desktop and no Python.
+  - **`videoannotator-start`** (sh for Linux and macOS, PowerShell for Windows, with a one-line
+    installer and a "Start VideoAnnotator" shortcut) finds Docker or Podman, asks once which
+    folder the videos are in (a folder picker), confirms in plain words, and shares it read-only
+    at its real path, so job pages, datasets and `run.json` name videos as the computer does.
+    It starts VideoAnnotator on 127.0.0.1 and opens the viewer already connected. Later starts
+    ask nothing. `share`, `unshare`, `list`, `stop`, `update` and `logs`; broad shares (a home
+    folder, a whole drive) ask first; a missing share (an unplugged drive) is skipped with a
+    note; every failure is one plain line with the next step.
+  - **The slim image on GHCR**, `ghcr.io/infantlab/videoannotator:<version>`, which the
+    launcher pins to its own version. Docker Hub stays a mirror.
+  - **Installed pipelines survive updates and restarts.** Pipelines installed from the viewer
+    live in the container, which is replaced on every update and every change of shared
+    folders: completed installs are now remembered and restored at start (the card says
+    "Restoring..."), from a new `videoannotator-cache` volume so nothing downloads again.
+    Jobs that need one wait for it. Compose gets this too.
+  - **Settings lists the shared folders**, read-only, and those not found at the last start,
+    with Stop sharing (`POST /api/v1/ingest/shares/stop`), applied at the next start. A request
+    can only make sharing narrower.
+  - **Results belong to the researcher** under Docker Engine on Linux too:
+    `VIDEOANNOTATOR_RESULTS_OWNER=uid:gid` makes the server give every results folder and file
+    to that user.
+  - Windows paths are shown with backslashes (`C:\Users\...`), and jobs report their video's
+    path as the computer shows it (`video_display_path`).
+
+- **Videos are read where they are, and results go to one folder you can find** (spec 022).
+  - **My folders.** On the server's own computer, the new-job wizard opens on "My folders": open
+    a folder, tick videos (or Select all, with or without subfolders) and the run starts at once.
+    Nothing is uploaded or copied. Upload is now a "Videos on another computer?" link, and the
+    main route when the server is on another machine. The server decides which applies
+    (`GET /api/v1/ingest/access`), and `POST /api/v1/ingest` takes the ticked videos as `files`.
+  - **Results folder.** Every run's results go to `~/VideoAnnotator/<run> (<date>)/<video>/`,
+    with a `run.json` listing pipelines, settings, versions and each video's source. Result
+    file names are unchanged. Folders are never overwritten, and hold results only, never a
+    video. Set `VIDEOANNOTATOR_RESULTS_DIR` to put them elsewhere. Jobs from before stay where
+    they are.
+  - **From the viewer.** Run and job pages show the results folder with Open folder (when the
+    server has a desktop to open it on), Copy location and, for a run, Download results: one zip
+    of every video's results without videos (`GET /api/v1/batches/{id}/results.zip`). A whole
+    run can be deleted (`DELETE /api/v1/batches/{id}`); confirmations name the folder, and the
+    original videos are never touched. Settings shows both folders.
+  - **Moved videos.** A queued job whose video has gone fails naming it, and the run goes on.
+    Its results stay viewable, with the player saying where the video was. "Run again" lists
+    missing videos first (`rerun?check=true`), then runs the rest, or finds them in a folder you
+    choose by name and size (`relocate_folder`).
+  - **Datasets of chosen videos** (`server_selection`) rerun exactly those videos, with no
+    prompts while they are where they were.
+  - **Docker.** Compose takes `VIDEOS_DIR` (read-only) and `RESULTS_DIR` (on your computer)
+    and shows host paths in the viewer; see the installation guide.
+
+- **Python 3.13 support** (spec 012). VideoAnnotator now installs and runs on Python 3.12 and 3.13;
+  3.13 is the default for the dev container and the Docker images. No library version changed:
+  on 3.13 the install adds only backports of standard-library audio modules that 3.13 removed.
+  Every pipeline was checked on a real video: identical results on both versions, except
+  OpenFace 3, whose GPU results vary slightly from run to run on either version (3.13 stayed
+  within that variation). Python
+  3.12 stays supported through v1.6.x and is planned to be dropped in v1.7.0. Python 3.14 waits
+  for TensorFlow, which the planned replacement of `face_analysis` removes.
+- The CLI and server log a warning when started on an unsupported Python. pip and `uv sync`
+  refuse unsupported versions, but `uv pip install .` from a checkout doesn't check.
+- **`videoannotator process <video> --pipelines a,b`** runs pipelines on one video without a
+  server. It was a stub that printed "not yet implemented". It goes through the same job path as
+  the server, records the job in the same database (so it shows in the viewer), prints each
+  pipeline's result files or error, and exits 1 if any pipeline failed. `--config` takes the
+  bundled YAML/JSON configs; `--output` also copies the result files to a folder. An unknown
+  pipeline name is rejected at once with the valid names. The video is read where it is, and
+  results go to the results folder (spec 022).
+- **Queue position in the viewer**: a pending job says where it is in the queue ("Next in queue",
+  "3rd in queue") under its status in the job and batch lists and on its page, so a queued job no
+  longer looks the same as a stuck one. The server already reported `queue_position`; the viewer
+  didn't show it.
+- **Deterministic mode**: `"deterministic": true` in a job's config (or in a `--config` file for
+  `videoannotator process`) asks cuDNN and torch for deterministic algorithms in every pipeline.
+  It is recorded with the job's config and in the job log. On the demo clip, normal mode also
+  reproduces exactly now (see Fixed), so this is for runs that must match on other GPUs and
+  drivers too.
+- The viewer type-checks cleanly (`bun run typecheck`, 24 errors before), and CI now runs it. Its
+  API types are generated from the server's OpenAPI schema by `scripts/gen_viewer_api_types.sh`.
+  They were months stale, and looked up paths without the trailing slash the server uses.
+- The viewer loads faster on first visit: each page is downloaded when first opened, so the
+  initial download fell from about 315 KB to 180 KB gzipped (the constitution's budget is 300 KB).
+- **Every output records what made it** (spec 017). Each file a job writes now carries a
+  provenance record: the pipeline, VideoAnnotator's version, every model with the exact weights
+  used (sha256 of the weights file, the Hugging Face commit, or the Ollama digest), the effective
+  settings (secrets redacted), the numerical settings in force (deterministic mode, cuDNN), when
+  it was made, the job, and the input video's name and sha256. For VLM output it also holds the
+  prompt's sha256 and the model's quantisation. Where it goes:
+  - JSON outputs: a top-level `provenance` key.
+  - WebVTT transcripts: a `NOTE` block that subtitle readers skip.
+  - RTTM: a companion `<file>.provenance.json`, shipped wherever the RTTM goes.
+
+  Standard readers (pycocotools, WebVTT parsers, pyannote's RTTM loader) read the files exactly
+  as before. Each pipeline's record is also on the job: in `GET /api/v1/jobs/{id}/results` and in
+  `videoannotator job results`.
+- **The viewer names the source of every overlay**: "person_tracking · VideoAnnotator 1.6.0"
+  under each annotation control, and on the OpenFace 3 and VLM panels; the info button shows the
+  full record as recorded. Older files open as before and say "version not recorded" (or only the
+  version, for COCO files that carried it). ELAN tiers are labelled as ground truth from their
+  file.
+- **Saved datasets in the viewer** (spec 018). The server has kept named lists of videos since
+  v1.5.0; the viewer now uses them:
+  - **In the job wizard**: "Save as dataset" for the videos you chose, and a "Saved dataset" tab
+    to choose them again. Uploaded videos are found in the folder this browser remembers, or one
+    you pick. A server folder is scanned. Missing, new or resized videos are listed before
+    anything runs, and you choose whether to continue or update the dataset. "Choose a folder"
+    on the upload tab keeps subfolder paths.
+  - **On the new Datasets page**: every dataset on the server, with who saved it, its videos and
+    when it was last used. Rename, edit, remove videos, delete (yours only), start a job, and
+    export or import.
+  - **Presets** can be exported and imported too.
+  - **From the terminal**: `videoannotator dataset list|show|export|import|delete`.
+
+  Datasets can now record a server folder, and paths within it. `GET /api/v1/ingest/scan` lists
+  a server folder's videos without starting anything.
+- **Run it again** (spec 019). From a finished job's or run's page:
+  - **Run again**: same videos and settings, as a new job (or run) linked to the original, which
+    is kept with its results so the two can be compared.
+  - **Edit and run again**: the wizard opens with the same videos, nothing to upload; change
+    pipelines or settings, then start. A failed job offers it as "Fix settings and run again".
+  - **Use these settings on other videos**, and **Save as preset**.
+  - The wizard's first step offers your recent jobs' settings and presets, and a completed run
+    suggests running on more videos.
+
+  API: `POST /api/v1/jobs/{id}/rerun` and `POST /api/v1/batches/{id}/rerun`; jobs carry
+  `rerun_of` and `reruns`. CLI: `videoannotator job rerun`.
+- **Prompt library and workbench** (spec 020).
+  - **The library**: every VLM prompt that runs, in a job or a preview, is kept once per exact
+    text. It's identified by the same SHA-256 the output's provenance records, with the models,
+    jobs and times it was used. The **Prompts** page searches them (starred first), names, stars,
+    tags and hides them, compares two word by word, and starts a job or a workbench session from
+    one.
+  - **The workbench**: tries several prompts × models × moments of a video side by side, showing
+    the frames the model saw. Earlier rounds stay on screen to compare, and any result can be sent
+    to a job or saved as a preset. The wizard's "Test this prompt" panel opens it in a new tab.
+  - **Under the hood**: previews now return the frames they used. A note says when the model
+    server isn't on this machine.
+  - **From the terminal**: `videoannotator prompts list|show|diff`, `vlm preview` and
+    `vlm models`.
+- **Compare two VLM jobs** (spec 021): "Compare with…" on a VLM job's page (and "Compare with
+  original" on a rerun) opens both runs' labels on one timeline. It lists the moments where they
+  disagree, summarises the agreement and which label each run gave, and seeks the video to any
+  moment to show both runs' reasoning.
+  - Runs with different sampling intervals are paired by time, and every sample is counted:
+    compared, unpaired or error.
+  - Labels are compared exactly as recorded, unless you choose to ignore case.
+  - An ELAN `.eaf` adds a ground-truth row and each run's agreement with it.
+  - The comparison exports as CSV, and has its own link to share.
+  - Jobs of different videos are refused, using the input hash from provenance.
+  - New endpoint: `GET /api/v1/jobs/{id}/video` streams a job's video (with seeking).
+- **A working start page in the viewer.** Home was a product page; it now shows what you need to
+  carry on:
+  - Whether the server is connected, its version, and how many pipelines are ready (with a link to
+    set up the rest).
+  - Three actions: run pipelines on videos, open the latest results, view files from this computer.
+  - Recent runs with their next step: view, run again, or fix and rerun a failed job (its error
+    shown).
+  - A first-run checklist on a new install (connect, install a pipeline, run a job, open its
+    results), which can be hidden.
+  - Recent datasets (run one in a click), starred prompts, and the results kept on this computer.
+- **A documentation site** built from `docs/` with mkdocs-material, published to GitHub Pages from
+  master. `docs/README.md` is the one entry page, arranged by task: install, use, run it for a
+  group, contribute. CI checks every relative link in the README, CONTRIBUTING and `docs/`
+  (`scripts/validate_docs_links.py`) and builds the site in strict mode, so moving a file can't
+  leave a dead link. Preview locally with `uv sync --inexact --group docs` then `mkdocs serve`.
+- `scripts/compare_pipeline_outputs.py`: run pipelines on a video in one environment and compare
+  the outputs with another (for Python and library upgrades).
+
+### Removed
+
+- Internal working documents moved out of the public docs into `docs/archive/`: the 2025
+  client/server team handoffs and QA reports from `docs/testing/`, `docs/Figure 1.docx`, dated
+  fix notes, the coding-agent setup guide and the v1.3 scripts audit.
+
+- **The LAION pipelines** (spec 014, from the v1.6.0 pipeline review): `laion_voice` (16–32 GB of
+  models, unmaintained upstream, trained on adult acted speech) and `face_laion_clip`
+  (unmaintained upstream, unvalidated on infants), with the `audio-laion` and `face-laion`
+  extras. `transformers` is no longer installed by any extra. A job naming either pipeline is
+  rejected with the reason and an alternative (HTTP 422, `PIPELINE_REMOVED`). They can return as
+  v1.7.0 plugins.
+- `configs/laion_pipelines.yaml` and `examples/test_laion_voice_pipeline.py`.
+
+### Deprecated
+
+- **`audio_processing`**: it duplicates `speech_recognition` + `speaker_diarization`. It still runs
+  and gives the same output, but it's no longer listed, job submissions using it get a
+  `warnings` entry, and it will be removed in v1.7.0. The `audio_processing:` sections of the
+  bundled configs had no effect and are gone.
+
+### Changed
+
+- **A container never shows its own folders** (spec 024). In a container with no folder shared,
+  My folders lists nothing (it used to list the container's home, `/root`) and says how to share
+  a folder; upload still works. Plain installs keep the home-folder default.
+- **Compose shares `/videos` only when `VIDEOS_DIR` is set** (spec 024). Before, an empty
+  `./videos` was shared when it wasn't. If you kept videos in `./videos` without setting
+  `VIDEOS_DIR`, set `VIDEOS_DIR=./videos`.
+- **"Isn't shared any more", not "moved or deleted"** (spec 024): a job whose video is in a folder
+  that is no longer shared says so, at job start, on the job page, in "Run again" and in dataset
+  runs (`video_unavailable_reason` on jobs).
+
+- **A job's results download leaves the video out** (spec 022). The zip from "Download Results"
+  and `GET /api/v1/jobs/{id}/artifacts` was one more copy of sensitive video each time; it now
+  holds the results only. Tick "Include the video" in the viewer, or add `include_video=true`,
+  to get the old contents; the response's `X-VideoAnnotator-Notice` header says so.
+- **Docker compose publishes on `127.0.0.1` only** (spec 022). `videoannotator-prod` and
+  `videoannotator-gpu` published no port before; they now publish `127.0.0.1:18011` and set
+  `VIDEOANNOTATOR_PUBLISHED_LOCALLY=1`, so the browser on your computer counts as local. If you
+  publish the port more widely, remove that variable (the server warns at startup while it is
+  set).
+- **A saved dataset of uploaded videos runs without asking where they are.** Uploaded videos
+  stay in the folders of the jobs that ran on them, so "Use" on such a dataset now runs from
+  those copies: no folder to choose, nothing to upload again. If some were deleted along with
+  their jobs, the viewer says how many and offers to run the rest or choose the folder. New
+  endpoints: `GET /api/v1/datasets/{id}/stored-videos` and `POST /api/v1/datasets/{id}/run`.
+- **Viewer after an upgrade**: a tab opened before VideoAnnotator was upgraded reloads itself
+  instead of crashing with "Failed to fetch dynamically imported module". The error screen's
+  "Go Home" now opens the viewer (`/viewer/`) instead of the server root.
+
+- **`face_analysis` detects faces with RetinaFace** instead of OpenCV's Haar cascade, which marked
+  ceiling lamps and bottles as faces and missed infants. On the sample clips it now finds parent
+  and infant in every sampled frame, with no false positives. First use downloads 119 MB of
+  weights. Its `confidence_threshold` is now applied (it was ignored), and each face's `score` is
+  the detector's confidence instead of a fixed 1.0. Set `deepface.detector_backend: opencv` for
+  the old detector.
+- **Batch page built for large runs**: one compact line per video; the pipelines are listed
+  once for the whole run, not on every row; filters for failed, with errors, running, queued and
+  done; a search box for runs of 10 or more videos. Deleting one video moves to its job page.
+  Runs of more than 50 videos now list every video (only the first 50 showed before).
+
+- **Job folders move to the per-user data folder**, beside the database: `jobs` in
+  `~/.local/share/videoannotator/` (Linux), `~/Library/Application Support/videoannotator/`
+  (macOS) or `%LOCALAPPDATA%\videoannotator\` (Windows). They were in `./storage/jobs` under the
+  folder the server started in, so starting it from somewhere else lost every earlier job's video
+  and results. `STORAGE_ROOT` still overrides it, and the server prints it at start
+  (`[INFO] Jobs: ...`). Jobs made before keep working from where they are: each recorded its
+  folder, which viewing, the results zip and deleting now use. When old job folders are found,
+  the server says so at start.
+- **Docker: job folders get a volume.** The images set `STORAGE_ROOT=/app/storage/jobs`, and
+  `docker-compose.yml` and the documented `docker run` mount `videoannotator-storage` there.
+  Before, job folders were inside the container, lost when it was recreated while the database
+  still listed the jobs.
+
+- **README rewritten for researchers**: what VideoAnnotator does and for whom, a screenshot, the
+  pipelines and their file formats, installing in three steps on Windows, macOS and Linux, and
+  opening the viewer. Developer and API detail moved to the docs.
+
+- **Dev-container docs rewritten** (`docs/installation/INSTALLATION.md` and troubleshooting): they
+  lead with the container volume clone on Windows and the 12 GB cap the container sets itself,
+  give measured memory use (about 2 GB idle, 5.4 GB for the full test suite, 6.5 GB for a
+  six-pipeline job), say what a 16 GB machine should expect and what running out of memory looks
+  like (`Killed`, exit 137). Capping WSL with `.wslconfig` is now a fallback, not the first step.
+  `docs/deployment/Docker.md` gives the measured image sizes.
+
+- **The viewer's Library is now Results**, so it isn't confused with Datasets. Datasets are lists
+  of videos to run jobs on, kept on the server; Results are what jobs produced, kept on this
+  computer, plus the demos. Old `/library` links redirect. The nav follows the work: New job, Jobs,
+  Results, Datasets, Prompts (opening local files is on Home and Results).
+
+- **One directory for model weights** (spec 016): `VIDEOANNOTATOR_MODELS_DIR`, by default the
+  per-user data directory (`~/.local/share/videoannotator/models` on Linux,
+  `~/Library/Application Support/videoannotator/models` on macOS,
+  `%LOCALAPPDATA%\videoannotator\models` on Windows), with one folder per source. Whisper and YOLO
+  used to download relative to wherever the server was started, so starting it elsewhere meant
+  downloading again. **Upgrading installs download their models once more**; the server says so
+  on start if it finds weights in the old places, and `videoannotator diagnose models` lists them
+  with sizes. `HF_HOME` (and your Hugging Face login) is left alone. The dev container uses
+  `<repo>/models` as before (no re-download); the Docker images use `/app/models`, a named volume in
+  docker-compose.
+- **The database moves to the per-user data folder** instead of `./videoannotator.db` under
+  wherever the server was started (so starting it elsewhere showed an empty job list):
+  `videoannotator.db` next to the models folder's default (`~/.local/share/videoannotator/` on
+  Linux), or `VIDEOANNOTATOR_DB_PATH`; `DATABASE_URL` still overrides both. The server prints it at
+  start (`[INFO] Database: ...`). Both database layers now use the same setting: before,
+  `VIDEOANNOTATOR_DB_PATH` moved job storage but users, API keys, datasets and presets stayed in
+  `./videoannotator.db`. **An existing `./videoannotator.db` is not moved**: copy it to the new
+  location (or point `VIDEOANNOTATOR_DB_PATH` at it) to keep its jobs and API keys. The Docker
+  images use `/app/database/videoannotator.db`, a named volume (`videoannotator-database`) in
+  docker-compose, so jobs and keys now survive a rebuild; the dev container keeps
+  `<repo>/videoannotator.db`.
+- **One Dockerfile for CPU and GPU** replaces `Dockerfile.cpu`, `Dockerfile.gpu` and
+  `Dockerfile.dev`: `docker build -t videoannotator .` (slim) or `--build-arg EXTRAS=all`, run with
+  `--gpus all` to use a GPU. It builds on `ubuntu:24.04` instead of a 2024 `nvidia/cuda` snapshot
+  (torch's wheels bring their own CUDA). Fixed on the way: the CPU image replaced torch with 2.6.0
+  after installing extras, which broke pyannote.audio 4; the GPU image didn't install
+  VideoAnnotator itself; both shipped the dev tools and uv's download cache. The image now starts
+  `videoannotator server` on 0.0.0.0. `Dockerfile.dev` (copied local models into the image) and
+  compose's `videoannotator-dev-gpu` service are gone: use the dev container, or a models volume.
+  Sizes (2026-10-02): slim 1.35 GB (347 MB compressed), every pipeline 14.9 GB (4.78 GB), against
+  26.1 GB (8.89 GB) for v1.4.3. A `.dockerignore` keeps the build context to what the image needs
+  (and `.env`, which can hold tokens, out of it).
+- **Logs go to one per-user folder** instead of `./logs` under wherever the server was started:
+  `VIDEOANNOTATOR_LOG_DIR`, by default `~/.local/state/videoannotator/logs` on Linux,
+  `~/Library/Logs/videoannotator` on macOS and `%LOCALAPPDATA%\videoannotator\logs` on Windows.
+  The server prints the folder at start (`[INFO] Logs: ...`). The Docker images keep `/app/logs`
+  (docker-compose's `./logs` mount still works) and the dev container keeps `<repo>/logs`. Old
+  `./logs` folders are left where they are. The documented `LOG_DIR` setting never did anything
+  and is gone.
+- **OpenFace 3 works outside a source checkout.** Its face detector loaded a backbone file from
+  `./weights/`, relative to the working directory, which only a source checkout has (it's committed
+  to this repository). That load is skipped: the detector's full checkpoint replaces those weights
+  anyway (outputs unchanged).
+- **torch 2.6 → 2.11, pyannote.audio 3 → 4, CUDA 12.4 → 12.6 wheels** (spec 015). torch 2.11 is
+  as far as it can go for now: pyannote.audio 4 imports torchaudio, which was discontinued at 2.11
+  and won't load on a newer torch. **GPU users need NVIDIA driver 560+** (Linux 560.28.03, Windows
+  560.76; 525+ usually works through CUDA's minor-version compatibility). On the demo video every
+  pipeline gives the same results: identical transcript text and speaker turns; person-tracking
+  boxes within 0.08 px and scene scores within 0.003 (numerical differences of the new torch);
+  OpenFace within its known run-to-run sensitivity.
+- **Diarization now also needs `pyannote/speaker-diarization-community-1`'s licence accepted on
+  Hugging Face**, even with the default `speaker-diarization-3.1` model: pyannote.audio 4 loads part
+  of every diarization pipeline from it. The pipeline's setup checklist lists it.
+- **pyannote.audio's telemetry is off by default.** pyannote.audio 4 sends anonymous usage data
+  (pipeline, file durations, speaker counts) to `otel.pyannote.ai` unless told not to; VideoAnnotator
+  sets `PYANNOTE_METRICS_ENABLED=0` unless you set it yourself (constitution principle I,
+  local-first).
+- Diarization hands pyannote the audio in memory, so it doesn't need FFmpeg's shared libraries
+  (pyannote.audio 4's own file decoding does).
+- **Short family names are predictable** (spec 014): `audio` and `face` resolve to the family's
+  declared default (`family_default` in pipeline metadata), not to whichever "stable" pipeline
+  sorted first. Before, `audio` meant the 16–32 GB LAION voice model whenever its extra was
+  installed, and `speaker_diarization` otherwise; it now means `audio_processing` (speech +
+  diarization) until v1.7.0. `face` means `face_analysis`.
+- Job responses have a `warnings` list (empty unless something deprecated was used).
+- **Core install is 82% smaller** (spec 013): 40 packages and 135 MB instead of 73 and 746 MB.
+  Removed from core because nothing in VideoAnnotator imports them: `moviepy`, `matplotlib`,
+  `tqdm`, `openpyxl`, `pandas`, `imageio`, `imageio-ffmpeg`, `av`, `alembic`, `rich`,
+  `click` (still installed, via `typer`), `scikit-image`, `cryptography`. `numba` moved to the
+  `audio` extra, its only user. **If your own scripts used one of these because it arrived with
+  VideoAnnotator, install it yourself.** Removed from extras: `imutils` (`face`) and
+  `supervision` (`person`), both unused; the empty `annotation` extra is gone.
+- **Each extra now works on its own** (checked by installing core plus one extra in a clean
+  environment and running its pipelines on the demo video). `face-openface3` didn't:
+  `openface-test` imports torch, torchvision, timm, scikit-image, pandas, huggingface-hub, tqdm,
+  matplotlib, seaborn and tensorboardX without declaring them, and they used to arrive with core
+  or with another extra. They're now declared in `face-openface3`.
+- Removed two modules that couldn't be imported: `videoannotator.main` and
+  `videoannotator.visualization` (both still imported `src.*` paths from before the package
+  moved to `src/videoannotator/`).
+- Core libraries upgraded: FastAPI 0.142, SQLAlchemy 2.1, Pydantic 2.13, NumPy 2.5, Pillow 12,
+  and others. Pipeline outputs on the demo video are unchanged.
+- **Development tools**: declared once, in the `dev` dependency group (installed by `uv sync` by
+  default; `pip install -e . --group dev` with pip ≥ 25.1). The `dev` extra is gone, and
+  `uv sync --extra dev` no longer works: use `uv sync`. Jupyter moved to its own `notebooks` group.
+- **Type checking covers the whole package**: mypy used to exclude the pipelines and several
+  storage, utility and exporter modules, and the pre-commit hook used an older mypy than CI on an
+  even smaller subset. Both now run the same check on all 117 modules.
+- Pre-commit hooks upgraded; `pydocstyle` (it pointed at a directory that no longer exists) and
+  `mirrors-prettier` (no stable release since v3) removed. GitHub Actions moved to current
+  versions (Node 20 is deprecated on Actions).
+- **Pipeline outputs are unchanged by this release's upgrades** (Python 3.13, torch 2.11,
+  pyannote.audio 4, the core dependency clean-up). The demo clip was run through v1.5.0 and this
+  release with the same six pipelines on the same GPU (2026-10-02):
+  - Identical: scene detection, person tracks, speaker diarization (every turn, to the
+    millisecond), and the speech transcript with its timings.
+  - Within run-to-run GPU noise: person-tracking scores (up to 0.12% apart; two runs of the same
+    version differ by up to 0.07%) and OpenFace 3 action-unit intensities (up to 1.4%, median
+    0.0004%; two runs of the same version differ by up to 1.6%).
+  - Face analysis (DeepFace) finds no faces in the demo clip in either version.
+  These outputs are now the committed baseline: `tests/integration/test_output_baseline.py` runs
+  the demo clip through a real server and compares every file with
+  `tests/fixtures/viewer_contract/` (real models, about a minute on a GPU; not run in CI).
+
+### Fixed
+
+- **A new install couldn't install pipelines from the viewer** (found in the first-time-user run,
+  2026-10-05). Two faults, each enough on its own:
+  - The API key the server makes on first start asked for admin rights, but they were never
+    given: the user it created wasn't an admin, so the viewer said "requires an administrator API
+    key" on every pipeline. Keys asking for `admin` now make their user one. On an install made
+    before this fix, run `uv run videoannotator generate-token --user admin@localhost --admin` once.
+  - On Linux, every pipeline needing torch failed to install in about a second ("No solution
+    found when resolving dependencies"). The lock takes torch from the CUDA 12.6 index, but the
+    install looked only on PyPI, whose Linux torch 2.11 is a CUDA 13 build. The install now adds
+    the project's index when the locked versions need it.
+- The one-click viewer link the server prints on first start named port 18011 even when the
+  server was started with `--port`, so it failed, or logged into a different server.
+- A job's results zip left out the video when it wasn't MP4, AVI, MOV or MKV (a WebM upload,
+  for instance). The job page no longer promises a job log in the zip; none is written.
+- The pipeline list showed the method variant twice, once as a version ("vpyscenedetect-clip").
+- Starting the server without the audio extra no longer warns that `pyannote.core` is missing
+  and suggests `pip install`.
+
+- **A pipeline that fails now says so.** Several pipelines caught their own errors and returned
+  nothing, so the job showed them as completed with empty results. Each now raises, and the job
+  lists the pipeline as failed with its error:
+  - `speech_recognition`: any transcription error (found through a Triton cache error), or a
+    missing input file.
+  - `speaker_diarization`: a missing input file, or a video with no audio track.
+  - `scene_detection`: a detection failure used to produce one invented scene spanning the whole
+    video; a scene classification failure used to drop the labels silently.
+  - `face_analysis` and `face_openface3_embedding`: when every sampled frame fails. A few bad
+    frames are still skipped, now with a warning counting them. An OpenFace 3 frame that fails
+    partway is dropped whole instead of keeping the faces it had reached.
+  - `person_tracking`: a YOLO model that couldn't be reloaded after corruption.
+  - `vlm_annotation`: a run that stops after repeated model failures, or where no sample point
+    got an answer. What it did get is still written to the job folder.
+  - `audio_processing` (deprecated): a sub-pipeline that fails to load or run. Before, it was
+    dropped silently.
+- **Result downloads work.** `GET /api/v1/jobs/{id}/results/files/{pipeline}`, the
+  `download_url` every job's results listed, returned `OUTPUT_FILE_MISSING` (HTTP 500) for every
+  job (also in v1.5.0): it looked for the database's internal annotation reference as if it were a
+  file. It now serves the file the pipeline wrote to the job folder (`clip_speech_recognition.vtt`,
+  `clip_person_tracking.json`, …). Each pipeline's results also list `files`, every file it wrote,
+  each downloadable with `?name=`. A URL is listed only when its file exists, and a missing file
+  is a 404 pointing at the job's ZIP (`/artifacts`). The file names come from a new optional
+  `file` on each pipeline's registry `outputs` entry.
+- **Results no longer depend on run or pipeline order.** OpenFace 3's landmark code turned on
+  cuDNN's benchmark mode, which picks convolution algorithms by timing them, for the rest of the
+  process. OpenFace's own results varied between runs (one face's action-unit intensities by up
+  to 2.4), and scene detection's scores differed depending on whether OpenFace ran first in the
+  job. It also turned on autograd anomaly detection and denormal flushing. Each pipeline now
+  starts from the same torch settings and can't leave its own behind; on the demo clip, repeated
+  runs and any pipeline order give identical files. **OpenFace 3 and scene detection results
+  shift slightly once** (OpenFace values by a median of 0.001; scene scores in the third
+  decimal); the output baseline was re-captured.
+- **The viewer's job page updates by itself again** while a job runs. Its polling read the job's
+  status from the wrong argument (React Query 5 passes the query, not its data), so it never
+  polled and a running job's page looked frozen until reloaded. Found by turning on type checking.
+- **The viewer's upload screen agrees with its loader about what each file is.** It had its own
+  detector, which called every JSON result "unknown". So every set of JSON results warned "No
+  annotation files detected" and "N file(s) could not be identified", and a video with only an
+  ELAN `.eaf` file couldn't be opened. One detector (`viewer/src/lib/fileDetection.ts`) now
+  classifies every file: by extension, then by the fields in the whole JSON, then by
+  VideoAnnotator's file name when the JSON is empty. JSON results are no longer subject to a
+  10 MB upload cap they were never meant to have.
+- COCO outputs' `info.date_created` was always `2025-01-01T00:00:00Z`; it is now the real UTC
+  time (and `info.year` the real year).
+- **`videoannotator job submit|status|results|list|download-annotations` work with
+  authentication on**: they sent no API key, so on a default install every call got 401. They
+  take `--api-key` (or `VIDEOANNOTATOR_API_KEY`), and default to `127.0.0.1`.
+- The job wizard's "Retry Job" for a failed job asked for the video to be uploaded again. It is
+  now "Fix settings and run again" and reuses the stored video.
+- **A prompt tested in the viewer reached the model with Windows line endings**: browsers send
+  multipart form newlines as CRLF, so a preview ran slightly different text from the job using
+  the same prompt. The server now restores plain newlines.
+- **A core install (`pip install videoannotator`, the slim Docker image) failed to start** with
+  `No module named 'httpx'`: the server imports the Ollama client at start, and the v1.6.0 core
+  clean-up dropped `httpx` as unused (every test environment had it through the dev tools). It is
+  a core dependency again, and CI now installs core alone and starts the server.
+- **A brand-new install started with no API key.** The first key was generated before the
+  database tables existed (`no such table: users`), so with authentication on by default a fresh
+  install couldn't be used until it was restarted. Security setup now runs after the tables are
+  created.
+- **`person_tracking` failed on a fresh install** with `No module named 'lap'`: ByteTrack needs
+  `lap`, which ultralytics doesn't declare (it installs it at runtime, which fails offline or in a
+  locked environment). `lap` is now a declared dependency of the `person` extra.
+- **The standalone `speech_recognition` and `speaker_diarization` pipelines wrote no files.**
+  Their results went to the database only, so the viewer, which loads a job from its files, showed
+  no transcript or speaker turns. They now write `<video>_speech_recognition.vtt` and
+  `<video>_speaker_diarization.rttm` like the deprecated `audio_processing` did.
+- **Speech recognition could return an empty transcript after another Python version had run on
+  the same machine.** Triton, which Whisper uses for word timestamps on GPU, caches compiled
+  launchers in `~/.triton/cache` without keying them on the Python version; a launcher built by
+  3.13 then fails under 3.12 (`PY_SSIZE_T_CLEAN macro must be defined`), and the pipeline
+  reported "completed" with no transcript. VideoAnnotator now uses one Triton cache per Python
+  version (`~/.triton/cache/py3.12`, `py3.13`) unless `TRITON_CACHE_DIR` is set.
+- **The Windows dev container was slow, and was running when a Windows machine froze.** Opened
+  from a Windows folder ("Reopen in Container"), every file the container touched crossed the
+  Windows–WSL file bridge and was scanned by Defender. The Python environment and model weights
+  now live in Docker named volumes (`videoannotator-venv`, `videoannotator-models`), the
+  container warns at start when its workspace is on a Windows drive, and the install guide steers
+  Windows users to "Clone Repository in Container Volume", a WSL memory cap, and stopping the
+  container before the machine sleeps (troubleshooting: "Windows freezes or crawls while the dev
+  container is running"). The freeze examined was memory exhaustion, not a test run: the WSL VM,
+  uncapped, can grow by several GB of page cache (installing the extras alone fills ~10 GB), on
+  a machine already near its limit. The dev container is now capped at 12 GB (`--memory=12g` in
+  `devcontainer.json`); under that cap the full test suite peaks at 5.4 GB and a job running every
+  pipeline on the demo clip at 6.5 GB. The dev container's models move from `./models` to
+  `/app/models`, as in the Docker images; the server lists the old folder at start so existing
+  weights can be copied over. `docker-compose.yml` names its models volume
+  `videoannotator-models`, so the dev container and Compose share one copy of the weights.
+
 ### Planned
 
 - Queue position display for pending jobs
@@ -1001,6 +1476,7 @@ The v1.0.0 release introduces significant architectural changes. Here's how to m
 ```python
 # Direct pipeline initialization
 from src.processors.video_processor import VideoProcessor
+
 processor = VideoProcessor(config_dict)
 ```
 
@@ -1009,6 +1485,7 @@ processor = VideoProcessor(config_dict)
 ```python
 # Modern pipeline architecture
 from src.pipelines import SceneDetectionPipeline
+
 pipeline = SceneDetectionPipeline(config)
 ```
 
@@ -1034,10 +1511,7 @@ results = pipeline.process(video_path, start_time=0, end_time=None)
 
 ```python
 # Python dictionary configuration
-config = {
-    'video_settings': {'fps': 30},
-    'audio_settings': {'sample_rate': 16000}
-}
+config = {"video_settings": {"fps": 30}, "audio_settings": {"sample_rate": 16000}}
 ```
 
 **New:**

@@ -18,7 +18,9 @@ from videoannotator.exporters.native_formats import (
     export_coco_json,
     validate_coco_json,
 )
+from videoannotator.models_dir import resolve_yolo_model
 from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.provenance import weights_ref
 from videoannotator.utils.automatic_labeling import infer_person_labels_from_tracks
 from videoannotator.utils.model_loader import log_model_download
 from videoannotator.utils.person_identity import PersonIdentityManager
@@ -27,6 +29,13 @@ from videoannotator.utils.size_based_person_analysis import run_size_based_analy
 # Optional imports
 try:
     from ultralytics import YOLO
+    from ultralytics.hub.utils import events as _ultralytics_events
+
+    # Ultralytics sends a Google Analytics event on every predict while its
+    # global `sync` setting is on (the default). Switched off for this process
+    # only, so the user's own Ultralytics settings file is left alone
+    # (constitution principle I). YOLO_OFFLINE would also stop weight downloads.
+    _ultralytics_events.enabled = False
 
     YOLO_AVAILABLE = True
 except ImportError:
@@ -330,11 +339,16 @@ class PersonTrackingPipeline(BasePipeline):
 
         try:
             # Load model with enhanced download logging
+            # Load from the models directory; provenance keeps the configured name.
+            model_path = resolve_yolo_model(self.config["model"])
+            self._model_refs.append(
+                weights_ref(self.config["model"], "ultralytics", model_path)
+            )
             self.model = log_model_download(
                 "YOLO11 Pose Detection Model",
-                self.config["model"],
+                model_path,
                 YOLO,
-                self.config["model"],
+                model_path,
             )
             # ASCII-safe success marker
             self.logger.info(f"[OK] YOLO model ready: {self.config['model']}")
@@ -391,10 +405,9 @@ class PersonTrackingPipeline(BasePipeline):
                             iou=self.config["iou_threshold"],
                         )
                 except Exception as retry_e:
-                    self.logger.error(
-                        f"Failed to recover from model corruption: {retry_e}"
-                    )
-                    return []
+                    raise RuntimeError(
+                        f"YOLO model corrupted and could not be reloaded: {retry_e}"
+                    ) from retry_e
             else:
                 raise
 

@@ -139,6 +139,11 @@ def test_api_key(test_storage_env: Any) -> str | None:
     """Create a test API key for authentication."""
     # Initialize database
     init_database(force=True)
+    # init_database recreates `jobs` from database.models, which lacks the batch
+    # columns; a cached storage backend added them once and won't again.
+    from videoannotator.api.database import reset_storage_backend
+
+    reset_storage_backend()
 
     # Create admin user
     result = create_admin_user()
@@ -390,9 +395,19 @@ class TestJobManagement:
 class TestJobProcessingIntegration:
     """Test job processing integration with batch system."""
 
+    # Runs the real scene_detection pipeline, which loads CLIP before it fails on
+    # the fake video: minutes on a cold cache, and memory CI runners don't have.
+    @pytest.mark.real_models
+    @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_job_processing_lifecycle(self, test_client: APITestClient) -> None:
+    async def test_job_processing_lifecycle(
+        self, test_client: APITestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test complete job processing lifecycle."""
+        # Off for the suite (tests/conftest.py). Safe here: jobs are cleared before
+        # each test, and this one fails fast on a fake video without loading models.
+        # The app starts on the first request, after this.
+        monkeypatch.setenv("VIDEOANNOTATOR_BACKGROUND_PROCESSING", "true")
         # Create a minimal test video file
         with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
             # Write some minimal video-like content
@@ -418,7 +433,7 @@ class TestJobProcessingIntegration:
             assert job_data["status"] == "pending"
 
             # Check job status over time
-            max_wait_time = 30  # Maximum wait time in seconds
+            max_wait_time = 180  # Maximum wait time in seconds
             wait_time = 0
             final_status = None
 

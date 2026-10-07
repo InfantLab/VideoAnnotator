@@ -39,47 +39,10 @@ export const DebugPanel = ({ isOpen, onClose }: DebugPanelProps) => {
       const sample = await file.slice(0, 200).text();
       addLog(`Content sample: ${sample}${sample.length === 200 ? '...' : ''}`);
       
-      // === SIMULATE EXACT DRAG & DROP DETECTION PIPELINE ===
-      // This is the same code as FileUploader.tsx detectFiles function
-      
-      // Step 1: Initial fileUtils detection
-      const { detectFileType: fileUtilsDetect, detectJSONType } = await import('@/lib/fileUtils');
-      let detected = fileUtilsDetect(file);
-      addLog(`📝 Step 1 - fileUtils detection: ${detected.type} (${detected.confidence})`);
-      
-      // Step 2: JSON content analysis (if unknown JSON)
-      if (detected.type === 'unknown' && detected.extension === 'json') {
-        addLog(`🔍 Step 2 - JSON file detected as unknown, trying detectJSONType...`);
-        try {
-          detected = await detectJSONType(file);
-          addLog(`📝 Step 2 - detectJSONType result: ${detected.type} (${detected.confidence})`);
-          
-          // Step 3: Merger fallback (if still unknown)
-          if (detected.type === 'unknown') {
-            addLog(`🔍 Step 3 - Still unknown, trying merger fallback...`);
-            const { detectFileType: mergerDetect } = await import('@/lib/parsers/merger');
-            const mergerResult = await mergerDetect(file);
-            
-            // Convert merger result to fileUtils format (same as FileUploader)
-            detected = {
-              type: mergerResult.type,
-              extension: 'json',
-              mimeType: 'application/json',
-              confidence: mergerResult.confidence > 0.7 ? 'high' : 
-                         mergerResult.confidence > 0.4 ? 'medium' : 'low',
-              reason: `Detected via content analysis (${mergerResult.confidence.toFixed(2)} confidence)`
-            };
-            addLog(`📝 Step 3 - merger result: ${detected.type} (${detected.confidence}) - confidence: ${mergerResult.confidence.toFixed(3)}`);
-          }
-        } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : String(error);
-          addLog(`❌ JSON detection failed: ${message}`);
-        }
-      }
-      
-      addLog(`🎯 FINAL RESULT: ${detected.type} (${detected.confidence})`);
-      addLog(`   Reason: ${detected.reason}`);
-      
+      // The same detection FileUploader uses (lib/fileDetection.ts).
+      const detected = await detectFileType(file);
+      addLog(`🎯 RESULT: ${detected.type} (confidence ${detected.confidence.toFixed(2)})`);
+
       // Show if this would be accepted by FileUploader
       const wouldBeAccepted = detected.type !== 'unknown';
       addLog(`📋 Would be accepted by drag & drop: ${wouldBeAccepted ? '✅ YES' : '❌ NO - shows as "Unknown file type"'}`);
@@ -140,21 +103,25 @@ export const DebugPanel = ({ isOpen, onClose }: DebugPanelProps) => {
     
     try {
       // Access the function from the global window object
-      const debugUtils = (window as unknown as { debugUtils?: unknown }).debugUtils;
-      if (!debugUtils || !debugUtils.checkDataIntegrity) {
+      const debugUtils = (
+        window as unknown as {
+          debugUtils?: {
+            checkDataIntegrity?: (key: string) => Promise<{ valid: boolean; issues: string[] }>;
+          };
+        }
+      ).debugUtils;
+      if (!debugUtils?.checkDataIntegrity) {
         addLog('❌ debugUtils.checkDataIntegrity not available');
         addLog('Make sure debug utilities are loaded');
         setIsRunning(false);
         return;
       }
 
-      const debugUtilsWithIntegrity = debugUtils as {
-        checkDataIntegrity: (key: string) => Promise<{ valid: boolean; issues: string[] }>;
-      };
-      
+      const { checkDataIntegrity } = debugUtils;
+
       for (const [key, _] of Object.entries(DEMO_DATA_SETS)) {
         addLog(`Checking ${key}...`);
-        const result = await debugUtilsWithIntegrity.checkDataIntegrity(key);
+        const result = await checkDataIntegrity(key);
         addLog(`${key}: ${result.valid ? '✅ Valid' : '❌ Issues found'}`);
         if (!result.valid) {
           result.issues.forEach(issue => addLog(`  - ${issue}`));

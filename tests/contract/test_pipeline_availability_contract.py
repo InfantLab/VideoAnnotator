@@ -44,16 +44,16 @@ def _make_unavailable(monkeypatch, unavailable_extras: set[str]):
 
 class TestPipelineAvailabilityContract:
     def test_default_listing_omits_unavailable_pipelines(self, client, monkeypatch):
-        _make_unavailable(monkeypatch, {"face-laion"})
+        _make_unavailable(monkeypatch, {"face-openface3"})
 
         response = client.get("/api/v1/pipelines/")
 
         assert response.status_code == 200
         names = {p["name"] for p in response.json()["pipelines"]}
-        assert "face_laion_clip" not in names
+        assert "face_openface3_embedding" not in names
 
     def test_default_listing_keeps_available_pipelines(self, client, monkeypatch):
-        _make_unavailable(monkeypatch, {"face-laion"})
+        _make_unavailable(monkeypatch, {"face-openface3"})
 
         response = client.get("/api/v1/pipelines/")
 
@@ -64,7 +64,7 @@ class TestPipelineAvailabilityContract:
     def test_include_unavailable_shows_availability_and_install_hint(
         self, client, monkeypatch
     ):
-        _make_unavailable(monkeypatch, {"face-laion"})
+        _make_unavailable(monkeypatch, {"face-openface3"})
 
         response = client.get(
             "/api/v1/pipelines/", params={"include_unavailable": "true"}
@@ -72,14 +72,14 @@ class TestPipelineAvailabilityContract:
 
         assert response.status_code == 200
         pipelines_by_name = {p["name"]: p for p in response.json()["pipelines"]}
-        assert "face_laion_clip" in pipelines_by_name
+        assert "face_openface3_embedding" in pipelines_by_name
 
-        entry = pipelines_by_name["face_laion_clip"]
+        entry = pipelines_by_name["face_openface3_embedding"]
         assert entry["available"] is False
-        assert entry["install_hint"] == "pip install videoannotator[face-laion]"
+        assert entry["install_hint"] == "pip install videoannotator[face-openface3]"
 
     def test_available_pipelines_report_available_true(self, client, monkeypatch):
-        _make_unavailable(monkeypatch, {"face-laion"})
+        _make_unavailable(monkeypatch, {"face-openface3"})
 
         response = client.get(
             "/api/v1/pipelines/", params={"include_unavailable": "true"}

@@ -13,10 +13,16 @@ import { parseApiError } from "@/lib/errorHandling";
 import vavIcon from "@/assets/v-a-v.icon.png";
 import { JobCancelButton } from "@/components/JobCancelButton";
 import { JobDeleteButton } from "@/components/JobDeleteButton";
+import { ResultsLocation } from "@/components/ResultsLocation";
+import { Checkbox } from "@/components/ui/checkbox";
 import { canCancelJob } from "@/hooks/useJobCancellation";
 import { canDeleteJob } from "@/hooks/useJobDeletion";
 import type { JobStatus } from "@/types/api";
 import { failedPipelinesOf, isCompletedWithErrors } from "@/lib/jobOutcome";
+import { queueLabel } from "@/lib/queuePosition";
+import { RunAgainActions } from "@/components/RunAgainActions";
+import { CompareWith } from "@/components/CompareWith";
+import { settingsOf, wizardState } from "@/lib/wizardStart";
 
 const CreateJobDetail = () => {
   const { jobId } = useParams<{ jobId: string }>();
@@ -33,24 +39,27 @@ const CreateJobDetail = () => {
       return apiClient.getJob(jobId);
     },
     enabled: !!jobId,
-    refetchInterval: (data) => {
-      if (!data) return false;
-      const status = data.status;
+    // React Query 5 passes the query, not its data: reading `.status` off the
+    // argument meant this page never polled, so a running job looked frozen.
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
       // Poll while job is active or cancelling
       return status === "running" || status === "pending" || status === "cancelling" ? 2000 : false;
     },
   });
 
   // Which pipelines produced nothing, and why: only worth asking once the job
-  // has finished with an error message.
+  // has finished with an error message, or failed outright.
   const withErrors = !!job && isCompletedWithErrors(job);
+  const failed = job?.status === "failed";
   const { data: results } = useQuery({
     queryKey: ["job-results", jobId],
     queryFn: () => apiClient.getJobResults(jobId!),
-    enabled: !!jobId && withErrors,
+    enabled: !!jobId && (withErrors || failed),
     staleTime: 60_000,
   });
   const failedPipelines = Object.entries(failedPipelinesOf(results));
+  const queued = job ? queueLabel(job as JobResponse & Record<string, unknown>) : null;
 
   const getStatusClassName = (status: string, errorMessage?: string | null) => {
     const statusMap = {
@@ -99,7 +108,8 @@ const CreateJobDetail = () => {
     navigate(`/view/${job.id}`);
   };
 
-  // The job's artifacts zip: source video, every pipeline's output and the job log.
+  // The job's results zip; the video only when asked for (spec 022).
+  const [includeVideo, setIncludeVideo] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const handleDownloadResults = async () => {
@@ -107,7 +117,7 @@ const CreateJobDetail = () => {
     setIsDownloading(true);
     setDownloadError(null);
     try {
-      const response = await apiClient.getJobArtifacts(job.id);
+      const response = await apiClient.getJobArtifacts(job.id, { includeVideo });
       if (!response.ok) throw new Error(`the server answered ${response.status}`);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -126,22 +136,19 @@ const CreateJobDetail = () => {
     }
   };
 
-  const handleRetryJob = () => {
-    if (!job) return;
-
-    // Extract video filename with fallback
+  // The video's name, to label this job in the wizard and in actions.
+  const jobLabel = (() => {
+    if (!job) return '';
     const record = job as JobResponse & Record<string, unknown>;
-    const getString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
-    const videoFilename = getString(record.video_filename) ?? getString(record.filename) ?? getString(record.video_name);
+    const name = [record.video_filename, record.filename, record.video_name].find((v) => typeof v === 'string');
+    return (name as string | undefined) ?? `job ${job.id.slice(0, 8)}`;
+  })();
 
-    // Navigate to create new job with pre-filled settings
+  /** "Fix settings and run again": the wizard with this job's video and settings (spec 019). */
+  const handleEditAndRunAgain = () => {
+    if (!job) return;
     navigate('/jobs/new', {
-      state: {
-        retryJobId: job.id,
-        retryJobConfig: job.config,
-        retryJobPipelines: job.selected_pipelines,
-        retryJobVideoFilename: videoFilename,
-      }
+      state: wizardState({ mode: 'rerun', jobId: job.id, label: jobLabel, ...settingsOf(job) }),
     });
   };
 
@@ -243,9 +250,9 @@ const CreateJobDetail = () => {
           )}
 
           {job.status === "failed" && (
-            <Button onClick={handleRetryJob} variant="outline" size="sm">
+            <Button onClick={handleEditAndRunAgain} variant="outline" size="sm">
               <RotateCcw className="h-4 w-4 mr-2" />
-              Retry Job
+              Fix settings and run again
             </Button>
           )}
 
@@ -255,6 +262,7 @@ const CreateJobDetail = () => {
               jobStatus={job.status as JobStatus}
               size="sm"
               onDeleted={() => navigate('/jobs')}
+              resultsFolder={job.results_folder?.display_path}
             />
           )}
 
@@ -283,8 +291,47 @@ const CreateJobDetail = () => {
                 <span className="font-mono font-medium">{name}</span>: {reason}
               </p>
             ))}
+            <Button variant="link" className="h-auto p-0 text-orange-800" onClick={handleEditAndRunAgain}>
+              Fix settings and run again
+            </Button>
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Links between a job and its reruns, whatever their status */}
+      {(job.rerun_of || (job.reruns?.length ?? 0) > 0) && (
+        <div className="text-sm space-y-1 rounded-md border p-3">
+          {job.rerun_of && (
+            <p>
+              Runs again <Link className="underline" to={`/jobs/${job.rerun_of}`}>job {job.rerun_of.slice(0, 8)}</Link>.
+            </p>
+          )}
+          {(job.reruns?.length ?? 0) > 0 && (
+            <p>
+              Run again as{' '}
+              {job.reruns!.map((id, i) => (
+                <span key={id}>
+                  {i > 0 && ', '}
+                  <Link className="underline" to={`/jobs/${id}`}>job {id.slice(0, 8)}</Link>
+                </span>
+              ))}
+              .
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Run it again (spec 019): where the decision is made, not in a menu */}
+      {['completed', 'failed', 'cancelled'].includes(job.status) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Run it again</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <RunAgainActions target={{ kind: 'job', id: job.id, label: jobLabel, settings: settingsOf(job) }} />
+            <CompareWith job={job} />
+          </CardContent>
+        </Card>
       )}
 
       {/* Status Card */}
@@ -292,12 +339,15 @@ const CreateJobDetail = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Job Status</span>
-            <Badge variant="outline" className={getStatusClassName(job.status, job.error_message)}>
-              {job.status.toUpperCase()}
-              {job.status === 'completed' && job.error_message && (
-                <AlertCircle className="ml-1 h-3 w-3 inline" />
-              )}
-            </Badge>
+            <span className="flex items-center gap-2">
+              {queued && <span className="text-sm font-normal text-muted-foreground">{queued}</span>}
+              <Badge variant="outline" className={getStatusClassName(job.status, job.error_message)}>
+                {job.status.toUpperCase()}
+                {job.status === 'completed' && job.error_message && (
+                  <AlertCircle className="ml-1 h-3 w-3 inline" />
+                )}
+              </Badge>
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -323,11 +373,17 @@ const CreateJobDetail = () => {
                 <AlertDescription>
                   <div className="space-y-2">
                     <p className="font-semibold">Job failed during processing</p>
-                    {job.error_message && (
-                      <p className="text-sm">
-                        <span className="font-medium">Error:</span> {job.error_message}
-                      </p>
-                    )}
+                    {failedPipelines.length > 0
+                      ? failedPipelines.map(([name, reason]) => (
+                          <p key={name} className="text-sm">
+                            <span className="font-mono font-medium">{name}</span>: {reason}
+                          </p>
+                        ))
+                      : job.error_message && (
+                          <p className="text-sm">
+                            <span className="font-medium">Error:</span> {job.error_message}
+                          </p>
+                        )}
                   </div>
                 </AlertDescription>
               </Alert>
@@ -405,6 +461,30 @@ const CreateJobDetail = () => {
         </CardContent>
       </Card>
 
+      {job.video_available === false && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Video not found at <span className="font-mono text-xs break-all">{job.video_display_path ?? job.video_path}</span> (
+            {job.video_unavailable_reason ?? 'moved or deleted since the job ran'}). Its results are all still
+            here; only playback needs the video.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {job.results_folder?.exists === false && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Results not found at{' '}
+            <span className="font-mono text-xs break-all">{job.results_folder.display_path}</span>. The folder
+            was moved, renamed or deleted outside VideoAnnotator; put it back to see this job&apos;s files.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <ResultsLocation folder={job.results_folder} label="This video's results" />
+
       {/* Results Section (when completed) */}
       {job.status === "completed" && (
         <Card>
@@ -436,9 +516,10 @@ const CreateJobDetail = () => {
               {downloadError && (
                 <p className="text-sm text-destructive">Couldn&apos;t download the results: {downloadError}</p>
               )}
-              <p className="text-xs text-muted-foreground">
-                The zip holds the video, each pipeline&apos;s output and the job log.
-              </p>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Checkbox checked={includeVideo} onCheckedChange={(checked) => setIncludeVideo(checked === true)} />
+                Include the video in the download (it holds each pipeline&apos;s output either way)
+              </label>
             </div>
           </CardContent>
         </Card>

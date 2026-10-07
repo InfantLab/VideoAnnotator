@@ -18,7 +18,10 @@ from videoannotator.exporters.native_formats import (
     validate_coco_json,
 )
 from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.provenance import clip_ref
 from videoannotator.version import __version__
+
+_CLIP_PRETRAINED = "laion2b_s34b_b79k"
 
 # Optional imports
 try:
@@ -210,9 +213,8 @@ class SceneDetectionPipeline(BasePipeline):
             return segments
 
         except Exception as e:
-            self.logger.error(f"Scene detection failed: {e}")
-            # Fallback to single scene
-            return [{"start": start_time, "end": end_time or 0.0}]
+            # Not a single whole-video scene: that would look like a real result.
+            raise RuntimeError(f"Scene detection failed: {e}") from e
 
     def _classify_scenes(
         self, video_path: str, segments: list[dict[str, Any]]
@@ -312,8 +314,7 @@ class SceneDetectionPipeline(BasePipeline):
             return classified_segments
 
         except Exception as e:
-            self.logger.error(f"Scene classification failed: {e}")
-            return segments
+            raise RuntimeError(f"Scene classification failed: {e}") from e
 
     def _initialize_clip(self):
         """Initialize CLIP model."""
@@ -326,11 +327,12 @@ class SceneDetectionPipeline(BasePipeline):
         self.clip_model, _, self.clip_preprocess = (
             open_clip.create_model_and_transforms(
                 self.config["clip_model"],
-                pretrained="laion2b_s34b_b79k",
+                pretrained=_CLIP_PRETRAINED,
                 device=self.device,
             )
         )
         self.clip_tokenizer = open_clip.get_tokenizer(self.config["clip_model"])
+        self._model_refs.append(clip_ref(self.config["clip_model"], _CLIP_PRETRAINED))
         self.logger.info(
             f"CLIP model loaded: {self.config['clip_model']} on {self.device}"
         )

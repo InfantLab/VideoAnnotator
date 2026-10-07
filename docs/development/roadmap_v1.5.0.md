@@ -165,7 +165,8 @@ and each has its own spec in `specs/`:
       videoannotator[scene]`/`[face]` runs during 004's manual quickstart pass (§1/§2) that only the
       requested family's deps land, nothing else.
 - [ ] `pip install videoannotator[all]` reproduces v1.4.3 behaviour exactly; no config/CLI changes needed.
-      (Moved to v1.6.0: the acceptance fixtures are re-baselined there.)
+      (Moved to v1.6.0: the acceptance fixtures are re-baselined there. Done 2026-10-02, against
+      v1.5.0: `tests/integration/test_output_baseline.py`.)
       Mechanism exists (`tests/integration/test_v144_parity.py`, run and passing — 4 passed, 6
       skipped) but the skips are real: no v1.4.4 golden fixtures have been captured yet (needs
       checking out the v1.4.4 tag and running real model inference to generate them — substantial,

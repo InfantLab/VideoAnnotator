@@ -7,11 +7,14 @@ import { Link, useParams } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Loader2, RefreshCw, RotateCcw, XCircle } from 'lucide-react';
-import { JobsTable } from '@/components/JobsTable';
+import { BatchVideosTable } from '@/components/BatchVideosTable';
+import { RunAgainActions } from '@/components/RunAgainActions';
+import { ResultsLocation } from '@/components/ResultsLocation';
+import { RunDeleteButton } from '@/components/RunDeleteButton';
+import { settingsOf } from '@/lib/wizardStart';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { parseApiError } from '@/lib/errorHandling';
 import { formatUptime } from '@/lib/formatters';
@@ -124,7 +127,7 @@ const BatchDetail = () => {
 
   const jobs = jobsData?.jobs ?? [];
   const eta = etaText(batch, jobs);
-  // Counted from the member jobs we have (first page), since the batch summary
+  // Counted from the member jobs, since the batch summary
   // doesn't separate them. A job "completed" with an error message produced
   // results for some pipelines but not all.
   const withErrors = jobs.filter(isCompletedWithErrors).length;
@@ -143,6 +146,7 @@ const BatchDetail = () => {
   const setupNotes = recallRunSetup(batchId);
   const downloadLabel = totalDownloadLabel(setupNotes);
   const finished = batch.total - batch.by_status.pending - batch.by_status.running;
+  const active = batch.by_status.pending + batch.by_status.running > 0;
   const cancellable = isBatchCancellable(batch);
   const retryable = isBatchRetryable(batch);
 
@@ -199,8 +203,15 @@ const BatchDetail = () => {
               ) : (
                 <RotateCcw className="h-4 w-4 mr-1" />
               )}
-              Retry {batch.by_status.failed + batch.by_status.cancelled}
+              Retry {batch.by_status.failed + batch.by_status.cancelled} in place
             </Button>
+          )}
+          {batchId && (
+            <RunDeleteButton
+              batchId={batchId}
+              videoCount={batch.total}
+              resultsFolder={batch.results_folder?.display_path}
+            />
           )}
         </div>
       </div>
@@ -227,6 +238,12 @@ const BatchDetail = () => {
         />
       </div>
 
+      <ResultsLocation
+        folder={batch.results_folder}
+        label="This run's results"
+        runZip={batchId ? { batchId } : undefined}
+      />
+
       {preparing && (
         <Alert>
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -251,63 +268,43 @@ const BatchDetail = () => {
         <Alert className="border-orange-300">
           <AlertDescription>
             {withErrors} video{withErrors === 1 ? '' : 's'} finished without results from every
-            pipeline. The reason is on each video&apos;s row; open a video for details.
+            pipeline. Each video&apos;s row says which pipelines and why; open a video for details.
           </AlertDescription>
         </Alert>
       )}
 
-      <Card>
-        <CardContent className="pt-6 space-y-2">
-          <Progress value={batch.completion_percentage} className="h-2" />
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {batch.by_status.running > 0 && (
-              <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 border-blue-200">
-                {batch.by_status.running} running
-              </Badge>
-            )}
-            {batch.by_status.pending > 0 && (
-              <Badge
-                variant="outline"
-                className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200"
-              >
-                {batch.by_status.pending} queued
-              </Badge>
-            )}
-            {cleanlyCompleted > 0 && (
-              <Badge
-                variant="outline"
-                className="text-xs bg-green-100 text-green-800 border-green-200"
-              >
-                {cleanlyCompleted} done
-              </Badge>
-            )}
-            {withErrors > 0 && (
-              <Badge
-                variant="outline"
-                className="text-xs bg-orange-100 text-orange-800 border-orange-200"
-              >
-                {withErrors} with errors
-              </Badge>
-            )}
-            {batch.by_status.failed > 0 && (
-              <Badge variant="outline" className="text-xs bg-red-100 text-red-800 border-red-200">
-                {batch.by_status.failed} failed
-              </Badge>
-            )}
-            {batch.by_status.cancelled > 0 && (
-              <Badge variant="outline" className="text-xs bg-gray-100 text-gray-800 border-gray-200">
-                {batch.by_status.cancelled} cancelled
-              </Badge>
-            )}
+      {active && <Progress value={batch.completion_percentage} className="h-2" />}
+
+      {/* Spec 019: the next step, where the decision is made */}
+      {!active && jobs.length > 0 && (
+        <Card>
+          <div className="px-6 py-4 space-y-3">
+            <div>
+              <h3 className="font-medium">
+                {batch.by_status.completed === batch.total ? 'Run on more videos, or run it again' : 'Run it again'}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Settings from this run&apos;s first video. Running again makes a new run; this one is kept.
+              </p>
+            </div>
+            <RunAgainActions
+              target={{
+                kind: 'batch',
+                id: batchId,
+                label: batchDisplayName(batch),
+                videoCount: batch.total,
+                settings: settingsOf(jobs[0]),
+              }}
+            />
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      )}
 
       <Card>
-        <div className="px-6 pt-4 pb-2">
+        <div className="px-6 pt-4 pb-3">
           <h3 className="font-medium">Videos in this run</h3>
           <p className="text-xs text-muted-foreground">
-            Double-click a row for that video&apos;s job details.
+            Double-click a video for its job details (log, outputs, delete).
           </p>
         </div>
         {jobsLoading && !jobsData ? (
@@ -315,7 +312,7 @@ const BatchDetail = () => {
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
         ) : (
-          <JobsTable jobs={jobs} onChanged={() => refetchJobs()} preparing={preparing} />
+          <BatchVideosTable jobs={jobs} active={active} preparing={preparing} />
         )}
       </Card>
     </div>

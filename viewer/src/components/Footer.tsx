@@ -6,7 +6,7 @@ export const Footer = () => {
   return (
     <footer className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="px-4 py-2">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
           {/* Left: Version Info */}
           <div className="flex items-center gap-2">
             <span>{APP_NAME}</span>

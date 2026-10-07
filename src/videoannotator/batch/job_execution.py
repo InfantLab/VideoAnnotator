@@ -22,8 +22,22 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ..registry.pipeline_loader import import_error_for
+from ..prompt_library import record_use_quietly
+from ..provenance import build_record, file_sha256, stamp_file
+from ..registry.pipeline_loader import (
+    deprecation_message,
+    import_error_for,
+    removed_pipeline_message,
+)
+from ..registry.pipeline_registry import get_registry
+from ..results_folder import (
+    display_path,
+    record_job_finished,
+    video_unavailable_reason,
+)
 from ..storage.base import StorageBackend
+from ..utils.torch_settings import apply_torch_settings, restored_torch_settings
+from .result_files import job_folder
 from .types import BatchJob, JobStatus, PipelineResult
 
 logger = logging.getLogger(__name__)
@@ -44,14 +58,15 @@ def run_job_pipelines(
     implementations already had.
     """
     try:
-        return _run(job, storage, pipeline_classes)
+        _run(job, storage, pipeline_classes)
     except Exception as e:  # top-level safety net, see docstring
         logger.error(f"Unexpected error running job {job.job_id}: {e}", exc_info=True)
         job.status = JobStatus.FAILED
         job.error_message = str(e)
         job.completed_at = datetime.now()
         storage.save_job_metadata(job)
-        return job
+    record_job_finished(job)
+    return job
 
 
 def _run(
@@ -72,6 +87,18 @@ def _run(
         storage.save_job_metadata(job)
         return job
 
+    # Read in place, a video can move after the job was queued (spec 022).
+    # Say which one and where it was, instead of a decoder error per pipeline.
+    if job.video_path is not None and not Path(job.video_path).is_file():
+        job.status = JobStatus.FAILED
+        job.error_message = (
+            f"Video not found: {display_path(job.video_path)} "
+            f"({video_unavailable_reason(job.video_path)})"
+        )
+        job.completed_at = datetime.now()
+        storage.save_job_metadata(job)
+        return job
+
     job.status = JobStatus.RUNNING
     job.started_at = job.started_at or datetime.now()
     storage.save_job_metadata(job)
@@ -79,7 +106,9 @@ def _run(
     if job.output_dir is None and job.storage_path:
         job.output_dir = job.storage_path
     if job.output_dir is None:
-        job.output_dir = Path.cwd() / "storage" / "jobs" / job.job_id / "output"
+        from ..storage.config import get_job_storage_path
+
+        job.output_dir = get_job_storage_path(job.job_id) / "output"
     job.output_dir.mkdir(parents=True, exist_ok=True)
 
     pipelines_to_run = _resolve_pipelines(job, pipeline_classes)
@@ -145,6 +174,9 @@ def _resolve_pipelines(job: BatchJob, pipeline_classes: dict[str, type]) -> list
 
 
 def _unavailable_reason(pipeline_name: str) -> str:
+    removed = removed_pipeline_message(pipeline_name)
+    if removed:
+        return removed
     reason = import_error_for(pipeline_name)
     if reason:
         return f"Pipeline not available on this server: {reason}"
@@ -177,20 +209,47 @@ def _run_one_pipeline(
         )
         return
 
+    meta = get_registry().get(pipeline_name)
+    deprecation = deprecation_message(meta) if meta else None
+    if deprecation:
+        logger.warning(f"Job {job.job_id}: {deprecation}")
+
     start_time = datetime.now()
     pipeline_config = job.config.get(pipeline_name, {}) if job.config else {}
     pipeline_class = pipeline_classes[pipeline_name]
     pipeline = pipeline_class(pipeline_config)
 
+    deterministic = (
+        bool(job.config.get("deterministic", False)) if job.config else False
+    )
+
+    record: dict[str, Any] | None = None
     try:
-        pipeline.initialize()
-        try:
-            annotations = _process(pipeline, pipeline_name, pipeline_class, job)
-        finally:
+        with restored_torch_settings():
+            apply_torch_settings(deterministic)
+            pipeline.initialize()
+            # Again: a library's setup can change them (OpenFace 3 did).
+            settings = apply_torch_settings(deterministic)
+            if settings:
+                logger.info(f"{pipeline_name} runs with torch settings {settings}")
+            record = _provenance(job, pipeline_name, pipeline, settings, deterministic)
+            if record.get("vlm"):  # spec 020: every prompt that runs is kept
+                record_use_quietly(
+                    pipeline.config["prompt"],
+                    pipeline.config["model"],
+                    "job",
+                    job_id=job.job_id,
+                )
             try:
-                pipeline.cleanup()
-            except Exception as cleanup_error:
-                logger.warning(f"Pipeline cleanup error: {cleanup_error}")
+                annotations = _process(pipeline, pipeline_name, pipeline_class, job)
+                # Some load a model only when it's first needed (scene's CLIP).
+                record["models"] = [m.to_dict() for m in _models(pipeline)]
+            finally:
+                try:
+                    pipeline.cleanup()
+                except Exception as cleanup_error:
+                    logger.warning(f"Pipeline cleanup error: {cleanup_error}")
+        _stamp_outputs(job, pipeline_name, pipeline, record)
 
         end_time = datetime.now()
         processing_time = (end_time - start_time).total_seconds()
@@ -206,6 +265,7 @@ def _run_one_pipeline(
             if isinstance(annotations, list)
             else None,
             output_file=Path(output_file) if isinstance(output_file, str) else None,
+            provenance=record,
         )
         logger.info(
             f"Completed {pipeline_name} for job {job.job_id} in {processing_time:.2f}s"
@@ -221,7 +281,64 @@ def _run_one_pipeline(
             start_time=start_time,
             end_time=datetime.now(),
             error_message=str(e),
+            provenance=record,
         )
+
+
+def _provenance(
+    job: BatchJob,
+    pipeline_name: str,
+    pipeline: Any,
+    torch_settings: dict[str, Any],
+    deterministic: bool,
+) -> dict[str, Any]:
+    video = Path(job.video_path) if job.video_path else None
+    provenance_vlm = getattr(pipeline, "provenance_vlm", None)
+    return build_record(
+        pipeline_name,
+        models=_models(pipeline),
+        settings=getattr(pipeline, "config", {}),
+        determinism={"deterministic": deterministic, **torch_settings}
+        if torch_settings
+        else {},
+        job_id=job.job_id,
+        input_name=video.name if video else None,
+        input_sha256=file_sha256(video) if video and video.is_file() else None,
+        vlm=provenance_vlm() if callable(provenance_vlm) else None,
+    )
+
+
+def _models(pipeline: Any) -> list[Any]:
+    # Pipelines that don't subclass BasePipeline (plugins) may not report any.
+    provenance_models = getattr(pipeline, "provenance_models", None)
+    return list(provenance_models()) if callable(provenance_models) else []
+
+
+def _stamp_outputs(
+    job: BatchJob, pipeline_name: str, pipeline: Any, record: dict[str, Any] | None
+) -> None:
+    """Record `record` in every file the pipeline wrote (spec 017)."""
+    meta = get_registry().get(pipeline_name)
+    if record is None or meta is None or job.video_path is None:
+        return
+    stem = Path(job.video_path).stem
+    sub_pipelines = getattr(pipeline, "audio_pipelines", {})
+    for output in meta.outputs:
+        if not output.file:
+            continue
+        path = job_folder(job) / f"{stem}_{output.file}"
+        if not path.is_file():
+            continue
+        sub = Path(output.file).stem
+        file_record = (
+            {**record, "pipeline": {"name": pipeline_name, "sub_pipeline": sub}}
+            if sub in sub_pipelines
+            else record
+        )
+        try:
+            stamp_file(path, file_record)
+        except Exception as e:  # a good result shouldn't fail on its label
+            logger.error(f"Could not record provenance in {path}: {e}")
 
 
 def _process(pipeline: Any, pipeline_name: str, pipeline_class: type, job: BatchJob):

@@ -7,7 +7,7 @@ import type { StandardAnnotationData } from '../types/annotations'
 // Mock the version utils
 vi.mock('../utils/version', () => ({
   VERSION: '0.2.0',
-  GITHUB_URL: 'https://github.com/InfantLab/video-annotation-viewer',
+  GITHUB_URL: 'https://github.com/InfantLab/VideoAnnotator',
   APP_NAME: 'Video Annotation Viewer'
 }))
 
@@ -25,7 +25,7 @@ describe('Components', () => {
 
       const sourceLink = screen.getByRole('link', { name: /Source/i })
       expect(sourceLink).toBeInTheDocument()
-      expect(sourceLink).toHaveAttribute('href', 'https://github.com/InfantLab/video-annotation-viewer')
+      expect(sourceLink).toHaveAttribute('href', 'https://github.com/InfantLab/VideoAnnotator')
       expect(sourceLink).toHaveAttribute('target', '_blank')
     })
 
@@ -97,11 +97,20 @@ describe('Components', () => {
       scene_detection: [
         {
           id: 1,
+          image_id: 'demo_frame_000075',
+          category_id: 1,
+          bbox: [0, 0, 640, 480],
+          area: 640 * 480,
+          iscrowd: 0,
           start_time: 0.0,
           end_time: 5.0,
           duration: 5.0,
+          timestamp: 2.5,
+          frame_start: 0,
+          frame_end: 150,
           scene_type: 'indoor',
           score: 1,
+          all_scores: { indoor: 1 },
           video_id: 'demo'
         }
       ],

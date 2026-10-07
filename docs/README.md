@@ -1,82 +1,53 @@
-# VideoAnnotator Documentation
+# VideoAnnotator documentation
 
-## Current Release: v1.4.1
+VideoAnnotator runs computer-vision and audio pipelines over videos of people (faces, bodies,
+speech, scenes, and labels from a vision-language model), keeps a record of what made every result,
+and shows the results on the video in its viewer. It runs on your own computer: videos never leave
+it.
 
-This documentation is organized into clear sections for different user types and development phases.
+New here? Start with **[Getting started](usage/GETTING_STARTED.md)**.
 
-## 📖 User Documentation
+## Install
 
-### Installation
+- [Installation](installation/INSTALLATION.md): Windows, macOS and Linux, with or without a GPU,
+  and the dev container.
+- [Docker](deployment/Docker.md): the CPU and GPU images, and Docker Compose.
+- [Access tokens for gated models](installation/ENVIRONMENT_SETUP.md): the Hugging Face token
+  that speaker diarization needs.
+- [Installation troubleshooting](installation/troubleshooting.md)
 
-- [Installation Guide](installation/INSTALLATION.md) - **Modern uv-based setup** with CUDA support
-- macOS specifics: see the macOS section inside the Installation Guide for libomp, Node, ffmpeg, and PATH fixes.
-- [Environment Setup](installation/ENVIRONMENT_SETUP.md) - HuggingFace and configuration
-- [Python Development 2025](installation/PythonDev2025.md) - **Modern development practices** with uv, Ruff, and Docker
+## Use
 
-### Usage
+- [Getting started](usage/GETTING_STARTED.md): start the server, open the viewer, run a first job.
+- [Command-line examples](usage/demo_commands.md)
+- [Pipelines](usage/pipeline_specs.md): what each pipeline does and the files it writes.
+- [Getting your results](usage/accessing_results.md): downloading and reading the output files.
+- [Configuration](usage/configuration.md) and [environment variables](usage/environment_variables.md)
+- [Connecting the viewer with an API key](usage/CLIENT_TOKEN_SETUP_GUIDE.md)
+- [Scene detection and person tracking](usage/scene_detection.md)
+- [Troubleshooting](usage/troubleshooting.md)
 
-- [Getting Started](usage/GETTING_STARTED.md) - Quick start guide for new users
-- [Accessing Results](usage/accessing_results.md) - **New**: Downloading annotations and artifacts
-- [Configuration](usage/configuration.md) - Configuration guide
-- [Pipeline Specifications](usage/pipeline_specs.md) - Detailed pipeline documentation
-- [Scene Detection Guide](usage/scene_detection.md) - Scene detection usage
-- [Demo Commands](usage/demo_commands.md) - Example commands and workflows
-- [Troubleshooting](usage/troubleshooting.md) - Common issues and solutions
+## Run it for a group
 
-## Command Shortcuts (Containers)
+- [Security overview](security/README.md): [authentication](security/authentication.md),
+  [CORS](security/cors.md) and the [production checklist](security/production_checklist.md).
+- [Locales in the Docker images](locale.md)
 
-If you are using the provided Docker/devcontainer images, a few convenience commands are available on `PATH`.
-These are optional shortcuts; the canonical CLI remains `uv run videoannotator ...`.
+## Contribute
 
-| Action | Shortcut | Equivalent |
-|---|---|---|
-| Initialize the database + create an admin token | `setupdb --admin-email you@example.com --admin-username you` | `uv run videoannotator setup-db --admin-email you@example.com --admin-username you` |
-| Run the VideoAnnotator CLI (any subcommand) | `va ...` | `uv run videoannotator ...` |
-| Start the API server (recommended defaults) | `va` | `uv run videoannotator` |
-| Start the API server (explicit subcommand) | `server ...` | `uv run videoannotator server ...` |
-| Generate a new API token | `newtoken ...` | `uv run videoannotator generate-token ...` |
-| List available pipelines (detailed) | `va pipelines --detailed` | `uv run videoannotator pipelines --detailed` |
-| Validate a config file | `va config --validate configs/default.yaml` | `uv run videoannotator config --validate configs/default.yaml` |
-| Submit a processing job | `va job submit video.mp4 --pipelines scene,person` | `uv run videoannotator job submit video.mp4 --pipelines scene,person` |
-| Check job status | `va job status <job_id>` | `uv run videoannotator job status <job_id>` |
-| List jobs | `va job list` | `uv run videoannotator job list` |
-| Run all tests (quick/quiet) | `vatest` | `uv run pytest -q` |
-| Run some tests (quick/quiet) | `vatest tests/unit/` | `uv run pytest -q tests/unit/` |
+- [Contributing guide](../CONTRIBUTING.md)
+- [Development notes](development/README.md): conventions, output formats, the
+  [pre-commit hooks](development/PRE_COMMIT_GUIDE.md).
+- [Testing overview](testing/testing_overview.md), [testing standards](testing/testing_standards.md)
+  and [coverage](testing/coverage_report.md)
+- [Roadmap for v1.6.0](development/roadmap_v1.6.0.md), then [v1.7.0](development/roadmap_v1.7.0.md)
+  and [v1.7 to v2.0](development/roadmap_v1.7_to_v2.0.md)
+- [Changelog](../CHANGELOG.md)
 
-For more copy-pasteable CLI workflows, see `usage/demo_commands.md`.
+## Reviewing the software
 
-### Deployment
+- [Quick start for JOSS reviewers](GETTING_STARTED_REVIEWERS.md)
+- [The JOSS paper](joss.md)
 
-- [Docker Guide](deployment/Docker.md) - Container deployment (Docker Compose-first)
-
-## 🔧 Development Documentation
-
-### Active Development & Roadmap
-
-- **[Roadmap Overview (Archived)](archive/development/roadmap_overview.md)** - Historical release strategy notes
-- [v1.4.0 Roadmap](development/roadmap_v1.4.0.md) - Roadmap for the v1.4.0 cycle
-- [v1.5.0 Roadmap](development/roadmap_v1.5.0.md) - Modularity & integration release (JOSS resubmission response)
-- [v1.6.0 Roadmap](development/roadmap_v1.6.0.md) - Public release: one repository, results out, agents, model refresh, corpus view, tutorials
-- [v1.7.0 Roadmap](development/roadmap_v1.7.0.md) - Plugin ecosystem (planned as v1.6.0 until 2026-09-24)
-- [v1.7 to v2.0 Roadmap](development/roadmap_v1.7_to_v2.0.md) - Remote pipelines, HPC dispatch, slim core
-- [Modular Pipeline Architecture Spec](../specs/003-modular-pipeline-architecture/spec.md) - Full design spec underlying v1.5.0/v1.7.0
-- [Examples CLI Update Plan](development/EXAMPLES_CLI_UPDATE_CHECKLIST.md) - CLI modernization checklist
-
-## 🧪 Testing & QA
-
-### Current Testing
-
-- [Testing Overview](testing/testing_overview.md) - Complete testing strategy and results
-- [Testing Standards](testing/testing_standards.md) - Quality assurance standards
-- [Batch Testing Guide](testing/batch_testing_guide.md) - Batch processing test procedures
-
-## 📁 Archive
-
-Historical and superseded documentation lives under `archive/`:
-
-- [Archive Root](archive/) - Top-level archive index
-- [Release Notes](archive/release-notes/) - Historical release notes
-- [Development (Archived)](archive/development/) - Completed roadmaps, checklists, and completion summaries
-- [Testing (Archived)](archive/testing/) - Historical QA checklists
-- [Dated Updates](archive/2025/) - Dated update memos
-- **v1.3.0** (Future Release) - Advanced features, security, and scalability enhancements
+Older documents, kept for the record, are in [archive/](archive/README.md). They describe earlier
+versions and may be wrong about this one.

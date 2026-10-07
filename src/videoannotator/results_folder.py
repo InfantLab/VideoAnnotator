@@ -1,0 +1,619 @@
+"""The results folder: every run's results, by run then video (spec 022).
+
+New jobs write their outputs to `<results root>/<run> (<date>)/<video>/` (the
+job's `output_dir`), so a researcher finds them by name instead of behind a
+random job ID in a hidden application folder. Each run folder also holds
+`run.json`, an index of what ran on which videos.
+
+Every naming and layout rule lives here, so the five ways a run is created
+(upload, folder ingest, dataset run, rerun, CLI `process`) can't drift apart.
+Two rules are enforced by construction rather than by checks callers might
+forget: folders are created exclusively, so existing results are never
+overwritten (FR-024), and a video folder never holds a video (FR-020).
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import threading
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import UTC, date, datetime
+from pathlib import Path
+from typing import Any
+
+from .config_env import (
+    RESULTS_OWNER_ENV,
+    WINDOWS_PATH,
+    host_paths,
+    results_dir,
+    results_owner,
+)
+
+logger = logging.getLogger(__name__)
+
+RUN_RECORD = "run.json"
+RUN_RECORD_FORMAT = "videoannotator-run"
+MAX_COMPONENT = 120
+
+_INVALID = re.compile(r'[<>:"/\\|?*\x00-\x1f\x7f]')
+_RESERVED = {
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    *(f"COM{i}" for i in range(1, 10)),
+    *(f"LPT{i}" for i in range(1, 10)),
+}
+
+# One lock for run records and batch → run-folder lookups: both are tiny,
+# infrequent writes, and one lock can't deadlock against another.
+_lock = threading.RLock()
+_batch_run_folders: dict[str, Path] = {}
+
+
+class ResultsFolderError(Exception):
+    """The results folder can't be used; names the folder and why."""
+
+    def __init__(self, folder: Path, reason: str):
+        super().__init__(f"Can't write results to {display_path(folder)}: {reason}")
+        self.folder = folder
+        self.reason = reason
+
+
+def results_root() -> Path:
+    """Where every run's results go."""
+    return results_dir()
+
+
+def display_path(path: Path | str) -> str:
+    """`path` as the researcher would find it on their own machine.
+
+    Under Docker the server sees `/results/...`; the researcher's file browser
+    shows the host folder mounted there.
+    """
+    text = str(path)
+    for container, host in host_paths():
+        if text == container or text.startswith(container + "/"):
+            rest = text[len(container) :]
+            if WINDOWS_PATH.match(host + "\\"):
+                rest = rest.replace("/", "\\") or ("\\" if host.endswith(":") else "")
+            return host + rest
+    return text
+
+
+def folder_ref(path: Path | str | None) -> dict[str, Any] | None:
+    """`{"path", "display_path"}` for API responses, or None."""
+    if path is None:
+        return None
+    return {"path": str(path), "display_path": display_path(path)}
+
+
+def sanitize_component(name: str, fallback: str = "Run") -> str:
+    """`name` made safe as one folder name on every OS.
+
+    Drops characters Windows forbids, trailing dots and spaces (Windows strips
+    them, so two names could collide), and avoids reserved device names.
+    """
+    cleaned = _INVALID.sub("", name).strip().rstrip(". ")
+    cleaned = cleaned[:MAX_COMPONENT].rstrip(". ")
+    if not cleaned:
+        return fallback
+    if cleaned.split(".")[0].upper() in _RESERVED:
+        cleaned = "_" + cleaned
+    return cleaned
+
+
+def run_name(
+    *,
+    batch_name: str | None = None,
+    dataset_name: str | None = None,
+    source_folder: Path | None = None,
+    video: Path | None = None,
+    now: datetime | None = None,
+) -> str:
+    """The run's name: the first of these that is set (research.md R2)."""
+    for candidate in (
+        batch_name,
+        dataset_name,
+        source_folder.name if source_folder else None,
+        video.stem if video else None,
+    ):
+        if candidate and candidate.strip():
+            return candidate.strip()
+    return f"Run {(now or datetime.now()).strftime('%Y-%m-%d %H-%M')}"
+
+
+def give_to_owner(*paths: Path) -> None:
+    """Give `paths` to `$VIDEOANNOTATOR_RESULTS_OWNER`, when set (spec 024, R6).
+
+    Rootful Docker on Linux runs the server as root, so without this the
+    researcher couldn't move or delete their own results. Never raises.
+    """
+    owner = results_owner()
+    if owner is None or not hasattr(os, "chown"):
+        return
+    for path in paths:
+        try:
+            os.chown(path, *owner)
+        except OSError as e:
+            logger.warning(
+                f"Could not give {path} to {RESULTS_OWNER_ENV}={owner[0]}:{owner[1]}: {e}"
+            )
+
+
+def check_writable(root: Path | None = None) -> Path:
+    """Confirm results can be written under `root` before a run starts (FR-026)."""
+    root = root or results_root()
+    try:
+        if not root.is_dir():
+            root.mkdir(parents=True, exist_ok=True)
+            give_to_owner(root)
+        with tempfile.NamedTemporaryFile(dir=root, prefix=".write-check-"):
+            pass
+    except OSError as e:
+        raise ResultsFolderError(root, e.strerror or str(e)) from e
+    return root
+
+
+def results_root_overlaps(configured_roots: list[Path]) -> Path | None:
+    """The explicitly configured video folder the results root lies in, if any.
+
+    The default video folder (home) always contains the default results folder,
+    and that is fine: results are only ever written into their own run
+    folders. A video folder someone named on purpose is different -- writing
+    inside it mixes derived results into raw data (FR-021).
+    """
+    root = results_root()
+    for allowed in configured_roots:
+        if root == allowed or allowed in root.parents:
+            return allowed
+    return None
+
+
+def is_inside_results(path: Path) -> bool:
+    """Whether `path` (resolved) lies inside the results root."""
+    try:
+        return path.resolve().is_relative_to(results_root())
+    except OSError:
+        return False
+
+
+@dataclass
+class RunFolder:
+    """One run's folder, with `run.json` and one folder per video."""
+
+    path: Path
+    source_root: Path | None = None
+
+    @classmethod
+    def create(
+        cls,
+        name: str,
+        *,
+        batch_id: str | None,
+        pipelines: list[str] | None,
+        config: dict[str, Any] | None,
+        source_root: Path | None = None,
+        today: date | None = None,
+    ) -> RunFolder:
+        """Create `<root>/<name> (<date>)`, numbering it if that exists."""
+        root = check_writable()
+        stamp = (today or date.today()).isoformat()
+        base = sanitize_component(name)[: MAX_COMPONENT - len(stamp) - 8].rstrip(". ")
+        number = 1
+        while True:
+            suffix = stamp if number == 1 else f"{stamp} {number}"
+            path = root / f"{base} ({suffix})"
+            try:
+                path.mkdir()
+                give_to_owner(path)
+                break
+            except FileExistsError:
+                number += 1
+            except OSError as e:
+                raise ResultsFolderError(root, e.strerror or str(e)) from e
+
+        from .version import __version__
+
+        _write_record(
+            path,
+            {
+                "format": RUN_RECORD_FORMAT,
+                "format_version": 1,
+                "run": {
+                    "batch_id": batch_id,
+                    "name": name,
+                    "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
+                },
+                "videoannotator_version": __version__,
+                "pipelines": list(pipelines or []),
+                "config": _redacted(config),
+                "videos": [],
+            },
+        )
+        return cls(path=path, source_root=source_root)
+
+    @classmethod
+    def for_batch(cls, batch_id: str, create: Callable[[], RunFolder]) -> RunFolder:
+        """The run folder for `batch_id`, created by `create` only once.
+
+        Uploads arrive one job per request, possibly in parallel, but a batch
+        is one run: without this, two first uploads could each make a folder.
+        """
+        with _lock:
+            known = _batch_run_folders.get(batch_id)
+            if known is not None and known.is_dir():
+                return cls(path=known)
+            from .api.database import get_storage_backend
+
+            storage = get_storage_backend()
+            for job_id in storage.list_jobs_by_batch(batch_id):
+                job = storage.load_job_metadata(job_id)
+                folder = Path(job.output_dir).parent if job and job.output_dir else None
+                if folder is not None and (folder / RUN_RECORD).is_file():
+                    _batch_run_folders[batch_id] = folder
+                    return cls(path=folder)
+            run = create()
+            _batch_run_folders[batch_id] = run.path
+            return run
+
+    def add_video(
+        self,
+        job: Any,
+        video: Path,
+        *,
+        uploaded_name: str | None = None,
+        size_bytes: int | None = None,
+    ) -> Path:
+        """Give `job` its own video folder here and record it in `run.json`.
+
+        Named after the video. A second video with the same name gets its path
+        within the source folder (`site_a__child01`), then a number.
+        """
+        name = Path(uploaded_name).stem if uploaded_name else video.stem
+        candidates = [sanitize_component(name, "video")]
+        if self.source_root is not None and video.is_relative_to(self.source_root):
+            relative = video.relative_to(self.source_root).with_suffix("")
+            if len(relative.parts) > 1:
+                candidates.append(
+                    sanitize_component("__".join(relative.parts), "video")
+                )
+        candidates += [f"{candidates[-1]} {n}" for n in range(2, 1000)]
+
+        for candidate in candidates:
+            folder = self.path / candidate
+            try:
+                folder.mkdir()
+                give_to_owner(folder)
+                break
+            except FileExistsError:
+                continue
+            except OSError as e:
+                raise ResultsFolderError(self.path, e.strerror or str(e)) from e
+        else:  # pragma: no cover - a thousand same-named videos in one run
+            raise ResultsFolderError(self.path, f"too many videos named {name}")
+
+        if size_bytes is None and uploaded_name is None:
+            try:
+                size_bytes = video.stat().st_size
+            except OSError:
+                size_bytes = None
+        source: dict[str, Any] = (
+            {"kind": "uploaded", "original_filename": uploaded_name}
+            if uploaded_name
+            else {"kind": "in_place", "path": str(video), "size_bytes": size_bytes}
+        )
+        if uploaded_name and size_bytes is not None:
+            source["size_bytes"] = size_bytes
+
+        def add(record: dict[str, Any]) -> None:
+            record["videos"].append(
+                {
+                    "job_id": job.job_id,
+                    "folder": folder.name,
+                    "source": source,
+                    "status": "pending",
+                }
+            )
+
+        _update_record(self.path, add)
+        job.output_dir = folder
+        return folder
+
+
+def run_folder_of(job: Any) -> Path | None:
+    """The run folder holding `job`'s results, or None for older jobs."""
+    if not getattr(job, "output_dir", None):
+        return None
+    folder = Path(job.output_dir).parent
+    return folder if (folder / RUN_RECORD).is_file() else None
+
+
+def record_job_finished(job: Any) -> None:
+    """Update `job`'s entry in its run's `run.json` once it settles.
+
+    Never raises: a run record is an index, and failing to update it must not
+    fail the job whose results are already written.
+    """
+    folder = run_folder_of(job)
+    if folder is None:
+        return
+    output_dir = Path(job.output_dir)
+    try:
+        files = sorted(p.name for p in output_dir.iterdir() if p.is_file())
+    except OSError:
+        files = []
+    models: dict[str, list[Any]] = {}
+    for name, result in (job.pipeline_results or {}).items():
+        provenance = getattr(result, "provenance", None) or {}
+        if provenance.get("models"):
+            models[name] = provenance["models"]
+    finished = job.completed_at.astimezone(UTC) if job.completed_at else None
+
+    def update(record: dict[str, Any]) -> None:
+        for entry in record["videos"]:
+            if entry.get("job_id") == job.job_id:
+                entry["status"] = job.status.value
+                entry["finished_at"] = (
+                    finished.isoformat(timespec="seconds") if finished else None
+                )
+                entry["files"] = files
+                entry["models"] = models
+                if job.error_message:
+                    entry["error"] = job.error_message
+                else:
+                    entry.pop("error", None)
+
+    try:
+        _update_record(folder, update)
+    except Exception as e:
+        logger.warning(f"Could not update {folder / RUN_RECORD}: {e}")
+    if results_owner() is not None:
+        try:
+            give_to_owner(*output_dir.rglob("*"))
+        except OSError as e:
+            logger.warning(f"Could not list {output_dir} to give it to its owner: {e}")
+
+
+def remove_job_results(job: Any) -> None:
+    """Delete `job`'s video folder, and its run folder once nothing else is left.
+
+    Only ever inside the results root, and never the source video (FR-030).
+    """
+    if not getattr(job, "output_dir", None):
+        return
+    output_dir = Path(job.output_dir)
+    if not is_inside_results(output_dir) or output_dir.resolve() == results_root():
+        return
+    folder = run_folder_of(job)
+    shutil.rmtree(output_dir, ignore_errors=True)
+    if folder is None:
+        return
+
+    def drop(record: dict[str, Any]) -> None:
+        record["videos"] = [
+            v for v in record["videos"] if v.get("job_id") != job.job_id
+        ]
+
+    try:
+        _update_record(folder, drop)
+        if [p.name for p in folder.iterdir()] == [RUN_RECORD]:
+            shutil.rmtree(folder)
+            with _lock:
+                for batch_id, path in list(_batch_run_folders.items()):
+                    if path == folder:
+                        del _batch_run_folders[batch_id]
+    except OSError as e:
+        logger.warning(f"Could not tidy run folder {folder}: {e}")
+
+
+def read_record(folder: Path) -> dict[str, Any] | None:
+    """`folder`'s run record, or None when it has none or it can't be read."""
+    try:
+        return json.loads((folder / RUN_RECORD).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def _redacted(config: dict[str, Any] | None) -> dict[str, Any]:
+    from .provenance import redact
+
+    return redact(dict(config or {}))
+
+
+def _update_record(folder: Path, change: Callable[[dict[str, Any]], None]) -> None:
+    with _lock:
+        record = read_record(folder)
+        if record is None:
+            raise OSError(f"no readable {RUN_RECORD} in {folder}")
+        change(record)
+        _write_record(folder, record)
+
+
+def _write_record(folder: Path, record: dict[str, Any]) -> None:
+    """Replace `run.json` atomically: readers see the old file or the new one."""
+    with _lock:
+        fd, temp = tempfile.mkstemp(dir=folder, prefix=".run-", suffix=".json")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(record, f, indent=2, default=str)
+            os.replace(temp, folder / RUN_RECORD)
+        except BaseException:
+            Path(temp).unlink(missing_ok=True)
+            raise
+        give_to_owner(folder / RUN_RECORD)
+
+
+def in_container() -> bool:
+    """Whether the server runs in a container (Docker or Podman)."""
+    return Path("/.dockerenv").exists() or Path("/run/.containerenv").exists()
+
+
+def folder_opener() -> list[str] | None:
+    """The command that opens a folder in this machine's file manager, if any.
+
+    None where nothing could show it: in a container, or on a Linux machine
+    with no desktop session (a headless server).
+    """
+    if in_container():
+        return None
+    if sys.platform == "win32":
+        return ["explorer"]
+    if sys.platform == "darwin":
+        return ["open"]
+    if (
+        os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
+    ) and shutil.which("xdg-open"):
+        return ["xdg-open"]
+    return None
+
+
+def open_folder(path: Path) -> None:
+    """Open `path` in the file manager. Raises OSError when that can't happen."""
+    opener = folder_opener()
+    if opener is None:
+        raise OSError("no desktop to open folders on")
+    if sys.platform == "win32":
+        os.startfile(path)  # type: ignore[attr-defined]  # Windows only
+        return
+    subprocess.Popen(
+        [*opener, str(path)],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+
+VIDEO_SUFFIXES = (".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm", ".m4v")
+
+
+def result_files_in(folder: Path) -> list[Path]:
+    """Every file under `folder` except videos, in a stable order."""
+    try:
+        return sorted(
+            p
+            for p in folder.rglob("*")
+            if p.is_file() and p.suffix.lower() not in VIDEO_SUFFIXES
+        )
+    except OSError:
+        return []
+
+
+def run_zip_entries(jobs: list[Any]) -> tuple[str, list[tuple[Path, str]]]:
+    """The run's results as `(file, name in archive)`, and the archive's name.
+
+    The archive has the on-disk layout: `<run>/run.json` and one folder per
+    video, never a video (FR-028). Runs from before results folders existed
+    get the same layout, built from each job's own folder.
+    """
+    from .batch.result_files import job_folder
+
+    run = next((f for f in map(run_folder_of, jobs) if f is not None), None)
+    top = (
+        run.name
+        if run
+        else sanitize_component(
+            next((j.batch_name for j in jobs if j.batch_name), None) or "Run"
+        )
+    )
+    entries: list[tuple[Path, str]] = []
+    if run is not None:
+        entries.append((run / RUN_RECORD, f"{top}/{RUN_RECORD}"))
+    used: set[str] = set()
+    for job in jobs:
+        if run_folder_of(job) is not None:
+            folder = Path(job.output_dir)
+            name = folder.name
+        else:
+            folder = job_folder(job)
+            stem = Path(job.video_path).stem if job.video_path else job.job_id
+            name = sanitize_component(stem, "video")
+            number = 2
+            while name in used:
+                name = f"{sanitize_component(stem, 'video')} {number}"
+                number += 1
+        used.add(name)
+        for path in result_files_in(folder):
+            entries.append(
+                (path, f"{top}/{name}/{path.relative_to(folder).as_posix()}")
+            )
+    return top, entries
+
+
+def recorded_size(job: Any) -> int | None:
+    """The size `job`'s video had when the run was created, from `run.json`."""
+    folder = run_folder_of(job)
+    record = read_record(folder) if folder is not None else None
+    for entry in (record or {}).get("videos", []):
+        if entry.get("job_id") == job.job_id:
+            size = entry.get("source", {}).get("size_bytes")
+            return size if isinstance(size, int) else None
+    return None
+
+
+def not_shared_message(folder: Path | str) -> str:
+    """`folder` is outside every shared folder (spec 024, R9)."""
+    return f"{display_path(folder)} isn't shared with VideoAnnotator any more"
+
+
+VIDEO_MOVED = "moved or deleted since the job was created"
+
+
+def video_unavailable_reason(path: Path | str) -> str:
+    """Why a job's video at `path` can't be read, for researchers (R9).
+
+    Outside every folder VideoAnnotator may read, it isn't shared any more
+    (a container only sees what is shared with it); otherwise it moved. Videos
+    kept with a job (uploads) and results were never in a shared folder.
+    """
+    from .api.v1.ingest import allowed_roots
+    from .storage.config import get_storage_root
+
+    given = Path(path)
+    try:
+        # Compared resolved, named as given (macOS resolves /home elsewhere).
+        video = given.resolve()
+        kept = [get_storage_root().resolve(), results_root()]
+    except OSError:
+        video, kept = given, []
+    inside = [*allowed_roots(), *kept]
+    if any(video == root or video.is_relative_to(root) for root in inside):
+        return VIDEO_MOVED
+    return not_shared_message(given.parent)
+
+
+def rerun_video_missing(video: Path | None) -> str:
+    """Why a job can't run again on `video`, which isn't there (R9)."""
+    if video is None:
+        return "its video is no longer available"
+    reason = video_unavailable_reason(video)
+    if reason == VIDEO_MOVED:
+        return f"its video is no longer at {display_path(video)}"
+    return f"its video can't be read: {reason}"
+
+
+def find_moved_video(
+    name: str, size: int | None, folder: Path, recursive: bool
+) -> Path | None:
+    """The one file in `folder` with this name and size, if there is exactly one.
+
+    Name alone isn't enough: another take saved under the same name must not
+    be picked up silently. Without a recorded size nothing matches.
+    """
+    if size is None:
+        return None
+    try:
+        candidates = folder.rglob(name) if recursive else [folder / name]
+        matches = [p for p in candidates if p.is_file() and p.stat().st_size == size]
+    except OSError:
+        return None
+    return matches[0] if len(matches) == 1 else None

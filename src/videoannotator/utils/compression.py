@@ -6,14 +6,16 @@ from collections.abc import Generator
 from pathlib import Path
 
 from videoannotator.storage.manager import get_storage_provider
-from videoannotator.storage.providers.base import JobArtifact
+from videoannotator.storage.providers.base import JobArtifact, StorageProvider
 from videoannotator.utils.logging_config import get_logger
 
 logger = get_logger("utils.compression")
 
 
 def create_job_zip_archive(
-    job_id: str, artifacts: list[JobArtifact]
+    job_id: str,
+    artifacts: list[JobArtifact],
+    provider: StorageProvider | None = None,
 ) -> Generator[bytes, None, None]:
     """Create a ZIP archive of job artifacts and stream it.
 
@@ -27,7 +29,7 @@ def create_job_zip_archive(
     Yields:
         bytes: Chunks of the ZIP file.
     """
-    provider = get_storage_provider()
+    provider = provider or get_storage_provider()
 
     # Create a temporary file for the ZIP archive
     with tempfile.NamedTemporaryFile(suffix=".zip", delete=True) as temp_zip:
@@ -71,3 +73,24 @@ def create_job_zip_archive(
         except Exception as e:
             logger.error(f"Error creating ZIP archive: {e}")
             raise
+
+
+def stream_zip(
+    entries: list[tuple[Path, str]], chunk_size: int = 1024 * 1024
+) -> Generator[bytes, None, None]:
+    """Zip `(file, name in archive)` pairs and stream the result.
+
+    Built in a temporary file on disk, not in memory: a 100-video run's
+    results can be gigabytes. A file that can't be read is logged and left
+    out rather than failing the whole download.
+    """
+    with tempfile.TemporaryFile(suffix=".zip") as temp_zip:
+        with zipfile.ZipFile(temp_zip, "w", zipfile.ZIP_DEFLATED) as zf:
+            for path, arcname in entries:
+                try:
+                    zf.write(path, arcname=arcname)
+                except OSError as e:
+                    logger.error(f"Failed to add {path} to ZIP: {e}")
+        temp_zip.seek(0)
+        while chunk := temp_zip.read(chunk_size):
+            yield chunk

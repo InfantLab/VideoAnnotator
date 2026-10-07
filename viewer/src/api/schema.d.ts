@@ -4,6 +4,77 @@
  */
 
 export interface paths {
+    "/api/v1/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Health check with optional detailed diagnostics
+         * @description Check API server liveness and optionally retrieve detailed system status.
+         *
+         *     **Basic mode** (default): Returns simple 200 OK for load balancers.
+         *     Fast response, minimal overhead.
+         *
+         *     **Detailed mode** (?detailed=true): Returns comprehensive diagnostics including:
+         *     - Database connectivity and job count
+         *     - Storage disk space and warnings
+         *     - GPU availability and memory
+         *     - Pipeline registry status
+         *
+         *     Detailed mode returns 503 status if critical subsystems are unhealthy.
+         *
+         *     **Example Requests:**
+         *
+         *     Basic (fast):
+         *     ```bash
+         *     curl -X GET "http://localhost:18011/api/v1/health"
+         *     ```
+         *
+         *     Detailed (diagnostic):
+         *     ```bash
+         *     curl -X GET "http://localhost:18011/api/v1/health?detailed=true" \
+         *       -H "X-API-Key: your-api-key-here"
+         *     ```
+         */
+        get: operations["health_check_api_v1_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the currently authenticated user's identity
+         * @description Returns identity information for whoever the caller's API key/token belongs to --
+         *     in particular `is_admin`, which gates actions like the pipeline extras-install
+         *     endpoints (`POST /api/v1/pipelines/extras/{extra}/install`). Always requires
+         *     authentication, regardless of the server's `AUTH_REQUIRED` setting.
+         *
+         *     A `false` `is_admin` here is the direct explanation for a `403 Administrator
+         *     privileges required` response from an admin-only endpoint -- surface this to
+         *     users rather than leaving that error unexplained.
+         */
+        get: operations["get_current_user_identity_api_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/": {
         parameters: {
             query?: never;
@@ -12,30 +83,156 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Jobs
-         * @description List jobs with pagination and filtering.
+         * List Processing Jobs
+         * @description List all video processing jobs with pagination and optional status filtering.
          *
-         *     Args:
-         *         page: Page number (1-based)
-         *         per_page: Items per page
-         *         status_filter: Optional status filter
+         *     Returns a paginated list of jobs with their current status, configuration, and metadata.
+         *     Use this endpoint to monitor multiple jobs or filter by status.
          *
-         *     Returns:
-         *         Paginated list of jobs
+         *     **Status Values**: pending, running, completed, failed, cancelled
+         *
+         *     **curl Example - List All Jobs**:
+         *     ```bash
+         *     curl -X GET "http://localhost:18011/api/v1/jobs/" \
+         *       -H "Authorization: Bearer YOUR_API_KEY"
+         *     ```
+         *
+         *     **curl Example - Filter by Status**:
+         *     ```bash
+         *     curl -X GET "http://localhost:18011/api/v1/jobs/?status_filter=completed" \
+         *       -H "Authorization: Bearer YOUR_API_KEY"
+         *     ```
+         *
+         *     **curl Example - Pagination**:
+         *     ```bash
+         *     curl -X GET "http://localhost:18011/api/v1/jobs/?page=2&per_page=20" \
+         *       -H "Authorization: Bearer YOUR_API_KEY"
+         *     ```
+         *
+         *     **Success Response** (200 OK):
+         *     ```json
+         *     {
+         *       "jobs": [
+         *         {
+         *           "id": "abc123-def456",
+         *           "status": "completed",
+         *           "video_path": "/tmp/uploads/video1.mp4",
+         *           "config": {"person_tracking": {"confidence_threshold": 0.7}},
+         *           "selected_pipelines": ["person_tracking"],
+         *           "created_at": "2025-10-22T10:00:00Z",
+         *           "completed_at": "2025-10-22T10:05:23Z",
+         *           "error_message": null,
+         *           "result_path": "/storage/jobs/abc123-def456/results",
+         *           "storage_path": "/storage/jobs/abc123-def456"
+         *         },
+         *         {
+         *           "id": "xyz789-uvw012",
+         *           "status": "running",
+         *           "video_path": "/tmp/uploads/video2.mp4",
+         *           "config": null,
+         *           "selected_pipelines": ["face_recognition"],
+         *           "created_at": "2025-10-22T10:10:00Z",
+         *           "completed_at": null,
+         *           "error_message": null,
+         *           "result_path": null,
+         *           "storage_path": "/storage/jobs/xyz789-uvw012"
+         *         }
+         *       ],
+         *       "total": 2,
+         *       "page": 1,
+         *       "per_page": 10
+         *     }
+         *     ```
+         *
+         *     **Error Response** (401 Unauthorized):
+         *     ```json
+         *     {
+         *       "error": {
+         *         "code": "UNAUTHORIZED",
+         *         "message": "Invalid or missing API key",
+         *         "hint": "Include valid API key in Authorization header",
+         *         "timestamp": "2025-10-22T10:30:00Z"
+         *       }
+         *     }
+         *     ```
          */
         get: operations["list_jobs_api_v1_jobs__get"];
         put?: never;
         /**
-         * Submit Job
-         * @description Submit a video processing job.
+         * Submit Video Processing Job
+         * @description Submit a video file for processing with one or more annotation pipelines.
          *
-         *     Args:
-         *         video: Video file to process
-         *         config: Optional JSON configuration string
-         *         selected_pipelines: Optional comma-separated pipeline names
+         *     The video is uploaded as multipart/form-data and processed asynchronously.
+         *     Returns immediately with a job ID that can be used to check status and retrieve results.
          *
-         *     Returns:
-         *         Job information including ID and status
+         *     **Configuration Validation**: If both config and selected_pipelines are provided,
+         *     the configuration is validated against each pipeline's requirements before job creation.
+         *
+         *     **Supported Video Formats**: MP4, AVI, MOV, MKV, WEBM (FFmpeg-compatible formats)
+         *
+         *     **curl Example - Basic Submission**:
+         *     ```bash
+         *     curl -X POST "http://localhost:18011/api/v1/jobs/" \
+         *       -H "Authorization: Bearer YOUR_API_KEY" \
+         *       -F "video=@/path/to/video.mp4"
+         *     ```
+         *
+         *     **curl Example - With Pipeline Selection**:
+         *     ```bash
+         *     curl -X POST "http://localhost:18011/api/v1/jobs/" \
+         *       -H "Authorization: Bearer YOUR_API_KEY" \
+         *       -F "video=@/path/to/video.mp4" \
+         *       -F "selected_pipelines=person_tracking,face_recognition"
+         *     ```
+         *
+         *     **curl Example - With Configuration**:
+         *     ```bash
+         *     curl -X POST "http://localhost:18011/api/v1/jobs/" \
+         *       -H "Authorization: Bearer YOUR_API_KEY" \
+         *       -F "video=@/path/to/video.mp4" \
+         *       -F "selected_pipelines=person_tracking" \
+         *       -F 'config={"person_tracking":{"confidence_threshold":0.7}}'
+         *     ```
+         *
+         *     **Success Response** (201 Created):
+         *     ```json
+         *     {
+         *       "id": "abc123-def456-ghi789",
+         *       "status": "pending",
+         *       "video_path": "/tmp/uploads/video.mp4",
+         *       "config": {"person_tracking": {"confidence_threshold": 0.7}},
+         *       "selected_pipelines": ["person_tracking"],
+         *       "created_at": "2025-10-22T10:30:00Z",
+         *       "completed_at": null,
+         *       "error_message": null,
+         *       "result_path": null,
+         *       "storage_path": "/storage/jobs/abc123-def456-ghi789"
+         *     }
+         *     ```
+         *
+         *     **Error Response** (400 Bad Request - Invalid Configuration):
+         *     ```json
+         *     {
+         *       "error": {
+         *         "code": "INVALID_CONFIG",
+         *         "message": "Configuration validation failed: person_tracking: Invalid value for confidence_threshold (must be between 0 and 1)",
+         *         "hint": "Fix the validation errors and resubmit",
+         *         "timestamp": "2025-10-22T10:30:00Z"
+         *       }
+         *     }
+         *     ```
+         *
+         *     **Error Response** (401 Unauthorized - Missing/Invalid API Key):
+         *     ```json
+         *     {
+         *       "error": {
+         *         "code": "UNAUTHORIZED",
+         *         "message": "Invalid or missing API key",
+         *         "hint": "Include valid API key in Authorization header: Bearer YOUR_KEY",
+         *         "timestamp": "2025-10-22T10:30:00Z"
+         *       }
+         *     }
+         *     ```
          */
         post: operations["submit_job_api_v1_jobs__post"];
         delete?: never;
@@ -53,13 +250,80 @@ export interface paths {
         };
         /**
          * Get Job Status
-         * @description Get job status and details.
+         * @description Retrieve the current status and details of a specific video processing job.
          *
-         *     Args:
-         *         job_id: Job ID to query
+         *     Use this endpoint to poll job status during processing. The status field indicates
+         *     the current state of the job: pending, running, completed, failed, or cancelled.
          *
-         *     Returns:
-         *         Job information including current status
+         *     **Status Values**:
+         *     - `pending`: Job queued, not yet started
+         *     - `running`: Job currently processing
+         *     - `completed`: Job finished successfully, results available
+         *     - `failed`: Job encountered an error (see error_message)
+         *     - `cancelled`: Job was cancelled by user request
+         *
+         *     **curl Example**:
+         *     ```bash
+         *     curl -X GET "http://localhost:18011/api/v1/jobs/abc123-def456" \
+         *       -H "Authorization: Bearer YOUR_API_KEY"
+         *     ```
+         *
+         *     **Success Response** (200 OK - Running Job):
+         *     ```json
+         *     {
+         *       "id": "abc123-def456",
+         *       "status": "running",
+         *       "video_path": "/tmp/uploads/video.mp4",
+         *       "config": {"person_tracking": {"confidence_threshold": 0.7}},
+         *       "selected_pipelines": ["person_tracking", "face_recognition"],
+         *       "created_at": "2025-10-22T10:00:00Z",
+         *       "completed_at": null,
+         *       "error_message": null,
+         *       "result_path": null,
+         *       "storage_path": "/storage/jobs/abc123-def456"
+         *     }
+         *     ```
+         *
+         *     **Success Response** (200 OK - Completed Job):
+         *     ```json
+         *     {
+         *       "id": "abc123-def456",
+         *       "status": "completed",
+         *       "video_path": "/tmp/uploads/video.mp4",
+         *       "config": {"person_tracking": {"confidence_threshold": 0.7}},
+         *       "selected_pipelines": ["person_tracking"],
+         *       "created_at": "2025-10-22T10:00:00Z",
+         *       "completed_at": "2025-10-22T10:05:23Z",
+         *       "error_message": null,
+         *       "result_path": "/storage/jobs/abc123-def456/results",
+         *       "storage_path": "/storage/jobs/abc123-def456"
+         *     }
+         *     ```
+         *
+         *     **Error Response** (404 Not Found):
+         *     ```json
+         *     {
+         *       "error": {
+         *         "code": "JOB_NOT_FOUND",
+         *         "message": "Job abc123-invalid not found",
+         *         "detail": {"job_id": "abc123-invalid"},
+         *         "hint": "Check job ID or use GET /api/v1/jobs to list all jobs",
+         *         "timestamp": "2025-10-22T10:30:00Z"
+         *       }
+         *     }
+         *     ```
+         *
+         *     **Error Response** (401 Unauthorized):
+         *     ```json
+         *     {
+         *       "error": {
+         *         "code": "UNAUTHORIZED",
+         *         "message": "Invalid or missing API key",
+         *         "hint": "Include valid API key in Authorization header",
+         *         "timestamp": "2025-10-22T10:30:00Z"
+         *       }
+         *     }
+         *     ```
          */
         get: operations["get_job_status_api_v1_jobs__job_id__get"];
         put?: never;
@@ -77,6 +341,647 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Job
+         * @description Cancel a running or pending video processing job.
+         *
+         *     Attempts to gracefully stop job execution. Jobs that are already completed, failed,
+         *     or previously cancelled return their current status (idempotent operation).
+         *
+         *     **Cancellation Behavior**:
+         *     - `pending` jobs: Removed from queue, never started
+         *     - `running` jobs: Interrupted, partial results may be available
+         *     - `completed/failed` jobs: Cannot be cancelled (returns 409 error)
+         *     - `cancelled` jobs: Returns current state (idempotent)
+         *
+         *     **curl Example**:
+         *     ```bash
+         *     curl -X POST "http://localhost:18011/api/v1/jobs/abc123-def456/cancel" \
+         *       -H "Authorization: Bearer YOUR_API_KEY"
+         *     ```
+         *
+         *     **Success Response** (200 OK - Job Cancelled):
+         *     ```json
+         *     {
+         *       "id": "abc123-def456",
+         *       "status": "cancelled",
+         *       "video_path": "/tmp/uploads/video.mp4",
+         *       "config": {"person_tracking": {"confidence_threshold": 0.7}},
+         *       "selected_pipelines": ["person_tracking"],
+         *       "created_at": "2025-10-22T10:00:00Z",
+         *       "completed_at": "2025-10-22T10:02:15Z",
+         *       "error_message": "Job cancelled by user request",
+         *       "result_path": null,
+         *       "storage_path": "/storage/jobs/abc123-def456"
+         *     }
+         *     ```
+         *
+         *     **Error Response** (404 Not Found):
+         *     ```json
+         *     {
+         *       "error": {
+         *         "code": "JOB_NOT_FOUND",
+         *         "message": "Job abc123-invalid not found",
+         *         "detail": {"job_id": "abc123-invalid"},
+         *         "hint": "Check job ID or use GET /api/v1/jobs to list all jobs",
+         *         "timestamp": "2025-10-22T10:30:00Z"
+         *       }
+         *     }
+         *     ```
+         *
+         *     **Error Response** (409 Conflict - Already Completed):
+         *     ```json
+         *     {
+         *       "error": {
+         *         "code": "JOB_ALREADY_COMPLETED",
+         *         "message": "Job abc123-def456 is already completed (status: completed)",
+         *         "detail": {"job_id": "abc123-def456", "status": "completed"},
+         *         "hint": "Cannot cancel a job that has already finished",
+         *         "timestamp": "2025-10-22T10:30:00Z"
+         *       }
+         *     }
+         *     ```
+         */
+        post: operations["cancel_job_endpoint_api_v1_jobs__job_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Job
+         * @description Retry a job that is in a failed or cancelled terminal state (spec 006 FR-004).
+         *
+         *     Reuses the job's originally stored video file and configuration — no re-upload needed.
+         *     Resets the job to `pending`; the server's background job processor picks it up on its
+         *     next poll cycle, same as a freshly submitted job.
+         *
+         *     **Retry Behavior**:
+         *     - `failed`/`cancelled` jobs: reset to `pending`, retry_count incremented, reprocessed
+         *     - `pending`/`running` jobs: rejected (409) — not yet in a retryable terminal state
+         *     - `completed` jobs: rejected (409) — nothing to retry
+         *     - Job whose original video file no longer exists in storage: rejected (409)
+         *
+         *     **curl Example**:
+         *     ```bash
+         *     curl -X POST "http://localhost:18011/api/v1/jobs/abc123-def456/retry" \
+         *       -H "Authorization: Bearer YOUR_API_KEY"
+         *     ```
+         */
+        post: operations["retry_job_endpoint_api_v1_jobs__job_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/rerun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a job again
+         * @description Creates a new job with the same video, pipelines and settings as a finished job
+         *     (completed, failed or cancelled), linked to it by `rerun_of`. The original and
+         *     its results are not changed. Pass `selected_pipelines` and/or `config` to change
+         *     them for the new job ("Edit and run again"). Unlike `/retry`, which resets a
+         *     failed job in place, both runs are kept so they can be compared.
+         *
+         *     409 `JOB_NOT_FINISHED` while the job is running; 409 `RERUN_VIDEO_MISSING` when
+         *     its video is no longer stored.
+         */
+        post: operations["rerun_job_endpoint_api_v1_jobs__job_id__rerun_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Job Results
+         * @description Retrieve detailed results for a completed video processing job.
+         *
+         *     Returns pipeline-specific outputs, annotation counts, processing times, and download URLs
+         *     for generated files. Only available after job completes successfully.
+         *
+         *     **Result Files**: each pipeline writes files to the job folder (e.g.
+         *     `<video>_person_tracking.json`, `<video>_speech_recognition.vtt`). `download_url` downloads a
+         *     pipeline's main file and `files` lists every file it wrote. Both are relative to the server.
+         *     `GET /api/v1/jobs/{job_id}/artifacts` downloads everything as one ZIP.
+         *
+         *     **curl Example**:
+         *     ```bash
+         *     curl -X GET "http://localhost:18011/api/v1/jobs/abc123-def456/results" \
+         *       -H "Authorization: Bearer YOUR_API_KEY"
+         *     ```
+         *
+         *     **Success Response** (200 OK):
+         *     ```json
+         *     {
+         *       "job_id": "abc123-def456",
+         *       "status": "completed",
+         *       "pipeline_results": {
+         *         "person_tracking": {
+         *           "pipeline_name": "person_tracking",
+         *           "status": "completed",
+         *           "start_time": "2025-10-22T10:00:05Z",
+         *           "end_time": "2025-10-22T10:03:12Z",
+         *           "processing_time": 187.3,
+         *           "annotation_count": 1245,
+         *           "output_file": "database:/annotations/abc123-def456/person_tracking",
+         *           "download_url": "/api/v1/jobs/abc123-def456/results/files/person_tracking",
+         *           "files": [
+         *             {
+         *               "name": "clip_person_tracking.json",
+         *               "download_url": "/api/v1/jobs/abc123-def456/results/files/person_tracking?name=clip_person_tracking.json"
+         *             },
+         *             {
+         *               "name": "clip_person_tracks.json",
+         *               "download_url": "/api/v1/jobs/abc123-def456/results/files/person_tracking?name=clip_person_tracks.json"
+         *             }
+         *           ],
+         *           "error_message": null
+         *         },
+         *         "speech_recognition": {
+         *           "pipeline_name": "speech_recognition",
+         *           "status": "failed",
+         *           "start_time": "2025-10-22T10:03:15Z",
+         *           "end_time": "2025-10-22T10:03:20Z",
+         *           "processing_time": null,
+         *           "annotation_count": null,
+         *           "output_file": null,
+         *           "download_url": null,
+         *           "files": [],
+         *           "error_message": "No audio could be extracted from clip.mp4: ..."
+         *         }
+         *       },
+         *       "created_at": "2025-10-22T10:00:00Z",
+         *       "completed_at": "2025-10-22T10:05:23Z",
+         *       "result_path": "/storage/jobs/abc123-def456/results"
+         *     }
+         *     ```
+         *
+         *     **Error Response** (404 Not Found):
+         *     ```json
+         *     {
+         *       "error": {
+         *         "code": "JOB_NOT_FOUND",
+         *         "message": "Job abc123-invalid not found",
+         *         "detail": {"job_id": "abc123-invalid"},
+         *         "hint": "Check job ID or use GET /api/v1/jobs to list all jobs",
+         *         "timestamp": "2025-10-22T10:30:00Z"
+         *       }
+         *     }
+         *     ```
+         *
+         *     **Note**: For jobs still in progress, use GET /jobs/{job_id} to check status first.
+         */
+        get: operations["get_job_results_api_v1_jobs__job_id__results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/video": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream a job's video
+         * @description The video a job ran on, with range requests so a browser can seek (spec 021). 404 VIDEO_NOT_STORED when it is no longer on the server.
+         */
+        get: operations["get_job_video_api_v1_jobs__job_id__video_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/results/files/{pipeline_name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Result File
+         * @description Download a file a pipeline wrote for a job.
+         *
+         *     Args:
+         *         job_id: Job ID
+         *         pipeline_name: Name of pipeline to download results for
+         *         name: Which of the pipeline's files (as listed in `files` by
+         *             GET /jobs/{job_id}/results); default its main output
+         *
+         *     Returns:
+         *         File download response
+         */
+        get: operations["download_result_file_api_v1_jobs__job_id__results_files__pipeline_name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/batches/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List submission batches
+         * @description Lists every batch the server currently knows about -- that is, every distinct
+         *     `batch_id` carried by at least one job -- most recently submitted first, with
+         *     the same aggregate summary `GET /api/v1/batches/{batch_id}` returns for one.
+         *
+         *     This is what lets a client show N videos submitted together as a single unit
+         *     without having to remember, client-side, which jobs it submitted together: the
+         *     grouping lives on the server and survives a page reload, a different browser,
+         *     or a different machine.
+         *
+         *     A batch has no independent existence, so this list is derived, not stored: a
+         *     batch appears here as soon as one job carries its id, and disappears once its
+         *     last member job is deleted. Jobs with no `batch_id` (standalone submissions)
+         *     are not represented here at all -- list those through `GET /api/v1/jobs`.
+         */
+        get: operations["list_batches_api_v1_batches__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/batches/{batch_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get aggregate status for a submission batch
+         * @description Aggregates every job currently tagged with `batch_id` (via `POST /api/v1/jobs`'s
+         *     `batch_id` form field) into one summary: counts by state, overall completion
+         *     percentage, and (once at least one job has completed) a time-remaining estimate
+         *     computed from real observed per-job processing time (FR-002/FR-003).
+         *
+         *     A batch that no job currently references returns an empty summary (`total: 0`)
+         *     rather than 404 -- a batch isn't a resource that can be "not found," it's just
+         *     whatever the query over `jobs` currently returns (see spec's Key Entities).
+         */
+        get: operations["get_batch_summary_api_v1_batches__batch_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a run
+         * @description Deletes every job in the run, their results, and the run's results folder.
+         *     Jobs still running are cancelled first. The original videos are never touched
+         *     (spec 022, FR-030).
+         */
+        delete: operations["delete_batch_api_v1_batches__batch_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/batches/{batch_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel every cancellable job in a batch
+         * @description Cancels every job tagged with `batch_id` that is still pending or running,
+         *     applying the same semantics as `POST /api/v1/jobs/{job_id}/cancel` to each.
+         *     Jobs that have already completed or failed are left untouched and reported in
+         *     `skipped` with why -- cancelling a batch that is half-finished is a normal
+         *     thing to want, so this never fails the whole request because some of its jobs
+         *     are past the point of cancelling.
+         *
+         *     Jobs already cancelled are reported in `cancelled` (the operation is
+         *     idempotent per job), so calling this twice is safe.
+         */
+        post: operations["cancel_batch_api_v1_batches__batch_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/batches/{batch_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry every retryable job in a batch
+         * @description Retries every job tagged with `batch_id` that is currently in a retryable
+         *     terminal state (failed/cancelled with its original video still available),
+         *     applying spec 006's single-job retry semantics to each (FR-004). Jobs that
+         *     are still running, already completed, or otherwise not retryable are left
+         *     untouched and reported in `skipped` with why -- this never fails the whole
+         *     request because of jobs that simply don't need retrying (FR-005).
+         */
+        post: operations["retry_batch_api_v1_batches__batch_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/batches/{batch_id}/rerun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a batch again
+         * @description Runs every finished job of a batch again (spec 019) as a new batch named
+         *     "<name> (rerun)", each job linked to its original by `rerun_of`. The original
+         *     batch is not changed. Optional `selected_pipelines` / `config` replace every
+         *     job's ("Edit and run again"); they are checked before any job is created. Jobs
+         *     still running, or whose video is gone, are reported in `skipped`.
+         */
+        post: operations["rerun_batch_api_v1_batches__batch_id__rerun_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/batches/{batch_id}/results.zip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a run's results as one file
+         * @description Streams every video's results in the run, in the same layout as the run's
+         *     results folder (`<run>/run.json`, then one folder per video), as one zip.
+         *     Never includes a video (spec 022, FR-028). Runs from before results folders
+         *     existed get the same layout, built from each job's own folder.
+         */
+        get: operations["batch_results_zip_api_v1_batches__batch_id__results_zip_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingest/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What this caller may do with videos on the server's machine
+         * @description Tells a client, for the caller making the request, whether it counts as being
+         *     on the server's own machine and so may choose videos where they are (spec
+         *     022): the viewer offers "My folders" only when `can_read_in_place` is true,
+         *     and otherwise explains `reason` and offers upload. Decided by the server from
+         *     how the request arrived; the client can't claim it.
+         *
+         *     Any authenticated caller may ask.
+         */
+        get: operations["access_api_v1_ingest_access_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingest/shares/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop sharing a folder, from the next start
+         * @description Asks `videoannotator-start` to stop sharing a folder (spec 024): the request is
+         *     left in its requests folder and applied the next time VideoAnnotator starts.
+         *     The server can't change what is shared itself, and a request can only ever
+         *     make sharing narrower.
+         *
+         *     Administrator only, on this computer only. 404 `SHARE_NOT_FOUND` for a folder
+         *     that isn't shared; 409 `NOT_MANAGED_BY_LAUNCHER` when VideoAnnotator wasn't
+         *     started by `videoannotator-start` (change the compose settings instead).
+         */
+        post: operations["stop_sharing_api_v1_ingest_shares_stop_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingest/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the videos a folder ingest would use
+         * @description Every video `POST /api/v1/ingest` would create a job for, with its path within
+         *     the folder and its size, without creating anything. Used to save a server
+         *     folder as a dataset and to show what changed in it since (spec 018).
+         *
+         *     Admin-only, and only for callers on the server's own machine, as ingest is.
+         */
+        get: operations["scan_api_v1_ingest_scan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingest/browse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Browse server-side folders available for ingest
+         * @description Lists folders on the server that jobs can be created from, so a client can
+         *     offer a folder picker instead of asking a user to type an absolute path (a
+         *     browser cannot discover one: neither the file input nor the File System Access
+         *     API exposes a real path).
+         *
+         *     Called with no `path`, returns the allowed roots. Called with a `path` inside
+         *     one of them, returns that folder's immediate subfolders (each with a count of
+         *     the videos directly inside it) and its own videos.
+         *
+         *     Admin-only, and only for callers on the server's own machine.
+         */
+        get: operations["browse_api_v1_ingest_browse_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a batch of jobs from a folder on the server
+         * @description Turns every video in a server-side folder into a job, as one batch, in one
+         *     request -- no upload. Jobs reference the videos where they already are, so
+         *     nothing is copied and a 40-video corpus starts processing immediately instead
+         *     of after 40 multipart uploads.
+         *
+         *     The created jobs are ordinary jobs in every other respect: they queue, report
+         *     progress, cancel, and retry exactly like uploaded ones, and share a `batch_id`
+         *     so they can be tracked as a single run (`GET /api/v1/batches/{batch_id}`).
+         *     Deleting one removes its results, never the original video.
+         *
+         *     Files that cannot be used (unreadable, or empty) are reported in `skipped`
+         *     rather than failing the request, so one bad file in a corpus doesn't block the
+         *     other thirty-nine.
+         *
+         *     Admin-only, and only for callers on the server's own machine.
+         */
+        post: operations["ingest_folder_api_v1_ingest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/results/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open a results folder in this computer's file manager
+         * @description Only for callers on the server's own machine (403 `NOT_SAME_MACHINE`), and only
+         *     for folders inside the results folder (422 `PATH_OUTSIDE_RESULTS`), so it can't
+         *     be used to look around the filesystem. 409 `OPEN_FOLDER_UNSUPPORTED` when there
+         *     is no desktop to open it on (a headless server, or Docker): show the location
+         *     for the researcher to copy instead.
+         */
+        post: operations["open_results_folder_api_v1_results_open_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Job Artifacts
+         * @description Download a job's results as a ZIP archive, without its video by default.
+         *
+         *     Args:
+         *         job_id: The unique identifier of the job.
+         *         include_video: Also include the video.
+         *         current_user: The authenticated user.
+         *
+         *     Returns:
+         *         StreamingResponse: A ZIP file containing the artifacts.
+         */
+        get: operations["download_job_artifacts_api_v1_jobs__job_id__artifacts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pipelines/": {
         parameters: {
             query?: never;
@@ -85,13 +990,99 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Pipelines
-         * @description List all available pipelines.
+         * List all available video annotation pipelines
+         * @description Retrieves a comprehensive list of all registered pipelines available for video annotation,
+         *     including their metadata, configuration schemas, capabilities, and supported tasks.
          *
-         *     Returns:
-         *         List of available pipelines with their configurations
+         *     Each pipeline includes:
+         *     - Basic metadata (name, display_name, description, family, variant)
+         *     - Task taxonomy (tasks, modalities, capabilities)
+         *     - Backend requirements and stability level
+         *     - Output formats and types
+         *     - Configuration schema with parameter types and defaults
+         *     - Usage examples
+         *
+         *     **Example Request:**
+         *     ```bash
+         *     curl -X GET "http://localhost:18011/api/v1/pipelines" \
+         *       -H "X-API-Key: your-api-key-here"
+         *     ```
+         *
+         *     **Success Response (200 OK):**
+         *     ```json
+         *     {
+         *       "pipelines": [
+         *         {
+         *           "name": "openface3_identity",
+         *           "display_name": "OpenFace 3 - Identity",
+         *           "description": "Face detection, tracking, and identity recognition",
+         *           "pipeline_family": "openface",
+         *           "variant": "identity",
+         *           "tasks": ["face_detection", "face_tracking", "face_recognition"],
+         *           "modalities": ["video"],
+         *           "capabilities": ["detection", "tracking", "recognition"],
+         *           "backends": ["openface"],
+         *           "stability": "stable",
+         *           "outputs": [
+         *             {
+         *               "format": "COCO",
+         *               "types": ["detection", "tracking", "recognition"]
+         *             }
+         *           ],
+         *           "config_schema": {
+         *             "detection_confidence": {
+         *               "type": "float",
+         *               "default": 0.5,
+         *               "description": "Minimum confidence threshold for face detection"
+         *             }
+         *           },
+         *           "examples": [
+         *             "videoannotator job submit --video input.mp4 --pipeline openface3_identity"
+         *           ]
+         *         }
+         *       ],
+         *       "total": 1
+         *     }
+         *     ```
+         *
+         *     **Error Response (401 Unauthorized):**
+         *     ```json
+         *     {
+         *       "error": {
+         *         "code": "UNAUTHORIZED",
+         *         "message": "Invalid or missing API key"
+         *       }
+         *     }
+         *     ```
+         *
+         *     The pipeline list is dynamically loaded from the registry metadata, ensuring all
+         *     registered pipelines are discoverable. Use this endpoint to explore available
+         *     pipelines before submitting jobs.
          */
         get: operations["list_pipelines_api_v1_pipelines__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pipelines/extras": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List installable pipeline extras groups
+         * @description Every extras group that enables at least one pipeline, in `pyproject.toml` order
+         *     (spec 011): the pipelines it enables, whether it's installed, an approximate download
+         *     size in MB (hand-maintained; includes torch only if torch isn't installed yet),
+         *     whether it pulls a CUDA torch build, and the id of an install in progress, if any.
+         */
+        get: operations["list_extras_groups_api_v1_pipelines_extras_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -108,16 +1099,157 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Pipeline Info
-         * @description Get detailed information about a specific pipeline.
+         * Get detailed information about a specific pipeline
+         * @description Retrieves comprehensive metadata and configuration details for a single pipeline
+         *     specified by name. Use this endpoint to explore pipeline capabilities, configuration
+         *     options, and usage examples before submitting jobs.
          *
-         *     Args:
-         *         pipeline_name: Name of the pipeline
+         *     **Pipeline Information Includes:**
+         *     - Taxonomy: tasks, modalities, capabilities
+         *     - Backend requirements and stability level
+         *     - Output formats and annotation types
+         *     - Complete configuration schema with types, defaults, and descriptions
+         *     - Usage examples (CLI and API)
          *
-         *     Returns:
-         *         Detailed pipeline information
+         *     **Example Request:**
+         *     ```bash
+         *     curl -X GET "http://localhost:18011/api/v1/pipelines/openface3_identity" \
+         *       -H "X-API-Key: your-api-key-here"
+         *     ```
+         *
+         *     **Success Response (200 OK):**
+         *     ```json
+         *     {
+         *       "name": "openface3_identity",
+         *       "display_name": "OpenFace 3 - Identity",
+         *       "description": "Face detection, tracking, and identity recognition using OpenFace 3",
+         *       "pipeline_family": "openface",
+         *       "variant": "identity",
+         *       "tasks": ["face_detection", "face_tracking", "face_recognition"],
+         *       "modalities": ["video"],
+         *       "capabilities": ["detection", "tracking", "recognition"],
+         *       "backends": ["openface"],
+         *       "stability": "stable",
+         *       "outputs": [
+         *         {
+         *           "format": "COCO",
+         *           "types": ["detection", "tracking", "recognition"]
+         *         }
+         *       ],
+         *       "config_schema": {
+         *         "detection_confidence": {
+         *           "type": "float",
+         *           "default": 0.5,
+         *           "description": "Minimum confidence threshold for face detection (0.0-1.0)"
+         *         },
+         *         "enable_landmarks": {
+         *           "type": "bool",
+         *           "default": true,
+         *           "description": "Extract facial landmarks for alignment"
+         *         }
+         *       },
+         *       "examples": [
+         *         "videoannotator job submit --video input.mp4 --pipeline openface3_identity",
+         *         "videoannotator job submit --video input.mp4 --pipeline openface3_identity --config detection_confidence=0.7"
+         *       ]
+         *     }
+         *     ```
+         *
+         *     **Error Response (404 Not Found):**
+         *     ```json
+         *     {
+         *       "error": {
+         *         "code": "PIPELINE_NOT_FOUND",
+         *         "message": "Pipeline 'invalid_name' not found",
+         *         "hint": "Run 'videoannotator pipelines --detailed' to list available pipelines"
+         *       }
+         *     }
+         *     ```
+         *
+         *     **Error Response (401 Unauthorized):**
+         *     ```json
+         *     {
+         *       "error": {
+         *         "code": "UNAUTHORIZED",
+         *         "message": "Invalid or missing API key"
+         *       }
+         *     }
+         *     ```
+         *
+         *     Use the configuration schema to validate parameters before job submission.
+         *     All configuration parameters are optional and have sensible defaults.
          */
         get: operations["get_pipeline_info_api_v1_pipelines__pipeline_name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pipelines/extras/{extra}/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger installation of a pipeline extras group
+         * @description Admin-only. Triggers installing one named `[project.optional-dependencies]` extras group
+         *     (e.g. `face`, `audio`, `scene`, `all`) so its pipeline(s) become available, without needing
+         *     terminal/shell access (specs/005-pipeline-extras-install).
+         *
+         *     Returns immediately with a trackable job id rather than waiting for the (potentially
+         *     multi-minute) install to finish -- poll `GET /extras/install-jobs/{job_id}` for progress.
+         *     Most installs activate immediately (`activation: "live"` on the job). One that changed a
+         *     package the server had already imported reports `activation: "restart_required"` and sets
+         *     the top-level `restart_required` on `GET /api/v1/pipelines`; see `POST /api/v1/system/restart`.
+         */
+        post: operations["install_extra_api_v1_pipelines_extras__extra__install_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pipelines/extras/install-jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check the status of an extras-group install job
+         * @description Admin-only. Returns the current state of an install job created by
+         *     `POST /extras/{extra}/install`: `pending`, `running`, `completed`, or `failed`. On
+         *     `failed`, `command_output` carries the captured error output for diagnosis.
+         */
+        get: operations["get_extras_install_job_api_v1_pipelines_extras_install_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pipelines/{pipeline_name}/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a pipeline's config schema as job-creation form parameters
+         * @description Same underlying data as `config_schema` on `GET /{pipeline_name}`, reshaped into the form the video-annotation-viewer's dynamic job-creation UI expects (typed parameters with optional enum choices), rather than the raw type/default/description dict.
+         */
+        get: operations["get_pipeline_schema_api_v1_pipelines__pipeline_name__schema_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -141,12 +1273,290 @@ export interface paths {
          *
          *     Args:
          *         pipeline_name: Name of the pipeline
-         *         config: Configuration to validate
+         *         request: Configuration validation request
          *
          *     Returns:
-         *         Validation result
+         *         Validation result with errors and warnings
          */
         post: operations["validate_pipeline_config_api_v1_pipelines__pipeline_name__validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasets/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List saved datasets
+         * @description Shared-read: any authenticated user sees every saved dataset on this server, matching existing job-listing visibility (FR-005).
+         */
+        get: operations["list_datasets_api_v1_datasets__get"];
+        put?: never;
+        /**
+         * Save a new dataset (also used for import)
+         * @description Creates a saved dataset owned by the caller. Also serves as the import path for a previously-exported dataset definition (FR-006) -- POST the exact body a prior GET returned; a fresh id and the current caller as owner are assigned. A name collision with one the caller already owns is rejected with 409, never silently overwritten (FR-007).
+         */
+        post: operations["create_dataset_api_v1_datasets__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasets/{dataset_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a saved dataset
+         * @description Retrieve a single saved dataset by id.
+         */
+        get: operations["get_dataset_api_v1_datasets__dataset_id__get"];
+        /**
+         * Update a saved dataset
+         * @description Owner or administrator only.
+         */
+        put: operations["update_dataset_api_v1_datasets__dataset_id__put"];
+        post?: never;
+        /**
+         * Delete a saved dataset
+         * @description Owner or administrator only. Does not affect the historical record of any job previously submitted using this dataset (FR-008).
+         */
+        delete: operations["delete_dataset_api_v1_datasets__dataset_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasets/{dataset_id}/stored-videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which of a dataset's videos the server still has
+         * @description For each video in the dataset, a job whose stored copy (uploaded with that job) can be reused, matched by filename and size. Null when no job has it any more, e.g. its jobs were deleted.
+         */
+        get: operations["stored_videos_api_v1_datasets__dataset_id__stored_videos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasets/{dataset_id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a dataset from the server's stored copies
+         * @description Creates one job per dataset video the server still stores (see `/stored-videos`), as one batch, with no upload: each video is hard-linked from the job that has it. Videos with no stored copy are listed in `skipped`. 422 `DATASET_NOT_STORED` when none are stored.
+         */
+        post: operations["run_dataset_api_v1_datasets__dataset_id__run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/presets/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List saved pipeline presets
+         * @description Shared-read: any authenticated user sees every saved preset on this server, matching existing job-listing visibility (FR-005).
+         */
+        get: operations["list_presets_api_v1_presets__get"];
+        put?: never;
+        /**
+         * Save a new pipeline preset (also used for import)
+         * @description Creates a saved preset owned by the caller. Also serves as the import path for a previously-exported preset definition (FR-006) -- POST the exact body a prior GET returned; a fresh id and the current caller as owner are assigned. A name collision with one the caller already owns is rejected with 409, never silently overwritten (FR-007).
+         */
+        post: operations["create_preset_api_v1_presets__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/presets/{preset_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a saved pipeline preset
+         * @description Retrieval always succeeds even if a referenced pipeline is no longer available on this server -- see `unavailable_pipelines` (FR-009).
+         */
+        get: operations["get_preset_api_v1_presets__preset_id__get"];
+        /**
+         * Update a saved pipeline preset
+         * @description Owner or administrator only.
+         */
+        put: operations["update_preset_api_v1_presets__preset_id__put"];
+        post?: never;
+        /**
+         * Delete a saved pipeline preset
+         * @description Owner or administrator only. Does not affect the historical record of any job previously submitted using this preset (FR-008).
+         */
+        delete: operations["delete_preset_api_v1_presets__preset_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/prompts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search the prompt library
+         * @description Starred first, then most recently used. `q` matches text and name.
+         */
+        get: operations["list_prompts_api_v1_prompts__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/prompts/{sha256}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a prompt */
+        get: operations["get_prompt_api_v1_prompts__sha256__get"];
+        /** Name, tag, star or hide a prompt */
+        put: operations["update_prompt_api_v1_prompts__sha256__put"];
+        post?: never;
+        /**
+         * Delete a prompt no job used
+         * @description 409 PROMPT_USED_BY_JOBS once any job ran it: it is part of their provenance. Hide it instead.
+         */
+        delete: operations["delete_prompt_api_v1_prompts__sha256__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vlm/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List models available on the configured Ollama server
+         * @description Lists the vision-language models currently pulled on the configured Ollama
+         *     server (FR-004). Distinguishes "server unreachable" (503) from "reachable
+         *     but zero models pulled" (200 with an empty list) -- both are valid states a
+         *     researcher needs to tell apart, not one generic failure (FR-005).
+         */
+        get: operations["list_vlm_models_api_v1_vlm_models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vlm/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test a prompt against one frame (or burst) without creating a job
+         * @description Runs `prompt` against `model` for a single frame -- either an uploaded
+         *     image, or a frame extracted from an already-uploaded video at
+         *     `timestamp_sec` -- and returns the label/reasoning synchronously (FR-001).
+         *     Nothing is persisted: no job, no annotation record (FR-001, spec's
+         *     Assumptions).
+         *
+         *     `sampling_mode="frame_burst"` requires `video_path`+`timestamp_sec` (an
+         *     uploaded still image can't be burst-sampled) and reuses the real pipeline's
+         *     own burst-window/clamping logic exactly (edge case).
+         */
+        post: operations["preview_vlm_prompt_api_v1_vlm_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/config/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Config
+         * @description Validate a complete job configuration against selected pipelines.
+         *
+         *     This endpoint validates configuration for multiple pipelines at once,
+         *     providing comprehensive error and warning reporting.
+         *
+         *     Args:
+         *         request: Configuration validation request with config and pipeline list
+         *
+         *     Returns:
+         *         Validation result with errors, warnings, and helpful messages
+         *
+         *     Example:
+         *         ```json
+         *         POST /api/v1/config/validate
+         *         {
+         *             "config": {
+         *                 "person_tracking": {"confidence_threshold": 0.5},
+         *                 "audio_processing": {"sample_rate": 16000}
+         *             },
+         *             "selected_pipelines": ["person_tracking", "whisper_transcription"]
+         *         }
+         *         ```
+         */
+        post: operations["validate_config_api_v1_config_validate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -161,15 +1571,185 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Detailed Health Check
-         * @description Detailed system health check.
+         * Comprehensive system health and resource monitoring
+         * @description Returns detailed system health information including CPU, memory, disk usage,
+         *     GPU availability, database status, pipeline registry, and service health.
          *
-         *     Returns:
-         *         Comprehensive system health information
+         *     This endpoint provides comprehensive diagnostics useful for:
+         *     - Monitoring system resource usage
+         *     - Verifying GPU availability for ML pipelines
+         *     - Checking pipeline registry status
+         *     - Validating database connectivity
+         *     - Assessing overall system capacity
+         *
+         *     **Example Request:**
+         *     ```bash
+         *     curl -X GET "http://localhost:18011/api/v1/system/health" \
+         *       -H "X-API-Key: your-api-key-here"
+         *     ```
+         *
+         *     **Success Response (200 OK):**
+         *     ```json
+         *     {
+         *       "status": "healthy",
+         *       "timestamp": "2025-01-08T10:30:45.123456",
+         *       "api_version": "1.2.0",
+         *       "videoannotator_version": "1.2.0",
+         *       "system": {
+         *         "platform": "Linux-6.5.0-1025-azure-x86_64-with-glibc2.35",
+         *         "python_version": "3.10.12",
+         *         "cpu_count": 8,
+         *         "cpu_percent": 15.3,
+         *         "memory_percent": 42.5,
+         *         "memory": {
+         *           "total": 16777216000,
+         *           "available": 9663676416,
+         *           "percent": 42.5,
+         *           "used": 7113539584,
+         *           "free": 9663676416
+         *         },
+         *         "disk": {
+         *           "total": 107374182400,
+         *           "used": 45097156608,
+         *           "free": 62277025792,
+         *           "percent": 42.0
+         *         }
+         *       },
+         *       "database": {
+         *         "status": "healthy",
+         *         "message": "Database is accessible",
+         *         "writable": true
+         *       },
+         *       "gpu": {
+         *         "available": true,
+         *         "device_count": 1,
+         *         "current_device": 0,
+         *         "device_name": "NVIDIA GeForce RTX 3090",
+         *         "compute_capability": "8.6",
+         *         "memory_allocated": 512000000,
+         *         "memory_reserved": 1024000000
+         *       },
+         *       "pipelines": {
+         *         "total": 12,
+         *         "names": [
+         *           "openface3_identity",
+         *           "whisper_transcription",
+         *           "diarization_pyannote"
+         *         ]
+         *       },
+         *       "workers": {
+         *         "status": "running",
+         *         "active_jobs": 2,
+         *         "processing_jobs": ["job-123", "job-456"],
+         *         "queued_jobs": 3,
+         *         "max_concurrent_workers": 2,
+         *         "poll_interval_seconds": 5
+         *       },
+         *       "services": {
+         *         "database": {
+         *           "status": "healthy",
+         *           "message": "Database is accessible"
+         *         },
+         *         "job_queue": "embedded",
+         *         "pipelines": "ready"
+         *       },
+         *       "security": {
+         *         "auth_required": true
+         *       },
+         *       "uptime_seconds": 3672
+         *     }
+         *     ```
+         *
+         *     **Unhealthy Response (200 OK with status unhealthy):**
+         *     ```json
+         *     {
+         *       "status": "unhealthy",
+         *       "timestamp": "2025-01-08T10:30:45.123456",
+         *       "error": "Failed to connect to database",
+         *       "api_version": "1.2.0",
+         *       "videoannotator_version": "1.2.0"
+         *     }
+         *     ```
+         *
+         *     **GPU Not Available Response:**
+         *     ```json
+         *     {
+         *       "gpu": {
+         *         "available": false,
+         *         "reason": "CUDA not available"
+         *       }
+         *     }
+         *     ```
+         *
+         *     **GPU Compatibility Warning (old GPU detected):**
+         *     ```json
+         *     {
+         *       "gpu": {
+         *         "available": true,
+         *         "device_name": "NVIDIA GeForce GTX 1060 6GB",
+         *         "compute_capability": "6.1",
+         *         "compatibility_warning": "GPU compute capability 6.1 is below PyTorch 2.5.0 minimum requirement (7.0). GPU acceleration may not work. Consider downgrading PyTorch to 1.13.x for older GPUs or upgrading hardware.",
+         *         "pytorch_version": "2.5.0",
+         *         "min_compute_capability": 7.0
+         *       }
+         *     }
+         *     ```
+         *
+         *     **Worker Information:**
+         *
+         *     The `workers` section provides real-time information about the background job processing:
+         *     - `status`: Whether the worker is "running" or "stopped"
+         *     - `active_jobs`: Number of jobs currently being processed
+         *     - `processing_jobs`: List of job IDs currently being processed
+         *     - `queued_jobs`: Number of jobs waiting in the queue (pending status)
+         *     - `max_concurrent_workers`: Maximum number of jobs that can run simultaneously
+         *     - `poll_interval_seconds`: How often the worker checks for new jobs
+         *
+         *     This information is useful for monitoring system load and capacity planning.
+         *
+         *     **Note**: This endpoint is more resource-intensive than the basic `/health` endpoint
+         *     due to system metrics collection (CPU sampling, disk I/O). For lightweight health
+         *     checks, use the root `/health` endpoint instead.
+         *
+         *     The `uptime_seconds` field shows how long the API server has been running,
+         *     useful for monitoring restarts and stability.
+         *
+         *     The `gpu.compute_capability` field indicates the CUDA compute capability of the GPU,
+         *     which determines compatibility with PyTorch versions. Modern PyTorch (2.5+) requires
+         *     compute capability 7.0 or higher (Volta architecture). If your GPU is older, a
+         *     `compatibility_warning` will be included with recommended actions.
          */
         get: operations["detailed_health_check_api_v1_system_health_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/restart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restart the server to activate newly installed pipelines
+         * @description Admin-only (specs/011-pipeline-readiness FR-007). Returns `202` with the current
+         *     `boot_id`, then shuts the server down gracefully and starts it again with the same
+         *     command. Poll `GET /health` until `boot_id` changes.
+         *
+         *     Refused with `409`:
+         *     - `RESTART_UNSUPPORTED`: this deployment can't restart itself; `hint` says how to.
+         *     - `INSTALL_IN_PROGRESS`: an extras install is pending/running. `force` doesn't override.
+         *     - `JOBS_RUNNING`: annotation jobs are running (`details.job_ids`). Retry with
+         *       `force=true` to restart anyway; those jobs are marked failed on the next start.
+         */
+        post: operations["restart_server_api_v1_system_restart_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -245,6 +1825,191 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/debug/server-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Server Debug Info
+         * @description Get comprehensive server information for debugging.
+         *
+         *     Returns server configuration, status, and system information.
+         */
+        get: operations["get_server_debug_info_api_v1_debug_server_info_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/debug/token-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Token Debug Info
+         * @description Get detailed information about the current API token.
+         *
+         *     Returns token validation status, permissions, and rate limiting
+         *     info.
+         */
+        get: operations["get_token_debug_info_api_v1_debug_token_info_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/debug/pipelines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Pipeline Debug Info
+         * @description Get detailed pipeline configuration and status information.
+         *
+         *     Returns comprehensive pipeline information including components,
+         *     parameters, and current status.
+         */
+        get: operations["get_pipeline_debug_info_api_v1_debug_pipelines_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/debug/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Job Debug Info
+         * @description Get detailed debugging information for a specific job.
+         *
+         *     Returns comprehensive job status, logs, resource usage, and file
+         *     information.
+         */
+        get: operations["get_job_debug_info_api_v1_debug_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/debug/request-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Request Log
+         * @description Get recent API request log for debugging.
+         *
+         *     Returns recent API requests with timing and status information.
+         */
+        get: operations["get_request_log_api_v1_debug_request_log_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/debug/mock-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mock Sse Events
+         * @description Mock SSE endpoint for client testing until real SSE is implemented.
+         *
+         *     Returns Server-Sent Events format for job monitoring testing.
+         */
+        get: operations["mock_sse_events_api_v1_debug_mock_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/debug/background-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Background Jobs Status
+         * @description Get status of background job processing system.
+         *
+         *     Returns information about the background job manager including
+         *     currently processing jobs and system status.
+         */
+        get: operations["get_background_jobs_status_api_v1_debug_background_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/events/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Events Stream
+         * @description Server-Sent Events endpoint for real-time updates.
+         *
+         *     Emits `job_status_changed` events as job state actually changes (spec
+         *     008), plus a periodic heartbeat -- both additive to, never a
+         *     replacement for, polling `GET /jobs`/`GET /batches/{id}`.
+         *
+         *     Returns:
+         *         StreamingResponse: SSE stream of job-status-change and heartbeat events
+         */
+        get: operations["events_stream_api_v1_events_stream_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -254,7 +2019,7 @@ export interface paths {
         };
         /**
          * Health Check
-         * @description Basic health check endpoint.
+         * @description Return basic health status information.
          */
         get: operations["health_check_health_get"];
         put?: never;
@@ -269,29 +2034,595 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** BatchCancelResponse */
+        BatchCancelResponse: {
+            /** Batch Id */
+            batch_id: string;
+            /** Cancelled */
+            cancelled: string[];
+            /** Skipped */
+            skipped: components["schemas"]["BatchJobSkipped"][];
+        };
+        /** BatchJobSkipped */
+        BatchJobSkipped: {
+            /** Job Id */
+            job_id: string;
+            /** Reason */
+            reason: string;
+        };
+        /** BatchListResponse */
+        BatchListResponse: {
+            /** Batches */
+            batches: components["schemas"]["BatchSummaryResponse"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Per Page */
+            per_page: number;
+        };
+        /** BatchRerunResponse */
+        BatchRerunResponse: {
+            /**
+             * Batch Id
+             * @description The new batch
+             */
+            batch_id: string;
+            /** Rerun Of Batch */
+            rerun_of_batch: string;
+            /** Created */
+            created: string[];
+            /** Skipped */
+            skipped: components["schemas"]["BatchJobSkipped"][];
+            /**
+             * Relocated
+             * @description Videos found in `relocate_folder`, by name and size (spec 022)
+             */
+            relocated?: components["schemas"]["RelocatedVideo"][];
+        };
+        /** BatchRetryResponse */
+        BatchRetryResponse: {
+            /** Batch Id */
+            batch_id: string;
+            /** Retried */
+            retried: string[];
+            /** Skipped */
+            skipped: components["schemas"]["BatchJobSkipped"][];
+        };
+        /** BatchStatusCounts */
+        BatchStatusCounts: {
+            /** Pending */
+            pending: number;
+            /** Running */
+            running: number;
+            /** Completed */
+            completed: number;
+            /** Failed */
+            failed: number;
+            /** Cancelled */
+            cancelled: number;
+        };
+        /** BatchSummaryResponse */
+        BatchSummaryResponse: {
+            /** Batch Id */
+            batch_id: string;
+            /** Batch Name */
+            batch_name?: string | null;
+            /** Dataset Id */
+            dataset_id?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Total */
+            total: number;
+            by_status: components["schemas"]["BatchStatusCounts"];
+            /** Completion Percentage */
+            completion_percentage: number;
+            /** Estimated Seconds Remaining */
+            estimated_seconds_remaining?: number | null;
+            /** @description The run's results folder (spec 022); null for runs made before results folders existed */
+            results_folder?: components["schemas"]["FolderRef"] | null;
+        };
+        /** Body_preview_vlm_prompt_api_v1_vlm_preview_post */
+        Body_preview_vlm_prompt_api_v1_vlm_preview_post: {
+            /**
+             * Image
+             * @description A single frame image to test the prompt against
+             */
+            image?: string | null;
+            /**
+             * Video Path
+             * @description Path to an already-uploaded video (alternative to `image`)
+             */
+            video_path?: string | null;
+            /**
+             * Timestamp Sec
+             * @description Timestamp within `video_path` to extract the frame(s) from
+             */
+            timestamp_sec?: number | null;
+            /**
+             * Prompt
+             * @default Classify as TOUCH only if:
+             *     The mother's hand or arm is actually in physical contact with the infant's body.
+             *
+             *     Classify as NO_TOUCH if:
+             *     The mother's hand or arm visually overlaps the infant in the image, but one is clearly in front of or behind the other (the apparent contact is camera perspective, not real contact).
+             *     The mother's hand or arm is near but not actually touching the infant.
+             *
+             *     Return ONLY: TOUCH or NO_TOUCH.
+             */
+            prompt: string;
+            /** Model */
+            model: string;
+            /**
+             * Sampling Mode
+             * @default single_frame
+             */
+            sampling_mode: string;
+            /**
+             * Frame Interval Sec
+             * @default 5
+             */
+            frame_interval_sec: number;
+            /**
+             * Burst Offsets
+             * @description JSON-encoded list[int], e.g. '[-2,-1,0,1,2]'
+             */
+            burst_offsets?: string | null;
+            /**
+             * Think
+             * @default false
+             */
+            think: boolean;
+            /** Base Url */
+            base_url?: string | null;
+        };
         /** Body_submit_job_api_v1_jobs__post */
         Body_submit_job_api_v1_jobs__post: {
             /**
              * Video
-             * Format: binary
-             * @description Video file to process
+             * @description Video file to process (MP4, AVI, MOV, MKV, WEBM)
              */
             video: string;
             /**
              * Config
-             * @description JSON configuration
+             * @description JSON configuration object for pipeline parameters. Example: '{"person_tracking":{"confidence_threshold":0.7}}'
              */
             config?: string | null;
             /**
              * Selected Pipelines
-             * @description Comma-separated pipeline names
+             * @description Comma-separated list of pipeline names to run. Example: 'person_tracking,face_recognition'. Use GET /api/v1/pipelines to list available pipelines.
              */
             selected_pipelines?: string | null;
+            /**
+             * Batch Id
+             * @description Client-generated identifier grouping this job with others submitted in the same wizard pass (spec 008). Omit for a standalone job.
+             */
+            batch_id?: string | null;
+            /**
+             * Batch Name
+             * @description Human-readable label for this batch (spec 008), e.g. the folder the videos came from. Send the same value with every job in the batch; it is stored per-job and read back off whichever job carries it. Ignored when batch_id is omitted.
+             */
+            batch_name?: string | null;
+            /**
+             * Dataset Id
+             * @description Saved dataset (spec 007) this job was submitted from, if any. Purely informational -- not validated against /api/v1/datasets.
+             */
+            dataset_id?: string | null;
+        };
+        /**
+         * ConflictingDistribution
+         * @description An already-imported distribution an install changed (spec 011 FR-006).
+         */
+        ConflictingDistribution: {
+            /** Name */
+            name: string;
+            /** Old Version */
+            old_version: string;
+            /** New Version */
+            new_version?: string | null;
+        };
+        /**
+         * CurrentUserResponse
+         * @description Response for `GET /auth/me`.
+         */
+        CurrentUserResponse: {
+            /** Id */
+            id?: string | null;
+            /** Username */
+            username?: string | null;
+            /** Email */
+            email?: string | null;
+            /**
+             * Is Admin
+             * @default false
+             */
+            is_admin: boolean;
+        };
+        /**
+         * DatasetCreateRequest
+         * @description Body for `POST /datasets`. Also accepts a previously-exported
+         *     dataset's `GET` response verbatim (FR-006) -- `id`/`owner_user_id`/
+         *     timestamp fields present in an export are simply ignored here; a fresh
+         *     id and the current caller as owner are always assigned.
+         */
+        DatasetCreateRequest: {
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /**
+             * Video Manifest
+             * @default []
+             */
+            video_manifest: components["schemas"]["VideoManifestEntry"][];
+            /** Server Folder */
+            server_folder?: string | null;
+            /**
+             * Server Folder Recursive
+             * @default false
+             */
+            server_folder_recursive: boolean;
+            /**
+             * Server Selection
+             * @description The manifest is a chosen subset of server_folder (spec 022): using the dataset runs exactly those videos, and files added to the folder are not differences
+             * @default false
+             */
+            server_selection: boolean;
+        };
+        /** DatasetListResponse */
+        DatasetListResponse: {
+            /** Datasets */
+            datasets: components["schemas"]["DatasetResponse"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * DatasetResponse
+         * @description A saved dataset, including its manifest -- this exact shape is also
+         *     what export produces and import (`POST`) accepts (FR-006).
+         */
+        DatasetResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** Owner User Id */
+            owner_user_id: string;
+            /** Owner Name */
+            owner_name?: string | null;
+            /** Video Manifest */
+            video_manifest: components["schemas"]["VideoManifestEntry"][];
+            /** Server Folder */
+            server_folder?: string | null;
+            /**
+             * Server Folder Recursive
+             * @default false
+             */
+            server_folder_recursive: boolean;
+            /**
+             * Server Selection
+             * @default false
+             */
+            server_selection: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Last Used At */
+            last_used_at?: string | null;
+        };
+        /** DatasetRunRequest */
+        DatasetRunRequest: {
+            /** Selected Pipelines */
+            selected_pipelines?: string[] | null;
+            /** Config */
+            config?: {
+                [key: string]: unknown;
+            } | null;
+            /** Batch Name */
+            batch_name?: string | null;
+        };
+        /** DatasetRunResponse */
+        DatasetRunResponse: {
+            /** Batch Id */
+            batch_id: string;
+            /** Batch Name */
+            batch_name: string | null;
+            /** Created */
+            created: string[];
+            /** Skipped */
+            skipped: components["schemas"]["DatasetRunSkipped"][];
+        };
+        /** DatasetRunSkipped */
+        DatasetRunSkipped: {
+            /** Filename */
+            filename: string;
+            /** Reason */
+            reason: string;
+        };
+        /**
+         * DatasetUpdateRequest
+         * @description Body for `PUT /datasets/{id}`. Only provided fields are changed.
+         */
+        DatasetUpdateRequest: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Video Manifest */
+            video_manifest?: components["schemas"]["VideoManifestEntry"][] | null;
+            /** Server Selection */
+            server_selection?: boolean | null;
+        };
+        /**
+         * ExtrasGroupInfo
+         * @description One installable extras group (spec 011 contract §2).
+         */
+        ExtrasGroupInfo: {
+            /** Name */
+            name: string;
+            /** Pipelines */
+            pipelines: string[];
+            /** Installed */
+            installed: boolean;
+            /** Approx Download Mb */
+            approx_download_mb?: number | null;
+            /**
+             * Includes Gpu Torch
+             * @default false
+             */
+            includes_gpu_torch: boolean;
+            /** Install Job Id */
+            install_job_id?: string | null;
+        };
+        /**
+         * ExtrasGroupListResponse
+         * @description Response for `GET /api/v1/pipelines/extras`.
+         */
+        ExtrasGroupListResponse: {
+            /** Extras */
+            extras: components["schemas"]["ExtrasGroupInfo"][];
+        };
+        /**
+         * ExtrasInstallJobResponse
+         * @description Response for `GET /extras/install-jobs/{job_id}`.
+         */
+        ExtrasInstallJobResponse: {
+            /** Job Id */
+            job_id: string;
+            /** Extra Name */
+            extra_name: string;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Started At */
+            started_at?: string | null;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Command Output */
+            command_output?: string | null;
+            /**
+             * Restart Required
+             * @default false
+             */
+            restart_required: boolean;
+            /** Activation */
+            activation?: string | null;
+            /**
+             * Conflicting Distributions
+             * @default []
+             */
+            conflicting_distributions: components["schemas"]["ConflictingDistribution"][];
+        };
+        /**
+         * ExtrasInstallTriggerResponse
+         * @description Response for `POST /extras/{extra}/install`.
+         */
+        ExtrasInstallTriggerResponse: {
+            /** Job Id */
+            job_id: string;
+            /** Extra Name */
+            extra_name: string;
+            /** Status */
+            status: string;
+        };
+        /** FolderRef */
+        FolderRef: {
+            /** Path */
+            path: string;
+            /**
+             * Display Path
+             * @description The same location as the researcher's own machine shows it (differs from `path` under Docker)
+             */
+            display_path: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** IngestAccessResponse */
+        IngestAccessResponse: {
+            /**
+             * Same Machine
+             * @description The caller is on the server's own machine (loopback, or VIDEOANNOTATOR_PUBLISHED_LOCALLY under Docker)
+             */
+            same_machine: boolean;
+            /**
+             * Can Read In Place
+             * @description The caller may choose videos on this machine (My folders)
+             */
+            can_read_in_place: boolean;
+            /**
+             * Reason
+             * @description Why `can_read_in_place` is false, for researchers
+             */
+            reason?: string | null;
+            /** Allowed Folders */
+            allowed_folders: components["schemas"]["FolderRef"][];
+            results_root: components["schemas"]["FolderRef"];
+            /**
+             * Can Open Folders
+             * @description `POST /api/v1/results/open` can show a folder on this machine
+             */
+            can_open_folders: boolean;
+            /**
+             * Places
+             * @description Where My folders starts: allowed folders and the usual video places under home that exist (empty unless `can_read_in_place`)
+             */
+            places?: components["schemas"]["Place"][];
+            /**
+             * In Container
+             * @description The server runs in a container (spec 024)
+             * @default false
+             */
+            in_container: boolean;
+            /**
+             * Managed By Launcher
+             * @description Started by videoannotator-start, which can stop sharing a folder (spec 024)
+             * @default false
+             */
+            managed_by_launcher: boolean;
+            /**
+             * Shares
+             * @description Folders shared with VideoAnnotator, present or not (spec 024)
+             */
+            shares?: components["schemas"]["Share"][];
+        };
+        /** IngestBrowseResponse */
+        IngestBrowseResponse: {
+            /**
+             * Path
+             * @description Folder listed, or null when listing the roots
+             */
+            path?: string | null;
+            /**
+             * Parent
+             * @description Parent folder, or null at a root
+             */
+            parent?: string | null;
+            /** Roots */
+            roots: string[];
+            /** Directories */
+            directories: components["schemas"]["IngestDirectory"][];
+            /** Videos */
+            videos: components["schemas"]["IngestVideo"][];
+            /**
+             * Video Count
+             * @description Videos directly in this folder
+             */
+            video_count: number;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+        };
+        /** IngestDirectory */
+        IngestDirectory: {
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+            /** Video Count */
+            video_count: number;
+            /**
+             * Has Videos
+             * @description Videos are in this folder or a few levels below it (spec 022), so a researcher can tell which folders lead somewhere
+             * @default false
+             */
+            has_videos: boolean;
+        };
+        /** IngestRequest */
+        IngestRequest: {
+            /**
+             * Path
+             * @description Folder on the server containing the videos
+             */
+            path: string;
+            /**
+             * Recursive
+             * @description Also include videos in subfolders
+             * @default false
+             */
+            recursive: boolean;
+            /**
+             * Files
+             * @description Only these videos, as paths relative to `path` (spec 022). Omit for every video in the folder; `recursive` is ignored when set.
+             */
+            files?: string[] | null;
+            /** Selected Pipelines */
+            selected_pipelines?: string[] | null;
+            /** Config */
+            config?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Batch Id
+             * @description Batch identifier to tag these jobs with. Generated if omitted.
+             */
+            batch_id?: string | null;
+            /**
+             * Batch Name
+             * @description Human label for the batch. Defaults to the folder's name.
+             */
+            batch_name?: string | null;
+            /** Dataset Id */
+            dataset_id?: string | null;
+        };
+        /** IngestResponse */
+        IngestResponse: {
+            /** Batch Id */
+            batch_id: string;
+            /** Batch Name */
+            batch_name: string | null;
+            /** Path */
+            path: string;
+            /**
+             * Total
+             * @description Jobs created
+             */
+            total: number;
+            /** Created */
+            created: string[];
+            /** Skipped */
+            skipped: components["schemas"]["IngestSkipped"][];
+            /** @description The run's results folder (spec 022) */
+            results_folder?: components["schemas"]["FolderRef"] | null;
+        };
+        /** IngestScanResponse */
+        IngestScanResponse: {
+            /** Path */
+            path: string;
+            /** Recursive */
+            recursive: boolean;
+            /** Videos */
+            videos: components["schemas"]["ScannedVideo"][];
+        };
+        /** IngestSkipped */
+        IngestSkipped: {
+            /** Filename */
+            filename: string;
+            /** Reason */
+            reason: string;
+        };
+        /** IngestVideo */
+        IngestVideo: {
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+            /** Size Bytes */
+            size_bytes?: number | null;
         };
         /**
          * JobListResponse
@@ -309,7 +2640,7 @@ export interface components {
         };
         /**
          * JobResponse
-         * @description Response model for job information.
+         * @description Response model for job information (aligned with DB Job model).
          */
         JobResponse: {
             /** Id */
@@ -318,6 +2649,21 @@ export interface components {
             status: string;
             /** Video Path */
             video_path?: string | null;
+            /**
+             * Video Filename
+             * @description Original video filename
+             */
+            video_filename?: string | null;
+            /**
+             * Video Size Bytes
+             * @description Video file size in bytes
+             */
+            video_size_bytes?: number | null;
+            /**
+             * Video Duration Seconds
+             * @description Video duration in seconds
+             */
+            video_duration_seconds?: number | null;
             /** Config */
             config?: {
                 [key: string]: unknown;
@@ -330,22 +2676,180 @@ export interface components {
             completed_at?: string | null;
             /** Error Message */
             error_message?: string | null;
+            /** Result Path */
+            result_path?: string | null;
+            /** Storage Path */
+            storage_path?: string | null;
+            /**
+             * Queue Position
+             * @description 1-based position in the pending queue (only set when status is 'pending')
+             */
+            queue_position?: number | null;
+            /**
+             * Progress Percentage
+             * @description Completed/total selected pipelines, as a percentage (spec 006)
+             * @default 0
+             */
+            progress_percentage: number;
+            /**
+             * Batch Id
+             * @description Client-supplied identifier grouping jobs submitted together (spec 008)
+             */
+            batch_id?: string | null;
+            /**
+             * Batch Name
+             * @description Human-readable label for that batch, if one was supplied (spec 008)
+             */
+            batch_name?: string | null;
+            /**
+             * Dataset Id
+             * @description Saved dataset (spec 007) this job was submitted from, if any
+             */
+            dataset_id?: string | null;
+            /**
+             * Rerun Of
+             * @description The job this one runs again (spec 019)
+             */
+            rerun_of?: string | null;
+            /**
+             * Reruns
+             * @description Jobs that run this one again, oldest first (single-job reads only)
+             */
+            reruns?: string[];
+            /**
+             * Warnings
+             * @description Non-fatal notices about the submission, e.g. a deprecated pipeline (spec 014)
+             */
+            warnings?: string[];
+            /** @description This video's results folder (spec 022); null for jobs made before results folders existed */
+            results_folder?: components["schemas"]["JobResultsFolder"] | null;
+            /**
+             * Video Available
+             * @description Whether the job's video is still at its location (spec 022)
+             * @default true
+             */
+            video_available: boolean;
+            /**
+             * Video Display Path
+             * @description `video_path` as the researcher's own machine shows it (differs under Docker; spec 024)
+             */
+            video_display_path?: string | null;
+            /**
+             * Video Unavailable Reason
+             * @description Why the video isn't available, for researchers: moved or deleted, or its folder isn't shared any more (spec 024)
+             */
+            video_unavailable_reason?: string | null;
+        };
+        /** JobResultsFolder */
+        JobResultsFolder: {
+            /** Path */
+            path: string;
+            /**
+             * Display Path
+             * @description The same location as the researcher's own machine shows it (differs from `path` under Docker)
+             */
+            display_path: string;
+            /**
+             * Exists
+             * @description Whether the folder is still there: false when it was moved, renamed or deleted outside VideoAnnotator
+             */
+            exists: boolean;
+        };
+        /**
+         * JobResultsResponse
+         * @description Response model for job results (aligned with DB schema).
+         */
+        JobResultsResponse: {
+            /** Job Id */
+            job_id: string;
+            /** Status */
+            status: string;
+            /** Pipeline Results */
+            pipeline_results: {
+                [key: string]: components["schemas"]["PipelineResultResponse"];
+            };
+            /** Created At */
+            created_at?: string | null;
+            /** Completed At */
+            completed_at?: string | null;
+            /** Result Path */
+            result_path?: string | null;
+            /** Error Message */
+            error_message?: string | null;
+        };
+        /** OpenFolderRequest */
+        OpenFolderRequest: {
+            /**
+             * Path
+             * @description A folder inside the results folder
+             */
+            path: string;
         };
         /**
          * PipelineInfo
-         * @description Information about an available pipeline.
+         * @description Information about an available pipeline (extended taxonomy).
          */
         PipelineInfo: {
             /** Name */
             name: string;
+            /** Display Name */
+            display_name?: string | null;
             /** Description */
             description: string;
-            /** Enabled */
+            /**
+             * Enabled
+             * @default true
+             */
             enabled: boolean;
+            /** Pipeline Family */
+            pipeline_family?: string | null;
+            /** Variant */
+            variant?: string | null;
+            /**
+             * Tasks
+             * @default []
+             */
+            tasks: string[];
+            /**
+             * Modalities
+             * @default []
+             */
+            modalities: string[];
+            /**
+             * Capabilities
+             * @default []
+             */
+            capabilities: string[];
+            /**
+             * Backends
+             * @default []
+             */
+            backends: string[];
+            /** Stability */
+            stability?: string | null;
+            /** Outputs */
+            outputs: {
+                [key: string]: unknown;
+            }[];
             /** Config Schema */
             config_schema: {
                 [key: string]: unknown;
             };
+            /**
+             * Examples
+             * @default []
+             */
+            examples: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Available
+             * @default true
+             */
+            available: boolean;
+            /** Install Hint */
+            install_hint?: string | null;
+            readiness?: components["schemas"]["PipelineReadiness"] | null;
         };
         /**
          * PipelineListResponse
@@ -356,6 +2860,439 @@ export interface components {
             pipelines: components["schemas"]["PipelineInfo"][];
             /** Total */
             total: number;
+            /**
+             * Restart Required
+             * @default false
+             */
+            restart_required: boolean;
+        };
+        /**
+         * PipelineParameterOption
+         * @description One valid choice for an enum/multiselect parameter.
+         */
+        PipelineParameterOption: {
+            /** Value */
+            value: string;
+            /** Label */
+            label?: string | null;
+        };
+        /**
+         * PipelineParameterSchema
+         * @description One config field, shaped for the viewer's dynamic job-creation form
+         *     (video-annotation-viewer's `PipelineParameterSchema`, `src/types/pipelines.ts`).
+         */
+        PipelineParameterSchema: {
+            /** Name */
+            name: string;
+            /** Type */
+            type: string;
+            /** Label */
+            label?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Default */
+            default?: unknown;
+            /** Enum */
+            enum?: components["schemas"]["PipelineParameterOption"][] | null;
+        };
+        /**
+         * PipelineReadiness
+         * @description Where a pipeline stands and the one next step (spec 011 contract §1).
+         *
+         *     `state`: installing | restoring | not_installed | restart_required |
+         *     needs_setup | ready.
+         *     `next_action`: wait | install | restart | setup | none. Clients must
+         *     tolerate values they don't know.
+         */
+        PipelineReadiness: {
+            /** State */
+            state: string;
+            /** Next Action */
+            next_action: string;
+            /** Extras Group */
+            extras_group?: string | null;
+            /** Install Job Id */
+            install_job_id?: string | null;
+            /**
+             * Blockers
+             * @default []
+             */
+            blockers: components["schemas"]["ReadinessItem"][];
+            /**
+             * Notes
+             * @default []
+             */
+            notes: components["schemas"]["ReadinessItem"][];
+        };
+        /**
+         * PipelineResultResponse
+         * @description Response model for individual pipeline results.
+         */
+        PipelineResultResponse: {
+            /** Pipeline Name */
+            pipeline_name: string;
+            /** Status */
+            status: string;
+            /** Start Time */
+            start_time?: string | null;
+            /** End Time */
+            end_time?: string | null;
+            /** Processing Time */
+            processing_time?: number | null;
+            /** Annotation Count */
+            annotation_count?: number | null;
+            /** Output File */
+            output_file?: string | null;
+            /** Download Url */
+            download_url?: string | null;
+            /** Files */
+            files?: components["schemas"]["ResultFileResponse"][];
+            /** Error Message */
+            error_message?: string | null;
+            /**
+             * Provenance
+             * @description What made this pipeline's outputs (spec 017); null for older jobs
+             */
+            provenance?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** PipelineSchemaDescriptor */
+        PipelineSchemaDescriptor: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** Group */
+            group?: string | null;
+        };
+        /**
+         * PipelineSchemaResponse
+         * @description Response for `GET /{pipeline_name}/schema`.
+         */
+        PipelineSchemaResponse: {
+            pipeline: components["schemas"]["PipelineSchemaDescriptor"];
+            /** Parameters */
+            parameters: components["schemas"]["PipelineParameterSchema"][];
+        };
+        /** Place */
+        Place: {
+            /**
+             * Label
+             * @description What to call it: 'Home', 'Videos', 'Desktop', ...
+             */
+            label: string;
+            /** Path */
+            path: string;
+            /** Display Path */
+            display_path: string;
+            /** Has Videos */
+            has_videos: boolean;
+        };
+        /**
+         * PresetCreateRequest
+         * @description Body for `POST /presets`. Also accepts a previously-exported preset's
+         *     `GET` response verbatim (FR-006) -- `id`/`owner_user_id`/timestamp/
+         *     `unavailable_pipelines` fields present in an export are simply ignored
+         *     here; a fresh id and the current caller as owner are always assigned.
+         */
+        PresetCreateRequest: {
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /**
+             * Selected Pipelines
+             * @default []
+             */
+            selected_pipelines: string[];
+            /**
+             * Config
+             * @default {}
+             */
+            config: {
+                [key: string]: unknown;
+            };
+            /**
+             * Tags
+             * @default {}
+             */
+            tags: {
+                [key: string]: unknown;
+            };
+        };
+        /** PresetListResponse */
+        PresetListResponse: {
+            /** Presets */
+            presets: components["schemas"]["PresetResponse"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * PresetResponse
+         * @description A saved preset. `selected_pipelines`/`config` mirror a job
+         *     submission's own fields exactly, so applying a preset is a direct copy
+         *     into a new job submission with no translation needed.
+         */
+        PresetResponse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** Owner User Id */
+            owner_user_id: string;
+            /** Selected Pipelines */
+            selected_pipelines: string[];
+            /** Config */
+            config: {
+                [key: string]: unknown;
+            };
+            /** Tags */
+            tags: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /**
+             * Unavailable Pipelines
+             * @default []
+             */
+            unavailable_pipelines: string[];
+        };
+        /**
+         * PresetUpdateRequest
+         * @description Body for `PUT /presets/{id}`. Only provided fields are changed.
+         */
+        PresetUpdateRequest: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Selected Pipelines */
+            selected_pipelines?: string[] | null;
+            /** Config */
+            config?: {
+                [key: string]: unknown;
+            } | null;
+            /** Tags */
+            tags?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * PreviewFrame
+         * @description A frame the model was shown, small, so a client can show it too.
+         */
+        PreviewFrame: {
+            /** Frame Number */
+            frame_number?: number | null;
+            /** Timestamp Sec */
+            timestamp_sec?: number | null;
+            /** Jpeg Base64 */
+            jpeg_base64: string;
+        };
+        /** PromptListResponse */
+        PromptListResponse: {
+            /** Prompts */
+            prompts: components["schemas"]["PromptResponse"][];
+            /** Total */
+            total: number;
+        };
+        /** PromptResponse */
+        PromptResponse: {
+            /** Sha256 */
+            sha256: string;
+            /** Text */
+            text: string;
+            /** Name */
+            name?: string | null;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: string[];
+            /**
+             * Starred
+             * @default false
+             */
+            starred: boolean;
+            /**
+             * Hidden
+             * @default false
+             */
+            hidden: boolean;
+            /**
+             * First Used At
+             * Format: date-time
+             */
+            first_used_at: string;
+            /**
+             * Last Used At
+             * Format: date-time
+             */
+            last_used_at: string;
+            /** First User Id */
+            first_user_id?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Updated By */
+            updated_by?: string | null;
+            /**
+             * Models
+             * @default []
+             */
+            models: string[];
+            /**
+             * Job Ids
+             * @default []
+             */
+            job_ids: string[];
+            /**
+             * Use Count
+             * @default 0
+             */
+            use_count: number;
+        };
+        /**
+         * PromptUpdateRequest
+         * @description Only provided fields change. The text never does: a different text is a
+         *     different prompt.
+         */
+        PromptUpdateRequest: {
+            /** Name */
+            name?: string | null;
+            /** Tags */
+            tags?: string[] | null;
+            /** Starred */
+            starred?: boolean | null;
+            /** Hidden */
+            hidden?: boolean | null;
+        };
+        /**
+         * ReadinessItem
+         * @description A blocker or note on a pipeline's readiness (spec 011 contract §1).
+         */
+        ReadinessItem: {
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Message */
+            message: string;
+            /** Help Url */
+            help_url?: string | null;
+            /** Approx Mb */
+            approx_mb?: number | null;
+        };
+        /** RelocatedVideo */
+        RelocatedVideo: {
+            /** Job Id */
+            job_id: string;
+            /** From */
+            from: string;
+            /** To */
+            to: string;
+        };
+        /**
+         * RerunRequest
+         * @description Body for running a job (or batch) again. Omitted fields keep the
+         *     original's; given ones replace it (spec 019's "Edit and run again").
+         */
+        RerunRequest: {
+            /** Selected Pipelines */
+            selected_pipelines?: string[] | null;
+            /** Config */
+            config?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * ResultFileResponse
+         * @description One file a pipeline wrote to the job folder.
+         */
+        ResultFileResponse: {
+            /** Name */
+            name: string;
+            /** Download Url */
+            download_url: string;
+        };
+        /** ScannedVideo */
+        ScannedVideo: {
+            /** Relative Path */
+            relative_path: string;
+            /** Name */
+            name: string;
+            /** Size Bytes */
+            size_bytes: number;
+        };
+        /**
+         * Share
+         * @description A folder shared with VideoAnnotator when it started (spec 024).
+         */
+        Share: {
+            /**
+             * Path
+             * @description Where the server sees it; the host path when not present
+             */
+            path: string;
+            /**
+             * Display Path
+             * @description As the researcher's computer shows it
+             */
+            display_path: string;
+            /**
+             * Present
+             * @description Found when VideoAnnotator last started
+             */
+            present: boolean;
+            /**
+             * Stop Requested
+             * @description Stop sharing was asked for: it stops at the next start
+             * @default false
+             */
+            stop_requested: boolean;
+        };
+        /** StopSharingRequest */
+        StopSharingRequest: {
+            /**
+             * Path
+             * @description The shared folder, as shown or as the server sees it
+             */
+            path: string;
+        };
+        /** StoredVideo */
+        StoredVideo: {
+            /** Filename */
+            filename: string;
+            /** Size Bytes */
+            size_bytes: number | null;
+            /**
+             * Job Id
+             * @description A job whose stored copy of this video can be reused, or null when no job still has it
+             */
+            job_id: string | null;
+        };
+        /** StoredVideosResponse */
+        StoredVideosResponse: {
+            /** Dataset Id */
+            dataset_id: string;
+            /** Videos */
+            videos: components["schemas"]["StoredVideo"][];
+            /** Stored */
+            stored: number;
+            /** Missing */
+            missing: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -365,6 +3302,117 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
+        };
+        /**
+         * VideoManifestEntry
+         * @description One remembered video's identity within a saved dataset (FR-002).
+         */
+        VideoManifestEntry: {
+            /** Filename */
+            filename: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Last Seen At */
+            last_seen_at?: string | null;
+            /** Relative Path */
+            relative_path?: string | null;
+        };
+        /** VlmModelsResponse */
+        VlmModelsResponse: {
+            /** Base Url */
+            base_url: string;
+            /** Models */
+            models: string[];
+        };
+        /** VlmPreviewResponse */
+        VlmPreviewResponse: {
+            /** Label */
+            label: string;
+            /** Reasoning */
+            reasoning: string;
+            /** Raw Response */
+            raw_response: string;
+            /** Total Time */
+            total_time: number;
+            /** Load Time */
+            load_time: number;
+            /** Prompt Tokens */
+            prompt_tokens: number;
+            /** Resp Tokens */
+            resp_tokens: number;
+            /** Tokens Per Sec */
+            tokens_per_sec: number;
+            /**
+             * Frames
+             * @default []
+             */
+            frames: components["schemas"]["PreviewFrame"][];
+        };
+        /**
+         * ConfigValidationRequest
+         * @description Request for full configuration validation.
+         */
+        videoannotator__api__v1__config__ConfigValidationRequest: {
+            /** Config */
+            config: {
+                [key: string]: unknown;
+            };
+            /** Selected Pipelines */
+            selected_pipelines: string[];
+        };
+        /**
+         * ConfigValidationResponse
+         * @description Response for config validation.
+         */
+        videoannotator__api__v1__config__ConfigValidationResponse: {
+            /** Valid */
+            valid: boolean;
+            /** Errors */
+            errors: {
+                [key: string]: unknown;
+            }[];
+            /** Warnings */
+            warnings: {
+                [key: string]: unknown;
+            }[];
+            /** Message */
+            message: string;
+            /** Pipelines Validated */
+            pipelines_validated: string[];
+        };
+        /**
+         * ConfigValidationRequest
+         * @description Request for config validation.
+         */
+        videoannotator__api__v1__pipelines__ConfigValidationRequest: {
+            /** Config */
+            config: {
+                [key: string]: unknown;
+            };
+            /** Selected Pipelines */
+            selected_pipelines?: string[] | null;
+        };
+        /**
+         * ConfigValidationResponse
+         * @description Response for config validation.
+         */
+        videoannotator__api__v1__pipelines__ConfigValidationResponse: {
+            /** Valid */
+            valid: boolean;
+            /** Errors */
+            errors: {
+                [key: string]: unknown;
+            }[];
+            /** Warnings */
+            warnings: {
+                [key: string]: unknown;
+            }[];
+            /** Message */
+            message: string;
         };
     };
     responses: never;
@@ -375,12 +3423,95 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    health_check_api_v1_health_get: {
+        parameters: {
+            query?: {
+                /** @description Include detailed diagnostics (slower response) */
+                detailed?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service is healthy */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service unhealthy (detailed mode only) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "status": "unhealthy",
+                     *       "version": "1.3.0",
+                     *       "timestamp": "2025-10-22T12:00:00.000Z",
+                     *       "details": {
+                     *         "database": {
+                     *           "status": "error",
+                     *           "error": "Connection timeout after 5s"
+                     *         },
+                     *         "storage": {
+                     *           "status": "ok"
+                     *         },
+                     *         "gpu": {
+                     *           "available": true
+                     *         },
+                     *         "registry": {
+                     *           "status": "ok"
+                     *         }
+                     *       }
+                     *     } */
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_current_user_identity_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentUserResponse"];
+                };
+            };
+        };
+    };
     list_jobs_api_v1_jobs__get: {
         parameters: {
             query?: {
                 page?: number;
                 per_page?: number;
                 status_filter?: string | null;
+                batch_id?: string | null;
+                unbatched_only?: boolean;
             };
             header?: never;
             path?: never;
@@ -501,9 +3632,655 @@ export interface operations {
             };
         };
     };
-    list_pipelines_api_v1_pipelines__get: {
+    cancel_job_endpoint_api_v1_jobs__job_id__cancel_post: {
         parameters: {
             query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_job_endpoint_api_v1_jobs__job_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rerun_job_endpoint_api_v1_jobs__job_id__rerun_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RerunRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_results_api_v1_jobs__job_id__results_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResultsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_video_api_v1_jobs__job_id__video_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_result_file_api_v1_jobs__job_id__results_files__pipeline_name__get: {
+        parameters: {
+            query?: {
+                name?: string | null;
+            };
+            header?: never;
+            path: {
+                job_id: string;
+                pipeline_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_batches_api_v1_batches__get: {
+        parameters: {
+            query?: {
+                /** @description 1-based page number */
+                page?: number;
+                /** @description Batches per page */
+                per_page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_batch_summary_api_v1_batches__batch_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The client-supplied batch identifier */
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_batch_api_v1_batches__batch_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The run's batch identifier */
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_batch_api_v1_batches__batch_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The client-supplied batch identifier */
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchCancelResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_batch_api_v1_batches__batch_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The client-supplied batch identifier */
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchRetryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rerun_batch_api_v1_batches__batch_id__rerun_post: {
+        parameters: {
+            query?: {
+                /** @description Dry run: report what would be skipped or relocated, create nothing */
+                check?: boolean;
+                /** @description Where moved videos are now: each missing video is looked for here by name and size (same machine and administrator only) */
+                relocate_folder?: string | null;
+                /** @description Also look in relocate_folder's subfolders */
+                recursive?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description The batch to run again */
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RerunRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchRerunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    batch_results_zip_api_v1_batches__batch_id__results_zip_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The run's batch identifier */
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    access_api_v1_ingest_access_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestAccessResponse"];
+                };
+            };
+        };
+    };
+    stop_sharing_api_v1_ingest_shares_stop_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StopSharingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Share"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_api_v1_ingest_scan_get: {
+        parameters: {
+            query: {
+                /** @description Folder on the server */
+                path: string;
+                /** @description Include subfolders */
+                recursive?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestScanResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    browse_api_v1_ingest_browse_get: {
+        parameters: {
+            query?: {
+                /** @description Folder to list; omit to list roots */
+                path?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestBrowseResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingest_folder_api_v1_ingest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    open_results_folder_api_v1_results_open_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenFolderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_job_artifacts_api_v1_jobs__job_id__artifacts_get: {
+        parameters: {
+            query?: {
+                /** @description Also include the job's video. Off by default since spec 022: the zip was otherwise one more copy of sensitive video. */
+                include_video?: boolean;
+            };
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pipelines_api_v1_pipelines__get: {
+        parameters: {
+            query?: {
+                /** @description Include pipelines whose required extras aren't installed. Each such entry has available=false and an install_hint. */
+                include_unavailable?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -519,6 +4296,35 @@ export interface operations {
                     "application/json": components["schemas"]["PipelineListResponse"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_extras_groups_api_v1_pipelines_extras_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtrasGroupListResponse"];
+                };
+            };
         };
     };
     get_pipeline_info_api_v1_pipelines__pipeline_name__get: {
@@ -526,6 +4332,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The unique identifier/name of the pipeline (e.g., 'openface3_identity', 'whisper_transcription') */
                 pipeline_name: string;
             };
             cookie?: never;
@@ -552,6 +4359,102 @@ export interface operations {
             };
         };
     };
+    install_extra_api_v1_pipelines_extras__extra__install_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The extras-group name to install, e.g. 'face', 'audio', 'all' */
+                extra: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtrasInstallTriggerResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_extras_install_job_api_v1_pipelines_extras_install_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The install job identifier returned by the trigger endpoint */
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtrasInstallJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pipeline_schema_api_v1_pipelines__pipeline_name__schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The pipeline's unique name */
+                pipeline_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineSchemaResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     validate_pipeline_config_api_v1_pipelines__pipeline_name__validate_post: {
         parameters: {
             query?: never;
@@ -563,9 +4466,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
+                "application/json": components["schemas"]["videoannotator__api__v1__pipelines__ConfigValidationRequest"];
             };
         };
         responses: {
@@ -575,7 +4476,606 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["videoannotator__api__v1__pipelines__ConfigValidationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_datasets_api_v1_datasets__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetListResponse"];
+                };
+            };
+        };
+    };
+    create_dataset_api_v1_datasets__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasetCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dataset_api_v1_datasets__dataset_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The saved dataset's id */
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_dataset_api_v1_datasets__dataset_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The saved dataset's id */
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasetUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_dataset_api_v1_datasets__dataset_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The saved dataset's id */
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stored_videos_api_v1_datasets__dataset_id__stored_videos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The saved dataset's id */
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoredVideosResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_dataset_api_v1_datasets__dataset_id__run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The saved dataset's id */
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasetRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetRunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_presets_api_v1_presets__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresetListResponse"];
+                };
+            };
+        };
+    };
+    create_preset_api_v1_presets__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresetCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_preset_api_v1_presets__preset_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The saved preset's id */
+                preset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_preset_api_v1_presets__preset_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The saved preset's id */
+                preset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresetUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_preset_api_v1_presets__preset_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The saved preset's id */
+                preset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_prompts_api_v1_prompts__get: {
+        parameters: {
+            query?: {
+                /** @description Words in the text or name */
+                q?: string | null;
+                /** @description Only prompts run with this model */
+                model?: string | null;
+                tag?: string | null;
+                include_hidden?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromptListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_prompt_api_v1_prompts__sha256__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description SHA-256 of the text, or a unique prefix */
+                sha256: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromptResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_prompt_api_v1_prompts__sha256__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sha256: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromptUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromptResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_prompt_api_v1_prompts__sha256__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sha256: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_vlm_models_api_v1_vlm_models_get: {
+        parameters: {
+            query?: {
+                base_url?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VlmModelsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_vlm_prompt_api_v1_vlm_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_preview_vlm_prompt_api_v1_vlm_preview_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VlmPreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_config_api_v1_config_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["videoannotator__api__v1__config__ConfigValidationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["videoannotator__api__v1__config__ConfigValidationResponse"];
                 };
             };
             /** @description Validation Error */
@@ -605,6 +5105,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    restart_server_api_v1_system_restart_post: {
+        parameters: {
+            query?: {
+                /** @description Restart even if annotation jobs are running */
+                force?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -650,6 +5184,211 @@ export interface operations {
         };
     };
     get_database_info_endpoint_api_v1_system_database_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_server_debug_info_api_v1_debug_server_info_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_token_debug_info_api_v1_debug_token_info_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    get_pipeline_debug_info_api_v1_debug_pipelines_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_job_debug_info_api_v1_debug_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_request_log_api_v1_debug_request_log_get: {
+        parameters: {
+            query?: {
+                /** @description Maximum number of requests to return */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mock_sse_events_api_v1_debug_mock_events_get: {
+        parameters: {
+            query?: {
+                /** @description API token for authentication */
+                token?: string | null;
+                /** @description Job ID to monitor */
+                job_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_background_jobs_status_api_v1_debug_background_jobs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    events_stream_api_v1_events_stream_get: {
         parameters: {
             query?: never;
             header?: never;

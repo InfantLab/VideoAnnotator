@@ -199,10 +199,14 @@ class BackgroundJobManager:
 
             # Select jobs to process
             jobs_to_process = []
-            for job_id in pending_job_ids[:available_slots]:
+            for job_id in pending_job_ids:
+                if len(jobs_to_process) >= available_slots:
+                    break
                 if job_id not in self.processing_jobs:
                     try:
                         job = self.storage.load_job_metadata(job_id)
+                        if self._waits_for_restore(job):
+                            continue
                         jobs_to_process.append(job)
                         self.processing_jobs.add(job_id)
                     except Exception as e:
@@ -220,6 +224,33 @@ class BackgroundJobManager:
 
         except Exception as e:
             logger.error(f"Error in processing cycle: {e}", exc_info=True)
+
+    def _waits_for_restore(self, job) -> bool:
+        """Whether `job` must not start yet: a pipeline it needs is being
+        restored in a new container (spec 024, R7), so it stays queued. If
+        that restore failed, the job fails now with the reason, rather than
+        waiting for something that won't come."""
+        from ..registry.pipeline_registry import get_registry
+        from . import extras_install
+
+        registry = get_registry()
+        for name in job.selected_pipelines or []:
+            meta = registry.get(name)
+            for extra in meta.requires_extras if meta else []:
+                if extras_install.restoring(extra):
+                    return True
+                failure = extras_install.restore_failure(extra)
+                if failure:
+                    job.status = JobStatus.FAILED
+                    job.error_message = (
+                        f"The {extra} pipelines couldn't be restored after "
+                        f"VideoAnnotator was updated or restarted ({failure}). "
+                        "Install them again from New job, then run this video again."
+                    )
+                    job.completed_at = datetime.now()
+                    self.storage.save_job_metadata(job)
+                    return True
+        return False
 
     async def _process_job_async(self, job):
         """Process a single job asynchronously.

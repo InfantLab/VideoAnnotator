@@ -1,0 +1,1048 @@
+#!/bin/sh
+# shellcheck shell=sh
+#
+# videoannotator-start: start VideoAnnotator in Docker or Podman, sharing the
+# folders a researcher chooses, read-only, at their real paths (spec 024).
+#
+# Behaviour is defined by specs/024-container-feels-local/contracts/launcher.md
+# and tests/launcher/cases.json; launcher/README.md explains the layout and how
+# to test it. Every message a researcher sees is in contracts/launcher.md.
+
+set -eu
+
+# Replaced with the release version by CI. Still the placeholder in a source
+# checkout, which then runs :latest and says it is a development launcher.
+VA_VERSION="@VERSION@"
+VA_IMAGE_REPO="ghcr.io/infantlab/videoannotator"
+VA_NAME="videoannotator"
+VA_INTERNAL_PORT=18011
+VA_DEFAULT_PORT=18011
+VA_GITHUB="InfantLab/VideoAnnotator"
+VA_GUIDE="https://github.com/$VA_GITHUB/blob/master/docs/installation/troubleshooting.md"
+VA_VOLUMES="models database storage cache"
+VA_NL='
+'
+
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+
+va_say() { printf '%s\n' "$*"; }
+va_err() { printf '%s\n' "$*" >&2; }
+
+# va_ask QUESTION DEFAULT(y|n): 0 for yes. --yes answers yes; no terminal
+# answers the default.
+va_ask() {
+    if [ "${VA_YES:-0}" = 1 ]; then return 0; fi
+    printf '%s ' "$1"
+    if ! read -r va_answer; then va_answer=""; fi
+    case "$va_answer" in
+        [Yy]*) return 0 ;;
+        [Nn]*) return 1 ;;
+        *) [ "$2" = y ] ;;
+    esac
+}
+
+# ---------------------------------------------------------------------------
+# Platform and settings (data-model.md, research R13)
+# ---------------------------------------------------------------------------
+
+va_os() {
+    if [ -n "${VA_OS:-}" ]; then printf '%s\n' "$VA_OS"; return; fi
+    case "$(uname -s)" in
+        Darwin) echo macos ;;
+        *) echo linux ;;
+    esac
+}
+
+va_settings_path() {
+    case "$(va_os)" in
+        macos) printf '%s\n' "$HOME/Library/Application Support/VideoAnnotator/start.conf" ;;
+        *) printf '%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}/videoannotator/start.conf" ;;
+    esac
+}
+
+va_requests_dir() { printf '%s/requests\n' "$(dirname "$(va_settings_path)")"; }
+
+# Reads start.conf into VA_S_* variables and VA_SHARES (newline-separated).
+va_settings_read() {
+    VA_S_ENGINE="" VA_S_IMAGE="" VA_S_RESULTS="" VA_S_KEY="" VA_S_PORT="" VA_SHARES=""
+    va_file=$(va_settings_path)
+    [ -f "$va_file" ] || return 0
+    while IFS= read -r va_line || [ -n "$va_line" ]; do
+        va_key=${va_line%%=*}
+        va_value=${va_line#*=}
+        [ "$va_key" = "$va_line" ] && continue
+        case "$va_key" in
+            engine) VA_S_ENGINE=$va_value ;;
+            image) VA_S_IMAGE=$va_value ;;
+            results) VA_S_RESULTS=$va_value ;;
+            key) VA_S_KEY=$va_value ;;
+            port) VA_S_PORT=$va_value ;;
+            share) VA_SHARES=$(va_list_add "$VA_SHARES" "$va_value") ;;
+        esac
+    done < "$va_file"
+}
+
+# Written whole to a temporary file, then moved: never half a file.
+va_settings_write() {
+    va_file=$(va_settings_path)
+    va_dir=$(dirname "$va_file")
+    (
+        umask 077
+        mkdir -p "$va_dir" "$va_dir/requests"
+        {
+            [ -n "$VA_S_ENGINE" ] && printf 'engine=%s\n' "$VA_S_ENGINE"
+            [ -n "$VA_S_IMAGE" ] && printf 'image=%s\n' "$VA_S_IMAGE"
+            [ -n "$VA_S_RESULTS" ] && printf 'results=%s\n' "$VA_S_RESULTS"
+            [ -n "$VA_S_PORT" ] && printf 'port=%s\n' "$VA_S_PORT"
+            [ -n "$VA_S_KEY" ] && printf 'key=%s\n' "$VA_S_KEY"
+            va_each "$VA_SHARES" | while IFS= read -r va_share; do
+                printf 'share=%s\n' "$va_share"
+            done
+        } > "$va_file.tmp"
+        chmod 600 "$va_file.tmp"
+        mv -f "$va_file.tmp" "$va_file"
+    )
+}
+
+# ---------------------------------------------------------------------------
+# Lists (newline-separated strings; folder names never hold newlines here)
+# ---------------------------------------------------------------------------
+
+va_each() { [ -n "$1" ] && printf '%s\n' "$1"; return 0; }
+
+va_list_add() {
+    if [ -z "$1" ]; then printf '%s' "$2"; else printf '%s\n%s' "$1" "$2"; fi
+}
+
+va_list_has() {
+    case "$VA_NL$1$VA_NL" in *"$VA_NL$2$VA_NL"*) return 0 ;; esac
+    return 1
+}
+
+# va_list_remove LIST ITEM [inside]: LIST without ITEM (with "inside", also
+# without anything inside the folder ITEM).
+va_list_remove() {
+    va_out=""
+    while IFS= read -r va_item; do
+        [ -n "$va_item" ] || continue
+        if [ "$va_item" = "$2" ]; then continue; fi
+        if [ "${3:-}" = inside ] && va_inside "$va_item" "$2"; then continue; fi
+        va_out=$(va_list_add "$va_out" "$va_item")
+    done <<EOF
+$1
+EOF
+    printf '%s' "$va_out"
+}
+
+va_list_count() {
+    if [ -z "$1" ]; then echo 0; else va_each "$1" | wc -l | tr -d ' '; fi
+}
+
+# ---------------------------------------------------------------------------
+# Folders (research R3, R4)
+# ---------------------------------------------------------------------------
+
+# Absolute, `~` expanded, no trailing separator. Symlinks are kept: the
+# researcher knows the path they chose.
+va_normalise() {
+    va_path=$1
+    case "$va_path" in
+        \~) va_path=$HOME ;;
+        \~/*) va_path="$HOME/${va_path#\~/}" ;;
+        /*) ;;
+        *) va_path="$(pwd)/$va_path" ;;
+    esac
+    while :; do
+        case "$va_path" in
+            */) [ "$va_path" = / ] && break; va_path=${va_path%/} ;;
+            *) break ;;
+        esac
+    done
+    va_path=$(printf '%s' "$va_path" | sed -e 's#/\./#/#g' -e 's#/\.$##' -e 's#//*#/#g')
+    printf '%s\n' "${va_path:-/}"
+}
+
+# Whether $1 is $2 or inside it.
+va_inside() {
+    [ "$1" = "$2" ] && return 0
+    [ "$2" = / ] && return 0
+    case "$1" in "$2"/*) return 0 ;; esac
+    return 1
+}
+
+# The image's own top-level folders: a share there would hide them.
+VA_IMAGE_DIRS="app bin boot dev etc lib lib32 lib64 libx32 opt proc root run sbin srv sys tmp usr var host"
+
+# va_container_path HOSTPATH [N]: where a host folder is mounted. Its real
+# path where that is safe; /host/<path> when it would hide an image folder;
+# /host/<N> when it holds a separator the server's settings use (`:` `;` `=`
+# `,`). N is the share's number, or "results".
+va_container_path() {
+    case "$1" in
+        *[:\;=,]*) printf '/host/%s\n' "${2:-1}"; return ;;
+    esac
+    va_first=${1#/}
+    va_first=${va_first%%/*}
+    for va_dir in $VA_IMAGE_DIRS; do
+        if [ "$va_first" = "$va_dir" ]; then printf '/host%s\n' "$1"; return; fi
+    done
+    printf '%s\n' "$1"
+}
+
+# va_broad_kind PATH: why sharing PATH would share too much, or nothing.
+va_broad_kind() {
+    va_home=$(va_normalise "$HOME")
+    case "$1" in
+        "$va_home") echo home; return ;;
+        /) echo everything; return ;;
+        /Volumes | /media | /mnt | /run/media) echo drives; return ;;
+        /media/* | /run/media/*)
+            va_rest=${1#/run}; va_rest=${va_rest#/media/}
+            case "$va_rest" in */*) ;; *) echo drives; return ;; esac ;;
+        /Users | /home) echo users; return ;;
+        /etc | /usr | /var | /bin | /sbin | /lib | /System | /Library | /private | /opt | /srv | /boot)
+            echo system; return ;;
+    esac
+}
+
+va_broad_message() {
+    case "$1" in
+        home) va_say "This shares everything in your home folder, including documents unrelated to your research." ;;
+        everything) va_say "This shares everything on this computer, including other people's files and system files." ;;
+        drives) va_say "This shares every drive connected to this computer, including ones unrelated to your research." ;;
+        users) va_say "This shares every user's home folder on this computer, not only yours." ;;
+        system) va_say "This shares system files, which hold no videos and may hold private settings." ;;
+    esac
+}
+
+# va_classify PATH: what sharing PATH would mean, given VA_SHARES and
+# VA_S_RESULTS. Prints the outcome, then flags:
+#   ok | broad <kind> | refused | duplicate      (outcome)
+#   replaces | nested_results                    (flags)
+va_classify() {
+    va_path=$1
+    if [ -n "${VA_S_RESULTS:-}" ] && va_inside "$va_path" "$VA_S_RESULTS"; then
+        echo refused; return
+    fi
+    va_replaces=""
+    while IFS= read -r va_s; do
+        [ -n "$va_s" ] || continue
+        if va_inside "$va_path" "$va_s"; then echo duplicate; return; fi
+        if va_inside "$va_s" "$va_path"; then va_replaces=" replaces"; fi
+    done <<EOF
+${VA_SHARES:-}
+EOF
+    va_kind=$(va_broad_kind "$va_path")
+    va_out=${va_kind:+broad $va_kind}
+    va_out="${va_out:-ok}$va_replaces"
+    if [ -n "${VA_S_RESULTS:-}" ] && va_inside "$VA_S_RESULTS" "$va_path"; then
+        va_out="$va_out nested_results"
+    fi
+    echo "$va_out"
+}
+
+# va_share_add PATH: add PATH to VA_SHARES after asking (unless --yes), as
+# va_classify decides. 0 added, 1 not added (already said why), 2 cancelled.
+va_share_add() {
+    va_path=$(va_normalise "$1")
+    if [ ! -d "$va_path" ]; then
+        va_say "Couldn't find the folder $va_path."
+        return 1
+    fi
+    va_class=$(va_classify "$va_path")
+    case "$va_class" in
+        refused)
+            va_say "That folder is inside your results folder, which VideoAnnotator can already read."
+            return 1 ;;
+        duplicate)
+            va_say "$va_path is already shared."
+            return 1 ;;
+        broad*)
+            va_broad_message "$(echo "$va_class" | cut -d' ' -f2)"
+            va_ask "Share it anyway? [y/N]" n || return 2 ;;
+    esac
+    case "$va_class" in
+        *replaces*) VA_SHARES=$(va_list_remove "$VA_SHARES" "$va_path" inside) ;;
+    esac
+    VA_SHARES=$(va_list_add "$VA_SHARES" "$va_path")
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# The engine (research R2)
+# ---------------------------------------------------------------------------
+
+va_engine() { "$VA_ENGINE" "$@"; }
+
+va_engine_label() {
+    case "$1" in
+        podman) echo Podman ;;
+        *) echo Docker ;;
+    esac
+}
+
+va_installed() { command -v "$1" >/dev/null 2>&1; }
+
+# Overridden in tests.
+va_engine_responds() { "$1" info >/dev/null 2>&1; }
+# shellcheck disable=SC2069  # stderr only: stdout is discarded on purpose
+va_engine_info_error() { "$1" info 2>&1 >/dev/null || true; }
+
+# va_engine_detect: sets VA_ENGINE, or explains why there is none and fails.
+# The one asked for; else whichever is running; both: the one used last, else
+# Docker; neither: Podman's machine is started where it has one.
+va_engine_detect() {
+    VA_BOTH_RUNNING=0
+    if [ -n "${VA_OPT_ENGINE:-}" ]; then
+        VA_ENGINE=$VA_OPT_ENGINE
+        if va_engine_responds "$VA_ENGINE"; then return 0; fi
+        if [ "$VA_ENGINE" = podman ] && va_installed podman && va_podman_machine_start; then
+            return 0
+        fi
+        if va_installed "$VA_ENGINE"; then
+            va_engine_unavailable "$VA_ENGINE"
+        else
+            va_say "VideoAnnotator needs Docker Desktop or Podman Desktop. Install one (see $VA_GUIDE#install-docker-or-podman), then run this again."
+        fi
+        return 1
+    fi
+    va_docker=0 va_podman=0
+    if va_installed docker && va_engine_responds docker; then va_docker=1; fi
+    if va_installed podman && va_engine_responds podman; then va_podman=1; fi
+    if [ $va_docker = 1 ] && [ $va_podman = 1 ]; then
+        VA_BOTH_RUNNING=1
+        VA_ENGINE=${VA_S_ENGINE:-docker}
+        case "$VA_ENGINE" in docker | podman) ;; *) VA_ENGINE=docker ;; esac
+        return 0
+    fi
+    if [ $va_docker = 1 ]; then VA_ENGINE=docker; return 0; fi
+    if [ $va_podman = 1 ]; then VA_ENGINE=podman; return 0; fi
+    if va_installed podman && va_podman_machine_start; then
+        VA_ENGINE=podman; return 0
+    fi
+    if va_installed docker; then va_engine_unavailable docker; return 1; fi
+    if va_installed podman; then va_engine_unavailable podman; return 1; fi
+    va_say "VideoAnnotator needs Docker Desktop or Podman Desktop. Install one (see $VA_GUIDE#install-docker-or-podman), then run this again."
+    return 1
+}
+
+va_engine_unavailable() {
+    va_explain_error "$1" "$(va_engine_info_error "$1")" 1 || true
+}
+
+# macOS (and Windows) run containers in Podman's virtual machine: start it.
+va_podman_machine_start() {
+    [ "$(va_os)" = macos ] || return 1
+    va_machines=$(podman machine list --format '{{.Name}}' 2>/dev/null || true)
+    va_say "Starting Podman's virtual machine (first time takes a minute)..."
+    if [ -z "$va_machines" ]; then
+        podman machine init >/dev/null 2>&1 || return 1
+    fi
+    podman machine start >/dev/null 2>&1 || return 1
+    va_engine_responds podman
+}
+
+# va_explain_error ENGINE STDERR EXITCODE: the plain message for an engine
+# failure. Returns 0 when there is nothing wrong (already running).
+va_explain_error() {
+    va_e_engine=$1 va_e_text=$2 va_e_code=$3
+    va_e_label=$(va_engine_label "$va_e_engine")
+    va_e_os=$(va_os)
+    case "$va_e_text" in
+        *"already in use by"* | *"is already in use"*)
+            va_say "VideoAnnotator is already running."
+            return 0 ;;
+        *"permission denied while trying to connect"*)
+            va_say "You don't have permission to use Docker yet. Run: sudo usermod -aG docker \$USER, log out and back in, then run this again. (Or use Podman, which needs no permission.)"
+            return 1 ;;
+        *"Is the docker daemon running?"* | *"Cannot connect to the Docker daemon"* | *"error during connect"*)
+            if [ "$va_e_os" = linux ] && ! va_docker_desktop; then
+                va_say "Docker isn't running. Start it with: sudo systemctl start docker, then run this again."
+            else
+                va_say "Docker Desktop isn't running. Start it, wait until it says it's running, then run this again."
+            fi
+            return 1 ;;
+        *"address already in use"* | *"port is already allocated"* | *"bind: "*"in use"*)
+            va_e_port=${VA_PORT:-$VA_DEFAULT_PORT}
+            va_say "Something else is using port $va_e_port. Close it, or run: videoannotator-start --port $((va_e_port + 1))"
+            return 1 ;;
+        *"is not shared from the host"* | *"Mounts denied"*)
+            va_e_path=$(printf '%s' "$va_e_text" | sed -n 's/.*The path \([^ ]*\) is not shared.*/\1/p' | head -n 1)
+            va_say "Docker Desktop can't see ${va_e_path:-that folder} yet. Add it in Docker Desktop's Settings, Resources, File sharing (see $VA_GUIDE#docker-desktop-file-sharing), then run this again."
+            return 1 ;;
+        *"manifest unknown"* | *"dial tcp"* | *"TLS handshake"* | *"no such host"* | *"pull access denied"* | *"connection refused"* | *"i/o timeout"*)
+            va_say "Couldn't download VideoAnnotator. Check your internet connection and run this again."
+            return 1 ;;
+        *OOMKilled* | *"out of memory"*)
+            va_say "VideoAnnotator ran out of memory. Give $va_e_label more (see $VA_GUIDE#memory), then run this again."
+            return 1 ;;
+    esac
+    if [ "$va_e_code" = 137 ]; then
+        va_say "VideoAnnotator ran out of memory. Give $va_e_label more (see $VA_GUIDE#memory), then run this again."
+        return 1
+    fi
+    va_say "VideoAnnotator couldn't start. Run: videoannotator-start logs"
+    if [ -n "$va_e_text" ]; then
+        printf '%s\n' "$va_e_text" | head -n 3 | sed 's/^/    /'
+    fi
+    return 1
+}
+
+# Docker Desktop (rather than Docker Engine): its file sharing gives files to
+# the researcher, and it starts from an app rather than a service.
+va_docker_desktop() {
+    case "${VA_DOCKER_DESKTOP:-}" in yes) return 0 ;; no) return 1 ;; esac
+    docker context show 2>/dev/null | grep -q desktop
+}
+
+# ---------------------------------------------------------------------------
+# GPU (research R15)
+# ---------------------------------------------------------------------------
+
+# Overridden in tests.
+va_has_nvidia() { va_installed nvidia-smi && nvidia-smi -L >/dev/null 2>&1; }
+va_docker_runtimes() { docker info --format '{{json .Runtimes}}' 2>/dev/null || true; }
+va_cdi_devices() { nvidia-ctk cdi list 2>/dev/null || true; }
+
+# va_gpu_flags: sets VA_GPU_FLAGS (space-separated, no spaces inside a flag)
+# and prints a note when there is a GPU the engine can't use yet.
+va_gpu_flags() {
+    VA_GPU_FLAGS=""
+    va_has_nvidia || return 0
+    case "$VA_ENGINE" in
+        docker)
+            case "$(va_docker_runtimes)" in
+                *nvidia*) VA_GPU_FLAGS="--gpus all"; return 0 ;;
+            esac ;;
+        podman)
+            case "$(va_cdi_devices)" in
+                *nvidia.com/gpu=*) VA_GPU_FLAGS="--device nvidia.com/gpu=all"; return 0 ;;
+            esac ;;
+    esac
+    va_say "Running without the GPU: $(va_engine_label "$VA_ENGINE") can't use it yet. To enable it, see $VA_GUIDE#gpu."
+}
+
+# ---------------------------------------------------------------------------
+# The run (contracts/launcher.md, "The run it builds")
+# ---------------------------------------------------------------------------
+
+va_mount_arg() {
+    va_m_source=$1 va_m_target=$2 va_m_extra=${3:-}
+    case "$va_m_source" in
+        *,* | *\"*)
+            # Docker and Podman read --mount as CSV: quote a field holding `,`.
+            va_m_source=$(printf '%s' "$va_m_source" | sed 's/"/""/g')
+            printf '%s\n' "type=bind,\"source=$va_m_source\",target=$va_m_target$va_m_extra" ;;
+        *)
+            printf '%s\n' "type=bind,source=$va_m_source,target=$va_m_target$va_m_extra" ;;
+    esac
+}
+
+# va_build_run: the engine's `run` arguments, one per line. Uses VA_ENGINE,
+# VA_PRESENT (shares found), VA_MISSING (shares not found), VA_S_RESULTS,
+# VA_PORT, VA_IMAGE and VA_GPU_FLAGS.
+va_build_run() {
+    printf '%s\n' run -d --name "$VA_NAME" -p "127.0.0.1:$VA_PORT:$VA_INTERNAL_PORT"
+    for va_flag in ${VA_GPU_FLAGS:-}; do printf '%s\n' "$va_flag"; done
+    for va_volume in $VA_VOLUMES; do
+        printf '%s\n' -v "videoannotator-$va_volume:/app/$va_volume"
+    done
+    va_roots="" va_pairs="" va_n=0
+    while IFS= read -r va_share; do
+        [ -n "$va_share" ] || continue
+        va_n=$((va_n + 1))
+        va_target=$(va_container_path "$va_share" "$va_n")
+        printf '%s\n' --mount
+        va_mount_arg "$va_share" "$va_target" ",readonly"
+        va_roots="${va_roots:+$va_roots:}$va_target"
+        va_pairs="${va_pairs:+$va_pairs;}$va_target=$va_share"
+    done <<EOF
+${VA_PRESENT:-}
+EOF
+    # After the read-only shares, so a results folder inside one stays writable.
+    va_results_target=$(va_container_path "$VA_S_RESULTS" results)
+    printf '%s\n' --mount
+    va_mount_arg "$VA_S_RESULTS" "$va_results_target"
+    printf '%s\n' --mount
+    va_mount_arg "$(va_requests_dir)" /app/launcher/requests
+    va_pairs="${va_pairs:+$va_pairs;}$va_results_target=$VA_S_RESULTS"
+    va_missing=$(va_each "${VA_MISSING:-}" | tr '\n' ';' | sed 's/;$//')
+    printf '%s\n' \
+        -e "VIDEOANNOTATOR_INGEST_ROOTS=$va_roots" \
+        -e "VIDEOANNOTATOR_MISSING_SHARES=$va_missing" \
+        -e "VIDEOANNOTATOR_RESULTS_DIR=$va_results_target" \
+        -e "VIDEOANNOTATOR_HOST_PATHS=$va_pairs" \
+        -e "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1" \
+        -e "VIDEOANNOTATOR_LAUNCHER=1"
+    # Rootful Docker on Linux writes as root: the server gives results back (R6).
+    # Podman's root is the researcher; Docker Desktop's file sharing already is.
+    if [ "$VA_ENGINE" = docker ] && [ "$(va_os)" = linux ] && ! va_docker_desktop; then
+        printf '%s\n' -e "VIDEOANNOTATOR_RESULTS_OWNER=${VA_UID:-$(id -u)}:${VA_GID:-$(id -g)}"
+    fi
+    printf '%s\n' "$VA_IMAGE"
+}
+
+# Splits the shares into VA_PRESENT and VA_MISSING, saying which are missing.
+va_split_shares() {
+    VA_PRESENT="" VA_MISSING=""
+    while IFS= read -r va_share; do
+        [ -n "$va_share" ] || continue
+        if [ -d "$va_share" ]; then
+            VA_PRESENT=$(va_list_add "$VA_PRESENT" "$va_share")
+        else
+            VA_MISSING=$(va_list_add "$VA_MISSING" "$va_share")
+            va_say "Couldn't find $va_share (an unplugged drive?), so it isn't shared this time."
+        fi
+    done <<EOF
+$VA_SHARES
+EOF
+}
+
+va_run_engine_with_args() {
+    # Built before IFS changes: va_build_run splits its own lists on spaces.
+    va_args=$(va_build_run)
+    va_old_ifs=$IFS
+    IFS=$VA_NL
+    set -f
+    # shellcheck disable=SC2086  # one argument per line, by construction
+    set -- $va_args
+    set +f
+    IFS=$va_old_ifs
+    va_engine "$@"
+}
+
+# ---------------------------------------------------------------------------
+# Starting, stopping, readiness
+# ---------------------------------------------------------------------------
+
+va_running() {
+    [ "$(va_engine container inspect -f '{{.State.Running}}' "$VA_NAME" 2>/dev/null || true)" = true ]
+}
+
+va_exists() { va_engine container inspect "$VA_NAME" >/dev/null 2>&1; }
+
+va_image_present() { va_engine image inspect "$1" >/dev/null 2>&1; }
+
+va_pull() {
+    if va_image_present "$VA_IMAGE"; then return 0; fi
+    va_say "Downloading VideoAnnotator (first time only, about 1 GB)..."
+    va_pull_err=$(va_engine pull "$VA_IMAGE" 2>&1 >/dev/null) && return 0
+    va_explain_error "$VA_ENGINE" "$va_pull_err" 1 || true
+    return 1
+}
+
+# Starts the container; retries once without the GPU if that is what failed.
+va_start() {
+    if va_exists; then va_engine rm -f "$VA_NAME" >/dev/null 2>&1 || true; fi
+    va_start_err=$(va_run_engine_with_args 2>&1 >/dev/null) && return 0
+    if [ -n "${VA_GPU_FLAGS:-}" ]; then
+        va_engine rm -f "$VA_NAME" >/dev/null 2>&1 || true
+        VA_GPU_FLAGS=""
+        if va_start_err=$(va_run_engine_with_args 2>&1 >/dev/null); then
+            va_say "Couldn't use the GPU, so VideoAnnotator is running without it. To enable it, see $VA_GUIDE#gpu."
+            return 0
+        fi
+    fi
+    if va_explain_error "$VA_ENGINE" "$va_start_err" 1; then
+        # Started twice at once: the other one won. Connect to it.
+        va_open_running
+        exit 0
+    fi
+    return 1
+}
+
+va_stop() {
+    va_engine stop -t 30 "$VA_NAME" >/dev/null 2>&1 || true
+    va_engine rm -f "$VA_NAME" >/dev/null 2>&1 || true
+}
+
+va_url() { printf 'http://127.0.0.1:%s%s\n' "$VA_PORT" "$1"; }
+
+# va_http URL [KEY]: the body on stdout; fails unless the status is 2xx.
+va_http() {
+    if va_installed curl; then
+        if [ -n "${2:-}" ]; then
+            curl -fsS --max-time 10 -H "Authorization: Bearer $2" "$1" 2>/dev/null
+        else
+            curl -fsS --max-time 10 "$1" 2>/dev/null
+        fi
+    else
+        if [ -n "${2:-}" ]; then
+            wget -qO- -T 10 --header "Authorization: Bearer $2" "$1" 2>/dev/null
+        else
+            wget -qO- -T 10 "$1" 2>/dev/null
+        fi
+    fi
+}
+
+# Whether anything answers on the port at all.
+va_port_answers() {
+    if va_installed curl; then
+        curl -s -o /dev/null --max-time 2 "$(va_url /)" 2>/dev/null
+        [ $? -ne 7 ]
+    else
+        wget -q -O /dev/null -T 2 -t 1 "$(va_url /)" 2>/dev/null
+        [ $? -ne 4 ]
+    fi
+}
+
+va_wait_ready() {
+    printf 'Starting...'
+    va_waited=0
+    while [ "$va_waited" -lt "${VA_READY_TIMEOUT:-300}" ]; do
+        if va_http "$(va_url /api/v1/system/health)" >/dev/null; then
+            va_say " ready."
+            return 0
+        fi
+        if ! va_running; then
+            va_say ""
+            va_state=$(va_engine container inspect -f '{{.State.OOMKilled}} {{.State.ExitCode}}' "$VA_NAME" 2>/dev/null || echo "false 1")
+            va_logs=$(va_engine logs --tail 20 "$VA_NAME" 2>&1 || true)
+            case "$va_state" in
+                true*) va_explain_error "$VA_ENGINE" OOMKilled 137 ;;
+                *) va_explain_error "$VA_ENGINE" "$(printf '%s\n' "$va_logs" | tail -n 3)" "${va_state#* }" ;;
+            esac
+            return 1
+        fi
+        sleep 2
+        va_waited=$((va_waited + 2))
+    done
+    va_say ""
+    va_say "VideoAnnotator is taking a long time to start. Run: videoannotator-start logs"
+    return 1
+}
+
+# The launcher's administrator key (research R14): reused while the server
+# accepts it, made again when it doesn't (a reset database).
+va_ensure_key() {
+    if [ -n "$VA_S_KEY" ] && va_http "$(va_url /api/v1/auth/me)" "$VA_S_KEY" >/dev/null; then
+        return 0
+    fi
+    va_engine exec "$VA_NAME" videoannotator generate-token --user researcher@localhost \
+        --username researcher --key-name "start-up program" --admin --expires-days 0 \
+        --output /tmp/key.json >/dev/null 2>&1 || return 1
+    va_json=$(va_engine exec "$VA_NAME" cat /tmp/key.json 2>/dev/null || true)
+    va_engine exec "$VA_NAME" rm -f /tmp/key.json >/dev/null 2>&1 || true
+    VA_S_KEY=$(printf '%s' "$va_json" | sed -n 's/.*"token": *"\([^"]*\)".*/\1/p' | head -n 1)
+    [ -n "$VA_S_KEY" ]
+}
+
+va_open_browser() {
+    va_link=$(va_url "/viewer-connect?token=$VA_S_KEY")
+    va_say "Opening $(va_url /viewer) in your browser."
+    [ "${VA_NO_BROWSER:-0}" = 1 ] && return 0
+    case "$(va_os)" in
+        macos) open "$va_link" >/dev/null 2>&1 || true ;;
+        *) if va_installed xdg-open; then xdg-open "$va_link" >/dev/null 2>&1 || true; fi ;;
+    esac
+}
+
+# Already running: connect the browser to it.
+va_open_running() {
+    va_ensure_key || true
+    va_settings_write
+    va_open_browser
+}
+
+# FR-014: what VideoAnnotator can read, and where results go, as the host shows them.
+va_summary() {
+    va_read=$(va_each "${VA_PRESENT:-}" | tr '\n' ';' | sed -e 's/;$//' -e 's/;/, /g')
+    va_say "VideoAnnotator can read: ${va_read:-no folders yet (run: videoannotator-start share)}. Results: $VA_S_RESULTS."
+}
+
+# ---------------------------------------------------------------------------
+# Settings Stop sharing asked for (research R10)
+# ---------------------------------------------------------------------------
+
+va_apply_stop_requests() {
+    va_requests="$(va_requests_dir)/stop-sharing.txt"
+    [ -f "$va_requests" ] || return 0
+    while IFS= read -r va_line || [ -n "$va_line" ]; do
+        [ -n "$va_line" ] || continue
+        if va_list_has "$VA_SHARES" "$va_line"; then
+            VA_SHARES=$(va_list_remove "$VA_SHARES" "$va_line")
+            va_say "Stopped sharing $va_line, as asked in Settings."
+        fi
+    done < "$va_requests"
+    # Deleted, not emptied: under Docker on Linux the server may own it.
+    rm -f "$va_requests"
+}
+
+# ---------------------------------------------------------------------------
+# Restarting for a change (research R11)
+# ---------------------------------------------------------------------------
+
+va_running_jobs() {
+    va_body=$(va_http "$(va_url "/api/v1/jobs/?status_filter=running&per_page=1")" "$VA_S_KEY") || { echo 0; return; }
+    va_total=$(printf '%s' "$va_body" | sed -n 's/.*"total": *\([0-9][0-9]*\).*/\1/p' | head -n 1)
+    echo "${va_total:-0}"
+}
+
+# va_restart MESSAGE: restart with the current settings, asking first when
+# videos are being processed.
+va_restart() {
+    if va_running; then
+        va_jobs=$(va_running_jobs)
+        if [ "$va_jobs" -gt 0 ]; then
+            if [ "$va_jobs" = 1 ]; then va_what="1 video is"; else va_what="$va_jobs videos are"; fi
+            if [ "${VA_YES:-0}" != 1 ]; then
+                printf '%s ' "$va_what being processed. [W]ait for them, or [r]estart now (they'll be marked failed and can be retried)?"
+                if ! read -r va_answer; then va_answer=""; fi
+                case "$va_answer" in
+                    [Rr]*) ;;
+                    *)
+                        va_say "Waiting for them to finish..."
+                        while [ "$(va_running_jobs)" -gt 0 ]; do sleep "${VA_WAIT_POLL:-10}"; done ;;
+                esac
+            fi
+        fi
+    fi
+    va_say "$1"
+    va_stop
+    va_launch
+}
+
+# ---------------------------------------------------------------------------
+# Commands
+# ---------------------------------------------------------------------------
+
+va_image_default() {
+    if [ -n "${VA_OPT_IMAGE:-}" ]; then
+        VA_IMAGE=$VA_OPT_IMAGE
+    elif [ "$VA_VERSION" = "@VERSION@" ]; then
+        VA_IMAGE=${VA_S_IMAGE:-$VA_IMAGE_REPO:latest}
+    else
+        # Pinned to the launcher's own version: the two always move together.
+        VA_IMAGE="$VA_IMAGE_REPO:$VA_VERSION"
+    fi
+}
+
+# Pull, start, wait, connect, save. Uses the settings as they are.
+va_launch() {
+    if [ "$VA_VERSION" = "@VERSION@" ] && [ -z "${VA_OPT_IMAGE:-}" ]; then
+        va_say "(development launcher: running $VA_IMAGE)"
+    fi
+    va_split_shares
+    if va_port_answers; then
+        va_say "Something else is using port $VA_PORT. Close it, or run: videoannotator-start --port $((VA_PORT + 1))"
+        return 1
+    fi
+    va_pull || return 1
+    va_gpu_flags
+    mkdir -p "$VA_S_RESULTS" "$(va_requests_dir)"
+    va_start || return 1
+    va_wait_ready || return 1
+    if ! va_ensure_key; then
+        va_say "VideoAnnotator started, but couldn't make its key. Run: videoannotator-start logs"
+        return 1
+    fi
+    VA_S_ENGINE=$VA_ENGINE VA_S_IMAGE=$VA_IMAGE VA_S_PORT=$VA_PORT
+    va_settings_write
+    va_summary
+    va_open_browser
+}
+
+# Offers an existing compose setup's folders (FR-024). 0 when settings were
+# seeded from them.
+va_migrate() {
+    if [ -n "${VIDEOS_DIR:-}" ] || [ -n "${RESULTS_DIR:-}" ]; then
+        va_say "VideoAnnotator was set up before with:"
+        [ -n "${VIDEOS_DIR:-}" ] && va_say "  videos:  $VIDEOS_DIR"
+        [ -n "${RESULTS_DIR:-}" ] && va_say "  results: $RESULTS_DIR"
+        if va_ask "Use your existing VideoAnnotator folders? [Y/n]" y; then
+            [ -n "${RESULTS_DIR:-}" ] && VA_S_RESULTS=$(va_normalise "$RESULTS_DIR")
+            [ -n "${VIDEOS_DIR:-}" ] && VA_SHARES=$(va_normalise "$VIDEOS_DIR")
+            return 0
+        fi
+    elif va_engine volume inspect videoannotator-database >/dev/null 2>&1; then
+        va_say "Your jobs and models will be kept."
+    fi
+    return 1
+}
+
+# Lists folders under home likely to hold videos, for the text prompt.
+va_likely_folders() {
+    for va_top in Videos Movies Desktop Documents; do
+        [ -d "$HOME/$va_top" ] || continue
+        find "$HOME/$va_top" -maxdepth 2 -type f \( -iname '*.mp4' -o -iname '*.mov' \
+            -o -iname '*.avi' -o -iname '*.mkv' -o -iname '*.webm' \) 2>/dev/null \
+            | head -n 2000 | while IFS= read -r va_video; do dirname "$va_video"; done
+    done | sort -u | head -n 10
+}
+
+va_picker_start() {
+    for va_try in Videos Movies Documents; do
+        if [ -d "$HOME/$va_try" ]; then printf '%s\n' "$HOME/$va_try"; return; fi
+    done
+    printf '%s\n' "$HOME"
+}
+
+# va_pick_folder QUESTION: a folder from the platform's picker, else typed.
+# Status 2 when cancelled.
+va_pick_folder() {
+    va_start_dir=$(va_picker_start)
+    if [ "$(va_os)" = macos ] && va_installed osascript; then
+        va_picked=$(osascript -e "POSIX path of (choose folder with prompt \"$1\" default location POSIX file \"$va_start_dir\")" 2>/dev/null) || return 2
+    elif [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] && va_installed zenity; then
+        va_picked=$(zenity --file-selection --directory --title="$1" --filename="$va_start_dir/" 2>/dev/null) || return 2
+    elif [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] && va_installed kdialog; then
+        va_picked=$(kdialog --getexistingdirectory "$va_start_dir" --title "$1" 2>/dev/null) || return 2
+    else
+        va_likely=$(va_likely_folders)
+        if [ -n "$va_likely" ]; then
+            va_say "Folders with videos in them:" >&2
+            printf '%s\n' "$va_likely" | sed 's/^/  /' >&2
+        fi
+        printf 'Type the folder path (or press Enter to cancel): ' >&2
+        read -r va_picked || return 2
+        [ -n "$va_picked" ] || return 2
+    fi
+    va_normalise "$va_picked"
+}
+
+va_confirm_share() {
+    va_say ""
+    va_say "VideoAnnotator will be able to read, but never change:"
+    va_say "  $1   (and everything inside it)"
+    va_say "Results go to:"
+    va_say "  $VA_S_RESULTS"
+    va_ask "Share this folder? [Y/n]" y
+}
+
+# First start: which folder are the videos in.
+va_first_share() {
+    while :; do
+        va_say ""
+        va_say "Which folder are your videos in?"
+        va_folder=$(va_pick_folder "Which folder are your videos in?") || return 2
+        va_saved=$VA_SHARES
+        va_rc=0
+        va_share_add "$va_folder" || va_rc=$?
+        case $va_rc in
+            0) if va_confirm_share "$va_folder"; then return 0; fi
+               VA_SHARES=$va_saved ;;
+            1) ;;
+            2) ;;
+        esac
+    done
+}
+
+va_cmd_start() {
+    va_engine_detect || exit 1
+    # Named on the first start, and whenever it isn't the obvious one.
+    if [ ! -f "$(va_settings_path)" ] || [ "$VA_BOTH_RUNNING" = 1 ] \
+        || [ "$VA_ENGINE" != "${VA_S_ENGINE:-$VA_ENGINE}" ]; then
+        va_say "Starting VideoAnnotator with $(va_engine_label "$VA_ENGINE")."
+    fi
+    if va_running; then
+        va_say "VideoAnnotator is already running."
+        va_open_running
+        exit 0
+    fi
+    va_apply_stop_requests
+    va_first=0
+    if [ ! -f "$(va_settings_path)" ]; then
+        va_first=1
+        va_migrate || true
+    fi
+    [ -n "${VA_OPT_RESULTS:-}" ] && VA_S_RESULTS=$(va_normalise "$VA_OPT_RESULTS")
+    VA_S_RESULTS=${VA_S_RESULTS:-$HOME/VideoAnnotator}
+    if [ -n "${VA_OPT_SHARES:-}" ]; then
+        while IFS= read -r va_share; do
+            [ -n "$va_share" ] || continue
+            va_share_add "$va_share" < /dev/null || true
+        done <<EOF
+$VA_OPT_SHARES
+EOF
+    elif [ $va_first = 1 ] && [ -z "$VA_SHARES" ]; then
+        va_rc=0
+        va_first_share || va_rc=$?
+        if [ $va_rc = 2 ]; then va_say "Nothing was shared."; exit 2; fi
+    fi
+    mkdir -p "$VA_S_RESULTS"
+    va_settings_write
+    va_launch || exit 1
+}
+
+va_cmd_share() {
+    va_engine_detect || exit 1
+    VA_S_RESULTS=${VA_S_RESULTS:-$HOME/VideoAnnotator}
+    if [ -n "${1:-}" ]; then
+        va_folder=$1
+    else
+        va_folder=$(va_pick_folder "Which folder do you want to share?") || exit 2
+    fi
+    va_rc=0
+    va_share_add "$va_folder" || va_rc=$?
+    case $va_rc in 1) exit 1 ;; 2) exit 2 ;; esac
+    va_folder=$(va_normalise "$va_folder")
+    if [ -z "${1:-}" ] && ! va_confirm_share "$va_folder"; then exit 2; fi
+    va_settings_write
+    va_restart "Restarting VideoAnnotator to share $va_folder..." || exit 1
+}
+
+va_cmd_unshare() {
+    va_engine_detect || exit 1
+    if [ -z "$VA_SHARES" ]; then va_say "No folders are shared."; exit 0; fi
+    if [ -n "${1:-}" ]; then
+        va_folder=$(va_normalise "$1")
+    else
+        va_say "Shared folders:"
+        va_each "$VA_SHARES" | awk '{ printf "  %d. %s\n", NR, $0 }'
+        printf 'Which one should VideoAnnotator stop reading? (number, or Enter to cancel) '
+        read -r va_number || exit 2
+        [ -n "$va_number" ] || exit 2
+        va_folder=$(va_each "$VA_SHARES" | sed -n "${va_number}p")
+    fi
+    if [ -z "$va_folder" ] || ! va_list_has "$VA_SHARES" "$va_folder"; then
+        va_say "$va_folder isn't shared."
+        exit 1
+    fi
+    VA_SHARES=$(va_list_remove "$VA_SHARES" "$va_folder")
+    va_settings_write
+    va_restart "Restarting VideoAnnotator to stop sharing $va_folder..." || exit 1
+}
+
+va_cmd_list() {
+    va_say "Shared folders (read-only):"
+    if [ -z "$VA_SHARES" ]; then va_say "  (none)"; else va_each "$VA_SHARES" | sed 's/^/  /'; fi
+    va_say "Results folder:"
+    va_say "  ${VA_S_RESULTS:-$HOME/VideoAnnotator}"
+    va_say "Engine: $(va_engine_label "${VA_S_ENGINE:-docker}")"
+    va_say "Image:  ${VA_S_IMAGE:-$VA_IMAGE}"
+}
+
+# Newest first: 0 when $1 is a newer version than $2.
+va_newer() {
+    awk -v a="${1#v}" -v b="${2#v}" 'BEGIN {
+        n = split(a, x, "."); m = split(b, y, ".")
+        for (i = 1; i <= (n > m ? n : m); i++) {
+            if (x[i] + 0 > y[i] + 0) exit 0
+            if (x[i] + 0 < y[i] + 0) exit 1
+        }
+        exit 1
+    }'
+}
+
+# Overridden in tests.
+va_latest_release() {
+    va_http "https://api.github.com/repos/$VA_GITHUB/releases/latest" \
+        | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n 1
+}
+
+va_install_release() {
+    va_installer="${TMPDIR:-/tmp}/videoannotator-install.$$.sh"
+    va_http "https://github.com/$VA_GITHUB/releases/download/$1/install.sh" > "$va_installer" || return 1
+    VA_RELEASE=$1 sh "$va_installer" --no-shortcut --quiet
+    va_rc=$?
+    rm -f "$va_installer"
+    return $va_rc
+}
+
+va_cmd_update() {
+    va_engine_detect || exit 1
+    if [ "${1:-}" != --continue ] && [ "$VA_VERSION" != "@VERSION@" ]; then
+        va_latest=$(va_latest_release || true)
+        if [ -n "$va_latest" ] && va_newer "$va_latest" "$VA_VERSION"; then
+            va_say "Updating the start-up program to $va_latest..."
+            va_install_release "$va_latest" || {
+                va_say "Couldn't download VideoAnnotator. Check your internet connection and run this again."
+                exit 1
+            }
+            exec "$HOME/.local/bin/videoannotator-start" update --continue
+        fi
+    fi
+    va_before=$(va_engine image inspect -f '{{.Id}}' "$VA_IMAGE" 2>/dev/null || true)
+    if ! va_pull_err=$(va_engine pull "$VA_IMAGE" 2>&1 >/dev/null); then
+        va_explain_error "$VA_ENGINE" "$va_pull_err" 1 || true
+        exit 1
+    fi
+    va_after=$(va_engine image inspect -f '{{.Id}}' "$VA_IMAGE" 2>/dev/null || true)
+    va_current=$(va_engine container inspect -f '{{.Image}}' "$VA_NAME" 2>/dev/null || true)
+    if [ "$va_before" = "$va_after" ] && { [ -z "$va_current" ] || [ "$va_current" = "$va_after" ]; } \
+        && [ "${VA_S_IMAGE:-$VA_IMAGE}" = "$VA_IMAGE" ]; then
+        va_say "VideoAnnotator is up to date."
+        exit 0
+    fi
+    VA_S_IMAGE=$VA_IMAGE
+    va_settings_write
+    va_restart "Restarting VideoAnnotator with the new version..." || exit 1
+    va_say "Updated. Your folders, results, models and installed pipelines are kept."
+}
+
+va_usage() {
+    cat <<'EOF'
+Usage: videoannotator-start [command] [options]
+
+Commands:
+  (none)          Start VideoAnnotator, or open it if it is already running
+  share [PATH]    Share another folder (read-only), then restart
+  unshare [PATH]  Stop sharing a folder, then restart
+  list            Show shared folders, results folder, engine and image
+  stop            Stop VideoAnnotator
+  update          Update VideoAnnotator (your folders, results and models are kept)
+  logs            Show VideoAnnotator's recent log
+
+Options:
+  --share PATH    Share this folder (repeatable)
+  --results PATH  Write results here (default: ~/VideoAnnotator)
+  --engine docker|podman
+  --yes           Answer yes to every question
+  --no-browser    Don't open the browser
+  --port N        Use this port on 127.0.0.1 (default: 18011)
+  --image REF     Run this image
+EOF
+}
+
+main() {
+    VA_COMMAND="" VA_ARG="" VA_OPT_SHARES="" VA_OPT_RESULTS="" VA_OPT_ENGINE=""
+    VA_OPT_IMAGE="" VA_OPT_PORT="" VA_CONTINUE=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --share) [ $# -ge 2 ] || { va_usage; exit 1; }
+                VA_OPT_SHARES=$(va_list_add "$VA_OPT_SHARES" "$2"); shift ;;
+            --share=*) VA_OPT_SHARES=$(va_list_add "$VA_OPT_SHARES" "${1#*=}") ;;
+            --results) [ $# -ge 2 ] || { va_usage; exit 1; }; VA_OPT_RESULTS=$2; shift ;;
+            --results=*) VA_OPT_RESULTS=${1#*=} ;;
+            --engine) [ $# -ge 2 ] || { va_usage; exit 1; }; VA_OPT_ENGINE=$2; shift ;;
+            --engine=*) VA_OPT_ENGINE=${1#*=} ;;
+            --image) [ $# -ge 2 ] || { va_usage; exit 1; }; VA_OPT_IMAGE=$2; shift ;;
+            --image=*) VA_OPT_IMAGE=${1#*=} ;;
+            --port) [ $# -ge 2 ] || { va_usage; exit 1; }; VA_OPT_PORT=$2; shift ;;
+            --port=*) VA_OPT_PORT=${1#*=} ;;
+            --yes | -y) VA_YES=1 ;;
+            --no-browser) VA_NO_BROWSER=1 ;;
+            --continue) VA_CONTINUE=--continue ;;
+            -h | --help) va_usage; exit 0 ;;
+            -*) va_say "Unknown option: $1"; va_usage; exit 1 ;;
+            *) if [ -z "$VA_COMMAND" ]; then VA_COMMAND=$1; else VA_ARG=$1; fi ;;
+        esac
+        shift
+    done
+    case "$VA_OPT_ENGINE" in "" | docker | podman) ;; *) va_usage; exit 1 ;; esac
+
+    va_settings_read
+    VA_PORT=${VA_OPT_PORT:-${VA_S_PORT:-$VA_DEFAULT_PORT}}
+    va_image_default
+
+    case "${VA_COMMAND:-start}" in
+        start) va_cmd_start ;;
+        share) va_cmd_share "$VA_ARG" ;;
+        unshare) va_cmd_unshare "$VA_ARG" ;;
+        list) va_cmd_list ;;
+        stop)
+            va_engine_detect || exit 1
+            va_stop
+            va_say "VideoAnnotator has stopped." ;;
+        logs)
+            va_engine_detect || exit 1
+            va_engine logs --tail 200 "$VA_NAME" ;;
+        update) va_cmd_update "$VA_CONTINUE" ;;
+        help) va_usage ;;
+        *) va_say "Unknown command: $VA_COMMAND"; va_usage; exit 1 ;;
+    esac
+}
+
+[ "${VA_SOURCE_ONLY:-}" = 1 ] || main "$@"

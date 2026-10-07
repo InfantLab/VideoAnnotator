@@ -6,13 +6,17 @@ import { ConnectionErrorBanner } from '@/components/ConnectionErrorBanner';
 import { useServerCapabilitiesContext } from '@/contexts/ServerCapabilitiesContext';
 import { isCorsOrNetworkError } from '@/lib/connectionUtils';
 import { APP_NAME } from '@/utils/version';
-import { BookOpen, Briefcase, MonitorPlay, Settings } from 'lucide-react';
+import { BookOpen, Briefcase, Database, MessageSquareText, PlusCircle, Settings } from 'lucide-react';
 import vavIcon from '@/assets/v-a-v.icon.png';
 
+// In the order of the work: run videos, follow jobs, look at results. Datasets
+// (videos to run) and Prompts feed new jobs. Opening local files is under Results.
 const navItems = [
-  { path: '/library', label: 'Library', icon: BookOpen },
+  { path: '/jobs/new', label: 'New job', icon: PlusCircle },
   { path: '/jobs', label: 'Jobs', icon: Briefcase },
-  { path: '/viewer', label: 'View Files', icon: MonitorPlay },
+  { path: '/results', label: 'Results', icon: BookOpen },
+  { path: '/datasets', label: 'Datasets', icon: Database },
+  { path: '/prompts', label: 'Prompts', icon: MessageSquareText },
 ];
 
 export const AppLayout = () => {
@@ -29,6 +33,7 @@ export const AppLayout = () => {
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
+    if (path === '/jobs') return location.pathname.startsWith('/jobs') && location.pathname !== '/jobs/new';
     return location.pathname.startsWith(path);
   };
 
@@ -51,6 +56,7 @@ export const AppLayout = () => {
                   <Button
                     variant={isActive(path) ? 'default' : 'ghost'}
                     size="sm"
+                    title={label}
                     className="flex items-center gap-2"
                   >
                     <Icon className="h-4 w-4" />

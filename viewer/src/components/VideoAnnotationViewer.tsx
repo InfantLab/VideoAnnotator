@@ -30,6 +30,13 @@ interface VideoAnnotationViewerProps {
   backPath?: string;
   /** Pipelines of this job that failed on the server: name -> reason. */
   failedPipelines?: Record<string, string>;
+  /** Shown in the header after the video's name (e.g. batch previous/next). */
+  headerNav?: React.ReactNode;
+  /**
+   * Set when the job's video is gone (spec 022): its annotations are still
+   * shown, and the player says where the video was expected.
+   */
+  missingVideoMessage?: string;
 }
 
 export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
@@ -39,6 +46,8 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   backLabel = 'Home',
   backPath = '/',
   failedPipelines = {},
+  headerNav,
+  missingVideoMessage,
 }) => {
   const navigate = useNavigate();
   const [videoFile, setVideoFile] = useState<File | null>(initialVideoFile);
@@ -46,6 +55,12 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
+  // Without a video there's no element to report its length: use the run's.
+  useEffect(() => {
+    if (!videoFile && missingVideoMessage && annotationData?.video_info?.duration) {
+      setDuration(annotationData.video_info.duration);
+    }
+  }, [videoFile, missingVideoMessage, annotationData]);
   const [playbackRate, setPlaybackRate] = useState(1);
 
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
@@ -164,7 +179,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   }, [handleKeyDown]);
 
   // Show file uploader if no files loaded
-  if (!videoFile || !annotationData) {
+  if ((!videoFile && !missingVideoMessage) || !annotationData) {
     return (
       <>
         <div className="min-h-screen bg-background p-6">
@@ -175,8 +190,8 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                 Drop or select a video file and annotation data (JSON, VTT, RTTM) to view them together.
               </p>
               <p className="text-sm text-muted-foreground mt-2">
-                Looking for demo datasets or server jobs? Visit the{' '}
-                <Link to="/library" className="text-primary underline underline-offset-2 hover:text-primary/80">Library</Link>
+                Looking for the demos or a job's results? See{' '}
+                <Link to="/results" className="text-primary underline underline-offset-2 hover:text-primary/80">Results</Link>
                 {' '}or{' '}
                 <Link to="/jobs" className="text-primary underline underline-offset-2 hover:text-primary/80">Jobs</Link>
                 {' '}page.
@@ -187,12 +202,12 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
               onAnnotationLoad={handleAnnotationLoad}
             />
 
-            {/* Library Datasets */}
+            {/* Saved results */}
             {libraryDatasets.length > 0 && (
               <Card className="p-5 mt-6">
-                <h3 className="font-semibold mb-1">Your Library</h3>
+                <h3 className="font-semibold mb-1">Saved results</h3>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Open a previously saved dataset.
+                  Results kept on this computer from earlier jobs, and the demos.
                 </p>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {libraryDatasets.map(({ jobId, entry }) => {
@@ -268,9 +283,10 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
               </Button>
               <div className="min-w-0">
                 <h1 className="text-lg font-semibold truncate">
-                  {annotationData.video_info?.filename || videoFile.name}
+                  {annotationData.video_info?.filename || videoFile?.name}
                 </h1>
               </div>
+              {headerNav}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <Button
@@ -312,6 +328,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                 <VideoPlayer
                   ref={videoRef}
                   videoFile={videoFile}
+                  missingVideoMessage={missingVideoMessage}
                   annotationData={annotationData}
                   currentTime={currentTime}
                   overlaySettings={overlaySettings}
@@ -355,6 +372,8 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                     annotations={annotationData.vlm_annotations}
                     currentTime={currentTime}
                     elanGroundTruth={annotationData.elan_ground_truth}
+                    provenance={annotationData.provenance?.vlm_annotations}
+                    elanProvenance={annotationData.provenance?.elan_ground_truth}
                   />
                 </div>
               )}
@@ -383,6 +402,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
                   onChange={setOpenface3Settings}
                   faceData={annotationData?.openface3_faces}
                   jobPipelines={jobPipelines}
+                  provenance={annotationData?.provenance?.openface3_faces}
                 />
               </div>
             </div>

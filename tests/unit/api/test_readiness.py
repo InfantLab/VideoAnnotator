@@ -337,6 +337,13 @@ class TestExtrasGroups:
 class TestWeightCacheLocations:
     def test_pyannote_models_found_in_pyannotes_own_cache(self, tmp_path, monkeypatch):
         monkeypatch.setenv("PYANNOTE_CACHE", str(tmp_path))
+        # Isolate from the machine's real hub cache, where pyannote.audio 4 itself
+        # downloads (pyannote 3 used only PYANNOTE_CACHE).
+        import huggingface_hub.constants
+
+        monkeypatch.setattr(
+            huggingface_hub.constants, "HF_HUB_CACHE", str(tmp_path / "hub")
+        )
         snapshot = (
             tmp_path / "models--pyannote--speaker-diarization-3.1" / "snapshots" / "abc"
         )
@@ -345,12 +352,12 @@ class TestWeightCacheLocations:
             assert readiness._hf_cached("pyannote/speaker-diarization-3.1")
             assert not readiness._hf_cached("pyannote/segmentation-3.0")
 
-    def test_whisper_found_in_the_pipelines_models_dir(self, tmp_path, monkeypatch):
+    def test_whisper_found_in_the_models_dir(self, tmp_path, monkeypatch):
         monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg"))
-        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("VIDEOANNOTATOR_MODELS_DIR", str(tmp_path / "models-root"))
         assert not readiness._whisper_cached("base")
-        (tmp_path / "models" / "whisper").mkdir(parents=True)
-        (tmp_path / "models" / "whisper" / "base.pt").write_bytes(b"")
+        (tmp_path / "models-root" / "whisper").mkdir(parents=True)
+        (tmp_path / "models-root" / "whisper" / "base.pt").write_bytes(b"")
         assert readiness._whisper_cached("base")
 
 
@@ -446,7 +453,9 @@ class TestHuggingFaceToken:
         registry = get_registry()
         registry.load()
         for name in ("speaker_diarization", "audio_processing"):
-            meta = next(m for m in registry.list() if m.name == name)
+            meta = next(
+                m for m in registry.list(include_deprecated=True) if m.name == name
+            )
             [secret] = [r for r in meta.requires_setup if r.kind == "secret"]
             assert secret.name == "HUGGINGFACE_TOKEN"
             assert "HF_AUTH_TOKEN" in secret.aliases

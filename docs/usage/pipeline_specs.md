@@ -183,18 +183,18 @@ scene_detection:
 ### Command Line Interface
 
 ```bash
-# Process single video with all pipelines
-uv run python -m videoannotator process video.mp4
+# Run pipelines on one video here, no server needed (exits 1 if a pipeline fails)
+uv run videoannotator process video.mp4 --pipelines person_tracking,scene_detection
 
-# Process specific pipeline
-uv run python -m videoannotator process video.mp4 --pipeline person_tracking
+# Custom settings (keyed by pipeline name), and copy the result files to a folder
+uv run videoannotator process video.mp4 --pipelines scene_detection \
+  --config configs/high_performance.yaml --output results/
 
-# Custom config
-uv run python -m videoannotator process video.mp4 --config configs/high_performance.yaml
-
-# Batch processing
-uv run python -m videoannotator batch videos/ --output results/
+# Many videos: start the server (videoannotator server) and add them in the viewer,
+# or submit each with videoannotator job submit
 ```
+
+`process` records the job like a submitted one, so it also appears in the viewer.
 
 ### Python API
 
@@ -241,11 +241,11 @@ from videoannotator.utils import annotations_to_dataframe
 df = annotations_to_dataframe(annotations)
 
 # Filter by type
-person_detections = df[df['type'] == 'person_bbox']
-speech_segments = df[df['type'] == 'transcript']
+person_detections = df[df["type"] == "person_bbox"]
+speech_segments = df[df["type"] == "transcript"]
 
 # Temporal analysis
-temporal_density = df.groupby('t').size()
+temporal_density = df.groupby("t").size()
 ```
 
 ## � Performance & Scalability
@@ -273,9 +273,7 @@ temporal_density = df.groupby('t').size()
 from videoannotator import BatchProcessor
 
 processor = BatchProcessor(
-    config="configs/high_performance.yaml",
-    num_workers=4,
-    gpu_acceleration=True
+    config="configs/high_performance.yaml", num_workers=4, gpu_acceleration=True
 )
 
 # Process entire directory

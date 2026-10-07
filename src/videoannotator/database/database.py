@@ -1,18 +1,22 @@
 """Database configuration and session management for VideoAnnotator API."""
 
-import os
 from collections.abc import Generator
+from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-# Database URL - defaults to SQLite for development
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./videoannotator.db")
+from videoannotator.database_location import database_url
+
+DATABASE_URL = database_url()
 
 # Create engine with appropriate settings
 if DATABASE_URL.startswith("sqlite"):
-    # SQLite-specific settings
+    # SQLite creates the file but not its directory (the per-user default may not exist).
+    Path(DATABASE_URL.removeprefix("sqlite:///")).parent.mkdir(
+        parents=True, exist_ok=True
+    )
     engine = create_engine(
         DATABASE_URL,
         connect_args={"check_same_thread": False},

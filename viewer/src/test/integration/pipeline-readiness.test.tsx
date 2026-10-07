@@ -219,6 +219,14 @@ describe('Pipeline readiness cards', () => {
     await waitFor(() => expect(apiClient.getExtrasInstallJob).toHaveBeenCalledWith('job-42'));
   });
 
+  it('shows a pipeline being restored after an update, with progress', () => {
+    renderStep([pipeline('scene_detection', 'Scene Detection', { state: 'restoring', nextAction: 'wait' })]);
+    const c = card('Scene Detection');
+    expect(within(c).getByText('Restoring')).toBeInTheDocument();
+    expect(within(c).getByText(/coming back by itself/)).toBeInTheDocument();
+    expect(within(c).queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
+  });
+
   it('renders a state it does not know as not available, with the server message', () => {
     renderStep([
       pipeline('x', 'Future Pipeline', {
@@ -250,6 +258,7 @@ describe('pipelineCardMode', () => {
     ['ready', 'selectable'],
     ['not_installed', 'install'],
     ['installing', 'installing'],
+    ['restoring', 'restoring'],
     ['restart_required', 'restart'],
     ['needs_setup', 'setup'],
     ['something_new', 'unavailable']

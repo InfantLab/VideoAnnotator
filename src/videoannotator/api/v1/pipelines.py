@@ -40,7 +40,8 @@ class ReadinessItem(BaseModel):
 class PipelineReadiness(BaseModel):
     """Where a pipeline stands and the one next step (spec 011 contract §1).
 
-    `state`: installing | not_installed | restart_required | needs_setup | ready.
+    `state`: installing | restoring | not_installed | restart_required |
+    needs_setup | ready.
     `next_action`: wait | install | restart | setup | none. Clients must
     tolerate values they don't know.
     """

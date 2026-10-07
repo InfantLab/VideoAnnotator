@@ -1,0 +1,110 @@
+{
+  "info": {
+    "description": "VideoAnnotator COCO Export",
+    "version": "1.5.0",
+    "year": 2026,
+    "contributor": "VideoAnnotator",
+    "date_created": "2026-10-04T14:03:14.053080+00:00"
+  },
+  "licenses": [],
+  "images": [
+    {
+      "id": "demo_clip_frame_000075",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000000.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 0,
+      "timestamp": 5.258
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": "demo_clip_frame_000075",
+      "category_id": 1,
+      "bbox": [
+        0,
+        0,
+        640,
+        480
+      ],
+      "area": 307200,
+      "iscrowd": 0,
+      "score": 0.6352394819259644,
+      "video_id": "demo_clip",
+      "timestamp": 5.258,
+      "start_time": 0,
+      "end_time": 10.516,
+      "duration": 10.516,
+      "scene_type": "clinic",
+      "frame_start": 0,
+      "frame_end": 150,
+      "all_scores": {
+        "living room": 5.1578467719082255e-06,
+        "kitchen": 2.3050792151479982e-05,
+        "bedroom": 3.7164772948017344e-05,
+        "outdoor": 0.0006947257206775248,
+        "clinic": 0.6352394819259644,
+        "nursery": 0.36217230558395386,
+        "office": 0.0018206459935754538,
+        "playground": 7.494638339267112e-06
+      }
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "scene",
+      "supercategory": "video_segment",
+      "description": "Video scene segment with temporal bounds"
+    }
+  ],
+  "provenance": {
+    "schema_version": 1,
+    "pipeline": {
+      "name": "scene_detection",
+      "sub_pipeline": null
+    },
+    "videoannotator_version": "1.5.0",
+    "models": [
+      {
+        "name": "ViT-B-32 (laion2b_s34b_b79k)",
+        "source": "open_clip",
+        "revision": "ac4f8c4b88af6d963118cbf40ad93176d092abbedfcb752601ae1866352656e6",
+        "revision_kind": "sha256"
+      }
+    ],
+    "settings": {
+      "threshold": 30.0,
+      "min_scene_length": 2.0,
+      "scene_prompts": [
+        "living room",
+        "kitchen",
+        "bedroom",
+        "outdoor",
+        "clinic",
+        "nursery",
+        "office",
+        "playground"
+      ],
+      "clip_model": "ViT-B-32",
+      "use_gpu": true,
+      "keyframe_extraction": "middle"
+    },
+    "determinism": {
+      "deterministic": false,
+      "cudnn_benchmark": false,
+      "cudnn_deterministic": false,
+      "deterministic_algorithms": false,
+      "anomaly_detection": false,
+      "cublas_workspace_config": ":4096:8"
+    },
+    "created_at": "2026-10-04T14:03:12.097940+00:00",
+    "job_id": "3abaf9e3-14d4-458c-af01-734863dcb97a",
+    "input": {
+      "name": "demo_clip.mp4",
+      "sha256": "0b809c13772c8cdff2a5355f958b5b70115cf8d5d7b461199d36056d3a8295b0"
+    }
+  }
+}

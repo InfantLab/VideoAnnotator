@@ -24,6 +24,7 @@ from typing import Any
 from packaging.requirements import Requirement
 
 from ..config_env import default_ollama_base_url, huggingface_token
+from ..models_dir import source_dir
 from ..registry import pipeline_loader
 from ..registry.pipeline_loader import extras_available
 from ..registry.pipeline_registry import (
@@ -38,10 +39,8 @@ from . import extras_install
 # installed yet, since groups share it). Labelled "approx." wherever shown.
 _EXTRA_OWN_MB: dict[str, int] = {
     "face": 650,  # deepface + tensorflow/tf-keras + opencv
-    "face-laion": 750,  # deepface/tensorflow + transformers + torchvision
     "face-openface3": 120,
     "audio": 300,  # openai-whisper, librosa, pyannote.*, torchaudio
-    "audio-laion": 200,  # transformers, librosa
     "scene": 120,  # open-clip, scenedetect, opencv
     "person": 200,  # ultralytics, supervision, torchvision, opencv
     "llm": 1,  # the ollama client; models are pulled into Ollama separately
@@ -52,6 +51,7 @@ _TORCH_MB = 3000 if sys.platform.startswith("linux") else 250
 
 _NEXT_ACTION = {
     "installing": "wait",
+    "restoring": "wait",
     "not_installed": "install",
     "restart_required": "restart",
     "needs_setup": "setup",
@@ -311,11 +311,11 @@ def _hf_cached(repo_id: str) -> bool:
 
 
 def _whisper_cached(model: str) -> bool:
-    """openai-whisper's default cache, or `./models/whisper`, the speech
-    pipelines' `cache_dir` default (relative to the server's cwd)."""
+    """The models directory (the speech pipelines' `cache_dir` default), or
+    openai-whisper's own default cache."""
     roots = (
+        source_dir("whisper"),
         Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "whisper",
-        Path("models") / "whisper",
     )
     return any((root / f"{model}.pt").is_file() for root in roots)
 
@@ -434,7 +434,13 @@ def pipeline_readiness(meta: PipelineMetadata) -> dict[str, Any]:
 
     blockers: list[dict[str, Any]] = []
     notes: list[dict[str, Any]] = []
-    if install_job_id:
+    restore = not extras_available(meta.requires_extras) and any(
+        extras_install.restoring(e) for e in meta.requires_extras
+    )
+    if restore:
+        # Installed before the container was recreated; coming back (spec 024).
+        state = "restoring"
+    elif install_job_id:
         state = "installing"
     elif not extras_available(meta.requires_extras):
         state = "not_installed"

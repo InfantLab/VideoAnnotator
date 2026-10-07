@@ -271,4 +271,17 @@ export const ExtrasInstallStatus = ({
   );
 };
 
+/**
+ * A pipeline installed before VideoAnnotator was updated or restarted, coming
+ * back by itself (VideoAnnotator spec 024): the same progress line as an
+ * install, and why jobs that need it are waiting.
+ */
+export const RestoringStatus = () => (
+  <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+    <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+    Restoring&hellip; you installed this before VideoAnnotator was updated or restarted, so it is
+    coming back by itself. Videos that need it wait until it&apos;s ready.
+  </p>
+);
+
 export default LockedPipelineCard;

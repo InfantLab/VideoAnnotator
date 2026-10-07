@@ -393,7 +393,7 @@ class TestDeepFaceModelPreparation:
         built = [
             c.kwargs["model_name"] for c in mock_deepface.build_model.call_args_list
         ]
-        assert built == ["Emotion", "Age", "Gender"]
+        assert built == ["Emotion", "Age", "Gender", "retinaface"]
         assert all(lock_held)
 
     @patch("videoannotator.pipelines.face_analysis.face_pipeline.DeepFace")
@@ -460,21 +460,43 @@ class TestDeepFaceNoFacePlaceholder:
     @patch("videoannotator.pipelines.face_analysis.face_pipeline.DeepFace")
     def test_fallback_uses_facial_area_and_drops_placeholder(self, mock_deepface):
         mock_deepface.analyze.side_effect = RuntimeError("analysis failed")
-        mock_deepface.extract_faces.side_effect = [
-            [{"confidence": 0.9}],
-            [
-                {
-                    "facial_area": {"x": 0, "y": 0, "w": 640, "h": 480},
-                    "confidence": 0,
-                },
-                {
-                    "facial_area": {"x": 10, "y": 20, "w": 50, "h": 60},
-                    "confidence": 0.8,
-                },
-            ],
+        mock_deepface.extract_faces.return_value = [
+            {
+                "facial_area": {"x": 0, "y": 0, "w": 640, "h": 480},
+                "confidence": 0,
+            },
+            {
+                "facial_area": {"x": 10, "y": 20, "w": 50, "h": 60},
+                "confidence": 0.8,
+            },
         ]
         pipeline = FaceAnalysisPipeline({"detection_backend": "deepface"})
 
         annotations = self._detect(pipeline)
 
         assert [a["bbox"] for a in annotations] == [[10.0, 20.0, 50.0, 60.0]]
+
+    @patch("videoannotator.pipelines.face_analysis.face_pipeline.DeepFace")
+    def test_low_confidence_dropped_and_score_recorded(self, mock_deepface):
+        mock_deepface.analyze.return_value = [
+            {"region": {"x": 100, "y": 40, "w": 70, "h": 70}, "face_confidence": 0.4},
+            {"region": {"x": 300, "y": 200, "w": 60, "h": 60}, "face_confidence": 0.96},
+        ]
+        pipeline = FaceAnalysisPipeline({"detection_backend": "deepface"})
+
+        annotations = self._detect(pipeline)
+
+        assert [a["bbox"] for a in annotations] == [[300.0, 200.0, 60.0, 60.0]]
+        assert annotations[0]["score"] == 0.96
+        assert annotations[0]["detector"] == "retinaface"
+
+    def test_default_detector_is_retinaface(self):
+        pipeline = FaceAnalysisPipeline()
+
+        assert pipeline.config["deepface"]["detector_backend"] == "retinaface"
+
+
+def test_legacy_keras_selected_before_tensorflow_import():
+    # RetinaFace (the default detector) only builds under tf_keras; Keras 3
+    # fails with "A KerasTensor cannot be used as input to a TensorFlow function".
+    assert os.environ.get("TF_USE_LEGACY_KERAS") == "1"

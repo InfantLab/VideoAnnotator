@@ -4,7 +4,8 @@
 # Storage Configuration
 storage:
   provider: "local"
-  root_path: "./storage/jobs"
+  # root_path: where job folders go. Default: `jobs` in the per-user data
+  # directory, beside the database. The STORAGE_ROOT environment variable wins.
   options:
     create_dirs: true
 
@@ -73,22 +74,13 @@ face_analysis:
   deepface:
     emotion_model: "VGG-Face"
     age_gender_model: "VGG-Face"
-    detector_backend: "opencv"
+    detector_backend: "retinaface" # opencv is faster but flags lamps/objects as faces
     enforce_detection: false
 
-# Audio Processing Pipeline
-audio_processing:
-  speech_recognition:
-    model: "openai/whisper-base"
-    language: "auto"
-
-  audio_classification:
-    confidence_threshold: 0.5
-
-  features:
-    sample_rate: 16000
-    hop_length: 512
-    n_mels: 128
+# Audio: configure speech_recognition and speaker_diarization as their own sections
+# (keyed by pipeline name). The old `audio_processing` section here had no effect (its
+# settings were ignored or equal to the defaults); that pipeline is deprecated in v1.6.0
+# and removed in v1.7.0.
 
 # Global Settings
 global:

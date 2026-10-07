@@ -84,6 +84,22 @@ class OllamaVLMClient:
                 "Start it with 'ollama serve' and retry."
             ) from exc
 
+    def model_details(self, model_name: str) -> dict[str, str | None]:
+        """The model's digest and quantisation as this server reports them
+        (provenance, spec 017); None for anything it doesn't report."""
+        details: dict[str, str | None] = {"digest": None, "quantization": None}
+        try:
+            for m in self._client.list().get("models", []):
+                if m.get("model", m.get("name")) == model_name:
+                    details["digest"] = m.get("digest")
+                    details["quantization"] = (m.get("details") or {}).get(
+                        "quantization_level"
+                    )
+                    break
+        except Exception:  # provenance must not fail a run that already preflighted
+            pass
+        return details
+
     def preflight(self, model_name: str) -> None:
         """Raise OllamaUnavailableError if the server is down or the model
         isn't pulled. Call once before processing any video."""

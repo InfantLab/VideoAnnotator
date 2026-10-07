@@ -48,8 +48,8 @@ class TestAuthMe:
         assert body["email"] == "admin@example.com"
 
     def test_non_admin_user_sees_is_admin_false(self, client):
-        client.app.dependency_overrides[validate_required_api_key] = (
-            lambda: NON_ADMIN_USER
+        client.app.dependency_overrides[validate_required_api_key] = lambda: (
+            NON_ADMIN_USER
         )
         resp = client.get("/api/v1/auth/me")
         assert resp.status_code == 200

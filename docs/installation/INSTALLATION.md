@@ -2,14 +2,122 @@
 
 > 📖 **Navigation**: [Getting Started](../usage/GETTING_STARTED.md) | [Demo Commands](../usage/demo_commands.md) | [Pipeline Specs](../usage/pipeline_specs.md) | [Main Documentation](../README.md)
 
-VideoAnnotator is a modern video analysis toolkit that uses AI models for comprehensive behavioral annotation. This guide covers installation using our modern **uv-based workflow** for fast, reliable dependency management.
+VideoAnnotator is a modern video analysis toolkit that uses AI models for comprehensive behavioral annotation.
+
+There are three ways to run it:
+
+- **[Start VideoAnnotator](#start-videoannotator-researchers)**: for researchers on their own
+  computer. Install Docker Desktop or Podman Desktop and the start-up program; it asks which folder
+  your videos are in and opens VideoAnnotator in your browser. No Python, no terminal commands
+  after the first.
+- **[Docker Compose](#docker-installation-alternative)**: for labs and servers.
+- **[Install with uv](#prerequisites)**: for developers, and for anyone who wants VideoAnnotator in
+  their own Python environment.
+
+## Start VideoAnnotator (researchers)
+
+### 1. Install Docker Desktop or Podman Desktop
+
+Either one; VideoAnnotator runs inside it. If you have one already, skip this step.
+
+- **Docker Desktop**: [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/)
+  (Windows, macOS, Linux). On Linux, Docker Engine works too.
+- **Podman Desktop**: [podman-desktop.io](https://podman-desktop.io/) (Windows, macOS, Linux). Free
+  for any use, including at large organisations. On Linux, plain `podman` works too.
+
+Start it once, and on Windows and macOS let it finish setting up.
+
+### 2. Install the start-up program
+
+Copy one line into a terminal (Windows: PowerShell).
+
+```bash
+# Linux and macOS
+curl -LsSf https://github.com/InfantLab/VideoAnnotator/releases/latest/download/install.sh | sh
+```
+
+```powershell
+# Windows
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/InfantLab/VideoAnnotator/releases/latest/download/install.ps1 | iex"
+```
+
+This adds a **Start VideoAnnotator** shortcut (desktop on Windows and macOS, applications menu on
+Linux) and the command `videoannotator-start`. Nothing else is installed on your computer.
+
+### 3. Start it
+
+Double-click **Start VideoAnnotator** (or run `videoannotator-start`). The first time it asks
+**which folder your videos are in**, with a folder picker, then confirms in plain words:
+
+```
+VideoAnnotator will be able to read, but never change:
+  /home/ada/Studies   (and everything inside it)
+Results go to:
+  /home/ada/VideoAnnotator
+Share this folder? [Y/n]
+```
+
+It then downloads VideoAnnotator (about 1 GB, first time only) and opens it in your browser, ready
+to use. Next time it asks nothing: it starts with the same folders and opens the browser.
+
+**What VideoAnnotator can access**, in one sentence for an ethics application: *VideoAnnotator
+can read only the folders I chose to share with it, without changing them, and writes its results
+only to its own results folder; it runs entirely on my computer and is reachable from this
+computer only.*
+
+### Sharing more folders, or fewer
+
+```bash
+videoannotator-start share            # share another folder (a picker opens), then restart
+videoannotator-start share D:\Pilot   # or name it
+videoannotator-start unshare          # stop sharing one (choose from a list)
+videoannotator-start list             # what is shared, where results go
+videoannotator-start stop             # stop VideoAnnotator
+videoannotator-start update           # the newest version; folders, results, models and
+                                      # installed pipelines are kept
+videoannotator-start logs             # VideoAnnotator's recent log, for a bug report
+```
+
+Settings in the viewer lists the shared folders too, with **Stop sharing** (it takes effect the next
+time VideoAnnotator starts). If videos are being processed when a change needs a restart, it asks
+whether to wait for them.
+
+Shared folders are read-only, at their own paths: job pages, saved datasets and each run's
+`run.json` name your videos as your computer does. A folder that is missing when VideoAnnotator
+starts (an unplugged drive) is skipped with a note and comes back when it is there again. Sharing
+your whole home folder, a whole drive or a system folder asks first, and defaults to No.
+
+Pipelines you install from the viewer stay installed through updates and restarts: VideoAnnotator
+restores them by itself (the pipeline card says **Restoring...** for a minute), and videos that
+need one wait for it.
+
+### Using the GPU
+
+The start-up program uses an NVIDIA GPU when the engine can, and otherwise runs on the CPU and says
+how to enable it:
+
+| Engine | What it needs |
+| --- | --- |
+| Docker Desktop (Windows) | A current NVIDIA driver; WSL 2 (Docker Desktop's default) |
+| Docker Engine (Linux) | The [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), configured for Docker (`nvidia-ctk runtime configure --runtime=docker`) |
+| Podman (Linux) | The NVIDIA Container Toolkit's CDI spec: `sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml` |
+| Podman Desktop (Windows) | The same CDI spec, inside Podman's machine (`podman machine ssh`) |
+| macOS | No GPU in containers: VideoAnnotator runs on the CPU |
+
+**macOS** is supported and community-tested (we test Windows and Linux ourselves); it runs on the
+CPU only.
+
+If something goes wrong, the start-up program says what in one line, with the next step;
+[troubleshooting](troubleshooting.md#the-start-up-program) has each message.
 
 ## Prerequisites
 
-- **Python 3.12+** (required)
+- **Python 3.12 or 3.13** (required; 3.13 recommended. Python 3.14 isn't supported yet.)
 - **Git** for cloning repositories
 - **uv** package manager (fast, modern Python dependency management)
-- **CUDA Toolkit 12.4+** (recommended for GPU acceleration)
+- **NVIDIA driver 560 or newer** for GPU acceleration (Linux ≥ 560.28.03, Windows ≥ 560.76: the CUDA 12.6
+  level). Drivers from 525 usually work through CUDA's minor-version compatibility. No CUDA Toolkit
+  install is needed: the PyTorch wheels bring their own CUDA libraries.
 - **NVIDIA GPU** with CUDA support (GTX 1060 6GB+ or better recommended)
 
 ## System Requirements
@@ -58,7 +166,7 @@ These tips address the most common macOS installation issues.
 - Viewer: available at `/viewer` on the running VideoAnnotator server, no separate setup. For
   standalone development of the viewer repo itself, use `npm run dev` (not `npm start`).
 
-## Quick Start (Recommended)
+## Install with uv (developers)
 
 ### 1. Install uv Package Manager
 
@@ -93,13 +201,12 @@ install that matches what you're doing:
 | Run only speech/diarization            | `uv sync --extra audio`                         | torch, torchaudio, librosa, openai-whisper, pyannote.audio |
 | Mix a few families                     | `uv sync --extra scene --extra person`          | union of the groups listed |
 | Run a slim API server (no local pipelines) | `uv sync`                                   | core only — useful if pipelines run on separate workers/nodes |
-| Reproduce the old "everything installed" behaviour | `uv sync --all-extras` (or `uv sync --extra all`) | every pipeline family, dev tools, and annotation extras |
+| Reproduce the old "everything installed" behaviour | `uv sync --all-extras` (or `uv sync --extra all`) | every pipeline family |
 
-Available extras groups: `face`, `face-laion`, `face-openface3`, `audio`,
-`audio-laion`, `scene`, `person`, plus the meta-group `all`. `face-laion`,
-`face-openface3`, and `audio-laion` are **not** included by a plain
-`--extra face`/`--extra audio` — they're separate, deliberately opt-in
-groups (see "LAION / OpenFace3 pipelines" below). `videoannotator pipelines
+Available extras groups: `face`, `face-openface3`, `audio`, `scene`, `person`,
+`llm`, plus the meta-group `all`. `face-openface3` is **not** included by a plain
+`--extra face`: it's a separate, deliberately opt-in group (see "OpenFace 3"
+below). `videoannotator pipelines
 --all` shows every pipeline the registry knows about, including ones your
 current install doesn't have the extras for (each with an install hint).
 
@@ -110,8 +217,8 @@ uv sync --extra scene
 # Example: everything, matching pre-v1.5.0 behaviour
 uv sync --all-extras
 
-# Install development dependencies (add to any of the above)
-uv sync --extra dev
+# Development tools (ruff, mypy, pytest, pre-commit) come with any `uv sync` by default
+# (dependency group `dev`); `--no-dev` leaves them out.
 
 # Initialize the local SQLite database (creates tables + admin API key)
 uv run videoannotator setup-db --admin-email you@example.com --admin-username you
@@ -119,28 +226,27 @@ uv run videoannotator setup-db --admin-email you@example.com --admin-username yo
 
 > The `setup-db` command is idempotent. Re-run it after pulling new schema changes or use `--force` when you want to drop and recreate tables. Pass `--skip-admin` if you prefer to manage API keys yourself later with `videoannotator generate-token`.
 
-#### LAION / OpenFace3 pipelines (separate opt-in extras groups)
+#### OpenFace 3 (separate opt-in extras group)
 
-`face-laion` (LAION CLIP face embeddings), `audio-laion` (LAION empathic
-voice), and `face-openface3` (OpenFace3 embeddings) are separate extras
-groups from `face`/`audio` because they pull in different, heavier
-dependency sets (`transformers`, `huggingface-hub`, or `openface-test`).
-They're included in `--all-extras`/`--extra all`, but not in a plain
-`--extra face` or `--extra audio`. If you're upgrading from a v1.4.x
-install that used a LAION or OpenFace3 pipeline, see "Upgrading from
-v1.4.x" below.
+`face-openface3` (landmarks, action units, gaze) is separate from `face` because it
+pulls in a different, heavier dependency set (`openface-test`, torch). It's included
+in `--all-extras`/`--extra all`, but not in a plain `--extra face`. **OpenFace 3.0 is
+licensed for academic or non-profit, non-commercial research use only.**
+
+The LAION pipelines (`face_laion_clip`, `laion_voice`) and their extras groups
+(`face-laion`, `audio-laion`) were removed in v1.6.0; a job naming one gets a message
+saying so and what to use instead.
 
 ### Upgrading from v1.4.x
 
 v1.4.x installed every pipeline by default. If your config references
-`face_laion_clip`, `laion_voice`, or `face_openface3_embedding` and you
-install anything less than `--all-extras`, job submission returns a clear
-message rather than a crash:
+`face_openface3_embedding` and you install anything less than `--all-extras`, job
+submission returns a clear message rather than a crash:
 
 ```
-Error: pipeline 'face_laion_clip' is not available in this install.
-As of v1.5.0, pipelines requiring the 'face-laion' extras group are no longer installed by default.
-Install it with: pip install videoannotator[face-laion]
+Error: pipeline 'face_openface3_embedding' is not available in this install.
+As of v1.5.0, pipelines requiring the 'face-openface3' extras group are no longer installed by default.
+Install it with: pip install videoannotator[face-openface3]
 ```
 
 Run `uv sync --all-extras` to restore full v1.4.x-equivalent behaviour, or
@@ -149,12 +255,11 @@ add just the extras group named in the message.
 ### 3. Install CUDA-enabled PyTorch (GPU acceleration)
 
 ```bash
-# Note: This repo pins Torch sources via `pyproject.toml` to the CUDA 12.4 wheel index.
-# In most cases `uv sync` is sufficient.
-# If you need to force a reinstall of CUDA wheels in your local environment:
-uv pip install --upgrade \
-   "torch==2.8.*+cu124" "torchvision==0.21.*+cu124" "torchaudio==2.8.*+cu124" \
-   --index-url https://download.pytorch.org/whl/cu124
+# `uv sync` installs torch 2.11 from the CUDA 12.6 wheel index on Linux (see
+# [tool.uv.sources] in pyproject.toml); macOS and Windows get PyPI's builds.
+# torch stays at 2.11 because pyannote.audio 4 needs torchaudio, discontinued at 2.11.
+uv sync --all-extras
+uv run python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
 ```
 
 ### 4. Install Native Dependencies (if needed)
@@ -216,6 +321,86 @@ cd ../python
 python setup.py install
 ```
 
+## Where model weights are stored
+
+Pipelines download their models on first use (the viewer's pipeline cards say how much). Since
+v1.6.0 every pipeline keeps them in **one directory**:
+
+| Platform | Default |
+| --- | --- |
+| Linux | `~/.local/share/videoannotator/models` (or `$XDG_DATA_HOME/videoannotator/models`) |
+| macOS | `~/Library/Application Support/videoannotator/models` |
+| Windows | `%LOCALAPPDATA%\videoannotator\models` |
+| Dev container, Docker images | `/app/models` or `<repo>/models` (a mounted directory or volume) |
+
+Set `VIDEOANNOTATOR_MODELS_DIR` to put them somewhere else (a shared data disk, for example).
+Inside it there's one folder per source: `huggingface/`, `pyannote/`, `torch/`, `deepface/`,
+`whisper/`, `yolo/`. VideoAnnotator points the libraries' own variables (`HF_HUB_CACHE`,
+`TORCH_HOME`, `PYANNOTE_CACHE`, `DEEPFACE_HOME`) there unless you've set them yourself; it never
+changes `HF_HOME`, so a `huggingface-cli login` token stays where it is.
+
+`uv run videoannotator diagnose models` shows the directory, its size per source, and any weights
+left in the pre-v1.6.0 locations (`~/.cache/huggingface`, `~/.cache/whisper`, `~/.deepface`,
+`./models`). Moving those into the new directory saves downloading them again.
+
+## Choosing videos on your own computer
+
+When the viewer and VideoAnnotator run on the same computer, the new-job wizard opens on
+**My folders**: open a folder, tick the videos (or **Select all**, optionally with subfolders), and
+the run starts at once. Videos are read where they are. Nothing is uploaded or copied, and deleting
+a job never touches the original video.
+
+It starts at **Places**: your home folder and its Videos, Movies, Desktop, Documents and Downloads
+folders, each marked when it holds videos. Inside a folder, the ones that lead to videos come first;
+hidden, system and tool folders aren't shown. Next time it reopens the folder you last used. If
+none of these folders holds any videos (a fresh container, say), the wizard starts on upload
+instead.
+
+My folders shows only the folders VideoAnnotator may read:
+
+| Install | Default |
+| --- | --- |
+| Plain install | your home folder |
+| Start VideoAnnotator | the folders you shared |
+| Docker Compose (below) | the folder you set as `VIDEOS_DIR` |
+
+In a container nothing else is ever listed: with no folder shared, the wizard says how to share
+one, and upload still works.
+
+To allow others (an external drive, a shared data disk), set `VIDEOANNOTATOR_INGEST_ROOTS` to the
+folders, separated by `:` (`;` on Windows), and restart the server. Only an administrator may read
+videos in place; the first user is one by default.
+
+When VideoAnnotator runs on another computer (a lab server), its folders aren't yours, so the
+wizard offers **Upload videos** instead. Uploading copies each video into VideoAnnotator's own
+storage.
+
+## Where results go
+
+Every run's results go to one visible folder, **`~/VideoAnnotator`** by default
+(`C:\Users\<you>\VideoAnnotator` on Windows): one folder per run, named after the run and its
+date, then one folder per video, named after the video.
+
+```
+~/VideoAnnotator/
+  BabyJokes wave 2 (2026-10-06)/
+    run.json                 what ran: pipelines, settings, versions, and each video's source
+    child01/
+      child01_face_detections.json
+      child01_speech_recognition.vtt
+      ...
+```
+
+Result files keep their usual names (`<video>_<output>`). Folders are never overwritten: a second
+run with the same name and date gets `(2026-10-06 2)`. These folders hold results only, never a
+copy of a video. `videoannotator server` prints the folder when it starts, and the viewer shows it
+on each run's and job's page, with **Open folder**, **Copy location** and, for a run,
+**Download results** (one zip, without videos).
+
+To put results somewhere else (an encrypted or backed-up drive), set `VIDEOANNOTATOR_RESULTS_DIR`,
+in the environment or in `.env`, and restart. Runs from before the change stay where they were
+written. Deleting a job or run in the viewer deletes its results folder.
+
 ## Verify Installation
 
 ```bash
@@ -230,7 +415,7 @@ uv run videoannotator server --host 0.0.0.0 --port 18011
 ```
 
 If you installed a torch-backed extras group (`scene`, `person`, `audio`,
-`face-laion`, `audio-laion`), you can additionally confirm the GPU/CPU
+`face-openface3`), you can additionally confirm the GPU/CPU
 build:
 
 ```bash
@@ -274,38 +459,125 @@ uv run python api_server.py
 
 ## Docker Installation (Alternative)
 
-### CPU Container
+For labs and servers. On your own computer, [Start VideoAnnotator](#start-videoannotator-researchers)
+does all of this for you. The image it runs is `ghcr.io/infantlab/videoannotator:<version>` (slim);
+`docker compose` below builds its own.
 
-By default these images build **slim** (no pipeline extras, no torch),
-matching the core-only install above. Pass `--build-arg EXTRAS=...` to
-include one or more pipeline families, or `EXTRAS=all` to reproduce the
-pre-v1.5.0 "everything installed" image.
+One `Dockerfile` builds the image for CPU and GPU machines. It builds **slim** by default (no
+pipeline extras, no torch), matching the core-only install above; install pipelines from the viewer,
+or build them in with `--build-arg EXTRAS=...`. torch's wheels bring their own CUDA, so the same image
+uses an NVIDIA GPU when run with `--gpus all` (needs the NVIDIA Container Toolkit, or Docker Desktop
+with WSL 2 on Windows) and runs on the CPU otherwise.
 
 ```bash
 # Slim (no extras, no torch)
-docker build -f Dockerfile.cpu -t videoannotator:cpu .
+docker build -t videoannotator .
 
 # One or more pipeline families
-docker build -f Dockerfile.cpu --build-arg EXTRAS=scene,person -t videoannotator:cpu-scene-person .
+docker build --build-arg EXTRAS=scene,person -t videoannotator:scene-person .
 
-# Everything (pre-v1.5.0 equivalent)
-docker build -f Dockerfile.cpu --build-arg EXTRAS=all -t videoannotator:cpu-all .
+# Every pipeline
+docker build --build-arg EXTRAS=all -t videoannotator:all .
 
-docker run --rm -v $(pwd)/data:/app/data videoannotator:cpu
+# Run on this computer: your videos read in place, results in ~/VideoAnnotator
+docker run --rm -p 127.0.0.1:18011:18011 --gpus all \
+  -v videoannotator-models:/app/models \
+  -v "$HOME/Studies":/videos:ro -v "$HOME/VideoAnnotator":/results \
+  -e VIDEOANNOTATOR_INGEST_ROOTS=/videos -e VIDEOANNOTATOR_RESULTS_DIR=/results \
+  -e VIDEOANNOTATOR_PUBLISHED_LOCALLY=1 \
+  -e VIDEOANNOTATOR_HOST_PATHS="/videos=$HOME/Studies;/results=$HOME/VideoAnnotator" \
+  videoannotator:all
 ```
 
-### GPU Container (Requires NVIDIA Container Toolkit)
+### Your videos and results under Docker
+
+The compose services `videoannotator-prod` and `videoannotator-gpu` need two folders from you:
+
+| Variable | Default | What it is |
+| --- | --- | --- |
+| `VIDEOS_DIR` | (none: nothing shared) | Your video folder. Mounted read-only: VideoAnnotator never changes it. |
+| `RESULTS_DIR` | `~/VideoAnnotator` | Where results go, on your own computer. |
 
 ```bash
-# Build and run GPU version (SKIP_IMAGE_UV_SYNC=false performs the install
-# at build time; EXTRAS works the same as the CPU image above)
-docker build -f Dockerfile.gpu --build-arg SKIP_IMAGE_UV_SYNC=false --build-arg EXTRAS=all -t videoannotator:gpu .
-docker run --gpus all --rm -v $(pwd)/data:/app/data videoannotator:gpu
+VIDEOS_DIR=~/Studies RESULTS_DIR=~/VideoAnnotator docker compose --profile prod up videoannotator-prod
 ```
+
+Then open `http://127.0.0.1:18011/viewer/`. My folders shows your video folder, and run and job
+pages show the results' location as your computer sees it, with **Copy location** (Docker can't
+open folders on your computer, so there is no **Open folder**). Started without `VIDEOS_DIR`,
+nothing is shared (since v1.6.0, even if a `./videos` folder exists): the wizard says how to set
+`VIDEOS_DIR`, and uploading still works.
+
+Compose keeps its data in named volumes: `videoannotator-models` (model weights),
+`videoannotator-database` and `videoannotator-storage` (jobs, keys, settings) and
+`videoannotator-cache` (downloads, so pipelines installed from the viewer are restored quickly
+after the container is recreated). They are the same volumes the start-up program uses, so
+switching from compose to Start VideoAnnotator keeps your jobs, models and pipelines; it also
+offers to reuse `VIDEOS_DIR` and `RESULTS_DIR` when they are set.
+
+**This machine only.** The port is published on `127.0.0.1`, so nothing else on your network can
+reach the server, and `VIDEOANNOTATOR_PUBLISHED_LOCALLY=1` tells the server that every caller is
+therefore on this computer. If you publish the port more widely (for example `18011:18011`, to share
+the server with a colleague), you **must** remove `VIDEOANNOTATOR_PUBLISHED_LOCALLY`: otherwise
+anyone who can reach the port can read the files in your video folder. The server warns at startup
+whenever the variable is set.
+
+**File ownership (Linux).** The container runs as root, so under Docker Engine result files in
+`RESULTS_DIR` would belong to root on the host. Set `VIDEOANNOTATOR_RESULTS_OWNER="$(id -u):$(id -g)"`
+(for `docker run`, `-e VIDEOANNOTATOR_RESULTS_OWNER=...`) and the server gives every results folder
+and file to you. Not `--user`: the image's own folders belong to root. Podman and Docker Desktop
+need neither.
 
 ### Dev Container (VS Code)
 
-Open the project in VS Code and use "Reopen in Container" for a complete GPU-enabled development environment.
+The dev container is a complete development environment: every pipeline, the GPU if you have one,
+the viewer's toolchain (Bun) and the pre-commit hooks.
+
+**Opening it**
+
+- **Linux and macOS**: clone the repository, open it in VS Code and run **Dev Containers: Reopen in
+  Container**.
+- **Windows**: run **Dev Containers: Clone Repository in Container Volume…** and give it
+  `https://github.com/InfantLab/VideoAnnotator`. The code then lives on the Linux side. If you
+  clone to `C:\` and reopen it in the container instead, every file read crosses the Windows–WSL
+  file bridge and Defender scans each one: in our measurements collecting the tests took 3–4 minutes
+  that way against 10–30 seconds from a volume. The container prints a warning at start if it finds
+  itself on a Windows drive.
+
+The first time, creating the container installs every pipeline's dependencies
+(`uv sync --inexact --all-extras`): allow 5–10 minutes and about 9 GB of disk.
+
+**Memory**
+
+The container caps itself at 12 GB (`--memory=12g` in `.devcontainer/devcontainer.json`), so it
+can't take over the machine. What it actually uses, measured on 2026-10-02:
+
+| Doing | Peak memory |
+|---|---|
+| VS Code and its extensions, idle | about 2 GB |
+| The full test suite | 5.4 GB |
+| A job running six pipelines on the demo video | 6.5 GB |
+
+Installing the extras fills the cap with page cache (cached files, not memory any program holds);
+Linux reclaims it when something needs the room, so a full cap during an install is normal.
+
+*On a 16 GB machine*, Docker Desktop's VM gets 8 GB by default (half your RAM), so that is the real
+limit, not the 12 GB cap. Everything above fits. If a long video or several jobs at once need more,
+the sign is a process ending with `Killed` (exit code 137). Raise the VM's memory in Docker Desktop
+(Settings → Resources, or `memory=` in `%USERPROFILE%\.wslconfig` on Windows), and the `--memory`
+value in `devcontainer.json` if the container's own cap is what was hit.
+
+**What survives a rebuild**
+
+The Python environment (`.venv`) and the model weights live in Docker named volumes
+(`videoannotator-venv`, `videoannotator-models`, the latter shared with `docker-compose.yml`). They
+survive container rebuilds and `docker system prune --volumes`, which removes only anonymous
+volumes (Docker 23 and later); only `docker volume rm`, `docker volume prune --all` or resetting
+Docker Desktop deletes them. A rebuild that moves Python (as the move to one `Dockerfile` did)
+leaves the old `.venv` pointing at an interpreter that's gone; `uv` recreates it and the
+post-create step reinstalls everything, which takes the same 5–10 minutes as the first time.
+See [troubleshooting](troubleshooting.md#the-dev-container-is-slow-freezes-or-runs-out-of-memory) to
+back up or wipe the volumes.
 
 ## Troubleshooting
 
@@ -338,9 +610,9 @@ Open the project in VS Code and use "Reopen in Container" for a complete GPU-ena
    uv run python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
    ```
 
-3. **CUDA version mismatch**: Ensure CUDA Toolkit matches PyTorch CUDA version:
-   - Check CUDA Toolkit: `nvcc --version`
-   - Check PyTorch CUDA: `uv run python -c "import torch; print(torch.version.cuda)"`
+3. **Driver too old**: torch's CUDA 12.6 wheels need NVIDIA driver 560+ (525+ with CUDA's
+   minor-version compatibility). `nvidia-smi` shows the driver version; update it if
+   `torch.cuda.is_available()` is False on a machine with a GPU. The pipelines fall back to CPU.
 
 ### Native Dependencies
 
@@ -357,19 +629,17 @@ VideoAnnotator uses:
 - **FastAPI** - Modern API framework
 - **Hatchling/setuptools** - Modern build backend
 - **Docker** - CPU and GPU containerization
-- **Python 3.12+** - Latest Python with performance improvements
+- **Python 3.12 or 3.13**
 
 ## Dependencies Overview
 
 | Extras group      | Tools                          | Purpose                             | Needs torch |
 | ------------------ | ------------------------------ | ------------------------------------ | ----------- |
-| `person`           | YOLO11, ByteTrack, supervision | Person detection & tracking          | ✅          |
+| `person`           | YOLO11, ByteTrack              | Person detection & tracking          | ✅          |
 | `scene`            | PySceneDetect, OpenCLIP        | Scene segmentation & classification  | ✅          |
 | `face`             | DeepFace                       | Face detection, emotion, age/gender  | ❌          |
-| `face-laion`       | LAION CLIP face embeddings     | Semantic face embeddings             | ✅          |
-| `face-openface3`   | OpenFace 3.0                   | 512-D face embeddings                | ✅ (lazy)   |
+| `face-openface3`   | OpenFace 3.0                   | Landmarks, action units, gaze        | ✅          |
 | `audio`            | Whisper, pyannote.audio        | Speech transcription & diarization   | ✅          |
-| `audio-laion`      | LAION empathic voice           | Nuanced audio emotion analysis       | ✅          |
 | *(core, always on)* | FastAPI, uvicorn, SQLAlchemy   | REST API server, job/storage state   | N/A         |
 
 `face` is the only pipeline family that doesn't need torch at all — see the

@@ -332,25 +332,10 @@ class TestBatchAsyncIntegration:
         new=Mock(load_model=Mock(return_value=Mock())),
         create=True,
     )
-    @patch(
-        "videoannotator.pipelines.audio_processing.laion_voice_pipeline.WhisperForConditionalGeneration",
-        create=True,
-    )
-    @patch(
-        "videoannotator.pipelines.face_analysis.laion_face_pipeline.AutoProcessor",
-        create=True,
-    )
-    @patch(
-        "videoannotator.pipelines.face_analysis.laion_face_pipeline.AutoModelForFaceAnalysis",
-        create=True,
-    )
     @patch("logging.getLogger")
     async def test_async_job_processing(
         self,
         mock_logger,
-        mock_face_model_class,
-        mock_face_proc_class,
-        mock_voice_model_class,
         mock_metadata,
         mock_extract,
     ):
@@ -363,9 +348,6 @@ class TestBatchAsyncIntegration:
         mock_logger.return_value = Mock()
 
         # Ensure patched optional dependency entry points behave as expected.
-        mock_face_proc_class.from_pretrained.return_value = Mock()
-        mock_face_model_class.from_pretrained.return_value = Mock()
-        mock_voice_model_class.from_pretrained.return_value = Mock()
 
         # Add jobs
         jobs = []

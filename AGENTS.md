@@ -5,9 +5,10 @@ Unified guidance for AI coding assistants (Copilot, Claude, others) collaboratin
 ## 1. Project Snapshot
 
 - **Name**: VideoAnnotator
-- **Current Release**: v1.2.0 (API-first, production-ready base)
-- **Active Minor (In Progress)**: v1.2.1 (polish + pipeline specification/registry foundation)
-- **Next Major (Planned)**: v1.3.0 (advanced ML, multi-modal, plugins, enterprise)
+- **Current Release**: v1.5.0
+- **In Progress**: v1.6.0, the public release (`docs/development/roadmap_v1.6.0.md`). Sections
+  below written for v1.2.x describe the registry's origins; `CLAUDE.md` and the roadmap are current.
+- **Viewer**: the Video Annotation Viewer lives in `viewer/` (merged 2026-09-30); see §23.
 - **Primary Users**: Individual researchers (90%) needing simple local installs.
 - **Secondary Users**: Lab / enterprise research groups (10%).
 - **Core Pillars**: Modular pipelines, standardized outputs, reproducibility, minimal friction.
@@ -373,3 +374,57 @@ For new `src/api/` modules:
 | Exception init type error | Inline: `self.attr: type = value` |
 | Stale mypy errors | Clear `.mypy_cache` |
 | Pre-commit formatting | Re-stage files |
+
+## 23. Viewer (`viewer/`)
+
+The Video Annotation Viewer: React 18 + TypeScript (strict), Vite, Tailwind, shadcn/ui, Zod. It
+renders VideoAnnotator's outputs (COCO person/face/OpenFace/VLM JSON, WebVTT, RTTM, scenes) over the
+video, and drives the API (job submission, SSE progress, results). It was a separate repository
+(`InfantLab/video-annotation-viewer`) until v1.5.0; it now shares VideoAnnotator's version number
+(`viewer/package.json` follows `pyproject.toml`; `tests/unit/test_versions_match.py` checks) and its
+changelog (the root `CHANGELOG.md`; `viewer/CHANGELOG.md` is frozen history). Standalone mode
+(drop in files, no server) is still supported.
+
+### Commands (Bun only; there is no npm lockfile)
+
+```bash
+bash scripts/dev.sh                      # API server + Vite dev server (port 19011, proxies to 18011)
+cd viewer && bun run lint && bun run test:run
+cd viewer && bun run typecheck           # zero errors, checked in CI (plain `tsc` checks nothing)
+bash scripts/gen_viewer_api_types.sh    # after an API change: regenerate src/api/schema.d.ts
+cd viewer && bun run e2e                 # Playwright smoke (bun run e2e:install first)
+bash scripts/build_viewer.sh             # rebuild into src/videoannotator/viewer_static/
+```
+
+Any change under `viewer/src/` needs `scripts/build_viewer.sh` and the rebuilt `viewer_static/`
+committed in the same commit; CI's `viewer` job runs `--check` and fails on a stale bundle.
+
+### Where things go
+
+- API client: `viewer/src/api/client.ts`; hooks (SSE, health, job actions): `viewer/src/hooks/`;
+  pages: `viewer/src/pages/`; shared types: `viewer/src/types/annotations.ts`.
+- A new output format: type in `types/annotations.ts`, parser in `lib/parsers/<format>.ts`,
+  detection and merge in `lib/parsers/merger.ts`, drawing in `components/VideoPlayer.tsx` (and the
+  timeline), validation in `lib/validation.ts`, tests in `viewer/src/test/`.
+- Changing what a pipeline writes, or how the viewer reads it: refresh the real-output fixtures in
+  `tests/fixtures/viewer_contract/` (its README says how) so
+  `viewer/src/test/contract/videoannotator-outputs.test.ts` tests the new shape.
+- Job results load from the artifacts zip (`hooks/useZipDownloader.ts`), through the same
+  detection and merge as dropped-in files.
+
+### Conventions and pitfalls
+
+- Reuse shadcn/ui components (`viewer/src/components/ui/`); validate external data with Zod.
+- ESLint's `react-refresh/only-export-components`: a module that exports a component exports only
+  components; move constants, helper hooks and variants to their own modules.
+- Keep `react-hooks/exhaustive-deps` clean (don't disable it); stabilise derived deps with `useMemo`.
+- Use `127.0.0.1`, not `localhost`, for the API: the browser keeps separate storage for the two, so
+  a token saved under one is missing under the other.
+- Tests mock the network; no real API calls in CI. jsdom's `File` drops Node `Buffer`s (size 0):
+  build test files from strings.
+- Large files: load progressively; don't block the UI.
+- Viewer specs before the merge are in `viewer/specs/` (history); new viewer work gets a spec in
+  `specs/` like any other feature, under the one constitution (`.specify/memory/constitution.md`),
+  which covers the viewer since v1.1.0: no telemetry (I), the formats it reads (II), layers (IV),
+  UI stability (V), and faithful display (VI): never create or hide values; holding the latest
+  sample until the next is allowed; overlays attributable to their pipeline.

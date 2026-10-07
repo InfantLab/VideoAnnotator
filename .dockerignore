@@ -1,0 +1,13 @@
+# Allowlist: the build context is only what the Dockerfile copies. Everything else
+# (.git, .venv, models, databases, .env with tokens, viewer/node_modules) stays out.
+*
+!pyproject.toml
+!uv.lock
+!.python-version
+!README.md
+!src/
+!configs/
+# CI only: tests/launcher/Dockerfile.e2e adds these; the published image never copies them.
+!tests/launcher/e2e/
+**/__pycache__
+**/*.pyc

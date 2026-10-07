@@ -16,6 +16,7 @@ capabilities:
 outputs:
   - format: JSON
     types: [scene_boundary, scene_category]
+    file: scene_detection.json
 config_schema:
   threshold:
     type: float

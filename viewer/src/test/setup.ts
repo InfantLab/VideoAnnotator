@@ -17,12 +17,13 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
-// Mock window.ResizeObserver (used by some UI components)
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+// Mock window.ResizeObserver (used by some UI components). A class, because
+// Radix constructs it with `new`, which an arrow-function mock can't serve.
+global.ResizeObserver = class {
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+} as unknown as typeof ResizeObserver
 
 // Mock HTMLVideoElement methods (for video player tests)
 Object.defineProperty(HTMLMediaElement.prototype, 'play', {

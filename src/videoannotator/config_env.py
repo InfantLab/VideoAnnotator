@@ -6,10 +6,14 @@ Values can be overridden via environment variables or .env files.
 v1.3.0: Added concurrent job limiting configuration.
 """
 
+import logging
 import os
+import re
 from pathlib import Path
 
 from dotenv import dotenv_values, find_dotenv, load_dotenv
+
+from videoannotator.database_location import database_url
 
 
 def load_env_file() -> None:
@@ -176,13 +180,99 @@ CORS_ALLOW_CREDENTIALS = get_bool_env("CORS_ALLOW_CREDENTIALS", True)
 # boundary of what an admin on this machine can turn into a job.
 INGEST_ROOTS = get_str_env("VIDEOANNOTATOR_INGEST_ROOTS", "")
 
+# Where every run's results go (spec 022): one visible folder, by run then
+# video. Not ~/Documents, which many Windows installs sync to OneDrive by
+# default. Read per call, like the Ollama URL below, so it follows the
+# environment the server is running in.
+RESULTS_DIR_ENV = "VIDEOANNOTATOR_RESULTS_DIR"
+
+# Docker: set when the port is published on the host's loopback only, so every
+# caller that can reach the server is on this machine (spec 022, R6).
+PUBLISHED_LOCALLY_ENV = "VIDEOANNOTATOR_PUBLISHED_LOCALLY"
+
+# Docker: `container=host` path prefix pairs, `;`-separated, so locations are
+# shown as the researcher's own paths rather than the container's.
+HOST_PATHS_ENV = "VIDEOANNOTATOR_HOST_PATHS"
+
+
+# Spec 024: set by `videoannotator-start`, which can apply stop-sharing requests
+# the server leaves in LAUNCHER_REQUESTS_DIR.
+LAUNCHER_ENV = "VIDEOANNOTATOR_LAUNCHER"
+LAUNCHER_REQUESTS_DIR = Path("/app/launcher/requests")
+
+# Spec 024: shares the launcher couldn't find at this start (host paths,
+# `;`-separated), so Settings can still list them.
+MISSING_SHARES_ENV = "VIDEOANNOTATOR_MISSING_SHARES"
+
+# Spec 024, R6: `uid:gid` to give results to. Rootful Docker on Linux writes as
+# root on the host otherwise.
+RESULTS_OWNER_ENV = "VIDEOANNOTATOR_RESULTS_OWNER"
+
+
+def managed_by_launcher() -> bool:
+    """Whether `videoannotator-start` started this server."""
+    return get_bool_env(LAUNCHER_ENV, False)
+
+
+def missing_shares() -> list[str]:
+    """Host paths of shared folders missing when the launcher last started."""
+    raw = os.environ.get(MISSING_SHARES_ENV, "")
+    return [entry.strip() for entry in raw.split(";") if entry.strip()]
+
+
+def results_owner() -> tuple[int, int] | None:
+    """`(uid, gid)` from `$VIDEOANNOTATOR_RESULTS_OWNER`, or None."""
+    raw = os.environ.get(RESULTS_OWNER_ENV, "").strip()
+    if not raw:
+        return None
+    uid, sep, gid = raw.partition(":")
+    try:
+        if sep:
+            return int(uid), int(gid)
+    except ValueError:
+        pass
+    logging.getLogger(__name__).warning(
+        f"Ignoring {RESULTS_OWNER_ENV}={raw!r}: expected uid:gid, e.g. 1000:1000"
+    )
+    return None
+
+
+def results_dir() -> Path:
+    """`$VIDEOANNOTATOR_RESULTS_DIR`, else `~/VideoAnnotator`, resolved."""
+    raw = os.environ.get(RESULTS_DIR_ENV, "").strip()
+    path = Path(raw).expanduser() if raw else Path.home() / "VideoAnnotator"
+    return path.resolve()
+
+
+def published_locally() -> bool:
+    """Whether every caller counts as being on this machine (Docker, R6)."""
+    return get_bool_env(PUBLISHED_LOCALLY_ENV, False)
+
+
+WINDOWS_PATH = re.compile(r"^[A-Za-z]:\\")
+
+
+def host_paths() -> list[tuple[str, str]]:
+    """`(container prefix, host prefix)` pairs, longest container prefix first.
+
+    A Windows host prefix (`C:\\...`, spec 024) keeps its backslashes.
+    """
+    pairs = []
+    for entry in os.environ.get(HOST_PATHS_ENV, "").split(";"):
+        container, sep, host = entry.partition("=")
+        container, host = container.strip(), host.strip()
+        if sep and container and host:
+            host = host.rstrip("\\" if WINDOWS_PATH.match(host) else "/")
+            pairs.append((container.rstrip("/"), host))
+    return sorted(pairs, key=lambda pair: len(pair[0]), reverse=True)
+
 
 # =============================================================================
 # Database Configuration
 # =============================================================================
 
-# Database URL (defaults to SQLite)
-DATABASE_URL = get_str_env("DATABASE_URL", "sqlite:///./videoannotator.db")
+# DATABASE_URL, else SQLite at VIDEOANNOTATOR_DB_PATH or the per-user default
+DATABASE_URL = database_url()
 
 # Enable database connection pool
 DB_POOL_ENABLED = get_bool_env("DB_POOL_ENABLED", True)
@@ -199,7 +289,6 @@ DB_POOL_SIZE = get_int_env("DB_POOL_SIZE", 5)
 LOG_LEVEL = get_str_env("LOG_LEVEL", "INFO")
 
 # Log directory
-LOG_DIR = Path(get_str_env("LOG_DIR", "./logs"))
 
 # Enable structured JSON logging
 LOG_JSON = get_bool_env("LOG_JSON", False)
@@ -271,12 +360,19 @@ def print_config() -> None:
     print(f"  API_PORT: {API_PORT}")
     print(f"  ENABLE_VIEWER: {ENABLE_VIEWER}")
     print(f"  CORS_ORIGINS: {CORS_ORIGINS}")
+    print("\nVideos and results:")
+    print(f"  VIDEOANNOTATOR_INGEST_ROOTS: {INGEST_ROOTS or '(home folder)'}")
+    print(f"  {RESULTS_DIR_ENV}: {results_dir()}")
+    print(f"  {PUBLISHED_LOCALLY_ENV}: {published_locally()}")
+    print(f"  {HOST_PATHS_ENV}: {host_paths() or '(none)'}")
     print("\nDatabase:")
     print(f"  DATABASE_URL: {DATABASE_URL}")
     print(f"  DB_POOL_SIZE: {DB_POOL_SIZE}")
     print("\nLogging:")
     print(f"  LOG_LEVEL: {LOG_LEVEL}")
-    print(f"  LOG_DIR: {LOG_DIR}")
+    from videoannotator.utils.logging_config import logs_dir
+
+    print(f"  VIDEOANNOTATOR_LOG_DIR: {logs_dir()}")
     print("\nModels:")
     print(f"  MODEL_CACHE_DIR: {MODEL_CACHE_DIR}")
     print(f"  DEVICE: {DEVICE}")

@@ -132,3 +132,56 @@ class TestAutoAPIKeyGeneration:
         assert token_info.token_type == TokenType.API_KEY
         uuid.UUID(token_info.user_id)
         assert token_info.is_active is True
+
+
+def test_first_start_on_a_fresh_database_creates_an_api_key(tmp_path):
+    """Security setup used to run before the tables existed, so a brand-new
+    install logged `no such table: users` and started with authentication on and
+    no key."""
+    import sqlite3
+    import subprocess
+    import sys
+
+    db = tmp_path / "fresh.db"
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if k not in ("AUTH_REQUIRED", "DATABASE_URL", "VIDEOANNOTATOR_DB_PATH")
+    }
+    env.update(
+        VIDEOANNOTATOR_DB_PATH=str(db),
+        VIDEOANNOTATOR_LOG_DIR=str(tmp_path / "logs"),
+        VIDEOANNOTATOR_BACKGROUND_PROCESSING="false",
+    )
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from fastapi.testclient import TestClient\n"
+            "from videoannotator.api.main import create_app\n"
+            "with TestClient(create_app()):\n"
+            "    pass\n",
+        ],
+        cwd=tmp_path,
+        env=env,
+        check=True,
+        capture_output=True,
+    )
+    with sqlite3.connect(db) as conn:
+        assert conn.execute("select count(*) from api_keys").fetchone()[0] == 1
+        # The first key must be able to install pipelines from the viewer.
+        assert conn.execute("select is_admin from users").fetchall() == [(1,)]
+
+
+def test_first_key_link_uses_the_port_the_server_was_started_on(capsys, monkeypatch):
+    """`videoannotator server --port 18111` sets API_PORT; the link must follow it."""
+    monkeypatch.setenv("API_PORT", "18111")
+    with patch("videoannotator.api.startup.get_token_manager") as mock_get_manager:
+        mock_manager = MagicMock()
+        mock_manager.list_all_tokens.return_value = []
+        mock_manager.generate_api_key.return_value = ("va_key", MagicMock())
+        mock_get_manager.return_value = mock_manager
+        ensure_api_key_exists()
+    assert (
+        "http://127.0.0.1:18111/viewer-connect?token=va_key" in capsys.readouterr().out
+    )

@@ -2,14 +2,18 @@ import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Check, X as XIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import type { ElanTierAnnotation, VLMFrameAnnotation } from '@/types/annotations';
+import type { ElanTierAnnotation, ProvenanceInfo, VLMFrameAnnotation } from '@/types/annotations';
+import { ProvenanceAttribution } from './ProvenanceAttribution';
 import { getVlmAnnotationAtTime } from '@/lib/parsers/vlm';
+import { isPositiveLabel } from '@/lib/vlmLabels';
 import { getElanFourwayAtTime } from '@/lib/parsers/elan';
 
 interface VlmAnnotationPanelProps {
   annotations: VLMFrameAnnotation[];
   currentTime: number;
   elanGroundTruth?: ElanTierAnnotation[];
+  provenance?: ProvenanceInfo;
+  elanProvenance?: ProvenanceInfo;
 }
 
 const labelVariant = (label: string): 'default' | 'secondary' | 'destructive' => {
@@ -23,13 +27,13 @@ const labelVariant = (label: string): 'default' | 'secondary' | 'destructive' =>
 // at the same instant — not a general-purpose label parser. Works for the
 // touch-detection vocabulary (TOUCH/NO_TOUCH/MATERNAL_TOUCH/etc, YES/NO);
 // a differently-worded prompt's labels won't binarize meaningfully here.
-const isPositiveLabel = (label: string): boolean =>
-  !label.startsWith('ERROR') && label !== 'NO_TOUCH' && label !== 'NO' && label !== 'EMPTY';
 
 export const VlmAnnotationPanel = ({
   annotations,
   currentTime,
-  elanGroundTruth
+  elanGroundTruth,
+  provenance,
+  elanProvenance
 }: VlmAnnotationPanelProps) => {
   const [expanded, setExpanded] = useState(false);
 
@@ -63,6 +67,10 @@ export const VlmAnnotationPanel = ({
 
   return (
     <Card className="flex-shrink-0 p-3 space-y-2">
+      <ProvenanceAttribution info={provenance} pipeline="vlm_annotation" />
+      {elanGroundTruth && elanGroundTruth.length > 0 && (
+        <ProvenanceAttribution info={elanProvenance} pipeline="elan_ground_truth" />
+      )}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <Badge variant={labelVariant(current.label)}>{current.label}</Badge>

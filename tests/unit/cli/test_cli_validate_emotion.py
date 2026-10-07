@@ -9,7 +9,7 @@ runner = CliRunner()
 
 VALID = {
     "schema_version": 1,
-    "source_pipeline": "face_laion_clip",
+    "source_pipeline": "face_analysis",
     "emotions": [
         {
             "start": 0.0,
@@ -26,7 +26,7 @@ VALID = {
 
 INVALID = {
     "schema_version": 1,
-    "source_pipeline": "face_laion_clip",
+    "source_pipeline": "face_analysis",
     "emotions": [
         {
             "start": 0.4,

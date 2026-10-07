@@ -1,14 +1,20 @@
-import { Dispatch, ReactNode, SetStateAction, useEffect, useMemo, useState } from "react";
+import { Dispatch, ReactNode, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ServerFolderPicker, type ServerFolderSelection } from "@/components/ServerFolderPicker";
+import { NoFolderAccess, ServerFolderPicker, type ServerFolderSelection } from "@/components/ServerFolderPicker";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw, FolderOpen, HardDrive } from "lucide-react";
+import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw, FolderOpen, HardDrive, Database } from "lucide-react";
+import { DatasetPicker, type PickedFile } from "@/components/DatasetPicker";
+import { SaveDatasetDialog } from "@/components/SaveDatasetDialog";
+import { settingsOf, wizardStartOf, type WizardStart } from "@/lib/wizardStart";
+import { StartFromRecent } from "@/components/StartFromRecent";
+import { manifestFrom, relativePathOf, scanCandidates } from "@/lib/datasetMatch";
+import { rememberFolder, supportsFolderHandles, videosIn } from "@/lib/datasetHandles";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { apiClient } from "@/api/client";
 import { handleAPIError } from "@/api/handleError";
@@ -35,13 +41,15 @@ import {
 } from "@/hooks/usePipelineCatalog";
 import { DynamicPipelineParameters } from "@/components/DynamicPipelineParameters";
 import { findUrlFieldErrors } from "@/lib/pipelineUrlFields";
-import { LockedPipelineCard, ExtrasInstallStatus, ReadinessDetails } from "@/components/LockedPipelineCard";
+import { LockedPipelineCard, ExtrasInstallStatus, ReadinessDetails, RestoringStatus } from "@/components/LockedPipelineCard";
 import { RestartRequiredBanner } from "@/components/RestartRequiredBanner";
 import type { PipelineDescriptor } from "@/types/pipelines";
+import type { IngestAccess } from "@/types/ingest";
 import { useConfigValidation } from "@/hooks/useConfigValidation";
 import { ConfigValidationPanel } from "@/components/ConfigValidationPanel";
 import { useExtrasInstall } from "@/hooks/useExtrasInstall";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useIngestAccess } from "@/hooks/useIngestAccess";
 import {
   extrasGroupOf,
   isPipelineSelectable,
@@ -58,7 +66,7 @@ import { APIError, apiErrorEnvelope } from "@/api/handleError";
 
 // Wizard steps
 const STEPS = [
-  { id: 1, title: "Choose Videos", description: "Upload files, or use a folder on the server" },
+  { id: 1, title: "Choose Videos", description: "From My folders, a saved dataset, or an upload" },
   { id: 2, title: "Select Pipelines", description: "Choose annotation pipelines" },
   { id: 3, title: "Configure", description: "Set pipeline parameters" },
   { id: 4, title: "Review & Submit", description: "Review and start jobs" },
@@ -113,18 +121,15 @@ const defaultBatchName = (files: File[]): string => {
     : `${files.length} videos — ${stamp}`;
 };
 
-// Type for retry state passed via React Router
-interface RetryJobState {
-  retryJobId: string;
-  retryJobConfig?: Record<string, unknown>;
-  retryJobPipelines?: string[];
-  retryJobVideoFilename?: string;
-}
 
 const CreateNewJob = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const retryState = location.state as RetryJobState | undefined;
+  // How the wizard was opened (spec 019): read once, since the state is
+  // cleared from history after use. "Choose other videos instead" turns a
+  // rerun into a settings start.
+  const [start, setStart] = useState<WizardStart | null>(() => wizardStartOf(location.state));
+  const rerunning = start?.mode === 'rerun' || start?.mode === 'rerunBatch' ? start : null;
 
   const { data: catalogData, isLoading: catalogLoading, error: catalogError } = usePipelineCatalog();
   const refreshPipelineCatalog = useRefreshPipelineCatalog();
@@ -143,9 +148,33 @@ const CreateNewJob = () => {
   // is explicit state rather than derived from `serverFolder`: you can't pick
   // a folder before switching to the server tab, so deriving it would make the
   // tab impossible to open.
-  const [videoSource, setVideoSource] = useState<'upload' | 'server'>('upload');
+  // "Start a job" on the Datasets page opens on the Saved dataset tab.
+  const startFromDataset = start?.mode === 'dataset' ? start : null;
+  const [videoSource, setVideoSource] = useState<VideoSource>(startFromDataset ? 'dataset' : 'upload');
+  // Spec 022: on the server's own machine, videos are chosen in "My folders"
+  // and read where they are; upload is the fallback for another computer.
+  // Only the server can say which this is, so step 1 waits for its answer.
+  const ingestAccess = useIngestAccess();
+  const [sourceDefaulted, setSourceDefaulted] = useState(startFromDataset !== null);
+  useEffect(() => {
+    if (sourceDefaulted || ingestAccess.isLoading) return;
+    // My folders only helps if it can find videos: where none of its places
+    // has any (a fresh container, videos on another drive), start on upload.
+    const places = ingestAccess.access?.places;
+    const findsVideos = places === undefined || places.some((p) => p.has_videos);
+    if (ingestAccess.sameMachine && (findsVideos || !ingestAccess.canReadInPlace)) setVideoSource('server');
+    setSourceDefaulted(true);
+  }, [sourceDefaulted, ingestAccess.isLoading, ingestAccess.sameMachine, ingestAccess.canReadInPlace, ingestAccess.access]);
   const [serverFolder, setServerFolder] = useState<ServerFolderSelection | null>(null);
+  // The saved dataset the chosen videos are (spec 018); cleared by any manual change.
+  const [fromDataset, setFromDataset] = useState<{ id: string; name: string } | null>(null);
+  const [relativePaths, setRelativePaths] = useState<Map<File, string | null>>(new Map());
+  const [folderHandle, setFolderHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  // A browser-uploaded dataset whose videos the server still stores: it runs
+  // from those copies, so there is nothing to pick or upload.
+  const [storedRun, setStoredRun] = useState<StoredRun | null>(null);
   const usingServerFolder = videoSource === 'server' && serverFolder !== null;
+  const usingStored = videoSource === 'dataset' && storedRun !== null;
 
   // The catalog (`pipelines` above) never carries per-field parameters —
   // apiClient.getPipelineCatalog()'s mapLegacyPipelineResponse always sets
@@ -217,21 +246,21 @@ const CreateNewJob = () => {
     });
   }, [pipelines, defaultSelectedPipelines]);
 
-  // Handle retry state - pre-fill form with failed job's configuration
+  // Pre-fill a job's or batch's settings once (rerun, "Use these settings").
+  // Pipelines this server can't run now are left out and said so.
+  const [startApplied, setStartApplied] = useState(false);
   useEffect(() => {
-    if (retryState && pipelines.length) {
-      if (retryState.retryJobPipelines) {
-        const { kept, leftOut } = partitionSelection(retryState.retryJobPipelines, pipelines);
-        setSelectedPipelines(kept);
-        setSelectionNotices(leftOut);
-      }
-      if (retryState.retryJobConfig) {
-        setConfig(retryState.retryJobConfig);
-      }
-      // Clear the state after using it to prevent re-filling on navigation
-      window.history.replaceState({}, document.title);
+    if (startApplied || !start || start.mode === 'dataset' || !pipelines.length) return;
+    if (start.selectedPipelines) {
+      const { kept, leftOut } = partitionSelection(start.selectedPipelines, pipelines);
+      setSelectedPipelines(kept);
+      setSelectionNotices(leftOut);
     }
-  }, [retryState, pipelines]);
+    if (start.config) setConfig(start.config);
+    setStartApplied(true);
+    // Clear the state after using it to prevent re-filling on navigation
+    window.history.replaceState({}, document.title);
+  }, [start, startApplied, pipelines]);
 
   // A preset is applied like a retried job: its pipelines through the same
   // readiness filter (left-out ones are named), its settings over the current ones.
@@ -304,9 +333,11 @@ const CreateNewJob = () => {
       const response = await apiClient.ingestFolder({
         path: serverFolder.path,
         recursive: serverFolder.recursive,
+        files: serverFolder.files,
         selected_pipelines: selectedPipelines,
         config: effectiveConfig,
         batch_name: batchName.trim() || undefined,
+        dataset_id: fromDataset?.id,
       });
 
       setSubmitSuccess(response.created);
@@ -335,12 +366,86 @@ const CreateNewJob = () => {
     }
   };
 
+  /** A saved dataset from the server's stored copies: one request, no upload. */
+  const submitStoredDataset = async () => {
+    if (!storedRun) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess([]);
+    const effectiveConfig = Object.fromEntries(
+      Object.entries(config).filter(([pipelineId]) => selectedPipelines.includes(pipelineId))
+    );
+    try {
+      const response = await apiClient.runDataset(storedRun.id, {
+        selected_pipelines: selectedPipelines,
+        config: Object.keys(effectiveConfig).length > 0 ? effectiveConfig : undefined,
+        batch_name: batchName.trim() || undefined,
+      });
+      setSubmitSuccess(response.created);
+      rememberRunSetup(response.batch_id, weightsNotesFor(pipelines, selectedPipelines));
+      if (response.skipped.length > 0) {
+        setSubmitError(parseApiError({
+          error: `${response.skipped.length} video(s) were not run`,
+          hint: response.skipped.map((s) => `${s.filename}: ${s.reason}`).join('\n'),
+        }));
+      }
+      if (response.created.length > 0) {
+        setTimeout(() => navigate(`/batches/${response.batch_id}`), 2000);
+      }
+    } catch (error) {
+      setSubmitError(parseApiError(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  /** "Edit and run again": the original's videos, these settings (spec 019). */
+  const submitRerun = async () => {
+    if (!rerunning) return;
+    if (selectedPipelines.length === 0) {
+      setSubmitError(parseApiError("No pipelines selected"));
+      return;
+    }
+    setIsSubmitting(true);
+    setSubmitError(null);
+    const overrides = {
+      selected_pipelines: selectedPipelines,
+      config: Object.fromEntries(Object.entries(config).filter(([id]) => selectedPipelines.includes(id))),
+    };
+    try {
+      if (rerunning.mode === 'rerun') {
+        const job = await apiClient.rerunJob(rerunning.jobId, overrides);
+        setSubmitSuccess([job.id]);
+        setTimeout(() => navigate(`/jobs/${job.id}`), 1500);
+      } else {
+        const result = await apiClient.rerunBatch(rerunning.batchId, overrides);
+        setSubmitSuccess(result.created);
+        if (result.skipped.length > 0) {
+          setSubmitError(parseApiError({
+            error: `${result.skipped.length} job(s) were not run again`,
+            hint: result.skipped.map((s) => s.reason).join('\n'),
+          }));
+        }
+        if (result.created.length > 0) setTimeout(() => navigate(`/batches/${result.batch_id}`), 1500);
+      }
+    } catch (error) {
+      setSubmitError(parseApiError(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const performActualSubmission = async () => {
     console.log('🚀 Submit button clicked - starting job submission');
     console.log('Selected pipelines:', selectedPipelines);
     console.log('Config:', config);
 
-    if (!usingServerFolder && selectedFiles.length === 0) {
+    if (rerunning) {
+      await submitRerun();
+      return;
+    }
+
+    if (!usingServerFolder && !usingStored && selectedFiles.length === 0) {
       setSubmitError(parseApiError("No videos selected"));
       return;
     }
@@ -360,6 +465,11 @@ const CreateNewJob = () => {
 
     if (usingServerFolder) {
       await submitServerFolder();
+      return;
+    }
+
+    if (usingStored) {
+      await submitStoredDataset();
       return;
     }
 
@@ -398,7 +508,7 @@ const CreateNewJob = () => {
             file,
             selectedPipelines,
             effectiveConfig,
-            { id: batchId, name: effectiveBatchName }
+            { id: batchId, name: effectiveBatchName, datasetId: fromDataset?.id }
           );
           console.log(`✅ Job created successfully: ${response.id}`);
           jobIds.push(response.id);
@@ -463,7 +573,35 @@ const CreateNewJob = () => {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
+        if (rerunning) {
+          return (
+            <div className="rounded-md border p-4 text-sm">
+              <p className="font-medium">
+                {rerunning.mode === 'rerunBatch'
+                  ? `The ${rerunning.videoCount} videos of ${rerunning.label}`
+                  : `The video of ${rerunning.label}`}
+              </p>
+              <p className="text-muted-foreground">Already on the server; nothing is uploaded again.</p>
+            </div>
+          );
+        }
         return (
+          <>
+          {!start && (
+            <div className="mb-4">
+              <StartFromRecent
+                onUseJob={(job, label) => {
+                  setStart({ mode: 'settings', label, ...settingsOf(job) });
+                  setStartApplied(false);
+                }}
+                onApplyPreset={(preset) => {
+                  applyPreset(preset);
+                  setStart({ mode: 'settings', label: `preset “${preset.name}”`, selectedPipelines: preset.selected_pipelines, config: preset.config });
+                  setStartApplied(true);
+                }}
+              />
+            </div>
+          )}
           <VideoUploadStep
             selectedFiles={selectedFiles}
             setSelectedFiles={setSelectedFiles}
@@ -471,7 +609,14 @@ const CreateNewJob = () => {
             setVideoSource={setVideoSource}
             serverFolder={serverFolder}
             setServerFolder={setServerFolder}
+            dataset={{ fromDataset, setFromDataset, relativePaths, setRelativePaths, folderHandle, setFolderHandle }}
+            storedRun={storedRun}
+            setStoredRun={setStoredRun}
+            highlightDatasetId={startFromDataset?.datasetId}
+            access={ingestAccess.access}
+            accessLoading={!sourceDefaulted}
           />
+          </>
         );
       case 2:
         return (
@@ -506,7 +651,13 @@ const CreateNewJob = () => {
         return (
           <ReviewStep
             serverFolder={usingServerFolder ? serverFolder : null}
+            storedSource={usingStored ? storedRun ?? undefined : undefined}
             selectedFiles={selectedFiles}
+            rerunSource={
+              rerunning
+                ? { label: rerunning.label, videoCount: rerunning.mode === 'rerunBatch' ? rerunning.videoCount : 1 }
+                : undefined
+            }
             selectedPipelines={selectedPipelines}
             config={config}
             onSubmit={handleSubmitJobs}
@@ -527,6 +678,8 @@ const CreateNewJob = () => {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
+        if (rerunning) return true;
+        if (videoSource === 'dataset') return storedRun !== null;
         return videoSource === 'server' ? serverFolder !== null : selectedFiles.length > 0;
       case 2:
         return (
@@ -573,23 +726,34 @@ const CreateNewJob = () => {
         </div>
       </div>
 
-      {/* Retry Banner */}
-      {retryState && (
+      {rerunning && (
         <Alert>
           <RotateCcw className="h-4 w-4" />
-          <AlertTitle>Retrying Failed Job</AlertTitle>
+          <AlertTitle>Running {rerunning.label} again</AlertTitle>
           <AlertDescription>
-            <div className="space-y-1">
-              <p>Job ID: <span className="font-mono text-sm">{retryState.retryJobId}</span></p>
-              <p>Pipeline settings and configuration have been pre-filled.</p>
-              <p className="font-semibold">
-                {retryState.retryJobVideoFilename
-                  ? `Please upload "${retryState.retryJobVideoFilename}" again to retry the job.`
-                  : 'Please upload the same video file to retry the job.'
-                }
-              </p>
-            </div>
+            <p>
+              {rerunning.mode === 'rerunBatch'
+                ? `Its ${rerunning.videoCount} videos are used again`
+                : 'Its video is used again'}
+              : nothing to upload. Change pipelines or settings, then start. The original and its results are kept.
+            </p>
+            <Button
+              variant="link"
+              className="h-auto p-0"
+              onClick={() =>
+                setStart({ mode: 'settings', label: rerunning.label, selectedPipelines, config })
+              }
+            >
+              Choose other videos instead
+            </Button>
           </AlertDescription>
+        </Alert>
+      )}
+      {start?.mode === 'settings' && (
+        <Alert>
+          <RotateCcw className="h-4 w-4" />
+          <AlertTitle>Settings from {start.label}</AlertTitle>
+          <AlertDescription>Its pipelines and settings are filled in. Choose the videos to run them on.</AlertDescription>
         </Alert>
       )}
 
@@ -702,29 +866,138 @@ const CreateNewJob = () => {
 };
 
 // Step Components
-const VideoUploadStep = ({
+type VideoSource = 'upload' | 'server' | 'dataset';
+
+interface DatasetSelectionState {
+  fromDataset: { id: string; name: string } | null;
+  setFromDataset: (dataset: { id: string; name: string } | null) => void;
+  relativePaths: Map<File, string | null>;
+  setRelativePaths: (paths: Map<File, string | null>) => void;
+  folderHandle: FileSystemDirectoryHandle | null;
+  setFolderHandle: (handle: FileSystemDirectoryHandle | null) => void;
+}
+
+/** A saved dataset run from the server's stored copies of its videos. */
+interface StoredRun {
+  id: string;
+  name: string;
+  videoCount: number;
+  /** Dataset videos the server no longer has, left out of the run. */
+  missing: string[];
+}
+
+export const VideoUploadStep = ({
   selectedFiles,
   setSelectedFiles,
   videoSource,
   setVideoSource,
   serverFolder,
-  setServerFolder
+  setServerFolder,
+  dataset,
+  highlightDatasetId,
+  storedRun,
+  setStoredRun,
+  access,
+  accessLoading
 }: {
   selectedFiles: File[];
   setSelectedFiles: (files: File[]) => void;
-  videoSource: 'upload' | 'server';
-  setVideoSource: (source: 'upload' | 'server') => void;
+  videoSource: VideoSource;
+  setVideoSource: (source: VideoSource) => void;
   serverFolder: ServerFolderSelection | null;
   setServerFolder: (selection: ServerFolderSelection | null) => void;
+  dataset: DatasetSelectionState;
+  highlightDatasetId?: string;
+  storedRun: StoredRun | null;
+  setStoredRun: (run: StoredRun | null) => void;
+  access: IngestAccess | null;
+  accessLoading: boolean;
 }) => {
+  const [saving, setSaving] = useState(false);
+  const folderInput = useRef<HTMLInputElement>(null);
+
+  // The selection no longer equals the dataset it came from.
+  const changedByHand = () => {
+    dataset.setFromDataset(null);
+    setStoredRun(null);
+  };
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    const paths = new Map(dataset.relativePaths);
+    for (const file of files) paths.set(file, relativePathOf(file));
+    dataset.setRelativePaths(paths);
     setSelectedFiles([...selectedFiles, ...files]);
+    changedByHand();
+  };
+
+  const applyFolder = (picked: PickedFile[], handle: FileSystemDirectoryHandle | null) => {
+    dataset.setRelativePaths(new Map(picked.map((p) => [p.file, p.relativePath])));
+    dataset.setFolderHandle(handle);
+    setSelectedFiles(picked.map((p) => p.file));
+  };
+
+  const chooseFolder = async () => {
+    if (!supportsFolderHandles()) {
+      folderInput.current?.click();
+      return;
+    }
+    try {
+      const handle = await (window as unknown as { showDirectoryPicker: (o: object) => Promise<FileSystemDirectoryHandle> })
+        .showDirectoryPicker({ mode: 'read' });
+      const found = await videosIn(handle);
+      applyFolder(found.map((c) => ({ file: c.item, relativePath: c.relativePath })), handle);
+      changedByHand();
+    } catch {
+      // Picker cancelled or refused: keep the current selection.
+    }
   };
 
   const removeFile = (index: number) => {
     setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
+    changedByHand();
   };
+
+  const selectServerFolder = (selection: ServerFolderSelection | null) => {
+    setServerFolder(selection);
+    changedByHand();
+  };
+
+  const buildDataset = async () => {
+    if (videoSource === 'server' && serverFolder?.files) {
+      // Spec 022: the chosen videos, not the folder.
+      const chosen = new Set(serverFolder.files);
+      const scan = await apiClient.scanServerFolder(serverFolder.path, true);
+      return {
+        video_manifest: manifestFrom(scanCandidates(scan.videos.filter((v) => chosen.has(v.relative_path)))),
+        server_folder: scan.path,
+        server_folder_recursive: false,
+        server_selection: true,
+      };
+    }
+    if (videoSource === 'server' && serverFolder) {
+      const scan = await apiClient.scanServerFolder(serverFolder.path, serverFolder.recursive);
+      return {
+        video_manifest: manifestFrom(scanCandidates(scan.videos)),
+        server_folder: scan.path,
+        server_folder_recursive: scan.recursive,
+      };
+    }
+    return {
+      video_manifest: manifestFrom(
+        selectedFiles.map((file) => ({
+          name: file.name,
+          size: file.size,
+          relativePath: dataset.relativePaths.get(file) ?? null,
+          item: file,
+        })),
+      ),
+    };
+  };
+
+  const hasSelection = videoSource === 'server' ? serverFolder !== null : selectedFiles.length > 0;
+  const sameMachine = access?.same_machine ?? false;
 
   const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
 
@@ -732,27 +1005,62 @@ const VideoUploadStep = ({
   // folder would make "what is this run?" ambiguous, so switching clears the
   // one being left behind.
   const onSourceChange = (next: string) => {
-    const mode = next === 'server' ? 'server' : 'upload';
+    const mode: VideoSource = next === 'server' || next === 'dataset' ? next : 'upload';
     setVideoSource(mode);
+    if (mode === 'dataset') return; // nothing changes until a dataset is chosen
     if (mode === 'upload') setServerFolder(null);
     else setSelectedFiles([]);
+    changedByHand();
   };
+
+  if (accessLoading) {
+    return (
+      <div className="space-y-3" aria-busy="true">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <Tabs value={videoSource} onValueChange={onSourceChange}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="upload">
-            <Upload className="h-4 w-4 mr-2" />
-            Upload from this computer
-          </TabsTrigger>
-          <TabsTrigger value="server">
-            <HardDrive className="h-4 w-4 mr-2" />
-            Folder on the server
+          {sameMachine ? (
+            <TabsTrigger value="server">
+              <HardDrive className="h-4 w-4 mr-2" />
+              My folders
+            </TabsTrigger>
+          ) : (
+            <TabsTrigger value="upload">
+              <Upload className="h-4 w-4 mr-2" />
+              Upload videos
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="dataset">
+            <Database className="h-4 w-4 mr-2" />
+            Saved datasets
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="upload" className="mt-4">
+        <TabsContent value="upload" className="mt-4 space-y-3">
+          {sameMachine && access?.places && access.places.length > 0 && !access.places.some((p) => p.has_videos) && (
+            <p className="text-sm text-muted-foreground">
+              No videos were found in the folders VideoAnnotator can read on this computer, so you&apos;re
+              starting with upload.
+            </p>
+          )}
+          {sameMachine && (
+            <div className="flex items-start justify-between gap-2 text-sm">
+              <p className="text-muted-foreground">
+                Uploading copies each video to VideoAnnotator&apos;s storage. Use it for videos
+                on another computer.
+              </p>
+              <Button variant="link" size="sm" className="h-auto p-0 shrink-0" onClick={() => onSourceChange('server')}>
+                Back to My folders
+              </Button>
+            </div>
+          )}
           <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 text-center">
             <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">Upload Video Files</h3>
@@ -760,6 +1068,20 @@ const VideoUploadStep = ({
               Select video files to process. Formats: MP4, WebM, AVI, MOV
             </p>
 
+            <div className="mb-3">
+              <Button variant="outline" size="sm" onClick={chooseFolder}>
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Choose a folder
+              </Button>
+              <input
+                ref={folderInput}
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+                {...{ webkitdirectory: '', directory: '' }}
+              />
+              <span className="text-xs text-muted-foreground ml-2">or pick files:</span>
+            </div>
             <input
               type="file"
               accept="video/*"
@@ -767,28 +1089,113 @@ const VideoUploadStep = ({
               onChange={handleFileChange}
               className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
-            {selectedFiles.length > 8 && (
+            {selectedFiles.length > 8 && sameMachine && (
               <p className="text-xs text-muted-foreground mt-4">
                 That&apos;s {selectedFiles.length} uploads, one per video, with this tab kept
-                open. If these files are on the machine running VideoAnnotator, the
-                &ldquo;Folder on the server&rdquo; tab starts them without uploading anything.
+                open. These files are on this computer, so My folders starts them without
+                uploading or copying anything.
               </p>
             )}
           </div>
         </TabsContent>
 
         <TabsContent value="server" className="mt-4 space-y-3">
-          <div className="flex items-start gap-2">
-            <FolderOpen className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-            <p className="text-sm text-muted-foreground">
-              Pick a folder that the VideoAnnotator server can already see. Its videos are
-              read where they are — nothing is uploaded or copied, so a whole corpus starts
-              in one step.
-            </p>
-          </div>
-          <ServerFolderPicker selection={serverFolder} onSelect={setServerFolder} />
+          {access?.can_read_in_place ? (
+            <>
+              <ServerFolderPicker selection={serverFolder} onSelect={selectServerFolder} />
+              <Button variant="link" size="sm" className="h-auto p-0" onClick={() => onSourceChange('upload')}>
+                Videos on another computer? Upload them &rsaquo;
+              </Button>
+            </>
+          ) : (
+            <NoFolderAccess access={access} onUpload={() => onSourceChange('upload')} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="dataset" className="mt-4">
+          <DatasetPicker
+            highlightId={highlightDatasetId}
+            onUseStored={(chosen, stored) => {
+              setSelectedFiles([]);
+              setServerFolder(null);
+              dataset.setFromDataset({ id: chosen.id, name: chosen.name });
+              setStoredRun({
+                id: chosen.id,
+                name: chosen.name,
+                videoCount: stored.stored,
+                missing: stored.videos.filter((v) => !v.job_id).map((v) => v.filename),
+              });
+            }}
+            onUseFiles={(picked, chosen, handle) => {
+              setStoredRun(null);
+              applyFolder(picked, handle);
+              setServerFolder(null);
+              setVideoSource('upload');
+              dataset.setFromDataset({ id: chosen.id, name: chosen.name });
+            }}
+            onUseServerFolder={(selection, chosen) => {
+              setStoredRun(null);
+              setSelectedFiles([]);
+              setServerFolder(selection);
+              setVideoSource('server');
+              dataset.setFromDataset({ id: chosen.id, name: chosen.name });
+            }}
+          />
         </TabsContent>
       </Tabs>
+
+      {videoSource === 'dataset' && storedRun && (
+        <div className="flex items-start gap-2 rounded-md border p-3 text-sm">
+          <Database className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+          <div>
+            <p>
+              <span className="font-medium">{storedRun.videoCount} video{storedRun.videoCount === 1 ? '' : 's'}</span>{' '}
+              from &ldquo;{storedRun.name}&rdquo;, already on the server: nothing to upload.
+            </p>
+            {storedRun.missing.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Not included (no longer on the server): {storedRun.missing.join(', ')}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {hasSelection && videoSource !== 'dataset' && (
+        <div className="flex items-center justify-between gap-2 rounded-md border p-3 text-sm">
+          {dataset.fromDataset ? (
+            <>
+              <span>
+                <Database className="h-4 w-4 inline mr-1" />
+                From saved dataset <strong>{dataset.fromDataset.name}</strong>
+              </span>
+              <Button variant="ghost" size="sm" onClick={changedByHand}>
+                Don't link to it
+              </Button>
+            </>
+          ) : (
+            <>
+              <span className="text-muted-foreground">Running these videos again later?</span>
+              <Button variant="outline" size="sm" onClick={() => setSaving(true)}>
+                Save as dataset
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+      {saving && (
+        <SaveDatasetDialog
+          open
+          defaultName={videoSource === 'server' && serverFolder ? serverFolder.path.split(/[\\/]/).filter(Boolean).pop() ?? '' : defaultBatchName(selectedFiles)}
+          build={buildDataset}
+          onSaved={async (saved) => {
+            if (dataset.folderHandle) await rememberFolder(saved.id, dataset.folderHandle);
+            dataset.setFromDataset({ id: saved.id, name: saved.name });
+            setSaving(false);
+          }}
+          onClose={() => setSaving(false)}
+        />
+      )}
 
       {videoSource === 'upload' && selectedFiles.length > 0 && (
         <div className="p-4 bg-green-50 rounded-lg">
@@ -908,7 +1315,7 @@ export const PipelineSelectionStep = ({
     pipelines.forEach((pipeline) => {
       const readiness = pipeline.readiness;
       const extraName = extrasGroupOf(pipeline);
-      if (readiness?.state === 'installing' && readiness.installJobId && extraName) {
+      if ((readiness?.state === 'installing' || readiness?.state === 'restoring') && readiness.installJobId && extraName) {
         adoptJob(extraName, readiness.installJobId, lockedPipelineIdsByExtra.get(extraName) ?? [pipeline.id]);
       }
     });
@@ -1079,6 +1486,7 @@ export const PipelineSelectionStep = ({
                           </Button>
                         </div>
                       )}
+                      {mode === 'restoring' && <RestoringStatus />}
                       {mode === 'restart' && (!job || job.status !== 'completed') && (
                         <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-500">
                           Installed. Restart the server to activate it.
@@ -1348,7 +1756,9 @@ const ConfigurationStep = ({
 
 const ReviewStep = ({
   serverFolder,
+  storedSource,
   selectedFiles,
+  rerunSource,
   selectedPipelines,
   config,
   onSubmit,
@@ -1361,7 +1771,9 @@ const ReviewStep = ({
   notReadySelected = []
 }: {
   serverFolder: ServerFolderSelection | null;
+  storedSource?: StoredRun;
   selectedFiles: File[];
+  rerunSource?: { label: string; videoCount: number };
   selectedPipelines: string[];
   config: Record<string, unknown>;
   onSubmit: () => void;
@@ -1378,13 +1790,19 @@ const ReviewStep = ({
   const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
   // A server-folder run has no File objects to describe, and its exact video
   // count is the server's to report -- so describe the source, not a list.
-  const runLabel = serverFolder
+  const runLabel = rerunSource
+    ? `${rerunSource.label} (rerun)`
+    : storedSource
+    ? storedSource.name
+    : serverFolder
     ? serverFolder.path.split(/[/\\]/).filter(Boolean).pop() || serverFolder.path
     : defaultBatchName(selectedFiles);
-  const videoCountLabel = serverFolder
-    ? serverFolder.recursive
-      ? 'Every video in that folder and its subfolders'
-      : `${serverFolder.videoCount} video${serverFolder.videoCount === 1 ? '' : 's'}`
+  const videoCountLabel = rerunSource
+    ? `${rerunSource.videoCount} video${rerunSource.videoCount === 1 ? '' : 's'}, used again`
+    : storedSource
+    ? `${storedSource.videoCount} video${storedSource.videoCount === 1 ? '' : 's'}, already on the server`
+    : serverFolder
+    ? `${serverFolder.videoCount} video${serverFolder.videoCount === 1 ? '' : 's'}, read where they are`
     : `${selectedFiles.length} video${selectedFiles.length === 1 ? '' : 's'}`;
   const pipelineNames = selectedPipelines
     .map((pipelineId) => pipelines.find((pipeline) => pipeline.id === pipelineId)?.name || pipelineId)

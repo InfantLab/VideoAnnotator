@@ -254,6 +254,10 @@ export async function validateFaceAnalysisFile(file: File): Promise<{
         const firstFace = faces[0];
         const warnings: string[] = [];
 
+        if (typeof firstFace !== 'object' || firstFace === null) {
+            return { isValid: false, error: 'Invalid face annotation: expected an object' };
+        }
+
         // Check required fields
         if (!('face_id' in firstFace)) {
             return { isValid: false, error: 'Missing required field: face_id' };
@@ -267,7 +271,8 @@ export async function validateFaceAnalysisFile(file: File): Promise<{
             return { isValid: false, error: 'Missing required field: timestamp' };
         }
 
-        if (!('attributes' in firstFace) || !firstFace.attributes.emotions) {
+        const attributes = (firstFace as { attributes?: { emotions?: unknown } }).attributes;
+        if (!attributes?.emotions) {
             warnings.push('Face has no emotion analysis data');
         }
 

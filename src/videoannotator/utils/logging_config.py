@@ -7,11 +7,39 @@ comprehensive debugging support.
 import json
 import logging
 import logging.handlers
+import os
 import sys
 import traceback
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
+
+LOG_DIR_ENV = "VIDEOANNOTATOR_LOG_DIR"
+
+
+def _default_logs_dir() -> Path:
+    if sys.platform == "win32":
+        base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+        return base / "videoannotator" / "logs"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Logs" / "videoannotator"
+    # XDG puts logs under state, not data.
+    base = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+    return base / "videoannotator" / "logs"
+
+
+def logs_dir() -> Path:
+    """The log directory, as an absolute path.
+
+    `VIDEOANNOTATOR_LOG_DIR`, defaulting to the platform's per-user log location, so
+    starting the server from another directory doesn't scatter logs.
+    """
+    configured = os.environ.get(LOG_DIR_ENV)
+    root = Path(configured).expanduser() if configured else _default_logs_dir()
+    return root.resolve()
+
+
+_resolve_logs_dir = logs_dir
 
 
 class StructuredFormatter(logging.Formatter):
@@ -93,11 +121,11 @@ class APIRequestFormatter(logging.Formatter):
 class VideoAnnotatorLoggingConfig:
     """Configuration class for VideoAnnotator logging system."""
 
-    def __init__(self, logs_dir: str = "logs", log_level: str = "INFO"):
+    def __init__(self, logs_dir: str | Path | None = None, log_level: str = "INFO"):
         """Initialize logging paths and default log level."""
-        self.logs_dir = Path(logs_dir)
+        self.logs_dir = Path(logs_dir) if logs_dir is not None else _resolve_logs_dir()
         self.log_level = log_level.upper()
-        self.logs_dir.mkdir(exist_ok=True)
+        self.logs_dir.mkdir(parents=True, exist_ok=True)
 
         # Create log files
         self.api_log_file = self.logs_dir / "api_server.log"
@@ -335,7 +363,7 @@ _logging_config: VideoAnnotatorLoggingConfig | None = None
 
 
 def setup_videoannotator_logging(
-    logs_dir: str = "logs",
+    logs_dir: str | Path | None = None,
     log_level: str = "INFO",
     capture_warnings: bool = True,
     capture_stdstreams: bool = False,

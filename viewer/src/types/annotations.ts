@@ -375,17 +375,61 @@ export interface StandardAnnotationData {
   face_analysis?: LAIONFaceAnnotation[]; // Legacy face analysis support
   openface3_faces?: StandardFaceAnnotation[]; // NEW: OpenFace3 face analysis support
   audio_file?: File; // Separate WAV file
+  /** What made each track (spec 017), from the file it was drawn from. */
+  provenance?: Partial<Record<ProvenanceTrack, ProvenanceInfo>>;
   metadata?: {
     created: string;
     version: string;
     pipelines: string[];
-    source: 'videoannotator' | 'custom';
+    source: 'videoannotator' | 'custom' | 'demo';
     // NEW: Processing information from VideoAnnotator
     processing_config?: VideoAnnotatorCompleteResults['config'];
     processing_time?: number;
     total_duration?: number;
   };
 }
+
+// Provenance (spec 017: specs/017-output-provenance/contracts/provenance-in-files.md)
+
+export interface ProvenanceModel {
+  name: string;
+  source: string;
+  revision: string | null;
+  revision_kind: string;
+  revision_note?: string;
+}
+
+/** As written by VideoAnnotator; readers keep unknown fields. */
+export interface ProvenanceRecord {
+  schema_version: number;
+  pipeline: { name: string; sub_pipeline?: string | null };
+  videoannotator_version: string;
+  models?: ProvenanceModel[];
+  settings?: Record<string, unknown>;
+  determinism?: Record<string, unknown>;
+  created_at: string;
+  job_id?: string | null;
+  input?: { name?: string | null; sha256?: string | null };
+  vlm?: Record<string, unknown>;
+  [field: string]: unknown;
+}
+
+export type ProvenanceInfo =
+  | { kind: 'recorded'; record: ProvenanceRecord }
+  /** An older file that says only part of it, e.g. a COCO file's VideoAnnotator version. */
+  | { kind: 'partial'; videoannotatorVersion?: string }
+  | { kind: 'ground_truth'; fileName: string }
+  | { kind: 'none' };
+
+export type ProvenanceTrack =
+  | 'person_tracking'
+  | 'face_analysis'
+  | 'openface3_faces'
+  | 'speech_recognition'
+  | 'speaker_diarization'
+  | 'scene_detection'
+  | 'vlm_annotations'
+  | 'elan_ground_truth';
 
 // File Type Detection (Updated for v1.1.1)
 export type SupportedFileType =

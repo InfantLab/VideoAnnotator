@@ -51,6 +51,18 @@ export async function setDatasetForJob(jobId: string, entry: JobDatasetIndexEntr
   await setJobDatasetIndex(index);
 }
 
+/** Whether access is already granted, without prompting (prompting needs a user gesture). */
+export async function hasPermission(
+  handle: FileSystemHandle,
+  mode: LocalFsPermissionMode = 'readwrite'
+): Promise<boolean> {
+  try {
+    return (await (handle as PermissionQueryableHandle).queryPermission?.({ mode })) === 'granted';
+  } catch {
+    return false;
+  }
+}
+
 export async function ensurePermission(
   handle: FileSystemHandle,
   mode: LocalFsPermissionMode = 'readwrite'

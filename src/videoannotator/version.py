@@ -13,13 +13,39 @@ logger = get_logger("videoannotator.version")
 __version__ = "1.5.0"
 __version_info__ = (1, 5, 0, "final")
 # Release version for v1.5.0
-__release_date__ = "2026-07-19"
+__release_date__ = "2026-09-30"
 __author__ = "VideoAnnotator Team"
 __license__ = "MIT"
 
 # Build information
 __build_date__ = datetime.now().isoformat()
 __git_commit__ = None  # Will be populated by CI/CD if available
+
+# Keep in step with requires-python and the classifiers in pyproject.toml
+# (tests/unit/test_supported_python.py checks this).
+SUPPORTED_PYTHON = ((3, 12), (3, 13))
+
+_unsupported_python_warned = False
+
+
+def warn_if_unsupported_python() -> None:
+    """Log one warning per process when running on an unsupported Python.
+
+    pip and `uv sync` refuse unsupported versions, but `uv pip install .` from a
+    checkout doesn't check requires-python, so this is the only signal such a
+    user gets. A warning, not an error: a core-only install may still work.
+    """
+    global _unsupported_python_warned
+    current = tuple(sys.version_info[:2])
+    if current in SUPPORTED_PYTHON or _unsupported_python_warned:
+        return
+    _unsupported_python_warned = True
+    supported = ", ".join(f"{major}.{minor}" for major, minor in SUPPORTED_PYTHON)
+    logger.warning(
+        f"Python {current[0]}.{current[1]} is not supported by VideoAnnotator "
+        f"{__version__} (supported: {supported}). "
+        "Some pipelines may fail to install or run."
+    )
 
 
 def get_version_info() -> dict[str, Any]:

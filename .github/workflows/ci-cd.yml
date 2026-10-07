@@ -7,11 +7,15 @@ on:
     branches: [master, main, develop]
   release:
     types: [published]
+  schedule:
+    - cron: "17 4 * * 1"  # Mondays: extras-restore-e2e
   workflow_dispatch:
 
 jobs:
   test:
     runs-on: ${{ matrix.os }}
+    # Normally 4-5 minutes; a stuck apt mirror once held a job for an hour.
+    timeout-minutes: 45
     # Windows has known SQLite file-locking issues during test teardown
     # (tracked separately); keep it informational so it doesn't block CI.
     continue-on-error: ${{ matrix.os == 'windows-latest' }}
@@ -19,18 +23,21 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.12"]
+        python-version: ["3.12", "3.13"]
+    env:
+      # Otherwise uv follows .python-version (3.13) and the 3.12 jobs test 3.13.
+      UV_PYTHON: ${{ matrix.python-version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.2.0  # no moving major tags since v8
         with:
           enable-cache: true
 
@@ -56,15 +63,17 @@ jobs:
           uv sync --dev --all-extras
 
       - name: Lint with ruff
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: |
           uv run ruff check src/videoannotator tests
 
       - name: Check formatting with ruff
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: |
           uv run ruff format --check src/videoannotator tests
 
       - name: Type check with mypy
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: |
           uv run mypy src/videoannotator
 
@@ -78,15 +87,191 @@ jobs:
           # note. No-op on Linux/Windows.
           KMP_DUPLICATE_LIB_OK: "TRUE"
         run: |
-          uv run pytest -q --cov=src/videoannotator --cov-report=xml --cov-report=term-missing --cov-fail-under=45
+          uv run pytest -q -m "not real_models and not performance" --cov=src/videoannotator --cov-report=xml --cov-report=term-missing --cov-fail-under=45
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
-          file: ./coverage.xml
+          files: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
+
+  viewer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: viewer
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.x"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run lint
+
+      # Plain `tsc --noEmit` compiles nothing here (tsconfig.json only references).
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Unit tests
+        run: bun run test:run
+
+      # Fails when src/videoannotator/viewer_static/ doesn't match a fresh build of viewer/.
+      - name: Bundle matches source
+        working-directory: .
+        run: bash scripts/build_viewer.sh --check
+
+  # Every other job installs the dev group and every extra, which hid a core
+  # dependency missing from `pip install videoannotator` (httpx, 2026-10-02).
+  launcher:
+    # The launcher's sh script against tests/launcher/cases.json (spec 024). No
+    # engine needed; macOS catches BSD-userland differences (research R12).
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install bats, jq and shellcheck (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y bats jq shellcheck
+      - name: Install bats, jq and shellcheck (macOS)
+        if: runner.os == 'macOS'
+        run: brew install bats-core jq shellcheck
+      - name: shellcheck
+        run: shellcheck launcher/videoannotator-start launcher/install.sh
+      - name: bats
+        run: bats tests/launcher
+
+  launcher-windows:
+    # The PowerShell launcher against the same cases (spec 024).
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install PSScriptAnalyzer and Pester 5
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+          Install-Module Pester -MinimumVersion 5.5 -MaximumVersion 5.99 -Force -SkipPublisherCheck -Scope CurrentUser
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: Invoke-ScriptAnalyzer -Path launcher -Recurse -Severity Warning -EnableExit
+      - name: Pester (PowerShell 7)
+        shell: pwsh
+        run: Invoke-Pester tests/launcher -CI
+      - name: Pester (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          Install-Module Pester -MinimumVersion 5.5 -MaximumVersion 5.99 -Force -SkipPublisherCheck -Scope CurrentUser
+          Invoke-Pester tests/launcher -CI
+
+  e2e-images:
+    # The slim image, and the CI-only e2e image built from it (Dockerfile.e2e),
+    # saved for the launcher-e2e jobs to load into Docker and Podman.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the slim image
+        run: docker build -t localhost/videoannotator:ci .
+      - name: Build the e2e image
+        run: docker build -f tests/launcher/Dockerfile.e2e -t localhost/videoannotator:e2e .
+      - name: Save
+        run: docker save localhost/videoannotator:e2e | gzip > e2e-image.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-image
+          path: e2e-image.tar.gz
+          retention-days: 2
+
+  launcher-e2e:
+    # The launcher end to end with a real engine (spec 024, research R12).
+    runs-on: ubuntu-latest
+    needs: [e2e-images]
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [docker, podman]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          name: e2e-image
+      - name: Load the image into ${{ matrix.engine }}
+        run: gunzip -c e2e-image.tar.gz | ${{ matrix.engine }} load
+      - name: End to end
+        run: tests/launcher/test_launcher_e2e.sh ${{ matrix.engine }}
+
+  extras-restore-e2e:
+    # Weekly: an installed pipeline group is restored after the container is
+    # recreated, from the download cache (spec 024, research R7). Too heavy
+    # (torch) for every push.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs: [e2e-images]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          name: e2e-image
+      - name: Load the image
+        run: gunzip -c e2e-image.tar.gz | docker load
+      - name: Install scene, recreate, restore
+        run: tests/launcher/test_extras_restore_e2e.sh docker
+
+  core-install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.2.0  # no moving major tags since v8
+        with:
+          enable-cache: true
+
+      - name: Install core only (no dev group, no extras)
+        run: |
+          uv sync --frozen --no-dev
+
+      - name: Server starts on a fresh database and serves the API
+        run: |
+          export VIDEOANNOTATOR_DB_PATH="$RUNNER_TEMP/va.db" VIDEOANNOTATOR_LOG_DIR="$RUNNER_TEMP/logs"
+          uv run --no-sync videoannotator server --port 18011 > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 60); do curl -sf localhost:18011/health && break; sleep 2; done
+          curl -sf localhost:18011/health
+          curl -sf "localhost:18011/api/v1/pipelines/?include_unavailable=true" > /dev/null
+          ! grep -E "ERROR|Traceback" "$RUNNER_TEMP/server.log" || { cat "$RUNNER_TEMP/server.log"; exit 1; }
+
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.2.0  # no moving major tags since v8
+        with:
+          enable-cache: true
+
+      - name: Relative links resolve
+        run: python3 scripts/validate_docs_links.py
+
+      # The site Pages publishes (docs-site.yml); --strict fails on a broken link or anchor.
+      - name: Site builds
+        run: |
+          uv sync --frozen --only-group docs
+          uv run --no-sync mkdocs build --strict
 
   integration-test:
     runs-on: ubuntu-latest
@@ -94,15 +279,15 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.2.0  # no moving major tags since v8
         with:
           enable-cache: true
 
@@ -118,7 +303,7 @@ jobs:
 
       - name: Run integration tests
         run: |
-          uv run pytest -q -m integration
+          uv run pytest -q -m "integration and not real_models"
 
       - name: Test CLI interface
         run: |
@@ -131,15 +316,15 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.2.0  # no moving major tags since v8
         with:
           enable-cache: true
 
@@ -170,16 +355,16 @@ jobs:
     runs-on: ubuntu-latest
     name: Draft JOSS paper
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build draft PDF
-        uses: openjournals/openjournals-draft-action@master
+        uses: openjournals/openjournals-draft-action@af22ceb4b8f9eff6b3a13c05747ccc2f573cf2e6  # master, 2026-10-01
         with:
           journal: joss
           paper-path: paper/paper.md
 
       - name: Upload paper PDF
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: paper
           path: paper/paper.pdf
@@ -192,10 +377,10 @@ jobs:
       security-events: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: "fs"
           scan-ref: "."
@@ -203,22 +388,22 @@ jobs:
           output: "trivy-results.sarif"
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: "trivy-results.sarif"
 
   build-and-publish:
     runs-on: ubuntu-latest
-    needs: [test, integration-test]
+    needs: [test, viewer, integration-test]
     if: github.event_name == 'release' && github.event.action == 'published'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Install build dependencies
         run: |
@@ -239,6 +424,79 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
 
+  image:
+    # The slim image researchers run through the launcher (spec 024,
+    # contracts/image.md): ghcr.io/infantlab/videoannotator:<version> on
+    # releases, :latest from the default branch. Docker Hub (docker-build
+    # below) stays a mirror where its secrets exist.
+    runs-on: ubuntu-latest
+    needs: [test, integration-test]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || (github.event_name == 'release' && github.event.action == 'published')
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tags and labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/infantlab/videoannotator
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=VideoAnnotator
+            org.opencontainers.image.description=VideoAnnotator, slim: pipelines are installed from the viewer as needed
+
+      - name: Build and push (slim)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          build-args: EXTRAS=
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=ghcr-slim
+          cache-to: type=gha,mode=max,scope=ghcr-slim
+
+  release-launcher:
+    # The launcher and its installers as release assets, pinned to the
+    # release's version, which pins the image they run (spec 024, R16).
+    runs-on: ubuntu-latest
+    needs: [launcher, launcher-windows]
+    if: github.event_name == 'release' && github.event.action == 'published'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Pin the version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          sed -i "s/@VERSION@/$version/" launcher/videoannotator-start launcher/videoannotator-start.ps1 \
+            launcher/install.sh launcher/install.ps1
+          ! grep -l '@VERSION@' launcher/videoannotator-start launcher/videoannotator-start.ps1 \
+            launcher/install.sh launcher/install.ps1
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" --clobber \
+            launcher/videoannotator-start launcher/videoannotator-start.ps1 \
+            launcher/videoannotator-start.cmd launcher/install.sh launcher/install.ps1
+
   docker-build:
     runs-on: ubuntu-latest
     needs: [test, integration-test]
@@ -248,10 +506,10 @@ jobs:
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Check Docker Hub secrets
         run: |
@@ -263,14 +521,14 @@ jobs:
 
       - name: Login to Docker Hub
         if: ${{ env.DOCKER_USERNAME != '' && env.DOCKER_PASSWORD != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: videoannotator/videoannotator
           tags: |
@@ -282,7 +540,7 @@ jobs:
 
       - name: Build and push Docker image
         if: ${{ env.DOCKER_USERNAME != '' && env.DOCKER_PASSWORD != '' }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true

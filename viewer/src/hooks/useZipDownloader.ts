@@ -5,6 +5,7 @@ import * as zip from '@zip.js/zip.js';
 import { detectFileType, mergeAnnotationData, DetectedFile } from '@/lib/parsers/merger';
 import {
   ensurePermission,
+  hasPermission,
   getDatasetFolderName,
   getDatasetForJob,
   getRootDirHandle,
@@ -15,7 +16,13 @@ import {
 import { isDemoJobId, getDemoKey } from '@/lib/localLibrary/installDemoDataset';
 import { loadDemoVideo, loadDemoAnnotations } from '@/utils/debugUtils';
 
-export type DownloadState = 'idle' | 'selecting_dir' | 'downloading' | 'unzipping' | 'ready' | 'error';
+// 'needs_folder': no library folder yet (or the browser wants a click before
+// it shows the picker). Waits for the user; going back to 'idle' instead made
+// the page start again, reopen the picker and loop.
+export type DownloadState = 'idle' | 'needs_folder' | 'selecting_dir' | 'downloading' | 'unzipping' | 'ready' | 'error';
+
+/** 'ask': use the library folder, asking for one only if a click allows it. 'pick': the user clicked "Choose folder". 'skip': view without saving. */
+export type FolderChoice = 'ask' | 'pick' | 'skip';
 
 interface UseZipDownloaderResult {
   state: DownloadState;
@@ -23,7 +30,7 @@ interface UseZipDownloaderResult {
   error: string | null;
   videoFile: File | null;
   annotationData: StandardAnnotationData | null;
-  startDownload: (jobId: string) => Promise<void>;
+  startDownload: (jobId: string, folder?: FolderChoice) => Promise<void>;
   reset: () => void;
 }
 
@@ -35,7 +42,7 @@ interface UseZipDownloaderResult {
 const ANNOTATION_PARSER_VERSION = 2;
 
 /** Unzip a job's artifacts and parse every annotation file in it. */
-export async function parseArtifactsZip(blob: Blob): Promise<{ video: File; annotations: StandardAnnotationData }> {
+export async function parseArtifactsZip(blob: Blob): Promise<{ video: File | null; annotations: StandardAnnotationData }> {
   const reader = new zip.BlobReader(blob);
   const zipReader = new zip.ZipReader(reader);
   const entries = await zipReader.getEntries();
@@ -72,7 +79,9 @@ export async function parseArtifactsZip(blob: Blob): Promise<{ video: File; anno
 
   await zipReader.close();
 
-  if (!foundVideo) {
+  // A video read in place can move after its run (spec 022); its results
+  // are still worth showing, so only a zip with neither is an error.
+  if (!foundVideo && candidateFiles.length === 0) {
     throw new Error('No video file found in artifacts ZIP');
   }
 
@@ -125,7 +134,7 @@ export async function parseArtifactsZip(blob: Blob): Promise<{ video: File; anno
     const now = new Date().toISOString();
     foundAnnotations = {
       video_info: {
-        filename: foundVideo.name,
+        filename: foundVideo?.name ?? 'video',
         duration: 0,
         width: 0,
         height: 0,
@@ -243,6 +252,11 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
     }
   }, []);
 
+  const reuseGrantedRootDir = useCallback(async (): Promise<FileSystemDirectoryHandle | null> => {
+    const existing = await getRootDirHandle().catch(() => null);
+    return existing && (await hasPermission(existing, 'readwrite')) ? existing : null;
+  }, []);
+
   const pickOrReuseRootDir = useCallback(async (): Promise<FileSystemDirectoryHandle | null> => {
     const supportsFS = 'showDirectoryPicker' in window;
     if (!supportsFS) return null;
@@ -340,7 +354,7 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
     [writeFileToDir]
   );
 
-  const startDownload = useCallback(async (jobId: string) => {
+  const startDownload = useCallback(async (jobId: string, folder: FolderChoice = 'ask') => {
     console.log('Starting download for job:', jobId);
     setError(null);
     setProgress(0);
@@ -387,24 +401,26 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
       // Ignore and continue to download path.
     }
 
-    setState('selecting_dir');
+    if (folder === 'pick') setState('selecting_dir');
     setError(null);
     setProgress(0);
     
     try {
       const supportsFS = 'showDirectoryPicker' in window;
       let rootDirHandle: FileSystemDirectoryHandle | null = null;
-      if (supportsFS) {
-        rootDirHandle = await pickOrReuseRootDir();
+      if (supportsFS && folder !== 'skip') {
+        // Without a click, the browser refuses both the picker and a permission
+        // prompt, so 'ask' only reuses a folder that is already granted.
+        rootDirHandle = folder === 'pick' ? await pickOrReuseRootDir() : await reuseGrantedRootDir();
         if (!rootDirHandle) {
-          // User canceled folder picker.
-          setState('idle');
+          setState('needs_folder');
           return;
         }
       }
 
       // 1. Fetch the artifacts stream
-      const response = await apiClient.getJobArtifacts(jobId);
+      // The viewer plays the video from this zip, so it asks for it.
+      const response = await apiClient.getJobArtifacts(jobId, { includeVideo: true });
       
       if (!response.body) {
         throw new Error('Response body is empty');
@@ -456,8 +472,9 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
       setVideoFile(foundVideo);
       setAnnotationData(foundAnnotations);
 
-      // Persist to local library if we have a chosen root folder.
-      if (rootDirHandle) {
+      // Persist to local library if we have a chosen root folder. Not without
+      // its video: the library entry would open as a broken dataset later.
+      if (rootDirHandle && foundVideo) {
         try {
           await ingestToLocalDataset(jobId, rootDirHandle, blob, foundVideo, foundAnnotations);
         } catch (persistErr) {
@@ -472,7 +489,7 @@ export const useZipDownloader = (): UseZipDownloaderResult => {
       setError(err instanceof Error ? err.message : 'Download failed');
       setState('error');
     }
-  }, [ingestToLocalDataset, pickOrReuseRootDir, tryOpenLocalDataset]);
+  }, [ingestToLocalDataset, pickOrReuseRootDir, reuseGrantedRootDir, tryOpenLocalDataset]);
 
   return {
     state,

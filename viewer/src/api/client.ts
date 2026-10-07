@@ -1,4 +1,4 @@
-import type { paths } from './schema';
+import type { components, paths } from './schema';
 import type {
   PipelineCatalog,
   PipelineCatalogCacheEntry,
@@ -26,14 +26,28 @@ import type {
   BatchSummary,
 } from '@/types/batches';
 import type {
+  IngestAccess,
   IngestBrowseResponse,
   IngestRequest,
   IngestResponse,
+  Share,
 } from '@/types/ingest';
 import type { CurrentUser } from '@/types/api';
 import type { JobResults } from '@/lib/jobOutcome';
 import type { Preset, PresetCreateRequest, PresetListResponse } from '@/types/presets';
+import type { LibraryPrompt, PromptListResponse, PromptUpdateRequest } from '@/types/prompts';
+import type {
+  DatasetCreateRequest,
+  DatasetListResponse,
+  DatasetRunRequest,
+  DatasetRunResponse,
+  DatasetUpdateRequest,
+  SavedDataset,
+  ServerFolderScan,
+  StoredVideosResponse,
+} from '@/types/datasets';
 import { APIError } from './handleError';
+import { API_TOKEN_STORAGE_KEY, API_URL_STORAGE_KEY, defaultApiUrl, normalizeApiUrl } from '@/lib/apiConnection';
 
 const mapReadinessItems = (value: unknown): ReadinessItem[] =>
   Array.isArray(value)
@@ -63,32 +77,13 @@ const mapReadiness = (value: unknown): PipelineReadiness | undefined => {
   };
 };
 
-// API configuration with localStorage fallback
 const getApiBaseUrl = () => {
-  // Check localStorage first - respect empty string (Proxy mode)
-  let url = localStorage.getItem('videoannotator_api_url');
-  
-  if (url === null) {
-    // Fallback to env var or empty string
-    url = import.meta.env.VITE_API_BASE_URL || '';
-  }
-
-  // CRITICAL FIX: Force 127.0.0.1 over localhost
-  // This ensures that every time we retrieve the URL, we apply the DNS correction.
-  if (url && url.includes('//localhost:')) {
-    // Only log this once per session to avoid spamming
-    if (!window.__dns_correction_logged) {
-      console.log('🔄 DNS CORRECTION (Global): Switching API host from localhost to 127.0.0.1');
-      window.__dns_correction_logged = true;
-    }
-    return url.replace('//localhost:', '//127.0.0.1:');
-  }
-
-  return url;
+  const saved = localStorage.getItem(API_URL_STORAGE_KEY);
+  return saved === null ? defaultApiUrl() : normalizeApiUrl(saved);
 };
 
 const getApiToken = () => {
-  const saved = localStorage.getItem('videoannotator_api_token');
+  const saved = localStorage.getItem(API_TOKEN_STORAGE_KEY);
   if (saved !== null) return saved;
 
   return import.meta.env.VITE_API_TOKEN || '';
@@ -109,7 +104,7 @@ export const hasConfiguredApiToken = (): boolean => getApiToken().trim() !== '';
  * - JWT: starts with 'eyJ' (e.g., 'eyJhbGciOiJIUzI1NiIs...')
  * - Other tokens: At least 8 characters and contains only valid characters
  * 
- * Rejects obviously invalid tokens like 'dev-token', 'Bearer xyz', empty strings
+ * Rejects obviously invalid tokens like the old 'dev-token' placeholder, 'Bearer xyz', empty strings
  */
 const isValidToken = (token: string): boolean => {
   if (!token || token.trim() === '') return false;
@@ -123,14 +118,10 @@ const isValidToken = (token: string): boolean => {
   if (trimmed.startsWith('eyJ')) return true;
 
   // Reject known invalid patterns
-  // NOTE: 'dev-token' is explicitly ALLOWED for local development
-  const invalidPatterns = ['test-token', 'Bearer ', 'your-api-token'];
+  const invalidPatterns = ['dev-token', 'test-token', 'Bearer ', 'your-api-token'];
   if (invalidPatterns.some(pattern => trimmed.toLowerCase().includes(pattern.toLowerCase()))) {
     return false;
   }
-
-  // Accept 'dev-token' specifically
-  if (trimmed === 'dev-token') return true;
 
   // Accept any token that's at least 8 characters and looks like a valid token
   // (alphanumeric, dashes, underscores, dots)
@@ -143,10 +134,20 @@ const isValidToken = (token: string): boolean => {
 };
 
 // Type definitions from OpenAPI schema
-export type JobResponse = paths['/api/v1/jobs']['get']['responses']['200']['content']['application/json']['jobs'][0];
-export type JobListResponse = paths['/api/v1/jobs']['get']['responses']['200']['content']['application/json'];
-export type PipelineResponse = paths['/api/v1/pipelines']['get']['responses']['200']['content']['application/json'][0];
-export type SubmitJobRequest = paths['/api/v1/jobs']['post']['requestBody']['content']['multipart/form-data'];
+// Regenerate with scripts/gen_viewer_api_types.sh after changing the server's API.
+export type JobResponse = components['schemas']['JobResponse'];
+
+export interface BatchRerunResult {
+  batch_id: string;
+  rerun_of_batch: string;
+  created: string[];
+  skipped: { job_id: string; reason: string }[];
+  /** Moved videos found in the chosen folder (spec 022). */
+  relocated?: { job_id: string; from: string; to: string }[];
+}
+export type JobListResponse = components['schemas']['JobListResponse'];
+export type PipelineResponse = components['schemas']['PipelineInfo'];
+export type SubmitJobRequest = NonNullable<paths['/api/v1/jobs/']['post']['requestBody']>['content']['multipart/form-data'];
 
 // HTTP client with authentication and error handling
 class APIClient {
@@ -159,31 +160,15 @@ class APIClient {
   private readonly pipelineCatalogTTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(baseURL?: string, token?: string) {
-    let url = baseURL || getApiBaseUrl();
-    
-    // CRITICAL FIX: Force 127.0.0.1 over localhost
-    // Your machine resolves 'localhost' to 103.86.96.100 (ISP DNS), which causes timeouts.
-    // We must use 127.0.0.1 to ensure we hit the local server.
-    if (url.includes('//localhost:')) {
-      console.log('🔄 DNS CORRECTION: Switching API host from localhost to 127.0.0.1');
-      url = url.replace('//localhost:', '//127.0.0.1:');
-    }
-
-    this.baseURL = url.replace(/\/$/, ''); // Remove trailing slash
+    this.baseURL = baseURL === undefined ? getApiBaseUrl() : normalizeApiUrl(baseURL);
     this.token = token || getApiToken();
   }
 
   // Update configuration dynamically
+  /** undefined keeps a setting; '' is a value (this page's origin, or no token). */
   updateConfig(baseURL?: string, token?: string) {
-    if (baseURL) {
-      let url = baseURL;
-      if (url.includes('//localhost:')) {
-        console.log('🔄 DNS CORRECTION: Switching API host from localhost to 127.0.0.1');
-        url = url.replace('//localhost:', '//127.0.0.1:');
-      }
-      this.baseURL = url.replace(/\/$/, '');
-    }
-    if (token) this.token = token;
+    if (baseURL !== undefined) this.baseURL = normalizeApiUrl(baseURL);
+    if (token !== undefined) this.token = token.trim();
   }
 
   // Get current configuration
@@ -385,10 +370,8 @@ class APIClient {
           (typeof family === 'string' && family) ||
           (typeof category === 'string' && category) ||
           undefined,
-        version:
-          (typeof version === 'string' && version) ||
-          (typeof variant === 'string' && variant) ||
-          'unknown',
+        // The variant names the method, not a version; it's shown as the model.
+        version: (typeof version === 'string' && version) || undefined,
         model:
           (typeof modelName === 'string' && modelName) ||
           (typeof variant === 'string' && variant) ||
@@ -638,6 +621,115 @@ class APIClient {
     });
   }
 
+  /**
+   * Run a finished job again as a new job linked to it (spec 019). Omitted
+   * settings keep the original's. 409 when it's still running or its video is gone.
+   */
+  async rerunJob(
+    jobId: string,
+    overrides: { selected_pipelines?: string[]; config?: Record<string, unknown> } = {}
+  ): Promise<JobResponse> {
+    return this.request(`/api/v1/jobs/${encodeURIComponent(jobId)}/rerun`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(overrides),
+    });
+  }
+
+  /**
+   * Run a batch's finished jobs again as a new batch (spec 019). `check` only
+   * reports what would be skipped; `relocateFolder` is where moved videos are
+   * now, matched by name and size (spec 022).
+   */
+  async rerunBatch(
+    batchId: string,
+    overrides: { selected_pipelines?: string[]; config?: Record<string, unknown> } = {},
+    options: { check?: boolean; relocateFolder?: string; recursive?: boolean } = {}
+  ): Promise<BatchRerunResult> {
+    const query = new URLSearchParams();
+    if (options.check) query.set('check', 'true');
+    if (options.relocateFolder) query.set('relocate_folder', options.relocateFolder);
+    if (options.recursive) query.set('recursive', 'true');
+    const suffix = query.toString() ? `?${query}` : '';
+    return this.request(`/api/v1/batches/${encodeURIComponent(batchId)}/rerun${suffix}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(overrides),
+    });
+  }
+
+  /** The prompt library (spec 020): every VLM prompt that ran, once each. */
+  async listPrompts(params: { q?: string; model?: string; tag?: string; includeHidden?: boolean } = {}): Promise<PromptListResponse> {
+    const query = new URLSearchParams();
+    if (params.q) query.set('q', params.q);
+    if (params.model) query.set('model', params.model);
+    if (params.tag) query.set('tag', params.tag);
+    if (params.includeHidden) query.set('include_hidden', 'true');
+    return this.request(`/api/v1/prompts/?${query}`);
+  }
+
+  async updatePrompt(sha256: string, body: PromptUpdateRequest): Promise<LibraryPrompt> {
+    return this.request(`/api/v1/prompts/${sha256}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  async deletePrompt(sha256: string): Promise<void> {
+    return this.request(`/api/v1/prompts/${sha256}`, { method: 'DELETE' });
+  }
+
+  /** Saved datasets (specs 007, 018), shared by everyone on the server. */
+  async listDatasets(): Promise<DatasetListResponse> {
+    return this.request('/api/v1/datasets/');
+  }
+
+  async getDataset(id: string): Promise<SavedDataset> {
+    return this.request(`/api/v1/datasets/${encodeURIComponent(id)}`);
+  }
+
+  /** Also the import path: POST an exported dataset as it is. 409 on a name the caller already uses. */
+  async createDataset(body: DatasetCreateRequest): Promise<SavedDataset> {
+    return this.request('/api/v1/datasets/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  async updateDataset(id: string, body: DatasetUpdateRequest): Promise<SavedDataset> {
+    return this.request(`/api/v1/datasets/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  /** Which of a browser-uploaded dataset's videos the server still stores (from the jobs that ran on them). */
+  async getStoredVideos(id: string): Promise<StoredVideosResponse> {
+    return this.request(`/api/v1/datasets/${encodeURIComponent(id)}/stored-videos`);
+  }
+
+  /** One batch on the dataset's stored copies: no folder, no upload. */
+  async runDataset(id: string, body: DatasetRunRequest): Promise<DatasetRunResponse> {
+    return this.request(`/api/v1/datasets/${encodeURIComponent(id)}/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  async deleteDataset(id: string): Promise<void> {
+    return this.request(`/api/v1/datasets/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  }
+
+  /** The videos a server-folder ingest would use, with sizes (admin, same machine). */
+  async scanServerFolder(path: string, recursive: boolean): Promise<ServerFolderScan> {
+    const query = new URLSearchParams({ path, recursive: String(recursive) });
+    return this.request(`/api/v1/ingest/scan?${query}`);
+  }
+
   /** Per-pipeline outcome of a job, including why a pipeline failed. */
   async getJobResults(jobId: string): Promise<JobResults> {
     return this.request(`/api/v1/jobs/${jobId}/results`);
@@ -700,6 +792,25 @@ class APIClient {
     return this.request(`/api/v1/batches/${batchId}/cancel`, { method: 'POST' });
   }
 
+  /** A run's results as one zip, without videos (spec 022). */
+  async getBatchResultsZip(batchId: string): Promise<Blob> {
+    return (await this.fetchRaw(`/api/v1/batches/${encodeURIComponent(batchId)}/results.zip`)).blob();
+  }
+
+  /** Delete a run: its jobs and results folder, never the videos (spec 022). */
+  async deleteBatch(batchId: string): Promise<void> {
+    return this.request(`/api/v1/batches/${encodeURIComponent(batchId)}`, { method: 'DELETE' });
+  }
+
+  /** Open a results folder in this computer's file manager (same machine only). */
+  async openResultsFolder(path: string): Promise<void> {
+    return this.request('/api/v1/results/open', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+  }
+
   async retryBatch(batchId: string): Promise<BatchRetryResponse> {
     return this.request(`/api/v1/batches/${batchId}/retry`, { method: 'POST' });
   }
@@ -709,6 +820,20 @@ class APIClient {
   // server's disk, instead of uploading a corpus one file at a time.
   // Admin-only and local-callers-only server-side; see src/types/ingest.ts.
   // ==========================================================================
+
+  /** What this browser may do with videos on the server's machine (spec 022). */
+  async getIngestAccess(): Promise<IngestAccess> {
+    return this.request('/api/v1/ingest/access');
+  }
+
+  /** Stop sharing a folder from the next start (spec 024; admin, same machine, launcher only). */
+  async stopSharing(path: string): Promise<Share> {
+    return this.request('/api/v1/ingest/shares/stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+  }
 
   /** List server-side folders. Omit `path` to list the allowed roots. */
   async browseServerFolders(path?: string): Promise<IngestBrowseResponse> {
@@ -884,6 +1009,7 @@ class APIClient {
       prompt_tokens: number;
       resp_tokens: number;
       tokens_per_sec: number;
+      frames?: Array<{ frame_number: number | null; timestamp_sec: number | null; jpeg_base64: string }>;
     }>(
       '/api/v1/vlm/preview',
       { method: 'POST', body: formData },
@@ -902,7 +1028,12 @@ class APIClient {
       loadTime: response.load_time,
       promptTokens: response.prompt_tokens,
       respTokens: response.resp_tokens,
-      tokensPerSec: response.tokens_per_sec
+      tokensPerSec: response.tokens_per_sec,
+      frames: (response.frames ?? []).map((f) => ({
+        frameNumber: f.frame_number,
+        timestampSec: f.timestamp_sec,
+        jpegBase64: f.jpeg_base64,
+      })),
     };
   }
 
@@ -1051,12 +1182,48 @@ class APIClient {
    * @param jobId - Job ID to download artifacts for
    * @returns Response object that can be used to stream the ZIP file
    */
-  async getJobArtifacts(jobId: string): Promise<Response> {
+  /** Fetch with this client's server and key, keeping the raw Response (files, videos). */
+  private async fetchRaw(path: string): Promise<Response> {
+    this.baseURL = getApiBaseUrl().replace(/\/$/, '');
+    this.token = getApiToken();
+    const headers: Record<string, string> = {};
+    if (this.token && isValidToken(this.token)) headers['Authorization'] = `Bearer ${this.token}`;
+    const response = await fetch(`${this.baseURL}${path}`, { headers });
+    if (!response.ok) {
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch {
+        body = undefined;
+      }
+      const message = (body as { error?: { message?: string } } | undefined)?.error?.message ?? `HTTP ${response.status}`;
+      throw new APIError(message, response.status, response, body);
+    }
+    return response;
+  }
+
+  /** A pipeline's main output file for a job, as text (spec 021). */
+  async getResultFileText(jobId: string, pipeline: string): Promise<string> {
+    return (await this.fetchRaw(`/api/v1/jobs/${encodeURIComponent(jobId)}/results/files/${pipeline}`)).text();
+  }
+
+  /** The job's video as a blob URL (a <video> can't send the API key itself). Revoke it when done. */
+  async getJobVideoUrl(jobId: string): Promise<string> {
+    const blob = await (await this.fetchRaw(`/api/v1/jobs/${encodeURIComponent(jobId)}/video`)).blob();
+    return URL.createObjectURL(blob);
+  }
+
+  /**
+   * The job's results zip. Without its video unless `includeVideo` (spec 022:
+   * the zip was otherwise one more copy of sensitive video).
+   */
+  async getJobArtifacts(jobId: string, options: { includeVideo?: boolean } = {}): Promise<Response> {
     // Always get fresh values from localStorage
     this.baseURL = getApiBaseUrl().replace(/\/$/, '');
     this.token = getApiToken();
 
-    const url = `${this.baseURL}/api/v1/jobs/${jobId}/artifacts`;
+    const query = options.includeVideo ? '?include_video=true' : '';
+    const url = `${this.baseURL}/api/v1/jobs/${jobId}/artifacts${query}`;
     
     const headers: Record<string, string> = {};
     if (this.token && isValidToken(this.token)) {
@@ -1249,9 +1416,17 @@ export function getApiClient(): APIClient {
 }
 
 // Export singleton as property for backward compatibility
+// Methods are bound to the real client: called through the proxy, `this` was
+// the proxy, so `this.token = ...` in updateConfig landed on the proxy's empty
+// target and Settings' "Test Connection" kept testing the saved configuration.
 export const apiClient = new Proxy({} as APIClient, {
   get(_target, prop) {
-    return getApiClient()[prop as keyof APIClient];
+    const client = getApiClient();
+    const value = Reflect.get(client, prop, client);
+    return typeof value === 'function' ? value.bind(client) : value;
+  },
+  set(_target, prop, value) {
+    return Reflect.set(getApiClient(), prop, value);
   },
 });
 

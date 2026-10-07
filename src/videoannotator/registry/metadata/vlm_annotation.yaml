@@ -19,6 +19,7 @@ capabilities:
 outputs:
   - format: JSON
     types: [vlm_label, vlm_reasoning]
+    file: vlm_annotation.json
 config_schema:
   prompt:
     type: string

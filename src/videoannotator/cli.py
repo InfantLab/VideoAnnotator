@@ -1,5 +1,6 @@
 """VideoAnnotator CLI - Unified command-line interface."""
 
+import json
 import os
 from collections.abc import Callable
 from pathlib import Path
@@ -10,7 +11,7 @@ import uvicorn
 
 from .config_env import API_PORT, MAX_CONCURRENT_JOBS, WORKER_POLL_INTERVAL
 from .validation.emotion_validator import validate_emotion_file
-from .version import __version__
+from .version import __version__, warn_if_unsupported_python
 
 app = typer.Typer(
     name="videoannotator",
@@ -34,6 +35,8 @@ def _default(
     This makes `uv run videoannotator` behave like `uv run videoannotator server`
     with the recommended host and port.
     """
+    warn_if_unsupported_python()
+
     # If a subcommand was invoked, do nothing here and let Typer handle it.
     if ctx.invoked_subcommand is not None:
         return
@@ -93,8 +96,29 @@ def server(
         typer.echo("")
         raise typer.Exit(code=1)
 
+    # The first-start API key message builds the viewer link from this.
+    os.environ["API_PORT"] = str(port)
     typer.echo(f"[START] Starting VideoAnnotator API server on http://{host}:{port}")
     typer.echo(f"[INFO] API documentation available at http://{host}:{port}/docs")
+    from videoannotator.utils.logging_config import logs_dir
+
+    typer.echo(f"[INFO] Logs: {logs_dir()}")
+    from videoannotator.database_location import database_url
+
+    db_url = database_url()
+    # A server URL can carry a password; only a SQLite path is safe to print.
+    db_shown = (
+        db_url.removeprefix("sqlite:///")
+        if db_url.startswith("sqlite")
+        else "DATABASE_URL"
+    )
+    typer.echo(f"[INFO] Database: {db_shown}")
+    from .storage.config import get_storage_root
+
+    typer.echo(f"[INFO] Jobs: {get_storage_root()}")
+    from .results_folder import display_path, results_root
+
+    typer.echo(f"[INFO] Results: {display_path(results_root())}")
 
     from .config_env import ENABLE_VIEWER
 
@@ -127,6 +151,11 @@ def server(
                 host=host,
                 port=port,
                 reload=reload,
+                # Only the package: by default the reloader watches the whole
+                # working directory, which in a checkout includes .venv,
+                # viewer/node_modules and gigabytes of models (scanning that on a
+                # slow mount left the server hung in disk I/O).
+                reload_dirs=[str(Path(__file__).resolve().parent)] if reload else None,
                 workers=workers
                 if not reload
                 else 1,  # Reload doesn't work with multiple workers
@@ -186,23 +215,73 @@ def server(
 @app.command()
 def process(
     video: Path = typer.Argument(..., help="Path to video file to process"),
-    output: Path | None = typer.Option(None, help="Output directory for results"),
-    pipelines: str | None = typer.Option(
-        None, help="Comma-separated list of pipelines to run"
+    pipelines: str = typer.Option(
+        ...,
+        help="Comma-separated pipelines to run (see 'videoannotator pipelines list')",
     ),
-    config: Path | None = typer.Option(None, help="Path to configuration file"),
+    output: Path | None = typer.Option(
+        None, help="Also copy the result files to this folder"
+    ),
+    config: Path | None = typer.Option(
+        None, help="Pipeline settings, YAML or JSON keyed by pipeline name"
+    ),
 ):
-    """Process a single video file (legacy mode)."""
-    typer.echo(f"[PROCESS] Processing video: {video}")
+    """Run pipelines on one video here and now, without a server.
 
-    if not video.exists():
+    The job is recorded like a submitted one, so it appears in the viewer and
+    in 'videoannotator job list'. Exits 1 if any pipeline failed.
+    """
+    import shutil
+
+    import yaml
+
+    from .batch.local_job import LocalJobError, result_files, run_local_job
+    from .batch.types import JobStatus
+
+    if not video.is_file():
         typer.echo(f"[ERROR] Video file not found: {video}", err=True)
         raise typer.Exit(code=1)
 
-    # TODO: Implement direct video processing using existing pipelines
-    typer.echo("[WARNING] Direct processing is not yet implemented")
-    typer.echo("[INFO] Use 'videoannotator server' and submit jobs via API")
-    typer.echo("[INFO] See API docs at http://localhost:18011/docs")
+    config_data = None
+    if config is not None:
+        try:
+            config_data = yaml.safe_load(config.read_text())  # JSON is YAML too
+        except (OSError, yaml.YAMLError) as e:
+            typer.echo(f"[ERROR] Cannot read config {config}: {e}", err=True)
+            raise typer.Exit(code=1) from e
+
+    selected = [p.strip() for p in pipelines.split(",") if p.strip()]
+    typer.echo(f"[PROCESS] {video.name}: {', '.join(selected)}")
+    try:
+        job = run_local_job(video, selected, config_data)
+    except LocalJobError as e:
+        typer.echo(f"[ERROR] {e}", err=True)
+        if e.hint:
+            typer.echo(f"Hint: {e.hint}", err=True)
+        raise typer.Exit(code=1) from e
+
+    files = result_files(job)
+    for name, result in job.pipeline_results.items():
+        if result.status == JobStatus.COMPLETED:
+            typer.echo(f"[OK] {name}")
+            for f in files.get(name, []):
+                typer.echo(f"     {f}")
+        else:
+            typer.echo(f"[FAILED] {name}: {result.error_message}", err=True)
+
+    if output is not None:
+        output.mkdir(parents=True, exist_ok=True)
+        for f in (f for fs in files.values() for f in fs):
+            shutil.copy2(f, output / f.name)
+        typer.echo(f"[INFO] Result files copied to {output}")
+
+    if job.output_dir is not None:
+        from .results_folder import display_path
+
+        typer.echo(f"[INFO] Results: {display_path(job.output_dir)}")
+    typer.echo(f"[INFO] Job {job.job_id}: {job.status.value}")
+    if job.status != JobStatus.COMPLETED or job.error_message:
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -253,6 +332,19 @@ def worker(
 
 
 # Create a sub-app for job management
+_SERVER_OPTION = typer.Option("http://127.0.0.1:18011", help="API server URL")
+_KEY_OPTION = typer.Option(
+    None,
+    "--api-key",
+    envvar="VIDEOANNOTATOR_API_KEY",
+    help="API key (or set VIDEOANNOTATOR_API_KEY); not needed with auth off",
+)
+
+
+def _auth_headers(api_key: str | None) -> dict[str, str]:
+    return {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
+
 job_app = typer.Typer(name="job", help="Manage remote processing jobs")
 app.add_typer(job_app, name="job")
 
@@ -264,7 +356,8 @@ def submit_job(
         None, help="Comma-separated list of pipelines to run"
     ),
     config: Path | None = typer.Option(None, help="Path to configuration file"),
-    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
 ):
     """Submit a video processing job to the API server."""
     import json
@@ -293,7 +386,11 @@ def submit_job(
 
             # Submit job
             response = requests.post(
-                f"{server}/api/v1/jobs/", files=files, data=data, timeout=30
+                f"{server}/api/v1/jobs/",
+                files=files,
+                data=data,
+                headers=_auth_headers(api_key),
+                timeout=30,
             )
 
         if response.status_code == 201:
@@ -349,7 +446,8 @@ def download_annotations(
     output: Path = typer.Option(
         Path("."), "--output", "-o", help="Directory to save the annotations to"
     ),
-    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
 ):
     """Download all annotations for a specific job."""
     import requests
@@ -358,7 +456,7 @@ def download_annotations(
     typer.echo(f"[INFO] Downloading annotations for job {job_id} from {url}...")
 
     try:
-        with requests.get(url, stream=True) as r:
+        with requests.get(url, stream=True, headers=_auth_headers(api_key)) as r:
             if r.status_code == 404:
                 typer.echo(
                     f"[ERROR] Job {job_id} not found or has no artifacts.", err=True
@@ -392,7 +490,8 @@ def download_annotations(
 @job_app.command("status")
 def job_status(
     job_id: str = typer.Argument(..., help="Job ID to check status for"),
-    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
 ):
     """Check the status of a processing job."""
     import requests
@@ -400,7 +499,9 @@ def job_status(
     typer.echo(f"[STATUS] Checking status for job: {job_id}")
 
     try:
-        response = requests.get(f"{server}/api/v1/jobs/{job_id}", timeout=10)
+        response = requests.get(
+            f"{server}/api/v1/jobs/{job_id}", headers=_auth_headers(api_key), timeout=10
+        )
 
         if response.status_code == 200:
             job_data = response.json()
@@ -428,7 +529,8 @@ def job_status(
 @job_app.command("results")
 def job_results(
     job_id: str = typer.Argument(..., help="Job ID to get results for"),
-    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
     download: str | None = typer.Option(
         None, help="Pipeline name to download results for"
     ),
@@ -439,7 +541,11 @@ def job_results(
     typer.echo(f"[RESULTS] Getting results for job: {job_id}")
 
     try:
-        response = requests.get(f"{server}/api/v1/jobs/{job_id}/results", timeout=10)
+        response = requests.get(
+            f"{server}/api/v1/jobs/{job_id}/results",
+            headers=_auth_headers(api_key),
+            timeout=10,
+        )
 
         if response.status_code == 200:
             results = response.json()
@@ -459,6 +565,13 @@ def job_results(
                     typer.echo(f"    Output File: {result['output_file']}")
                 if result.get("error_message"):
                     typer.echo(f"    Error: {result['error_message']}")
+                provenance = result.get("provenance")
+                if provenance:
+                    version = provenance.get("videoannotator_version")
+                    typer.echo(f"    Made by: VideoAnnotator {version}")
+                    for model in provenance.get("models", []):
+                        revision = model.get("revision") or "revision not recorded"
+                        typer.echo(f"    Model: {model['name']} ({revision})")
                 typer.echo("")
         elif response.status_code == 404:
             typer.echo(f"[ERROR] Job {job_id} not found", err=True)
@@ -474,7 +587,8 @@ def job_results(
 
 @job_app.command("list")
 def list_jobs(
-    server: str = typer.Option("http://localhost:18011", help="API server URL"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
     status_filter: str | None = typer.Option(
         None, help="Filter by status (pending, running, completed, failed)"
     ),
@@ -491,7 +605,12 @@ def list_jobs(
         if status_filter:
             params["status_filter"] = status_filter
 
-        response = requests.get(f"{server}/api/v1/jobs/", params=params, timeout=10)
+        response = requests.get(
+            f"{server}/api/v1/jobs/",
+            params=params,
+            headers=_auth_headers(api_key),
+            timeout=10,
+        )
 
         if response.status_code == 200:
             data = response.json()
@@ -521,6 +640,280 @@ def list_jobs(
     except requests.RequestException as e:
         typer.echo(f"[ERROR] Failed to connect to API server: {e}", err=True)
         raise typer.Exit(code=1)
+
+
+@job_app.command("rerun")
+def rerun_job(
+    job_id: str = typer.Argument(
+        ..., help="A finished job (completed, failed or cancelled)"
+    ),
+    pipelines: str | None = typer.Option(
+        None, help="Comma-separated pipelines to run instead of the original's"
+    ),
+    config: Path | None = typer.Option(
+        None, help="Settings (YAML or JSON) to use instead of the original's"
+    ),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """Run a finished job again as a new job linked to it; the original is kept."""
+    import yaml
+
+    body: dict[str, Any] = {}
+    if pipelines:
+        body["selected_pipelines"] = [
+            p.strip() for p in pipelines.split(",") if p.strip()
+        ]
+    if config is not None:
+        try:
+            body["config"] = yaml.safe_load(config.read_text())  # JSON is YAML too
+        except (OSError, yaml.YAMLError) as e:
+            typer.echo(f"[ERROR] Cannot read config {config}: {e}", err=True)
+            raise typer.Exit(code=1) from e
+    job = _api_request(
+        "POST", f"{server}/api/v1/jobs/{job_id}/rerun", api_key, json=body
+    )
+    typer.echo(f"[OK] Job {job['id']} runs {job_id} again ({job['status']})")
+    typer.echo(f"[INFO] Track it with: videoannotator job status {job['id']}")
+
+
+dataset_app = typer.Typer(
+    name="dataset",
+    help="Saved datasets: named lists of videos to run jobs on (shared on the server)",
+)
+app.add_typer(dataset_app, name="dataset")
+
+
+def _api_request(method: str, url: str, api_key: str | None, **kwargs: Any) -> Any:
+    """Call the datasets API; print the server's message and exit 1 on an error."""
+    import requests
+
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    try:
+        kwargs.setdefault("timeout", 30)
+        resp = requests.request(method, url, headers=headers, **kwargs)
+    except requests.RequestException as e:
+        typer.echo(f"[ERROR] Cannot reach the server: {e}", err=True)
+        raise typer.Exit(code=1) from e
+    if resp.status_code == 401:
+        typer.echo(
+            "[ERROR] Authentication required: pass --api-key or set "
+            "VIDEOANNOTATOR_API_KEY (create one with: videoannotator generate-token)",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    if not resp.ok:
+        try:
+            error = resp.json().get("error", {})
+            message = error.get("message") or resp.text
+        except ValueError:
+            message = resp.text
+        typer.echo(f"[ERROR] {message}", err=True)
+        raise typer.Exit(code=1)
+    return resp.json() if resp.content else None
+
+
+@dataset_app.command("list")
+def dataset_list(server: str = _SERVER_OPTION, api_key: str | None = _KEY_OPTION):
+    """List the server's saved datasets."""
+    body = _api_request("GET", f"{server}/api/v1/datasets/", api_key)
+    if not body["datasets"]:
+        typer.echo("No saved datasets.")
+    for d in body["datasets"]:
+        source = (
+            f"server folder {d['server_folder']}"
+            if d.get("server_folder")
+            else "uploaded"
+        )
+        owner = d.get("owner_name") or d["owner_user_id"]
+        typer.echo(
+            f"{d['id']}  {d['name']}  ({len(d['video_manifest'])} videos, {source}, "
+            f"saved by {owner})"
+        )
+
+
+@dataset_app.command("show")
+def dataset_show(
+    dataset_id: str, server: str = _SERVER_OPTION, api_key: str | None = _KEY_OPTION
+):
+    """Show a dataset and its videos."""
+    d = _api_request("GET", f"{server}/api/v1/datasets/{dataset_id}", api_key)
+    typer.echo(f"{d['name']}  ({d['id']})")
+    if d.get("description"):
+        typer.echo(d["description"])
+    if d.get("server_folder"):
+        recursive = (
+            " (chosen videos)"
+            if d.get("server_selection")
+            else " (with subfolders)"
+            if d.get("server_folder_recursive")
+            else ""
+        )
+        typer.echo(f"Server folder: {d['server_folder']}{recursive}")
+    for entry in d["video_manifest"]:
+        typer.echo(
+            f"  {entry.get('relative_path') or entry['filename']}  "
+            f"{entry['size_bytes']} bytes"
+        )
+
+
+@dataset_app.command("export")
+def dataset_export(
+    dataset_id: str,
+    output: Path | None = typer.Option(None, "-o", "--output", help="File to write"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """Write a dataset's definition as JSON, to share or import elsewhere."""
+    d = _api_request("GET", f"{server}/api/v1/datasets/{dataset_id}", api_key)
+    for field in ("id", "owner_user_id", "owner_name"):
+        d.pop(field, None)
+    text = json.dumps(d, indent=2)
+    if output is None:
+        typer.echo(text)
+    else:
+        output.write_text(text + "\n", encoding="utf-8")
+        typer.echo(f"[OK] Exported to {output}")
+
+
+@dataset_app.command("import")
+def dataset_import(
+    file: Path, server: str = _SERVER_OPTION, api_key: str | None = _KEY_OPTION
+):
+    """Import an exported dataset, as yours. A name you already use is an error."""
+    try:
+        body = json.loads(file.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        typer.echo(f"[ERROR] Cannot read {file}: {e}", err=True)
+        raise typer.Exit(code=1) from e
+    if not isinstance(body, dict) or "name" not in body:
+        typer.echo(f"[ERROR] {file} is not an exported dataset", err=True)
+        raise typer.Exit(code=1)
+    d = _api_request("POST", f"{server}/api/v1/datasets/", api_key, json=body)
+    typer.echo(f"[OK] Imported {d['name']} ({d['id']})")
+
+
+@dataset_app.command("delete")
+def dataset_delete(
+    dataset_id: str,
+    yes: bool = typer.Option(False, "--yes", help="Don't ask for confirmation"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """Delete a dataset (yours, or any as an admin). Videos and past jobs stay."""
+    if not yes and not typer.confirm(f"Delete dataset {dataset_id}?"):
+        raise typer.Exit(code=1)
+    _api_request("DELETE", f"{server}/api/v1/datasets/{dataset_id}", api_key)
+    typer.echo(f"[OK] Deleted {dataset_id}")
+
+
+prompts_app = typer.Typer(
+    name="prompts", help="The prompt library: every VLM prompt that ran (spec 020)"
+)
+app.add_typer(prompts_app, name="prompts")
+vlm_app = typer.Typer(name="vlm", help="Try VLM prompts without creating a job")
+app.add_typer(vlm_app, name="vlm")
+
+
+@prompts_app.command("list")
+def prompts_list(
+    search: str | None = typer.Option(
+        None, "--search", "-s", help="Words in the text or name"
+    ),
+    model: str | None = typer.Option(None, help="Only prompts run with this model"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """List prompts, starred first, then most recently used."""
+    params = {k: v for k, v in {"q": search, "model": model}.items() if v}
+    body = _api_request("GET", f"{server}/api/v1/prompts/", api_key, params=params)
+    if not body["prompts"]:
+        typer.echo("No prompts yet: they are added when a VLM job or preview runs.")
+    for p in body["prompts"]:
+        star = "*" if p["starred"] else " "
+        title = p["name"] or p["text"].strip().splitlines()[0][:60]
+        typer.echo(
+            f"{star} {p['sha256'][:12]}  {title}  ({p['use_count']} uses; "
+            f"{', '.join(p['models'])})"
+        )
+
+
+@prompts_app.command("show")
+def prompts_show(
+    sha: str = typer.Argument(..., help="Hash, or its first characters"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """Show a prompt's full text, models and jobs."""
+    p = _api_request("GET", f"{server}/api/v1/prompts/{sha}", api_key)
+    typer.echo(f"{p['name'] or '(unnamed)'}  sha256 {p['sha256']}")
+    typer.echo(f"Models: {', '.join(p['models'])}")
+    typer.echo(f"Jobs: {', '.join(p['job_ids']) or 'none'}")
+    typer.echo(f"First used {p['first_used_at']}, last used {p['last_used_at']}")
+    typer.echo("")
+    typer.echo(p["text"])
+
+
+@prompts_app.command("diff")
+def prompts_diff(
+    a: str,
+    b: str,
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """Show how two prompts differ, word by word."""
+    import difflib
+
+    first = _api_request("GET", f"{server}/api/v1/prompts/{a}", api_key)["text"]
+    second = _api_request("GET", f"{server}/api/v1/prompts/{b}", api_key)["text"]
+    if first.split() == second.split():
+        typer.echo("Same words; they differ only in whitespace.")
+        return
+    for token in difflib.ndiff(first.split(), second.split()):
+        if token.startswith(("- ", "+ ")):
+            typer.echo(token)
+
+
+@vlm_app.command("preview")
+def vlm_preview(
+    video: Path = typer.Argument(
+        ..., help="A video the server can read (same machine)"
+    ),
+    at: float = typer.Option(..., "--at", help="Seconds into the video"),
+    model: str = typer.Option(..., help="An Ollama model (videoannotator vlm models)"),
+    prompt_file: Path | None = typer.Option(
+        None, help="Prompt text; default: the pipeline's"
+    ),
+    burst: bool = typer.Option(False, help="Send a burst of frames around --at"),
+    server: str = _SERVER_OPTION,
+    api_key: str | None = _KEY_OPTION,
+):
+    """Ask a model about one moment of a video. The prompt is kept in the library."""
+    data: dict[str, Any] = {
+        "video_path": str(video.resolve()),
+        "timestamp_sec": at,
+        "model": model,
+        "sampling_mode": "frame_burst" if burst else "single_frame",
+    }
+    if prompt_file is not None:
+        data["prompt"] = prompt_file.read_text(encoding="utf-8")
+    result = _api_request(
+        "POST", f"{server}/api/v1/vlm/preview", api_key, data=data, timeout=300
+    )
+    typer.echo(f"Label: {result['label']}")
+    typer.echo(f"Frames: {[f['frame_number'] for f in result.get('frames', [])]}")
+    typer.echo(f"Time: {result['total_time']}s")
+    typer.echo("")
+    typer.echo(result["reasoning"])
+
+
+@vlm_app.command("models")
+def vlm_models(server: str = _SERVER_OPTION, api_key: str | None = _KEY_OPTION):
+    """List the models the server's Ollama has."""
+    body = _api_request("GET", f"{server}/api/v1/vlm/models", api_key)
+    typer.echo(f"Ollama at {body['base_url']}:")
+    for name in body["models"]:
+        typer.echo(f"  {name}")
 
 
 pipelines_app = typer.Typer(
@@ -1011,7 +1404,7 @@ def version():
 def diagnose(
     component: str = typer.Argument(
         "all",
-        help="Component to diagnose: system, gpu, storage, database, ollama, or all",
+        help="Component to diagnose: system, gpu, storage, database, models, ollama, or all",
     ),
     json_output: bool = typer.Option(
         False, "--json", help="Output results as JSON for scripting"
@@ -1029,6 +1422,7 @@ def diagnose(
     from videoannotator.diagnostics import (
         diagnose_database,
         diagnose_gpu,
+        diagnose_models,
         diagnose_ollama,
         diagnose_storage,
         diagnose_system,
@@ -1040,6 +1434,7 @@ def diagnose(
         "gpu": ("GPU", diagnose_gpu),
         "storage": ("Storage", diagnose_storage),
         "database": ("Database", diagnose_database),
+        "models": ("Models", diagnose_models),
         "ollama": ("Ollama", diagnose_ollama),
     }
 
@@ -1133,6 +1528,13 @@ def diagnose(
                 free_gb = disk.get("free_gb", 0)
                 percent = disk.get("percent_used", 0)
                 typer.echo(f"  Disk: {free_gb:.1f} GB free ({percent:.1f}% used)")
+
+            elif comp_name == "models" and result["status"] != "error":
+                typer.echo(f"  Directory: {result['models_dir']}")
+                typer.echo(f"  Size: {result['total_bytes'] / 1e9:.2f} GB")
+                for source, size in result["sources"].items():
+                    if size:
+                        typer.echo(f"    {source}: {size / 1e9:.2f} GB")
 
             elif comp_name == "database" and result["status"] != "error":
                 connected = result.get("connected", False)

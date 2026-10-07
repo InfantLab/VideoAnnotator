@@ -22,6 +22,8 @@ import torch
 from videoannotator.pipelines.base_pipeline import BasePipeline
 from videoannotator.utils.model_loader import log_model_download
 
+from ...models_dir import source_dir
+from ...provenance import whisper_ref
 from .ffmpeg_utils import check_ffmpeg_available
 from .ffmpeg_utils import extract_audio_from_video as ffmpeg_extract
 
@@ -72,7 +74,7 @@ class WhisperBasePipeline(BasePipeline):
                 - sample_rate: Audio sample rate (default: 16000)
                 - device: Device to use ("cpu", "cuda", "auto") (default: "auto")
                 - use_fp16: Use half precision when possible (default: True)
-                - cache_dir: Model cache directory (default: "./models/whisper")
+                - cache_dir: Model cache directory (default: <models dir>/whisper)
                 - use_auth_token: Use HF auth token for gated models (default: False)
                 - normalize_audio: Normalize audio during preprocessing (default: True)
         """
@@ -81,7 +83,7 @@ class WhisperBasePipeline(BasePipeline):
             "sample_rate": 16000,  # Whisper's preferred sample rate
             "device": "auto",  # "cpu", "cuda", or "auto"
             "use_fp16": True,  # Use half precision when possible
-            "cache_dir": "./models/whisper",  # Local cache for models
+            "cache_dir": str(source_dir("whisper")),
             "use_auth_token": False,  # Use HF auth token for gated models
             "normalize_audio": True,  # Normalize audio during preprocessing
         }
@@ -149,6 +151,8 @@ class WhisperBasePipeline(BasePipeline):
             cuda_markers = [
                 "not compiled with cuda",
                 "cuda driver",
+                # torch built with CUDA on a machine without the NVIDIA driver
+                "no nvidia driver",
                 "no cuda gpus are available",
                 "cublas",
                 "cudnn",
@@ -318,6 +322,7 @@ class WhisperBasePipeline(BasePipeline):
                 in_memory=True,
             )
 
+            self._model_refs.append(whisper_ref(whisper_module, model_size))
             self.logger.info(
                 f"Standard Whisper model '{model_size}' loaded successfully to {self.device}"
             )

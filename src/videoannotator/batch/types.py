@@ -31,6 +31,8 @@ class PipelineResult:
     annotation_count: int | None = None
     output_file: Path | None = None
     error_message: str | None = None
+    # What made this pipeline's outputs (spec 017); None for older jobs.
+    provenance: dict[str, Any] | None = None
 
     @property
     def duration(self) -> float | None:
@@ -63,6 +65,7 @@ class BatchJob:
     batch_id: str | None = None  # 008: client-supplied submission-batch tag
     batch_name: str | None = None  # 008: human label for that batch, if given
     dataset_id: str | None = None  # 008: saved dataset (007) this job came from
+    rerun_of: str | None = None  # 019: the job this one runs again
 
     @property
     def video_id(self) -> str:
@@ -109,6 +112,7 @@ class BatchJob:
                     if result.output_file
                     else None,
                     "error_message": result.error_message,
+                    "provenance": result.provenance,
                 }
                 for name, result in self.pipeline_results.items()
             },
@@ -125,6 +129,7 @@ class BatchJob:
             "batch_id": self.batch_id,
             "batch_name": self.batch_name,
             "dataset_id": self.dataset_id,
+            "rerun_of": self.rerun_of,
         }
 
     @classmethod
@@ -148,6 +153,7 @@ class BatchJob:
                 if result_data["output_file"]
                 else None,
                 error_message=result_data["error_message"],
+                provenance=result_data.get("provenance"),  # absent before spec 017
             )
 
         return cls(
@@ -174,6 +180,7 @@ class BatchJob:
             batch_id=data.get("batch_id"),
             batch_name=data.get("batch_name"),
             dataset_id=data.get("dataset_id"),
+            rerun_of=data.get("rerun_of"),
         )
 
 

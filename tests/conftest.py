@@ -1,6 +1,22 @@
 """Shared pytest fixtures and environment patches for VideoAnnotator tests."""
 
+import os
+import tempfile
+from pathlib import Path
+
 import pytest
+
+# The API's startup launches the background job processor, which would pick up
+# jobs other tests submitted and run real pipelines. Tests of the processor build
+# their own BackgroundJobManager.
+os.environ.setdefault("VIDEOANNOTATOR_BACKGROUND_PROCESSING", "false")
+
+# Before any test module imports videoannotator: modules that bind SessionLocal at
+# import keep the engine made then, so test_storage_env (below) is too late for
+# them, and they would open the user's real database.
+_import_time_db = Path(tempfile.mkdtemp(prefix="va-tests-")) / "import_time.db"
+os.environ["VIDEOANNOTATOR_DB_PATH"] = str(_import_time_db)
+os.environ["DATABASE_URL"] = f"sqlite:///{_import_time_db}"
 
 
 # --- Speech Pipeline Robustness Fixture ---
@@ -48,6 +64,37 @@ def disable_auth_for_tests(monkeypatch):
     """
     monkeypatch.setenv("AUTH_REQUIRED", "false")
     yield
+
+
+@pytest.fixture(autouse=True)
+def results_root(tmp_path_factory, monkeypatch):
+    """Each test's results folder (spec 022), never the real ~/VideoAnnotator.
+
+    Every new job writes its results there, so without this a test run would
+    leave folders in the developer's home.
+    """
+    root = tmp_path_factory.mktemp("results") / "VideoAnnotator"
+    monkeypatch.setenv("VIDEOANNOTATOR_RESULTS_DIR", str(root))
+    monkeypatch.delenv("VIDEOANNOTATOR_PUBLISHED_LOCALLY", raising=False)
+    monkeypatch.delenv("VIDEOANNOTATOR_HOST_PATHS", raising=False)
+    try:
+        from videoannotator import results_folder
+
+        results_folder._batch_run_folders.clear()
+    except ImportError:
+        pass
+    return root
+
+
+@pytest.fixture
+def ingest_root(tmp_path, monkeypatch):
+    """A folder the ingest API may read videos from."""
+    from videoannotator.api.v1 import ingest as ingest_module
+
+    root = tmp_path / "videos"
+    root.mkdir()
+    monkeypatch.setattr(ingest_module, "INGEST_ROOTS", str(root))
+    return root
 
 
 @pytest.fixture(autouse=True)

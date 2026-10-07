@@ -106,6 +106,16 @@ class StorageBackend(ABC):
         """
         pass
 
+    def list_reruns(self, job_id: str) -> list[str]:
+        """Jobs that run `job_id` again, oldest first (spec 019). Backends
+        with an index override this; the default reads every job."""
+        reruns = []
+        for other_id in self.list_jobs():
+            other = self.load_job_metadata(other_id)
+            if other is not None and other.rerun_of == job_id:
+                reruns.append(other)
+        return [j.job_id for j in sorted(reruns, key=lambda j: j.created_at)]
+
     @abstractmethod
     def list_unbatched_jobs(self) -> list[str]:
         """List job IDs carrying no batch identifier.
