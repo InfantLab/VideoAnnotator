@@ -38,8 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Videos are read where they are, and results go to one folder you can find** (spec 022).
   - **My folders.** On the server's own computer, the new-job wizard opens on "My folders": open
     a folder, tick videos (or Select all, with or without subfolders) and the run starts at once.
-    Nothing is uploaded or copied. Upload is now a "Videos on another computer?" link, and the
-    main route when the server is on another machine. The server decides which applies
+    Nothing is uploaded or copied. "Upload videos" is the tab beside it, for videos in folders
+    that aren't shared, and the main route when the server is on another machine. The server decides which applies
     (`GET /api/v1/ingest/access`), and `POST /api/v1/ingest` takes the ticked videos as `files`.
   - **Results folder.** Every run's results go to `~/VideoAnnotator/<run> (<date>)/<video>/`,
     with a `run.json` listing pipelines, settings, versions and each video's source. Result

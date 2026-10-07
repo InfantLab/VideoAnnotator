@@ -1,5 +1,5 @@
 // Spec 022: on the server's own machine, videos are chosen in "My folders" and
-// read where they are; upload is a link for videos on another computer.
+// read where they are; upload is a tab alongside for folders that aren't shared.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
@@ -101,16 +101,16 @@ beforeEach(() => {
 });
 
 describe('Choose Videos, step 1', () => {
-  it('opens on My folders on the same machine, with upload as a link', async () => {
+  it('opens on My folders on the same machine, with upload as a tab beside it', async () => {
     const setVideoSource = vi.fn();
     wrap(step({ setVideoSource }));
 
     expect(screen.getByRole('tab', { name: /My folders/ })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: /Saved datasets/ })).toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: /Upload/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Upload videos/ })).toHaveAttribute('aria-selected', 'false');
     expect(await screen.findByText(/used where they are, never copied/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Videos on another computer\? Upload them/ }));
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Upload videos/ }), { button: 0 });
     expect(setVideoSource).toHaveBeenCalledWith('upload');
   });
 

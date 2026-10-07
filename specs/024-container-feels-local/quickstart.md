@@ -58,3 +58,17 @@ drive or folder a second one (`D:\Pilot`).
 
 1. Both installed and running: it uses the one used last, and says which.
 2. Only Podman: it uses Podman with no extra step. Results belong to you on Linux.
+
+## Walkthrough log
+
+### 2026-10-08 — Windows, Docker Desktop (T084, in progress)
+
+- First launch after a clean reset reported "Something else is using port 18011". It didn't recur:
+  the port was free moments later and the image bound to it. Likely the port was still held just
+  after `docker rm -f`, or a native `videoannotator server` (also 18011) was running. The hint
+  `videoannotator-start --port 18012` can't be run as printed from a repo checkout, since the
+  launcher is only on PATH once installed.
+- **Decision (supersedes spec 022's "upload is a link"):** Upload videos is now a tab beside My
+  folders and Saved datasets, not the footnote "Videos on another computer? Upload them". With the
+  launcher, the server is on the same computer, so upload's real job is videos in a folder that
+  hasn't been shared, which is one of the main ways to use the app, not an edge case.

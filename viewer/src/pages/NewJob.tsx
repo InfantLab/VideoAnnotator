@@ -1025,18 +1025,17 @@ export const VideoUploadStep = ({
   return (
     <div className="space-y-6">
       <Tabs value={videoSource} onValueChange={onSourceChange}>
-        <TabsList className="grid w-full grid-cols-2">
-          {sameMachine ? (
+        <TabsList className={`grid w-full ${sameMachine ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          {sameMachine && (
             <TabsTrigger value="server">
               <HardDrive className="h-4 w-4 mr-2" />
               My folders
             </TabsTrigger>
-          ) : (
-            <TabsTrigger value="upload">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload videos
-            </TabsTrigger>
           )}
+          <TabsTrigger value="upload">
+            <Upload className="h-4 w-4 mr-2" />
+            Upload videos
+          </TabsTrigger>
           <TabsTrigger value="dataset">
             <Database className="h-4 w-4 mr-2" />
             Saved datasets
@@ -1051,15 +1050,11 @@ export const VideoUploadStep = ({
             </p>
           )}
           {sameMachine && (
-            <div className="flex items-start justify-between gap-2 text-sm">
-              <p className="text-muted-foreground">
-                Uploading copies each video to VideoAnnotator&apos;s storage. Use it for videos
-                on another computer.
-              </p>
-              <Button variant="link" size="sm" className="h-auto p-0 shrink-0" onClick={() => onSourceChange('server')}>
-                Back to My folders
-              </Button>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Uploading copies each video into VideoAnnotator, so it works for videos in any folder,
+              including ones you haven&apos;t shared. Videos in a shared folder can be used where they
+              are, without copying, from My folders.
+            </p>
           )}
           <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 text-center">
             <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -1103,9 +1098,6 @@ export const VideoUploadStep = ({
           {access?.can_read_in_place ? (
             <>
               <ServerFolderPicker selection={serverFolder} onSelect={selectServerFolder} />
-              <Button variant="link" size="sm" className="h-auto p-0" onClick={() => onSourceChange('upload')}>
-                Videos on another computer? Upload them &rsaquo;
-              </Button>
             </>
           ) : (
             <NoFolderAccess access={access} onUpload={() => onSourceChange('upload')} />
