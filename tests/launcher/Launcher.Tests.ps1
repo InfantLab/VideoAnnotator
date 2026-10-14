@@ -78,8 +78,36 @@ Describe 'run' {
         $gpu = @()
         if ($i.gpu) { $gpu = $i.gpu.Split(' ') }
         $run = Get-VaRunCommand -Present @($i.shares) -Missing @($i.missing) `
-            -Results $i.results -Port $i.port -Image $i.image -GpuFlags $gpu -RequestsDir $requests -Engine $i.engine
+            -Results $i.results -Port $i.port -Image $i.image -GpuFlags $gpu -RequestsDir $requests -Engine $i.engine `
+            -HostNetwork:((Get-Field $i 'network') -eq 'host')
         ($run -join "`n") | Should -BeExactly (@($Row.expect.args) -join "`n")
+    }
+}
+
+Describe 'port publishing fallback' {
+    It 'falls back when netavark has no nftables (Podman 6 on WSL)' {
+        $err = 'Error: preparing container d69c for attach: netavark (exit code 1): nftables error: "nft" did not return successfully while applying ruleset:'
+        Test-VaNoPortPublishing -Engine 'podman' -Stderr $err | Should -BeTrue
+    }
+    It 'not for other failures, or for Docker' {
+        Test-VaNoPortPublishing -Engine 'podman' -Stderr 'Error: address already in use' | Should -BeFalse
+        Test-VaNoPortPublishing -Engine 'docker' -Stderr 'nftables error' | Should -BeFalse
+    }
+}
+
+Describe 'no cgroups fallback' {
+    It 'falls back when WSL 3 delegates no cgroup controller' {
+        $err = 'Error: crun: controller `pids` is not available under /sys/fs/cgroup/non-systemd/machine.slice/libpod-c1b7.scope/container/cgroup.controllers: OCI runtime error'
+        Test-VaNoCgroupController -Engine 'podman' -Stderr $err | Should -BeTrue
+    }
+    It 'not for other failures, or for Docker' {
+        Test-VaNoCgroupController -Engine 'podman' -Stderr 'Error: address already in use' | Should -BeFalse
+        Test-VaNoCgroupController -Engine 'docker' -Stderr 'controller `pids` is not available' | Should -BeFalse
+    }
+    It 'runs without cgroups, otherwise unchanged' {
+        $run = Get-VaRunCommand -Results 'C:\Users\ada\VideoAnnotator' -Port '18011' -Image 'img' `
+            -RequestsDir 'C:\r' -Engine 'podman' -NoCgroups
+        ($run[0..6] -join ' ') | Should -BeExactly 'run -d --name videoannotator --cgroups=disabled -p 127.0.0.1:18011:18011'
     }
 }
 

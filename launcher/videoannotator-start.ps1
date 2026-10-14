@@ -266,14 +266,28 @@ function Get-VaEngineInfoError {
     return (Invoke-VaEngine -Engine $Engine -Arguments @('info')).Err
 }
 
+# Podman's machine by name: Podman Desktop may name it podman-machine-1, and
+# `podman machine start` without a name only looks for podman-machine-default.
+# The default one, else the first; '' when there is none.
+function Get-VaPodmanMachineName {
+    $list = Invoke-VaEngine -Engine 'podman' -Arguments @('machine', 'list', '--format', 'json')
+    if ($list.ExitCode -ne 0 -or -not $list.Out.Trim()) { return '' }
+    try { $machines = @($list.Out | ConvertFrom-Json) } catch { return '' }
+    if ($machines.Count -eq 0) { return '' }
+    $default = @($machines | Where-Object { $_.Default })
+    if ($default.Count -gt 0) { return [string]$default[0].Name }
+    return [string]$machines[0].Name
+}
+
 # Podman Desktop runs containers in a virtual machine: start it (make it first).
 function Invoke-VaPodmanMachine {
-    $machines = Invoke-VaEngine -Engine 'podman' -Arguments @('machine', 'list', '--format', '{{.Name}}')
+    $name = Get-VaPodmanMachineName
     Write-VaSay "Starting Podman's virtual machine (first time takes a minute)..."
-    if (-not $machines.Out.Trim()) {
+    if (-not $name) {
         if ((Invoke-VaEngine -Engine 'podman' -Arguments @('machine', 'init')).ExitCode -ne 0) { return $false }
+        $name = Get-VaPodmanMachineName
     }
-    if ((Invoke-VaEngine -Engine 'podman' -Arguments @('machine', 'start')).ExitCode -ne 0) { return $false }
+    if ((Invoke-VaEngine -Engine 'podman' -Arguments @('machine', 'start', $name)).ExitCode -ne 0) { return $false }
     return (Test-VaEngineReady 'podman')
 }
 
@@ -367,7 +381,7 @@ function Test-VaNvidia {
 }
 
 function Get-VaCdiDevice {
-    return (Invoke-VaEngine -Engine 'podman' -Arguments @('machine', 'ssh', 'nvidia-ctk', 'cdi', 'list')).Out
+    return (Invoke-VaEngine -Engine 'podman' -Arguments @('machine', 'ssh', (Get-VaPodmanMachineName), 'nvidia-ctk', 'cdi', 'list')).Out
 }
 
 # @{ Flags; Note }. Docker Desktop passes the GPU through WSL whenever the
@@ -407,9 +421,19 @@ function Get-VaRunCommand {
     param(
         [string[]]$Present = @(), [string[]]$Missing = @(),
         [string]$Results, [string]$Port, [string]$Image, [string[]]$GpuFlags = @(),
-        [string]$RequestsDir = (Get-VaRequestsDir), [string]$Engine = $script:Engine
+        [string]$RequestsDir = (Get-VaRequestsDir), [string]$Engine = $script:Engine,
+        [switch]$HostNetwork, [switch]$NoCgroups
     )
-    $run = @('run', '-d', '--name', $script:VaName, '-p', "127.0.0.1:$($Port):$($script:VaInternalPort)")
+    $run = @('run', '-d', '--name', $script:VaName)
+    # See Test-VaNoCgroupController.
+    if ($NoCgroups) { $run += @('--cgroups=disabled') }
+    # See Test-VaNoPortPublishing. On the machine's own network the server
+    # listens on 127.0.0.1 only, which WSL forwards to Windows' 127.0.0.1.
+    if ($HostNetwork) {
+        $run += @('--network', 'host')
+    } else {
+        $run += @('-p', "127.0.0.1:$($Port):$($script:VaInternalPort)")
+    }
     $run += @($GpuFlags | Where-Object { $_ })
     foreach ($volume in $script:VaVolumes) { $run += @('-v', "videoannotator-$($volume):/app/$volume") }
     $roots = @()
@@ -438,6 +462,7 @@ function Get-VaRunCommand {
         '-e', "OLLAMA_BASE_URL=$(Get-VaOllamaUrl $Engine)",
         $Image
     )
+    if ($HostNetwork) { $run += @('videoannotator', 'server', '--host', '127.0.0.1', '--port', "$Port") }
     # The same for either engine on Windows, and no VIDEOANNOTATOR_RESULTS_OWNER:
     # Docker Desktop's file sharing and Podman's machine give files to the
     # researcher already.
@@ -471,8 +496,17 @@ function Test-VaExist {
     return ((Invoke-VaEngine @('container', 'inspect', $script:VaName)).ExitCode -eq 0)
 }
 
+# A localhost/ image was built on this computer, so a pull can only fail, and
+# fails as a network error. Docker and Podman keep separate images.
+function Test-VaLocalImage {
+    if ($script:Image -notlike 'localhost/*') { return $false }
+    Write-VaSay "$($script:Image) was built on this computer and isn't in $(Get-VaEngineLabel $script:Engine). Build it there (see docs/deployment/Docker.md), or run: videoannotator-start --image $($script:VaImageRepo):latest"
+    return $true
+}
+
 function Invoke-VaPull {
     if ((Invoke-VaEngine @('image', 'inspect', $script:Image)).ExitCode -eq 0) { return $true }
+    if (Test-VaLocalImage) { return $false }
     Write-VaSay 'Downloading VideoAnnotator (first time only, about 1 GB)...'
     $pull = Invoke-VaEngine @('pull', $script:Image)
     if ($pull.ExitCode -eq 0) { return $true }
@@ -482,14 +516,46 @@ function Invoke-VaPull {
 
 function Get-VaThisRun {
     return (Get-VaRunCommand -Present $script:Present -Missing $script:Missing `
-            -Results $script:Config.results -Port $script:Port -Image $script:Image -GpuFlags $script:GpuFlags)
+            -Results $script:Config.results -Port $script:Port -Image $script:Image -GpuFlags $script:GpuFlags `
+            -HostNetwork:$script:HostNetwork -NoCgroups:$script:NoCgroups)
 }
 
-# Starts the container; retries once without the GPU if that is what failed.
+# WSL 3.0 puts Podman's machine in a cgroup it shares with WSL's own processes,
+# so no controller reaches the containers and crun refuses to start one
+# (podman-container-tools/podman#29749). Without cgroups it starts; the
+# launcher sets no resource limits for them to enforce.
+function Test-VaNoCgroupController {
+    param([string]$Engine, [string]$Stderr)
+    return ($Engine -eq 'podman' -and "$Stderr" -match 'controller `\w+` is not available')
+}
+
+# Some Podman machines on WSL can't publish a port: the WSL kernel lacks the
+# nftables netavark needs (netavark 2 has no iptables), and a rootful machine
+# can't use pasta. Others can, so this is a fallback, not the default.
+function Test-VaNoPortPublishing {
+    param([string]$Engine, [string]$Stderr)
+    return ($Engine -eq 'podman' -and "$Stderr" -match 'nftables error|netavark.*(nft|firewall)')
+}
+
+# Starts the container; retries without cgroups or on the machine's own network
+# when Podman's machine can't give it those, and once without the GPU if that
+# is what failed.
 function Invoke-VaStart {
     if (Test-VaExist) { [void](Invoke-VaEngine @('rm', '-f', $script:VaName)) }
     $run = Invoke-VaEngine (Get-VaThisRun)
     if ($run.ExitCode -eq 0) { return $true }
+    for ($retry = 0; $retry -lt 2; $retry++) {
+        if (-not $script:NoCgroups -and (Test-VaNoCgroupController -Engine $script:Engine -Stderr $run.Err)) {
+            $script:NoCgroups = $true
+        } elseif (-not $script:HostNetwork -and (Test-VaNoPortPublishing -Engine $script:Engine -Stderr $run.Err)) {
+            $script:HostNetwork = $true
+        } else {
+            break
+        }
+        [void](Invoke-VaEngine @('rm', '-f', $script:VaName))
+        $run = Invoke-VaEngine (Get-VaThisRun)
+        if ($run.ExitCode -eq 0) { return $true }
+    }
     if (@($script:GpuFlags).Count -gt 0) {
         [void](Invoke-VaEngine @('rm', '-f', $script:VaName))
         $script:GpuFlags = @()
@@ -915,8 +981,9 @@ function Invoke-VaCommandUpdate {
         }
     }
     $before = (Invoke-VaEngine @('image', 'inspect', '-f', '{{.Id}}', $script:Image)).Out.Trim()
-    $pull = Invoke-VaEngine @('pull', $script:Image)
-    if ($pull.ExitCode -ne 0) {
+    if ($script:Image -like 'localhost/*') {
+        if (-not $before -and (Test-VaLocalImage)) { exit 1 }
+    } elseif (($pull = Invoke-VaEngine @('pull', $script:Image)).ExitCode -ne 0) {
         Write-VaError (Get-VaErrorMessage -Engine $script:Engine -Stderr $pull.Err -Code 1)
         exit 1
     }
@@ -997,6 +1064,8 @@ function Invoke-VaMain {
     if ($portOption) { $script:Port = [int]$portOption }
     $script:Image = Get-VaImage -Option $script:ImageOption -Saved $script:Config.image
     $script:GpuFlags = @()
+    $script:HostNetwork = $false
+    $script:NoCgroups = $false
 
     if (-not $command) { $command = 'start' }
     switch ($command) {

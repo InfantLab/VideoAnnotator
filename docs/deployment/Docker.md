@@ -20,6 +20,10 @@ docker build --build-arg EXTRAS=scene,person -t videoannotator:scene-person .
 docker build --build-arg EXTRAS=all -t videoannotator:all .
 ```
 
+With Podman on Windows, add `--network=host --format docker` (`podman build --network=host --format
+docker -t videoannotator .`): the WSL kernel can't apply the nftables rules Podman's default build
+network needs, and `--format docker` keeps the `SHELL` line.
+
 Measured on 2026-10-02 (Docker Desktop on Windows 11 with WSL 2, RTX 4060 Laptop GPU):
 
 | Image | On disk | Download (compressed) | Build time |

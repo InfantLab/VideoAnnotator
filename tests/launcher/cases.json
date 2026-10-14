@@ -1229,12 +1229,9 @@
         "home": "C:\\Users\\ada",
         "appdata": "C:\\Users\\ada\\AppData\\Roaming",
         "shares": [
-          "C:\\Users\\ada\\Studies",
-          "E:\\Lab data"
+          "C:\\Users\\ada\\Studies"
         ],
-        "missing": [
-          "F:\\Unplugged"
-        ],
+        "missing": [],
         "results": "C:\\Users\\ada\\VideoAnnotator",
         "port": "18011",
         "image": "ghcr.io/infantlab/videoannotator:1.6.0",
@@ -1251,6 +1248,69 @@
           "videoannotator",
           "-p",
           "127.0.0.1:18011:18011",
+          "-v",
+          "videoannotator-models:/app/models",
+          "-v",
+          "videoannotator-database:/app/database",
+          "-v",
+          "videoannotator-storage:/app/storage",
+          "-v",
+          "videoannotator-cache:/app/cache",
+          "--mount",
+          "type=bind,source=C:\\Users\\ada\\Studies,target=/c/Users/ada/Studies,readonly",
+          "--mount",
+          "type=bind,source=C:\\Users\\ada\\VideoAnnotator,target=/c/Users/ada/VideoAnnotator",
+          "--mount",
+          "type=bind,source=C:\\Users\\ada\\AppData\\Roaming\\VideoAnnotator\\requests,target=/app/launcher/requests",
+          "-e",
+          "VIDEOANNOTATOR_INGEST_ROOTS=/c/Users/ada/Studies",
+          "-e",
+          "VIDEOANNOTATOR_MISSING_SHARES=",
+          "-e",
+          "VIDEOANNOTATOR_RESULTS_DIR=/c/Users/ada/VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_HOST_PATHS=/c/Users/ada/Studies=C:\\Users\\ada\\Studies;/c/Users/ada/VideoAnnotator=C:\\Users\\ada\\VideoAnnotator",
+          "-e",
+          "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
+          "-e",
+          "VIDEOANNOTATOR_LAUNCHER=1",
+          "-e",
+          "OLLAMA_BASE_URL=http://host.containers.internal:11434",
+          "ghcr.io/infantlab/videoannotator:1.6.0"
+        ]
+      }
+    },
+    {
+      "name": "Windows, Podman that can't publish a port: the machine's own network",
+      "os": "windows",
+      "input": {
+        "engine": "podman",
+        "network": "host",
+        "home": "C:\\Users\\ada",
+        "appdata": "C:\\Users\\ada\\AppData\\Roaming",
+        "shares": [
+          "C:\\Users\\ada\\Studies",
+          "E:\\Lab data"
+        ],
+        "missing": [
+          "F:\\Unplugged"
+        ],
+        "results": "C:\\Users\\ada\\VideoAnnotator",
+        "port": "18012",
+        "image": "ghcr.io/infantlab/videoannotator:1.6.0",
+        "uid": "",
+        "gid": "",
+        "gpu": "",
+        "desktop": "no"
+      },
+      "expect": {
+        "args": [
+          "run",
+          "-d",
+          "--name",
+          "videoannotator",
+          "--network",
+          "host",
           "-v",
           "videoannotator-models:/app/models",
           "-v",
@@ -1281,7 +1341,13 @@
           "VIDEOANNOTATOR_LAUNCHER=1",
           "-e",
           "OLLAMA_BASE_URL=http://host.containers.internal:11434",
-          "ghcr.io/infantlab/videoannotator:1.6.0"
+          "ghcr.io/infantlab/videoannotator:1.6.0",
+          "videoannotator",
+          "server",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "18012"
         ]
       }
     }

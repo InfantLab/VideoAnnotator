@@ -68,6 +68,15 @@ read-only shares, so a results folder inside a share stays writable (R4).
 `VIDEOANNOTATOR_MISSING_SHARES` lists, `;`-separated, the host paths of shares missing at this
 start, so Settings can still list them.
 Windows maps `C:\Users\ada\Studies` to `/c/Users/ada/Studies` with the host path in `HOST_PATHS`.
+When Podman on Windows can't publish the port (a WSL kernel without the nftables netavark needs:
+netavark 2 has no iptables, and a rootful machine can't use pasta), the launcher runs again with
+`--network host` in place of `-p 127.0.0.1:<port>:18011`, ending the run with
+`videoannotator server --host 127.0.0.1 --port <port>`; WSL forwards the machine's 127.0.0.1 to
+Windows'. When crun reports a cgroup controller isn't available (WSL 3.0 puts the machine in a
+cgroup shared with WSL's own processes, so none is delegated: podman-container-tools/podman#29749),
+it runs again with `--cgroups=disabled`; the launcher sets no resource limits to lose. A machine
+without either problem runs the usual way: no setting to change in any case. Machine commands name the machine (the default one,
+else the first): Podman Desktop may call it `podman-machine-1`.
 Named volumes are the same as `docker-compose.yml`'s (plus the new cache volume, which compose
 gains too), so a compose install's jobs, models and installed pipelines carry over (FR-024).
 

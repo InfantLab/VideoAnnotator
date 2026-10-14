@@ -332,15 +332,25 @@ va_engine_unavailable() {
     va_explain_error "$1" "$(va_engine_info_error "$1")" 1 || true
 }
 
+# Podman's machine by name: `podman machine start` without one only looks for
+# podman-machine-default. The default one, else the first; empty when none.
+va_podman_machine_name() {
+    va_pm_list=$(podman machine list --format '{{.Name}} {{.Default}}' 2>/dev/null || true)
+    va_pm_name=$(printf '%s\n' "$va_pm_list" | awk '$2 == "true" { print $1; exit }')
+    [ -n "$va_pm_name" ] || va_pm_name=$(printf '%s\n' "$va_pm_list" | awk 'NF { print $1; exit }')
+    printf '%s\n' "$va_pm_name"
+}
+
 # macOS (and Windows) run containers in Podman's virtual machine: start it.
 va_podman_machine_start() {
     [ "$(va_os)" = macos ] || return 1
-    va_machines=$(podman machine list --format '{{.Name}}' 2>/dev/null || true)
+    va_pm=$(va_podman_machine_name)
     va_say "Starting Podman's virtual machine (first time takes a minute)..."
-    if [ -z "$va_machines" ]; then
+    if [ -z "$va_pm" ]; then
         podman machine init >/dev/null 2>&1 || return 1
+        va_pm=$(va_podman_machine_name)
     fi
-    podman machine start >/dev/null 2>&1 || return 1
+    podman machine start "$va_pm" >/dev/null 2>&1 || return 1
     va_engine_responds podman
 }
 
@@ -539,8 +549,16 @@ va_exists() { va_engine container inspect "$VA_NAME" >/dev/null 2>&1; }
 
 va_image_present() { va_engine image inspect "$1" >/dev/null 2>&1; }
 
+# A localhost/ image was built on this computer, so a pull can only fail, and
+# fails as a network error. Docker and Podman keep separate images.
+va_is_local_image() { case "$VA_IMAGE" in localhost/*) return 0 ;; *) return 1 ;; esac; }
+va_say_local_image() {
+    va_say "$VA_IMAGE was built on this computer and isn't in $(va_engine_label "$VA_ENGINE"). Build it there (see docs/deployment/Docker.md), or run: videoannotator-start --image $VA_IMAGE_REPO:latest"
+}
+
 va_pull() {
     if va_image_present "$VA_IMAGE"; then return 0; fi
+    if va_is_local_image; then va_say_local_image; return 1; fi
     va_say "Downloading VideoAnnotator (first time only, about 1 GB)..."
     va_pull_err=$(va_engine pull "$VA_IMAGE" 2>&1 >/dev/null) && return 0
     va_explain_error "$VA_ENGINE" "$va_pull_err" 1 || true
@@ -967,7 +985,9 @@ va_cmd_update() {
         fi
     fi
     va_before=$(va_engine image inspect -f '{{.Id}}' "$VA_IMAGE" 2>/dev/null || true)
-    if ! va_pull_err=$(va_engine pull "$VA_IMAGE" 2>&1 >/dev/null); then
+    if va_is_local_image; then
+        if [ -z "$va_before" ]; then va_say_local_image; exit 1; fi
+    elif ! va_pull_err=$(va_engine pull "$VA_IMAGE" 2>&1 >/dev/null); then
         va_explain_error "$VA_ENGINE" "$va_pull_err" 1 || true
         exit 1
     fi
