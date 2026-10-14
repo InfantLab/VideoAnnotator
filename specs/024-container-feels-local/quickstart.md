@@ -23,7 +23,7 @@ drive or folder a second one (`D:\Pilot`).
 ## Story 2: again, with no questions
 
 1. Close everything, start VideoAnnotator again: no question; it says which folder it can read.
-2. Install a pipeline group from the viewer (e.g. Person Tracking). Then `videoannotator-start share`
+2. Install a pipeline group from the viewer's Pipelines page (e.g. Person Tracking). Then `videoannotator-start share`
    a second folder (this recreates the container): the card shows "Restoring…" briefly, then Person
    Tracking is ready again, without downloading it again. A job submitted meanwhile waits, then runs.
 3. Run `videoannotator-start update` (or install a newer launcher): same folders, jobs, results,
@@ -72,3 +72,25 @@ drive or folder a second one (`D:\Pilot`).
   folders and Saved datasets, not the footnote "Videos on another computer? Upload them". With the
   launcher, the server is on the same computer, so upload's real job is videos in a folder that
   hasn't been shared, which is one of the main ways to use the app, not an edge case.
+
+### 2026-10-14 — Windows, Docker Desktop (T084, continued)
+
+Story 1 largely works. Fixed from this walk:
+
+- "Share this folder? [Y/n]" came straight after "Results go to:", so it read as asking about the
+  results folder. The question now follows the videos folder and reads "Share this folder with
+  VideoAnnotator?"; the results folder is in the summary line after start.
+- "Your jobs and models will be kept." showed on what felt like a first start (Docker keeps named
+  volumes when containers and images are removed). Now: "Found your earlier VideoAnnotator jobs
+  and models. They'll be kept."
+- After installing a pipeline, "Restart the server to activate it" gave no way to do so from the
+  card, and the launcher had already exited. The card now has a "Restart now" button (sharing the
+  banner's restart), the wording says VideoAnnotator rather than "server", and the launcher gains
+  `videoannotator-start restart`, which the fallback hint names when the launcher runs things.
+- Ollama on the host was unreachable: the launcher didn't set `OLLAMA_BASE_URL`, and the message
+  explained container networking. The launcher now sets it (Docker: `host.docker.internal`, with
+  `host-gateway` on Linux Docker Engine; Podman: `host.containers.internal`) and the message says
+  to start the Ollama app. Checked under Docker Desktop on Windows: the container reaches a host
+  service bound to 127.0.0.1 only (Ollama's default), so no `OLLAMA_HOST` change is needed there.
+  Linux needs `OLLAMA_HOST=0.0.0.0` (in INSTALLATION.md, "Using Ollama"). Still to check: Podman
+  Desktop, and macOS.

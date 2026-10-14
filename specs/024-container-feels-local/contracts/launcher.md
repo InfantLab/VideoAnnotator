@@ -11,6 +11,7 @@ The same behaviour from `videoannotator-start` (POSIX `sh`; Linux, macOS) and
 | `videoannotator-start share [PATH]` | Share another folder (picker if no PATH), then restart (asks about running jobs) |
 | `videoannotator-start unshare [PATH]` | Stop sharing (list to choose from if no PATH), then restart |
 | `videoannotator-start list` | Print shared folders, results folder, engine, image |
+| `videoannotator-start restart` | Restart with the same settings (asks about running jobs); not running: start |
 | `videoannotator-start stop` | Stop VideoAnnotator |
 | `videoannotator-start update` | Update the launcher from the latest release, then the app: the new launcher pulls its own pinned image and restarts (research.md R16). Installed pipelines are restored; weights, jobs and settings are untouched. Already up to date: says so, changes nothing |
 | `videoannotator-start logs` | Show the server's recent log |
@@ -28,9 +29,7 @@ Which folder are your videos in?            (a folder picker opens)
 
 VideoAnnotator will be able to read, but never change:
   /home/ada/Studies   (and everything inside it)
-Results go to:
-  /home/ada/VideoAnnotator
-Share this folder? [Y/n]
+Share this folder with VideoAnnotator? [Y/n]
 
 Downloading VideoAnnotator (first time only, about 1 GB)...
 Starting... ready.

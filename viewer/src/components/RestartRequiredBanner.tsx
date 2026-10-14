@@ -2,7 +2,7 @@ import { Loader2, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { MANUAL_RESTART_HINT, useServerRestart } from "@/hooks/useServerRestart";
+import { useServerRestart } from "@/hooks/useServerRestart";
 
 interface RestartRequiredBannerProps {
   restartRequired: boolean;
@@ -17,7 +17,7 @@ interface RestartRequiredBannerProps {
  */
 export const RestartRequiredBanner = ({ restartRequired }: RestartRequiredBannerProps) => {
   const { isAdmin } = useCurrentUser();
-  const { state, restart, reset } = useServerRestart();
+  const { state, restart, reset, manualHint } = useServerRestart();
 
   if (!restartRequired && state.phase !== "restarting") return null;
 
@@ -25,9 +25,9 @@ export const RestartRequiredBanner = ({ restartRequired }: RestartRequiredBanner
     return (
       <Alert role="status">
         <Loader2 className="h-4 w-4 animate-spin" />
-        <AlertTitle>Restarting server&hellip;</AlertTitle>
+        <AlertTitle>Restarting VideoAnnotator&hellip;</AlertTitle>
         <AlertDescription>
-          This usually takes a few seconds. The page will update when the server is back.
+          This usually takes a few seconds. The page will update when it is back.
         </AlertDescription>
       </Alert>
     );
@@ -36,12 +36,11 @@ export const RestartRequiredBanner = ({ restartRequired }: RestartRequiredBanner
   return (
     <Alert>
       <RefreshCw className="h-4 w-4" />
-      <AlertTitle>Server restart needed</AlertTitle>
+      <AlertTitle>Restart VideoAnnotator to finish</AlertTitle>
       <AlertDescription className="space-y-2">
         <p>
-          A pipeline install has finished, but it updated packages the running server had already
-          loaded, so the server needs to restart to use it. Newly installed pipelines stay locked
-          until then.
+          A pipeline install has finished. VideoAnnotator needs a quick restart (a few seconds)
+          before it can use it. Newly installed pipelines stay locked until then.
         </p>
 
         {state.phase === "confirm_force" && (
@@ -75,19 +74,19 @@ export const RestartRequiredBanner = ({ restartRequired }: RestartRequiredBanner
 
         {state.phase === "timed_out" && (
           <p className="font-medium text-destructive">
-            The server hasn't come back after two minutes. {MANUAL_RESTART_HINT}
+            VideoAnnotator hasn't come back after two minutes. {manualHint}
           </p>
         )}
 
         {(state.phase === "idle" || state.phase === "done") &&
           (isAdmin === false ? (
             <p className="text-muted-foreground">
-              Restarting needs an administrator API key. Ask whoever runs your server to restart it.
+              Restarting needs an administrator API key. Ask whoever runs VideoAnnotator to restart it.
             </p>
           ) : (
             <Button size="sm" onClick={() => restart(false)}>
               <RefreshCw className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-              Restart server
+              Restart VideoAnnotator
             </Button>
           ))}
       </AlertDescription>

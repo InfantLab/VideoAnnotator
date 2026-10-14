@@ -52,9 +52,7 @@ Double-click **Start VideoAnnotator** (or run `videoannotator-start`). The first
 ```
 VideoAnnotator will be able to read, but never change:
   /home/ada/Studies   (and everything inside it)
-Results go to:
-  /home/ada/VideoAnnotator
-Share this folder? [Y/n]
+Share this folder with VideoAnnotator? [Y/n]
 ```
 
 It then downloads VideoAnnotator (about 1 GB, first time only) and opens it in your browser, ready
@@ -72,6 +70,7 @@ videoannotator-start share            # share another folder (a picker opens), t
 videoannotator-start share D:\Pilot   # or name it
 videoannotator-start unshare          # stop sharing one (choose from a list)
 videoannotator-start list             # what is shared, where results go
+videoannotator-start restart          # restart (e.g. to finish a pipeline install)
 videoannotator-start stop             # stop VideoAnnotator
 videoannotator-start update           # the newest version; folders, results, models and
                                       # installed pipelines are kept
@@ -103,6 +102,23 @@ how to enable it:
 | Podman (Linux) | The NVIDIA Container Toolkit's CDI spec: `sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml` |
 | Podman Desktop (Windows) | The same CDI spec, inside Podman's machine (`podman machine ssh`) |
 | macOS | No GPU in containers: VideoAnnotator runs on the CPU |
+
+### Using Ollama (local AI models)
+
+Install [Ollama](https://ollama.com/download) on the same computer and start it. VideoAnnotator
+finds it by itself; there is nothing to set up.
+
+**Linux only:** Ollama normally accepts connections only from programs on the computer itself,
+which, on Linux, doesn't include containers. If VideoAnnotator says it can't find Ollama while
+Ollama is running, let Ollama accept them too:
+
+```bash
+sudo systemctl edit ollama
+# in the editor that opens, add these two lines, then save:
+#   [Service]
+#   Environment="OLLAMA_HOST=0.0.0.0"
+sudo systemctl restart ollama
+```
 
 **macOS** is supported and community-tested (we test Windows and Linux ourselves); it runs on the
 CPU only.

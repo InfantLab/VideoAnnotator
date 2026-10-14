@@ -16,9 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     folder the videos are in (a folder picker), confirms in plain words, and shares it read-only
     at its real path, so job pages, datasets and `run.json` name videos as the computer does.
     It starts VideoAnnotator on 127.0.0.1 and opens the viewer already connected. Later starts
-    ask nothing. `share`, `unshare`, `list`, `stop`, `update` and `logs`; broad shares (a home
+    ask nothing. `share`, `unshare`, `list`, `restart`, `stop`, `update` and `logs`; broad shares (a home
     folder, a whole drive) ask first; a missing share (an unplugged drive) is skipped with a
     note; every failure is one plain line with the next step.
+  - **Ollama on the same computer just works.** The launcher points the container at the
+    host's Ollama (`host.docker.internal`, or `host.containers.internal` under Podman), and when
+    Ollama can't be found the message says to start the Ollama app, with no container jargon.
+  - **Finishing a pipeline install is one click.** A card whose pipeline needs a restart has
+    its own "Restart now" button, and the wording is "Restart VideoAnnotator", not "the server".
   - **The slim image on GHCR**, `ghcr.io/infantlab/videoannotator:<version>`, which the
     launcher pins to its own version. Docker Hub stays a mirror.
   - **Installed pipelines survive updates and restarts.** Pipelines installed from the viewer

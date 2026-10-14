@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ExtrasInstallJob, PipelineDescriptor, ReadinessItem } from "@/types/pipelines";
+import { RestartToActivate } from "@/components/RestartToActivate";
 
 interface LockedPipelineCardProps {
   pipeline: PipelineDescriptor;
@@ -256,12 +257,7 @@ export const ExtrasInstallStatus = ({
     // fetch reports it available. Say so on the card too: the step-level
     // RestartRequiredBanner can be scrolled out of view, and a card that just
     // reverts to "Not installed" reads as if the install did nothing.
-    return (
-      <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-500">
-        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-        Installed. Restart the server to activate it.
-      </p>
-    );
+    return <RestartToActivate />;
   }
 
   return (

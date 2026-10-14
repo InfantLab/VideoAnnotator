@@ -731,6 +731,8 @@
           "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
           "-e",
           "VIDEOANNOTATOR_LAUNCHER=1",
+          "-e",
+          "OLLAMA_BASE_URL=http://host.containers.internal:11434",
           "ghcr.io/infantlab/videoannotator:1.6.0"
         ]
       }
@@ -787,6 +789,10 @@
           "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
           "-e",
           "VIDEOANNOTATOR_LAUNCHER=1",
+          "-e",
+          "OLLAMA_BASE_URL=http://host.docker.internal:11434",
+          "--add-host",
+          "host.docker.internal:host-gateway",
           "-e",
           "VIDEOANNOTATOR_RESULTS_OWNER=1000:1001",
           "ghcr.io/infantlab/videoannotator:1.6.0"
@@ -845,6 +851,8 @@
           "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
           "-e",
           "VIDEOANNOTATOR_LAUNCHER=1",
+          "-e",
+          "OLLAMA_BASE_URL=http://host.docker.internal:11434",
           "ghcr.io/infantlab/videoannotator:1.6.0"
         ]
       }
@@ -901,6 +909,8 @@
           "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
           "-e",
           "VIDEOANNOTATOR_LAUNCHER=1",
+          "-e",
+          "OLLAMA_BASE_URL=http://host.docker.internal:11434",
           "ghcr.io/infantlab/videoannotator:1.6.0"
         ]
       }
@@ -964,6 +974,8 @@
           "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
           "-e",
           "VIDEOANNOTATOR_LAUNCHER=1",
+          "-e",
+          "OLLAMA_BASE_URL=http://host.containers.internal:11434",
           "ghcr.io/infantlab/videoannotator:1.6.0"
         ]
       }
@@ -1023,6 +1035,8 @@
           "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
           "-e",
           "VIDEOANNOTATOR_LAUNCHER=1",
+          "-e",
+          "OLLAMA_BASE_URL=http://host.containers.internal:11434",
           "ghcr.io/infantlab/videoannotator:1.6.0"
         ]
       }
@@ -1077,6 +1091,8 @@
           "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
           "-e",
           "VIDEOANNOTATOR_LAUNCHER=1",
+          "-e",
+          "OLLAMA_BASE_URL=http://host.containers.internal:11434",
           "ghcr.io/infantlab/videoannotator:latest"
         ]
       }
@@ -1133,6 +1149,8 @@
           "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
           "-e",
           "VIDEOANNOTATOR_LAUNCHER=1",
+          "-e",
+          "OLLAMA_BASE_URL=http://host.containers.internal:11434",
           "ghcr.io/infantlab/videoannotator:1.6.0"
         ]
       }
@@ -1197,6 +1215,8 @@
           "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
           "-e",
           "VIDEOANNOTATOR_LAUNCHER=1",
+          "-e",
+          "OLLAMA_BASE_URL=http://host.docker.internal:11434",
           "ghcr.io/infantlab/videoannotator:1.6.0"
         ]
       }
@@ -1259,6 +1279,8 @@
           "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1",
           "-e",
           "VIDEOANNOTATOR_LAUNCHER=1",
+          "-e",
+          "OLLAMA_BASE_URL=http://host.containers.internal:11434",
           "ghcr.io/infantlab/videoannotator:1.6.0"
         ]
       }

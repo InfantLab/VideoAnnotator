@@ -27,8 +27,8 @@ setup() {
     [[ "$output" == *"Which folder are your videos in?"* ]]
     [[ "$output" == *"VideoAnnotator will be able to read, but never change:"* ]]
     [[ "$output" == *"  $HOME/Studies   (and everything inside it)"* ]]
-    [[ "$output" == *"Results go to:"*"  $HOME/VideoAnnotator"* ]]
-    [[ "$output" == *"Share this folder? [Y/n]"* ]]
+    [[ "$output" == *"(and everything inside it)"$'\n'"Share this folder with VideoAnnotator? [Y/n]"* ]]
+    [[ "$output" == *"Results: $HOME/VideoAnnotator."* ]]
     [ -d "$HOME/VideoAnnotator" ]
 }
 

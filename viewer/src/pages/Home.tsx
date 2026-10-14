@@ -225,7 +225,7 @@ export default function Home() {
           <span className="flex items-center gap-2">
             {ready} of {pipelines.length} pipelines ready
             {ready < pipelines.length && (
-              <Link to="/jobs/new" className="underline underline-offset-2 text-primary">
+              <Link to="/pipelines" className="underline underline-offset-2 text-primary">
                 set up the others
               </Link>
             )}
@@ -290,7 +290,7 @@ export default function Home() {
               Connect to a VideoAnnotator server (<Link className="underline" to="/settings">Settings</Link>)
             </Step>
             <Step done={steps.pipelines}>
-              Install at least one pipeline (offered when you <Link className="underline" to="/jobs/new">start a job</Link>)
+              Install at least one pipeline (on the <Link className="underline" to="/pipelines">Pipelines</Link> page)
             </Step>
             <Step done={steps.ranJob}>Run your first job on a video</Step>
             <Step done={steps.sawResults}>

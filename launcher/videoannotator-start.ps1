@@ -396,11 +396,18 @@ function Get-VaMountArg {
     return "type=bind,source=$Source,target=$Target$Extra"
 }
 
+# Ollama on this computer, as the container reaches it.
+function Get-VaOllamaUrl {
+    param([string]$Engine)
+    if ($Engine -eq 'podman') { return 'http://host.containers.internal:11434' }
+    return 'http://host.docker.internal:11434'
+}
+
 function Get-VaRunCommand {
     param(
         [string[]]$Present = @(), [string[]]$Missing = @(),
         [string]$Results, [string]$Port, [string]$Image, [string[]]$GpuFlags = @(),
-        [string]$RequestsDir = (Get-VaRequestsDir)
+        [string]$RequestsDir = (Get-VaRequestsDir), [string]$Engine = $script:Engine
     )
     $run = @('run', '-d', '--name', $script:VaName, '-p', "127.0.0.1:$($Port):$($script:VaInternalPort)")
     $run += @($GpuFlags | Where-Object { $_ })
@@ -428,6 +435,7 @@ function Get-VaRunCommand {
         '-e', ('VIDEOANNOTATOR_HOST_PATHS=' + ($pairs -join ';')),
         '-e', 'VIDEOANNOTATOR_PUBLISHED_LOCALLY=1',
         '-e', 'VIDEOANNOTATOR_LAUNCHER=1',
+        '-e', "OLLAMA_BASE_URL=$(Get-VaOllamaUrl $Engine)",
         $Image
     )
     # The same for either engine on Windows, and no VIDEOANNOTATOR_RESULTS_OWNER:
@@ -709,7 +717,7 @@ function Invoke-VaMigrate {
             return $true
         }
     } elseif ((Invoke-VaEngine @('volume', 'inspect', 'videoannotator-database')).ExitCode -eq 0) {
-        Write-VaSay 'Your jobs and models will be kept.'
+        Write-VaSay "Found your earlier VideoAnnotator jobs and models. They'll be kept."
     }
     return $false
 }
@@ -745,9 +753,7 @@ function Confirm-VaShare {
     Write-VaSay ''
     Write-VaSay 'VideoAnnotator will be able to read, but never change:'
     Write-VaSay "  $Folder   (and everything inside it)"
-    Write-VaSay 'Results go to:'
-    Write-VaSay "  $($script:Config.results)"
-    return (Test-VaYes 'Share this folder? [Y/n]' 'y')
+    return (Test-VaYes 'Share this folder with VideoAnnotator? [Y/n]' 'y')
 }
 
 # First start: which folder are the videos in. $false when cancelled.
@@ -937,6 +943,7 @@ Commands:
   share [PATH]    Share another folder (read-only), then restart
   unshare [PATH]  Stop sharing a folder, then restart
   list            Show shared folders, results folder, engine and image
+  restart         Restart VideoAnnotator (e.g. to finish a pipeline install)
   stop            Stop VideoAnnotator
   update          Update VideoAnnotator (your folders, results and models are kept)
   logs            Show VideoAnnotator's recent log
@@ -997,6 +1004,14 @@ function Invoke-VaMain {
         'share' { Invoke-VaCommandShare $argument }
         'unshare' { Invoke-VaCommandUnshare $argument }
         'list' { Invoke-VaCommandList }
+        'restart' {
+            Use-VaEngine
+            if (Test-VaRunning) {
+                if (-not (Invoke-VaRestart 'Restarting VideoAnnotator...')) { exit 1 }
+            } else {
+                Invoke-VaCommandStart
+            }
+        }
         'stop' {
             Use-VaEngine
             Invoke-VaStop

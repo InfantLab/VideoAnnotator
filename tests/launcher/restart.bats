@@ -95,6 +95,23 @@ setup() {
     [[ "$output" == *"Something else is using port 18011. Close it, or run: videoannotator-start --port 18012"* ]]
 }
 
+@test "restart: stops, starts again with the same folders" {
+    echo running > "$STATE/container"
+    run main restart < /dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Restarting VideoAnnotator..."* ]]
+    grep -q "^stop -t 30 videoannotator" "$ENGINE_LOG"
+    [ "$(engine_runs)" -eq 1 ]
+    grep -q "source=$HOME/Studies,target=" "$ENGINE_LOG"
+}
+
+@test "restart when not running just starts" {
+    run main restart < /dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"Restarting"* ]]
+    [ "$(engine_runs)" -eq 1 ]
+}
+
 @test "stop" {
     echo running > "$STATE/container"
     run main stop

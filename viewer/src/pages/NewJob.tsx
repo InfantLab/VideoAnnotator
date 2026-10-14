@@ -43,6 +43,7 @@ import { DynamicPipelineParameters } from "@/components/DynamicPipelineParameter
 import { findUrlFieldErrors } from "@/lib/pipelineUrlFields";
 import { LockedPipelineCard, ExtrasInstallStatus, ReadinessDetails, RestoringStatus } from "@/components/LockedPipelineCard";
 import { RestartRequiredBanner } from "@/components/RestartRequiredBanner";
+import { RestartToActivate } from "@/components/RestartToActivate";
 import type { PipelineDescriptor } from "@/types/pipelines";
 import type { IngestAccess } from "@/types/ingest";
 import { useConfigValidation } from "@/hooks/useConfigValidation";
@@ -1235,7 +1236,8 @@ export const PipelineSelectionStep = ({
   restartRequired = false,
   selectionNotices = [],
   onDismissNotices,
-  presetBar
+  presetBar,
+  manage = false
 }: {
   pipelines: PipelineDescriptor[];
   selectedPipelines: string[];
@@ -1248,6 +1250,8 @@ export const PipelineSelectionStep = ({
   onDismissNotices?: () => void;
   /** Load/save presets; a slot so the step stays usable without a server that has them. */
   presetBar?: ReactNode;
+  /** Install and check pipelines without choosing any for a run (the Pipelines page). */
+  manage?: boolean;
 }) => {
   const groupedPipelines = useMemo(() => {
     const groups = new Map<string, PipelineDescriptor[]>();
@@ -1388,8 +1392,9 @@ export const PipelineSelectionStep = ({
       )}
 
       <p className="text-foreground">
-        Select the annotation pipelines reported by your VideoAnnotator server. Feature availability reflects
-        the live API catalog.
+        {manage
+          ? "The annotation pipelines your VideoAnnotator server offers. Install the ones you need here; you choose which to run when you start a job."
+          : "Select the annotation pipelines reported by your VideoAnnotator server. Feature availability reflects the live API catalog."}
       </p>
 
       {pipelines.some((pipeline) => pipelineCardMode(pipeline) === 'install') && (
@@ -1480,9 +1485,7 @@ export const PipelineSelectionStep = ({
                       )}
                       {mode === 'restoring' && <RestoringStatus />}
                       {mode === 'restart' && (!job || job.status !== 'completed') && (
-                        <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-500">
-                          Installed. Restart the server to activate it.
-                        </p>
+                        <RestartToActivate />
                       )}
                       {(mode === 'setup' || mode === 'unavailable') && (
                         <ReadinessDetails
@@ -1514,6 +1517,25 @@ export const PipelineSelectionStep = ({
 
                 const checked = selectedPipelines.includes(pipeline.id);
                 const description = pipeline.description ?? 'No description provided.';
+                if (manage) {
+                  return (
+                    <div key={pipeline.id} className="flex flex-col gap-1 rounded-lg border border-border bg-card p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium text-foreground">{pipeline.name}</span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge className="text-[10px] px-1.5 py-0 bg-green-600 hover:bg-green-600">Ready</Badge>
+                          {pipeline.version && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                              v{pipeline.version}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{description}</p>
+                      <ReadinessDetails notes={pipeline.readiness?.notes} />
+                    </div>
+                  );
+                }
                 return (
                   <label
                     key={pipeline.id}
@@ -1568,7 +1590,7 @@ export const PipelineSelectionStep = ({
         </Alert>
       )}
 
-      {selectedPipelines.length === 0 && (
+      {!manage && selectedPipelines.length === 0 && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>

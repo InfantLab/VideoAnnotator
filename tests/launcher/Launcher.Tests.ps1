@@ -78,7 +78,7 @@ Describe 'run' {
         $gpu = @()
         if ($i.gpu) { $gpu = $i.gpu.Split(' ') }
         $run = Get-VaRunCommand -Present @($i.shares) -Missing @($i.missing) `
-            -Results $i.results -Port $i.port -Image $i.image -GpuFlags $gpu -RequestsDir $requests
+            -Results $i.results -Port $i.port -Image $i.image -GpuFlags $gpu -RequestsDir $requests -Engine $i.engine
         ($run -join "`n") | Should -BeExactly (@($Row.expect.args) -join "`n")
     }
 }

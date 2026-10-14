@@ -30,7 +30,7 @@ setup() {
     va_pick_folder() { printf '%s\n' "$HOME/Second"; }
     run main share <<< "y"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Share this folder? [Y/n]"* ]]
+    [[ "$output" == *"Share this folder with VideoAnnotator? [Y/n]"* ]]
     grep -qx "share=$HOME/Second" "$(va_settings_path)"
 }
 

@@ -6,7 +6,7 @@ import { ConnectionErrorBanner } from '@/components/ConnectionErrorBanner';
 import { useServerCapabilitiesContext } from '@/contexts/ServerCapabilitiesContext';
 import { isCorsOrNetworkError } from '@/lib/connectionUtils';
 import { APP_NAME } from '@/utils/version';
-import { BookOpen, Briefcase, Database, MessageSquareText, PlusCircle, Settings } from 'lucide-react';
+import { BookOpen, Briefcase, Database, Layers, MessageSquareText, PlusCircle, Settings } from 'lucide-react';
 import vavIcon from '@/assets/v-a-v.icon.png';
 
 // In the order of the work: run videos, follow jobs, look at results. Datasets
@@ -17,6 +17,7 @@ const navItems = [
   { path: '/results', label: 'Results', icon: BookOpen },
   { path: '/datasets', label: 'Datasets', icon: Database },
   { path: '/prompts', label: 'Prompts', icon: MessageSquareText },
+  { path: '/pipelines', label: 'Pipelines', icon: Layers },
 ];
 
 export const AppLayout = () => {

@@ -461,9 +461,12 @@ def pipeline_readiness(meta: PipelineMetadata) -> dict[str, Any]:
 
 
 def _ollama_unreachable_message(status: dict[str, Any]) -> str:
+    from ..config_env import managed_by_launcher
     from ..diagnostics.ollama import unreachable_hint
 
     base_url = str(status.get("base_url"))
+    if managed_by_launcher():
+        return f"VideoAnnotator can't find Ollama. {unreachable_hint(base_url)}"
     return f"Ollama isn't reachable at {base_url}. {unreachable_hint(base_url)}"
 
 

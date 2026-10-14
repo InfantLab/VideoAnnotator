@@ -29,7 +29,7 @@ setup() {
     va_pick_folder() { printf '%s\n' "$HOME/Studies"; }
     run main <<< "y"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Your jobs and models will be kept."*"Which folder are your videos in?"* ]]
+    [[ "$output" == *"Found your earlier VideoAnnotator jobs and models. They'll be kept."*"Which folder are your videos in?"* ]]
 }
 
 @test "nothing is offered once start.conf exists" {

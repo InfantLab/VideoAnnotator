@@ -440,6 +440,15 @@ va_mount_arg() {
     esac
 }
 
+# Ollama on this computer, as the container reaches it.
+va_ollama_url() {
+    if [ "$VA_ENGINE" = podman ]; then
+        printf '%s\n' http://host.containers.internal:11434
+    else
+        printf '%s\n' http://host.docker.internal:11434
+    fi
+}
+
 # va_build_run: the engine's `run` arguments, one per line. Uses VA_ENGINE,
 # VA_PRESENT (shares found), VA_MISSING (shares not found), VA_S_RESULTS,
 # VA_PORT, VA_IMAGE and VA_GPU_FLAGS.
@@ -475,7 +484,12 @@ EOF
         -e "VIDEOANNOTATOR_RESULTS_DIR=$va_results_target" \
         -e "VIDEOANNOTATOR_HOST_PATHS=$va_pairs" \
         -e "VIDEOANNOTATOR_PUBLISHED_LOCALLY=1" \
-        -e "VIDEOANNOTATOR_LAUNCHER=1"
+        -e "VIDEOANNOTATOR_LAUNCHER=1" \
+        -e "OLLAMA_BASE_URL=$(va_ollama_url)"
+    # Linux Docker Engine has no host.docker.internal of its own.
+    if [ "$VA_ENGINE" = docker ] && [ "$(va_os)" = linux ] && ! va_docker_desktop; then
+        printf '%s\n' --add-host host.docker.internal:host-gateway
+    fi
     # Rootful Docker on Linux writes as root: the server gives results back (R6).
     # Podman's root is the researcher; Docker Desktop's file sharing already is.
     if [ "$VA_ENGINE" = docker ] && [ "$(va_os)" = linux ] && ! va_docker_desktop; then
@@ -757,7 +771,7 @@ va_migrate() {
             return 0
         fi
     elif va_engine volume inspect videoannotator-database >/dev/null 2>&1; then
-        va_say "Your jobs and models will be kept."
+        va_say "Found your earlier VideoAnnotator jobs and models. They'll be kept."
     fi
     return 1
 }
@@ -806,9 +820,7 @@ va_confirm_share() {
     va_say ""
     va_say "VideoAnnotator will be able to read, but never change:"
     va_say "  $1   (and everything inside it)"
-    va_say "Results go to:"
-    va_say "  $VA_S_RESULTS"
-    va_ask "Share this folder? [Y/n]" y
+    va_ask "Share this folder with VideoAnnotator? [Y/n]" y
 }
 
 # First start: which folder are the videos in.
@@ -981,6 +993,7 @@ Commands:
   share [PATH]    Share another folder (read-only), then restart
   unshare [PATH]  Stop sharing a folder, then restart
   list            Show shared folders, results folder, engine and image
+  restart         Restart VideoAnnotator (e.g. to finish a pipeline install)
   stop            Stop VideoAnnotator
   update          Update VideoAnnotator (your folders, results and models are kept)
   logs            Show VideoAnnotator's recent log
@@ -1032,6 +1045,13 @@ main() {
         share) va_cmd_share "$VA_ARG" ;;
         unshare) va_cmd_unshare "$VA_ARG" ;;
         list) va_cmd_list ;;
+        restart)
+            va_engine_detect || exit 1
+            if va_running; then
+                va_restart "Restarting VideoAnnotator..." || exit 1
+            else
+                va_cmd_start
+            fi ;;
         stop)
             va_engine_detect || exit 1
             va_stop

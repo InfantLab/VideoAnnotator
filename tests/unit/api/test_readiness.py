@@ -414,6 +414,18 @@ class TestOllamaBaseUrl:
             hint = ollama.unreachable_hint("http://127.0.0.1:11434")
         assert "OLLAMA_BASE_URL=http://host.docker.internal:11434" in hint
 
+    def test_unreachable_under_the_launcher_is_plain(self, monkeypatch):
+        from videoannotator.api.readiness import _ollama_unreachable_message
+
+        monkeypatch.setenv("VIDEOANNOTATOR_LAUNCHER", "1")
+        message = _ollama_unreachable_message(
+            {"base_url": "http://host.docker.internal:11434"}
+        )
+        assert message.startswith("VideoAnnotator can't find Ollama. ")
+        assert "Ollama app is running on this computer" in message
+        assert "host.docker.internal" not in message
+        assert "container" not in message
+
     def test_unreachable_outside_container_says_start_it(self):
         from videoannotator.diagnostics import ollama
 

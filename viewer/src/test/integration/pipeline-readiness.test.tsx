@@ -196,7 +196,8 @@ describe('Pipeline readiness cards', () => {
     renderStep([pipeline('person_tracking', 'Person Tracking', { state: 'restart_required', nextAction: 'restart', extrasGroup: 'person' })]);
     const c = card('Person Tracking');
     expect(within(c).getByText('Restart needed')).toBeInTheDocument();
-    expect(within(c).getByText('Installed. Restart the server to activate it.')).toBeInTheDocument();
+    expect(within(c).getByText('Installed. Restart VideoAnnotator to use it.')).toBeInTheDocument();
+    expect(within(c).getByRole('button', { name: 'Restart now' })).toBeInTheDocument();
   });
 
   it('picks up an install the server reports, even one this browser did not start', async () => {

@@ -398,7 +398,7 @@ describe('PipelineSelectionStep - Pipeline Extras Install UI', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Server restart needed')).toBeInTheDocument();
+        expect(screen.getByText('Restart VideoAnnotator to finish')).toBeInTheDocument();
       });
       // Wording is an expected next step, not error language.
       expect(screen.queryByText(/error/i)).not.toBeInTheDocument();
