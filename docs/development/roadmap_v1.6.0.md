@@ -602,17 +602,20 @@ parser per pipeline.
 - [ ] Two worked analysis notebooks, one R and one Python, reading the tidy export of the demo
       video.
 
-**→ Release candidate 1 (`v1.6.0rc1`)**: Phases 0–3 done. The pilot starts.
+**→ Release candidate 1 (`v1.6.0rc1`)**: Phases 0–3 done.
 
 ---
 
-### Pilot (from rc1 to release)
+### Pilot (after the release)
+
+Outside testing is what the release is for (Caspar, 2026-10-14), so it follows the tag. Spec 024's
+T083 runs here too.
 
 - [ ] 3–5 labs outside the team (conference contacts first) run it on about ten of their own
       videos, with a concrete ask: tell us where it broke.
 - [ ] Their reports go in the public issue tracker. Label starter tasks `good first issue`.
-- [ ] Pilot feedback reorders Phases 4–7.
-- [ ] With permission, record who used it and for what, for the JOSS research impact statement.
+- [ ] Pilot feedback sets the order of v1.6.x and v1.7 work.
+- [ ] With permission, record who used it and for what.
 
 ---
 
@@ -745,9 +748,9 @@ failed, where the pipelines disagree, what the whole dataset looks like.
 
 - Plugin ecosystem: entry-point discovery, `Dispatcher` ABC, `videoannotator-utils`
   ([`roadmap_v1.7.0.md`](roadmap_v1.7.0.md)).
-- A visual redesign of the viewer was here as "decided after the pilot". It is now planned as the
-  spec after 022: placeholder [`specs/023-viewer-overhaul`](../../specs/023-viewer-overhaul/spec.md)
-  (timeline, movement metric, reaching the data, multiple videos, researcher notes).
+- The viewer overhaul, placeholder [`specs/023-viewer-overhaul`](../../specs/023-viewer-overhaul/spec.md)
+  (timeline, movement metric, reaching the data, multiple videos, researcher notes). After the
+  release, informed by the pilot (Caspar, 2026-10-14).
 - Remote and HPC dispatch ([`roadmap_v1.7_to_v2.0.md`](roadmap_v1.7_to_v2.0.md)).
 - Pose, hand and motion specialist pipelines, unless pilot labs ask.
 
@@ -755,11 +758,6 @@ failed, where the pipelines disagree, what the whole dataset looks like.
 
 ## ✅ Success Criteria
 
-- [ ] A researcher outside the team installs it, works through the tutorial on their own machine,
-      and gets the tidy export into R or Python without help.
-- [ ] At least three labs outside the team have run it on their own videos (documented, with
-      permission).
-- [ ] At least one issue or pull request from outside the team has been resolved or merged.
 - [ ] Changing viewer code cannot ship a stale bundle: CI fails on a mismatch.
 - [ ] Every version constraint in `pyproject.toml` and the viewer's `package.json` has a recorded
       reason in the dependency audit, and the release supports Python 3.13 (3.14 as soon as
@@ -768,6 +766,14 @@ failed, where the pipelines disagree, what the whole dataset looks like.
 - [ ] Everything the viewer does is available from the CLI with `--json` and through MCP.
 - [ ] The viewer has zero TypeScript errors and no placeholder pages.
 - [ ] Nothing leaves the user's machine unless they switched on a hosted backend.
+
+**After the release** (the pilot's measures, not release gates):
+
+- [ ] A researcher outside the team installs it, works through the tutorial on their own machine,
+      and gets the tidy export into R or Python without help.
+- [ ] At least three labs outside the team have run it on their own videos (documented, with
+      permission).
+- [ ] At least one issue or pull request from outside the team has been resolved or merged.
 
 ---
 
