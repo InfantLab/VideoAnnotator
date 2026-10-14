@@ -276,7 +276,8 @@ jobs:
   integration-test:
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    # On releases too: the image and PyPI jobs need it, and skip when it does.
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event_name == 'release'
 
     steps:
       - uses: actions/checkout@v7
@@ -395,7 +396,8 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     needs: [test, viewer, integration-test]
-    if: github.event_name == 'release' && github.event.action == 'published'
+    # Not for release candidates (v1.6.0-rc1): a PyPI version can't be reused.
+    if: github.event_name == 'release' && github.event.action == 'published' && !contains(github.ref_name, '-')
 
     steps:
       - uses: actions/checkout@v7

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Release candidate **1.6.0-rc1** (2026-10-14) is everything below, for testing the install a new
+user follows from GitHub.
+
 ### Added
 
 - **Start VideoAnnotator: a container that feels local** (spec 024). For researchers on their
@@ -39,6 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     to that user.
   - Windows paths are shown with backslashes (`C:\Users\...`), and jobs report their video's
     path as the computer shows it (`video_display_path`).
+  - **Podman Desktop on Windows works across WSL releases.** The launcher starts the usual way
+    and falls back only on the specific failure: on WSL 2's kernel, which can't publish a port,
+    it runs on the machine's own network; on WSL 3.0, which gives the machine's containers no
+    cgroup controllers, it runs them without cgroups. It also finds a machine Podman Desktop
+    named `podman-machine-1`.
 
 - **Videos are read where they are, and results go to one folder you can find** (spec 022).
   - **My folders.** On the server's own computer, the new-job wizard opens on "My folders": open

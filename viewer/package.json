@@ -1,7 +1,7 @@
 {
   "name": "video-annotation-viewer",
   "private": true,
-  "version": "1.5.0",
+  "version": "1.6.0-rc1",
   "type": "module",
   "repository": {
     "type": "git",

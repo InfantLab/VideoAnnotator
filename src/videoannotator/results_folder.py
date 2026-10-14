@@ -482,7 +482,7 @@ def open_folder(path: Path) -> None:
     if opener is None:
         raise OSError("no desktop to open folders on")
     if sys.platform == "win32":
-        os.startfile(path)  # type: ignore[attr-defined]  # Windows only
+        os.startfile(path)  # type: ignore[attr-defined,unused-ignore]  # Windows only
         return
     subprocess.Popen(
         [*opener, str(path)],
