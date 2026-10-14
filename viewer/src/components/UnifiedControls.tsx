@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { OverlaySettings, TimelineSettings, StandardAnnotationData } from '@/types/annotations';
+import { OverlaySettings, TimelineSettings, StandardAnnotationData, type ProvenanceTrack } from '@/types/annotations';
+import { ProvenanceAttribution } from './ProvenanceAttribution';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,16 @@ interface UnifiedControlsProps {
 }
 
 /** Server pipelines whose output feeds each component, most specific first. */
+/** The track whose file records what drew each component (spec 017). */
+const COMPONENT_TRACK: Record<string, ProvenanceTrack> = {
+  person: 'person_tracking',
+  face: 'face_analysis',
+  emotions: 'face_analysis',
+  speech: 'speech_recognition',
+  speakers: 'speaker_diarization',
+  scenes: 'scene_detection',
+};
+
 const COMPONENT_PIPELINES: Record<string, string[]> = {
   person: ['person_tracking'],
   face: ['face_analysis', 'face_laion_clip', 'face_openface3_embedding'],
@@ -309,6 +320,12 @@ export const UnifiedControls = ({
                 <div className="text-xs text-muted-foreground">
                   {component.description}
                 </div>
+                {component.available && (
+                  <ProvenanceAttribution
+                    info={annotationData?.provenance?.[COMPONENT_TRACK[component.id]]}
+                    pipeline={COMPONENT_TRACK[component.id]}
+                  />
+                )}
                 {!component.available && (
                   failureFor(component.id) ? (
                     <div className="text-xs text-orange-700 dark:text-orange-400">
@@ -380,6 +397,12 @@ export const UnifiedControls = ({
                 <div className="text-xs text-muted-foreground">
                   {component.description}
                 </div>
+                {component.available && (
+                  <ProvenanceAttribution
+                    info={annotationData?.provenance?.[COMPONENT_TRACK[component.id]]}
+                    pipeline={COMPONENT_TRACK[component.id]}
+                  />
+                )}
                 {!component.available && (
                   failureFor(component.id) ? (
                     <div className="text-xs text-orange-700 dark:text-orange-400">

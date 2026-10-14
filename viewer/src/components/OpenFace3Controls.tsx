@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { StandardFaceAnnotation } from '@/types/annotations';
+import { StandardFaceAnnotation, type ProvenanceInfo } from '@/types/annotations';
+import { ProvenanceAttribution } from './ProvenanceAttribution';
 import { usePipelineContext } from '@/contexts/PipelineContext';
 import type { OpenFace3Settings } from './openface3Settings';
 
@@ -21,6 +22,7 @@ interface OpenFace3ControlsProps {
   faceData?: StandardFaceAnnotation[] | null;
   isCollapsed?: boolean;
   jobPipelines?: string[]; // Pipelines that were run for this specific job
+  provenance?: ProvenanceInfo;
 }
 
 export const OpenFace3Controls = ({
@@ -28,7 +30,8 @@ export const OpenFace3Controls = ({
   onChange,
   faceData,
   isCollapsed = false,
-  jobPipelines = []
+  jobPipelines = [],
+  provenance
 }: OpenFace3ControlsProps) => {
   const { isPipelineAvailable, getPipeline } = usePipelineContext();
 
@@ -253,6 +256,9 @@ export const OpenFace3Controls = ({
             />
           </div>
         </div>
+        {faceData && faceData.length > 0 && (
+          <ProvenanceAttribution info={provenance} pipeline="face_openface3_embedding" />
+        )}
       </CardHeader>
 
       <CardContent className="space-y-3">

@@ -161,10 +161,12 @@ def test_new_emotion_detection_feature(self):
     pipeline = FaceAnalysisPipeline()
 
     # Test the new feature with realistic mocking
-    with patch('src.pipelines.face_analysis.face_pipeline.cv2.dnn.readNetFromTensorflow'):
+    with patch(
+        "src.pipelines.face_analysis.face_pipeline.cv2.dnn.readNetFromTensorflow"
+    ):
         result = pipeline.detect_emotions(mock_frame)
         assert result is not None
-        assert 'emotion' in result
+        assert "emotion" in result
 ```
 
 ## 🔍 **Debugging & Troubleshooting**

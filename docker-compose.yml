@@ -1,15 +1,14 @@
-version: "3.8"
-
 services:
   # Development service
   videoannotator-dev:
     build:
       context: .
-      dockerfile: Dockerfile.cpu
+      dockerfile: Dockerfile
     volumes:
       - .:/app
       - ./data:/app/data
       - ./output:/app/output
+      - cache:/app/cache
     environment:
       - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
       - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
@@ -26,13 +25,31 @@ services:
   videoannotator-prod:
     build:
       context: .
-      dockerfile: Dockerfile.cpu
+      dockerfile: Dockerfile
     volumes:
+      - models:/app/models  # model weights persist across rebuilds (spec 016)
+      - database:/app/database  # jobs, users and API keys persist across rebuilds
+      - storage:/app/storage  # each job's video and results, which the database points to
+      - cache:/app/cache  # downloads, so installed pipelines are restored quickly (spec 024)
       - ./data:/app/data:ro
       - ./output:/app/output
+      # Spec 022: your videos, read where they are and never changed...
+      - ${VIDEOS_DIR:-./videos}:/videos:ro
+      # ...and your results, in a folder on your own machine.
+      - ${RESULTS_DIR:-~/VideoAnnotator}:/results
+    ports:
+      # This machine only: VIDEOANNOTATOR_PUBLISHED_LOCALLY below relies on it.
+      # Publishing more widely (e.g. "18011:18011") means removing that line.
+      - "127.0.0.1:18011:18011"
     environment:
       - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
       - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
+      # /videos only when VIDEOS_DIR is set: otherwise Docker's empty ./videos would count
+      # as a shared folder and the wizard couldn't say how to share one (spec 024, R8).
+      - VIDEOANNOTATOR_INGEST_ROOTS=${VIDEOS_DIR:+/videos}
+      - VIDEOANNOTATOR_RESULTS_DIR=/results
+      - VIDEOANNOTATOR_PUBLISHED_LOCALLY=1  # every caller is this machine: the port is on 127.0.0.1
+      - VIDEOANNOTATOR_HOST_PATHS=/videos=${VIDEOS_DIR:-./videos};/results=${RESULTS_DIR:-~/VideoAnnotator}
       - UV_NO_SYNC=1  # keep pipeline extras installed from the viewer across restarts (spec 011 FR-009)
       - PYTHONPATH=/app
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}  # Ollama on the host (vlm_annotation)
@@ -46,13 +63,31 @@ services:
   videoannotator-gpu:
     build:
       context: .
-      dockerfile: Dockerfile.gpu
+      dockerfile: Dockerfile
     volumes:
+      - models:/app/models  # model weights persist across rebuilds (spec 016)
+      - database:/app/database  # jobs, users and API keys persist across rebuilds
+      - storage:/app/storage  # each job's video and results, which the database points to
+      - cache:/app/cache  # downloads, so installed pipelines are restored quickly (spec 024)
       - ./data:/app/data:ro
       - ./output:/app/output
+      # Spec 022: your videos, read where they are and never changed...
+      - ${VIDEOS_DIR:-./videos}:/videos:ro
+      # ...and your results, in a folder on your own machine.
+      - ${RESULTS_DIR:-~/VideoAnnotator}:/results
+    ports:
+      # This machine only: VIDEOANNOTATOR_PUBLISHED_LOCALLY below relies on it.
+      # Publishing more widely (e.g. "18011:18011") means removing that line.
+      - "127.0.0.1:18011:18011"
     environment:
       - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
       - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
+      # /videos only when VIDEOS_DIR is set: otherwise Docker's empty ./videos would count
+      # as a shared folder and the wizard couldn't say how to share one (spec 024, R8).
+      - VIDEOANNOTATOR_INGEST_ROOTS=${VIDEOS_DIR:+/videos}
+      - VIDEOANNOTATOR_RESULTS_DIR=/results
+      - VIDEOANNOTATOR_PUBLISHED_LOCALLY=1  # every caller is this machine: the port is on 127.0.0.1
+      - VIDEOANNOTATOR_HOST_PATHS=/videos=${VIDEOS_DIR:-./videos};/results=${RESULTS_DIR:-~/VideoAnnotator}
       - UV_NO_SYNC=1  # keep pipeline extras installed from the viewer across restarts (spec 011 FR-009)
       - PYTHONPATH=/app
       - CUDA_VISIBLE_DEVICES=0
@@ -71,44 +106,11 @@ services:
     profiles:
       - gpu
 
-  # Development service with GPU and pre-cached models
-  videoannotator-dev-gpu:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    volumes:
-      - ./data:/app/data
-      - ./output:/app/output
-      - ./logs:/app/logs
-      - ./database:/app/database # Persistent database for development
-    environment:
-      - HUGGINGFACE_TOKEN  # passed through from the host env / .env; needed by speaker diarization (pyannote)
-      - HF_AUTH_TOKEN  # pre-v1.5.0 name, still read as a fallback
-      - PYTHONPATH=/app
-      - CUDA_VISIBLE_DEVICES=0
-      - VIDEOANNOTATOR_DB_PATH=/app/database/videoannotator_dev.db
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}  # Ollama on the host (vlm_annotation)
-    extra_hosts:
-      - "host.docker.internal:host-gateway"  # Linux Docker Engine; Docker Desktop provides it already
-    runtime: nvidia
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    ports:
-      - "18011:18011" # FastAPI server (host 18011)
-    command: ["uv", "run", "videoannotator", "server", "--host", "0.0.0.0", "--port", "18011"]
-    profiles:
-      - dev-gpu
-
   # Jupyter service for development
   jupyter:
     build:
       context: .
-      dockerfile: Dockerfile.cpu
+      dockerfile: Dockerfile
     volumes:
       - .:/app
       - ./data:/app/data
@@ -119,7 +121,7 @@ services:
       - PYTHONPATH=/app
     # --inexact: .:/app shares the repo's .venv; an exact sync would uninstall
     # pipeline extras installed from the viewer (see scripts/start_server.sh).
-    command: ["bash", "-lc", "uv sync --inexact --extra dev && uv run jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root"]
+    command: ["bash", "-lc", "uv sync --inexact --group notebooks && uv run jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root"]
     profiles:
       - dev
 
@@ -147,6 +149,16 @@ services:
 
 volumes:
   postgres_data:
+  models:
+    # Fixed name (not <project>_models), shared with the dev container, so the
+    # weights download once per machine.
+    name: videoannotator-models
+  database:
+    name: videoannotator-database
+  storage:
+    name: videoannotator-storage
+  cache:
+    name: videoannotator-cache
 
 networks:
   default:

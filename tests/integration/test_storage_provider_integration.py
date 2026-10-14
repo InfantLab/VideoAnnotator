@@ -120,12 +120,13 @@ def test_download_artifacts(client, temp_storage_root):
     response = client.post("/api/v1/jobs/", files=files)
     job_id = response.json()["id"]
 
-    # 2. Manually add some artifacts (simulating pipeline output)
-    storage_path = Path(response.json()["storage_path"])
-    assert storage_path.exists()
+    # 2. Manually add some artifacts (simulating pipeline output). Spec 022:
+    # pipelines write to the job's results folder, not its storage folder.
+    results = Path(response.json()["results_folder"]["path"])
+    assert results.exists()
 
-    (storage_path / "results.json").write_text('{"foo": "bar"}')
-    (storage_path / "annotations.vtt").write_text("WEBVTT")
+    (results / "results.json").write_text('{"foo": "bar"}')
+    (results / "annotations.vtt").write_text("WEBVTT")
 
     # 3. Download zip
     response = client.get(f"/api/v1/jobs/{job_id}/artifacts")
@@ -140,3 +141,4 @@ def test_download_artifacts(client, temp_storage_root):
         assert "results.json" in zf.namelist()
         assert "annotations.vtt" in zf.namelist()
         assert zf.read("results.json") == b'{"foo": "bar"}'
+        assert "test.mp4" not in zf.namelist()

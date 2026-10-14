@@ -107,7 +107,7 @@ Note (2026-09-24): the VLM pipeline itself already exists in core as `vlm_annota
 - [ ] **Extract `videoannotator-face`** (DeepFace + OpenFace 3) as a sibling package.
 - [ ] **Extract `videoannotator-scene`** (PySceneDetect + open_clip/SigLIP-2) as a sibling package.
 - [ ] **Extract `videoannotator-person`** (Ultralytics YOLO + ByteTrack/BoT-SORT) as a sibling package.
-- [ ] **Extract `videoannotator-laion`** (Empathic-Insight, if upstream still exists by 2028 — otherwise drop entirely).
+- [x] ~~**Extract `videoannotator-laion`**~~: the LAION pipelines were dropped in v1.6.0 (pipeline review). A plugin only if upstream is maintained again.
 - [ ] **Slim core image.** Base: `python:3.12-slim` + FastAPI + SQLAlchemy + numpy/pandas/opencv-headless + the registry/dispatcher/storage layers. Target: ~2 GB. No PyTorch in the core image.
 - [ ] **Per-plugin Docker images.** Each plugin published as `videoannotator/<plugin>:v2.0` extending the slim core. Compose-friendly: `docker-compose up videoannotator-core videoannotator-audio videoannotator-vlm` for a multi-pipeline deployment.
 - [ ] **`videoannotator[all]` meta-package.** Depends on every official plugin. Reproduces v1.4.x install footprint for users who want everything.
@@ -152,7 +152,7 @@ VLMs confabulate counts above ~5 people in frame, invent emotions for ambiguous 
 | `videoannotator-hand` | MIT | Wraps MediaPipe (Apache-2.0) |
 | `videoannotator-motion` | MIT | Wraps SEA-RAFT (BSD-3) |
 | `videoannotator-vlm` | MIT | Wraps Qwen2.5-VL/Qwen3-VL (Apache-2.0); InternVL3.5 (Apache-2.0); MiniCPM-o (Apache-2.0) |
-| `videoannotator-laion` | MIT | Wraps LAION Empathic-Insight (CC-BY-4.0) — drop if upstream gone |
+| ~~`videoannotator-laion`~~ | — | Dropped in v1.6.0 |
 
 The Ultralytics AGPL-3.0 issue is the only real licensing wrinkle. Ship `videoannotator-person` as a separate AGPL-3.0 plugin so the rest of the toolkit stays MIT-clean.
 

@@ -1,130 +1,272 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Database, Plus, Folder, Info } from "lucide-react";
+import { useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { ChevronDown, ChevronRight, Database, Download, HardDrive, Pencil, Play, Trash2, Upload } from 'lucide-react';
+import { apiClient } from '@/api/client';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { forgetFolder } from '@/lib/datasetHandles';
+import { canEdit, createWithFreeName, downloadJSON, exportFileName, parseExport } from '@/lib/datasets';
+import { parseApiError } from '@/lib/errorHandling';
+import type { DatasetCreateRequest, ManifestEntry, SavedDataset } from '@/types/datasets';
 
-const CreateDatasets = () => {
+const when = (iso?: string | null) => (iso ? new Date(iso).toLocaleString() : 'never');
+const entryName = (e: ManifestEntry) => e.relative_path || e.filename;
+const mb = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+
+/** Start a job from a dataset: the wizard opens on its Saved dataset tab. */
+export interface StartFromDatasetState {
+  startFromDataset: { id: string; name: string };
+}
+
+const DatasetRow = ({ dataset, editable }: { dataset: SavedDataset; editable: boolean }) => {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(dataset.name);
+  const [description, setDescription] = useState(dataset.description ?? '');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['datasets'] });
+  const update = useMutation({
+    mutationFn: (body: Parameters<typeof apiClient.updateDataset>[1]) => apiClient.updateDataset(dataset.id, body),
+    onSuccess: () => {
+      setProblem(null);
+      setEditing(false);
+      refresh();
+    },
+    onError: (e) => setProblem(parseApiError(e).message),
+  });
+  const remove = useMutation({
+    mutationFn: () => apiClient.deleteDataset(dataset.id),
+    onSuccess: async () => {
+      await forgetFolder(dataset.id);
+      refresh();
+    },
+    onError: (e) => setProblem(parseApiError(e).message),
+  });
+
+  const removeVideo = (entry: ManifestEntry) =>
+    update.mutate({ video_manifest: dataset.video_manifest.filter((e) => e !== entry) });
+
+  const exportIt = () => {
+    const { id: _id, owner_user_id: _owner, owner_name: _ownerName, ...definition } = dataset;
+    downloadJSON(exportFileName('dataset', dataset.name), definition);
+  };
+
+  const total = dataset.video_manifest.reduce((sum, e) => sum + (e.size_bytes || 0), 0);
+
   return (
-    <div className="container mx-auto px-6 py-8 max-w-5xl space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Dataset Management</h2>
-          <p className="text-muted-foreground">Manage video datasets for batch processing</p>
-        </div>
-        <Button disabled>
-          <Plus className="h-4 w-4 mr-2" />
-          Register Dataset (Coming Soon)
-        </Button>
-      </div>
-
-      {/* Info Alert */}
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertDescription>
-          Dataset management will allow you to register video collections for batch processing.
-          This feature is planned for a future release.
-        </AlertDescription>
-      </Alert>
-
-      {/* Placeholder Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="border-dashed border-2">
-          <CardContent className="flex flex-col items-center justify-center p-8 text-center">
-            <Database className="h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="font-medium text-foreground mb-2">No Datasets Registered</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Register your first video dataset to enable batch processing
+    <li className="p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <button type="button" className="flex items-start gap-2 text-left min-w-0" onClick={() => setOpen(!open)}>
+          {open ? <ChevronDown className="h-4 w-4 mt-1" /> : <ChevronRight className="h-4 w-4 mt-1" />}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 font-medium">
+              {dataset.server_folder ? <HardDrive className="h-4 w-4" /> : <Database className="h-4 w-4" />}
+              <span className="truncate">{dataset.name}</span>
+            </div>
+            {dataset.description && <p className="text-sm text-muted-foreground">{dataset.description}</p>}
+            <p className="text-xs text-muted-foreground">
+              {dataset.video_manifest.length} video{dataset.video_manifest.length === 1 ? '' : 's'} · {mb(total)}
+              {dataset.server_folder
+                ? ` · server folder ${dataset.server_folder}${dataset.server_folder_recursive ? ' (with subfolders)' : ''}`
+                : ' · uploaded from a browser'}
+              {' · saved by '}
+              {dataset.owner_name ?? 'unknown'} · created {when(dataset.created_at)} · last used {when(dataset.last_used_at)}
             </p>
-            <Button variant="outline" disabled>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Dataset
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Example dataset cards for future reference */}
-        <Card className="opacity-50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Folder className="h-5 w-5" />
-              Example Dataset
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="font-medium">Path:</span>
-                <span className="ml-2 text-muted-foreground">/videos/training</span>
-              </div>
-              <div>
-                <span className="font-medium">Videos:</span>
-                <span className="ml-2 text-muted-foreground">125 files</span>
-              </div>
-              <div>
-                <span className="font-medium">Total Size:</span>
-                <span className="ml-2 text-muted-foreground">2.3 GB</span>
-              </div>
-            </div>
-            <div className="mt-4 flex gap-2">
-              <Button size="sm" variant="outline" disabled>Scan</Button>
-              <Button size="sm" variant="outline" disabled>Process</Button>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </button>
+        <div className="flex gap-1 shrink-0">
+          <Button
+            size="sm"
+            onClick={() =>
+              navigate('/jobs/new', {
+                state: { startFromDataset: { id: dataset.id, name: dataset.name } } satisfies StartFromDatasetState,
+              })
+            }
+          >
+            <Play className="h-4 w-4 mr-1" /> Start a job
+          </Button>
+          <Button size="sm" variant="ghost" onClick={exportIt} aria-label={`Export ${dataset.name}`}>
+            <Download className="h-4 w-4" />
+          </Button>
+          {editable && (
+            <>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(!editing)} aria-label={`Edit ${dataset.name}`}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)} aria-label={`Delete ${dataset.name}`}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Future Features */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Planned Features</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
-              <div>
-                <h4 className="font-medium">Dataset Registration</h4>
-                <p className="text-sm text-muted-foreground">
-                  Register video directories with metadata for organized batch processing
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
-              <div>
-                <h4 className="font-medium">Video Scanning</h4>
-                <p className="text-sm text-muted-foreground">
-                  Automatically discover and catalog video files in registered datasets
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
-              <div>
-                <h4 className="font-medium">Batch Processing</h4>
-                <p className="text-sm text-muted-foreground">
-                  Process entire datasets with consistent pipeline configurations
-                </p>
-              </div>
-            </div>
+      {problem && (
+        <Alert variant="destructive">
+          <AlertDescription>{problem}</AlertDescription>
+        </Alert>
+      )}
 
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
-              <div>
-                <h4 className="font-medium">Progress Tracking</h4>
-                <p className="text-sm text-muted-foreground">
-                  Monitor batch job progress across multiple videos simultaneously
-                </p>
-              </div>
-            </div>
+      {editing && (
+        <div className="space-y-2 pl-6">
+          <Input value={name} onChange={(e) => setName(e.target.value)} aria-label="Dataset name" />
+          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} aria-label="Description" />
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              disabled={!name.trim() || update.isPending}
+              onClick={() => update.mutate({ name: name.trim(), description: description.trim() })}
+            >
+              Save
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
           </div>
-        </CardContent>
+        </div>
+      )}
+
+      {open && (
+        <ul className="pl-6 max-h-64 overflow-y-auto text-sm divide-y">
+          {dataset.video_manifest.map((entry, i) => (
+            <li key={`${entryName(entry)}-${i}`} className="flex items-center justify-between py-1">
+              <span className="font-mono text-xs truncate">{entryName(entry)}</span>
+              <span className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
+                {mb(entry.size_bytes)}
+                {editable && !dataset.server_folder && (
+                  <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => removeVideo(entry)}>
+                    Remove
+                  </Button>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete “{dataset.name}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The dataset is removed for everyone on this server. The videos themselves are not touched, and jobs
+              already run from it keep their results.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => remove.mutate()}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </li>
+  );
+};
+
+/**
+ * Saved datasets (spec 018): named lists of input videos, shared on the
+ * server, to run jobs on again. Results downloaded from jobs live in the Library.
+ */
+const Datasets = () => {
+  const queryClient = useQueryClient();
+  const { currentUser } = useCurrentUser();
+  const importInput = useRef<HTMLInputElement>(null);
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const { data, isLoading, error } = useQuery({ queryKey: ['datasets'], queryFn: () => apiClient.listDatasets() });
+
+  const importFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const raw = parseExport(await file.text(), ['name', 'video_manifest']);
+      const body: DatasetCreateRequest = {
+        name: String(raw.name),
+        description: (raw.description as string | null | undefined) ?? null,
+        video_manifest: raw.video_manifest as ManifestEntry[],
+        server_folder: (raw.server_folder as string | null | undefined) ?? null,
+        server_folder_recursive: Boolean(raw.server_folder_recursive),
+      };
+      const { name } = await createWithFreeName(body, (b) => apiClient.createDataset(b));
+      queryClient.invalidateQueries({ queryKey: ['datasets'] });
+      setNotice({ ok: true, text: name === body.name ? `Imported “${name}”.` : `Imported as “${name}” (you already had “${body.name}”).` });
+    } catch (e) {
+      setNotice({ ok: false, text: `Couldn't import ${file.name}: ${parseApiError(e).message}` });
+    }
+  };
+
+  const datasets = [...(data?.datasets ?? [])].sort((a, b) =>
+    (b.last_used_at ?? b.created_at).localeCompare(a.last_used_at ?? a.created_at),
+  );
+
+  return (
+    <div className="container mx-auto p-6 max-w-5xl space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Datasets</h1>
+          <p className="text-muted-foreground mt-2">
+            Named lists of videos to run jobs on, saved from the job wizard and shared with everyone on this server. A
+            dataset remembers which videos (names, sizes, folders), not the videos themselves. Results you've
+            downloaded are in the Library.
+          </p>
+        </div>
+        <div className="shrink-0">
+          <input ref={importInput} type="file" accept=".json,application/json" className="hidden" onChange={importFile} />
+          <Button variant="outline" onClick={() => importInput.current?.click()}>
+            <Upload className="h-4 w-4 mr-2" /> Import
+          </Button>
+        </div>
+      </div>
+
+      {notice && (
+        <Alert variant={notice.ok ? 'default' : 'destructive'}>
+          <AlertDescription>{notice.text}</AlertDescription>
+        </Alert>
+      )}
+
+      <Card>
+        {isLoading ? (
+          <p className="p-6 text-sm text-muted-foreground">Loading…</p>
+        ) : error ? (
+          <p className="p-6 text-sm text-destructive">Couldn't load datasets: {parseApiError(error).message}</p>
+        ) : datasets.length === 0 ? (
+          <div className="p-8 text-center space-y-2">
+            <Database className="h-10 w-10 mx-auto text-muted-foreground" />
+            <p className="font-medium">No saved datasets yet</p>
+            <p className="text-sm text-muted-foreground">
+              In a new job, choose your videos (a folder on this computer, or one on the server), then use “Save as
+              dataset”. Next time, pick it on the wizard's “Saved dataset” tab.
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y">
+            {datasets.map((dataset) => (
+              <DatasetRow key={dataset.id} dataset={dataset} editable={canEdit(dataset.owner_user_id, currentUser)} />
+            ))}
+          </ul>
+        )}
       </Card>
     </div>
   );
 };
 
-export default CreateDatasets;
+export default Datasets;

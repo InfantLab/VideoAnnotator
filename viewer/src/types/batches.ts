@@ -1,3 +1,5 @@
+import type { FolderRef } from './ingest';
+
 // Submission batches (VideoAnnotator spec 008).
 //
 // A batch is not a server-side resource with a record of its own — it is
@@ -35,6 +37,8 @@ export interface BatchSummary {
   by_status: BatchStatusCounts;
   /** Percentage of member jobs in any terminal state (completed/failed/cancelled). */
   completion_percentage: number;
+  /** The run's results folder (spec 022); null for runs from before results folders. */
+  results_folder?: FolderRef | null;
   /**
    * Null until at least one job in the batch has completed — the server has no
    * observed duration to extrapolate from before that. Render "estimating…"

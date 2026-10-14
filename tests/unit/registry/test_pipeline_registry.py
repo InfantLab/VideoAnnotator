@@ -134,10 +134,10 @@ class TestExtrasAvailabilityHelper:
 
     def test_install_hint_names_exact_pip_command(self):
         assert (
-            pipeline_loader.install_hint(["face-laion"])
-            == "pip install videoannotator[face-laion]"
+            pipeline_loader.install_hint(["face-openface3"])
+            == "pip install videoannotator[face-openface3]"
         )
         assert (
-            pipeline_loader.install_hint(["face-laion", "audio"])
-            == "pip install videoannotator[face-laion,audio]"
+            pipeline_loader.install_hint(["face-openface3", "audio"])
+            == "pip install videoannotator[face-openface3,audio]"
         )

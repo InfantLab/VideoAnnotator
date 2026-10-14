@@ -62,10 +62,10 @@ face_analysis:
   save_face_crops: false
   save_visualizations: true
 
-audio_processing:
-  enabled: true
-  whisper_model: "base"
-  sample_rate: 16000
+# Audio: configure speech_recognition and speaker_diarization as their own sections
+# (keyed by pipeline name). The old `audio_processing` section here had no effect (its
+# settings were ignored or equal to the defaults); that pipeline is deprecated in v1.6.0
+# and removed in v1.7.0.
 
 # Processing settings optimized for OpenFace 3.0
 processing:

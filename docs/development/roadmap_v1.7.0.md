@@ -63,8 +63,8 @@ a step-by-step testing guide. Checklist below updated to reflect what actually s
 still open.
 
 **Problem**: VideoAnnotator's current model-loading pattern is in-process — pipelines call
-`transformers.AutoModel.from_pretrained(...)` directly (e.g.
-[`laion_face_pipeline.py`](../../src/videoannotator/pipelines/face_analysis/laion_face_pipeline.py)),
+`transformers.AutoModel.from_pretrained(...)` directly (as the LAION face pipeline did until its
+removal in v1.6.0),
 which means every capability upgrade means a new bundled, versioned model dependency. Meanwhile
 capable open local models (e.g. the Qwen3 family) are now practically runnable on a researcher's own
 machine via `ollama serve` or a `llama.cpp` server, without VideoAnnotator vendoring any weights.

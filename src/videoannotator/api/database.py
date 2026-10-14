@@ -9,6 +9,7 @@ import logging
 import os
 from pathlib import Path
 
+from ..database_location import database_path
 from ..storage.base import StorageBackend
 from ..storage.sqlite_backend import SQLiteStorageBackend
 
@@ -52,8 +53,7 @@ def _create_storage_backend(
         logger.info(f"[DATABASE] Using custom SQLite path: {db_path_env}")
         return SQLiteStorageBackend(Path(db_path_env))
 
-    # Default: SQLite in current directory
-    default_path = Path.cwd() / "videoannotator.db"
+    default_path = database_path()
     logger.info(f"[DATABASE] Using default SQLite database: {default_path}")
     return SQLiteStorageBackend(default_path)
 
@@ -64,7 +64,7 @@ def get_storage_backend() -> StorageBackend:
     Environment variables determine the backend selection:
     - DATABASE_URL: If set and starts with "postgresql://", use PostgreSQL
     - VIDEOANNOTATOR_DB_PATH: Custom SQLite database path
-    - Default: SQLite database in current directory (./videoannotator.db)
+    - Default: videoannotator.db in the per-user data directory
 
     Returns:
         Configured storage backend instance.

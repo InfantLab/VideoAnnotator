@@ -431,8 +431,9 @@ curl http://your-server:18011/health
 # Check if server is running
 ps aux | grep videoannotator
 
-# Check server logs
-tail -f logs/api_server.log
+# Check server logs (the server prints its log folder at start: "[INFO] Logs: ...";
+# this is the Linux default)
+tail -f ~/.local/state/videoannotator/logs/api_server.log
 ```
 
 #### **"Permission denied" or "Insufficient scopes"**
@@ -453,7 +454,7 @@ curl -H "Authorization: Bearer your_token" \
   http://localhost:18011/api/v1/debug/token-info
 
 # Check server logs for authentication issues
-tail -f logs/api_requests.log | grep "401\|403"
+tail -f ~/.local/state/videoannotator/logs/api_requests.log | grep "401\|403"
 
 # Test with development token
 curl -H "Authorization: Bearer dev-token" \

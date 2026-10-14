@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Download, FolderOpen, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-export type DownloadState = 'idle' | 'selecting_dir' | 'downloading' | 'unzipping' | 'ready' | 'error';
+import type { DownloadState } from '@/hooks/useZipDownloader';
 
 interface DownloadProgressProps {
   state: DownloadState;
@@ -51,7 +51,7 @@ export const DownloadProgress: React.FC<DownloadProgressProps> = ({
     }
   };
 
-  if (state === 'idle' || state === 'ready') return null;
+  if (state === 'idle' || state === 'ready' || state === 'needs_folder') return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">

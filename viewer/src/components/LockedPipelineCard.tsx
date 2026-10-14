@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ExtrasInstallJob, PipelineDescriptor, ReadinessItem } from "@/types/pipelines";
+import { RestartToActivate } from "@/components/RestartToActivate";
 
 interface LockedPipelineCardProps {
   pipeline: PipelineDescriptor;
@@ -256,12 +257,7 @@ export const ExtrasInstallStatus = ({
     // fetch reports it available. Say so on the card too: the step-level
     // RestartRequiredBanner can be scrolled out of view, and a card that just
     // reverts to "Not installed" reads as if the install did nothing.
-    return (
-      <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-500">
-        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-        Installed. Restart the server to activate it.
-      </p>
-    );
+    return <RestartToActivate />;
   }
 
   return (
@@ -270,5 +266,18 @@ export const ExtrasInstallStatus = ({
     </Button>
   );
 };
+
+/**
+ * A pipeline installed before VideoAnnotator was updated or restarted, coming
+ * back by itself (VideoAnnotator spec 024): the same progress line as an
+ * install, and why jobs that need it are waiting.
+ */
+export const RestoringStatus = () => (
+  <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+    <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+    Restoring&hellip; you installed this before VideoAnnotator was updated or restarted, so it is
+    coming back by itself. Videos that need it wait until it&apos;s ready.
+  </p>
+);
 
 export default LockedPipelineCard;

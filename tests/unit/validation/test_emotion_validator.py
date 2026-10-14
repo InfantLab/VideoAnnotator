@@ -4,7 +4,7 @@ from videoannotator.validation.emotion_validator import validate_emotion_data
 def test_valid_emotion_minimal():
     data = {
         "schema_version": 1,
-        "source_pipeline": "face_laion_clip",
+        "source_pipeline": "face_analysis",
         "emotions": [
             {
                 "start": 0.0,
@@ -25,7 +25,7 @@ def test_valid_emotion_minimal():
 def test_invalid_emotion_confidence_mismatch():
     data = {
         "schema_version": 1,
-        "source_pipeline": "face_laion_clip",
+        "source_pipeline": "face_analysis",
         "emotions": [
             {
                 "start": 0.0,
@@ -46,7 +46,7 @@ def test_invalid_emotion_confidence_mismatch():
 def test_invalid_duplicate_labels():
     data = {
         "schema_version": 1,
-        "source_pipeline": "face_laion_clip",
+        "source_pipeline": "face_analysis",
         "emotions": [
             {
                 "start": 0.0,

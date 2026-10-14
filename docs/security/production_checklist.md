@@ -109,7 +109,7 @@ Complete security hardening checklist for deploying VideoAnnotator in production
   #!/bin/bash
   DATE=$(date +%Y%m%d_%H%M%S)
   tar -czf "backup_${DATE}.tar.gz" \
-      videoannotator.db \
+      "${VIDEOANNOTATOR_DB_PATH:-$HOME/.local/share/videoannotator/videoannotator.db}" \
       tokens/ \
       storage/
   aws s3 cp "backup_${DATE}.tar.gz" s3://backups/videoannotator/
@@ -169,7 +169,7 @@ Complete security hardening checklist for deploying VideoAnnotator in production
 
 - [ ] **Access Logs**: All API requests logged with user context
   ```bash
-  tail -f logs/api_requests.log
+  tail -f ~/.local/state/videoannotator/logs/api_requests.log
   ```
 
 - [ ] **Error Monitoring**: Exception tracking enabled
@@ -473,7 +473,7 @@ uv run safety check
    systemctl stop videoannotator
 
    # Review access logs
-   grep -i "suspicious" logs/api_requests.log
+   grep -i "suspicious" ~/.local/state/videoannotator/logs/api_requests.log
    ```
 
 2. **Investigation**:
@@ -503,7 +503,7 @@ uv run python -m scripts.manage_tokens create \
 # 3. Update all applications using the old key
 
 # 4. Review logs for unauthorized usage
-grep "va_api_compromised_key" logs/api_requests.log
+grep "va_api_compromised_key" ~/.local/state/videoannotator/logs/api_requests.log
 ```
 
 ## Compliance

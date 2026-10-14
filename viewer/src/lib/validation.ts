@@ -1,6 +1,10 @@
 // Validation schemas for VideoAnnotator standard formats
 // Using Zod for runtime validation and type safety
 // Reference: https://github.com/InfantLab/VideoAnnotator
+//
+// The `parse(...) as T` casts below: with `strict` off (tsconfig.app.json), zod
+// infers every field as optional, so its output type isn't assignable to ours.
+// The schema still enforces the required fields at runtime.
 
 import { z } from 'zod';
 import type {
@@ -160,7 +164,7 @@ export const StandardAnnotationDataSchema = z.object({
         created: z.string(),
         version: z.string(),
         pipelines: z.array(z.string()),
-        source: z.enum(['videoannotator', 'custom'])
+        source: z.enum(['videoannotator', 'custom', 'demo'])
     }).optional()
 });
 
@@ -208,7 +212,7 @@ function getZodReceived(issue: z.ZodIssue | undefined): unknown {
  */
 export function validateCOCOPersonData(data: unknown[]): COCOPersonAnnotation[] {
     try {
-        return z.array(COCOPersonAnnotationSchema).parse(data);
+        return z.array(COCOPersonAnnotationSchema).parse(data) as COCOPersonAnnotation[];
     } catch (error) {
         if (error instanceof z.ZodError) {
             const issue = error.errors[0];
@@ -227,7 +231,7 @@ export function validateCOCOPersonData(data: unknown[]): COCOPersonAnnotation[] 
  */
 export function validateWebVTTData(data: unknown[]): WebVTTCue[] {
     try {
-        return z.array(WebVTTCueSchema).parse(data);
+        return z.array(WebVTTCueSchema).parse(data) as WebVTTCue[];
     } catch (error) {
         if (error instanceof z.ZodError) {
             const issue = error.errors[0];
@@ -246,7 +250,7 @@ export function validateWebVTTData(data: unknown[]): WebVTTCue[] {
  */
 export function validateRTTMData(data: unknown[]): RTTMSegment[] {
     try {
-        return z.array(RTTMSegmentSchema).parse(data);
+        return z.array(RTTMSegmentSchema).parse(data) as RTTMSegment[];
     } catch (error) {
         if (error instanceof z.ZodError) {
             const issue = error.errors[0];
@@ -265,7 +269,7 @@ export function validateRTTMData(data: unknown[]): RTTMSegment[] {
  */
 export function validateSceneData(data: unknown[]): SceneAnnotation[] {
     try {
-        return z.array(SceneAnnotationSchema).parse(data);
+        return z.array(SceneAnnotationSchema).parse(data) as SceneAnnotation[];
     } catch (error) {
         if (error instanceof z.ZodError) {
             const issue = error.errors[0];
@@ -284,7 +288,7 @@ export function validateSceneData(data: unknown[]): SceneAnnotation[] {
  */
 export function validateStandardAnnotationData(data: unknown): StandardAnnotationData {
     try {
-        return StandardAnnotationDataSchema.parse(data);
+        return StandardAnnotationDataSchema.parse(data) as StandardAnnotationData;
     } catch (error) {
         if (error instanceof z.ZodError) {
             const issue = error.errors[0];

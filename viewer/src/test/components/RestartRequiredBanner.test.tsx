@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { RestartRequiredBanner } from '@/components/RestartRequiredBanner';
+import { resetServerRestart } from '@/hooks/useServerRestart';
 import { apiClient } from '@/api/client';
 import { APIError } from '@/api/handleError';
 
@@ -43,6 +44,7 @@ const renderBanner = () => {
 describe('RestartRequiredBanner', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetServerRestart();
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.mocked(apiClient.getCurrentUser).mockResolvedValue({
       id: 'u1',
@@ -75,7 +77,7 @@ describe('RestartRequiredBanner', () => {
     });
     renderBanner();
     expect(await screen.findByText(/needs an administrator API key/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /restart server/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /restart videoannotator/i })).not.toBeInTheDocument();
   });
 
   it('restarts, waits through connection errors for a new boot id, then refreshes', async () => {
@@ -87,9 +89,9 @@ describe('RestartRequiredBanner', () => {
       .mockResolvedValue({ bootId: 'new', restartMode: 'execv' });
 
     renderBanner();
-    await user.click(await screen.findByRole('button', { name: /restart server/i }));
+    await user.click(await screen.findByRole('button', { name: /restart videoannotator/i }));
 
-    expect(await screen.findByText(/Restarting server/)).toBeInTheDocument();
+    expect(await screen.findByText(/Restarting VideoAnnotator/)).toBeInTheDocument();
     expect(apiClient.restartServer).toHaveBeenCalledWith(false);
 
     await act(async () => {
@@ -113,7 +115,7 @@ describe('RestartRequiredBanner', () => {
     vi.mocked(apiClient.getBootIdentity).mockResolvedValue({ bootId: 'new' });
 
     renderBanner();
-    await user.click(await screen.findByRole('button', { name: /restart server/i }));
+    await user.click(await screen.findByRole('button', { name: /restart videoannotator/i }));
 
     expect(await screen.findByText(/2 annotation jobs are running/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /restart anyway/i }));
@@ -128,7 +130,7 @@ describe('RestartRequiredBanner', () => {
     );
 
     renderBanner();
-    await user.click(await screen.findByRole('button', { name: /restart server/i }));
+    await user.click(await screen.findByRole('button', { name: /restart videoannotator/i }));
 
     expect(await screen.findByText(/can't restart itself/)).toBeInTheDocument();
     expect(screen.getByText('Stop it and run `videoannotator server` again.')).toBeInTheDocument();
@@ -140,8 +142,8 @@ describe('RestartRequiredBanner', () => {
     vi.mocked(apiClient.getBootIdentity).mockRejectedValue(new APIError('Network error', 0));
 
     renderBanner();
-    await user.click(await screen.findByRole('button', { name: /restart server/i }));
-    await screen.findByText(/Restarting server/);
+    await user.click(await screen.findByRole('button', { name: /restart videoannotator/i }));
+    await screen.findByText(/Restarting VideoAnnotator/);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(125_000);

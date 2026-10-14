@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { notReadyReason, partitionSelection } from '@/lib/pipelineExtras';
 import { throughputSecondsRemaining, totalDownloadLabel, weightsNotesFor } from '@/lib/runSetup';
-import { failedPipelinesOf, isCompletedWithErrors } from '@/lib/jobOutcome';
+import { failedPipelinesOf, isCompletedWithErrors, jobErrorSummary } from '@/lib/jobOutcome';
 import type { PipelineDescriptor } from '@/types/pipelines';
 
 const pipeline = (id: string, name: string, readiness?: Partial<PipelineDescriptor['readiness']>): PipelineDescriptor =>
@@ -100,5 +100,17 @@ describe('job outcome', () => {
         },
       })
     ).toEqual({ person_tracking: 'No module named torch' });
+  });
+
+  it('gives a batch row the reasons, without repeating what the badge says', () => {
+    expect(
+      jobErrorSummary({ status: 'completed', error_message: 'Completed with errors. person_tracking: No module named torch' })
+    ).toBe('person_tracking: No module named torch');
+    expect(
+      jobErrorSummary({ status: 'failed', error_message: 'All pipelines failed. face_analysis: CUDA out of memory' })
+    ).toBe('face_analysis: CUDA out of memory');
+    expect(jobErrorSummary({ status: 'failed', error_message: 'Video file not found' })).toBe('Video file not found');
+    expect(jobErrorSummary({ status: 'completed', error_message: null })).toBeNull();
+    expect(jobErrorSummary({ status: 'cancelled', error_message: 'Job cancelled by user request' })).toBeNull();
   });
 });

@@ -1,7 +1,6 @@
 /// <reference types="vite/client" />
 
 interface Window {
-	__dns_correction_logged?: boolean;
 	version?: {
 		VERSION: string;
 		GITHUB_URL: string;

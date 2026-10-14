@@ -1,11 +1,12 @@
 """Job management endpoints for VideoAnnotator API."""
 
-import contextlib
 import json
 import logging
+import mimetypes
 import os
 import shutil
 import tempfile
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -15,11 +16,26 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from ...batch.result_files import pipeline_result_files
 from ...batch.types import BatchJob, JobStatus
 from ...database.crud import SavedDatasetCRUD
 from ...database.database import get_db
-from ...registry.pipeline_loader import extras_available
+from ...registry.pipeline_loader import (
+    deprecation_message,
+    extras_available,
+    removed_pipeline_message,
+)
 from ...registry.pipeline_registry import get_registry
+from ...results_folder import (
+    ResultsFolderError,
+    RunFolder,
+    display_path,
+    folder_ref,
+    rerun_video_missing,
+    run_folder_of,
+    run_name,
+    video_unavailable_reason,
+)
 from ...storage.base import StorageBackend
 from ...storage.manager import get_storage_provider
 from ...validation.validator import ConfigValidator
@@ -32,6 +48,7 @@ from .exceptions import (
     JobAlreadyCompletedException,
     JobNotFoundException,
     JobNotRetryableException,
+    PipelineRemovedException,
     PipelineUnavailableException,
 )
 
@@ -108,6 +125,38 @@ class JobSubmissionRequest(BaseModel):
     )
 
 
+class FolderRef(BaseModel):
+    path: str
+    display_path: str = Field(
+        description="The same location as the researcher's own machine shows it "
+        "(differs from `path` under Docker)"
+    )
+
+
+class JobResultsFolder(FolderRef):
+    exists: bool = Field(
+        description="Whether the folder is still there: false when it was moved, "
+        "renamed or deleted outside VideoAnnotator"
+    )
+
+
+def location_fields(job: BatchJob) -> dict[str, Any]:
+    """Where a job's results are, and whether its video still is (spec 022)."""
+    video = Path(job.video_path) if job.video_path else None
+    results = folder_ref(job.output_dir)
+    if results is not None:
+        results["exists"] = Path(results["path"]).is_dir()
+    available = bool(video and video.is_file())
+    return {
+        "results_folder": results,
+        "video_available": available,
+        "video_display_path": display_path(video) if video else None,
+        "video_unavailable_reason": (
+            video_unavailable_reason(video) if video and not available else None
+        ),
+    }
+
+
 class JobResponse(BaseModel):
     """Response model for job information (aligned with DB Job model)."""
 
@@ -150,6 +199,48 @@ class JobResponse(BaseModel):
         default=None,
         description="Saved dataset (spec 007) this job was submitted from, if any",
     )
+    rerun_of: str | None = Field(
+        default=None, description="The job this one runs again (spec 019)"
+    )
+    reruns: list[str] = Field(
+        default_factory=list,
+        description="Jobs that run this one again, oldest first (single-job reads only)",
+    )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Non-fatal notices about the submission, e.g. a deprecated pipeline (spec 014)",
+    )
+    results_folder: JobResultsFolder | None = Field(
+        default=None,
+        description="This video's results folder (spec 022); null for jobs made "
+        "before results folders existed",
+    )
+    video_available: bool = Field(
+        default=True,
+        description="Whether the job's video is still at its location (spec 022)",
+    )
+    video_display_path: str | None = Field(
+        default=None,
+        description="`video_path` as the researcher's own machine shows it "
+        "(differs under Docker; spec 024)",
+    )
+    video_unavailable_reason: str | None = Field(
+        default=None,
+        description="Why the video isn't available, for researchers: moved or "
+        "deleted, or its folder isn't shared any more (spec 024)",
+    )
+
+
+def deprecation_warnings(selected_pipelines: list[str] | None) -> list[str]:
+    """Warnings for any deprecated pipelines among `selected_pipelines`."""
+    registry = get_registry()
+    messages = []
+    for name in selected_pipelines or []:
+        meta = registry.get(name)
+        message = deprecation_message(meta) if meta else None
+        if message:
+            messages.append(message)
+    return messages
 
 
 class JobListResponse(BaseModel):
@@ -159,6 +250,13 @@ class JobListResponse(BaseModel):
     total: int
     page: int
     per_page: int
+
+
+class ResultFileResponse(BaseModel):
+    """One file a pipeline wrote to the job folder."""
+
+    name: str
+    download_url: str
 
 
 class PipelineResultResponse(BaseModel):
@@ -172,7 +270,12 @@ class PipelineResultResponse(BaseModel):
     annotation_count: int | None = None
     output_file: str | None = None
     download_url: str | None = None
+    files: list[ResultFileResponse] = Field(default_factory=list)
     error_message: str | None = None
+    provenance: dict[str, Any] | None = Field(
+        default=None,
+        description="What made this pipeline's outputs (spec 017); null for older jobs",
+    )
 
 
 class JobResultsResponse(BaseModel):
@@ -213,6 +316,8 @@ def validate_pipeline_selection(
     registry = get_registry()
     registry.load()
     for pipeline_name in selected_pipelines:
+        if removed_pipeline_message(pipeline_name):
+            raise PipelineRemovedException(pipeline_name)
         meta = registry.get(pipeline_name)
         if meta is not None and not extras_available(meta.requires_extras):
             raise PipelineUnavailableException(pipeline_name, meta.requires_extras)
@@ -412,7 +517,6 @@ async def submit_job(
             # Create BatchJob instance to get job_id
             batch_job = BatchJob(
                 video_path=Path(temp_video_path),  # Temporary, will be updated
-                output_dir=None,  # Will be set by processing system
                 config=parsed_config or {},
                 status=JobStatus.PENDING,
                 selected_pipelines=parsed_pipelines,
@@ -421,11 +525,30 @@ async def submit_job(
                 dataset_id=dataset_id,
             )
 
+            # Before the copy is stored, so an unwritable results folder
+            # refuses the job (FR-026). The copy stays in internal storage;
+            # only results go to the results folder (FR-020).
+            def new_run() -> RunFolder:
+                return RunFolder.create(
+                    run_name(batch_name=batch_job.batch_name, video=Path(filename)),
+                    batch_id=batch_id,
+                    pipelines=parsed_pipelines,
+                    config=parsed_config,
+                )
+
+            run = RunFolder.for_batch(batch_id, new_run) if batch_id else new_run()
+            run.add_video(
+                batch_job,
+                Path(filename),
+                uploaded_name=filename,
+                size_bytes=video_size_bytes,
+            )
+
             # Use StorageProvider to save the file
             provider = get_storage_provider()
 
-            with open(temp_video_path, "rb") as f:
-                provider.save_file(batch_job.job_id, filename, f)
+            with open(temp_video_path, "rb") as upload:
+                provider.save_file(batch_job.job_id, filename, upload)
 
             # Update job to use persistent path
             batch_job.storage_path = provider.get_absolute_path(batch_job.job_id, "")
@@ -493,13 +616,18 @@ async def submit_job(
             batch_id=batch_job.batch_id,
             batch_name=batch_job.batch_name,
             dataset_id=batch_job.dataset_id,
+            rerun_of=batch_job.rerun_of,
+            **location_fields(batch_job),
+            warnings=deprecation_warnings(batch_job.selected_pipelines),
         )
 
     except (
         InvalidRequestException,
         InvalidConfigException,
         APIError,
+        PipelineRemovedException,
         PipelineUnavailableException,
+        ResultsFolderError,
     ):
         # Let validation errors and other custom exceptions propagate
         raise
@@ -653,6 +781,9 @@ async def get_job_status(
             batch_id=job.batch_id,
             batch_name=job.batch_name,
             dataset_id=job.dataset_id,
+            rerun_of=job.rerun_of,
+            **location_fields(job),
+            reruns=storage.list_reruns(job.job_id),
         )
 
     except FileNotFoundError as e:
@@ -837,6 +968,8 @@ async def list_jobs(
                         batch_id=job.batch_id,
                         batch_name=job.batch_name,
                         dataset_id=job.dataset_id,
+                        rerun_of=job.rerun_of,
+                        **location_fields(job),
                     )
                 )
             except FileNotFoundError:
@@ -1000,6 +1133,8 @@ async def cancel_job_endpoint(
             batch_id=job_data.batch_id,
             batch_name=job_data.batch_name,
             dataset_id=job_data.dataset_id,
+            rerun_of=job_data.rerun_of,
+            **location_fields(job_data),
         )
 
     except (JobNotFoundException, JobAlreadyCompletedException, APIError):
@@ -1108,6 +1243,15 @@ def retry_job(job_id: str, storage: StorageBackend) -> BatchJob:
 
     logger.info(f"[RETRY] Retrying job {job_id} (previous status: {job_data.status})")
 
+    # A retry reruns the same job in its own video folder. What's there is the
+    # failed attempt's partial output, never another run's results.
+    if run_folder_of(job_data) is not None:
+        for leftover in Path(str(job_data.output_dir)).iterdir():
+            if leftover.is_file():
+                leftover.unlink(missing_ok=True)
+            else:
+                shutil.rmtree(leftover, ignore_errors=True)
+
     job_data.status = JobStatus.PENDING
     job_data.retry_count += 1
     job_data.error_message = None
@@ -1175,6 +1319,8 @@ async def retry_job_endpoint(
             batch_id=job_data.batch_id,
             batch_name=job_data.batch_name,
             dataset_id=job_data.dataset_id,
+            rerun_of=job_data.rerun_of,
+            **location_fields(job_data),
         )
 
     except (JobNotFoundException, JobNotRetryableException, APIError):
@@ -1189,6 +1335,194 @@ async def retry_job_endpoint(
         ) from e
 
 
+class RerunRequest(BaseModel):
+    """Body for running a job (or batch) again. Omitted fields keep the
+    original's; given ones replace it (spec 019's "Edit and run again")."""
+
+    selected_pipelines: list[str] | None = None
+    config: dict[str, Any] | None = None
+
+
+class RerunNotPossibleException(APIError):
+    def __init__(self, job_id: str, code: str, reason: str, hint: str):
+        super().__init__(
+            status_code=409,
+            code=code,
+            message=f"Cannot run job {job_id} again: {reason}",
+            hint=hint,
+        )
+
+
+def create_rerun(
+    original: BatchJob,
+    storage: StorageBackend,
+    request: RerunRequest | None = None,
+    batch_id: str | None = None,
+    batch_name: str | None = None,
+    video: Path | None = None,
+) -> BatchJob:
+    """A new pending job that runs `original` again, linked by `rerun_of`.
+
+    `video` is where the original's video is now, when it has moved (spec 022).
+
+    The original is not changed. A video stored in the original's folder (an
+    upload) is hard-linked, or copied where linking fails, into the new job's
+    folder so deleting either job can't break the other; one outside it (a
+    server-folder ingest) is used in place, as ingest does.
+    """
+    finished = (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED)
+    if original.status not in finished:
+        raise RerunNotPossibleException(
+            original.job_id,
+            "JOB_NOT_FINISHED",
+            f"it is {original.status.value}",
+            "Wait for it to finish, or cancel it first.",
+        )
+    if video is None:
+        video = Path(original.video_path) if original.video_path else None
+    if video is None or not video.is_file():
+        raise RerunNotPossibleException(
+            original.job_id,
+            "RERUN_VIDEO_MISSING",
+            rerun_video_missing(video),
+            "Choose the folder it is in now, or choose the video again.",
+        )
+
+    request = request or RerunRequest()
+    pipelines = (
+        request.selected_pipelines
+        if request.selected_pipelines is not None
+        else original.selected_pipelines
+    )
+    config = request.config if request.config is not None else original.config
+    validate_pipeline_selection(pipelines, config)
+
+    return job_from_stored_video(
+        original,
+        storage,
+        pipelines,
+        config,
+        batch_id=batch_id or str(uuid.uuid4()),
+        batch_name=batch_name or original.batch_name,
+        dataset_id=original.dataset_id,
+        rerun_of=original.job_id,
+        video=video,
+    )
+
+
+def job_from_stored_video(
+    original: BatchJob,
+    storage: StorageBackend,
+    pipelines: list[str] | None,
+    config: dict[str, Any] | None,
+    *,
+    batch_id: str,
+    batch_name: str | None,
+    dataset_id: str | None,
+    rerun_of: str | None = None,
+    video: Path | None = None,
+) -> BatchJob:
+    """A new pending job on the video `original` has stored, with these settings.
+
+    A video stored in the original's folder (an upload) is hard-linked, or
+    copied where linking fails, into the new job's folder so deleting either
+    job can't break the other; one outside it (a server-folder ingest) is used
+    in place, as ingest does. The caller checks the video exists.
+    """
+    video = video or Path(str(original.video_path))
+    job = BatchJob(
+        config=config or {},
+        status=JobStatus.PENDING,
+        selected_pipelines=pipelines,
+        batch_id=batch_id,
+        batch_name=batch_name,
+        dataset_id=dataset_id,
+        rerun_of=rerun_of,
+    )
+    original_folder = Path(original.storage_path) if original.storage_path else None
+    stored_copy = original_folder is not None and video.resolve().is_relative_to(
+        original_folder.resolve()
+    )
+    name = run_name(batch_name=batch_name, video=video)
+    if rerun_of and not name.endswith("(rerun)"):
+        name = f"{name} (rerun)"
+    run = RunFolder.for_batch(
+        batch_id,
+        lambda: RunFolder.create(
+            name, batch_id=batch_id, pipelines=pipelines, config=config
+        ),
+    )
+    run.add_video(job, video, uploaded_name=video.name if stored_copy else None)
+
+    provider = get_storage_provider()
+    provider.create_job_dir(job.job_id)
+    job.storage_path = provider.get_absolute_path(job.job_id, "")
+    if stored_copy:
+        target = Path(job.storage_path) / video.name
+        try:
+            os.link(video, target)
+        except OSError:
+            shutil.copy2(video, target)
+        job.video_path = target
+    else:
+        job.video_path = video
+    storage.save_job_metadata(job)
+    return job
+
+
+@router.post(
+    "/{job_id}/rerun",
+    response_model=JobResponse,
+    status_code=201,
+    summary="Run a job again",
+    description="""
+Creates a new job with the same video, pipelines and settings as a finished job
+(completed, failed or cancelled), linked to it by `rerun_of`. The original and
+its results are not changed. Pass `selected_pipelines` and/or `config` to change
+them for the new job ("Edit and run again"). Unlike `/retry`, which resets a
+failed job in place, both runs are kept so they can be compared.
+
+409 `JOB_NOT_FINISHED` while the job is running; 409 `RERUN_VIDEO_MISSING` when
+its video is no longer stored.
+""",
+)
+async def rerun_job_endpoint(
+    job_id: str,
+    request: RerunRequest | None = None,
+    storage: StorageBackend = Depends(get_storage),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> JobResponse:
+    """Run a finished job again as a new, linked job."""
+    original = storage.load_job_metadata(job_id)
+    if original is None:
+        raise JobNotFoundException(
+            job_id=job_id,
+            hint="Check job ID or use GET /api/v1/jobs to list all jobs",
+        )
+    job = create_rerun(original, storage, request)
+    video_filename, video_size_bytes, video_duration_seconds = extract_video_metadata(
+        job.video_path
+    )
+    return JobResponse(
+        id=job.job_id,
+        status=job.status.value,
+        video_path=str(job.video_path),
+        video_filename=video_filename,
+        video_size_bytes=video_size_bytes,
+        video_duration_seconds=video_duration_seconds,
+        config=job.config,
+        selected_pipelines=job.selected_pipelines,
+        created_at=job.created_at,
+        storage_path=str(job.storage_path),
+        batch_id=job.batch_id,
+        batch_name=job.batch_name,
+        dataset_id=job.dataset_id,
+        rerun_of=job.rerun_of,
+        **location_fields(job),
+        warnings=deprecation_warnings(job.selected_pipelines),
+    )
+
+
 @router.get(
     "/{job_id}/results",
     response_model=JobResultsResponse,
@@ -1199,8 +1533,10 @@ Retrieve detailed results for a completed video processing job.
 Returns pipeline-specific outputs, annotation counts, processing times, and download URLs
 for generated files. Only available after job completes successfully.
 
-**Result Files**: Each pipeline generates output files (e.g., person_tracking.json,
-face_recognition.json) that can be downloaded using the provided download_url.
+**Result Files**: each pipeline writes files to the job folder (e.g.
+`<video>_person_tracking.json`, `<video>_speech_recognition.vtt`). `download_url` downloads a
+pipeline's main file and `files` lists every file it wrote. Both are relative to the server.
+`GET /api/v1/jobs/{job_id}/artifacts` downloads everything as one ZIP.
 
 **curl Example**:
 ```bash
@@ -1221,20 +1557,31 @@ curl -X GET "http://localhost:18011/api/v1/jobs/abc123-def456/results" \\
       "end_time": "2025-10-22T10:03:12Z",
       "processing_time": 187.3,
       "annotation_count": 1245,
-      "output_file": "/storage/jobs/abc123-def456/person_tracking.json",
+      "output_file": "database:/annotations/abc123-def456/person_tracking",
       "download_url": "/api/v1/jobs/abc123-def456/results/files/person_tracking",
+      "files": [
+        {
+          "name": "clip_person_tracking.json",
+          "download_url": "/api/v1/jobs/abc123-def456/results/files/person_tracking?name=clip_person_tracking.json"
+        },
+        {
+          "name": "clip_person_tracks.json",
+          "download_url": "/api/v1/jobs/abc123-def456/results/files/person_tracking?name=clip_person_tracks.json"
+        }
+      ],
       "error_message": null
     },
-    "face_recognition": {
-      "pipeline_name": "face_recognition",
-      "status": "completed",
+    "speech_recognition": {
+      "pipeline_name": "speech_recognition",
+      "status": "failed",
       "start_time": "2025-10-22T10:03:15Z",
-      "end_time": "2025-10-22T10:05:23Z",
-      "processing_time": 128.1,
-      "annotation_count": 423,
-      "output_file": "/storage/jobs/abc123-def456/face_recognition.json",
-      "download_url": "/api/v1/jobs/abc123-def456/results/files/face_recognition",
-      "error_message": null
+      "end_time": "2025-10-22T10:03:20Z",
+      "processing_time": null,
+      "annotation_count": null,
+      "output_file": null,
+      "download_url": null,
+      "files": [],
+      "error_message": "No audio could be extracted from clip.mp4: ..."
     }
   },
   "created_at": "2025-10-22T10:00:00Z",
@@ -1288,17 +1635,20 @@ async def get_job_results(
                 annotation_count=result.annotation_count,
                 output_file=str(result.output_file) if result.output_file else None,
                 error_message=result.error_message,
+                provenance=result.provenance,
             )
 
-        # Build full pipeline results with download URLs
+        # Relative URLs: the client prepends the server origin. Advertised only
+        # for files that exist, so a listed URL always downloads.
         for name, result in pipeline_results.items():
-            if result.output_file:
-                with contextlib.suppress(Exception):
-                    # Construct a download URL for convenience; client may use server base URL
-                    # Note: This is a relative path; frontend should prepend server origin
-                    result.download_url = (
-                        f"/api/v1/jobs/{job.job_id}/results/files/{name}"
-                    )
+            url = f"/api/v1/jobs/{job.job_id}/results/files/{name}"
+            files = pipeline_result_files(job, name)
+            if files:
+                result.download_url = url
+                result.files = [
+                    ResultFileResponse(name=f.name, download_url=f"{url}?name={f.name}")
+                    for f in files
+                ]
 
         return JobResultsResponse(
             job_id=job.job_id,
@@ -1326,18 +1676,49 @@ async def get_job_results(
         ) from e
 
 
+@router.get(
+    "/{job_id}/video",
+    summary="Stream a job's video",
+    description="The video a job ran on, with range requests so a browser can seek "
+    "(spec 021). 404 VIDEO_NOT_STORED when it is no longer on the server.",
+)
+async def get_job_video(
+    job_id: str,
+    storage: StorageBackend = Depends(get_storage),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Any:
+    job = storage.load_job_metadata(job_id)
+    if job is None:
+        raise JobNotFoundException(
+            job_id=job_id,
+            hint="Check job ID or use GET /api/v1/jobs to list all jobs",
+        )
+    video = Path(job.video_path) if job.video_path else None
+    if video is None or not video.is_file():
+        raise APIError(
+            status_code=404,
+            code="VIDEO_NOT_STORED",
+            message=f"Job {job_id}'s video is no longer on the server",
+        )
+    media_type = mimetypes.guess_type(video.name)[0] or "application/octet-stream"
+    return FileResponse(path=str(video), media_type=media_type, filename=video.name)
+
+
 @router.get("/{job_id}/results/files/{pipeline_name}")
 async def download_result_file(
     job_id: str,
     pipeline_name: str,
+    name: str | None = None,
     storage: StorageBackend = Depends(get_storage),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> Any:
-    """Download a specific result file from a job.
+    """Download a file a pipeline wrote for a job.
 
     Args:
         job_id: Job ID
         pipeline_name: Name of pipeline to download results for
+        name: Which of the pipeline's files (as listed in `files` by
+            GET /jobs/{job_id}/results); default its main output
 
     Returns:
         File download response
@@ -1359,30 +1740,26 @@ async def download_result_file(
                 hint=f"Check pipeline name or use GET /api/v1/jobs/{job_id}/results to see available results",
             )
 
-        result = job.pipeline_results[pipeline_name]
-
-        # Check if output file exists
-        if not result.output_file:
-            raise InvalidRequestException(
-                message=f"No output file for pipeline '{pipeline_name}' in job {job_id}",
-                hint="This pipeline may not generate an output file",
-            )
-
-        output_file_path = Path(result.output_file)
-
-        # Verify file exists on disk
-        if not output_file_path.exists():
+        files = pipeline_result_files(job, pipeline_name)
+        if name is not None:
+            files = [f for f in files if f.name == name]
+        if not files:
             raise APIError(
-                status_code=500,
+                status_code=404,
                 code="OUTPUT_FILE_MISSING",
-                message=f"Output file not found: {output_file_path}",
-                hint="File may have been deleted or storage may be corrupt",
+                message=(
+                    f"No output file{f' named {name!r}' if name else ''} for "
+                    f"pipeline '{pipeline_name}' in job {job_id}"
+                ),
+                hint=(
+                    f"GET /api/v1/jobs/{job_id}/results lists each pipeline's "
+                    f"files; GET /api/v1/jobs/{job_id}/artifacts downloads them all"
+                ),
             )
 
-        # Return file
         return FileResponse(
-            path=str(output_file_path),
-            filename=output_file_path.name,
+            path=str(files[0]),
+            filename=files[0].name,
             media_type="application/octet-stream",
         )
 

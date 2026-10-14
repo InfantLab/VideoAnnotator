@@ -3,7 +3,7 @@
 Auto-generated from feature plans by `.specify/scripts/bash/update-agent-context.sh`. Last updated: 2026-08-26
 
 ## Active Technologies
-- Python 3.12 (`requires-python = ">=3.12,<3.13"`), FastAPI, SQLAlchemy, Pydantic, Typer/Click (core — stays required with no extras installed)
+- Python 3.12 and 3.13 (`requires-python = ">=3.12,<3.14"`; `.python-version` = 3.13, the dev/Docker default), FastAPI, SQLAlchemy, Pydantic, Typer/Click (core — stays required with no extras installed)
 - Per-pipeline extras (torch, ultralytics, pyannote.audio, transformers, deepface, open-clip-torch, openai-whisper, etc.) — being moved from required dependencies to `[project.optional-dependencies]` groups (`face`, `face-laion`, `face-openface3`, `audio`, `audio-laion`, `scene`, `person`, `all`) as of 004-extras-based-install
 - SQLite/SQLAlchemy for job/pipeline state; local filesystem model cache (HF/torch cache dirs)
 - New `extras_install_jobs` table (005-pipeline-extras-install) tracks admin-triggered, in-app
@@ -20,6 +20,8 @@ src/videoannotator/
 ├── registry/       # pipeline_registry.py, pipeline_loader.py, metadata/*.yaml
 ├── storage/        # job/annotation storage backends
 └── exporters/      # COCO/RTTM/WebVTT/native-format writers
+viewer/             # Video Annotation Viewer (React/Vite, Bun); built into src/videoannotator/viewer_static/
+                    # viewer conventions, where things go, pitfalls: AGENTS.md §23
 tests/
 ├── unit/ integration/ pipelines/ api/ contract/
 specs/<NNN>-<slug>/  # spec-kit feature specs (spec.md, plan.md, tasks.md, ...)
@@ -29,16 +31,19 @@ docs/development/roadmap_v1.{5,6,7}.0.md, roadmap_v1.7_to_v2.0.md  # release roa
 ## Commands
 ```bash
 pytest tests/                 # full suite
-pytest tests/ -k acceptance   # v1.4.x behaviour-parity fixtures
+pytest tests/integration/test_output_baseline.py  # demo-clip outputs vs baseline (real models, ~1 min)
 ruff check .                  # lint (see pyproject.toml [tool.ruff])
 mypy src/videoannotator        # type check
 pre-commit run --all-files    # full pre-commit gate (used on every commit)
 videoannotator pipelines list # CLI: list available pipelines
 videoannotator job submit <video> --pipelines <name>
+bash scripts/dev.sh           # API (auto-reload) + viewer dev server (hot reload) at http://127.0.0.1:19011
+bash scripts/build_viewer.sh  # rebuild viewer/ into viewer_static/ (commit the result; CI checks it)
+cd viewer && bun run lint && bun run test:run  # viewer lint + unit tests
 ```
 
 ## Code Style
-Python 3.12, ruff-enforced (line-length 88, see `[tool.ruff]` in `pyproject.toml` for the
+Python 3.12+ syntax (ruff/mypy target 3.12, the oldest supported), ruff-enforced (line-length 88, see `[tool.ruff]` in `pyproject.toml` for the
 per-file-ignore exceptions). Follow standard conventions; no comments explaining *what* code does,
 only non-obvious *why*.
 
@@ -48,7 +53,21 @@ Execution, Stable Pipeline Contract, Provenance & Reproducibility, Modular by Co
 Backward Compatibility by Default). `/speckit-plan`'s Constitution Check gate evaluates every plan
 against it.
 
+## Current Plan
+<!-- SPECKIT START -->
+`specs/024-container-feels-local/plan.md`: researchers start VideoAnnotator with `launcher/
+videoannotator-start` (sh, plus a PowerShell twin), which finds Docker or Podman, shares chosen
+folders read-only at their real paths (remembered in a host `start.conf`), runs the slim GHCR
+image on 127.0.0.1 and opens the viewer connected. App, installed pipelines (restored after
+updates and restarts), model weights, activity and the researcher's files each persist on their
+own. Inside a container the server never lists its own filesystem. After 024:
+`specs/023-viewer-overhaul` (needs research first).
+<!-- SPECKIT END -->
+
 ## Recent Changes
+- 012-python-313-support: `requires-python` widens to `>=3.12,<3.14`; CI tests both;
+  `.python-version` makes 3.13 the dev/Docker default; ruff/mypy targets stay at 3.12 (oldest
+  supported).
 - Post-005 follow-up: added `GET /api/v1/auth/me` (any authenticated caller can check its own
   `is_admin` — closes the gap where a 403 from an admin-only endpoint was undiagnosable from the
   frontend) and made `generate-token` grant admin by default to a brand-new user while the

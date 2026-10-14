@@ -344,3 +344,97 @@ class TestOwnerIdentityRequired:
         )
         assert resp.status_code == 400
         assert resp.json()["error"]["code"] == "OWNER_IDENTITY_REQUIRED"
+
+
+class TestServerFolderDatasets:
+    """Spec 018 additions: server folders, relative paths, owner names."""
+
+    def test_server_folder_and_relative_paths_round_trip(self, owner_client):
+        created = owner_client.post(
+            "/api/v1/datasets/",
+            json={
+                "name": "Session 1",
+                "server_folder": "/data/session1",
+                "server_folder_recursive": True,
+                "video_manifest": [
+                    {"filename": "a.mp4", "size_bytes": 1, "relative_path": "p01/a.mp4"}
+                ],
+            },
+        ).json()
+        got = owner_client.get(f"/api/v1/datasets/{created['id']}").json()
+        assert got["server_folder"] == "/data/session1"
+        assert got["server_folder_recursive"] is True
+        assert got["video_manifest"][0]["relative_path"] == "p01/a.mp4"
+
+    def test_a_selection_round_trips(self, owner_client):
+        """Spec 022: a dataset of chosen videos, not the whole folder."""
+        created = owner_client.post(
+            "/api/v1/datasets/",
+            json={
+                "name": "Pair",
+                "server_folder": "/data/session1",
+                "server_selection": True,
+                "video_manifest": [
+                    {"filename": "a.mp4", "size_bytes": 1, "relative_path": "a.mp4"}
+                ],
+            },
+        ).json()
+        assert created["server_selection"] is True
+        got = owner_client.get(f"/api/v1/datasets/{created['id']}").json()
+        assert got["server_selection"] is True
+        updated = owner_client.put(
+            f"/api/v1/datasets/{created['id']}", json={"server_selection": False}
+        ).json()
+        assert updated["server_selection"] is False
+
+    def test_folder_datasets_are_not_selections_by_default(self, owner_client):
+        created = owner_client.post(
+            "/api/v1/datasets/",
+            json={"name": "Whole", "server_folder": "/data/session1"},
+        ).json()
+        assert created["server_selection"] is False
+
+    def test_a_spec_007_export_still_imports(self, owner_client):
+        export = {
+            "id": "x",
+            "name": "Old",
+            "owner_user_id": "someone",
+            "video_manifest": [{"filename": "a.mp4", "size_bytes": 1}],
+            "created_at": "2026-01-01T00:00:00Z",
+        }
+        resp = owner_client.post("/api/v1/datasets/", json=export)
+        assert resp.status_code == 201
+        assert resp.json()["server_folder"] is None
+        assert resp.json()["video_manifest"][0]["relative_path"] is None
+
+    def test_owner_name_comes_from_the_user(self, client, temp_db):
+        from sqlalchemy.orm import Session
+
+        from videoannotator.database.models import User
+
+        with Session(temp_db) as session:
+            user = User(email="ada@example.org", username="ada")
+            session.add(user)
+            session.commit()
+            user_id = str(user.id)
+        _as(client, {"id": user_id, "username": "ada", "is_admin": False})
+        created = client.post("/api/v1/datasets/", json={"name": "Mine"}).json()
+        assert created["owner_name"] == "ada"
+
+
+def test_an_older_database_gains_the_dataset_columns(temp_db, monkeypatch):
+    from sqlalchemy import text
+
+    import videoannotator.database.migrations as migrations
+
+    with temp_db.begin() as conn:
+        conn.execute(text("ALTER TABLE saved_datasets DROP COLUMN server_folder"))
+        conn.execute(
+            text("ALTER TABLE saved_datasets DROP COLUMN server_folder_recursive")
+        )
+        conn.execute(text("ALTER TABLE saved_datasets DROP COLUMN server_selection"))
+    monkeypatch.setattr(migrations, "engine", temp_db)
+    assert migrations.migrate_to_v1_3_0()
+    with temp_db.connect() as conn:
+        cols = {r[1] for r in conn.execute(text("PRAGMA table_info('saved_datasets')"))}
+    assert {"server_folder", "server_folder_recursive", "server_selection"} <= cols

@@ -41,7 +41,7 @@ function enhanceAuthError(error: unknown) {
     if (isPlaceholderToken) {
       return {
         message: 'Authentication Required',
-        hint: 'You have a placeholder token ("dev-token") that doesn\'t work. Go to Settings and clear the API Token field to connect anonymously.',
+        hint: `"${currentToken}" was a placeholder in older versions and the server no longer accepts it. In Settings, replace it with your API key (Settings shows how to get one), or clear it if the server runs with authentication off.`,
         fieldErrors: [],
         code: parsed.code,
         requestId: parsed.requestId

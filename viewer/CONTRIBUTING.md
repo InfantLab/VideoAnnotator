@@ -13,7 +13,6 @@ Thank you for your interest in contributing to Video Annotation Viewer! This doc
 3. Install dependencies:
    ```bash
    bun install
-   # or npm install
    ```
 4. Start the development server:
    ```bash
@@ -59,7 +58,7 @@ bun run e2e
 
 ## Reporting Issues
 
-- Use [GitHub Issues](https://github.com/InfantLab/video-annotation-viewer/issues) to report bugs or request features
+- Use [GitHub Issues](https://github.com/InfantLab/VideoAnnotator/issues) to report bugs or request features
 - Include steps to reproduce, expected behavior, and actual behavior
 - Attach screenshots or error messages where relevant
 

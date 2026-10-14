@@ -10,12 +10,11 @@ __all__ = [
     "AudioPipeline",
     "BasePipeline",
     "FaceAnalysisPipeline",
-    "LAIONFacePipeline",
     "PersonTrackingPipeline",
     "SceneDetectionPipeline",
 ]
 
-# Each pipeline family needs a different extras group (`face`, `face-laion`,
+# Each pipeline family needs a different extras group (`face`, `face-openface3`,
 # `audio`, `person`, `scene` — see 004-extras-based-install); importing them
 # eagerly here would mean loading *any* single pipeline via the registry
 # forces every family's heavy deps to be installed, defeating extras
@@ -25,7 +24,6 @@ __all__ = [
 _LAZY_ATTRS = {
     "AudioPipeline": ".audio_processing",
     "FaceAnalysisPipeline": ".face_analysis.face_pipeline",
-    "LAIONFacePipeline": ".face_analysis.laion_face_pipeline",
     "PersonTrackingPipeline": ".person_tracking.person_pipeline",
     "SceneDetectionPipeline": ".scene_detection.scene_pipeline",
 }

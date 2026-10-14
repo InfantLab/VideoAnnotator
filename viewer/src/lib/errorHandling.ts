@@ -49,7 +49,7 @@ export function parseApiError(error: unknown): ParsedError {
     // Try v1.3.0 ErrorEnvelope format with Zod (defensive)
     const envelopeResult = ErrorEnvelopeSchema.safeParse(error);
     if (envelopeResult.success) {
-      return parseErrorEnvelope(envelopeResult.data);
+      return parseErrorEnvelope(envelopeResult.data as ErrorEnvelope);
     }
 
     // Handle legacy/other object formats
@@ -64,13 +64,18 @@ export function parseApiError(error: unknown): ParsedError {
     
     return {
       message: String(message),
-      code: (errObj.code ?? errObj.status ?? errObj.statusCode) as string | number | undefined,
+      code: codeOf(errObj.code ?? errObj.status ?? errObj.statusCode),
     };
   }
 
   return {
     message: String(error),
   };
+}
+
+/** An error code or HTTP status, as the string ParsedError carries. */
+function codeOf(value: unknown): string | undefined {
+  return typeof value === 'string' || typeof value === 'number' ? String(value) : undefined;
 }
 
 /**

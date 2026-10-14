@@ -8,7 +8,7 @@ This module uses established FOSS libraries directly instead of custom schema wr
 - audformat: Comprehensive audio annotation library
 
 Usage:
-    from src.exporters.native_formats import (
+    from videoannotator.exporters.native_formats import (
         export_coco_json,
         export_webvtt_captions,
         export_rttm_diarization,
@@ -18,6 +18,7 @@ Usage:
 
 import json
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 
@@ -66,9 +67,8 @@ try:
     PYANNOTE_CORE_AVAILABLE = True
 except ImportError:
     PYANNOTE_CORE_AVAILABLE = False
-    logger.warning(
-        "pyannote.core not available. Install with: pip install pyannote.core"
-    )
+    # Normal on an install without the audio extra, which brings it.
+    logger.debug("pyannote.core not installed (comes with the audio extra)")
 
 try:
     from praatio import textgrid as praatio_textgrid
@@ -171,13 +171,14 @@ def export_coco_json(
         categories = [{"id": 1, "name": "person", "supercategory": "person"}]
 
     # Create native COCO format
+    created = datetime.now(UTC)
     coco_data = {
         "info": {
             "description": "VideoAnnotator COCO Export",
             "version": __version__,
-            "year": 2025,
+            "year": created.year,
             "contributor": "VideoAnnotator",
-            "date_created": "2025-01-01T00:00:00Z",
+            "date_created": created.isoformat(),
         },
         "licenses": [],
         "images": images,

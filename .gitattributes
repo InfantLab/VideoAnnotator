@@ -27,3 +27,6 @@
 
 # Shell scripts should always be LF
 *.sh text eol=lf
+
+# Windows double-click wrapper: cmd.exe wants CRLF
+launcher/*.cmd text eol=crlf

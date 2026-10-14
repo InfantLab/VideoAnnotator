@@ -1,0 +1,32 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Dev: API + viewer (hot reload)",
+      "type": "shell",
+      "command": "bash scripts/dev.sh",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "Dev: API + viewer (auth on)",
+      "type": "shell",
+      "command": "bash scripts/dev.sh --auth",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Build viewer bundle (viewer_static)",
+      "type": "shell",
+      "command": "bash scripts/build_viewer.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Viewer: lint + unit tests",
+      "type": "shell",
+      "command": "cd viewer && bun run lint && bun run test:run",
+      "problemMatcher": []
+    }
+  ]
+}

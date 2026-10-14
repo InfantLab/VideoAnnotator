@@ -6,20 +6,16 @@ capabilities.
 
 __all__ = [
     "FaceAnalysisPipeline",
-    "LAIONFacePipeline",
     "OpenFace3Pipeline",
 ]
 
-# Each variant needs a different extras group (`face`, `face-laion`,
-# `face-openface3` — see 004-extras-based-install): FaceAnalysisPipeline needs
-# deepface, LAIONFacePipeline needs torch/transformers (and, since it composes
-# FaceAnalysisPipeline as its detector backend, deepface too), OpenFace3Pipeline
-# needs openface-test/scipy but *not* deepface. Importing any of them eagerly
+# Each variant needs a different extras group (`face`, `face-openface3` — see
+# 004-extras-based-install): FaceAnalysisPipeline needs deepface,
+# OpenFace3Pipeline needs openface-test but *not* deepface. Importing any of them eagerly
 # here would force every variant's deps onto whichever one you actually asked
 # for, so resolve lazily instead.
 _LAZY_ATTRS = {
     "FaceAnalysisPipeline": ".face_pipeline",
-    "LAIONFacePipeline": ".laion_face_pipeline",
     "OpenFace3Pipeline": ".openface3_pipeline",
 }
 

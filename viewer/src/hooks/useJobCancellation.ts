@@ -83,7 +83,6 @@ export function useJobCancellation(jobId: string, currentStatus: JobStatus) {
 
             // Parse the error and show toast with copy button
             const parsedError = parseApiError(error);
-            // @ts-expect-error - toast type mismatch with ToastFunction, but runtime works fine
             showErrorToast(toast, parsedError);
         },
 

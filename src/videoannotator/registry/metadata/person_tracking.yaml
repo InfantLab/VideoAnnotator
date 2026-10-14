@@ -16,6 +16,10 @@ capabilities:
 outputs:
   - format: COCO
     types: [person_detection, keypoints, tracking]
+    file: person_tracking.json
+  - format: JSON
+    types: [person_tracks]
+    file: person_tracks.json
 config_schema:
   model:
     type: string

@@ -53,13 +53,13 @@ export default function GettingStarted() {
       const result = await installAllBundledDemos((msg) => setDemoProgress(msg));
 
       if (result.installed === 0 && result.failed.length === 0) {
-        toast({ title: 'Demo datasets already installed', description: `All ${result.skipped} demos are up to date.`, duration: 4000 });
+        toast({ title: 'Demos already installed', description: `All ${result.skipped} demos are up to date.`, duration: 4000 });
       } else if (result.failed.length > 0) {
         const detail = result.failed.map(f => `${DEMO_LABELS[f.key] ?? f.key}: ${f.error}`).join('\n');
         const fullText = `Demo install errors\n\nInstalled ${result.installed}, failed ${result.failed.length}.\n${detail}`;
         toast({ title: 'Some demos failed to install', description: `Installed ${result.installed}, failed ${result.failed.length}.`, variant: 'destructive', duration: 12000, action: createCopyAction(fullText) });
       } else {
-        toast({ title: 'Demo datasets installed', description: `Installed ${result.installed} demo dataset${result.installed === 1 ? '' : 's'}.`, duration: 5000 });
+        toast({ title: 'Demos installed', description: `Installed ${result.installed} demo${result.installed === 1 ? '' : 's'}.`, duration: 5000 });
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
@@ -145,11 +145,11 @@ export default function GettingStarted() {
             </li>
             <li className="flex items-start gap-2">
               <span className="font-semibold text-primary min-w-[1.5rem]">2.</span>
-              Create annotation jobs by uploading videos
+              Create a job: choose videos in My folders (read where they are, never copied), or upload them from another computer
             </li>
             <li className="flex items-start gap-2">
               <span className="font-semibold text-primary min-w-[1.5rem]">3.</span>
-              View results in the Viewer or save to your Library
+              View results in the viewer; they're kept under Results
             </li>
           </ol>
           <Link to="/settings">
@@ -181,12 +181,12 @@ export default function GettingStarted() {
               className="gap-2"
             >
               <Download className="w-5 h-5" />
-              {isInstallingDemo ? (demoProgress ?? 'Installing demos…') : 'Install Demo Datasets'}
+              {isInstallingDemo ? (demoProgress ?? 'Installing demos…') : 'Install the demos'}
             </Button>
-            <Link to="/library">
+            <Link to="/results">
               <Button size="lg" variant="outline" className="gap-2">
                 <BookOpen className="w-5 h-5" />
-                Open Library
+                Open Results
               </Button>
             </Link>
           </div>

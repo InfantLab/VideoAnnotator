@@ -210,5 +210,7 @@ export interface VlmPreviewResponse {
   promptTokens: number;
   respTokens: number;
   tokensPerSec: number;
+  /** The frame(s) the model was shown, small; absent from servers before spec 020. */
+  frames: Array<{ frameNumber: number | null; timestampSec: number | null; jpegBase64: string }>;
 }
 

@@ -14,8 +14,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ...version import __version__ as videoannotator_version
 from ..database import get_database_info, get_storage_backend
-from ..dependencies import get_current_user
 from ..extras_install import ImportDeferredError, defer_import_during_install
+from ..middleware.auth import validate_api_key
 
 # Store for request logging (in production, use Redis or database)
 _request_log: list[dict[str, Any]] = []
@@ -161,13 +161,14 @@ async def get_server_debug_info():
 
 @router.get("/token-info")
 async def get_token_debug_info(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> dict[str, Any]:
     """Get detailed information about the current API token.
 
     Returns token validation status, permissions, and rate limiting
     info.
     """
+    current_user = current_user or {}
     try:
         # Mock response - replace with actual token validation logic
         return {
@@ -300,52 +301,6 @@ async def get_pipeline_debug_info():
                             "enable_head_pose": {"type": "bool", "default": True},
                         },
                     },
-                    {
-                        "name": "laion_face",
-                        "display_name": "LAION Face Analysis",
-                        "enabled": True,
-                        "model_loaded": True,
-                        "supported_analyses": [
-                            "age",
-                            "gender",
-                            "emotion",
-                            "attractiveness",
-                            "race",
-                        ],
-                        "parameters": {
-                            "enable_age_estimation": {"type": "bool", "default": False},
-                            "enable_emotion_recognition": {
-                                "type": "bool",
-                                "default": True,
-                            },
-                            "enable_gender_detection": {
-                                "type": "bool",
-                                "default": False,
-                            },
-                            "emotion_categories": {
-                                "type": "list",
-                                "default": [
-                                    "happy",
-                                    "sad",
-                                    "angry",
-                                    "surprised",
-                                    "neutral",
-                                    "fear",
-                                    "disgust",
-                                ],
-                                "available": [
-                                    "happy",
-                                    "sad",
-                                    "angry",
-                                    "surprised",
-                                    "neutral",
-                                    "fear",
-                                    "disgust",
-                                    "contempt",
-                                ],
-                            },
-                        },
-                    },
                 ],
             },
             {
@@ -397,34 +352,6 @@ async def get_pipeline_debug_info():
                                 "default": 5,
                                 "min": 1,
                                 "max": 10,
-                            },
-                        },
-                    },
-                    {
-                        "name": "laion_voice",
-                        "display_name": "LAION Voice Emotion",
-                        "enabled": True,
-                        "model_loaded": True,
-                        "parameters": {
-                            "enable_voice_emotion": {"type": "bool", "default": False},
-                            "emotion_categories": {
-                                "type": "list",
-                                "default": [
-                                    "neutral",
-                                    "happy",
-                                    "sad",
-                                    "angry",
-                                    "surprised",
-                                ],
-                                "available": [
-                                    "neutral",
-                                    "happy",
-                                    "sad",
-                                    "angry",
-                                    "surprised",
-                                    "fear",
-                                    "disgust",
-                                ],
                             },
                         },
                     },
@@ -506,7 +433,7 @@ async def get_pipeline_debug_info():
 
 @router.get("/jobs/{job_id}")
 async def get_job_debug_info(
-    job_id: str, current_user: dict = Depends(get_current_user)
+    job_id: str, current_user: dict[str, Any] | None = Depends(validate_api_key)
 ) -> dict[str, Any]:
     """Get detailed debugging information for a specific job.
 
@@ -588,12 +515,13 @@ async def get_request_log(
     limit: int = Query(
         50, description="Maximum number of requests to return", ge=1, le=100
     ),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> dict[str, Any]:
     """Get recent API request log for debugging.
 
     Returns recent API requests with timing and status information.
     """
+    current_user = current_user or {}
     try:
         # Return most recent requests, limited by the limit parameter
         recent_requests = _request_log[-limit:] if _request_log else []

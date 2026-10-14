@@ -2,13 +2,15 @@
 // viewer-handoff item 4). A preset is the wizard's own selection + config,
 // saved on the server and shared with everyone on it.
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bookmark, Loader2, Save } from 'lucide-react';
+import { Bookmark, Download, Loader2, Save, Upload } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Preset } from '@/types/presets';
+import { createWithFreeName, downloadJSON, exportFileName, parseExport } from '@/lib/datasets';
+import { parseApiError } from '@/lib/errorHandling';
 
 const PRESETS_KEY = ['presets'] as const;
 
@@ -24,6 +26,29 @@ export const PresetBar = ({ selectedPipelines, config, onApply }: PresetBarProps
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  const importInput = useRef<HTMLInputElement>(null);
+
+  // Share a preset with a colleague (spec 018): the server takes an export back as it is.
+  const importFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const raw = parseExport(await file.text(), ['name', 'selected_pipelines', 'config']);
+      const body = {
+        name: String(raw.name),
+        description: (raw.description as string | undefined) ?? undefined,
+        selected_pipelines: raw.selected_pipelines as string[],
+        config: raw.config as Record<string, unknown>,
+      };
+      const { created, name: used } = await createWithFreeName(body, (b) => apiClient.createPreset(b));
+      queryClient.invalidateQueries({ queryKey: PRESETS_KEY });
+      setChosenId(created.id);
+      setMessage(used === body.name ? `Imported “${used}”.` : `Imported as “${used}” (you already had “${body.name}”).`);
+    } catch (e) {
+      setMessage(`Couldn't import ${file.name}: ${parseApiError(e).message}`);
+    }
+  };
 
   // Servers before v1.5.0 have no presets endpoint: then the bar just doesn't show.
   const { data, isError } = useQuery({
@@ -88,6 +113,21 @@ export const PresetBar = ({ selectedPipelines, config, onApply }: PresetBarProps
           >
             Load
           </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-8"
+            disabled={!chosen}
+            aria-label="Export preset"
+            onClick={() => {
+              if (!chosen) return;
+              const { id: _id, owner_user_id: _owner, unavailable_pipelines: _unavailable, ...definition } = chosen;
+              downloadJSON(exportFileName('preset', chosen.name), definition);
+            }}
+          >
+            <Download className="h-3 w-3" />
+          </Button>
         </>
       ) : (
         <span className="text-muted-foreground">No saved presets yet.</span>
@@ -135,6 +175,12 @@ export const PresetBar = ({ selectedPipelines, config, onApply }: PresetBarProps
           Save selection as preset
         </Button>
       )}
+
+      <input ref={importInput} type="file" accept=".json,application/json" className="hidden" onChange={importFile} />
+      <Button type="button" size="sm" variant="ghost" className="h-8" onClick={() => importInput.current?.click()}>
+        <Upload className="mr-1 h-3 w-3" />
+        Import
+      </Button>
 
       {message && <span className="basis-full text-xs text-muted-foreground">{message}</span>}
     </div>

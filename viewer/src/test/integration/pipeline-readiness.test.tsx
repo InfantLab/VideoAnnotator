@@ -196,7 +196,8 @@ describe('Pipeline readiness cards', () => {
     renderStep([pipeline('person_tracking', 'Person Tracking', { state: 'restart_required', nextAction: 'restart', extrasGroup: 'person' })]);
     const c = card('Person Tracking');
     expect(within(c).getByText('Restart needed')).toBeInTheDocument();
-    expect(within(c).getByText('Installed. Restart the server to activate it.')).toBeInTheDocument();
+    expect(within(c).getByText('Installed. Restart VideoAnnotator to use it.')).toBeInTheDocument();
+    expect(within(c).getByRole('button', { name: 'Restart now' })).toBeInTheDocument();
   });
 
   it('picks up an install the server reports, even one this browser did not start', async () => {
@@ -217,6 +218,14 @@ describe('Pipeline readiness cards', () => {
     expect(within(c).getByText('Installing')).toBeInTheDocument();
     expect(within(c).getByText(/Installing…|Installing&hellip;|this can take several minutes/)).toBeInTheDocument();
     await waitFor(() => expect(apiClient.getExtrasInstallJob).toHaveBeenCalledWith('job-42'));
+  });
+
+  it('shows a pipeline being restored after an update, with progress', () => {
+    renderStep([pipeline('scene_detection', 'Scene Detection', { state: 'restoring', nextAction: 'wait' })]);
+    const c = card('Scene Detection');
+    expect(within(c).getByText('Restoring')).toBeInTheDocument();
+    expect(within(c).getByText(/coming back by itself/)).toBeInTheDocument();
+    expect(within(c).queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
   });
 
   it('renders a state it does not know as not available, with the server message', () => {
@@ -250,6 +259,7 @@ describe('pipelineCardMode', () => {
     ['ready', 'selectable'],
     ['not_installed', 'install'],
     ['installing', 'installing'],
+    ['restoring', 'restoring'],
     ['restart_required', 'restart'],
     ['needs_setup', 'setup'],
     ['something_new', 'unavailable']

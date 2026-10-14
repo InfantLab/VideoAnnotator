@@ -87,7 +87,7 @@ face_analysis:
   deepface:
     emotion_model: "VGG-Face" # Emotion recognition model
     age_gender_model: "VGG-Face" # Age/gender model
-    detector_backend: "opencv" # Face detector: opencv, mtcnn, retinaface, ssd
+    detector_backend: "retinaface" # Face detector: retinaface (default), mtcnn, yunet, ssd, opencv
     enforce_detection: false # Continue even if no face detected
 
   # Processing settings
@@ -187,7 +187,7 @@ annotator = VideoAnnotator(config_path="config/full_pipeline.yaml")
 # Process single video
 results = annotator.process_video(
     video_path="path/to/video.mp4",
-    pipelines=["scene_detection", "person_tracking", "face_analysis"]
+    pipelines=["scene_detection", "person_tracking", "face_analysis"],
 )
 
 # Save results
@@ -200,10 +200,7 @@ annotator.save_results(results, "output/annotations.json")
 from videoannotator.pipelines import ScenePipeline
 
 # Configure and run scene detection
-config = {
-    "threshold": 25.0,
-    "scene_labels": ["indoor", "outdoor", "office"]
-}
+config = {"threshold": 25.0, "scene_labels": ["indoor", "outdoor", "office"]}
 
 with ScenePipeline(config) as pipeline:
     annotations = pipeline.process("video.mp4")

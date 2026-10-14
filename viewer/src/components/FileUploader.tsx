@@ -9,13 +9,14 @@ import { parseApiError } from '@/lib/errorHandling';
 import { showErrorToast, showValidationErrorToast } from '@/lib/toastHelpers';
 import type { ParsedError } from '@/types/api';
 import {
+  describeFileType,
   detectFileType,
-  detectJSONType,
-  getFileTypeDescription,
-  validateFileSize,
+  isAnnotationType,
   validateFileSet,
-  type FileTypeInfo
-} from '@/lib/fileUtils';
+  validateFileSize,
+  type DetectedFile,
+  type DetectedFileType
+} from '@/lib/fileDetection';
 import {
   mergeAnnotationData
 } from '@/lib/parsers/merger';
@@ -27,12 +28,12 @@ interface FileUploaderProps {
 
 interface FileStatus {
   file: File;
-  detected: FileTypeInfo;
+  detected: DetectedFile;
   status: 'pending' | 'processing' | 'success' | 'error';
   error?: string;
 }
 
-const FileTypeIcon = ({ type }: { type: FileTypeInfo['type'] }) => {
+const FileTypeIcon = ({ type }: { type: DetectedFileType }) => {
   switch (type) {
     case 'video': return <Video className="w-4 h-4" />;
     case 'audio': return <Music className="w-4 h-4" />;
@@ -49,13 +50,13 @@ const FileTypeIcon = ({ type }: { type: FileTypeInfo['type'] }) => {
   }
 };
 
-const FileTypeLabel = ({ type, confidence }: { type: FileTypeInfo['type']; confidence?: string }) => {
+const FileTypeLabel = ({ type, confidence }: { type: DetectedFileType; confidence: number }) => {
   return (
-    <span className={`text-xs px-2 py-1 rounded ${confidence === 'high' ? 'bg-green-100 text-green-800' :
-      confidence === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+    <span className={`text-xs px-2 py-1 rounded ${confidence >= 0.8 ? 'bg-green-100 text-green-800' :
+      confidence >= 0.5 ? 'bg-yellow-100 text-yellow-800' :
         'bg-red-100 text-red-800'
       }`}>
-      {getFileTypeDescription(type)}
+      {describeFileType(type)}
     </span>
   );
 };
@@ -74,55 +75,15 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
     setProcessingStage('Detecting file types...');
     setProcessingProgress(10);
 
-    // Process each file individually
     const detectedFiles: FileStatus[] = [];
     for (const file of files) {
-      // Validate file size first
-      const sizeValidation = validateFileSize(file);
-      if (!sizeValidation.valid) {
-        detectedFiles.push({
-          file,
-          detected: detectFileType(file),
-          status: 'error',
-          error: sizeValidation.error
-        });
-        continue;
-      }
-
-      let detected = detectFileType(file);
-
-      // For JSON files, do content analysis with both methods
-      if (detected.type === 'unknown' && detected.extension === 'json') {
-        try {
-          // First try the simple fileUtils detection
-          detected = await detectJSONType(file);
-
-          // If still unknown, use the more sophisticated merger detection
-          if (detected.type === 'unknown') {
-            const { detectFileType: mergerDetect } = await import('@/lib/parsers/merger');
-            const mergerResult = await mergerDetect(file);
-
-            // Convert merger result to fileUtils format
-            detected = {
-              type: mergerResult.type,
-              extension: 'json',
-              mimeType: 'application/json',
-              confidence: mergerResult.confidence > 0.7 ? 'high' :
-                mergerResult.confidence > 0.4 ? 'medium' : 'low',
-              reason: `Detected via content analysis (${mergerResult.confidence.toFixed(2)} confidence)`
-            };
-          }
-        } catch (error: unknown) {
-          console.warn('JSON detection failed:', error);
-          // Keep as unknown if both methods fail
-        }
-      }
-
-      detectedFiles.push({
-        file,
-        detected,
-        status: 'pending'
-      });
+      const detected = await detectFileType(file);
+      const size = validateFileSize(file, detected.type);
+      detectedFiles.push(
+        size.valid
+          ? { file, detected, status: 'pending' }
+          : { file, detected, status: 'error', error: size.error }
+      );
     }
 
     // Add to existing files instead of replacing
@@ -144,8 +105,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
       setProcessingProgress(10);
 
       // Validate file set
-      const fileList = fileStatuses.map(fs => fs.file);
-      const validation = validateFileSet(fileList);
+      const validation = validateFileSet(fileStatuses.map(fs => fs.detected));
 
       if (!validation.valid) {
         toast({
@@ -168,25 +128,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
       setProcessingStage('Processing files...');
       setProcessingProgress(50);
 
-      // Convert to merger format
-      const detectedFiles = await Promise.all(fileStatuses.map(async (fs) => {
-        // For JSON files that still show as unknown, do deeper detection using merger
-        if (fs.detected.type === 'unknown' && fs.detected.extension === 'json') {
-          const { detectFileType } = await import('@/lib/parsers/merger');
-          const mergerResult = await detectFileType(fs.file);
-          return mergerResult;
-        } else {
-          // Convert fileUtils result to merger format
-          const confidence = fs.detected.confidence === 'high' ? 0.9 :
-            fs.detected.confidence === 'medium' ? 0.7 : 0.5;
-          return {
-            file: fs.file,
-            type: fs.detected.type,
-            confidence,
-            pipeline: fs.detected.type !== 'video' && fs.detected.type !== 'audio' ? fs.detected.type : undefined
-          };
-        }
-      }));
+      const detectedFiles = fileStatuses.map(fs => fs.detected);
 
       // Parse and merge data using existing merger
       const result = await mergeAnnotationData(detectedFiles, (stage, progress, total) => {
@@ -273,9 +215,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
 
   const hasFiles = fileStatuses.length > 0;
   const hasVideoFile = fileStatuses.some(f => f.detected.type === 'video');
-  const hasPipelineData = fileStatuses.some(f =>
-    ['person_tracking', 'speech_recognition', 'speaker_diarization', 'scene_detection', 'vlm_annotation', 'face_analysis', 'openface3_faces', 'complete_results'].includes(f.detected.type)
-  );
+  const hasPipelineData = fileStatuses.some(f => isAnnotationType(f.detected.type));
   const canProcess = hasVideoFile && hasPipelineData && !isProcessing;
 
   return (

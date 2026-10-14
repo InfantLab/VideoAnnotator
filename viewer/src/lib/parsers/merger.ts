@@ -19,20 +19,17 @@ import { parseWebVTT } from './webvtt';
 import { parseRTTM } from './rttm';
 import { parseCOCOPersonData } from './coco';
 import { parseSceneDetection } from './scene';
-import { parseVlmAnnotations, isValidVlmAnnotations } from './vlm';
-import { parseElanFile, isValidElanFile } from './elan';
+import { parseVlmAnnotations } from './vlm';
+import { parseElanFile } from './elan';
 import { parseCOCOOpenFace3Data } from './cocoOpenface3';
 // import { parseFaceAnalysis } from './face'; // Using local implementation
 
-/**
- * File type detection result
- */
-export interface DetectedFile {
-    file: File;
-    type: 'video' | 'person_tracking' | 'speech_recognition' | 'speaker_diarization' | 'scene_detection' | 'vlm_annotation' | 'elan_ground_truth' | 'face_analysis' | 'openface3_faces' | 'complete_results' | 'audio' | 'unknown';
-    pipeline?: string;
-    confidence: number;
-}
+import type { DetectedFile } from '../fileDetection';
+import { COMPANION_SUFFIX, provenanceFromCompanion, provenanceOfFile } from '../provenance';
+import type { ProvenanceTrack } from '@/types/annotations';
+
+// Detection lives in lib/fileDetection.ts; re-exported for existing importers.
+export { detectFileType, detectJSONStructure, type DetectedFile } from '../fileDetection';
 
 /**
  * Parsing progress callback
@@ -50,497 +47,6 @@ export interface ParseResult {
         warnings: string[];
         processingTime: number;
     };
-}
-
-/**
- * Detects file type based on extension and content
- */
-export async function detectFileType(file: File): Promise<DetectedFile> {
-    const extension = file.name.toLowerCase().split('.').pop() || '';
-    const mimeType = file.type.toLowerCase();
-
-    // Video files
-    if (['mp4', 'webm', 'avi', 'mov'].includes(extension) || mimeType.startsWith('video/')) {
-        return { file, type: 'video', confidence: 0.95 };
-    }
-
-    // Audio files
-    if (['wav', 'mp3', 'aac', 'ogg'].includes(extension) || mimeType.startsWith('audio/')) {
-        return { file, type: 'audio', confidence: 0.95 };
-    }
-
-    // Text files - need content analysis
-    if (extension === 'vtt' || file.name.includes('speech_recognition')) {
-        const isValid = await isValidWebVTT(file);
-        return {
-            file,
-            type: 'speech_recognition',
-            pipeline: 'speech_recognition',
-            confidence: isValid ? 0.9 : 0.3
-        };
-    }
-
-    if (extension === 'rttm' || file.name.includes('speaker_diarization')) {
-        const isValid = await isValidRTTM(file);
-        return {
-            file,
-            type: 'speaker_diarization',
-            pipeline: 'speaker_diarization',
-            confidence: isValid ? 0.9 : 0.3
-        };
-    }
-
-    if (extension === 'eaf') {
-        const isValid = await isValidElanFile(file);
-        return {
-            file,
-            type: 'elan_ground_truth',
-            pipeline: 'elan_ground_truth',
-            confidence: isValid ? 0.9 : 0.3
-        };
-    }
-
-    // JSON files - need content analysis
-    if (extension === 'json' || mimeType === 'application/json') {
-        return await detectJSONType(file);
-    }
-
-    return { file, type: 'unknown', confidence: 0.0 };
-}
-
-/**
- * Detects JSON file type based on content structure
- */
-async function detectJSONType(file: File): Promise<DetectedFile> {
-    try {
-        // DEBUG: Log JSON detection attempt
-        console.log('🔍 detectJSONType for', file.name);
-
-        // Check for VideoAnnotator v1.1.1 complete results format FIRST
-        // (before trying to parse partial JSON)
-        if (await isValidCompleteResults(file)) {
-            console.log('✅ Detected as complete_results');
-            return {
-                file,
-                type: 'complete_results',
-                pipeline: 'complete_results',
-                confidence: 0.95
-            };
-        }
-
-        // If not complete results, try parsing a sample for other JSON types
-        // Use larger sample for better detection of complex structures
-        const sampleSize = Math.min(10000, file.size);
-        const sample = await file.slice(0, sampleSize).text();
-
-        // Check for VLM frame annotations FIRST — its signature ("reasoning"
-        // + "sampling_mode") is unambiguous, but its export uses the same
-        // COCO info/annotations envelope as person_tracking/scene_detection,
-        // so it must be claimed before those more generic COCO-format checks
-        // run (isValidCOCOPersonData in particular treats any
-        // info.description containing "COCO" as a positive signal).
-        console.log('🔍 Checking VLM annotation format...');
-        if (await isValidVlmAnnotations(file)) {
-            console.log('✅ Detected as vlm_annotation');
-            return {
-                file,
-                type: 'vlm_annotation',
-                pipeline: 'vlm_annotation',
-                confidence: 0.9
-            };
-        }
-
-        // Check for face analysis (LAION format)
-        console.log('🔍 Checking face analysis format...');
-        if (await isValidFaceAnalysis(file)) {
-            console.log('✅ Detected as face_analysis');
-            return {
-                file,
-                type: 'face_analysis',
-                pipeline: 'face_analysis',
-                confidence: 0.8
-            };
-        }
-
-        // Check for OpenFace3 format (native format)
-        console.log('🔍 Checking OpenFace3 native format...');
-        if (await isValidOpenFace3Data(file)) {
-            console.log('✅ Detected as openface3_faces (native format)');
-            return {
-                file,
-                type: 'openface3_faces',
-                pipeline: 'openface3',
-                confidence: 0.85
-            };
-        }
-
-        // Check for COCO+OpenFace3 format (VideoAnnotator export)
-        console.log('🔍 Checking COCO+OpenFace3 format...');
-        if (await isValidCOCOOpenFace3Data(file)) {
-            console.log('✅ Detected as openface3_faces (COCO+OpenFace3 format)');
-            return {
-                file,
-                type: 'openface3_faces',
-                pipeline: 'openface3',
-                confidence: 0.90
-            };
-        }
-
-        // Check for person tracking (COCO format)
-        console.log('🔍 Checking person tracking format...');
-        if (await isValidCOCOPersonData(file)) {
-            console.log('✅ Detected as person_tracking');
-            return {
-                file,
-                type: 'person_tracking',
-                pipeline: 'person_tracking',
-                confidence: 0.8
-            };
-        }
-
-        // Check for scene detection
-        console.log('🔍 Checking scene detection format...');
-        if (await isValidSceneDetection(file)) {
-            console.log('✅ Detected as scene_detection');
-            return {
-                file,
-                type: 'scene_detection',
-                pipeline: 'scene_detection',
-                confidence: 0.8
-            };
-        }
-
-        // Check filename patterns for v1.1.1 naming
-        console.log('🔍 Checking filename patterns for:', file.name);
-        
-        if (file.name.includes('complete_results')) {
-            console.log('✅ Matched complete_results pattern');
-            return { file, type: 'complete_results', pipeline: 'complete_results', confidence: 0.7 };
-        }
-
-        // Enhanced face analysis patterns
-        if (file.name.includes('face_annotations') || file.name.includes('laion_face') || file.name.includes('face_analysis')) {
-            console.log('✅ Matched face_analysis pattern');
-            return { file, type: 'face_analysis', pipeline: 'face_analysis', confidence: 0.6 };
-        }
-
-        // Enhanced person tracking patterns  
-        if (file.name.includes('person') || file.name.includes('tracking') || file.name.includes('pose') || file.name.includes('keypoints')) {
-            console.log('✅ Matched person_tracking pattern');
-            return { file, type: 'person_tracking', pipeline: 'person_tracking', confidence: 0.5 };
-        }
-
-        // Enhanced scene detection patterns
-        if (file.name.includes('scene') || file.name.includes('scenes')) {
-            console.log('✅ Matched scene_detection pattern');
-            return { file, type: 'scene_detection', pipeline: 'scene_detection', confidence: 0.5 };
-        }
-
-        // Additional VEATIC dataset patterns (if they have different naming)
-        if (file.name.match(/^\d+/) && file.name.includes('.json')) {
-            console.log('🔍 Possible VEATIC numeric filename, trying content detection...');
-            // Fall through to unknown - the debug info will help us identify the format
-        }
-
-        return { file, type: 'unknown', confidence: 0.2 };
-
-    } catch (error) {
-        console.log('❌ detectJSONType failed for', file.name, ':', error);
-        
-        // Enhanced debugging for unknown files
-        try {
-            const sample = await file.slice(0, 1000).text();
-            console.log('📄 File content sample:', sample);
-            
-            // Try basic JSON parsing to see if it's valid JSON at all
-            const data = JSON.parse(sample);
-            console.log('📊 JSON keys:', Object.keys(data).slice(0, 10));
-            console.log('📈 Data type:', Array.isArray(data) ? 'Array' : 'Object');
-            if (Array.isArray(data) && data.length > 0) {
-                console.log('🔍 First array item keys:', Object.keys(data[0] || {}));
-            }
-        } catch (debugError) {
-            console.log('❌ File is not valid JSON or has other issues');
-        }
-        
-        return { file, type: 'unknown', confidence: 0.0 };
-    }
-}
-
-/**
- * Helper functions for file validation (imported from parsers)
- */
-async function isValidWebVTT(file: File): Promise<boolean> {
-    try {
-        const firstLine = await file.slice(0, 100).text();
-        return firstLine.trim().startsWith('WEBVTT');
-    } catch {
-        return false;
-    }
-}
-
-async function isValidRTTM(file: File): Promise<boolean> {
-    try {
-        const firstLines = await file.slice(0, 1000).text();
-        return firstLines.includes('SPEAKER');
-    } catch {
-        return false;
-    }
-}
-
-async function isValidCOCOPersonData(file: File): Promise<boolean> {
-    try {
-        // For large COCO files, we need to read more content to get past the metadata
-        const sampleSize = Math.min(10000, file.size);
-        const sample = await file.slice(0, sampleSize).text();
-        
-        // Try to find JSON structure indicators without full parsing
-        if (sample.includes('"keypoints"') && sample.includes('"bbox"')) {
-            console.log('✅ Found COCO keypoints/bbox indicators');
-            return true;
-        }
-        
-        // Try parsing what we have
-        const data = JSON.parse(sample);
-
-        if (Array.isArray(data)) {
-            return data.length === 0 || (data[0] && 'keypoints' in data[0] && 'bbox' in data[0]);
-        }
-
-        // Check for COCO format with metadata structure
-        if (data.info && data.info.description && data.info.description.includes('COCO')) {
-            // But first check if it's actually scene detection data
-            if (sample.includes('"scene_type"') || sample.includes('"start_time"') || sample.includes('"end_time"')) {
-                console.log('✅ Found COCO format but with scene indicators - likely scene detection');
-                return false; // Let scene detection handler take it
-            }
-            console.log('✅ Found COCO format indicator in metadata');
-            return true;
-        }
-
-        return (data.annotations && Array.isArray(data.annotations)) ||
-            (data.results && Array.isArray(data.results));
-    } catch (error) {
-        console.log('⚠️ COCO validation error:', error.message);
-        return false;
-    }
-}
-
-async function isValidSceneDetection(file: File): Promise<boolean> {
-    try {
-        const sampleSize = Math.min(5000, file.size);
-        const sample = await file.slice(0, sampleSize).text();
-        
-        // Look for scene detection indicators without full parsing
-        if (sample.includes('"scene_type"') || sample.includes('"start_time"') || sample.includes('"end_time"')) {
-            console.log('✅ Found scene detection indicators');
-            return true;
-        }
-        
-        const data = JSON.parse(sample);
-
-        if (Array.isArray(data)) {
-            return data.length === 0 || (data[0] && ('start_time' in data[0] || 'startTime' in data[0] || 'scene_type' in data[0]));
-        }
-
-        // Check for COCO format scene annotations
-        if (data.info && data.annotations && Array.isArray(data.annotations)) {
-            // Look for scene-related content in a small sample of annotations
-            const hasSceneMarkers = sample.includes('"scene_type"') || 
-                                  sample.includes('"start_time"') || 
-                                  sample.includes('"end_time"');
-            if (hasSceneMarkers) {
-                console.log('✅ Found COCO-style scene annotations');
-                return true;
-            }
-        }
-
-        return (data.results && Array.isArray(data.results)) ||
-            (data.scenes && Array.isArray(data.scenes)) ||
-            (data.annotations && data.annotations[0] && 'scene_type' in data.annotations[0]);
-    } catch (error) {
-        console.log('⚠️ Scene detection validation error:', error.message);
-        return false;
-    }
-}
-
-async function isValidCompleteResults(file: File): Promise<boolean> {
-    try {
-        // For complete_results.json, read the entire file since we need it anyway
-        const text = await file.text();
-        
-        // DEBUG: Show first 200 characters of file for debugging malformed JSON
-        console.log('🔍 isValidCompleteResults for', file.name);
-        console.log('  - First 200 chars:', text.substring(0, 200));
-        
-        const data = JSON.parse(text);
-
-        const isValid = !!(data.video_path && 
-                          data.pipeline_results && 
-                          data.config && 
-                          data.start_time &&
-                          data.total_duration !== undefined);
-
-        // DEBUG: Log file detection results
-        console.log('  - has video_path:', !!data.video_path);
-        console.log('  - has pipeline_results:', !!data.pipeline_results);
-        console.log('  - has config:', !!data.config);
-        console.log('  - has start_time:', !!data.start_time);
-        console.log('  - has total_duration:', data.total_duration !== undefined);
-        console.log('  - overall valid:', isValid);
-
-        return isValid;
-    } catch (error) {
-        console.log('❌ isValidCompleteResults failed for', file.name, ':', error);
-        
-        // Try to show problematic area of JSON
-        try {
-            const text = await file.text();
-            const lines = text.split('\n');
-            console.log('  - JSON structure around error:');
-            lines.slice(0, 5).forEach((line, idx) => {
-                console.log(`    Line ${idx + 1}: ${line}`);
-            });
-        } catch (debugError) {
-            console.log('  - Could not debug malformed JSON');
-        }
-        
-        return false;
-    }
-}
-
-async function isValidFaceAnalysis(file: File): Promise<boolean> {
-    try {
-        const sampleSize = Math.min(8000, file.size);
-        const sample = await file.slice(0, sampleSize).text();
-        
-        // Look for face analysis indicators without full parsing
-        if (sample.includes('"face_id"') || sample.includes('"attributes"') || sample.includes('"emotions"')) {
-            console.log('✅ Found face analysis indicators');
-            return true;
-        }
-        
-        // Check filename patterns for face analysis
-        if (file.name.toLowerCase().includes('face')) {
-            // If filename suggests face analysis, try harder to validate
-            if (sample.includes('"bbox"') && sample.includes('"score"')) {
-                console.log('✅ Filename + bbox/score suggests face analysis');
-                return true;
-            }
-        }
-        
-        const data = JSON.parse(sample);
-
-        if (Array.isArray(data)) {
-            return data.length === 0 || (data[0] && 'face_id' in data[0] && 'attributes' in data[0]);
-        }
-
-        return (data.annotations && data.annotations[0] && 'face_id' in data.annotations[0]) ||
-               (data.results && data.results[0] && 'face_id' in data.results[0]);
-    } catch (error) {
-        console.log('⚠️ Face analysis validation error:', error.message);
-        return false;
-    }
-}
-
-/**
- * Validates COCO+OpenFace3 JSON format (VideoAnnotator export)
- */
-async function isValidCOCOOpenFace3Data(file: File): Promise<boolean> {
-    try {
-        const sampleSize = Math.min(15000, file.size);
-        const sample = await file.slice(0, sampleSize).text();
-        
-        // Look for COCO structure with embedded OpenFace3 data
-        if (sample.includes('"info"') && 
-            sample.includes('"images"') && 
-            sample.includes('"annotations"') &&
-            sample.includes('"openface3"') &&
-            sample.includes('VideoAnnotator')) {
-            
-            // Try to parse the sample to validate structure
-            const data = JSON.parse(sample);
-            
-            // Check for COCO+OpenFace3 structure
-            if (data.info && 
-                data.info.description && 
-                data.info.description.includes('VideoAnnotator') &&
-                Array.isArray(data.images) &&
-                Array.isArray(data.annotations) &&
-                data.annotations.length > 0 &&
-                data.annotations[0].openface3) {
-                
-                console.log('✅ Found COCO+OpenFace3 structure');
-                return true;
-            }
-        }
-        
-        // Check filename patterns for OpenFace3 analysis files
-        if (file.name.toLowerCase().includes('openface3_analysis') || 
-            file.name.toLowerCase().includes('openface3_detailed')) {
-            console.log('✅ Filename suggests COCO+OpenFace3');
-            return true;
-        }
-        
-        return false;
-    } catch (error) {
-        console.log('⚠️ COCO+OpenFace3 validation error:', error.message);
-        return false;
-    }
-}
-
-/**
- * Validates OpenFace3 JSON format
- */
-async function isValidOpenFace3Data(file: File): Promise<boolean> {
-    try {
-        const sampleSize = Math.min(12000, file.size);
-        const sample = await file.slice(0, sampleSize).text();
-        
-        // Look for OpenFace3 indicators in the sample
-        if (sample.includes('"metadata"') && 
-            sample.includes('"faces"') && 
-            sample.includes('"pipeline"') &&
-            sample.includes('"model_info"')) {
-            
-            // Try to parse the sample to validate structure
-            const data = JSON.parse(sample);
-            
-            // Check for OpenFace3 structure
-            if (data.metadata && 
-                data.metadata.pipeline && 
-                data.metadata.model_info &&
-                Array.isArray(data.faces)) {
-                
-                console.log('✅ Found OpenFace3 structure');
-                return true;
-            }
-        }
-        
-        // Check filename patterns for OpenFace3
-        if (file.name.toLowerCase().includes('openface') || 
-            file.name.toLowerCase().includes('of3')) {
-            
-            // Verify it has the faces array if it's a JSON file
-            try {
-                const data = JSON.parse(sample);
-                if (Array.isArray(data.faces)) {
-                    console.log('✅ Filename suggests OpenFace3 and has faces array');
-                    return true;
-                }
-                console.log('⚠️ Filename suggests OpenFace3 but missing faces array - likely metadata/config');
-                return false;
-            } catch (e) {
-                // If we can't parse it, assume it's not valid data
-                return false;
-            }
-        }
-        
-        return false;
-    } catch (error) {
-        console.log('⚠️ OpenFace3 validation error:', error.message);
-        return false;
-    }
 }
 
 /**
@@ -662,6 +168,19 @@ export async function mergeAnnotationData(
     let faceAnalysis: LAIONFaceAnnotation[] = [];
     let openface3Faces: StandardFaceAnnotation[] = []; // OpenFace3 faces data
 
+    // What made each track (spec 017); RTTM's record is in a companion file.
+    const provenance: NonNullable<StandardAnnotationData['provenance']> = {};
+    const companions = new Map<string, File>();
+    for (const d of detectedFiles) {
+        if (d.type === 'provenance') companions.set(d.file.name.slice(0, -COMPANION_SUFFIX.length), d.file);
+    }
+    const record = async (track: ProvenanceTrack, file: File) => {
+        const companion = companions.get(file.name);
+        provenance[track] = companion
+            ? provenanceFromCompanion(await companion.text())
+            : await provenanceOfFile(file);
+    };
+
     // Processing metadata from VideoAnnotator v1.1.1
     let processingConfig: VideoAnnotatorCompleteResults['config'] | undefined;
     let processingTime: number | undefined;
@@ -724,6 +243,7 @@ export async function mergeAnnotationData(
                     if (personTracking.length === 0) { // Only if not from complete results
                         personTracking = await parseCOCOPersonData(detectedFile.file);
                         pipelinesFound.push('person_tracking');
+                        await record('person_tracking', detectedFile.file);
                     }
                     break;
 
@@ -731,6 +251,7 @@ export async function mergeAnnotationData(
                     if (faceAnalysis.length === 0) { // Only if not from complete results
                         faceAnalysis = await parseFaceAnalysis(detectedFile.file);
                         pipelinesFound.push('face_analysis');
+                        await record('face_analysis', detectedFile.file);
                     }
                     break;
 
@@ -750,23 +271,27 @@ export async function mergeAnnotationData(
                             openface3Faces = parser.parseOpenFace3Data(data);
                         }
                         pipelinesFound.push('openface3');
+                        await record('openface3_faces', detectedFile.file);
                     }
                     break;
 
                 case 'speech_recognition':
                     speechRecognition = await parseWebVTT(detectedFile.file);
                     pipelinesFound.push('speech_recognition');
+                    await record('speech_recognition', detectedFile.file);
                     break;
 
                 case 'speaker_diarization':
                     speakerDiarization = await parseRTTM(detectedFile.file);
                     pipelinesFound.push('speaker_diarization');
+                    await record('speaker_diarization', detectedFile.file);
                     break;
 
                 case 'scene_detection':
                     if (sceneDetection.length === 0) { // Only if not from complete results
                         sceneDetection = await parseSceneDetection(detectedFile.file);
                         pipelinesFound.push('scene_detection');
+                        await record('scene_detection', detectedFile.file);
                     }
                     break;
 
@@ -774,6 +299,7 @@ export async function mergeAnnotationData(
                     if (vlmAnnotations.length === 0) {
                         vlmAnnotations = await parseVlmAnnotations(detectedFile.file);
                         pipelinesFound.push('vlm_annotation');
+                        await record('vlm_annotations', detectedFile.file);
                     }
                     break;
 
@@ -781,8 +307,12 @@ export async function mergeAnnotationData(
                     if (elanGroundTruth.length === 0) {
                         elanGroundTruth = await parseElanFile(detectedFile.file);
                         pipelinesFound.push('elan_ground_truth');
+                        provenance.elan_ground_truth = { kind: 'ground_truth', fileName: detectedFile.file.name };
                     }
                     break;
+
+                case 'provenance':
+                    break; // read with the output it describes
 
                 case 'unknown':
                     warnings.push(`Could not determine type of file: ${detectedFile.file.name}`);
@@ -817,6 +347,8 @@ export async function mergeAnnotationData(
             total_duration: totalDuration
         }
     };
+
+    if (Object.keys(provenance).length > 0) data.provenance = provenance;
 
     // Add pipeline data if available
     if (personTracking.length > 0) {
@@ -868,104 +400,4 @@ export async function mergeAnnotationData(
             processingTime: totalProcessingTime
         }
     };
-}
-
-/**
- * Batch detect file types for multiple files
- */
-export async function batchDetectFileTypes(files: File[]): Promise<DetectedFile[]> {
-    const results = await Promise.all(
-        files.map(file => detectFileType(file))
-    );
-
-    // Sort by confidence (highest first)
-    return results.sort((a, b) => b.confidence - a.confidence);
-}
-
-/**
- * Validates that required files are present
- */
-export function validateFileSet(detectedFiles: DetectedFile[]): {
-    isValid: boolean;
-    missing: string[];
-    suggestions: string[];
-} {
-    const types = new Set(detectedFiles.map(f => f.type));
-    const missing: string[] = [];
-    const suggestions: string[] = [];
-
-    if (!types.has('video')) {
-        missing.push('Video file');
-        suggestions.push('Add a video file (.mp4, .webm, .avi, .mov)');
-    }
-
-    const hasPipelineData = types.has('person_tracking') ||
-        types.has('speech_recognition') ||
-        types.has('speaker_diarization') ||
-        types.has('scene_detection') ||
-        types.has('vlm_annotation') ||
-        types.has('face_analysis') ||
-        types.has('complete_results');
-
-    if (!hasPipelineData) {
-        missing.push('Pipeline data');
-        suggestions.push('Add at least one annotation file (.json for tracking/scenes, .vtt for speech, .rttm for speakers)');
-    }
-
-    return {
-        isValid: missing.length === 0,
-        missing,
-        suggestions
-    };
-}
-
-/**
- * Gets summary of detected files for UI display
- */
-export function getFilesSummary(detectedFiles: DetectedFile[]): {
-    video?: string;
-    audio?: string;
-    pipelines: Array<{ name: string; file: string; confidence: number }>;
-    unknown: string[];
-} {
-    const summary: {
-        video?: string;
-        audio?: string;
-        pipelines: Array<{ name: string; file: string; confidence: number }>;
-        unknown: string[];
-    } = {
-        pipelines: [],
-        unknown: []
-    };
-
-    for (const detected of detectedFiles) {
-        switch (detected.type) {
-            case 'video':
-                summary.video = detected.file.name;
-                break;
-            case 'audio':
-                summary.audio = detected.file.name;
-                break;
-            case 'person_tracking':
-            case 'speech_recognition':
-            case 'speaker_diarization':
-            case 'scene_detection':
-            case 'vlm_annotation':
-            case 'elan_ground_truth':
-            case 'face_analysis':
-            case 'openface3_faces':
-            case 'complete_results':
-                summary.pipelines.push({
-                    name: detected.pipeline || detected.type,
-                    file: detected.file.name,
-                    confidence: detected.confidence
-                });
-                break;
-            case 'unknown':
-                summary.unknown.push(detected.file.name);
-                break;
-        }
-    }
-
-    return summary;
 }

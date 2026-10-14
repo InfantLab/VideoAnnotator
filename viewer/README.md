@@ -9,7 +9,7 @@
 [![Vite 7](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Bun 1.x](https://img.shields.io/badge/Bun-1.x-000000?logo=bun&logoColor=white)](https://bun.sh/)
 [![Vitest](https://img.shields.io/badge/Tests-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
-[![CI Tests](https://github.com/InfantLab/video-annotation-viewer/actions/workflows/tests.yml/badge.svg)](https://github.com/InfantLab/video-annotation-viewer/actions/workflows/tests.yml)
+[![CI](https://github.com/InfantLab/VideoAnnotator/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/InfantLab/VideoAnnotator/actions/workflows/ci-cd.yml)
 [![codecov](https://codecov.io/gh/InfantLab/video-annotation-viewer/branch/main/graph/badge.svg)](https://codecov.io/gh/InfantLab/video-annotation-viewer)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -96,16 +96,16 @@ Video Annotation Viewer is a sophisticated web-based application designed for re
 
 ### Start the App
 
-**Option A — bundled with VideoAnnotator (recommended, zero config):** if you `pip install videoannotator[all]` and run `videoannotator serve`, the viewer is already included at `http://localhost:18011/viewer`. Open that URL — no separate install or server setup needed for the viewer itself.
+**Option A — bundled with VideoAnnotator (recommended, zero config):** if you `pip install videoannotator[all]` and run `videoannotator server`, the viewer is already included at `http://127.0.0.1:18011/viewer`. Open that URL — no separate install or server setup needed for the viewer itself.
 
-**Option B — run this repo standalone:**
+**Option B — run the viewer standalone:**
 ```bash
-git clone https://github.com/InfantLab/video-annotation-viewer.git
-cd video-annotation-viewer
-bun install        # or npm install
-bun run dev         # or npm run dev
+git clone https://github.com/InfantLab/VideoAnnotator.git
+cd VideoAnnotator/viewer
+bun install
+bun run dev
 ```
-This starts the viewer at `http://localhost:19011`. Demo Mode and Load Your Own Data work immediately with no other setup. **Create New Annotation Jobs** additionally requires a running VideoAnnotator server — see [Connect to VideoAnnotator API](#connect-to-videoannotator-api) below.
+This starts the viewer at `http://127.0.0.1:19011`. Demo Mode and Load Your Own Data work immediately with no other setup. **Create New Annotation Jobs** additionally requires a running VideoAnnotator server — see [Connect to VideoAnnotator API](#connect-to-videoannotator-api) below.
 
 ### Demo Mode
 1. Open the application
@@ -186,20 +186,17 @@ SPEAKER filename 1 3.80 1.50 <NA> <NA> SPEAKER_01 <NA> <NA>
 ### Local Development
 ```bash
 # Clone the repository
-git clone https://github.com/InfantLab/video-annotation-viewer.git
-cd video-annotation-viewer
+git clone https://github.com/InfantLab/VideoAnnotator.git
+cd VideoAnnotator/viewer
 
 # Install dependencies
 bun install
-# or npm install
 
 # Start development server
 bun run dev
-# or npm run dev
 
 # Build for production
 bun run build
-# or npm run build
 ```
 
 ### Project Structure
@@ -299,7 +296,7 @@ Comprehensive documentation is available in the [`docs/`](./docs/) directory:
 
 This project is part of the InfantLab research ecosystem. For contributions, issues, or feature requests:
 
-1. Check the [GitHub repository](https://github.com/InfantLab/video-annotation-viewer)
+1. Check the [GitHub repository](https://github.com/InfantLab/VideoAnnotator)
 2. Review existing issues and feature requests
 3. Follow the project's coding standards and testing requirements
 
@@ -330,7 +327,7 @@ DOI: 10.5281/zenodo.16948764
 **For Questions:** Please contact the developers at <infantologist@gmail.com>
 
 **For Bug Reports:** Please raise a GitHub issue at:  
-https://github.com/InfantLab/video-annotation-viewer/issues
+https://github.com/InfantLab/VideoAnnotator/issues
 
 **For VideoAnnotator Questions:** Visit the main VideoAnnotator repository:  
 https://github.com/InfantLab/VideoAnnotator

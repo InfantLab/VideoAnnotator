@@ -144,16 +144,16 @@ sync:
 
 # Docker commands
 docker-build:
-	docker build -f Dockerfile.cpu -t videoannotator:cpu .
+	docker build -t videoannotator .
 
 docker-build-gpu:
-	docker build -f Dockerfile.gpu -t videoannotator:gpu .
+	docker build --build-arg EXTRAS=all -t videoannotator:all .
 
 docker-run:
-	docker run --rm -p 18011:18011 -v $(PWD)/data:/app/data -v $(PWD)/output:/app/output -v $(PWD)/database:/app/database -v $(PWD)/logs:/app/logs videoannotator:cpu
+	docker run --rm -p 18011:18011 -v $(PWD)/data:/app/data -v $(PWD)/output:/app/output -v $(PWD)/database:/app/database -v $(PWD)/logs:/app/logs videoannotator
 
 docker-run-gpu:
-	docker run --gpus all --rm -p 18011:18011 -v $(PWD)/data:/app/data -v $(PWD)/output:/app/output -v $(PWD)/database:/app/database -v $(PWD)/logs:/app/logs videoannotator:gpu
+	docker run --gpus all --rm -p 18011:18011 -v $(PWD)/data:/app/data -v $(PWD)/output:/app/output -v $(PWD)/database:/app/database -v $(PWD)/logs:/app/logs videoannotator:all
 
 docker-dev:
 	docker compose up --build

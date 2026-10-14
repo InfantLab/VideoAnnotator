@@ -3,11 +3,17 @@
 from collections.abc import Iterator
 
 from videoannotator.storage.manager import get_storage_provider
-from videoannotator.storage.providers.base import ArtifactType, JobArtifact
+from videoannotator.storage.providers.base import (
+    ArtifactType,
+    JobArtifact,
+    StorageProvider,
+)
 
 
 def list_job_artifacts(
-    job_id: str, include_types: list[ArtifactType] | None = None
+    job_id: str,
+    include_types: list[ArtifactType] | None = None,
+    provider: StorageProvider | None = None,
 ) -> Iterator[JobArtifact]:
     """List artifacts for a specific job.
 
@@ -19,14 +25,16 @@ def list_job_artifacts(
     Returns:
         Iterator[JobArtifact]: Iterator of artifact objects.
     """
-    provider = get_storage_provider()
+    provider = provider or get_storage_provider()
 
     for artifact in provider.list_files(job_id):
         if include_types is None or artifact.artifact_type in include_types:
             yield artifact
 
 
-def get_annotation_artifacts(job_id: str) -> list[JobArtifact]:
+def get_annotation_artifacts(
+    job_id: str, provider: StorageProvider | None = None
+) -> list[JobArtifact]:
     """Get all relevant artifacts for a job, including source video.
 
     Args:
@@ -44,5 +52,6 @@ def get_annotation_artifacts(job_id: str) -> list[JobArtifact]:
                 ArtifactType.LOG,
                 ArtifactType.VIDEO,
             ],
+            provider=provider,
         )
     )

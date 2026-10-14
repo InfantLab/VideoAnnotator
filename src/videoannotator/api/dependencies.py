@@ -32,16 +32,9 @@ async def get_current_user(
     token_info = token_manager.validate_token(token)
 
     if not token_info:
-        # Fallback for development tokens
-        if token in ["dev-token", "test-token"]:
-            return {
-                "id": "test-user-123",
-                "username": "test_user",
-                "email": "test@example.com",
-                "is_active": True,
-                "scopes": ["read", "write", "debug"],
-            }
-
+        # No hard-coded tokens: "dev-token"/"test-token" used to be accepted here,
+        # on any server, auth required or not. Use AUTH_REQUIRED=false (or
+        # `videoannotator server --dev`) for local development instead.
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",

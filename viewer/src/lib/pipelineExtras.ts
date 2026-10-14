@@ -23,6 +23,7 @@ export type PipelineCardMode =
   | 'selectable'
   | 'install'
   | 'installing'
+  | 'restoring'
   | 'restart'
   | 'setup'
   | 'unavailable';
@@ -37,6 +38,9 @@ export function pipelineCardMode(pipeline: PipelineDescriptor): PipelineCardMode
       return 'install';
     case 'installing':
       return 'installing';
+    case 'restoring':
+      // Installed before the server's container was recreated (VideoAnnotator spec 024).
+      return 'restoring';
     case 'restart_required':
       return 'restart';
     case 'needs_setup':
@@ -50,6 +54,7 @@ export function pipelineCardMode(pipeline: PipelineDescriptor): PipelineCardMode
 export const PIPELINE_CARD_BADGE: Record<Exclude<PipelineCardMode, 'selectable'>, string> = {
   install: 'Not installed',
   installing: 'Installing',
+  restoring: 'Restoring',
   restart: 'Restart needed',
   setup: 'Needs setup',
   unavailable: 'Not available'
@@ -68,6 +73,7 @@ export function isPipelineSelectable(pipeline: PipelineDescriptor): boolean {
 const NOT_READY_FALLBACK: Record<Exclude<PipelineCardMode, 'selectable'>, string> = {
   install: "it isn't installed",
   installing: "it's still installing",
+  restoring: "it's being restored after an update or restart",
   restart: 'it needs a server restart',
   setup: 'it needs setup',
   unavailable: "the server says it isn't available"

@@ -48,6 +48,6 @@ Superseded roadmaps, QA checklists, implementation logs, and the archived standa
 ## 🔗 **External References**
 
 - **[VideoAnnotator Repository](https://github.com/InfantLab/VideoAnnotator)** - Processing pipeline for generating annotation data
-- **[Project Repository](https://github.com/InfantLab/video-annotation-viewer)** - Main project repository and issue tracking
+- **[Project Repository](https://github.com/InfantLab/VideoAnnotator/tree/master/viewer)** - Main project repository and issue tracking
 - **[Main README](../README.md)** - Project overview and getting started guide
-- **[GitHub Issues](https://github.com/InfantLab/video-annotation-viewer/issues)** - Bug reports and feature requests
+- **[GitHub Issues](https://github.com/InfantLab/VideoAnnotator/issues)** - Bug reports and feature requests

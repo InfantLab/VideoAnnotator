@@ -14,6 +14,8 @@ export interface IngestDirectory {
   path: string;
   /** Videos directly inside this folder; not recursive. */
   video_count: number;
+  /** Videos here or a few levels below (spec 022); absent on older servers. */
+  has_videos?: boolean;
 }
 
 export interface IngestVideo {
@@ -38,6 +40,8 @@ export interface IngestBrowseResponse {
 export interface IngestRequest {
   path: string;
   recursive?: boolean;
+  /** Spec 022: only these videos, as paths relative to `path`. Omit for the whole folder. */
+  files?: string[];
   selected_pipelines?: string[];
   config?: Record<string, unknown>;
   batch_id?: string;
@@ -58,6 +62,52 @@ export interface IngestResponse {
   total: number;
   created: string[];
   skipped: IngestSkipped[];
+  /** The run's results folder (spec 022); absent on older servers. */
+  results_folder?: FolderRef | null;
+}
+
+/** A location, and the same location as the researcher's own machine shows it. */
+export interface FolderRef {
+  path: string;
+  /** Differs from `path` under Docker, where the server sees `/results/...`. */
+  display_path: string;
+}
+
+/**
+ * What this browser may do with videos on the server's machine (spec 022),
+ * from `GET /api/v1/ingest/access`. The server decides "same machine" from how
+ * the request reached it; the viewer never guesses from its own URL.
+ */
+export interface IngestAccess {
+  same_machine: boolean;
+  can_read_in_place: boolean;
+  /** Why `can_read_in_place` is false, written for researchers. */
+  reason: string | null;
+  allowed_folders: FolderRef[];
+  results_root: FolderRef;
+  can_open_folders: boolean;
+  /** Where My folders starts: Home, Videos, Desktop, ... that exist (spec 022). */
+  places?: Place[];
+  /** The server runs in a container (spec 024); absent on older servers. */
+  in_container?: boolean;
+  /** Started by `videoannotator-start`, which shares folders and can stop sharing them (spec 024). */
+  managed_by_launcher?: boolean;
+  /** Folders shared with VideoAnnotator, present or not (spec 024); absent on older servers. */
+  shares?: Share[];
+}
+
+/** A folder shared with VideoAnnotator when it started (spec 024). */
+export interface Share extends FolderRef {
+  /** Found when VideoAnnotator last started; a missing one may be an unplugged drive. */
+  present: boolean;
+  /** Stop sharing was asked for: it stops when VideoAnnotator next starts. */
+  stop_requested: boolean;
+}
+
+export interface Place extends FolderRef {
+  /** "Home", "Videos", "Desktop", ... */
+  label: string;
+  has_videos: boolean;
 }
 
 /**

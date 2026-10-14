@@ -9,6 +9,7 @@ import { parseSceneDetection } from '../lib/parsers/scene'
 import { detectFileType, mergeAnnotationData } from '../lib/parsers/merger'
 import { apiClient } from '../api/client'
 import type { StandardAnnotationData } from '../types/annotations'
+import { STANDALONE_API_URL } from '../lib/apiConnection'
 
 export interface DemoDataPaths {
   video: string
@@ -193,8 +194,8 @@ const createVideoAnnotatorDebug = () => {
       return apiClient.getConfig()
     }
     return {
-      baseURL: 'http://localhost:18011',
-      token: 'dev-token'
+      baseURL: STANDALONE_API_URL,
+      token: ''
     }
   }
 

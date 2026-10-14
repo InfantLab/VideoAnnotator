@@ -8,6 +8,7 @@ import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { parseApiError } from '@/lib/errorHandling';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import { isStaleBuildError } from '@/lib/staleBuild';
 
 interface ErrorBoundaryProps {
     children: ReactNode;
@@ -83,11 +84,18 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             }
 
             // Default fallback UI with ErrorDisplay
-            const parsedError = parseApiError({
-                error: this.state.error.message,
-                error_code: 'REACT_ERROR',
-                hint: 'Try refreshing the page or clearing your browser cache. If the problem persists, please report this issue.',
-            });
+            const staleBuild = isStaleBuildError(this.state.error);
+            const parsedError = staleBuild
+                ? parseApiError({
+                      error: 'VideoAnnotator was updated since this page was opened.',
+                      error_code: 'VIEWER_UPDATED',
+                      hint: 'Reload the page to get the new version. Your jobs and results are not affected.',
+                  })
+                : parseApiError({
+                      error: this.state.error.message,
+                      error_code: 'REACT_ERROR',
+                      hint: 'Try refreshing the page or clearing your browser cache. If the problem persists, please report this issue.',
+                  });
 
             return (
                 <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
@@ -102,11 +110,19 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                         <ErrorDisplay error={parsedError} />
 
                         <div className="flex gap-3 justify-center">
-                            <Button onClick={this.resetError} variant="default">
+                            {/* Re-rendering can't fetch a file the server no longer has; only a reload gets the new build. */}
+                            <Button
+                                onClick={staleBuild ? () => window.location.reload() : this.resetError}
+                                variant="default"
+                            >
                                 <RefreshCw className="h-4 w-4 mr-2" />
-                                Try Again
+                                {staleBuild ? 'Reload' : 'Try Again'}
                             </Button>
-                            <Button onClick={() => window.location.href = '/'} variant="outline">
+                            {/* The viewer is served under /viewer/, not the server root. */}
+                            <Button
+                                onClick={() => (window.location.href = import.meta.env.BASE_URL)}
+                                variant="outline"
+                            >
                                 Go Home
                             </Button>
                         </div>

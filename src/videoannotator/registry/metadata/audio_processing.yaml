@@ -3,6 +3,13 @@ display_name: Audio Processing (Speech + Diarization)
 description: Transcribe speech with Whisper and perform speaker diarization using pyannote.audio producing WebVTT + RTTM outputs.
 pipeline_family: audio
 variant: whisper-pyannote
+# Short name 'audio' resolves here while this pipeline exists (spec 014).
+family_default: true
+# Duplicates speech_recognition + speaker_diarization (pipeline review, v1.6.0).
+# Kept running for existing configs; not listed; removed in v1.7.0.
+deprecated:
+  removal_version: "1.7.0"
+  replacement: [speech_recognition, speaker_diarization]
 module_path: videoannotator.pipelines.audio_processing:AudioPipeline
 requires_extras: [audio]
 tasks:
@@ -16,8 +23,10 @@ capabilities:
 outputs:
   - format: WebVTT
     types: [transcript]
+    file: speech_recognition.vtt
   - format: RTTM
     types: [speaker_turns]
+    file: speaker_diarization.rttm
 config_schema:
   whisper_model:
     type: string
@@ -58,6 +67,10 @@ requires_setup:
     name: pyannote/segmentation-3.0
     description: Accept the pyannote/segmentation-3.0 licence on Hugging Face too; speaker-diarization-3.1 uses it.
     help_url: https://huggingface.co/pyannote/segmentation-3.0
+  - kind: licence
+    name: pyannote/speaker-diarization-community-1
+    description: Accept the pyannote/speaker-diarization-community-1 licence too; pyannote.audio 4 loads part of every diarization pipeline (PLDA) from it, even with speaker-diarization-3.1.
+    help_url: https://huggingface.co/pyannote/speaker-diarization-community-1
 weights:
   - id: base
     approx_mb: 140

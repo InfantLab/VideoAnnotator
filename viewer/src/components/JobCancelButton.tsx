@@ -71,16 +71,18 @@ export function JobCancelButton({
                 className={className}
                 onClick={() => setShowDialog(true)}
                 disabled={isLoading || jobStatus === 'cancelling'}
+                aria-label={size === 'icon' ? 'Cancel job' : undefined}
+                title={size === 'icon' ? 'Cancel job' : undefined}
             >
                 {isLoading || jobStatus === 'cancelling' ? (
                     <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Cancelling...
+                        <Loader2 className={`${size === 'icon' ? '' : 'mr-2 '}h-4 w-4 animate-spin`} />
+                        {size !== 'icon' && 'Cancelling...'}
                     </>
                 ) : (
                     <>
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Cancel Job
+                        <XCircle className={`${size === 'icon' ? '' : 'mr-2 '}h-4 w-4`} />
+                        {size !== 'icon' && 'Cancel Job'}
                     </>
                 )}
             </Button>

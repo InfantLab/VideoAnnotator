@@ -24,8 +24,10 @@ from videoannotator.exporters.native_formats import (
     export_coco_json,
     validate_coco_json,
 )
-from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.pipelines.base_pipeline import BasePipeline, FrameFailures
+from videoannotator.provenance import weights_ref
 from videoannotator.utils.person_identity import PersonIdentityManager
+from videoannotator.utils.torch_settings import restored_torch_settings
 from videoannotator.version import __version__
 
 logger = logging.getLogger(__name__)
@@ -84,7 +86,7 @@ def _lazy_import_openface():
         # openface's multitask_model calls cv2.cvtColor without importing cv2,
         # so every predict() raised NameError and AU/emotion/gaze were dropped.
         if not hasattr(multitask_model, "cv2"):
-            multitask_model.cv2 = cv2  # type: ignore[attr-defined]
+            multitask_model.cv2 = cv2
 
         OPENFACE3_AVAILABLE = True
         logger.info("OpenFace 3.0 successfully imported (lazy)")
@@ -121,9 +123,29 @@ def _weight_path(filename: str) -> str:
     return hf_hub_download(OPENFACE_WEIGHTS_REPO, filename)
 
 
+def _skip_retinaface_backbone_pretrain() -> None:
+    """Don't load RetinaFace's ImageNet backbone from `./weights/`.
+
+    openface-test's RetinaFace loads `./weights/mobilenetV1X0.25_pretrain.tar`,
+    relative to the working directory, when `cfg_mnet["pretrain"]` is set (it is),
+    so OpenFace failed outside a source checkout, which happens to commit that
+    file. FaceDetector then loads the full Alignment_RetinaFace checkpoint over
+    those weights anyway, so inference doesn't need it (outputs verified
+    unchanged, spec 016).
+    """
+    from openface.Pytorch_Retinaface.data import cfg_mnet
+
+    cfg_mnet["pretrain"] = False
+
+
 @contextlib.contextmanager
 def _without_star_training_setup() -> Iterator[None]:
     """Build a LandmarkDetector without STAR's training-time setup.
+
+    STAR's `set_environment()` also changes process-wide torch settings:
+    `cudnn.benchmark` on (convolution algorithms chosen by timing, so results
+    vary between runs and leak into every later pipeline), denormals flushed
+    to zero, and autograd anomaly detection on. They are put back.
 
     Every LandmarkDetector calls `Base.init_instance()`, which adds a console
     and a log.txt handler to the *root* logger and sets it to NOTSET (so each
@@ -139,11 +161,12 @@ def _without_star_training_setup() -> Iterator[None]:
     root = logging.getLogger()
     handlers, level = list(root.handlers), root.level
     init_instance = Base.init_instance
-    Base.init_instance = lambda self: None  # type: ignore[method-assign]
+    Base.init_instance = lambda self: None
     try:
-        yield
+        with restored_torch_settings():
+            yield
     finally:
-        Base.init_instance = init_instance  # type: ignore[method-assign]
+        Base.init_instance = init_instance
         for handler in root.handlers[:]:
             if handler not in handlers:
                 root.removeHandler(handler)
@@ -245,6 +268,10 @@ class OpenFace3Pipeline(BasePipeline):
             face_detector_path = self.config.get("model_path") or _weight_path(
                 "Alignment_RetinaFace.pth"
             )
+            self._model_refs.append(
+                weights_ref("RetinaFace", "openface", face_detector_path)
+            )
+            _skip_retinaface_backbone_pretrain()
             self.face_detector = FaceDetector(
                 model_path=face_detector_path,
                 device=device,
@@ -263,6 +290,9 @@ class OpenFace3Pipeline(BasePipeline):
             # Configure device IDs for CUDA
             device_ids = [0] if device == "cuda" else [-1]
 
+            self._model_refs.append(
+                weights_ref(f"STAR {model_type}", "openface", landmark_model_path)
+            )
             with _without_star_training_setup():
                 self.landmark_detector = LandmarkDetector(
                     model_path=landmark_model_path,
@@ -280,6 +310,9 @@ class OpenFace3Pipeline(BasePipeline):
                 ]
             ):
                 mtl_model_path = _weight_path("MTL_backbone.pth")
+                self._model_refs.append(
+                    weights_ref("MTL backbone", "openface", mtl_model_path)
+                )
                 self.multitask_predictor = MultitaskPredictor(
                     model_path=mtl_model_path, device=device
                 )
@@ -561,6 +594,7 @@ class OpenFace3Pipeline(BasePipeline):
         categories: list[dict[str, Any]] = self._get_face_categories()
 
         annotation_id = 1
+        frame_failures = FrameFailures(self.logger)
 
         # Process frames
         for frame_idx, frame_num in enumerate(frames_to_process):
@@ -615,10 +649,12 @@ class OpenFace3Pipeline(BasePipeline):
                     annotation_id += 1
 
             except Exception as e:
-                self.logger.error(f"Error processing frame {frame_num}: {e}")
+                frame_failures.failed_on(frame_num, e)
                 continue
+            frame_failures.succeeded()
 
         cap.release()
+        frame_failures.check()
 
         # Create COCO dataset
         coco_dataset: dict[str, Any] = {
@@ -788,8 +824,6 @@ class OpenFace3Pipeline(BasePipeline):
 
                 face_results.append(face_data)
 
-        except Exception as e:
-            self.logger.error(f"Error processing frame at {timestamp:.2f}s: {e}")
         finally:
             # Clean up temporary file
             if temp_frame_path and os.path.exists(temp_frame_path):

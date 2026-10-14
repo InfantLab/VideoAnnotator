@@ -35,3 +35,17 @@ export function failedPipelinesOf(results: JobResults | null | undefined): Recor
   });
   return failed;
 }
+
+const SERVER_OUTCOME_PREFIX = /^(Completed with errors|All pipelines failed)\.\s*/;
+
+/**
+ * Why a failed or partly failed job went wrong, short enough for a table row:
+ * the job's error_message without the server's outcome prefix (the status
+ * badge already says that), i.e. "pipeline: reason; pipeline: reason".
+ */
+export function jobErrorSummary(job: { status: string; error_message?: string | null }): string | null {
+  if (job.status !== 'failed' && !isCompletedWithErrors(job)) return null;
+  const message = job.error_message?.trim();
+  if (!message) return null;
+  return message.replace(SERVER_OUTCOME_PREFIX, '') || message;
+}

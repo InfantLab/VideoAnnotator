@@ -58,8 +58,9 @@ const useJobEvents = (jobId: string | undefined) => {
     
     return events.filter(event => {
       // Filter events related to this specific job
-      if (event.data?.job_id === jobId) return true;
-      if (event.data?.id === jobId) return true;
+      const data = event.data as { job_id?: unknown; id?: unknown } | null | undefined;
+      if (data?.job_id === jobId) return true;
+      if (data?.id === jobId) return true;
       
       // For job-specific event types, assume they're for the current job context
       if (['job.update', 'job.log', 'job.complete', 'job.error'].includes(event.type)) {

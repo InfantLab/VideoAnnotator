@@ -22,7 +22,7 @@ Provide a lightweight, consistent JSON structure for emotion-related outputs acr
 ```
 {
   "schema_version": 1,
-  "source_pipeline": "face_laion_clip",
+  "source_pipeline": "face_analysis",
   "media": {
     "type": "video",
     "path": "relative/or/logical/reference.mp4",
@@ -42,7 +42,7 @@ Provide a lightweight, consistent JSON structure for emotion-related outputs acr
     }
   },
   "metadata": {
-    "pipeline_variant": "laion-clip-face",
+    "pipeline_variant": "deepface",
     "generation_time": "2025-09-17T12:34:56Z"
   }
 }

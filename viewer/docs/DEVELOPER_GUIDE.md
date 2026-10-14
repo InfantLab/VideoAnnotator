@@ -84,20 +84,17 @@ node --version  # Should be 18+
 ### Getting Started
 ```bash
 # Clone the repository
-git clone https://github.com/InfantLab/video-annotation-viewer.git
-cd video-annotation-viewer
+git clone https://github.com/InfantLab/VideoAnnotator.git
+cd VideoAnnotator/viewer
 
 # Install dependencies
 bun install
-# or: npm install
 
 # Start development server
 bun run dev
-# or: npm run dev
 
 # Build for production
 bun run build
-# or: npm run build
 ```
 
 ### Available Scripts
@@ -511,16 +508,21 @@ export function useSSE(jobId?: string) {
 }
 ```
 
-#### Route Structure (v0.3.0)
+#### Route Structure (`src/App.tsx`)
 
 ```
-/                     - Main annotation viewer
-/create               - Job management layout
-/create/jobs          - List all jobs
-/create/jobs/:id      - Job detail page
-/create/new           - Job creation wizard
-/create/settings      - API configuration
-/create/datasets      - Dataset management
+/                     - Home: status, recent runs and their next step, first-run checklist
+/getting-started      - First-run guide
+/results              - Results kept on this computer (opened jobs, demos); /library redirects here
+/datasets             - Saved datasets: lists of videos to run jobs on (on the server)
+/prompts              - VLM prompt library; /workbench and /compare for prompt work
+/jobs                 - Jobs and runs (batches)
+/jobs/new             - Job creation wizard
+/jobs/:jobId          - Job detail page
+/batches/:batchId     - One run (batch) of jobs
+/settings             - Server connection and API key
+/viewer               - Annotation viewer (standalone: drop in files)
+/view/:jobId          - Annotation viewer for a server job
 ```
 
 #### Job Creation Workflow
@@ -565,4 +567,4 @@ git push origin feature/your-feature
 3. Add demo data if adding new parsers
 4. Follow semantic commit messages
 
-For questions or support, check the [GitHub repository](https://github.com/InfantLab/video-annotation-viewer) or contact the development team.
+For questions or support, check the [GitHub repository](https://github.com/InfantLab/VideoAnnotator) or contact the development team.

@@ -1,0 +1,741 @@
+{
+  "info": {
+    "description": "VideoAnnotator COCO Export",
+    "version": "1.5.0",
+    "year": 2025,
+    "contributor": "VideoAnnotator",
+    "date_created": "2025-01-01T00:00:00Z"
+  },
+  "licenses": [],
+  "images": [
+    {
+      "id": "demo_clip_frame_0",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000000.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 0,
+      "timestamp": 0.0
+    },
+    {
+      "id": "demo_clip_frame_14",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000014.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 14,
+      "timestamp": 0.9836296296296296
+    },
+    {
+      "id": "demo_clip_frame_28",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000028.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 28,
+      "timestamp": 1.9672592592592593
+    },
+    {
+      "id": "demo_clip_frame_42",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000042.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 42,
+      "timestamp": 2.950888888888889
+    },
+    {
+      "id": "demo_clip_frame_56",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000056.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 56,
+      "timestamp": 3.9345185185185185
+    },
+    {
+      "id": "demo_clip_frame_70",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000070.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 70,
+      "timestamp": 4.918148148148148
+    },
+    {
+      "id": "demo_clip_frame_84",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000084.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 84,
+      "timestamp": 5.901777777777778
+    },
+    {
+      "id": "demo_clip_frame_98",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000098.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 98,
+      "timestamp": 6.885407407407407
+    },
+    {
+      "id": "demo_clip_frame_112",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000112.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 112,
+      "timestamp": 7.869037037037037
+    },
+    {
+      "id": "demo_clip_frame_126",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000126.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 126,
+      "timestamp": 8.852666666666668
+    },
+    {
+      "id": "demo_clip_frame_140",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000140.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 140,
+      "timestamp": 9.836296296296297
+    },
+    {
+      "id": "demo_clip_frame_154",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000154.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 154,
+      "timestamp": 10.819925925925926
+    },
+    {
+      "id": "demo_clip_frame_168",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000168.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 168,
+      "timestamp": 11.803555555555556
+    },
+    {
+      "id": "demo_clip_frame_182",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000182.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 182,
+      "timestamp": 12.787185185185185
+    },
+    {
+      "id": "demo_clip_frame_196",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000196.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 196,
+      "timestamp": 13.770814814814814
+    },
+    {
+      "id": "demo_clip_frame_210",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000210.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 210,
+      "timestamp": 14.754444444444445
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": "demo_clip_frame_0",
+      "category_id": 100,
+      "bbox": [
+        0.0,
+        0.0,
+        639.0,
+        479.0
+      ],
+      "area": 306081.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 0.0,
+      "frame_number": 0,
+      "backend": "deepface",
+      "emotion": "sad",
+      "emotion_confidence": 0.9788892269134521,
+      "emotion_scores": {
+        "angry": 7.413685776391787e-10,
+        "disgust": 3.964320191562898e-13,
+        "fear": 0.0038293986581265926,
+        "happy": 0.017281197011470795,
+        "sad": 0.9788892269134521,
+        "surprise": 6.602939037686018e-15,
+        "neutral": 1.9383767835279286e-07
+      },
+      "age": 28.0,
+      "gender": "Man",
+      "gender_confidence": 0.8874655961990356,
+      "gender_scores": {
+        "Woman": 0.11253438144922256,
+        "Man": 0.8874655961990356
+      }
+    },
+    {
+      "id": 2,
+      "image_id": "demo_clip_frame_14",
+      "category_id": 100,
+      "bbox": [
+        204.0,
+        104.0,
+        121.0,
+        121.0
+      ],
+      "area": 14641.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 0.9836296296296296,
+      "frame_number": 14,
+      "backend": "deepface",
+      "emotion": "sad",
+      "emotion_confidence": 0.9524698853492737,
+      "emotion_scores": {
+        "angry": 0.045821741223335266,
+        "disgust": 1.0308807030668526e-13,
+        "fear": 0.0001356583379674703,
+        "happy": 4.1247938497690484e-05,
+        "sad": 0.9524698853492737,
+        "surprise": 0.00014301674673333764,
+        "neutral": 0.0013884607469663024
+      },
+      "age": 32.0,
+      "gender": "Man",
+      "gender_confidence": 0.5907554030418396,
+      "gender_scores": {
+        "Woman": 0.4092446267604828,
+        "Man": 0.5907554030418396
+      }
+    },
+    {
+      "id": 3,
+      "image_id": "demo_clip_frame_28",
+      "category_id": 100,
+      "bbox": [
+        0.0,
+        0.0,
+        639.0,
+        479.0
+      ],
+      "area": 306081.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 1.9672592592592593,
+      "frame_number": 28,
+      "backend": "deepface",
+      "emotion": "sad",
+      "emotion_confidence": 0.8323816061019897,
+      "emotion_scores": {
+        "angry": 6.676910743408371e-06,
+        "disgust": 2.0774864495365364e-08,
+        "fear": 0.07536417990922928,
+        "happy": 0.09195805341005325,
+        "sad": 0.8323816061019897,
+        "surprise": 8.46200180149026e-07,
+        "neutral": 0.0002886377915274352
+      },
+      "age": 35.0,
+      "gender": "Man",
+      "gender_confidence": 0.8166779279708862,
+      "gender_scores": {
+        "Woman": 0.18332207202911377,
+        "Man": 0.8166779279708862
+      }
+    },
+    {
+      "id": 4,
+      "image_id": "demo_clip_frame_42",
+      "category_id": 100,
+      "bbox": [
+        0.0,
+        0.0,
+        639.0,
+        479.0
+      ],
+      "area": 306081.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 2.950888888888889,
+      "frame_number": 42,
+      "backend": "deepface",
+      "emotion": "happy",
+      "emotion_confidence": 0.9980257153511047,
+      "emotion_scores": {
+        "angry": 8.155115938279778e-05,
+        "disgust": 1.7071492948161904e-06,
+        "fear": 0.0003541481855791062,
+        "happy": 0.9980257153511047,
+        "sad": 0.0005008283769711852,
+        "surprise": 1.4624423272380227e-07,
+        "neutral": 0.0010359081206843257
+      },
+      "age": 32.0,
+      "gender": "Man",
+      "gender_confidence": 0.8583273887634277,
+      "gender_scores": {
+        "Woman": 0.14167262613773346,
+        "Man": 0.8583273887634277
+      }
+    },
+    {
+      "id": 5,
+      "image_id": "demo_clip_frame_56",
+      "category_id": 100,
+      "bbox": [
+        0.0,
+        0.0,
+        639.0,
+        479.0
+      ],
+      "area": 306081.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 3.9345185185185185,
+      "frame_number": 56,
+      "backend": "deepface",
+      "emotion": "angry",
+      "emotion_confidence": 0.8188093304634094,
+      "emotion_scores": {
+        "angry": 0.8188093304634094,
+        "disgust": 4.870093107456341e-06,
+        "fear": 0.1799316257238388,
+        "happy": 0.0010244653094559908,
+        "sad": 0.00022873561829328537,
+        "surprise": 7.755376145723858e-07,
+        "neutral": 1.4226506550585327e-07
+      },
+      "age": 28.0,
+      "gender": "Man",
+      "gender_confidence": 0.9317874908447266,
+      "gender_scores": {
+        "Woman": 0.06821244955062866,
+        "Man": 0.9317874908447266
+      }
+    },
+    {
+      "id": 6,
+      "image_id": "demo_clip_frame_70",
+      "category_id": 100,
+      "bbox": [
+        0.0,
+        0.0,
+        639.0,
+        479.0
+      ],
+      "area": 306081.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 4.918148148148148,
+      "frame_number": 70,
+      "backend": "deepface",
+      "emotion": "sad",
+      "emotion_confidence": 0.7628934979438782,
+      "emotion_scores": {
+        "angry": 0.000893819727934897,
+        "disgust": 7.739064926681749e-07,
+        "fear": 0.23000842332839966,
+        "happy": 0.006192811764776707,
+        "sad": 0.7628934979438782,
+        "surprise": 6.149863111204468e-06,
+        "neutral": 4.480995357880602e-06
+      },
+      "age": 28.0,
+      "gender": "Man",
+      "gender_confidence": 0.9303743243217468,
+      "gender_scores": {
+        "Woman": 0.06962571293115616,
+        "Man": 0.9303743243217468
+      }
+    },
+    {
+      "id": 7,
+      "image_id": "demo_clip_frame_84",
+      "category_id": 100,
+      "bbox": [
+        0.0,
+        0.0,
+        639.0,
+        479.0
+      ],
+      "area": 306081.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 5.901777777777778,
+      "frame_number": 84,
+      "backend": "deepface",
+      "emotion": "fear",
+      "emotion_confidence": 0.7107493877410889,
+      "emotion_scores": {
+        "angry": 0.0027581839822232723,
+        "disgust": 1.947852251760196e-05,
+        "fear": 0.7107493877410889,
+        "happy": 0.004204543773084879,
+        "sad": 0.28205356001853943,
+        "surprise": 0.00012915808474645019,
+        "neutral": 8.580159192206338e-05
+      },
+      "age": 30.0,
+      "gender": "Man",
+      "gender_confidence": 0.9375945925712585,
+      "gender_scores": {
+        "Woman": 0.06240540370345116,
+        "Man": 0.9375945925712585
+      }
+    },
+    {
+      "id": 8,
+      "image_id": "demo_clip_frame_98",
+      "category_id": 100,
+      "bbox": [
+        0.0,
+        0.0,
+        639.0,
+        479.0
+      ],
+      "area": 306081.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 6.885407407407407,
+      "frame_number": 98,
+      "backend": "deepface",
+      "emotion": "fear",
+      "emotion_confidence": 0.4234669804573059,
+      "emotion_scores": {
+        "angry": 0.0006375092780217528,
+        "disgust": 7.282388196472311e-06,
+        "fear": 0.4234669804573059,
+        "happy": 0.2432234138250351,
+        "sad": 0.33228176832199097,
+        "surprise": 6.632180884480476e-05,
+        "neutral": 0.00031673393095843494
+      },
+      "age": 31.0,
+      "gender": "Man",
+      "gender_confidence": 0.9377724528312683,
+      "gender_scores": {
+        "Woman": 0.062227584421634674,
+        "Man": 0.9377724528312683
+      }
+    },
+    {
+      "id": 9,
+      "image_id": "demo_clip_frame_112",
+      "category_id": 100,
+      "bbox": [
+        0.0,
+        0.0,
+        639.0,
+        479.0
+      ],
+      "area": 306081.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 7.869037037037037,
+      "frame_number": 112,
+      "backend": "deepface",
+      "emotion": "happy",
+      "emotion_confidence": 0.8869628310203552,
+      "emotion_scores": {
+        "angry": 0.002023947425186634,
+        "disgust": 8.416262971877586e-06,
+        "fear": 0.10944543033838272,
+        "happy": 0.8869628310203552,
+        "sad": 0.0015336561482399702,
+        "surprise": 6.619212399527896e-06,
+        "neutral": 1.920063550642226e-05
+      },
+      "age": 30.0,
+      "gender": "Man",
+      "gender_confidence": 0.9161312580108643,
+      "gender_scores": {
+        "Woman": 0.08386877924203873,
+        "Man": 0.9161312580108643
+      }
+    },
+    {
+      "id": 10,
+      "image_id": "demo_clip_frame_126",
+      "category_id": 100,
+      "bbox": [
+        0.0,
+        0.0,
+        639.0,
+        479.0
+      ],
+      "area": 306081.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 8.852666666666668,
+      "frame_number": 126,
+      "backend": "deepface",
+      "emotion": "happy",
+      "emotion_confidence": 0.7069337964057922,
+      "emotion_scores": {
+        "angry": 0.0011022662511095405,
+        "disgust": 1.2849803852077457e-06,
+        "fear": 0.18524251878261566,
+        "happy": 0.7069337964057922,
+        "sad": 0.10671849548816681,
+        "surprise": 6.115241717452591e-07,
+        "neutral": 1.050289597515075e-06
+      },
+      "age": 29.0,
+      "gender": "Man",
+      "gender_confidence": 0.9373168349266052,
+      "gender_scores": {
+        "Woman": 0.06268320232629776,
+        "Man": 0.9373168349266052
+      }
+    },
+    {
+      "id": 11,
+      "image_id": "demo_clip_frame_140",
+      "category_id": 100,
+      "bbox": [
+        0.0,
+        0.0,
+        639.0,
+        479.0
+      ],
+      "area": 306081.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 9.836296296296297,
+      "frame_number": 140,
+      "backend": "deepface",
+      "emotion": "fear",
+      "emotion_confidence": 0.9582518935203552,
+      "emotion_scores": {
+        "angry": 4.06361541536171e-05,
+        "disgust": 1.0560736996012565e-07,
+        "fear": 0.9582518935203552,
+        "happy": 0.03784117102622986,
+        "sad": 0.003864062950015068,
+        "surprise": 5.15860449468164e-07,
+        "neutral": 1.6361680081899976e-06
+      },
+      "age": 31.0,
+      "gender": "Man",
+      "gender_confidence": 0.9315717816352844,
+      "gender_scores": {
+        "Woman": 0.06842811405658722,
+        "Man": 0.9315717816352844
+      }
+    },
+    {
+      "id": 12,
+      "image_id": "demo_clip_frame_154",
+      "category_id": 100,
+      "bbox": [
+        0.0,
+        0.0,
+        639.0,
+        479.0
+      ],
+      "area": 306081.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 10.819925925925926,
+      "frame_number": 154,
+      "backend": "deepface",
+      "emotion": "happy",
+      "emotion_confidence": 0.9440571665763855,
+      "emotion_scores": {
+        "angry": 1.0319730790797621e-05,
+        "disgust": 4.5520600622239726e-08,
+        "fear": 0.040864720940589905,
+        "happy": 0.9440571665763855,
+        "sad": 0.015040215104818344,
+        "surprise": 8.213733053707983e-07,
+        "neutral": 2.6732574042398483e-05
+      },
+      "age": 30.0,
+      "gender": "Man",
+      "gender_confidence": 0.9324578642845154,
+      "gender_scores": {
+        "Woman": 0.06754215061664581,
+        "Man": 0.9324578642845154
+      }
+    },
+    {
+      "id": 13,
+      "image_id": "demo_clip_frame_168",
+      "category_id": 100,
+      "bbox": [
+        0.0,
+        0.0,
+        639.0,
+        479.0
+      ],
+      "area": 306081.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 11.803555555555556,
+      "frame_number": 168,
+      "backend": "deepface",
+      "emotion": "happy",
+      "emotion_confidence": 0.9785498976707458,
+      "emotion_scores": {
+        "angry": 1.1749805707950145e-05,
+        "disgust": 2.173535733618337e-07,
+        "fear": 0.016818951815366745,
+        "happy": 0.9785498976707458,
+        "sad": 0.004532124847173691,
+        "surprise": 1.3627615089717438e-06,
+        "neutral": 8.576783147873357e-05
+      },
+      "age": 30.0,
+      "gender": "Man",
+      "gender_confidence": 0.9315951466560364,
+      "gender_scores": {
+        "Woman": 0.06840483099222183,
+        "Man": 0.9315951466560364
+      }
+    },
+    {
+      "id": 14,
+      "image_id": "demo_clip_frame_182",
+      "category_id": 100,
+      "bbox": [
+        0.0,
+        0.0,
+        639.0,
+        479.0
+      ],
+      "area": 306081.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 12.787185185185185,
+      "frame_number": 182,
+      "backend": "deepface",
+      "emotion": "fear",
+      "emotion_confidence": 0.5216870903968811,
+      "emotion_scores": {
+        "angry": 0.0004915815079584718,
+        "disgust": 8.753255315241404e-06,
+        "fear": 0.5216870903968811,
+        "happy": 0.47480669617652893,
+        "sad": 0.002988117281347513,
+        "surprise": 3.917909907613648e-06,
+        "neutral": 1.3886633496440481e-05
+      },
+      "age": 32.0,
+      "gender": "Man",
+      "gender_confidence": 0.9353057742118835,
+      "gender_scores": {
+        "Woman": 0.06469419598579407,
+        "Man": 0.9353057742118835
+      }
+    },
+    {
+      "id": 15,
+      "image_id": "demo_clip_frame_196",
+      "category_id": 100,
+      "bbox": [
+        449.0,
+        123.0,
+        190.0,
+        224.0
+      ],
+      "area": 42560.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 13.770814814814814,
+      "frame_number": 196,
+      "backend": "deepface",
+      "emotion": "neutral",
+      "emotion_confidence": 0.770911455154419,
+      "emotion_scores": {
+        "angry": 0.0035939407534897327,
+        "disgust": 1.571630647845268e-08,
+        "fear": 0.049735285341739655,
+        "happy": 0.08064909279346466,
+        "sad": 0.09502137452363968,
+        "surprise": 8.884380804374814e-05,
+        "neutral": 0.770911455154419
+      },
+      "age": 27.0,
+      "gender": "Man",
+      "gender_confidence": 0.9770122766494751,
+      "gender_scores": {
+        "Woman": 0.02298770472407341,
+        "Man": 0.9770122766494751
+      }
+    },
+    {
+      "id": 16,
+      "image_id": "demo_clip_frame_210",
+      "category_id": 100,
+      "bbox": [
+        401.0,
+        115.0,
+        238.0,
+        238.0
+      ],
+      "area": 56644.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 14.754444444444445,
+      "frame_number": 210,
+      "backend": "deepface",
+      "emotion": "happy",
+      "emotion_confidence": 0.9977737665176392,
+      "emotion_scores": {
+        "angry": 3.097899389103986e-05,
+        "disgust": 1.8502970533518237e-07,
+        "fear": 5.68320756428875e-05,
+        "happy": 0.9977737665176392,
+        "sad": 0.0006431788788177073,
+        "surprise": 0.0009131593978963792,
+        "neutral": 0.0005819969810545444
+      },
+      "age": 24.0,
+      "gender": "Man",
+      "gender_confidence": 0.9739001393318176,
+      "gender_scores": {
+        "Woman": 0.026099851354956627,
+        "Man": 0.9739001393318176
+      }
+    }
+  ],
+  "categories": [
+    {
+      "id": 100,
+      "name": "face",
+      "supercategory": "person"
+    }
+  ]
+}

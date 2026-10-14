@@ -13,6 +13,7 @@ import {
 
 import { TokenSetup } from '@/components/TokenSetup';
 import { ServerDiagnostics } from '@/components/ServerDiagnostics';
+import { VideosAndResultsCard } from '@/components/VideosAndResultsCard';
 import { GPUInfo } from '@/components/GPUInfo';
 import { WorkerInfo } from '@/components/WorkerInfo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +37,7 @@ import {
 } from '@/hooks/usePipelineCatalog';
 
 import { RestartRequiredBanner } from '@/components/RestartRequiredBanner';
+import { TokenHelp } from '@/components/TokenHelp';
 
 import vavIcon from '@/assets/v-a-v.icon.png';
 
@@ -360,6 +362,8 @@ const CreateSettings = () => {
             </CardContent>
           </Card>
 
+          <VideosAndResultsCard />
+
           {/* Server Diagnostics */}
           <ServerDiagnostics className="mt-6" defaultOpen={false} />
 
@@ -444,15 +448,10 @@ const CreateSettings = () => {
                 </div>
 
                 <div>
-                  <h4 className="font-medium">Getting Your Token</h4>
-                  <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground mt-2">
-                    <li>Contact your VideoAnnotator server administrator</li>
-                    <li>
-                      For development, use the default token:
-                      <code className="bg-muted px-1 rounded">dev-token</code>
-                    </li>
-                    <li>Check server documentation for token generation instructions</li>
-                  </ol>
+                  <h4 className="font-medium">Getting Your Key</h4>
+                  <div className="mt-2">
+                    <TokenHelp />
+                  </div>
                 </div>
 
                 <div>

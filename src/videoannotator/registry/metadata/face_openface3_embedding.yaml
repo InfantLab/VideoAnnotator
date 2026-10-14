@@ -15,6 +15,10 @@ capabilities:
 outputs:
   - format: JSON
     types: [embeddings]
+    file: openface3_analysis.json
+  - format: JSON
+    types: [face_features]
+    file: openface3_detailed.json
 config_schema:
   model_path:
     type: string

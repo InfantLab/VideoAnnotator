@@ -49,11 +49,15 @@ class SQLiteStorageBackend(StorageBackend):
 
         Args:
             database_path: Path to SQLite database file.
-                          Defaults to ./videoannotator.db in current directory.
+                          Defaults to the configured database (database_location).
             echo: Whether to log SQL queries (useful for debugging)
         """
         if database_path is None:
-            database_path = Path.cwd() / "videoannotator.db"
+            from videoannotator.database_location import (
+                database_path as configured_path,
+            )
+
+            database_path = configured_path()
 
         self.database_path = Path(database_path)
         # Ensure parent directory exists (common in tests using TemporaryDirectory)
@@ -135,7 +139,8 @@ class SQLiteStorageBackend(StorageBackend):
             raise
 
     def _ensure_batch_columns(self) -> None:
-        """Add jobs.batch_id/batch_name/dataset_id if this is an older database."""
+        """Add columns newer than an existing database: jobs.batch_id/
+        batch_name/dataset_id (spec 008), pipeline_results.provenance (017)."""
         from sqlalchemy import text
 
         with self.engine.connect() as conn:
@@ -145,11 +150,21 @@ class SQLiteStorageBackend(StorageBackend):
                 ("batch_id", "VARCHAR"),
                 ("batch_name", "VARCHAR"),
                 ("dataset_id", "VARCHAR"),
+                ("rerun_of", "VARCHAR"),
             ):
                 if column in existing_cols:
                     continue
                 self.logger.info(f"[MIGRATION] Adding jobs.{column} column")
                 conn.execute(text(f"ALTER TABLE jobs ADD COLUMN {column} {ddl}"))
+            # spec 017
+            result = conn.execute(text("PRAGMA table_info('pipeline_results')"))
+            if "provenance" not in {row[1] for row in result}:
+                self.logger.info(
+                    "[MIGRATION] Adding pipeline_results.provenance column"
+                )
+                conn.execute(
+                    text("ALTER TABLE pipeline_results ADD COLUMN provenance JSON")
+                )
             conn.execute(
                 text("CREATE INDEX IF NOT EXISTS ix_jobs_batch_id ON jobs (batch_id)")
             )
@@ -176,6 +191,7 @@ class SQLiteStorageBackend(StorageBackend):
             batch_id=batch_job.batch_id,
             batch_name=batch_job.batch_name,
             dataset_id=batch_job.dataset_id,
+            rerun_of=batch_job.rerun_of,
         )
 
     def _db_job_to_batch_job(self, db_job: Job) -> "BatchJob":
@@ -202,6 +218,7 @@ class SQLiteStorageBackend(StorageBackend):
             batch_id=db_job.batch_id,
             batch_name=db_job.batch_name,
             dataset_id=db_job.dataset_id,
+            rerun_of=db_job.rerun_of,
         )
 
         # Load pipeline results
@@ -217,6 +234,7 @@ class SQLiteStorageBackend(StorageBackend):
                 annotation_count=result.annotation_count,
                 output_file=Path(result.output_file) if result.output_file else None,
                 error_message=result.error_message,
+                provenance=result.provenance,
             )
             batch_job.pipeline_results[result.pipeline_name] = pipeline_result
 
@@ -241,6 +259,7 @@ class SQLiteStorageBackend(StorageBackend):
                     existing.progress_percentage = round(job.progress_percentage)
                     existing.batch_id = job.batch_id
                     existing.dataset_id = job.dataset_id
+                    existing.rerun_of = job.rerun_of
                     # v1.3.0: Update storage_path if present
                     if job.storage_path:
                         existing.storage_path = str(job.storage_path)
@@ -264,6 +283,7 @@ class SQLiteStorageBackend(StorageBackend):
                             if result.output_file
                             else None,
                             error_message=result.error_message,
+                            provenance=result.provenance,
                         )
                         session.add(db_result)
 
@@ -289,6 +309,7 @@ class SQLiteStorageBackend(StorageBackend):
                             if result.output_file
                             else None,
                             error_message=result.error_message,
+                            provenance=result.provenance,
                         )
                         session.add(db_result)
 
@@ -408,6 +429,16 @@ class SQLiteStorageBackend(StorageBackend):
             self.logger.error(f"[ERROR] Failed to list jobs: {e}")
             return []
 
+    def list_reruns(self, job_id: str) -> list[str]:
+        """Jobs that run `job_id` again, oldest first (spec 019)."""
+        try:
+            with self.SessionLocal() as session:
+                query = session.query(Job.id).filter(Job.rerun_of == job_id)
+                return [row[0] for row in query.order_by(Job.created_at.asc()).all()]
+        except SQLAlchemyError as e:
+            self.logger.error(f"[ERROR] Failed to list reruns of {job_id}: {e}")
+            return []
+
     def list_jobs_by_batch(self, batch_id: str) -> list[str]:
         """List job IDs sharing a given batch identifier (spec 008)."""
         try:
@@ -458,6 +489,9 @@ class SQLiteStorageBackend(StorageBackend):
 
         try:
             with self.SessionLocal() as session:
+                db_job = session.query(Job).filter_by(id=job_id).first()
+                recorded = db_job.storage_path if db_job else None
+                output_dir = db_job.output_dir if db_job else None
                 # Foreign key constraints will cascade delete annotations and pipeline_results
                 deleted_count = session.query(Job).filter_by(id=job_id).delete()
 
@@ -472,7 +506,12 @@ class SQLiteStorageBackend(StorageBackend):
 
             # Delete persistent storage directory (video files, outputs)
             try:
+                # The folder the job recorded: jobs made before v1.6.0 live
+                # under ./storage/jobs, not today's storage root. Only a
+                # folder named after the job is ever removed.
                 storage_path = get_job_storage_path(job_id)
+                if recorded and Path(recorded).name == job_id:
+                    storage_path = Path(recorded)
                 if storage_path.exists():
                     shutil.rmtree(storage_path)
                     self.logger.debug(
@@ -483,6 +522,23 @@ class SQLiteStorageBackend(StorageBackend):
                 self.logger.warning(
                     f"[WARNING] Failed to delete storage for job {job_id}: {storage_error}"
                 )
+
+            # Its results folder too (spec 022) -- only ever inside the results
+            # root, and never the video it was made from.
+            if output_dir:
+                from types import SimpleNamespace
+
+                from ..results_folder import remove_job_results
+
+                try:
+                    remove_job_results(
+                        SimpleNamespace(job_id=job_id, output_dir=Path(output_dir))
+                    )
+                except Exception as results_error:
+                    self.logger.warning(
+                        f"[WARNING] Failed to delete results for job {job_id}: "
+                        f"{results_error}"
+                    )
 
             return deleted_count > 0
 

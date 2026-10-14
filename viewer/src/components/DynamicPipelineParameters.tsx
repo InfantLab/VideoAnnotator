@@ -270,7 +270,7 @@ export const DynamicPipelineParameters = ({
                           <Input
                             id={`${pipeline.id}-${parameter.name}`}
                             type="number"
-                            value={currentValue ?? ''}
+                            value={typeof currentValue === 'number' || typeof currentValue === 'string' ? currentValue : ''}
                             onChange={(event) => {
                               const newValue = coerceNumber(
                                 event.target.value,

@@ -1,0 +1,190 @@
+{
+  "info": {
+    "description": "VideoAnnotator COCO Export",
+    "version": "1.5.0",
+    "year": 2025,
+    "contributor": "VideoAnnotator",
+    "date_created": "2025-01-01T00:00:00Z"
+  },
+  "licenses": [],
+  "images": [
+    {
+      "id": "demo_clip_frame_000000",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000000.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 0,
+      "timestamp": 0
+    },
+    {
+      "id": "demo_clip_frame_000071",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000071.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 71,
+      "timestamp": 5.0
+    },
+    {
+      "id": "demo_clip_frame_000142",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000142.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 142,
+      "timestamp": 10.0
+    },
+    {
+      "id": "demo_clip_frame_000213",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000213.jpg",
+      "video_id": "demo_clip",
+      "frame_number": 213,
+      "timestamp": 15.0
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": "demo_clip_frame_000000",
+      "category_id": 1,
+      "bbox": [
+        0,
+        0,
+        640,
+        480
+      ],
+      "area": 307200,
+      "iscrowd": 0,
+      "video_id": "demo_clip",
+      "timestamp_sec": 0,
+      "frame_number": 0,
+      "sampling_mode": "single_frame",
+      "context_frame_offsets": null,
+      "context_frame_numbers": [
+        0
+      ],
+      "label": "NO_TOUCH",
+      "reasoning": "NO_TOUCH",
+      "raw_response": "NO_TOUCH",
+      "model": "qwen3.5:9b",
+      "backend": "ollama",
+      "base_url": "http://host.docker.internal:11434",
+      "prompt": "Classify as TOUCH only if:\nThe mother's hand or arm is actually in physical contact with the infant's body.\n\nClassify as NO_TOUCH if:\nThe mother's hand or arm visually overlaps the infant in the image, but one is clearly in front of or behind the other (the apparent contact is camera perspective, not real contact).\nThe mother's hand or arm is near but not actually touching the infant.\n\nReturn ONLY: TOUCH or NO_TOUCH.",
+      "total_time": 13.3047,
+      "load_time": 12.1111,
+      "prompt_tokens": 410,
+      "resp_tokens": 3,
+      "tokens_per_sec": 35.69
+    },
+    {
+      "id": 2,
+      "image_id": "demo_clip_frame_000071",
+      "category_id": 1,
+      "bbox": [
+        0,
+        0,
+        640,
+        480
+      ],
+      "area": 307200,
+      "iscrowd": 0,
+      "video_id": "demo_clip",
+      "timestamp_sec": 5.0,
+      "frame_number": 71,
+      "sampling_mode": "single_frame",
+      "context_frame_offsets": null,
+      "context_frame_numbers": [
+        71
+      ],
+      "label": "NO_TOUCH",
+      "reasoning": "NO_TOUCH",
+      "raw_response": "NO_TOUCH",
+      "model": "qwen3.5:9b",
+      "backend": "ollama",
+      "base_url": "http://host.docker.internal:11434",
+      "prompt": "Classify as TOUCH only if:\nThe mother's hand or arm is actually in physical contact with the infant's body.\n\nClassify as NO_TOUCH if:\nThe mother's hand or arm visually overlaps the infant in the image, but one is clearly in front of or behind the other (the apparent contact is camera perspective, not real contact).\nThe mother's hand or arm is near but not actually touching the infant.\n\nReturn ONLY: TOUCH or NO_TOUCH.",
+      "total_time": 1.0437,
+      "load_time": 0.0064,
+      "prompt_tokens": 410,
+      "resp_tokens": 3,
+      "tokens_per_sec": 53.33
+    },
+    {
+      "id": 3,
+      "image_id": "demo_clip_frame_000142",
+      "category_id": 1,
+      "bbox": [
+        0,
+        0,
+        640,
+        480
+      ],
+      "area": 307200,
+      "iscrowd": 0,
+      "video_id": "demo_clip",
+      "timestamp_sec": 10.0,
+      "frame_number": 142,
+      "sampling_mode": "single_frame",
+      "context_frame_offsets": null,
+      "context_frame_numbers": [
+        142
+      ],
+      "label": "NO_TOUCH",
+      "reasoning": "NO_TOUCH",
+      "raw_response": "NO_TOUCH",
+      "model": "qwen3.5:9b",
+      "backend": "ollama",
+      "base_url": "http://host.docker.internal:11434",
+      "prompt": "Classify as TOUCH only if:\nThe mother's hand or arm is actually in physical contact with the infant's body.\n\nClassify as NO_TOUCH if:\nThe mother's hand or arm visually overlaps the infant in the image, but one is clearly in front of or behind the other (the apparent contact is camera perspective, not real contact).\nThe mother's hand or arm is near but not actually touching the infant.\n\nReturn ONLY: TOUCH or NO_TOUCH.",
+      "total_time": 0.9586,
+      "load_time": 0.0049,
+      "prompt_tokens": 410,
+      "resp_tokens": 3,
+      "tokens_per_sec": 53.27
+    },
+    {
+      "id": 4,
+      "image_id": "demo_clip_frame_000213",
+      "category_id": 1,
+      "bbox": [
+        0,
+        0,
+        640,
+        480
+      ],
+      "area": 307200,
+      "iscrowd": 0,
+      "video_id": "demo_clip",
+      "timestamp_sec": 15.0,
+      "frame_number": 213,
+      "sampling_mode": "single_frame",
+      "context_frame_offsets": null,
+      "context_frame_numbers": [
+        213
+      ],
+      "label": "NO_TOUCH",
+      "reasoning": "NO_TOUCH",
+      "raw_response": "NO_TOUCH",
+      "model": "qwen3.5:9b",
+      "backend": "ollama",
+      "base_url": "http://host.docker.internal:11434",
+      "prompt": "Classify as TOUCH only if:\nThe mother's hand or arm is actually in physical contact with the infant's body.\n\nClassify as NO_TOUCH if:\nThe mother's hand or arm visually overlaps the infant in the image, but one is clearly in front of or behind the other (the apparent contact is camera perspective, not real contact).\nThe mother's hand or arm is near but not actually touching the infant.\n\nReturn ONLY: TOUCH or NO_TOUCH.",
+      "total_time": 1.0039,
+      "load_time": 0.0048,
+      "prompt_tokens": 410,
+      "resp_tokens": 3,
+      "tokens_per_sec": 52.7
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "vlm_annotation",
+      "supercategory": "frame_classification",
+      "description": "Per-frame vision-language-model classification"
+    }
+  ]
+}

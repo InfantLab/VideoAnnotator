@@ -13,6 +13,7 @@ from videoannotator.config_env import (
     DEFAULT_OLLAMA_BASE_URL,
     OLLAMA_BASE_URL_ENV,
     default_ollama_base_url,
+    managed_by_launcher,
 )
 from videoannotator.utils.logging_config import get_logger
 
@@ -30,6 +31,9 @@ def unreachable_hint(base_url: str) -> str:
     loopback URL is the container itself, so an Ollama running on the host
     is never reachable that way -- the usual cause when it "is running"."""
     host = urlparse(base_url).hostname or ""
+    if managed_by_launcher():
+        # The launcher already points the container at the host's Ollama.
+        return "Make sure the Ollama app is running on this computer, then try again."
     if _in_container() and host in ("127.0.0.1", "localhost", "::1"):
         return (
             "VideoAnnotator is running in a container, where this address is "

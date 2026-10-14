@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "pipeline": {
+    "name": "speaker_diarization",
+    "sub_pipeline": null
+  },
+  "videoannotator_version": "1.5.0",
+  "models": [
+    {
+      "name": "pyannote/speaker-diarization-3.1",
+      "source": "huggingface",
+      "revision": "84fd25912480287da0247647c3d2b4853cb3ee5d",
+      "revision_kind": "git"
+    }
+  ],
+  "settings": {
+    "model": "pyannote/speaker-diarization-3.1",
+    "min_speakers": 1,
+    "max_speakers": 10,
+    "use_auth_token": true
+  },
+  "determinism": {
+    "deterministic": false,
+    "cudnn_benchmark": false,
+    "cudnn_deterministic": false,
+    "deterministic_algorithms": false,
+    "anomaly_detection": false,
+    "cublas_workspace_config": ":4096:8"
+  },
+  "created_at": "2026-10-04T14:03:15.434687+00:00",
+  "job_id": "3abaf9e3-14d4-458c-af01-734863dcb97a",
+  "input": {
+    "name": "demo_clip.mp4",
+    "sha256": "0b809c13772c8cdff2a5355f958b5b70115cf8d5d7b461199d36056d3a8295b0"
+  }
+}

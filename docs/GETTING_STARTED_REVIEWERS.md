@@ -329,7 +329,7 @@ See [Pipeline Specifications](usage/pipeline_specs.md)
 ### Q: What about production deployment?
 
 **A**: Multiple options:
-- Docker: `Dockerfile.cpu`, `Dockerfile.gpu`
+- Docker: `Dockerfile` (one image for CPU and GPU)
 - Kubernetes: Manifests in `docs/deployment/`
 - Systemd: Service files provided
 - See [Deployment Guide](deployment/Docker.md)

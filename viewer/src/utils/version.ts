@@ -8,8 +8,10 @@
 // Vite resolves this JSON import at build time — no runtime fs access needed.
 import pkg from '../../package.json';
 
+// The viewer ships inside VideoAnnotator and shares its version (v1.6.0 Phase 0);
+// tests/unit/test_versions_match.py keeps package.json in step with pyproject.toml.
 export const VERSION: string = pkg.version;
-export const GITHUB_URL = 'https://github.com/InfantLab/video-annotation-viewer';
+export const GITHUB_URL = 'https://github.com/InfantLab/VideoAnnotator';
 export const APP_NAME = 'Video Annotation Viewer';
 
 /**

@@ -61,7 +61,7 @@ class TestAPIUnavailablePipelineErrorShape:
         assert body["pipeline"] == "face_analysis"
         assert body["install_hint"] == "pip install videoannotator[face]"
 
-    def test_submit_job_with_demoted_laion_pipeline_gets_migration_message(
+    def test_submit_job_with_demoted_pipeline_gets_migration_message(
         self, client, sample_video_file, monkeypatch
     ):
         import videoannotator.api.v1.jobs as jobs_module
@@ -69,14 +69,14 @@ class TestAPIUnavailablePipelineErrorShape:
         monkeypatch.setattr(jobs_module, "extras_available", lambda extras: False)
 
         files = {"video": ("test.avi", sample_video_file, "video/avi")}
-        data = {"selected_pipelines": "face_laion_clip"}
+        data = {"selected_pipelines": "face_openface3_embedding"}
 
         response = client.post("/api/v1/jobs/", files=files, data=data)
 
         assert response.status_code == 422
         body = response.json()
         assert "no longer installed by default" in body["detail"]
-        assert body["install_hint"] == "pip install videoannotator[face-laion]"
+        assert body["install_hint"] == "pip install videoannotator[face-openface3]"
 
 
 class TestCLIUnavailablePipelineErrorShape:
@@ -87,11 +87,11 @@ class TestCLIUnavailablePipelineErrorShape:
         fake_response = MagicMock()
         fake_response.status_code = 422
         fake_response.json.return_value = {
-            "detail": "Pipeline 'face_laion_clip' is not available in this install. "
-            "As of v1.5.0, pipelines requiring the 'face-laion' extras group "
+            "detail": "Pipeline 'face_openface3_embedding' is not available in this install. "
+            "As of v1.5.0, pipelines requiring the 'face-openface3' extras group "
             "are no longer installed by default.",
-            "install_hint": "pip install videoannotator[face-laion]",
-            "pipeline": "face_laion_clip",
+            "install_hint": "pip install videoannotator[face-openface3]",
+            "pipeline": "face_openface3_embedding",
         }
 
         runner = CliRunner()
@@ -103,11 +103,11 @@ class TestCLIUnavailablePipelineErrorShape:
                     "submit",
                     str(video_path),
                     "--pipelines",
-                    "face_laion_clip",
+                    "face_openface3_embedding",
                 ],
             )
 
         combined = result.stdout + (getattr(result, "stderr", "") or "")
         assert "Traceback" not in combined
         assert "Error:" in combined
-        assert "pip install videoannotator[face-laion]" in combined
+        assert "pip install videoannotator[face-openface3]" in combined

@@ -95,6 +95,11 @@ class SecureTokenManager:
             user = UserCRUD.get_by_username(db, username)
             if not user:
                 user = UserCRUD.create(db, email=email, username=username)
+            # Admin is a property of the user, not the key: without this the
+            # server's own first key (scopes incl. "admin") couldn't install
+            # pipelines from the viewer.
+            if "admin" in scopes and not user.is_admin:
+                user = UserCRUD.update(db, str(user.id), is_admin=True) or user
 
             api_key, token_string = APIKeyCRUD.create(
                 db=db,

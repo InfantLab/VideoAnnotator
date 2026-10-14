@@ -71,7 +71,9 @@ This will:
 2. Install dependencies:
 
    ```bash
-   pip install -e .[dev]
+   uv sync              # installs the dev tools (dependency group `dev`) by default
+   # or, with pip >= 25.1:
+   pip install -e . --group dev
    ```
 
 3. Set up pre-commit hooks:
@@ -95,7 +97,7 @@ docker-compose --profile dev up --build
 
 ## Testing Standards
 
-Please follow our comprehensive testing standards outlined in [TESTING_STANDARDS.md](docs/TESTING_STANDARDS.md).
+Please follow our comprehensive testing standards outlined in [testing standards](docs/testing/testing_standards.md).
 
 ### Running Tests
 

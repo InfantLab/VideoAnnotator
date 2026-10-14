@@ -4,18 +4,29 @@ Server-side, DB-backed, metadata-only (filename+size manifest, never the
 video files themselves) so a researcher can save a named set of videos once
 and reuse it on every future job submission instead of re-picking files from
 a browser dialog each time. See specs/007-datasets-and-presets/spec.md.
+
+A dataset saved from a browser upload has no folder the server can see, but
+its videos were uploaded with the jobs that ran on them, and each job keeps
+its copy. `/stored-videos` and `/run` find and reuse those copies, so running
+the dataset again needs no folder and no upload while they exist.
 """
 
 import logging
+import uuid
 from datetime import datetime
+from pathlib import Path as FilePath
 from typing import Any
 
 from fastapi import APIRouter, Depends, Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from ...batch.types import BatchJob
 from ...database.crud import SavedDatasetCRUD
 from ...database.database import get_db
+from ...results_folder import VIDEO_MOVED, video_unavailable_reason
+from ...storage.base import StorageBackend
+from ..database import get_storage_backend
 from ..errors import APIError
 from ..middleware.auth import validate_api_key
 
@@ -30,6 +41,9 @@ class VideoManifestEntry(BaseModel):
     filename: str
     size_bytes: int
     last_seen_at: datetime | None = None
+    # Path within the dataset's folder, so same-named files in subfolders stay
+    # distinct (spec 018). Absent in datasets saved before it.
+    relative_path: str | None = None
 
 
 class DatasetCreateRequest(BaseModel):
@@ -41,6 +55,14 @@ class DatasetCreateRequest(BaseModel):
     name: str
     description: str | None = None
     video_manifest: list[VideoManifestEntry] = []
+    server_folder: str | None = None
+    server_folder_recursive: bool = False
+    server_selection: bool = Field(
+        default=False,
+        description="The manifest is a chosen subset of server_folder (spec 022): "
+        "using the dataset runs exactly those videos, and files added to the "
+        "folder are not differences",
+    )
 
 
 class DatasetUpdateRequest(BaseModel):
@@ -49,6 +71,7 @@ class DatasetUpdateRequest(BaseModel):
     name: str | None = None
     description: str | None = None
     video_manifest: list[VideoManifestEntry] | None = None
+    server_selection: bool | None = None
 
 
 class DatasetResponse(BaseModel):
@@ -59,7 +82,11 @@ class DatasetResponse(BaseModel):
     name: str
     description: str | None = None
     owner_user_id: str
+    owner_name: str | None = None
     video_manifest: list[VideoManifestEntry]
+    server_folder: str | None = None
+    server_folder_recursive: bool = False
+    server_selection: bool = False
     created_at: datetime
     updated_at: datetime | None = None
     last_used_at: datetime | None = None
@@ -70,13 +97,22 @@ class DatasetListResponse(BaseModel):
     total: int
 
 
+def _owner_name(dataset: Any) -> str | None:
+    owner = getattr(dataset, "owner", None)
+    return (owner.username or owner.email) if owner is not None else None
+
+
 def _to_response(dataset: Any) -> DatasetResponse:
     return DatasetResponse(
         id=str(dataset.id),
         name=dataset.name,
         description=dataset.description,
         owner_user_id=str(dataset.owner_user_id),
+        owner_name=_owner_name(dataset),
         video_manifest=dataset.video_manifest or [],
+        server_folder=dataset.server_folder,
+        server_folder_recursive=bool(dataset.server_folder_recursive),
+        server_selection=bool(getattr(dataset, "server_selection", False)),
         created_at=dataset.created_at,
         updated_at=dataset.updated_at,
         last_used_at=dataset.last_used_at,
@@ -171,6 +207,9 @@ async def create_dataset(
         name=request.name,
         description=request.description,
         video_manifest=[e.model_dump(mode="json") for e in request.video_manifest],
+        server_folder=request.server_folder,
+        server_folder_recursive=request.server_folder_recursive,
+        server_selection=request.server_selection,
     )
     if dataset is None:
         raise APIError(
@@ -225,6 +264,7 @@ async def update_dataset(
             if request.video_manifest is not None
             else None
         ),
+        server_selection=request.server_selection,
     )
     if updated is None:
         raise APIError(
@@ -256,3 +296,193 @@ async def delete_dataset(
         dataset, owner_id, bool(user and user.get("is_admin", False))
     )
     SavedDatasetCRUD.delete(db, dataset_id)
+
+
+def get_storage() -> StorageBackend:
+    """Storage backend for finding the jobs that hold a dataset's videos."""
+    return get_storage_backend()
+
+
+class StoredVideo(BaseModel):
+    filename: str
+    size_bytes: int | None
+    job_id: str | None = Field(
+        description="A job whose stored copy of this video can be reused, or "
+        "null when no job still has it"
+    )
+
+
+class StoredVideosResponse(BaseModel):
+    dataset_id: str
+    videos: list[StoredVideo]
+    stored: int
+    missing: int
+
+
+class DatasetRunRequest(BaseModel):
+    selected_pipelines: list[str] | None = None
+    config: dict[str, Any] | None = None
+    batch_name: str | None = None
+
+
+class DatasetRunSkipped(BaseModel):
+    filename: str
+    reason: str
+
+
+class DatasetRunResponse(BaseModel):
+    batch_id: str
+    batch_name: str | None
+    created: list[str]
+    skipped: list[DatasetRunSkipped]
+
+
+NOT_STORED = "no longer stored on the server"
+
+
+def _stored_copies(
+    dataset: Any, storage: StorageBackend
+) -> list[tuple[dict[str, Any], BatchJob | None, str]]:
+    """Each manifest entry with a job that still stores that video, if any,
+    and otherwise why not.
+
+    A copy matches on filename and, where the manifest has one, size. Jobs
+    submitted from this dataset are preferred, then the newest. A video read
+    in place from a folder that isn't shared any more says so (spec 024).
+    """
+    by_name: dict[str, list[BatchJob]] = {}
+    for job_id in storage.list_jobs():
+        job = storage.load_job_metadata(job_id)
+        if job is None or not job.video_path:
+            continue
+        by_name.setdefault(FilePath(str(job.video_path)).name, []).append(job)
+
+    def rank(job: BatchJob) -> tuple[bool, str]:
+        created = job.created_at.isoformat() if job.created_at else ""
+        return (job.dataset_id == dataset.id, created)
+
+    result = []
+    for entry in dataset.video_manifest or []:
+        found = None
+        why = NOT_STORED
+        for job in sorted(by_name.get(entry["filename"], []), key=rank, reverse=True):
+            video = FilePath(str(job.video_path))
+            try:
+                if not video.is_file():
+                    reason = video_unavailable_reason(video)
+                    if why == NOT_STORED and reason != VIDEO_MOVED:
+                        why = reason
+                    continue
+                if entry.get("size_bytes") is not None and (
+                    video.stat().st_size != entry["size_bytes"]
+                ):
+                    continue
+            except OSError:
+                continue
+            found = job
+            break
+        result.append((entry, found, why))
+    return result
+
+
+@router.get(
+    "/{dataset_id}/stored-videos",
+    response_model=StoredVideosResponse,
+    summary="Which of a dataset's videos the server still has",
+    description=(
+        "For each video in the dataset, a job whose stored copy (uploaded with "
+        "that job) can be reused, matched by filename and size. Null when no "
+        "job has it any more, e.g. its jobs were deleted."
+    ),
+)
+async def stored_videos(
+    dataset_id: str = Path(..., description="The saved dataset's id"),
+    db: Session = Depends(get_db),
+    storage: StorageBackend = Depends(get_storage),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> StoredVideosResponse:
+    """List a dataset's videos with the stored copy of each, if any."""
+    dataset = _get_or_404(db, dataset_id)
+    videos = [
+        StoredVideo(
+            filename=entry["filename"],
+            size_bytes=entry.get("size_bytes"),
+            job_id=job.job_id if job else None,
+        )
+        for entry, job, _ in _stored_copies(dataset, storage)
+    ]
+    stored = sum(1 for v in videos if v.job_id)
+    return StoredVideosResponse(
+        dataset_id=dataset_id,
+        videos=videos,
+        stored=stored,
+        missing=len(videos) - stored,
+    )
+
+
+@router.post(
+    "/{dataset_id}/run",
+    response_model=DatasetRunResponse,
+    status_code=201,
+    summary="Run a dataset from the server's stored copies",
+    description=(
+        "Creates one job per dataset video the server still stores (see "
+        "`/stored-videos`), as one batch, with no upload: each video is "
+        "hard-linked from the job that has it. Videos with no stored copy are "
+        "listed in `skipped`. 422 `DATASET_NOT_STORED` when none are stored."
+    ),
+)
+async def run_dataset(
+    request: DatasetRunRequest,
+    dataset_id: str = Path(..., description="The saved dataset's id"),
+    db: Session = Depends(get_db),
+    storage: StorageBackend = Depends(get_storage),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> DatasetRunResponse:
+    """Create a batch of jobs on a dataset's stored videos."""
+    from .jobs import job_from_stored_video, validate_pipeline_selection
+
+    dataset = _get_or_404(db, dataset_id)
+    validate_pipeline_selection(request.selected_pipelines, request.config)
+    copies = _stored_copies(dataset, storage)
+    if not any(job for _, job, _ in copies):
+        raise APIError(
+            status_code=422,
+            code="DATASET_NOT_STORED",
+            message=f"The server no longer has any of the videos of '{dataset.name}'.",
+            hint="Choose the folder they are in instead.",
+        )
+
+    batch_id = str(uuid.uuid4())
+    batch_name = request.batch_name or dataset.name
+    created: list[str] = []
+    skipped: list[DatasetRunSkipped] = []
+    for entry, original, why in copies:
+        if original is None:
+            skipped.append(DatasetRunSkipped(filename=entry["filename"], reason=why))
+            continue
+        try:
+            job = job_from_stored_video(
+                original,
+                storage,
+                request.selected_pipelines,
+                request.config,
+                batch_id=batch_id,
+                batch_name=batch_name,
+                dataset_id=dataset_id,
+            )
+            created.append(job.job_id)
+        except Exception as e:  # one bad file shouldn't sink the batch
+            logger.warning(
+                f"[DATASET] Could not create job for {entry['filename']}: {e}"
+            )
+            skipped.append(DatasetRunSkipped(filename=entry["filename"], reason=str(e)))
+
+    try:
+        SavedDatasetCRUD.touch_last_used(db, dataset_id)
+    except Exception as e:
+        logger.debug(f"Could not touch last_used_at for dataset {dataset_id}: {e}")
+
+    return DatasetRunResponse(
+        batch_id=batch_id, batch_name=batch_name, created=created, skipped=skipped
+    )

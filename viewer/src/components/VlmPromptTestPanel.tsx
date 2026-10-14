@@ -100,6 +100,19 @@ export const VlmPromptTestPanel = ({ prompt, model, videoFile }: VlmPromptTestPa
           <Sparkles className="h-3.5 w-3.5" />
           Test this prompt
         </Label>
+        {/* More room, several prompts and models at once, several moments (spec 020). */}
+        {/* A new tab keeps the wizard as it is; router state doesn't cross tabs, the URL does. */}
+        <a
+          href={`${import.meta.env.BASE_URL}workbench?${new URLSearchParams({
+            ...(prompt.trim() ? { prompt } : {}),
+            ...(model ? { model } : {}),
+          })}`}
+          className="text-xs underline"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open in the workbench
+        </a>
       </div>
 
       {videoUrl && (

@@ -2,7 +2,120 @@
 
 This guide helps you resolve common installation and runtime issues. Most issues can be resolved in 5-10 minutes.
 
-> **Quick Links**: [Common Issues](#common-issues) | [GPU/CUDA](#gpu-and-cuda-issues) | [Database](#database-issues) | [Network](#network-issues) | [Diagnostics](#diagnostic-commands)
+> **Quick Links**: [The start-up program](#the-start-up-program) | [Common Issues](#common-issues) | [GPU/CUDA](#gpu-and-cuda-issues) | [Database](#database-issues) | [Network](#network-issues) | [Diagnostics](#diagnostic-commands)
+
+## The start-up program
+
+`videoannotator-start` (and the **Start VideoAnnotator** shortcut) says what went wrong in one line,
+with the next step. Each message, and more about what to do:
+
+### Install Docker or Podman
+
+> VideoAnnotator needs Docker Desktop or Podman Desktop. Install one (see ...), then run this again.
+
+Neither is installed (or neither is on your `PATH`). Install
+[Docker Desktop](https://www.docker.com/products/docker-desktop/) or
+[Podman Desktop](https://podman-desktop.io/), start it once so it can finish setting up, then start
+VideoAnnotator again.
+
+### Docker isn't running
+
+> Docker Desktop isn't running. Start it, wait until it says it's running, then run this again.
+
+Open Docker Desktop and wait until its status says it is running (the whale icon stops animating).
+
+> Docker isn't running. Start it with: sudo systemctl start docker, then run this again.
+
+Linux, Docker Engine: the service is stopped. `sudo systemctl enable --now docker` also starts it at
+every boot.
+
+> You don't have permission to use Docker yet. Run: sudo usermod -aG docker $USER, log out and back in, then run this again. (Or use Podman, which needs no permission.)
+
+Linux: only members of the `docker` group may use Docker Engine. Logging out and back in is what
+makes the new group count. Podman needs no such permission.
+
+### Podman's machine
+
+> Starting Podman's virtual machine (first time takes a minute)...
+
+On Windows and macOS, Podman runs containers in a small virtual machine; the start-up program starts
+it (and creates it, the first time). Nothing to do. If it fails, open Podman Desktop and start the
+machine there.
+
+### Port in use
+
+> Something else is using port 18011. Close it, or run: videoannotator-start --port 18012
+
+Another program (perhaps another VideoAnnotator, started without the start-up program) is using the
+port. Close it, or start with `--port 18012`; the start-up program remembers the port.
+
+### Download failed
+
+> Couldn't download VideoAnnotator. Check your internet connection and run this again.
+
+The first start downloads about 1 GB from `ghcr.io`. Behind a proxy, set it in Docker Desktop
+(Settings, Resources, Proxies) or for Podman (`HTTPS_PROXY` in the machine).
+
+### Memory
+
+> VideoAnnotator ran out of memory. Give Docker/Podman more (see ...), then run this again.
+
+On Windows and macOS, containers get a share of your computer's memory. Give them at least 8 GB
+(16 GB for face and speech pipelines): Docker Desktop, Settings, Resources; Podman Desktop,
+Settings, Resources, or `podman machine set --memory 8192` with the machine stopped. On Windows with
+WSL 2, Docker Desktop's memory is set in `%UserProfile%\.wslconfig` (`[wsl2]` then `memory=8GB`).
+
+### GPU
+
+> Running without the GPU: Docker can't use it yet. To enable it, see ...
+
+You have an NVIDIA GPU, but the engine can't pass it to VideoAnnotator yet; it runs on the CPU
+meanwhile. What each engine needs is in the
+[installation guide](INSTALLATION.md#using-the-gpu). If a start with the GPU fails, the start-up
+program starts once more without it and says so.
+
+### Docker Desktop file sharing
+
+> Docker Desktop can't see /opt/data yet. Add it in Docker Desktop's Settings, Resources, File sharing (see ...), then run this again.
+
+macOS: Docker Desktop shares `/Users`, `/Volumes`, `/private` and `/tmp` by default. To share a
+folder elsewhere, add it under Settings, Resources, File sharing, then apply and restart.
+
+### Already running
+
+> VideoAnnotator is already running.
+
+Started twice: the browser opens on the one already running. Nothing to do.
+
+### Shared folders
+
+> Couldn't find E:\Data (an unplugged drive?), so it isn't shared this time.
+
+A shared folder wasn't there at start. Plug the drive in and start again; it is still remembered.
+To forget it: `videoannotator-start unshare`.
+
+> This shares everything in your home folder, including documents unrelated to your research. Share it anyway? [y/N]
+
+Sharing a very broad folder lets VideoAnnotator read much more than your videos. Choose the folder
+your videos are in instead, unless you really mean it.
+
+> That folder is inside your results folder, which VideoAnnotator can already read.
+
+Results are already readable (and writable); there's no need to share them.
+
+### Running videos and restarts
+
+> 2 videos are being processed. [W]ait for them, or [r]estart now (they'll be marked failed and can be retried)?
+
+Sharing a folder, stopping sharing one, and updating all restart VideoAnnotator. Waiting is the
+default. Videos still queued keep their place either way.
+
+### Anything else
+
+> VideoAnnotator couldn't start. Run: videoannotator-start logs
+
+The lines after it are the engine's own words. `videoannotator-start logs` shows VideoAnnotator's
+log; include both when you [report a problem](https://github.com/InfantLab/VideoAnnotator/issues).
 
 ## Common Issues
 
@@ -178,15 +291,15 @@ df -h
 
 **2. Clean up**:
 ```bash
-# Remove old logs
-rm -rf logs/*.log
+# Remove old logs (folder printed at server start; Linux default shown)
+rm -f ~/.local/state/videoannotator/logs/*.log
 
 # Clean test artifacts
 rm -rf test_storage/
 
-# Remove cached models (will re-download when needed)
-rm -rf ~/.cache/huggingface/
-rm -rf models/
+# Remove model weights (re-downloaded when needed). Where they are, and
+# how much space each source takes:
+videoannotator diagnose models
 
 # Clean uv cache
 uv cache clean
@@ -253,6 +366,61 @@ Common fixes:
 - **Database check fails**: Fix permissions on `custom_storage/`
 - **GPU check fails**: See GPU/CUDA section below
 - **Video test fails**: Use `--skip-video-test` if no video needed
+
+---
+
+### The dev container is slow, freezes or runs out of memory
+
+**Symptoms**:
+- Tests, imports and model loading are far slower than on Linux or macOS (Windows), with
+  `MsMpEng.exe` (Defender) high in Task Manager, or the container printed
+  `WARNING: this workspace is a Windows folder mounted into the container` when it started
+- A command ends with `Killed`, or exit code 137
+- The whole machine stops responding (Windows), often just after waking from sleep with the
+  container still running
+
+**Slow on Windows**: the project is in a Windows folder (e.g. `C:\Users\you\code\VideoAnnotator`)
+opened with **Reopen in Container**, so every file the container reads crosses the Windows–WSL file
+bridge and Defender scans it. Open the project from a container volume instead: in VS Code,
+**Dev Containers: Clone Repository in Container Volume…**, then
+`https://github.com/InfantLab/VideoAnnotator`. Commit and push anything in your Windows clone
+first; the volume clone starts from GitHub. Optionally, if you administer the machine, put code on a
+[Dev Drive](https://learn.microsoft.com/windows/dev-drive/) or exclude your code folder from
+Defender's real-time scanning.
+
+**`Killed` or exit 137**: the process ran out of memory. The container is capped at 12 GB
+(`--memory=12g` in `.devcontainer/devcontainer.json`), and Docker Desktop's VM may be smaller: by
+default it gets half your RAM, so 8 GB on a 16 GB machine. Normal work stays well inside 8 GB (about
+2 GB idle, 5.4 GB for the full test suite, 6.5 GB for a six-pipeline job), so this usually means a
+long video, several jobs at once, or other containers running. Give the VM more memory (Docker
+Desktop → Settings → Resources, or `memory=` in `%USERPROFILE%\.wslconfig` then `wsl --shutdown`),
+and raise `--memory` in `devcontainer.json` if the container's own cap was the limit. A full cap
+while installing packages is not this: that is page cache, which is reclaimed.
+
+**Freezes on Windows**: not fully explained. In the one case examined (2026-10-02) the laptop had
+slept overnight with the container running, and within minutes of waking the Docker VM locked up
+while handing memory back to Windows (a `soft lockup` in `page_reporting_process`). Until that is
+understood, stop the container (or quit Docker Desktop) before the machine sleeps. If Docker
+Desktop's **Resource Saver** mode is on (Settings → Resources), try turning it off: it has been
+linked to WSL hangs after sleep. If your machine freezes anyway, please open an issue with the time
+it happened and what was running; we are still collecting cases.
+
+**Model weights and the Python environment** live in Docker named volumes, `videoannotator-models`
+and `videoannotator-venv`, whichever way you open the project. They survive rebuilding the
+container and `docker system prune --volumes`, which removes only anonymous volumes (Docker 23
+and later). Only `docker volume rm`, `docker volume prune --all` or resetting Docker Desktop
+deletes them.
+
+```bash
+# On the host. Back up the weights to the current directory:
+docker run --rm -v videoannotator-models:/models -v "$PWD":/backup alpine tar czf /backup/videoannotator-models.tgz -C /models .
+# Wipe them (they download again when a pipeline needs them):
+docker volume rm videoannotator-models
+```
+
+Weights already downloaded into the old `models/` folder of a Windows clone can be reused: with
+the clone open in its container, `cp -a models/. /app/models/` copies them into the volume once.
+The server lists such old locations when it starts.
 
 ---
 
@@ -336,6 +504,7 @@ use_fp16: true
 **4. Clear GPU cache** between runs:
 ```python
 import torch
+
 torch.cuda.empty_cache()
 ```
 
@@ -701,17 +870,18 @@ lsof custom_storage/jobs.db
 ### Log Analysis
 
 ```bash
-# View recent logs
-tail -f logs/videoannotator.log
+# View recent logs (folder printed at server start as "[INFO] Logs: ...";
+# Linux default shown, /app/logs in Docker)
+tail -f ~/.local/state/videoannotator/logs/api_server.log
 
 # Search for errors
-grep ERROR logs/videoannotator.log | tail -20
+tail -50 ~/.local/state/videoannotator/logs/errors.log
 
 # Search for specific job
-grep "job_abc123" logs/videoannotator.log
+grep "job_abc123" ~/.local/state/videoannotator/logs/api_server.log
 
 # Check API request logs
-grep "POST /api/v1/jobs" logs/videoannotator.log
+grep "POST /api/v1/jobs" ~/.local/state/videoannotator/logs/api_requests.log
 ```
 
 ---

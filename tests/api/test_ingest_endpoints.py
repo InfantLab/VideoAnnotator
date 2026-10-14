@@ -197,7 +197,7 @@ class TestIngestPathGuards:
 
         response = _ingest(outside, selected_pipelines=["stub_pipeline"])
         assert response.status_code == 403
-        assert "outside the folders" in response.text
+        assert "isn't shared with VideoAnnotator" in response.text
         # The error says how to allow it rather than leaving the user stuck.
         assert "VIDEOANNOTATOR_INGEST_ROOTS" in response.text
 
@@ -219,6 +219,7 @@ class TestIngestPathGuards:
         assert response.status_code == 201
 
     def test_defaults_to_the_home_directory_when_unconfigured(self, monkeypatch):
+        monkeypatch.setattr(ingest_module, "in_container", lambda: False)
         monkeypatch.setattr(ingest_module, "INGEST_ROOTS", "")
         assert ingest_module.allowed_roots() == [Path.home().resolve()]
 
@@ -327,3 +328,147 @@ class TestIngestIsLocalOnly:
         scope = {"type": "http", "client": ("203.0.113.7", 1234), "headers": []}
         with pytest.raises(APIError):
             ingest_module.require_local_caller(Request(scope))
+
+
+class TestScan:
+    """GET /ingest/scan: what an ingest would use, without creating jobs (spec 018)."""
+
+    def test_lists_videos_with_relative_paths_and_sizes(self, corpus):
+        before = len(get_storage_backend().list_jobs())
+        body = client.get(
+            "/api/v1/ingest/scan", params={"path": str(corpus), "recursive": True}
+        ).json()
+        paths = [v["relative_path"] for v in body["videos"]]
+        assert "session_two/dyad_13.mp4" in paths
+        assert "notes.txt" not in [v["name"] for v in body["videos"]]
+        assert {
+            v["size_bytes"] for v in body["videos"] if v["name"] != "empty.mp4"
+        } == {len(b"fake video bytes")}
+        assert len(get_storage_backend().list_jobs()) == before
+
+    def test_not_recursive_by_default(self, corpus):
+        body = client.get("/api/v1/ingest/scan", params={"path": str(corpus)}).json()
+        assert all("/" not in v["relative_path"] for v in body["videos"])
+
+    def test_same_guards_as_ingest(self, corpus, tmp_path):
+        outside = tmp_path / "elsewhere"
+        outside.mkdir()
+        assert (
+            client.get("/api/v1/ingest/scan", params={"path": str(outside)}).status_code
+            == 403
+        )
+        app.dependency_overrides[validate_required_api_key] = lambda: NON_ADMIN_USER
+        assert (
+            client.get("/api/v1/ingest/scan", params={"path": str(corpus)}).status_code
+            == 403
+        )
+
+
+class TestChosenFiles:
+    """Spec 022: tick some videos in a folder and run exactly those."""
+
+    def test_only_the_chosen_videos_become_jobs(self, corpus):
+        body = _ingest(
+            corpus,
+            selected_pipelines=["stub_pipeline"],
+            files=["dyad_01.mp4", "session_two/dyad_13.mp4", "dyad_05.mp4"],
+        ).json()
+        storage = get_storage_backend()
+        names = sorted(
+            storage.load_job_metadata(job_id).video_path.name
+            for job_id in body["created"]
+        )
+        assert names == ["dyad_01.mp4", "dyad_05.mp4", "dyad_13.mp4"]
+        assert body["skipped"] == []
+
+    def test_recursive_is_ignored_when_files_are_given(self, corpus):
+        body = _ingest(
+            corpus,
+            selected_pipelines=["stub_pipeline"],
+            files=["dyad_02.mp4"],
+            recursive=True,
+        ).json()
+        assert body["total"] == 1
+
+    def test_a_file_outside_the_allowed_folders_is_skipped(self, corpus, tmp_path):
+        outside = tmp_path / "elsewhere"
+        outside.mkdir()
+        (outside / "secret.mp4").write_bytes(b"v")
+        (corpus / "link.mp4").symlink_to(outside / "secret.mp4")
+        body = _ingest(
+            corpus,
+            selected_pipelines=["stub_pipeline"],
+            files=["dyad_01.mp4", "../../elsewhere/secret.mp4", "link.mp4"],
+        ).json()
+        assert body["total"] == 1
+        skipped = {s["filename"]: s["reason"] for s in body["skipped"]}
+        assert set(skipped) == {"../../elsewhere/secret.mp4", "link.mp4"}
+        assert all("outside" in reason for reason in skipped.values())
+
+    def test_a_video_chosen_twice_runs_once(self, corpus):
+        body = _ingest(
+            corpus,
+            selected_pipelines=["stub_pipeline"],
+            files=["dyad_03.mp4", "session_two/../dyad_03.mp4", "dyad_03.mp4"],
+        ).json()
+        assert body["total"] == 1
+
+    def test_non_videos_are_reported(self, corpus):
+        response = _ingest(
+            corpus, selected_pipelines=["stub_pipeline"], files=["notes.txt"]
+        )
+        assert response.status_code == 422
+        assert "notes.txt: not a video file" in response.json()["error"]["hint"]
+
+
+class TestLargeFolders:
+    def test_scan_lists_a_thousand_files_in_under_a_second(self, tmp_path, monkeypatch):
+        import time
+
+        folder = tmp_path / "big"
+        folder.mkdir()
+        for i in range(1000):
+            (folder / f"v{i:04d}.mp4").write_bytes(b"")
+        monkeypatch.setattr(ingest_module, "INGEST_ROOTS", str(tmp_path))
+        start = time.monotonic()
+        response = client.get("/api/v1/ingest/scan", params={"path": str(folder)})
+        assert response.status_code == 200
+        assert len(response.json()["videos"]) == 1000
+        assert time.monotonic() - start < 1
+
+
+class TestFindingYourVideos:
+    """Spec 022: My folders leads to videos instead of listing clutter."""
+
+    def test_hidden_tool_and_results_folders_are_not_listed(
+        self, tmp_path, monkeypatch
+    ):
+        home = tmp_path / "home"
+        for name in (".cache", ".bun", "node_modules", "AppData", "Studies", "Empty"):
+            (home / name).mkdir(parents=True)
+        (home / "Studies" / "wave1").mkdir()
+        (home / "Studies" / "wave1" / "child01.mp4").write_bytes(b"v")
+        monkeypatch.setenv("VIDEOANNOTATOR_RESULTS_DIR", str(home / "VideoAnnotator"))
+        (home / "VideoAnnotator").mkdir()
+        monkeypatch.setattr(ingest_module, "INGEST_ROOTS", str(home))
+        body = client.get("/api/v1/ingest/browse", params={"path": str(home)}).json()
+        listed = [(d["name"], d["has_videos"]) for d in body["directories"]]
+        assert listed == [("Studies", True), ("Empty", False)]
+
+    def test_places_start_where_videos_usually_are(self, tmp_path, monkeypatch):
+        from videoannotator.api.middleware.auth import validate_api_key
+
+        home = tmp_path / "home"
+        for name in ("Videos", "Desktop", "Documents"):
+            (home / name).mkdir(parents=True)
+        (home / "Desktop" / "clip.mp4").write_bytes(b"v")
+        monkeypatch.setattr(ingest_module.Path, "home", lambda: home)
+        monkeypatch.setattr(ingest_module, "INGEST_ROOTS", str(home))
+        app.dependency_overrides[validate_api_key] = lambda: ADMIN_USER
+        places = client.get("/api/v1/ingest/access").json()["places"]
+        assert [(p["label"], p["has_videos"]) for p in places] == [
+            ("Home", True),
+            ("Videos", False),
+            ("Desktop", True),
+            ("Documents", False),
+        ]
