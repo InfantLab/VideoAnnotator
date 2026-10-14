@@ -15,8 +15,9 @@ asking us.
 ([#10182](https://github.com/openjournals/joss-reviews/issues/10182)) was sent for an editorial
 scope check because no one outside the author team has used or contributed to it yet. JOSS accepts
 publications, outside use, integration with other research tools, or benchmarks with reproducible
-materials as evidence. v1.6.0 is built to produce all four: pilot labs start on release candidates,
-results export to ELAN, and every default model has a published benchmark score.
+materials as evidence. JOSS declined on scope (2026-10-06) and is no longer a goal; the shape stands
+for its own reason, outside use. The pilot follows the release, and a benchmark is not in v1.6.0
+(see Phase 5b).
 
 > Until 2026-09-24 this file held the plugin-ecosystem plan. That plan is now
 > [`roadmap_v1.7.0.md`](roadmap_v1.7.0.md), with its git history.
@@ -42,9 +43,10 @@ without help
   ELAN.
 - ✅ **Agents are users too.** Anything a person can do in the viewer, an agent can do through the
   CLI or MCP.
-- ✅ **No model change without a score.** A pipeline default changes only when the benchmark says the
-  new one is better.
-- ✅ **Pilot on release candidates.** Outside labs start at rc1, not at the final release.
+- ✅ **No model change without a reason on record.** A pipeline default changes on the upstream
+  model's published evaluation, after its output on the demo clip has been checked against the
+  baseline (`tests/integration/test_output_baseline.py`). The CHANGELOG and model card say why.
+- ✅ **Pilot after the release.** Outside testing is what the release is for.
 
 ---
 
@@ -365,8 +367,7 @@ but only the devcontainer does.
       Whisper), which this phase's one models directory makes practical.
 
 **Library versions vs default models**: this phase upgrades libraries. Switching a pipeline's
-*default model* (for example to `speaker-diarization-community-1`) still waits for the benchmark in
-Phase 5. If a library upgrade can't keep the current default model runnable, the audit says so and
+*default model* (for example to `speaker-diarization-community-1`) is Phase 5c's. If a library upgrade can't keep the current default model runnable, the audit says so and
 the spec decides.
 
 **Why second**: the install instructions, tutorials and docs written from Phase 2 onwards name the
@@ -460,7 +461,7 @@ half-built page.
       1-pixel difference in RetinaFace's box between two runs of the same video changes that
       face's gaze and action-unit intensities by up to ~2.4. Offer a deterministic mode
       (`torch.use_deterministic_algorithms`, cuDNN deterministic) and record it in provenance, and
-      measure run-to-run spread for every pipeline in the Phase 5 benchmark.
+      measure run-to-run spread for every pipeline.
       Also order-dependent (found 2026-10-04): `scene_detection`'s CLIP scores on the demo clip
       match the baseline exactly when it runs after `face_openface3_embedding` and
       `person_tracking` in the same job, but differ in the third decimal (0.6352 vs 0.6340) when
@@ -474,7 +475,7 @@ half-built page.
       job config and logged per pipeline. Not yet in the output files: that comes with Phase 3's
       provenance. Measured on the demo clip: two normal runs, two deterministic runs, and
       single-pipeline vs five-pipeline jobs all give identical files. Scene and OpenFace fixtures
-      re-baselined (README). Still to do: spread across GPUs and drivers, in the Phase 5 benchmark.
+      re-baselined (README). Not measured: spread across GPUs and drivers.
 - [x] **A pipeline that fails must say so.** `speech_recognition` catches errors in transcription,
       logs them only to the pipeline log, and returns no annotations, so the job reports the
       pipeline as completed with an empty transcript (found 2026-10-01 through a Triton cache
@@ -661,15 +662,16 @@ export; caregiver prosody.
 - [ ] Hosted endpoints are off by default. Enabling one shows a plain warning that frames leave the
       machine; for infant video that is an ethics-approval question.
 
-#### 5b. Benchmark first
+#### 5b. Benchmark: not in v1.6.0
 
-- [ ] `videoannotator benchmark`: runs chosen pipelines on a benchmark set that has human codes, and
-      writes a score table per pipeline and model version.
-- [ ] The benchmark set: 10–20 clips we have consent to share, with human codes. The Peekaboo demo
-      clip is one. The limit here is data, not code.
-- [ ] A published score for every default model, in the docs.
+Dropped 2026-10-14 (Caspar). The pipelines wrap off-the-shelf models that come with their own
+published evaluations, and a proper benchmark is a project in itself: no human-coded infant video
+of our own, and the open sets either cover speech only (HomeBank's public VanDam corpora,
+CC BY-NC-SA 3.0) or can't be redistributed (BabyView, on Databrary). Model cards (Phase 7) cite the
+upstream evaluations and say plainly that few were trained or tested on infants. Labs can check a
+pipeline against their own ELAN codes in the viewer's Compare page. Revisit after the pilot.
 
-#### 5c. Refresh defaults (each only if the benchmark agrees)
+#### 5c. Refresh defaults (each on the upstream evaluation plus a demo-clip check)
 
 - [ ] **Face** (if the Phase 1 review keeps a deepface-based pipeline): replace the default OpenCV
       Haar-cascade detector (`face_pipeline.py`, `detector_backend: opencv`) with YuNet or
@@ -680,11 +682,11 @@ export; caregiver prosody.
       large-v3-turbo.
 - [ ] **Diarization**: pyannote `speaker-diarization-3.1` → `speaker-diarization-community-1`,
       which mainly improves speaker counting and keeps speaker identity consistent across a
-      recording. The pyannote.audio 4 library upgrade itself happens in Phase 1. Score NVIDIA
+      recording. The pyannote.audio 4 library upgrade itself happens in Phase 1. Weigh NVIDIA
       Streaming Sortformer alongside, with dependency health as a criterion: pyannote is what holds
       torch at 2.11 (via the discontinued torchaudio) and upstream shows no plan to drop it.
       Background and decision: `dependency_audit_v1.6.0.md` §8.
-- [ ] Before that benchmark: a half-day Sortformer spike (installs on torch 2.14 without
+- [ ] Before choosing: a half-day Sortformer spike (installs on torch 2.14 without
       torchaudio? NeMo's telemetry? install size? demo-clip output). Audit §8.
 - [ ] Caspar: ask LAAC-LSCP about VTC 2's licence (the repository has none). VTC 2 also depends on
       pyannote, so adopting it keeps the torch cap. Audit §8.
@@ -762,7 +764,8 @@ failed, where the pipelines disagree, what the whole dataset looks like.
 - [ ] Every version constraint in `pyproject.toml` and the viewer's `package.json` has a recorded
       reason in the dependency audit, and the release supports Python 3.13 (3.14 as soon as
       TensorFlow does).
-- [ ] Every default model has a published benchmark score, and none changed without one.
+- [ ] Every default model has a model card citing its upstream evaluation, and every change of
+      default has its reason in the CHANGELOG.
 - [ ] Everything the viewer does is available from the CLI with `--json` and through MCP.
 - [ ] The viewer has zero TypeScript errors and no placeholder pages.
 - [ ] Nothing leaves the user's machine unless they switched on a hosted backend.
