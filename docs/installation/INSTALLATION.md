@@ -184,6 +184,55 @@ These tips address the most common macOS installation issues.
 
 ## Install with uv (developers)
 
+To run VideoAnnotator in your own Python environment, to change the code or script it.
+
+### Quick start
+
+**Windows** (PowerShell):
+
+```powershell
+winget install astral-sh.uv Git.Git Gyan.FFmpeg
+# close and reopen PowerShell so it finds them
+git clone https://github.com/InfantLab/VideoAnnotator.git
+cd VideoAnnotator
+uv sync
+uv run videoannotator server
+```
+
+The pipelines run on the CPU. For an NVIDIA GPU on Windows, use
+[Start VideoAnnotator](#start-videoannotator-researchers) with Docker Desktop.
+
+**macOS** (with [Homebrew](https://brew.sh); Apple Silicon and Intel run on the CPU):
+
+```bash
+brew install uv git ffmpeg libomp
+git clone https://github.com/InfantLab/VideoAnnotator.git
+cd VideoAnnotator
+uv sync
+uv run videoannotator server
+```
+
+**Linux** (Debian/Ubuntu; an NVIDIA GPU with driver 560 or newer is used automatically):
+
+```bash
+sudo apt install git ffmpeg
+curl -LsSf https://astral.sh/uv/install.sh | sh
+git clone https://github.com/InfantLab/VideoAnnotator.git
+cd VideoAnnotator
+uv sync
+uv run videoannotator server
+```
+
+The first time the server starts, it prints a link that opens the viewer already logged in:
+
+```
+Connect the viewer with one click:
+  http://127.0.0.1:18011/viewer-connect?token=...
+```
+
+Lost it? `uv run videoannotator generate-token` makes a new one. The steps below explain each
+part, and the install options.
+
 ### 1. Install uv Package Manager
 
 ```bash
@@ -199,7 +248,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/VideoAnnotator.git
+git clone https://github.com/InfantLab/VideoAnnotator.git
 cd VideoAnnotator
 ```
 

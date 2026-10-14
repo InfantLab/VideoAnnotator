@@ -42,118 +42,40 @@ Every output file records what made it: the pipeline and VideoAnnotator version,
 exact weights, and the settings. That is what you need to report the method, and to get the same
 results again later.
 
-## Install
+## Get started
 
-VideoAnnotator itself needs about 1 GB of disk. Each pipeline adds its libraries and models:
-allow about 12 GB if you install every one. A job running every pipeline used about 6 GB of
-memory, so 16 GB of RAM is comfortable. A GPU is optional.
+You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) or
+[Podman Desktop](https://podman-desktop.io/), installed and started once. No Python.
 
-### Start VideoAnnotator (the easy way)
-
-1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or
-   [Podman Desktop](https://podman-desktop.io/), and start it once.
-2. Install the start-up program with one line:
-
-   ```bash
-   # Linux and macOS
-   curl -LsSf https://github.com/InfantLab/VideoAnnotator/releases/latest/download/install.sh | sh
-   ```
+1. **Install the start-up program**, with one line:
 
    ```powershell
    # Windows (PowerShell)
    powershell -ExecutionPolicy Bypass -c "irm https://github.com/InfantLab/VideoAnnotator/releases/latest/download/install.ps1 | iex"
    ```
 
-3. Double-click **Start VideoAnnotator**. It asks which folder your videos are in, shares it
-   read-only, and opens VideoAnnotator in your browser. Results go to a `VideoAnnotator` folder in
+   ```bash
+   # macOS and Linux
+   curl -LsSf https://github.com/InfantLab/VideoAnnotator/releases/latest/download/install.sh | sh
+   ```
+
+2. **Double-click Start VideoAnnotator.** The first time, it asks which folder your videos are
+   in and shares it read-only. Then it opens VideoAnnotator in your browser. Next time it just
+   starts.
+
+3. **Run a job.** Choose **New job**, tick some videos and the pipelines to run. The first time
+   you choose a pipeline, VideoAnnotator offers to install it. **Jobs** shows progress; open a
+   finished job to see the results on the video. Results also go to a `VideoAnnotator` folder in
    your home folder.
 
-No Python and no further commands; next time it just starts. Labs and servers can use
-[Docker Compose](docs/installation/INSTALLATION.md#docker-installation-alternative) instead. See the
-[installation guide](docs/installation/INSTALLATION.md#start-videoannotator-researchers) for sharing
-more folders, the GPU, and what VideoAnnotator can access.
+Allow about 1 GB of disk, plus up to 12 GB if you install every pipeline, and 16 GB of RAM. A
+GPU is optional. The VLM pipeline needs [Ollama](https://ollama.com) running on the same
+computer.
 
-To install it in your own Python environment instead (developers, or to change the code):
-
-### Windows
-
-In PowerShell:
-
-```powershell
-# 1. Tools: uv (Python manager), Git, ffmpeg
-winget install astral-sh.uv Git.Git Gyan.FFmpeg
-# (close and reopen PowerShell so it finds them)
-
-# 2. VideoAnnotator
-git clone https://github.com/InfantLab/VideoAnnotator.git
-cd VideoAnnotator
-uv sync
-
-# 3. Start it
-uv run videoannotator server
-```
-
-On Windows the pipelines run on the CPU. To use an NVIDIA GPU, use Start VideoAnnotator (above) with Docker Desktop.
-
-### macOS
-
-In Terminal (with [Homebrew](https://brew.sh)):
-
-```bash
-# 1. Tools
-brew install uv git ffmpeg libomp
-
-# 2. VideoAnnotator
-git clone https://github.com/InfantLab/VideoAnnotator.git
-cd VideoAnnotator
-uv sync
-
-# 3. Start it
-uv run videoannotator server
-```
-
-Apple Silicon and Intel Macs run the pipelines on the CPU.
-
-### Linux
-
-```bash
-# 1. Tools (Debian/Ubuntu; use your distribution's package manager otherwise)
-sudo apt install git ffmpeg
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# 2. VideoAnnotator
-git clone https://github.com/InfantLab/VideoAnnotator.git
-cd VideoAnnotator
-uv sync
-
-# 3. Start it
-uv run videoannotator server
-```
-
-With an NVIDIA GPU (driver 560 or newer), the pipelines use it automatically.
-
-## Open the viewer
-
-The first time the server starts, it prints a link:
-
-```
-Connect the viewer with one click:
-  http://127.0.0.1:18011/viewer-connect?token=...
-```
-
-Open it in your browser. It logs you in and opens the viewer's home page. From there:
-
-1. **New job**: choose one or more videos and the pipelines to run. The first time you choose a
-   pipeline, the viewer offers to install it. Restart the server when it asks you to.
-2. **Jobs**: follow progress. A job takes from about a minute (a short clip) to longer than the
-   video itself (all pipelines, on a CPU).
-3. **View** a finished job to see the results on the video, and download the files.
-
-Lost the link? `uv run videoannotator generate-token` makes a new one.
-
-Speaker diarization needs a free Hugging Face token
-([how to get one](docs/installation/ENVIRONMENT_SETUP.md)). The VLM pipeline needs
-[Ollama](https://ollama.com) running on the same computer.
+The [installation guide](docs/installation/INSTALLATION.md) covers sharing more folders, the
+GPU, labs and servers ([Docker Compose](docs/installation/INSTALLATION.md#docker-installation-alternative)),
+and installing from source in your own Python environment
+([developers](docs/installation/INSTALLATION.md#install-with-uv-developers)).
 
 ## Learn more
 
