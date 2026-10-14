@@ -21,8 +21,10 @@ results export to ELAN, and every default model has a published benchmark score.
 > Until 2026-09-24 this file held the plugin-ecosystem plan. That plan is now
 > [`roadmap_v1.7.0.md`](roadmap_v1.7.0.md), with its git history.
 
-**Target Release**: in time for the early-2027 conference season (BCCCD, 7–9 Jan 2027)
-**Current Status**: Phase 0 done; Phase 1 nearly done (open items below); Phase 2 next (2026-10-02)
+**Target Release**: as complete as possible, as soon as possible. No conference deadline (BCCCD
+dropped 2026-10-14). The pilot (and spec 024's T083) runs after the release.
+**Current Status**: Phases 0–1 done bar non-blocking items; Phase 2 closing with spec 024's
+walkthroughs (2026-10-14)
 **Main Goal**: an outside lab can go from install to results in R or Python, on its own videos,
 without help
 **Prerequisites**: v1.5.0 tagged, after spec 011's SC-001 manual run
@@ -770,5 +772,5 @@ failed, where the pipelines disagree, what the whole dataset looks like.
 ---
 
 **Last Updated**: 2026-09-30
-**Target Release**: Early 2027, ahead of BCCCD (7–9 Jan 2027)
+**Target Release**: as soon as complete (see the top of this file)
 **Status**: Planning Phase — Public Release

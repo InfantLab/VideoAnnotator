@@ -266,8 +266,8 @@ Delivery step 7). Cross-cutting, so tasks name the stories they cover rather tha
 - [X] T080 [P] Update `README.md`'s install section launcher-first (Docker Desktop or Podman Desktop, the one-line installer, "Start VideoAnnotator"; compose for labs), and add or tick 024 in `docs/development/roadmap_v1.6.0.md` (constitution, Engineering Standards: Documentation)
 - [X] T081 Run the full gates: `pytest tests/`, `ruff check .`, `mypy src/videoannotator`, `cd viewer && bun run lint && bunx tsc --noEmit -p tsconfig.app.json && bun run test:run`, `bats tests/launcher`, `pre-commit run --all-files`; fix anything failing
 - [ ] T082 Walk `specs/024-container-feels-local/quickstart.md` on Linux with Docker and with Podman; record results (and any deviations) in a "Walkthrough log" section at the end of that file; confirm SC-002 (no container path on any screen)
-- [ ] T083 Ask a pilot researcher (non-technical) to run quickstart Story 5 unaided on their own machine; record in the walkthrough log whether each message let them act without help (SC-005)
-- [ ] T084 Walk the quickstart on Windows with Docker Desktop and with Podman Desktop (maintainer's machine, by hand); record results in the same log; ask the pilot lab to run it on macOS and note it as pending until they report
+- [>>] T083 Ask a pilot researcher (non-technical) to run quickstart Story 5 unaided on their own machine; record in the walkthrough log whether each message let them act without help (SC-005)
+- [x] T084 Walk the quickstart on Windows with Docker Desktop and with Podman Desktop (maintainer's machine, by hand); record results in the same log; ask the pilot lab to run it on macOS and note it as pending until they report
 
 ---
 
