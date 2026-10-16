@@ -106,6 +106,13 @@ class StorageBackend(ABC):
         """
         pass
 
+    def list_jobs_by_dataset(self, dataset_id: str) -> list[str]:
+        """Job IDs run from a saved dataset, oldest first (spec 025). Backends
+        with a query language override this scan."""
+        jobs = [self.load_job_metadata(job_id) for job_id in self.list_jobs()]
+        matching = [j for j in jobs if j is not None and j.dataset_id == dataset_id]
+        return [j.job_id for j in sorted(matching, key=lambda j: j.created_at)]
+
     def list_reruns(self, job_id: str) -> list[str]:
         """Jobs that run `job_id` again, oldest first (spec 019). Backends
         with an index override this; the default reads every job."""

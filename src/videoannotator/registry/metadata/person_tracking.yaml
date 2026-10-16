@@ -46,3 +46,26 @@ version: 1
 stability: beta
 backends:
   - pytorch
+
+# spec 025: cited by the methods paragraph (videoannotator export methods).
+citations:
+  - key: jocher2024yolo11
+    bibtex: |
+      @software{jocher2024yolo11,
+        author = {Jocher, Glenn and Qiu, Jing},
+        title = {Ultralytics {YOLO11}},
+        version = {11.0.0},
+        year = {2024},
+        url = {https://github.com/ultralytics/ultralytics},
+        license = {AGPL-3.0}
+      }
+  - key: zhang2022bytetrack
+    bibtex: |
+      @inproceedings{zhang2022bytetrack,
+        author = {Zhang, Yifu and Sun, Peize and Jiang, Yi and Yu, Dongdong and Weng, Fucheng and Yuan, Zehuan and Luo, Ping and Liu, Wenyu and Wang, Xinggang},
+        title = {{ByteTrack}: Multi-Object Tracking by Associating Every Detection Box},
+        booktitle = {Computer Vision -- {ECCV} 2022},
+        pages = {1--21},
+        year = {2022},
+        doi = {10.1007/978-3-031-20047-2_1}
+      }

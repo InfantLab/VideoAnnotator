@@ -332,6 +332,9 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        # A dev viewer on another port reads the export summary (spec 025) and
+        # the server's file name for downloads.
+        expose_headers=["X-VideoAnnotator-Export-Summary", "Content-Disposition"],
     )
 
     # Include API routes

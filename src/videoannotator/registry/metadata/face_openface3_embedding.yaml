@@ -49,3 +49,16 @@ weights:
   - id: nutPace/openface_weights
     approx_mb: 282
     cache: huggingface
+
+# spec 025: cited by the methods paragraph (videoannotator export methods).
+citations:
+  - key: hu2025openface3
+    bibtex: |
+      @inproceedings{hu2025openface3,
+        author = {Hu, Jiewen and Mathur, Leena and Liang, Paul Pu and Morency, Louis-Philippe},
+        title = {{OpenFace} 3.0: A Lightweight Multitask System for Comprehensive Facial Behavior Analysis},
+        booktitle = {19th {IEEE} International Conference on Automatic Face and Gesture Recognition ({FG})},
+        year = {2025},
+        eprint = {2506.02891},
+        archiveprefix = {arXiv}
+      }

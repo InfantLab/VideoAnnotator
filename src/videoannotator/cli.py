@@ -916,6 +916,198 @@ def vlm_models(server: str = _SERVER_OPTION, api_key: str | None = _KEY_OPTION):
         typer.echo(f"  {name}")
 
 
+export_app = typer.Typer(
+    name="export",
+    help="Results out of VideoAnnotator: one table, ELAN files, a methods paragraph "
+    "(spec 025). Works on any results folder, with or without a server.",
+)
+app.add_typer(export_app, name="export")
+
+_FOLDER_ARGUMENT = typer.Argument(
+    ...,
+    help="A results folder: a video's, a run's, a folder of runs, or a downloaded "
+    "results zip, extracted",
+)
+_JSON_OPTION = typer.Option(
+    False, "--json", help="Print the export summary as JSON instead of text"
+)
+_EXPORT_SUFFIXES = (".csv", ".parquet", ".eaf", ".md", ".bib", ".zip")
+
+
+def _export_results(folder: Path) -> Any:
+    """The results under `folder`, or exit 1 saying why there are none."""
+    from .exporters.results_set import from_folder
+
+    try:
+        results = from_folder(folder)
+    except FileNotFoundError as e:
+        typer.echo(f"[ERROR] {e}", err=True)
+        raise typer.Exit(code=1) from e
+    if results.is_empty():
+        typer.echo(f"[ERROR] No VideoAnnotator results in {folder}", err=True)
+        for m in results.missing:
+            typer.echo(f"  {m.video}: {m.reason}", err=True)
+        raise typer.Exit(code=1)
+    return results
+
+
+def _export_path(folder: Path, output: str | None, default_name: str) -> Path | None:
+    """Where to write: `output`, stdout (`-`, as None), or `default_name` in `folder`."""
+    if output == "-":
+        return None
+    if output is None:
+        return folder / default_name
+    path = Path(output).expanduser()
+    if (
+        path.exists()
+        and not path.is_dir()
+        and path.suffix.lower() not in _EXPORT_SUFFIXES
+    ):
+        typer.echo(
+            f"[ERROR] {path} exists and isn't an export; choose another --output",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    return path
+
+
+def _report(summary: Any, output: str, as_json: bool) -> None:
+    if as_json:
+        typer.echo(json.dumps({**summary.to_dict(), "output": output}, indent=2))
+        return
+    pipelines = len(summary.pipelines)
+    typer.echo(
+        f"[OK] {summary.rows:,} rows, {summary.videos} video"
+        f"{'' if summary.videos == 1 else 's'}, {pipelines} pipeline"
+        f"{'' if pipelines == 1 else 's'} -> {output}",
+        err=output == "stdout",
+    )
+    for line in summary.lines():
+        typer.echo(f"  {line}", err=True)
+
+
+def _write_failed(path: Path, error: OSError) -> typer.Exit:
+    typer.echo(
+        f"[ERROR] Cannot write {path}: {error.strerror or error}. "
+        "Choose somewhere else with --output.",
+        err=True,
+    )
+    return typer.Exit(code=1)
+
+
+@export_app.command("table")
+def export_table(
+    folder: Path = _FOLDER_ARGUMENT,
+    format: str = typer.Option("csv", "--format", help="csv or parquet"),
+    output: str | None = typer.Option(
+        None,
+        "-o",
+        "--output",
+        help="File to write ('-' for stdout); default <folder>/<folder name>.<format>",
+    ),
+    as_json: bool = _JSON_OPTION,
+):
+    """One table of every pipeline's results: one row per event and measure."""
+    import sys
+
+    from .exporters.table import (
+        ParquetNotInstalled,
+        parquet_available,
+        write_csv,
+        write_parquet,
+    )
+
+    if format not in ("csv", "parquet"):
+        typer.echo("[ERROR] --format must be csv or parquet", err=True)
+        raise typer.Exit(code=2)
+    if format == "parquet" and not parquet_available():
+        typer.echo(f"[ERROR] {ParquetNotInstalled()}", err=True)
+        raise typer.Exit(code=3)
+    folder = folder.expanduser()
+    results = _export_results(folder)
+    path = _export_path(folder, output, f"{folder.resolve().name}.{format}")
+    if path is None:
+        if format == "parquet":
+            typer.echo("[ERROR] Parquet can't be written to stdout", err=True)
+            raise typer.Exit(code=2)
+        summary = write_csv(results, sys.stdout)
+        _report(summary, "stdout", as_json)
+        return
+    try:
+        if format == "parquet":
+            summary = write_parquet(results, path)
+        else:
+            with open(path, "w", encoding="utf-8", newline="") as out:
+                summary = write_csv(results, out)
+    except OSError as e:
+        raise _write_failed(path, e) from e
+    _report(summary, str(path), as_json)
+
+
+@export_app.command("elan")
+def export_elan(
+    folder: Path = _FOLDER_ARGUMENT,
+    output: Path | None = typer.Option(
+        None,
+        "-o",
+        "--output",
+        help="Folder to write the .eaf files to; default: each beside its results",
+    ),
+    as_json: bool = _JSON_OPTION,
+):
+    """One ELAN (.eaf) file per video, one tier per pipeline track."""
+    from .exporters.elan import beside_results, file_name, write_videos
+
+    results = _export_results(folder.expanduser())
+
+    def target(video: Any) -> Path:
+        if output is None:
+            return beside_results(video)
+        base = output.expanduser()
+        return (base / video.run if video.run else base) / file_name(video)
+
+    try:
+        summary = write_videos(results, target)
+    except OSError as e:
+        raise _write_failed(Path(e.filename or folder), e) from e
+    if as_json:
+        typer.echo(json.dumps({**summary.to_dict(), "output": str(output or folder)}))
+        return
+    where = output or "beside each video's results"
+    typer.echo(
+        f"[OK] {summary.videos} ELAN file{'' if summary.videos == 1 else 's'}, "
+        f"{summary.rows:,} annotations -> {where}"
+    )
+    for line in summary.lines():
+        typer.echo(f"  {line}", err=True)
+
+
+@export_app.command("methods")
+def export_methods(
+    folder: Path = _FOLDER_ARGUMENT,
+    output: str | None = typer.Option(
+        None, "-o", "--output", help="Markdown file to write; default: print it"
+    ),
+    as_json: bool = _JSON_OPTION,
+):
+    """A methods paragraph with BibTeX: models, exact weights, settings, citations."""
+    from .exporters.methods import describe
+
+    described = describe(_export_results(folder.expanduser()))
+    if as_json:
+        typer.echo(json.dumps(described.to_dict(), indent=2))
+        return
+    path = _export_path(folder, output or "-", "methods.md")
+    if path is None:
+        typer.echo(described.to_markdown())
+        return
+    try:
+        path.write_text(described.to_markdown(), encoding="utf-8")
+    except OSError as e:
+        raise _write_failed(path, e) from e
+    typer.echo(f"[OK] Methods for {described.summary['videos']} video(s) -> {path}")
+
+
 pipelines_app = typer.Typer(
     name="pipelines",
     help="Inspect and manage annotation pipelines",

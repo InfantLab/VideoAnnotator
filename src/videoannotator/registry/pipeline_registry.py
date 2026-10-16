@@ -95,6 +95,15 @@ class WeightSpec:
 
 
 @dataclass
+class Citation:
+    """A reference users of a pipeline should cite (spec 025), as one BibTeX
+    entry whose key is `key`. The methods paragraph cites these."""
+
+    key: str
+    bibtex: str
+
+
+@dataclass
 class DeprecationInfo:
     """Why a pipeline is deprecated, when it goes, and what to use instead."""
 
@@ -135,6 +144,8 @@ class PipelineMetadata:
     family_default: bool = False
     # spec 014: still runs (existing configs keep working) but isn't listed.
     deprecated: DeprecationInfo | None = None
+    # spec 025: what to cite for this pipeline (method and model papers).
+    citations: list[Citation] = field(default_factory=list)
 
 
 class PipelineRegistry:
@@ -291,6 +302,21 @@ class PipelineRegistry:
                 )
             )
 
+        citations: list[Citation] = []
+        for item in raw.get("citations") or []:
+            if (
+                not isinstance(item, dict)
+                or not item.get("key")
+                or not item.get("bibtex")
+            ):
+                LOGGER.warning(
+                    "Metadata %s has an invalid citations entry", source.name
+                )
+                continue
+            citations.append(
+                Citation(key=str(item["key"]), bibtex=str(item["bibtex"]).strip())
+            )
+
         return PipelineMetadata(
             name=str(raw["name"]),
             display_name=str(raw["display_name"]),
@@ -314,6 +340,7 @@ class PipelineRegistry:
             weights=weights,
             family_default=bool(raw.get("family_default", False)),
             deprecated=_parse_deprecated(raw.get("deprecated"), source.name),
+            citations=citations,
         )
 
     def list(self, include_deprecated: bool = False) -> builtins.list[PipelineMetadata]:

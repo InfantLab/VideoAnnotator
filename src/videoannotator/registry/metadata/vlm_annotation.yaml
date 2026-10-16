@@ -93,3 +93,12 @@ requires_setup:
     name: ollama
     description: A running Ollama server with a vision model pulled
     help_url: https://ollama.com/download
+
+# spec 025: cited by the methods paragraph (videoannotator export methods).
+citations:
+  - key: ollama
+    bibtex: |
+      @software{ollama,
+        title = {Ollama},
+        url = {https://github.com/ollama/ollama}
+      }

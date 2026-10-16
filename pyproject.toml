@@ -175,8 +175,12 @@ llm = [
     # cv2 is used for frame sampling (cv2.VideoCapture), same as `scene`.
     "opencv-python>=4.11.0.86,<5.0",
 ]
+# Exports the results table as Parquet (spec 025); CSV needs nothing extra.
+parquet = [
+    "pyarrow>=17",
+]
 all = [
-    "videoannotator[face,face-openface3,audio,scene,person,llm]"
+    "videoannotator[face,face-openface3,audio,scene,person,llm,parquet]"
 ]
 
 [tool.setuptools.package-data]
@@ -355,6 +359,8 @@ dev = [
     "ruff>=0.14.0",
     "types-PyYAML>=6.0.0",
     "types-requests>=2.31.0",
+    # Validates exported ELAN files against the EAF 3.0 schema (spec 025).
+    "xmlschema>=3.0",
 ]
 # The documentation site: `uv run --group docs mkdocs serve`.
 docs = [

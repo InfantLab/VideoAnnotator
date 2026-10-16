@@ -120,3 +120,27 @@ weights:
   - id: gender_model_weights.h5
     approx_mb: 540
     cache: deepface
+
+# spec 025: cited by the methods paragraph (videoannotator export methods).
+citations:
+  - key: serengil2026deepface
+    bibtex: |
+      @article{serengil2026deepface,
+        author = {Serengil, Sefik Ilkin and Ozpinar, Alper},
+        title = {Boosted {LightFace}: A Hybrid {DNN} and {GBM} Model for Boosted Facial Recognition},
+        journal = {Gazi University Journal of Science},
+        volume = {39},
+        number = {1},
+        pages = {452--466},
+        year = {2026},
+        doi = {10.35378/gujs.1794891}
+      }
+  - key: deng2020retinaface
+    bibtex: |
+      @inproceedings{deng2020retinaface,
+        author = {Deng, Jiankang and Guo, Jia and Ververas, Evangelos and Kotsia, Irene and Zafeiriou, Stefanos},
+        title = {{RetinaFace}: Single-Shot Multi-Level Face Localisation in the Wild},
+        booktitle = {Proceedings of the {IEEE/CVF} Conference on Computer Vision and Pattern Recognition ({CVPR})},
+        pages = {5203--5212},
+        year = {2020}
+      }

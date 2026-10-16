@@ -103,3 +103,17 @@ weights:
   - id: base
     approx_mb: 140
     cache: whisper
+
+# spec 025: cited by the methods paragraph (videoannotator export methods).
+citations:
+  - key: radford2023whisper
+    bibtex: |
+      @inproceedings{radford2023whisper,
+        author = {Radford, Alec and Kim, Jong Wook and Xu, Tao and Brockman, Greg and McLeavey, Christine and Sutskever, Ilya},
+        title = {Robust Speech Recognition via Large-Scale Weak Supervision},
+        booktitle = {Proceedings of the 40th International Conference on Machine Learning},
+        series = {Proceedings of Machine Learning Research},
+        volume = {202},
+        pages = {28492--28518},
+        year = {2023}
+      }
