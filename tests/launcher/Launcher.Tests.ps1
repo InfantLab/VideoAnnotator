@@ -69,6 +69,12 @@ Describe 'settings' {
         $read = Read-VaConfig -Path (Join-Path $TestDrive 'none.conf')
         @($read.shares).Count | Should -Be 0
     }
+
+    It 'counts a single matching PATH entry without unwrapping it to a string' {
+        $dir = 'C:\Users\ada\AppData\Local\VideoAnnotator'
+        $userPath = 'C:\Users\ada\AppData\Local\VideoAnnotator'
+        @($userPath.Split(';') | Where-Object { $_ -ieq $dir }).Count | Should -Be 1
+    }
 }
 
 Describe 'run' {
