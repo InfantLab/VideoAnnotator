@@ -2,7 +2,8 @@
 
 **Feature Branch**: `023-viewer-overhaul` (work lands on `1.6-dev`)
 **Created**: 2026-10-06
-**Updated**: 2026-10-06, scope widened from the results player to the whole viewer experience
+**Updated**: 2026-10-06, scope widened from the results player to the whole viewer experience;
+2026-10-16, themes 7–13 added after spec 025, and the [inventory](inventory.md) (Process step 1) begun
 **Status**: Placeholder. Not yet specified. Needs research and design thinking first (see
 [Process](#process)); only then run `/speckit-specify` with
 `SPECIFY_FEATURE_DIRECTORY=specs/023-viewer-overhaul`.
@@ -78,13 +79,16 @@ the fact ("run this on more videos?", "keep these together?"), never demanded up
 This needs research and thought before a spec. Proposed steps, each written up in this folder:
 
 1. **Inventory**: every current page, its purpose, and the terms it uses. Mark where the same thing
-   has two names, or one name means two things.
+   has two names, or one name means two things. Done: [inventory.md](inventory.md) (pages,
+   naming clashes, the results player, standalone mode, empty states).
 2. **Users and tasks**: who uses it (a tinkerer with VLMs, a lab coding a corpus, a student
    reviewing someone else's results) and their main tasks, in their own words. Ask pilot labs and
-   psychologist colleagues, not only us.
+   psychologist colleagues, not only us. Cold start: people can't say how they'll use a tool
+   they've never had, so asking what they want of it gives little. Approach still to decide.
 3. **Comparable tools**: how researchers already organise video coding work (ELAN, BORIS, Datavyu,
    Label Studio, DeepLabCut's GUI, FiftyOne, Noldus Observer). Which of their words and structures
-   researchers already know.
+   researchers already know. Desk research done: [comparable-tools.md](comparable-tools.md);
+   hands-on tries still to do.
 4. **Model and vocabulary**: settle the hierarchy, the words, and what lives at each level,
    including settings.
 5. **Journeys and wireframes**: the chosen journeys step by step, and the navigation, as sketches.
@@ -108,6 +112,59 @@ This needs research and thought before a spec. Proposed steps, each written up i
 6. **Researchers' own notes and annotations, light touch**: add a note or a simple label at a
    moment or over a span, kept with the results. Related: ELAN export (roadmap v1.6.0 Phase 3),
    so researcher annotations can travel to the tools labs already code in.
+
+## Further themes (2026-10-16, after spec 025)
+
+Each with what the viewer does today (checked in `viewer/src/` at `a4edb1a`).
+
+7. **VLMs get a clear front door.** VLM prompting is probably the most popular light-touch use,
+   but the Prompt workbench has no nav entry: it's reached only from a sentence on Home and a
+   button on Prompts. Prompts, Workbench and Compare are three pages for one activity (try
+   prompts, run one, compare runs), and only Compare is linked from a job. This belongs with
+   "Try it" above.
+8. **Help where the question arises, not on an external wiki.** The footer and Getting started
+   link to DeepWiki for `InfantLab/video-annotation-viewer`, the repo archived when the viewer
+   moved here (roadmap Phase 0), so it is both stale and out of context. Getting started still
+   says "VAV". Only 5 files use a tooltip. Wanted: tooltips on terms and settings, toasts that say
+   what just happened and what to do next, short inline help on each page, and docs links that
+   point into this repo's `docs/` at the right section.
+9. **Pipeline settings that are readable.** The job wizard's configuration step
+   (`pages/NewJob.tsx`, 1,946 lines in all) shows registry-driven parameters for every selected
+   pipeline at once, followed by a raw JSON editor; OpenFace 3 and the VLM have their own
+   one-off controls. Wanted: settings grouped per pipeline, the few that matter shown first with
+   their defaults and units, the rest behind "more", and the JSON kept for experts. This ties in
+   with recipes (above) and with spec 017's provenance, which already records what was used.
+10. **The results player.**
+    a. *Controls take a lot of room.* `UnifiedControls` is a card with an overlay switch and a
+       timeline switch per pipeline, plus lock and all-on/all-off; it hard-codes six pipelines
+       (pose, faces, emotions, transcript, speakers, scenes), so new ones such as the VLM are
+       handled elsewhere. Candidates: toggle lanes from the timeline itself (click a lane's
+       label), a compact layers popover, keyboard shortcuts, and lanes derived from what the
+       results contain rather than a fixed list.
+    b. *The timeline is minimal.* Fixed lanes, the full video always (no zoom or pan), no
+       hover details, no lane for faces over time or per person. The "motion" lane plots the
+       sum of person-box areas per 0.1 s, which is not movement, so under Principle VI it needs
+       a truthful label or a real measure (theme 2). Candidates: zoom and pan, hover for the
+       values behind an event, per-person and per-speaker rows, numeric tracks (movement,
+       face count, VLM scores) as small charts, jump to next/previous event, and researcher
+       notes as their own lane (theme 6).
+    c. *Aware of runs and datasets.* Opened from a batch, the player has previous/next
+       (`BatchNavigation`); opened any other way it shows one video with no sense of where it
+       belongs. Wanted: which run and dataset this video is from, its siblings, and other runs'
+       results on the same video (theme 5).
+11. **Exports in plain sight, methods included.** Spec 025's Export menu (table, ELAN, methods)
+    appears only on Job detail and Batch detail. It is missing from the results player, the
+    Datasets page (the API exports datasets) and Results. Export, and "how do I cite this?",
+    should be reachable wherever results are.
+12. **Reusable workflows.** What can be saved today is scattered: presets (pipelines and
+    settings, on the server, exportable as JSON), datasets (lists of videos), the prompt library,
+    and "Run again" from a past job. None of them joins videos, settings, prompts and export
+    choices into one thing to rerun on new videos or share with a lab. Recipes (above) are the
+    starting idea; the question is whether a recipe is that thing or one part of it.
+13. **Data as a proper view.** "View data" (`FileViewer`) is a modal of pretty-printed JSON.
+    Wanted: a table of the results (the spec 025 long-format table is the natural source),
+    sortable and filterable, linked to the video (click a row to seek, playing highlights the
+    row), next to the player rather than over it. This is theme 3 made concrete.
 
 ## Constraints already known
 
