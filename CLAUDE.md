@@ -62,7 +62,8 @@ by `src/videoannotator/exporters/`, so `videoannotator export table|elan|methods
 server), the API (`/export/...`, `/methods` on jobs, batches, datasets) and the viewer's Export menu
 agree. Plus R and Python notebooks in `examples/notebooks/`. Native outputs don't change. Before
 025: spec 024 (container launcher; T082 walkthrough open). After 025:
-`specs/023-viewer-overhaul` (needs research first).
+the viewer overhaul, designed in `specs/023-viewer-overhaul` and split into `specs/026-pipeline-guide`,
+`027-ask-ai`, `028-video-page` and `029-videos-and-projects` (specified, not yet planned).
 <!-- SPECKIT END -->
 
 ## Recent Changes

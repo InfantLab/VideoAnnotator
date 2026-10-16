@@ -1,12 +1,12 @@
-# Feature Specification: Viewer Overhaul (placeholder)
+# Feature Specification: Viewer Overhaul (design)
 
 **Feature Branch**: `023-viewer-overhaul` (work lands on `1.6-dev`)
 **Created**: 2026-10-06
 **Updated**: 2026-10-06, scope widened from the results player to the whole viewer experience;
-2026-10-16, themes 7–13 added after spec 025, and the [inventory](inventory.md) (Process step 1) begun
-**Status**: Placeholder. Not yet specified. Needs research and design thinking first (see
-[Process](#process)); only then run `/speckit-specify` with
-`SPECIFY_FEATURE_DIRECTORY=specs/023-viewer-overhaul`.
+2026-10-16, themes 7–13, research, decisions, draft proposal, journeys, and the split into
+specs 026–029
+**Status**: Design. Research, decisions, a draft proposal and journeys are here; it is built by
+specs 026–029 (see [Split into specs](#split-into-specs)).
 **Sequence**: the spec after [022](../022-videos-read-in-place/spec.md) (videos and results where
 you expect them).
 
@@ -198,6 +198,84 @@ start points.
 The browser's local copies of results become an invisible cache: no folder question before
 playing. Standalone mode: "Open files from this computer" on Home; server pages stay visible but
 say they need a server and what works without one.
+
+### The Video page
+
+One video: everything found in it, from any run, on one time axis, with the values behind it.
+
+```
+┌ ← Peekaboo study   p01_t1.mp4   3 of 48  ‹ ›          [Ask AI] [Run…] [Export ▾] [⋯] ┐
+│                                                  │ Data │ Notes │ Runs │ About        │
+│                                                  │ ─────────────────────────────────│
+│              video (with overlays)               │ Lane: [all ▾]   Search [      ]  │
+│                                                  │ 0:11.9  Speakers  SPEAKER_00     │
+│                                                  │▶0:12.4  Speech    "Peekaboo!"    │
+│                                                  │ 0:12.5  Ask AI    touching       │
+│ ▶  0:12.4 / 3:20  ⏮ ⏭ event   1×   frame 372     │ 0:13.0  People    person 2 in    │
+├──────────────────────────────────────────────────┴──────────────────────────────────┤
+│ [Layers ▾]  [− zoom +]  ▕██████▏────────────────────────── (visible range)          │
+│ 👁 Speech                     ▬▬▬▬  ▬▬▬▬▬     ▬▬                 run 12 Oct ▾       │
+│ 👁 Speakers   SPEAKER_00      ▬▬      ▬▬▬                                           │
+│               SPEAKER_01          ▬▬▬     ▬                                         │
+│ 👁 People     person 1     ▔▔▔▔▔▔▔▔▔▔▔▔▔                                            │
+│               person 2           ▔▔▔▔▔▔▔                                            │
+│ 👁 Faces      count        ╱╲__╱╲_                                                  │
+│ 👁 Ask AI     touch        ●  ●●   ●     ●                                          │
+│    Notes      (yours)      ▲      ▬▬▬                     N: note · ⇧N: span        │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Lanes are the controls.** Each lane's label shows what it is, an eye to show or hide its
+  overlay on the video, and a click to collapse it; "Layers" lists them all. The separate
+  controls card goes. Lanes come from what the results contain, not a fixed list, so a pipeline
+  that didn't run takes no space.
+- **One row per person or speaker** inside a lane, labelled, with stable colours (spec 023 fix,
+  `41a38d2`). Numeric values (face count, scores, a future movement measure) are small charts.
+- **Zoom and pan**, a visible-range bar, previous/next event in the selected lane (keys), hover
+  for the values behind an event, frame number in the readout.
+- **Data beside the video** (theme 13): the spec 025 table for this video, filterable by lane,
+  searchable; the playing row is highlighted and a click seeks. Replaces "View data".
+- **Which run.** Each lane says which run it shows; a video run more than once offers the others
+  in the lane's menu, and two runs can be shown as two lanes to compare.
+- **Notes** (theme 6): N marks a moment, Shift+N a span; notes are their own lane, visibly the
+  researcher's, kept with the video and exported to ELAN as their own tier.
+- **About** shows provenance (spec 017) for each lane: pipeline, model, version, settings.
+- Debug, "Load different files" and the like move to the ⋯ menu.
+- Opened from a project or folder, ‹ › move through it (theme 10c).
+
+### Technical findings (2026-10-16)
+
+- **The VLM pipeline writes only at the end** (`vlm_pipeline.py`: annotations are collected,
+  then saved once). Answers filling in during a run needs it to write as it goes, or report
+  answers through job progress.
+- **Burst spacing is the sampling interval**: a burst frame is at `anchor + offset ×
+  frame_interval_sec`. "X frames Y apart" needs a separate spacing setting.
+- **No range from jobs**: `process()` takes start and end, but the job runner always passes the
+  whole video (`batch/job_execution.py`).
+- **Video streaming exists but isn't used**: `GET /jobs/{id}/video` serves the video with range
+  requests (spec 021), and result files can be fetched one at a time. The player instead
+  downloads a zip with the video inside and asks for a local folder. Streaming needs auth that a
+  `<video>` element can send (a short-lived token in the URL, or a cookie).
+- **Jobs record their dataset** (`dataset_id`), so a project's runs can be found without new
+  links. There is no list of videos in the API: the Videos page needs one, built from jobs and
+  datasets.
+- **Datasets ≈ projects already**: name, description, videos, an optional server folder, and
+  whether the videos are a selection from it. **Presets ≈ workflows already**: pipelines and
+  their config, which includes VLM prompts and sampling.
+
+### Split into specs
+
+023 is the design; these specs build it. Each ships on its own, in this order:
+
+| Spec | What | Depends on |
+|---|---|---|
+| [026 pipeline guide](../026-pipeline-guide/spec.md) | Pipeline metadata for researchers: what each does, behavioural vs technical settings, plain labels, homepage, benchmarks, settings hidden when they don't apply; shown on Pipelines and in New run | nothing |
+| [027 Ask AI](../027-ask-ai/spec.md) | The VLM window: try, history, sampling taught on the timeline, local/remote badge; pipeline gains burst spacing, ranges and answers as they come | 026 (labels for VLM settings), shares the new timeline with 028 |
+| [028 Video page](../028-video-page/spec.md) | Player, lanes as controls, zoom, data beside the video, run per lane, notes, streaming instead of the zip and folder question | none strictly; reuses 027's timeline work |
+| [029 Videos and projects](../029-videos-and-projects/spec.md) | One Videos page with projects and folders, projects from datasets, settings that projects remember, workflows from presets, simplified New run, new nav, Home for first run, activity indicator, help in context | 028 (opening a video), 026 (New run) |
+
+Not in any of them yet: a real movement measure (theme 2; roadmap v1.7.0 Phase 3 computes it on
+the server), and human review of pipeline output (shelved).
 
 ## Starting point for the model (discussion of 2026-10-06, not settled; see Decisions above)
 

@@ -765,9 +765,9 @@ failed, where the pipelines disagree, what the whole dataset looks like.
 
 - Plugin ecosystem: entry-point discovery, `Dispatcher` ABC, `videoannotator-utils`
   ([`roadmap_v1.7.0.md`](roadmap_v1.7.0.md)).
-- The viewer overhaul, placeholder [`specs/023-viewer-overhaul`](../../specs/023-viewer-overhaul/spec.md)
-  (timeline, movement metric, reaching the data, multiple videos, researcher notes). After the
-  release, informed by the pilot (Caspar, 2026-10-14).
+- The viewer overhaul: design in [`specs/023-viewer-overhaul`](../../specs/023-viewer-overhaul/spec.md)
+  (2026-10-16), built by specs 026 (pipeline guide), 027 (Ask AI), 028 (Video page) and 029
+  (videos and projects). After the release, informed by the pilot (Caspar, 2026-10-14).
 - Remote and HPC dispatch ([`roadmap_v1.7_to_v2.0.md`](roadmap_v1.7_to_v2.0.md)).
 - Pose, hand and motion specialist pipelines, unless pilot labs ask.
 
