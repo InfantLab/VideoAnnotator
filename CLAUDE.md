@@ -55,12 +55,13 @@ against it.
 
 ## Current Plan
 <!-- SPECKIT START -->
-`specs/024-container-feels-local/plan.md`: researchers start VideoAnnotator with `launcher/
-videoannotator-start` (sh, plus a PowerShell twin), which finds Docker or Podman, shares chosen
-folders read-only at their real paths (remembered in a host `start.conf`), runs the slim GHCR
-image on 127.0.0.1 and opens the viewer connected. App, installed pipelines (restored after
-updates and restarts), model weights, activity and the researcher's files each persist on their
-own. Inside a container the server never lists its own filesystem. After 024:
+`specs/025-results-out/plan.md` (roadmap v1.6.0 Phase 3): results out of VideoAnnotator for
+analysis. One long-format table (CSV; Parquet with the `parquet` extra), one ELAN `.eaf` per video,
+and a methods paragraph with BibTeX, all built from the output files and their spec 017 provenance
+by `src/videoannotator/exporters/`, so `videoannotator export table|elan|methods <folder>` (no
+server), the API (`/export/...`, `/methods` on jobs, batches, datasets) and the viewer's Export menu
+agree. Plus R and Python notebooks in `examples/notebooks/`. Native outputs don't change. Before
+025: spec 024 (container launcher; T082 walkthrough open). After 025:
 `specs/023-viewer-overhaul` (needs research first).
 <!-- SPECKIT END -->
 
