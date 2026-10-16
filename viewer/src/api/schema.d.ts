@@ -2010,6 +2010,173 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/export/table": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export a job's results as one table
+         * @description One table of every pipeline's results: one row per event and measure, the same
+         *     columns for every pipeline (spec 025, `contracts/table.md`). The export summary
+         *     (videos and pipelines covered, files skipped and why, videos without results) is
+         *     in the `X-VideoAnnotator-Export-Summary` header as JSON.
+         */
+        get: operations["export_job_table_api_v1_jobs__job_id__export_table_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/batches/{batch_id}/export/table": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export a run's results as one table
+         * @description One table of every pipeline's results: one row per event and measure, the same
+         *     columns for every pipeline (spec 025, `contracts/table.md`). The export summary
+         *     (videos and pipelines covered, files skipped and why, videos without results) is
+         *     in the `X-VideoAnnotator-Export-Summary` header as JSON.
+         */
+        get: operations["export_batch_table_api_v1_batches__batch_id__export_table_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasets/{dataset_id}/export/table": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export every run of a saved dataset as one table
+         * @description One table of every pipeline's results: one row per event and measure, the same
+         *     columns for every pipeline (spec 025, `contracts/table.md`). The export summary
+         *     (videos and pipelines covered, files skipped and why, videos without results) is
+         *     in the `X-VideoAnnotator-Export-Summary` header as JSON.
+         *
+         *     Every run made from the dataset is included; the `run` column tells them apart.
+         */
+        get: operations["export_dataset_table_api_v1_datasets__dataset_id__export_table_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A methods paragraph for a job's results
+         * @description A methods paragraph for a paper (spec 025): each pipeline, the models with their
+         *     exact weight revisions, settings that differ from the defaults, VideoAnnotator's
+         *     version, and citations, as prose with `[@key]` citations plus BibTeX. Built only
+         *     from the provenance recorded in the output files; anything not recorded is said
+         *     to be. `format=markdown` returns the same as one Markdown file.
+         */
+        get: operations["job_methods_api_v1_jobs__job_id__methods_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/batches/{batch_id}/methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A methods paragraph for a run's results
+         * @description A methods paragraph for a paper (spec 025): each pipeline, the models with their
+         *     exact weight revisions, settings that differ from the defaults, VideoAnnotator's
+         *     version, and citations, as prose with `[@key]` citations plus BibTeX. Built only
+         *     from the provenance recorded in the output files; anything not recorded is said
+         *     to be. `format=markdown` returns the same as one Markdown file.
+         *
+         *     Videos processed the same way are described once, with their number.
+         */
+        get: operations["batch_methods_api_v1_batches__batch_id__methods_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/export/elan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export a job's results as an ELAN file
+         * @description ELAN (`.eaf`, EAF 3.0) with one tier per pipeline track (spec 025): speech,
+         *     speaker turns, scenes, people and faces in view, VLM labels. Per-detection
+         *     measures stay in the table; the summary header's `left_out` says which.
+         */
+        get: operations["export_job_elan_api_v1_jobs__job_id__export_elan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/batches/{batch_id}/export/elan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export a run's results as ELAN files
+         * @description ELAN (`.eaf`, EAF 3.0) with one tier per pipeline track (spec 025): speech,
+         *     speaker turns, scenes, people and faces in view, VLM labels. Per-detection
+         *     measures stay in the table; the summary header's `left_out` says which.
+         *
+         *     One `.eaf` per video, as a zip.
+         */
+        get: operations["export_batch_elan_api_v1_batches__batch_id__export_elan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -5404,6 +5571,235 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    export_job_table_api_v1_jobs__job_id__export_table_get: {
+        parameters: {
+            query?: {
+                /** @description csv (always available) or parquet (optional extra) */
+                format?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The job's id */
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_batch_table_api_v1_batches__batch_id__export_table_get: {
+        parameters: {
+            query?: {
+                /** @description csv (always available) or parquet (optional extra) */
+                format?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The run's batch identifier */
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_dataset_table_api_v1_datasets__dataset_id__export_table_get: {
+        parameters: {
+            query?: {
+                /** @description csv (always available) or parquet (optional extra) */
+                format?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The saved dataset's id */
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    job_methods_api_v1_jobs__job_id__methods_get: {
+        parameters: {
+            query?: {
+                /** @description json, or markdown for one .md file */
+                format?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The job's id */
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    batch_methods_api_v1_batches__batch_id__methods_get: {
+        parameters: {
+            query?: {
+                /** @description json, or markdown for one .md file */
+                format?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The run's batch identifier */
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_job_elan_api_v1_jobs__job_id__export_elan_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The job's id */
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_batch_elan_api_v1_batches__batch_id__export_elan_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The run's batch identifier */
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

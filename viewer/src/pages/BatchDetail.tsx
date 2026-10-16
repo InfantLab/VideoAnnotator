@@ -13,6 +13,7 @@ import { ArrowLeft, Loader2, RefreshCw, RotateCcw, XCircle } from 'lucide-react'
 import { BatchVideosTable } from '@/components/BatchVideosTable';
 import { RunAgainActions } from '@/components/RunAgainActions';
 import { ResultsLocation } from '@/components/ResultsLocation';
+import { ExportMenu } from '@/components/ExportMenu';
 import { RunDeleteButton } from '@/components/RunDeleteButton';
 import { settingsOf } from '@/lib/wizardStart';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
@@ -242,7 +243,9 @@ const BatchDetail = () => {
         folder={batch.results_folder}
         label="This run's results"
         runZip={batchId ? { batchId } : undefined}
+        actions={batchId ? <ExportMenu scope={{ kind: 'batch', id: batchId }} /> : undefined}
       />
+      {!batch.results_folder && batchId && <ExportMenu scope={{ kind: 'batch', id: batchId }} />}
 
       {preparing && (
         <Alert>

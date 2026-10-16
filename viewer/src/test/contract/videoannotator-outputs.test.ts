@@ -10,6 +10,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { parseElanFile } from '@/lib/parsers/elan';
 import { detectFileType, mergeAnnotationData } from '@/lib/parsers/merger';
 
 const CURRENT = path.resolve(__dirname, '../../../../tests/fixtures/viewer_contract');
@@ -169,5 +170,35 @@ describe.each([
       expect(current[track]?.length, track).toBe(legacy[track]?.length);
     }
     expect(Object.keys(strip(current)).sort()).toEqual(Object.keys(strip(legacy)).sort());
+  });
+});
+
+// Spec 025: VideoAnnotator's ELAN export opens in the viewer, before and after
+// a coder has added their own tier in ELAN (FR-022).
+const EXPORTED = path.join(CURRENT, 'exported');
+const EXPORTED_TIERS = [
+  'scene_detection scenes',
+  'speech_recognition speech',
+  'speaker_diarization SPEAKER_00',
+  'speaker_diarization SPEAKER_01',
+  'person_tracking person_demo_clip_001 (parent)',
+  'person_tracking person_demo_clip_002 (parent)',
+  'face_analysis faces',
+  'face_openface3_embedding faces',
+  'vlm_annotation labels',
+];
+
+describe('VideoAnnotator ELAN export → viewer', () => {
+  it.each([
+    ['as exported', 'demo_clip.eaf', EXPORTED_TIERS],
+    ['after editing in ELAN', 'demo_clip_edited_in_elan.eaf', [...EXPORTED_TIERS, 'Infant gaze']],
+  ])('opens %s and shows every tier', async (_label, name, tiers) => {
+    const file = fixtureIn(EXPORTED, name);
+    expect((await detectFileType(file)).type).toBe('elan_ground_truth');
+    // The parser the merger uses for an .eaf (merger.ts, elan_ground_truth).
+    const annotations = await parseElanFile(file);
+    expect([...new Set(annotations.map((a) => a.tier))].sort()).toEqual([...tiers].sort());
+    const speech = annotations.filter((a) => a.tier === 'speech_recognition speech');
+    expect(speech[0]).toMatchObject({ value: 'Ready, baby girl?', startSec: 0, endSec: 1.32 });
   });
 });

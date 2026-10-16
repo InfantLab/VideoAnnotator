@@ -1202,6 +1202,30 @@ class APIClient {
     return response;
   }
 
+  /**
+   * Results out (spec 025): a job's, run's or dataset's results as one table,
+   * ELAN files, or (via getMethods) a methods paragraph. The server's export
+   * summary (what was covered and skipped) comes back with the file.
+   */
+  async exportResults(
+    scope: ExportScope,
+    kind: 'table' | 'elan',
+    format: 'csv' | 'parquet' = 'csv'
+  ): Promise<ExportDownload> {
+    const query = kind === 'table' ? `?format=${format}` : '';
+    const response = await this.fetchRaw(`${exportBase(scope)}/export/${kind}${query}`);
+    return {
+      blob: await response.blob(),
+      filename: filenameFromDisposition(response.headers.get('Content-Disposition')),
+      summary: parseExportSummary(response.headers.get('X-VideoAnnotator-Export-Summary')),
+    };
+  }
+
+  /** A methods paragraph with BibTeX for a job's or run's results (spec 025). */
+  async getMethods(scope: ExportScope): Promise<MethodsDescription> {
+    return (await this.fetchRaw(`${exportBase(scope)}/methods`)).json();
+  }
+
   /** A pipeline's main output file for a job, as text (spec 021). */
   async getResultFileText(jobId: string, pipeline: string): Promise<string> {
     return (await this.fetchRaw(`/api/v1/jobs/${encodeURIComponent(jobId)}/results/files/${pipeline}`)).text();
@@ -1433,3 +1457,71 @@ export const apiClient = new Proxy({} as APIClient, {
 // Export the class for custom instances
 export { APIClient };
 
+
+
+// --- Results out (spec 025) -------------------------------------------------
+
+export type ExportScope =
+  | { kind: 'job'; id: string }
+  | { kind: 'batch'; id: string }
+  | { kind: 'dataset'; id: string };
+
+export interface ExportSummary {
+  table_format_version: number;
+  rows: number;
+  videos: number;
+  pipelines: string[];
+  skipped: { run: string; video: string; file: string; reason: string }[];
+  missing: { run: string; video: string; reason: string }[];
+  notes: string[];
+  left_out: string[];
+  truncated: boolean;
+}
+
+export interface ExportDownload {
+  blob: Blob;
+  filename: string | null;
+  summary: ExportSummary | null;
+}
+
+export interface MethodsDescription {
+  prose: string;
+  bibtex: string;
+  revisions: string[];
+  prompts: { sha256: string; text: string }[];
+  summary: { videos: number; groups: number; not_recorded: string[] };
+}
+
+const EXPORT_PATHS: Record<ExportScope['kind'], string> = {
+  job: 'jobs',
+  batch: 'batches',
+  dataset: 'datasets',
+};
+
+function exportBase(scope: ExportScope): string {
+  return `/api/v1/${EXPORT_PATHS[scope.kind]}/${encodeURIComponent(scope.id)}`;
+}
+
+/** The file name a Content-Disposition header gives, preferring RFC 5987's UTF-8 form. */
+export function filenameFromDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1]);
+    } catch {
+      // fall through to the plain form
+    }
+  }
+  const plain = /filename="([^"]*)"/i.exec(header);
+  return plain ? plain[1] : null;
+}
+
+export function parseExportSummary(header: string | null): ExportSummary | null {
+  if (!header) return null;
+  try {
+    return JSON.parse(header) as ExportSummary;
+  } catch {
+    return null;
+  }
+}
