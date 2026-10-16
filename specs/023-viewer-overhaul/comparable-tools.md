@@ -4,6 +4,11 @@
 checked hands-on or with researchers. Aim: which words and structures researchers already know,
 and which ideas fit spec themes 7–13.
 
+**Read with spec Decisions 1–8 (2026-10-16).** Label Studio is surveyed for completeness only and
+is not a source of ideas. ELAN is what researchers know but not a practical model; ideas from it
+are taken one at a time. Where a tool's word differs from the plain one (observation, task, tier,
+sample for "video"), the plain word wins.
+
 ## How each organises the work
 
 | Tool | Top-level container | Unit of work | The scheme (what gets coded) | Reuse |
@@ -17,10 +22,10 @@ and which ideas fit spec themes 7–13.
 | **FiftyOne** | **dataset** | sample (a video, with frames) | label fields | saved **views** (filters) over a dataset |
 
 What recurs: researchers in behavioural coding (BORIS, Observer) know **project** and
-**observation**; linguists (ELAN) know **template** and **tier**; ML users (Label Studio,
-FiftyOne, DeepLabCut) know **project**, **dataset** and **task**. Nobody says "job" or "batch".
-"Observation" is the word psychologists coding behaviour are most likely to know for "one video,
-coded".
+**observation**; linguists (ELAN) know **template** and **tier**; ML users (FiftyOne,
+DeepLabCut) know **project** and **dataset**. Nobody says "job" or "batch". "Project" is the
+one word they all share, which fits it as the optional top level (Decisions 2 and 5). "Observation"
+is the coding tools' word for "one video, coded", but under Decision 1 a video stays a video.
 
 ## Ideas that bear on the themes
 
@@ -31,7 +36,7 @@ lets ethograms be exported and imported separately. None of them versions the sc
 are edits. Versioning would be ours, and earns its keep because our settings change outputs
 (spec 017 provenance), not just the coding form.
 
-**Many synchronised views (themes 10, 13).** ELAN's model is the strongest precedent: a timeline
+**Many synchronised views (themes 10, 13).** One idea worth taking from ELAN on its own merits: a timeline
 viewer plus **grid** (a table of one tier's annotations), **subtitle**, **text** and **timeseries**
 viewers, in tabs next to the video, shown or hidden individually, and **all synchronised in
 time**: navigate in one and the others follow. That is the shape theme 13 asks for (a table next
@@ -41,8 +46,7 @@ to the player, click a row to seek) and a reason not to put data in a modal.
 type or **participant**. Datavyu: one column per coding pass, cells stacked in time. Observer
 XT: an event plot against time, synchronised with video, audio and **imported external data**
 (numeric signals), and **colours set per modifier in the scheme** so the same thing is the same
-colour everywhere. Label Studio: a `TimeSeries` chart under the video for numeric tracks.
-Common ground: labelled rows, grouping by person, numeric tracks alongside categorical ones,
+colour everywhere. Common ground: labelled rows, grouping by person, numeric tracks alongside categorical ones,
 stable colours chosen in the scheme rather than hashed.
 
 **Toggling layers (theme 10a).** ELAN shows and hides tiers from the timeline itself (tier list
@@ -72,7 +76,7 @@ side-by-side outputs and keep history.
 
 ## Next
 
-- Try ELAN, BORIS and Datavyu hands-on with one of our demo clips (ELAN export from spec 025 makes
+- Try BORIS and Datavyu hands-on, and ELAN for the export round trip, with one of our demo clips (ELAN export from spec 025 makes
   the round trip possible) and note what feels familiar.
 - Ask pilot researchers which of these they have used; their words should outrank ours.
 

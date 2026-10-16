@@ -38,13 +38,175 @@ The viewer's structure mirrors the API, and is bewildering to a psychologist usi
 The API and spec 022's on-disk layout can stay as they are. This spec is about what the viewer
 shows and how a researcher moves through it.
 
-## Starting point for the model (discussion of 2026-10-06, not settled)
+## Decisions (2026-10-16)
+
+1. **Call things what they are.** A video is a "video", a folder is a "folder". A name earns its
+   place only when no plain word fits, and then says what the thing is, not what it's for.
+   Today's API words (job, batch) and coding-tool words (observation, task, tier) don't appear
+   in the viewer unless they're the plainest word for the thing. Nor do discipline words:
+   clinical psychologists say observations, experimental psychologists say participants, and a
+   video may hold several of either. What the tool handles is videos and their annotations, so
+   those are the words.
+2. **Projects are optional, and the top level.** A project can group things, but nothing requires
+   one. Nobody should have to create a project to look at a video, least of all to try a VLM
+   prompt on one.
+3. **Not modelled on Label Studio.** Its projects, tasks and labelling configs are confusing to
+   use; nothing in this design should look or work like it.
+4. **ELAN is familiar but not the model.** Researchers know it, and it stays an export target
+   (spec 025). Its interface isn't practical as a template for ours; individual ideas from it
+   (labelled rows, views kept in sync with the video) are taken only on their own merits.
+5. **Two levels: video and project.** A project *is* the set of videos (what the strawman below
+   called a dataset, and the server's saved datasets today), so there is no separate dataset
+   level and nothing above the project. It holds its videos, from one folder or picked from
+   several, and the runs made on them. A run is not a level: it's a record of settings applied
+   to videos once, kept with the video and project it touched.
+6. **A video can be in more than one project.** So a video's results belong to the video and
+   the run that made them; a project shows the results of its videos rather than owning them.
+7. **A saved dataset is a project.** The server's datasets become the viewer's projects. Where
+   datasets carry more than a project needs, simplify them to get there; what a project needs
+   that a dataset lacks (default settings, notes) is added to the API additively (Principle V).
+8. **"Run" is the word** for settings applied to videos once. Alternatives clash with words
+   researchers already use: "session" is a recording session, "analysis" is the statistics,
+   "pass" is coding-tool jargon. Revisit only if pilot users stumble on it.
+
+## Draft proposal (2026-10-16, for review)
+
+Agreed in discussion so far, not yet tried on researchers. Journeys (Process step 5) will be
+checked against it.
+
+### Settings: light touch, three layers
+
+1. **A run records what it used** (already true, spec 017). A run's settings never change, so the
+   runs are the version history: no explicit versioning, and "what changed?" is "compare with an
+   earlier run" ("threshold 0.7 → 0.5 since 12 Oct").
+2. **A project remembers its current settings**, unasked: whatever was last used or edited
+   there. A new run on the project starts from them. A video outside any project starts from the
+   last settings used, or the defaults.
+3. **Workflows, only when asked.** "Save as workflow" from a run or a project: pipelines, their
+   settings, Ask AI prompts and sampling, export choices. Applying one to another project
+   *copies* it into that project's current settings; editing the workflow later never changes a
+   project silently. Workflows replace presets (the API's presets stay, Principle V) and keep
+   presets' export-as-file for sharing.
+
+The settings form (theme 9): one section per pipeline, the few settings that matter first with
+defaults and units, the rest under "More", changes from the default marked, JSON behind "Edit as
+JSON".
+
+### Ask AI (the VLM window)
+
+Named for what the researcher does: writes a question about the video. Not "Prompts" (indirect),
+not "VLM" (jargon), not "AI analysis" (every pipeline is that).
+
+**Where the model runs is a live badge, not part of the name.** "Local · qwen3.5:9b on this
+computer" (or "on lab-server") when the endpoint is this machine or the lab's network; "Remote ·
+frames are sent to api.openai.com", prominent and in a warning colour, if a cloud endpoint is
+ever configured (v1.6.0's OpenAI-compatible connector makes that possible). A "(Local)" in the
+name would turn false the first time someone did, which Principle VI rules out; the badge stays
+true and, with today's Ollama-only setup, always says Local. The same badge belongs on Pipelines
+and, if not there already, in the methods paragraph. This matters to researchers: participants'
+video not leaving their machines is often an ethics-approval condition (Principle I).
+
+Replaces Workbench, Prompts and the
+wizard's prompt test panel, and is where a researcher may first meet rich, systematic prompting,
+so results come back in the same window, with no going back and forth.
+
+```
+┌ Ask AI · p01_t1.mp4                   Local · qwen3.5:9b on this computer ┐
+│ Prompt                     │                                          │
+│ ┌────────────────────────┐ │                                          │
+│ │ Is the infant touching │ │              video                       │
+│ │ the parent? Answer...  │ │        (no overlays: just the video)     │
+│ └────────────────────────┘ │                                          │
+│ Model  [qwen3.5:9b ▾]      │                                          │
+│ Sample every [5] s         │                                          │
+│   from [0:00] to [end]     │                                          │
+│   [3] frames, [0.5] s apart│                                          │
+│ ≈ 120 samples, ~8 min      │                                          │
+│ [Try on this frame]        │                                          │
+│ [Try on 10 moments]        │                                          │
+│ [Run on whole video]       │                                          │
+├────────────────────────────┴──────────────────────────────────────────┤
+│ touch v3  ●  ●●   ●     ●●●     ●   ●            (click: seek)        │
+│ touch v2  ● ●  ●   ●   ●  ●●    ●●  ●                                 │
+├───────────────────────────────────────────────────────────────────────┤
+│ Table: time · frames · answer · reasoning      [Export ▾ CSV · video] │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+- **Prompt and settings left of the video**, to show they are applied to it.
+- **No overlays.** The video stays clean; the link is the timeline: click a marker to seek, the
+  sample nearest the playhead is highlighted, hover shows the frames sent and the answer.
+- **Try** (current frame, or N moments) uses the existing preview endpoint and answers in
+  seconds; each try is kept in a history beside the prompt and recorded in the prompt library.
+  **Run on whole video** is a background run whose answers fill the lane and table as they come.
+- **Prompts compared as lanes**, one above the other; the table can show them side by side.
+- **Sampling**: every N seconds, over the whole video or a range, or at listed moments; per sample
+  point, X frames spaced Y apart; an estimate of samples and time before starting.
+- **Outputs**: timeline lane, table (spec 025 CSV), video.
+
+Gaps this exposes (to plan):
+- Burst spacing is tied to the interval today (`burst_offsets` are multiples of
+  `frame_interval_sec`), so "X frames Y apart" needs a new, additive `burst_spacing_sec`
+  (default: the interval). No start/end range exists either.
+- Answers filling in during a run need the VLM pipeline to write as it goes (to check: it may
+  only write at the end).
+- "Outputs to a video": to confirm whether this means an annotated video file (labels drawn on);
+  nothing renders one today.
+
+### Pages
+
+Nav: **Home · Videos · Ask AI · Pipelines**, with an activity indicator (what's running),
+Help and Settings. Once set up, the viewer opens on Videos; Home keeps the first-run and no-server
+start points.
+
+**Videos and projects are one page**, like a mail client's folders and messages:
+
+```
+┌ Videos ───────────────────────────────────────────────────────────────┐
+│ All videos      (212) │ Peekaboo study · 48 videos     [Run…] [Export▾]│
+│ Not in a project (37) │ Settings: faces, speech, Ask AI "touch"  [Edit] │
+│ ───────────────────── │ Runs: ● running 31/48 · ✓ 12 Oct · ✓ 3 Oct     │
+│ Projects              │ ───────────────────────────────────────────────│
+│  Peekaboo study  (48) │ ☐ Video         Folder      Faces Speech AI    │
+│  Pilot lab B     (90) │ ☐ p01_t1.mp4    /data/pk    ✓     ✓      ●     │
+│  + New project        │ ☐ p01_t2.mp4    /data/pk    ✓     ✓      –     │
+│ ───────────────────── │ ...                                            │
+│ Folders               │                                                │
+│  /data/pk        (48) │ 2 selected: [Run…] [Export▾] [Add to project▾] │
+└───────────────────────┴────────────────────────────────────────────────┘
+```
+
+- Left: All videos, Not in a project, each project, each folder.
+- A project selected: its current settings, runs and progress, Run, Export (table, ELAN,
+  methods), Compare runs. A folder or All videos: Run and Export for what's shown or selected.
+- A project is made after the fact: select videos → "Add to project → New project…". A video in
+  two projects shows under both.
+- A multi-video run outside a project is a filter here ("videos in this run"), not its own page
+  (its log aside).
+
+| Page | What it is | Replaces |
+|---|---|---|
+| Home | First-run and no-server start points: ask AI about a video, run pipelines, open files from this computer | Home |
+| Videos | Above | Jobs, Results, Datasets, Batch detail, Compare (runs) |
+| Video | One video: player, timeline, data table beside it (theme 13), every run's results (pick the run per pipeline), notes, export, run more, its runs; previous/next within the list it was opened from | Results player, Job detail |
+| Ask AI | Above | Workbench, Prompts, wizard's prompt test |
+| New run (no nav entry) | Simplified wizard from a video, a project, a selection or Home; prefilled from the project's settings or a workflow | New job |
+| Pipelines | What each does, installing them, saved workflows | Pipelines, presets |
+| Help | Getting started rewritten, links into this repo's `docs/` | Getting started, DeepWiki links |
+| Settings | Connection, token, diagnostics | Settings |
+
+The browser's local copies of results become an invisible cache: no folder question before
+playing. Standalone mode: "Open files from this computer" on Home; server pages stay visible but
+say they need a server and what works without one.
+
+## Starting point for the model (discussion of 2026-10-06, not settled; see Decisions above)
 
 **Words.** "Study" is wrong: too high-level and too intentional. Annotating videos is one task
 within a study. "Project" gives a sense of a cohesive goal, but may be too large a grouping.
 "Dataset" is truthful: it claims nothing about purpose. A hierarchy may be needed.
 
-**A strawman hierarchy, every level optional except the video:**
+**A strawman hierarchy, every level optional except the video** (superseded by Decision 5:
+Dataset and Project merge into Project, and Run is a record rather than a level):
 
 | Level | What it is | What might live there |
 |---|---|---|
@@ -67,8 +229,10 @@ results on the timeline, nothing to name. The VLM workbench belongs here. Struct
 the fact ("run this on more videos?", "keep these together?"), never demanded up front.
 
 **Open questions:**
-1. Which words, at which levels: project, dataset, run, video? Is a project optional?
-2. Can a dataset belong to more than one project?
+1. ~~Which words, at which levels?~~ Settled by Decisions 1, 2, 5 and 8: video, folder, run,
+   and an optional project as the only grouping.
+2. ~~Can a video be in more than one project? Is a saved dataset a project?~~ Yes to both
+   (Decisions 6 and 7). Still open: what simplifying datasets into projects means in practice.
 3. Where do settings live, and how do they vary: project defaults, versions, per-run overrides?
 4. What does a light-touch user see, and when does the structure appear?
 5. Which pages survive, merge or go: Home, Jobs, Results, Datasets, Prompts, Workbench, Compare?
@@ -90,9 +254,11 @@ This needs research and thought before a spec. Proposed steps, each written up i
    researchers already know. Desk research done: [comparable-tools.md](comparable-tools.md);
    hands-on tries still to do.
 4. **Model and vocabulary**: settle the hierarchy, the words, and what lives at each level,
-   including settings.
+   including settings. Hierarchy and words settled (Decisions 1–8); settings (open question 3)
+   still to do.
 5. **Journeys and wireframes**: the chosen journeys step by step, and the navigation, as sketches.
-   Try them on one or two researchers before specifying.
+   Try them on one or two researchers before specifying. Begun: [journeys.md](journeys.md)
+   (New to AI analysis; experienced in manual coding), each checked against the draft proposal.
 6. **Specify**: `/speckit-specify` from the above.
 
 ## Themes to cover (from the original placeholder; now one part of the whole)
