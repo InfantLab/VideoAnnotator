@@ -1,5 +1,6 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import { StandardAnnotationData, TimelineSettings } from '@/types/annotations';
+import { categoryHues } from '@/lib/categoryColors';
 
 interface TimelineProps {
   annotationData: StandardAnnotationData;
@@ -13,6 +14,19 @@ export const Timeline = ({ annotationData, currentTime, duration, settings, onSe
   const containerRef = useRef<HTMLDivElement>(null);
   const motionCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  const speakerHues = useMemo(
+    () => categoryHues((annotationData.speaker_diarization ?? []).map((s) => s.speaker_id)),
+    [annotationData.speaker_diarization],
+  );
+  const vlmHues = useMemo(
+    () => categoryHues((annotationData.vlm_annotations ?? []).map((a) => a.label)),
+    [annotationData.vlm_annotations],
+  );
+  const elanHues = useMemo(
+    () => categoryHues((annotationData.elan_ground_truth ?? []).map((a) => a.tier)),
+    [annotationData.elan_ground_truth],
+  );
 
   // Handle click and drag on timeline
   const handleMouseMove = useCallback((e: React.MouseEvent | MouseEvent) => {
@@ -51,7 +65,8 @@ export const Timeline = ({ annotationData, currentTime, duration, settings, onSe
     }
   }, [isDragging, handleMouseMove]);
 
-  // Draw motion graph from person tracking data
+  // The largest person box's area per 0.1 s: a size measure (nearer the camera, or more
+  // people in one box), not movement. A real movement measure is spec 023 theme 2.
   const drawMotion = useCallback(() => {
     if (!settings.showMotion) return;
 
@@ -67,27 +82,24 @@ export const Timeline = ({ annotationData, currentTime, duration, settings, onSe
     ctx.strokeStyle = 'hsl(200, 70%, 60%)';
     ctx.lineWidth = 2;
 
-    // Group poses by time and calculate motion intensity
     const timeSlots = new Map<number, number>();
     annotationData.person_tracking.forEach(pose => {
-      const timeSlot = Math.floor(pose.timestamp * 10) / 10; // 0.1s resolution
-      const currentIntensity = timeSlots.get(timeSlot) || 0;
-      // Use bbox area as motion intensity proxy
-      const motionIntensity = pose.bbox ? (pose.bbox[2] * pose.bbox[3]) / 10000 : 0;
-      timeSlots.set(timeSlot, Math.max(currentIntensity, motionIntensity));
+      const timeSlot = Math.floor(pose.timestamp * 10) / 10;
+      const area = pose.bbox ? pose.bbox[2] * pose.bbox[3] : 0;
+      timeSlots.set(timeSlot, Math.max(timeSlots.get(timeSlot) || 0, area));
     });
 
     if (timeSlots.size === 0) return;
 
-    const maxMotion = Math.max(...timeSlots.values());
-    if (maxMotion === 0) return;
+    const maxArea = Math.max(...timeSlots.values());
+    if (maxArea === 0) return;
 
     ctx.beginPath();
     const sortedTimes = Array.from(timeSlots.entries()).sort((a, b) => a[0] - b[0]);
 
-    sortedTimes.forEach(([timestamp, intensity], index) => {
+    sortedTimes.forEach(([timestamp, area], index) => {
       const x = (timestamp / duration) * width;
-      const y = height - (intensity / maxMotion) * height;
+      const y = height - (area / maxArea) * height;
 
       if (index === 0) {
         ctx.moveTo(x, y);
@@ -195,7 +207,7 @@ export const Timeline = ({ annotationData, currentTime, duration, settings, onSe
               {annotationData.speaker_diarization.map((segment, index) => {
                 const left = (segment.start_time / duration) * 100;
                 const width = ((segment.end_time - segment.start_time) / duration) * 100;
-                const hue = (segment.speaker_id.charCodeAt(0) * 137.508) % 360;
+                const hue = speakerHues.get(segment.speaker_id) ?? 0;
                 return (
                   <div
                     key={index}
@@ -240,7 +252,7 @@ export const Timeline = ({ annotationData, currentTime, duration, settings, onSe
             <div className="absolute top-14 left-0 right-0 h-4">
               {annotationData.vlm_annotations.map((annotation, index) => {
                 const left = (annotation.timestamp_sec / duration) * 100;
-                const hue = (annotation.label.charCodeAt(0) * 137.508) % 360;
+                const hue = vlmHues.get(annotation.label) ?? 0;
                 return (
                   <div
                     key={annotation.id ?? index}
@@ -269,7 +281,7 @@ export const Timeline = ({ annotationData, currentTime, duration, settings, onSe
               {annotationData.elan_ground_truth.map((annotation, index) => {
                 const left = (annotation.startSec / duration) * 100;
                 const width = ((annotation.endSec - annotation.startSec) / duration) * 100;
-                const hue = (annotation.tier.charCodeAt(0) * 137.508) % 360;
+                const hue = elanHues.get(annotation.tier) ?? 0;
                 return (
                   <div
                     key={index}
@@ -287,11 +299,12 @@ export const Timeline = ({ annotationData, currentTime, duration, settings, onSe
             </div>
           )}
 
-          {/* Motion Graph */}
           {settings.showMotion && (
             <canvas
               ref={motionCanvasRef}
               className="absolute bottom-0 left-0 opacity-80"
+              title="Largest person box area (size, not movement)"
+              aria-label="Largest person box area over time"
             />
           )}
         </div>

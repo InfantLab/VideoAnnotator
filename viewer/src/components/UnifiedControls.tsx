@@ -165,7 +165,7 @@ export const UnifiedControls = ({
       title: '👤 Person Tracking',
       color: 'hsl(25, 95%, 53%)', // Orange
       label: 'COCO Pose Keypoints',
-      description: '17-point skeleton overlay & timeline',
+      description: 'Skeleton overlay; timeline shows the largest person box area (size, not movement)',
       overlayKey: 'pose' as keyof OverlaySettings,
       timelineKey: 'showMotion' as keyof TimelineSettings,
       available: isDataAvailable('person')
@@ -175,9 +175,9 @@ export const UnifiedControls = ({
       title: '😊 Face Detection',
       color: 'hsl(142, 76%, 36%)', // Green
       label: 'LAION Face Analysis',
-      description: 'Face bounding boxes & detection timeline',
+      description: 'Face bounding boxes (overlay only; no timeline lane yet)',
       overlayKey: 'faces' as keyof OverlaySettings,
-      timelineKey: 'showFaces' as keyof TimelineSettings,
+      timelineKey: null,
       available: isDataAvailable('face')
     },
     {
@@ -185,9 +185,9 @@ export const UnifiedControls = ({
       title: '🎭 Emotion Recognition',
       color: 'hsl(142, 76%, 36%)', // Green (same as face)
       label: 'Facial Emotions',
-      description: 'Emotion labels & analysis timeline',
+      description: 'Emotion labels on faces (overlay only; no timeline lane yet)',
       overlayKey: 'emotions' as keyof OverlaySettings,
-      timelineKey: 'showEmotions' as keyof TimelineSettings,
+      timelineKey: null,
       available: isDataAvailable('face') // Uses same data as faces
     },
     {
@@ -458,24 +458,39 @@ export const UnifiedControls = ({
                 </Button>
               </div>
 
-              {/* Timeline Toggle */}
+              {/* Timeline Toggle: only for components that draw a timeline lane */}
               <div className="col-span-2 flex justify-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleTimelineToggle(component.timelineKey)}
-                  disabled={!component.available || isLocked}
-                  className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform"
-                  title={`${timelineSettings[component.timelineKey] ? 'Disable' : 'Enable'} timeline for ${component.title}`}
-                >
-                  <div
-                    className="w-6 h-6 rounded-full border-2 transition-all"
-                    style={{ 
-                      backgroundColor: component.available && timelineSettings[component.timelineKey] ? component.color : 'transparent',
-                      borderColor: component.available ? component.color : '#ccc'
-                    }}
-                  />
-                </Button>
+                {(() => {
+                  const timelineKey = component.timelineKey;
+                  if (!timelineKey) {
+                    return (
+                      <div
+                        className="h-8 w-8 flex items-center justify-center text-muted-foreground text-xs"
+                        title="No timeline lane for this yet"
+                      >
+                        —
+                      </div>
+                    );
+                  }
+                  return (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleTimelineToggle(timelineKey)}
+                      disabled={!component.available || isLocked}
+                      className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform"
+                      title={`${timelineSettings[timelineKey] ? 'Disable' : 'Enable'} timeline for ${component.title}`}
+                    >
+                      <div
+                        className="w-6 h-6 rounded-full border-2 transition-all"
+                        style={{ 
+                          backgroundColor: component.available && timelineSettings[timelineKey] ? component.color : 'transparent',
+                          borderColor: component.available ? component.color : '#ccc'
+                        }}
+                      />
+                    </Button>
+                  );
+                })()}
               </div>
 
               {/* Lock Indicator */}

@@ -418,6 +418,14 @@ user follows from GitHub.
 
 ### Fixed
 
+- **The results player's timeline no longer misleads** (found 2026-10-16 in spec 023's
+  inventory). Every speaker had the same colour on the timeline and the overlay, because the
+  colour came from the ID's first letter and every diarization ID starts with "S"; VLM labels and
+  ELAN tiers could collide the same way. Each value now gets its own colour. The faces and
+  emotions rows had timeline switches with no lane behind them; they now say "overlay only". The
+  lane labelled as person tracking's timeline plots the largest person box's area, and now says
+  so ("size, not movement") instead of passing for motion.
+
 - **Person tracking's first run records its weights** (found 2026-10-16 with spec 025's methods
   paragraph). The weights were hashed for provenance before ultralytics downloaded them, so a
   first run recorded "weights file not found" and the methods said "revision not recorded". They
