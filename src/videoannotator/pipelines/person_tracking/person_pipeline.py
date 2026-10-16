@@ -341,14 +341,17 @@ class PersonTrackingPipeline(BasePipeline):
             # Load model with enhanced download logging
             # Load from the models directory; provenance keeps the configured name.
             model_path = resolve_yolo_model(self.config["model"])
-            self._model_refs.append(
-                weights_ref(self.config["model"], "ultralytics", model_path)
-            )
             self.model = log_model_download(
                 "YOLO11 Pose Detection Model",
                 model_path,
                 YOLO,
                 model_path,
+            )
+            # After loading: on a first run the weights only exist once
+            # ultralytics has downloaded them, possibly elsewhere.
+            loaded_from = getattr(self.model, "ckpt_path", None) or model_path
+            self._model_refs.append(
+                weights_ref(self.config["model"], "ultralytics", loaded_from)
             )
             # ASCII-safe success marker
             self.logger.info(f"[OK] YOLO model ready: {self.config['model']}")
