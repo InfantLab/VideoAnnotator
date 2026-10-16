@@ -576,6 +576,22 @@ job in the wizard from memory, although every job already stores its `selected_p
       installed pipelines restored after recreation, Settings' Stop sharing); open: the CI
       end-to-end runs with Docker and Podman (first run on a push to `master`), the quickstart
       walkthroughs on Linux and Windows, and a pilot researcher on macOS (T082-T084).
+- [ ] **The API and CLI from a launcher install** (found 2026-10-16): a researcher started with
+      `videoannotator-start` has no `videoannotator` command on the host, and the API key it
+      made sits in `start.conf`, which no command prints. Phase 3's R and Python notebooks and
+      Phase 4's MCP server both need the URL and key. Proposal: `videoannotator-start api`
+      prints the URL, the key and a three-line R, Python and curl example, and
+      `videoannotator-start cli ARGS` runs the CLI inside the container with the key already
+      set. Docs that say `docker compose exec videoannotator va ...` (`accessing_results.md`,
+      `demo_commands.md`) move to whatever this settles on.
+- [ ] **`INSTALLATION.md` down to the researcher's install** (2026-10-16: 729 lines): it opens
+      with the launcher and then runs through the developer uv install, a manual OpenFace 3
+      build that the `face-openface3` extra replaced, Docker Compose, the dev container, a
+      second troubleshooting section, an architecture overview and performance tips. Keep the
+      launcher steps, sharing, GPU, Ollama, system requirements and where results go. Move the
+      uv install and dev container to a developer page linked from `CONTRIBUTING.md`, Docker
+      Compose to its own page, troubleshooting into `troubleshooting.md`, and drop the manual
+      OpenFace build.
 
 **Not in this phase**: a visual redesign. Decide on one after the pilot, from what outside users
 say.
