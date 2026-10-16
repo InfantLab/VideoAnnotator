@@ -25,7 +25,7 @@ for its own reason, outside use. The pilot follows the release, and a benchmark 
 **Target Release**: as complete as possible, as soon as possible. No conference deadline (BCCCD
 dropped 2026-10-14). The pilot (and spec 024's T083) runs after the release.
 **Current Status**: Phases 0–1 done bar non-blocking items; Phase 2 closing with spec 024's
-walkthroughs (2026-10-14)
+walkthroughs (2026-10-14); Phase 3 (Results Out, spec 025) built 2026-10-16
 **Main Goal**: an outside lab can go from install to results in R or Python, on its own videos,
 without help
 **Prerequisites**: v1.5.0 tagged, after spec 011's SC-001 manual run
@@ -589,21 +589,36 @@ right for provenance and wrong for analysis: to get one table in R, a researcher
 parser per pipeline.
 
 **Solution**:
-- [ ] **Tidy export**: one row per event (video, pipeline, track or person, start, end, label,
+- [x] **Tidy export**: one row per event (video, pipeline, track or person, start, end, label,
       value, confidence, model), as CSV and Parquet, per job and per batch or dataset, from the
       API, the CLI and a viewer button. This table also feeds the corpus view (Phase 6) and agents
       (Phase 4).
-- [ ] **ELAN export**: `.eaf` with one tier per pipeline track. The viewer already parses `.eaf`
+      Done 2026-10-16 (spec 025, `specs/025-results-out/`): one long table, a row per event and
+      measure, 19 fixed columns (`contracts/table.md`, format version 1). Built from the result
+      files and their provenance by `src/videoannotator/exporters/`, so
+      `videoannotator export table <folder>` works on any results folder with no server, and the
+      API and the viewer's Export menu give the same rows. Parquet is the optional `parquet`
+      extra.
+- [x] **ELAN export**: `.eaf` with one tier per pipeline track. The viewer already parses `.eaf`
       (`src/lib/parsers/elan.ts`), so this closes the loop with the tool many labs already code in.
-- [ ] **Methods paragraph**: `GET /api/v1/jobs/{id}/methods`, a CLI command and a viewer button.
+      Done 2026-10-16: EAF 3.0, validated against ELAN's schema in tests; built from the table's
+      rows; frame detections become "in view" spans. The viewer contract test opens the export
+      and a copy edited in ELAN. Not yet opened in ELAN itself by a person (spec 025 quickstart).
+- [x] **Methods paragraph**: `GET /api/v1/jobs/{id}/methods`, a CLI command and a viewer button.
       Returns the models, versions, weight revisions, parameters and citations as prose plus
       BibTeX, ready for a methods section. Needs the provenance fields from the reproducibility
       item in [`roadmap_v1.7_to_v2.0.md`](roadmap_v1.7_to_v2.0.md), pulled forward: model revision
       SHA, prompt SHA-256, quantisation.
-- [ ] Two worked analysis notebooks, one R and one Python, reading the tidy export of the demo
-      video.
+      Done 2026-10-16, for jobs and runs (`/batches/{id}/methods` too). Citations live in each
+      pipeline's metadata (`citations:`). Found on the way, not fixed: some metadata defaults
+      differ from the pipelines' code defaults (scene `min_scene_length` 1.0 vs 2.0, Whisper's
+      punctuation strings), so the paragraph lists those settings as changed.
+- [x] Two worked analysis notebooks, one R and one Python, reading the tidy export of the demo
+      video. Done 2026-10-16: `examples/notebooks/`; the Python one runs in CI, the R one was run
+      on R 4.3 and is checked before each release (`tests/manual/results_out_r_notebook.md`).
 
-**→ Release candidate 1 (`v1.6.0rc1`)**: Phases 0–3 done.
+**→ Release candidate 1 (`v1.6.0rc1`)**: Phases 0–3 done. (rc1 was cut on 2026-10-14 to test the
+install before Phase 3 landed; Phase 3 is in the next release candidate.)
 
 ---
 

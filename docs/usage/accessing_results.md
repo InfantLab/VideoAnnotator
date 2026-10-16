@@ -2,6 +2,9 @@
 
 This page describes where VideoAnnotator stores outputs and how to retrieve them using the CLI or HTTP API.
 
+> For analysis, export everything as one table (CSV or Parquet), as ELAN files, or as a methods
+> paragraph: see [Results out](exporting_results.md).
+
 ## Where results are stored
 
 ### Docker Compose (recommended)

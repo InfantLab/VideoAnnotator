@@ -12,6 +12,37 @@ user follows from GitHub.
 
 ### Added
 
+- **Results out: one table, ELAN files and a methods paragraph** (spec 025, roadmap Phase 3). An
+  outside lab can now take results into R or Python without writing a parser per pipeline.
+  - **The results table**: every pipeline's results in one CSV (or Parquet), one row per event
+    and measure, the same 19 columns for every pipeline (`run`, `video`, `pipeline`, `event`,
+    `track`, `start`, `end`, `measure`, `label`, `value`, `confidence`, a box, `model`,
+    `videoannotator_version`, `file`, …). Times are seconds from the start of the video for
+    every pipeline. Keypoints, landmarks and embeddings stay in the native files. Format version
+    1; later versions only add columns or measures.
+  - **ELAN files** (`.eaf`, EAF 3.0, validated against ELAN's schema): one per video, one tier per
+    pipeline track (scenes, speech, each speaker, each tracked person, faces, VLM labels), linked
+    to the video. Frame detections become "in view" spans; per-detection measures stay in the
+    table. The viewer still opens a file after a coder adds tiers in ELAN.
+  - **A methods paragraph** with BibTeX: each pipeline, its models with exact weight revisions,
+    settings that differ from the defaults, deterministic mode, VideoAnnotator's version, and
+    citations. A run's videos processed the same way are described once; differences are counted.
+    Anything not recorded says so. No video names, paths or ids. Pipeline metadata gains an
+    optional `citations` key (filled in for all eight shipped pipelines).
+  - **Everywhere**: the viewer's **Export** menu on job and run pages (and a table button on
+    saved datasets); `videoannotator export table|elan|methods <folder>`, which works on any
+    results folder with no server; and `GET /api/v1/{jobs,batches,datasets}/{id}/export/table`,
+    `.../export/elan`, `GET /api/v1/{jobs,batches}/{id}/methods`. All three read the same files
+    the same way, so they give the same result. Results from before provenance (v1.5.0) export
+    too, marked `not recorded`.
+  - **Parquet** is an optional extra, `pip install videoannotator[parquet]` (in `all`), so the core
+    install stays slim; an admin can install it from the viewer when it's first asked for.
+  - **Two worked notebooks** in `examples/notebooks/`, R Markdown and Jupyter, reading the demo
+    clip's table: speaking time per speaker, the transcript, who is in view when, facial
+    expression over time, going wide, and who is in view while someone speaks. The Python one
+    runs in CI; the R one before each release (`tests/manual/results_out_r_notebook.md`).
+  - Docs: [`docs/usage/exporting_results.md`](docs/usage/exporting_results.md).
+
 - **Start VideoAnnotator: a container that feels local** (spec 024). For researchers on their
   own computer, with Docker Desktop or Podman Desktop and no Python.
   - **`videoannotator-start`** (sh for Linux and macOS, PowerShell for Windows, with a one-line
@@ -386,6 +417,11 @@ user follows from GitHub.
   `tests/fixtures/viewer_contract/` (real models, about a minute on a GPU; not run in CI).
 
 ### Fixed
+
+- **Person tracking's first run records its weights** (found 2026-10-16 with spec 025's methods
+  paragraph). The weights were hashed for provenance before ultralytics downloaded them, so a
+  first run recorded "weights file not found" and the methods said "revision not recorded". They
+  are now hashed after loading, from where ultralytics loaded them.
 
 - **A new install couldn't install pipelines from the viewer** (found in the first-time-user run,
   2026-10-05). Two faults, each enough on its own:
