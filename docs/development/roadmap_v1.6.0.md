@@ -1,9 +1,21 @@
 # 🚀 VideoAnnotator v1.6.0 Development Roadmap
 
+> **Rescoped 2026-10-17 (Caspar).** v1.6.0 was to be the public release. Announcing it and piloting
+> it just before the viewer is redesigned would leave the public version in an awkward state, and
+> pilot labs would report on a viewer about to change. So v1.6.0 is now a **quiet consolidation
+> release**: tagged, citable and installable, not announced. The public release, with the
+> redesigned viewer, the tutorial, the pilot and the announcements, is v1.7.0
+> ([`roadmap_v1.7.0.md`](roadmap_v1.7.0.md)); the plugin ecosystem moved to v1.8.0. Phases 4–7
+> below were moved there, except the model-default refresh (Phase 5c), which stays so the public
+> version's outputs are stable. New here: Phase 3b, the pipeline guide (spec 026). References to
+> Phases 4, 5, 6 and 7 in earlier entries mean the plan before this date; in v1.7.0 they are Phase 5
+> (Agents), Phase 2 (Connectors, old 5a), spec 029 (Corpus overview) and Phase 3 (Docs).
+
 ## Release Overview
 
-VideoAnnotator v1.6.0 is the **Public Release**: the first version we announce to the developmental
-research community, with a tutorial, mailing-list posts and a webinar.
+VideoAnnotator v1.6.0 is the **Consolidation Release**: one repository, current dependencies, a
+clean first contact, and results out in formats researchers use. It is released quietly; the
+public release is v1.7.0.
 
 v1.5.0 made the tool usable by us without a terminal: in-app pipeline installs, batches, folder
 ingest, the VLM pipeline, and the viewer bundled at `/viewer` (see
@@ -11,7 +23,7 @@ ingest, the VLM pipeline, and the viewer bundled at `/viewer` (see
 to install it, run it on their own videos, and get the results into their own analysis without
 asking us.
 
-**Why this shape**: on 2026-09-24 the JOSS submission
+**Why this shape** (written for the public release, which v1.7.0 now is): on 2026-09-24 the JOSS submission
 ([#10182](https://github.com/openjournals/joss-reviews/issues/10182)) was sent for an editorial
 scope check because no one outside the author team has used or contributed to it yet. JOSS accepts
 publications, outside use, integration with other research tools, or benchmarks with reproducible
@@ -20,14 +32,14 @@ for its own reason, outside use. The pilot follows the release, and a benchmark 
 (see Phase 5b).
 
 > Until 2026-09-24 this file held the plugin-ecosystem plan. That plan is now
-> [`roadmap_v1.7.0.md`](roadmap_v1.7.0.md), with its git history.
+> [`roadmap_v1.8.0.md`](roadmap_v1.8.0.md) (v1.7.0 until 2026-10-17), with its git history.
 
-**Target Release**: as complete as possible, as soon as possible. No conference deadline (BCCCD
-dropped 2026-10-14). The pilot (and spec 024's T083) runs after the release.
-**Current Status**: Phases 0–1 done bar non-blocking items; Phase 2 closing with spec 024's
-walkthroughs (2026-10-14); Phase 3 (Results Out, spec 025) built 2026-10-16
-**Main Goal**: an outside lab can go from install to results in R or Python, on its own videos,
-without help
+**Target Release**: as soon as Phases 3b and 5c are done. No deadline (BCCCD dropped 2026-10-14). The
+pilot (and spec 024's T083) moved to v1.7.0's release candidates.
+**Current Status**: Phases 0–1 done bar non-blocking items; Phase 2 done bar the long-video checks
+(spec 024 walkthroughs done 2026-10-17); Phase 3 (Results Out, spec 025) built 2026-10-16
+**Main Goal**: everything an outside lab will need under v1.7.0's new viewer, done and stable:
+install, pipelines, results out
 **Prerequisites**: v1.5.0 tagged, after spec 011's SC-001 manual run
 (`tests/manual/pipeline_readiness_e2e.md`)
 
@@ -46,14 +58,14 @@ without help
 - ✅ **No model change without a reason on record.** A pipeline default changes on the upstream
   model's published evaluation, after its output on the demo clip has been checked against the
   baseline (`tests/integration/test_output_baseline.py`). The CHANGELOG and model card say why.
-- ✅ **Pilot after the release.** Outside testing is what the release is for.
+- ✅ **Pilot on what will be announced.** Outside testing runs on v1.7.0's release candidates, not
+  on a viewer about to be replaced (2026-10-17).
 
 ---
 
 ## 📋 v1.6.0 Deliverables
 
-Phases are in order. Phases 0–3 make release candidate 1; the pilot runs from there to release and
-reorders Phases 4–7.
+Phases 0–3 made the release candidates; Phases 3b and 5c finish the release.
 
 ### Phase 0: One Repository
 
@@ -573,12 +585,13 @@ job in the wizard from memory, although every job already stores its `selected_p
       folder the videos are in, shares it read-only at its real path, remembers it, and never shows
       the container's own folders. Spec: `specs/024-container-feels-local/`.
       Built 2026-10-06 (`videoannotator-start` for Linux/macOS and Windows, the slim image on GHCR,
-      installed pipelines restored after recreation, Settings' Stop sharing); open: the CI
-      end-to-end runs with Docker and Podman (first run on a push to `master`), the quickstart
-      walkthroughs on Linux and Windows, and a pilot researcher on macOS (T082-T084).
+      installed pipelines restored after recreation, Settings' Stop sharing). Quickstart
+      walkthroughs done 2026-10-17: Windows by hand (T084), Linux reliable in daily use (T082).
+      Open: the CI end-to-end runs with Docker and Podman (first run on a push to `master`), and a
+      pilot researcher on macOS (T083, with v1.7.0's pilot).
 
-**Not in this phase**: a visual redesign. Decide on one after the pilot, from what outside users
-say.
+**Not in this phase**: a visual redesign. It is v1.7.0's first phase (design in
+[`specs/023-viewer-overhaul`](../../specs/023-viewer-overhaul/spec.md), built by specs 026–029).
 
 ---
 
@@ -607,7 +620,7 @@ parser per pipeline.
 - [x] **Methods paragraph**: `GET /api/v1/jobs/{id}/methods`, a CLI command and a viewer button.
       Returns the models, versions, weight revisions, parameters and citations as prose plus
       BibTeX, ready for a methods section. Needs the provenance fields from the reproducibility
-      item in [`roadmap_v1.7_to_v2.0.md`](roadmap_v1.7_to_v2.0.md), pulled forward: model revision
+      item in [`roadmap_v1.8_to_v2.0.md`](roadmap_v1.8_to_v2.0.md), pulled forward: model revision
       SHA, prompt SHA-256, quantisation.
       Done 2026-10-16, for jobs and runs (`/batches/{id}/methods` too). Citations live in each
       pipeline's metadata (`citations:`). Found on the way, not fixed: some metadata defaults
@@ -617,76 +630,27 @@ parser per pipeline.
       video. Done 2026-10-16: `examples/notebooks/`; the Python one runs in CI, the R one was run
       on R 4.3 and is checked before each release (`tests/manual/results_out_r_notebook.md`).
 
-**→ Release candidate 1 (`v1.6.0rc1`)**: Phases 0–3 done. (rc1 was cut on 2026-10-14 to test the
-install before Phase 3 landed; Phase 3 is in the next release candidate.)
+**→ Release candidates**: rc1 was cut on 2026-10-14 to test the install before Phase 3 landed;
+rc2 carries Phase 3.
 
 ---
 
-### Pilot (after the release)
+### Phase 3b: Pipeline Guide
 
-Outside testing is what the release is for (Caspar, 2026-10-14), so it follows the tag. Spec 024's
-T083 runs here too.
-
-- [ ] 3–5 labs outside the team (conference contacts first) run it on about ten of their own
-      videos, with a concrete ask: tell us where it broke.
-- [ ] Their reports go in the public issue tracker. Label starter tasks `good first issue`.
-- [ ] Pilot feedback sets the order of v1.6.x and v1.7 work.
-- [ ] With permission, record who used it and for what.
-
----
-
-### Phase 4: Agents
-
-**Problem**: researchers increasingly work alongside an agent of their own (Claude Code, Codex,
-Gemini CLI and others). The REST API is complete but an agent has to discover it from scratch, and
-parts of the CLI still prompt interactively.
-
-**Solution**:
-- [ ] **MCP server**: `videoannotator mcp` (stdio), and the same tools over HTTP on a running server.
-      Tools: pipeline readiness, submit a folder or batch, job and batch status, annotations for a
-      time window (tidy rows), the frame at time *t* as an image, comparison with an `.eaf` file,
-      and the methods paragraph. With frames plus annotations an agent can audit ("look at the ten
-      moments where the speaker label and the face on screen disagree").
-- [ ] **Agent Skill** shipped in the repo (`SKILL.md`): installing, choosing pipelines for a
-      research question, reading outputs, auditing disagreements.
-- [ ] **A CLI that agents can drive**: `--json` on every command, no prompts when the flags are given
-      (`generate-token` still prompts), documented exit codes.
-- [ ] `llms.txt` and a "Using VideoAnnotator with your agent" docs page. It says plainly that frames
-      sent to a cloud-hosted agent leave the machine.
+- [ ] [`specs/026-pipeline-guide`](../../specs/026-pipeline-guide/spec.md): each pipeline's metadata
+      says what it does in behavioural terms, splits its settings into behavioural (shown) and
+      technical (collapsed), and gives its homepage, published benchmarks and citation; the
+      viewer, the API and `videoannotator pipelines describe` show the same guide. Groundwork for
+      v1.7.0's run setup and model cards; useful on today's Pipelines page.
+- [x] Remove the DeepWiki links (they point at the archived viewer repo) and "VAV" from Getting
+      started. Done 2026-10-17: the footer's and Getting started's docs links go to the docs site.
 
 ---
 
-### Phase 5: Models
+### Phase 5c: Refresh Model Defaults
 
-**Candidates**: [`pipeline_landscape_v1.6.0.md`](pipeline_landscape_v1.6.0.md) (2026-10-01) lists,
-per kind of processing, what we have, what's obsolete, the current best tools with licences, and
-what developmental research uses that we don't do at all. Top of its list: voice type
-classification (VTC 2) with adult word counts (ALICE) and conversational turns; infant looking
-(iCatcher+); motion energy and dyadic synchrony; adult/child role per person; de-identified
-export; caregiver prosody.
-
-#### 5a. Connectors
-
-- [ ] **OpenAI-compatible connector** alongside the Ollama one (`backends: [ollama,
-      openai_compatible]`), moved here from v1.7.0. One client covers Ollama, llama.cpp, vLLM,
-      LM Studio, SGLang and hosted APIs.
-- [ ] **Structured outputs**: the prompt carries a JSON schema, so VLM labels come back parseable
-      rather than as free text.
-- [ ] **Video input** through vLLM (Qwen-VL models) as a third sampling mode beside single frame and
-      burst. Ollama's Qwen3-VL has no video input as of September 2026.
-- [ ] Hosted endpoints are off by default. Enabling one shows a plain warning that frames leave the
-      machine; for infant video that is an ethics-approval question.
-
-#### 5b. Benchmark: not in v1.6.0
-
-Dropped 2026-10-14 (Caspar). The pipelines wrap off-the-shelf models that come with their own
-published evaluations, and a proper benchmark is a project in itself: no human-coded infant video
-of our own, and the open sets either cover speech only (HomeBank's public VanDam corpora,
-CC BY-NC-SA 3.0) or can't be redistributed (BabyView, on Databrary). Model cards (Phase 7) cite the
-upstream evaluations and say plainly that few were trained or tested on infants. Labs can check a
-pipeline against their own ELAN codes in the viewer's Compare page. Revisit after the pilot.
-
-#### 5c. Refresh defaults (each on the upstream evaluation plus a demo-clip check)
+Each on the upstream evaluation plus a demo-clip check (principle: no model change without a reason
+on record). Done before the public release so its outputs are stable.
 
 - [ ] **Face** (if the Phase 1 review keeps a deepface-based pipeline): replace the default OpenCV
       Haar-cascade detector (`face_pipeline.py`, `detector_backend: opencv`) with YuNet or
@@ -709,92 +673,59 @@ pipeline against their own ELAN codes in the viewer's Compare page. Revisit afte
 - [ ] **OpenFace 3**: confirm `openface-test` is the maintained distribution (the Phase 1
       audit keeps it at `==0.1.13`).
 
-#### 5d. New pipelines: whichever the pilot labs ask for
+**Benchmark: not in v1.6.0 or v1.7.0** (was Phase 5b).
 
-Candidates, none committed (the Phase 1 pipeline review may promote some before the pilot):
-- **Voice Type Classifier**: key child, other child, female adult, male adult. Already standard in
-  child-language research. VTC 2 depends on pyannote.audio and has no stated licence (audit §8).
-- **Gaze target** (Gaze-LLE), for joint attention.
-- **Text-prompted segmentation and tracking** (SAM 3), e.g. "infant", "adult". Licence to check.
-
----
-
-### Phase 6: Corpus Overview
-
-**Problem**: the viewer shows one video at a time. Researchers think in corpora: which videos
-failed, where the pipelines disagree, what the whole dataset looks like.
-
-**Solution**:
-- [ ] Implement [`specs/010-corpus-analysis-foundations`](../../specs/010-corpus-analysis-foundations/spec.md)
-      (dataset summary endpoint) on top of the tidy export.
-- [ ] A corpus page in the viewer: one row per video, one small track per pipeline, sortable (by
-      speaker/face disagreement, coverage, failures). A click opens the existing single-video
-      timeline. This is the paper's cross-modal audit, at corpus scale.
-- [x] Previous/next between a batch's videos in the results viewer (item 4 of spec 008's viewer
-      handoff).
-      Done in Phase 0 (see "Results view isn't batch-aware").
+Dropped 2026-10-14 (Caspar). The pipelines wrap off-the-shelf models that come with their own
+published evaluations, and a proper benchmark is a project in itself: no human-coded infant video
+of our own, and the open sets either cover speech only (HomeBank's public VanDam corpora,
+CC BY-NC-SA 3.0) or can't be redistributed (BabyView, on Databrary). Model cards (Phase 7) cite the
+upstream evaluations and say plainly that few were trained or tested on infants. Labs can check a
+pipeline against their own ELAN codes in the viewer's Compare page. Revisit after the pilot.
 
 ---
 
-### Phase 7: Docs and Tutorials
+### Release (quiet)
 
-- [ ] **Tutorial**: the Peekaboo demo video from start to finish (install, run, review, export,
-      analyse in R and Python).
-- [ ] **Which pipeline for which question**, in the field's terms: caregiver speech, infant
-      vocalisations, movement, faces, joint attention, touch.
-- [ ] **A model card per pipeline**: the model, what it was trained on (few include infants), known
-      failure modes, licence (Ultralytics is AGPL-3.0; pyannote models are gated), what to cite.
-- [ ] **Data protection**: what runs where, what never leaves the machine, what changes with a
-      hosted backend or a cloud agent.
-- [ ] **Contributing a pipeline**: a guide and template, with `vlm_annotation` as the worked
-      example. Contributions go into core by pull request; entry-point plugins wait for v1.7.0.
-- [ ] **A 10-minute screencast**, reused for the webinar and conference tutorial.
+- [ ] `v1.6.0rc2` with Phase 3; then Phases 3b and 5c.
+- [ ] Tag `v1.6.0`, GitHub release, Zenodo DOI, `CITATION.cff` updated. No announcements.
+- [ ] Release notes say plainly that the viewer is being redesigned for v1.7.0, the public
+      release.
 
 ---
 
-### Launch
+## ➡️ Moved to v1.7.0 (2026-10-17)
 
-- [ ] Tag `v1.6.0`, GitHub release, Zenodo DOI, `CITATION.cff` updated.
-- [ ] Update `paper/paper.md` and its research impact statement with the pilot's use, and tell the
-      editors on #10182.
-- [ ] Announce: mailing lists, webinar, conference tutorial.
-
----
+The pilot, Phase 4 (Agents), Phase 5a (Connectors) and 5d (New pipelines), Phase 6 (Corpus
+Overview, now spec 029's Videos page), Phase 7 (Docs and Tutorials) and the Launch. See
+[`roadmap_v1.7.0.md`](roadmap_v1.7.0.md).
 
 ## ❌ Out of Scope for v1.6.0
 
+- The viewer overhaul (v1.7.0).
+- Publicity, the pilot, the tutorial and screencast (v1.7.0, written against the new viewer).
 - Plugin ecosystem: entry-point discovery, `Dispatcher` ABC, `videoannotator-utils`
-  ([`roadmap_v1.7.0.md`](roadmap_v1.7.0.md)).
-- The viewer overhaul: design in [`specs/023-viewer-overhaul`](../../specs/023-viewer-overhaul/spec.md)
-  (2026-10-16), built by specs 026 (pipeline guide), 027 (Ask AI), 028 (Video page) and 029
-  (videos and projects). After the release, informed by the pilot (Caspar, 2026-10-14).
-- Remote and HPC dispatch ([`roadmap_v1.7_to_v2.0.md`](roadmap_v1.7_to_v2.0.md)).
-- Pose, hand and motion specialist pipelines, unless pilot labs ask.
+  ([`roadmap_v1.8.0.md`](roadmap_v1.8.0.md)).
+- Remote and HPC dispatch ([`roadmap_v1.8_to_v2.0.md`](roadmap_v1.8_to_v2.0.md)).
 
 ---
 
 ## ✅ Success Criteria
 
-- [ ] Changing viewer code cannot ship a stale bundle: CI fails on a mismatch.
-- [ ] Every version constraint in `pyproject.toml` and the viewer's `package.json` has a recorded
+- [x] Changing viewer code cannot ship a stale bundle: CI fails on a mismatch (Phase 0,
+      `scripts/build_viewer.sh --check`).
+- [x] Every version constraint in `pyproject.toml` and the viewer's `package.json` has a recorded
       reason in the dependency audit, and the release supports Python 3.13 (3.14 as soon as
       TensorFlow does).
-- [ ] Every default model has a model card citing its upstream evaluation, and every change of
-      default has its reason in the CHANGELOG.
-- [ ] Everything the viewer does is available from the CLI with `--json` and through MCP.
-- [ ] The viewer has zero TypeScript errors and no placeholder pages.
+- [ ] Every change of default model has its reason in the CHANGELOG (Phase 5c).
+- [x] The viewer has zero TypeScript errors (checked 2026-10-16).
+- [ ] The viewer has no placeholder pages.
 - [ ] Nothing leaves the user's machine unless they switched on a hosted backend.
 
-**After the release** (the pilot's measures, not release gates):
-
-- [ ] A researcher outside the team installs it, works through the tutorial on their own machine,
-      and gets the tidy export into R or Python without help.
-- [ ] At least three labs outside the team have run it on their own videos (documented, with
-      permission).
-- [ ] At least one issue or pull request from outside the team has been resolved or merged.
+Moved to v1.7.0: model cards for every default model; everything the viewer does available from
+the CLI with `--json` and through MCP; the pilot's measures.
 
 ---
 
-**Last Updated**: 2026-09-30
-**Target Release**: as soon as complete (see the top of this file)
-**Status**: Planning Phase — Public Release
+**Last Updated**: 2026-10-17 (rescoped as the consolidation release)
+**Target Release**: as soon as Phases 3b and 5c are done
+**Status**: Release candidates — Consolidation Release

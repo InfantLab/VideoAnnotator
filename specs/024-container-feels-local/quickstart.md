@@ -94,3 +94,12 @@ Story 1 largely works. Fixed from this walk:
   service bound to 127.0.0.1 only (Ollama's default), so no `OLLAMA_HOST` change is needed there.
   Linux needs `OLLAMA_HOST=0.0.0.0` (in INSTALLATION.md, "Using Ollama"). Still to check: Podman
   Desktop, and macOS.
+
+### 2026-10-17 — Windows done (T084); Linux accepted (T082)
+
+- Windows with Docker Desktop: walkthrough finished by the maintainer, by hand (T084).
+- Linux: reported reliable in daily use. Accepted for T082 without a step-by-step walk of this
+  quickstart, so Podman on Linux and SC-002 (no container path on any screen) were not checked
+  item by item here.
+- Still open: Podman Desktop on Windows and macOS (Ollama reachability, above), and a pilot
+  researcher on macOS (T083), which moves to v1.7.0's pilot.
