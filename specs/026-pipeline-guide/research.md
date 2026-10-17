@@ -132,3 +132,25 @@ drift test covers it.
 
 **Rationale**: the docs and the app say the same (v1.7.0 Phase 3's "which pipeline for which
 question" starts here).
+
+## Sourced figures (checked 2026-10-17)
+
+Each benchmark entry in the metadata, with where it was read. Figures are copied as printed.
+
+| Pipeline | Benchmark | Figure | Source, as read |
+|---|---|---|---|
+| face_analysis | WIDER FACE (hard), AP | 91.4% | RetinaFace abstract, arXiv:1905.00641 ("achieving AP equal to 91.4%") |
+| face_analysis | DeepFace age model, MAE | ± 4.65 | DeepFace README ("Age model got ± 4.65 MAE") |
+| face_analysis | DeepFace gender model, accuracy | 97.44% | DeepFace README ("gender model got 97.44% accuracy") |
+| face_openface3_embedding | DISFA AU F1 / MPII gaze angle / AffectNet 8-emotion acc. / 300W NME | 60 / 4.25 / 0.56 / 2.87 | OpenFace 3.0 paper, arXiv:2506.02891 HTML, Table III, row "OpenFace 3.0 (MTL)" |
+| person_tracking | COCO Keypoints val2017, mAP pose 50-95 | 50.0 | Ultralytics docs macro at v8.3.183 (our locked version), YOLO11n-pose row; the dataset named in the current docs.ultralytics.com/tasks/pose footnote |
+| speaker_diarization | AMI headset mix / DIHARD 3 Full / VoxConverse v0.3, DER % | 18.8 / 21.7 / 11.3 | pyannote/speaker-diarization-3.1 model card |
+| speech_recognition | LibriSpeech test-clean / test-other, WER % | 5.0 / 12.4 | Whisper paper, arXiv:2212.04356 HTML, Table 8 (greedy decoding), row "Whisper base" |
+| scene_detection | none | `[]` | PySceneDetect publishes no accuracy figure; CLIP's zero-shot results aren't for scene-setting labels |
+| vlm_annotation | none | `[]` + quality note | depends on the model chosen |
+| audio_processing | none | `[]` + quality note | deprecated; see speech and speaker turns |
+
+Discrepancy noted: spec 030's research quotes DIHARD 3 DER 21.4 for 3.1 from the community-1 card; the
+3.1 card itself prints 21.7. The metadata uses the 3.1 card's own figure.
+OpenFace 3: the paper has single-task and multitask rows and doesn't say which the released package
+uses; the metadata quotes the multitask (MTL) row and says so in its quality note.

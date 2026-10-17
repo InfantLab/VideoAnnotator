@@ -637,11 +637,13 @@ rc2 carries Phase 3.
 
 ### Phase 3b: Pipeline Guide
 
-- [ ] [`specs/026-pipeline-guide`](../../specs/026-pipeline-guide/spec.md): each pipeline's metadata
+- [x] [`specs/026-pipeline-guide`](../../specs/026-pipeline-guide/spec.md): each pipeline's metadata
       says what it does in behavioural terms, splits its settings into behavioural (shown) and
       technical (collapsed), and gives its homepage, published benchmarks and citation; the
       viewer, the API and `videoannotator pipelines describe` show the same guide. Groundwork for
       v1.7.0's run setup and model cards; useful on today's Pipelines page.
+      Done 2026-10-17: all 8 pipelines have a guide with sourced figures (spec 026
+      research.md, "Sourced figures"); two settings the code never read are removed.
 - [x] Remove the DeepWiki links (they point at the archived viewer repo) and "VAV" from Getting
       started. Done 2026-10-17: the footer's and Getting started's docs links go to the docs site.
 

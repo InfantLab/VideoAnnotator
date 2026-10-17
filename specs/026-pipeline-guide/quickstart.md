@@ -54,3 +54,14 @@ The API's guide fields and `describe --json` match the metadata for every built-
 uv run python scripts/generate_pipeline_specs.py && git diff --stat docs/pipelines_spec.md
 pytest tests/unit/docs/test_pipeline_spec_doc.py -q
 ```
+
+## Walk log
+
+### 2026-10-17
+
+- 1 (metadata check), 2 (CLI), 3 (API on a live server at port 18099), 5 (consistency) and 6
+  (generated doc): as described, no deviations. `pipelines list` against the server shows each
+  title beside its name.
+- 4 (viewer): **not walked in a browser** (none available in this session). Covered by component
+  tests (`PipelineGuide.test.tsx`, `DynamicPipelineParameters.test.tsx`, the schema contract test);
+  still to look at on screen.

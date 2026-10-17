@@ -12,6 +12,20 @@ user follows from GitHub.
 
 ### Added
 
+- **A guide for every pipeline** (spec 026, roadmap v1.6.0 Phase 3b). Each pipeline now says what
+  it finds in plain words ("Faces: expression, age, gender"), splits its settings into the few
+  about *what* is measured (shown first, with units) and the technical ones (collapsed, with how
+  many differ from the defaults), hides settings that don't apply (the OpenCV-only face
+  thresholds, burst offsets outside burst mode) unless they've been changed, and gives its
+  homepage, its published benchmarks quoted from their sources, and what to cite. The figures
+  say what they measure: none of the face figures is for infants, and Whisper's are for English
+  read aloud by adults. Written once in each pipeline's metadata, so the viewer (Pipelines page,
+  the job wizard, Copy BibTeX), the API (new fields on `/pipelines`, `/pipelines/{name}` and
+  `/schema`, nothing renamed) and the CLI agree; `docs/pipelines_spec.md` has a section per
+  pipeline.
+- **`videoannotator pipelines describe <name> [--json]`** prints a pipeline's guide, settings and
+  sources without a server. `pipelines list` shows each pipeline's title.
+
 - **Results out: one table, ELAN files and a methods paragraph** (spec 025, roadmap Phase 3). An
   outside lab can now take results into R or Python without writing a parser per pipeline.
   - **The results table**: every pipeline's results in one CSV (or Parquet), one row per event
@@ -223,6 +237,9 @@ user follows from GitHub.
 
 ### Removed
 
+- **Two settings that did nothing** (spec 026): `scene_detection`'s `enable_clip_labels` and
+  `audio_processing`'s `enable_diarization` were never read by the code. A config that still sets
+  them runs as before; the validator says the field will be ignored.
 - Internal working documents moved out of the public docs into `docs/archive/`: the 2025
   client/server team handoffs and QA reports from `docs/testing/`, `docs/Figure 1.docx`, dated
   fix notes, the coding-agent setup guide and the v1.3 scripts audit.
