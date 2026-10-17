@@ -47,6 +47,40 @@ COLUMNS = [
 ]
 
 
+def guide_section(m) -> list[str]:
+    """One pipeline's guide (spec 026): what it does, what to set, where it comes from."""
+    lines = [f"### {m.guide_title} (`{m.name}`)", "", m.guide_summary, ""]
+    behavioural = [
+        (k, f) for k, f in m.config_schema.items() if f.group == "behavioural"
+    ]
+    if behavioural:
+        lines.append(
+            "What to measure: "
+            + ", ".join(
+                f"{f.label or k} (`{k}`, default `{f.default}`{' ' + f.unit if f.unit else ''})"
+                for k, f in behavioural
+            )
+            + "."
+        )
+        lines.append("")
+    if m.homepage:
+        lines += [f"Homepage: <{m.homepage}>", ""]
+    if m.benchmarks:
+        for b in m.benchmarks:
+            note = f" ({b.note})" if b.note else ""
+            lines.append(
+                f"- {b.name}: {b.measure} {b.figure}{note}. [Source]({b.source})"
+            )
+        lines.append("")
+    elif m.benchmarks == []:
+        lines += ["No published benchmark.", ""]
+    if m.quality_note:
+        lines += [m.quality_note, ""]
+    if m.citations:
+        lines += ["Cite: " + ", ".join(f"`{c.key}`" for c in m.citations) + ".", ""]
+    return lines
+
+
 def generate():
     reg = get_registry()
     reg.load(force=True)
@@ -67,6 +101,10 @@ def generate():
         header + sep + "\n".join(rows),
         "",
         "Total pipelines: " + str(len(metas)),
+        "",
+        "## Pipeline guides",
+        "",
+        *[line for m in metas for line in guide_section(m)],
     ]
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text("\n".join(content), encoding="utf-8")

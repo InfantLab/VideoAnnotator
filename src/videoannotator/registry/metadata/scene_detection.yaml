@@ -1,5 +1,12 @@
 name: scene_detection
 display_name: Scene Detection
+title: "Scenes: cuts and settings"
+summary: >-
+  Finds where the video cuts from one shot to another and labels the kind of setting each scene shows.
+homepage: https://www.scenedetect.com/
+benchmarks: []
+quality_note: >-
+  Neither PySceneDetect nor CLIP publishes an accuracy figure for finding cuts or labelling scene settings.
 description: Detect hard cuts and scene boundaries using PySceneDetect with semantic labeling via CLIP.
 pipeline_family: scene
 variant: pyscenedetect-clip
@@ -19,17 +26,20 @@ outputs:
     file: scene_detection.json
 config_schema:
   threshold:
+    group: technical
+    label: "Cut sensitivity (content score)"
+    min: 0
     type: float
     default: 30.0
     description: Scene cut detection threshold
   min_scene_length:
+    group: behavioural
+    label: "Shortest scene"
+    unit: s
+    min: 0
     type: float
     default: 1.0
     description: Minimum scene length in seconds
-  enable_clip_labels:
-    type: boolean
-    default: true
-    description: Use CLIP embeddings for environment labels
 examples:
   - cli: videoannotator job submit demo.mp4 --pipelines scene_detection
     description: Submit scene detection job

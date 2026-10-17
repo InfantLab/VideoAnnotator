@@ -1,0 +1,57 @@
+name: full_guide
+display_name: Full Guide Pipeline (Method X)
+description: Metadata with every spec 026 guide key, some deliberately invalid.
+title: "Things: what they are"
+summary: Finds things in each sampled frame. Says what kind each one is.
+homepage: https://example.org/method-x
+benchmarks:
+  - name: Things benchmark (hard)
+    measure: AP
+    figure: "91.4%"
+    source: https://example.org/paper
+    note: large backbone
+  - name: Missing its source
+    measure: AP
+    figure: "50%"
+quality_note: Depends on the model you choose.
+module_path: tests.fixtures.stub_pipeline_module:StubPipeline
+outputs:
+  - format: JSON
+    types: [stub]
+config_schema:
+  backend:
+    type: string
+    default: fast
+    description: Which detector to use.
+    enum: [fast, slow]
+    group: technical
+    label: Detector
+  most_things:
+    type: integer
+    default: 10
+    description: Maximum number of things per frame.
+    group: behavioural
+    label: Most things per frame
+    unit: things
+    min: 1
+    max: 100
+  slow_only:
+    type: float
+    default: 1.1
+    description: Only used by the slow detector.
+    group: technical
+    label: Slow detector scale
+    applies_when:
+      backend: [slow]
+  odd_group:
+    type: boolean
+    default: true
+    description: Has a group that isn't one of the two.
+    group: advanced
+  dangling:
+    type: integer
+    default: 3
+    description: Its condition names a setting that doesn't exist.
+    applies_when:
+      nonexistent: [x]
+version: 1

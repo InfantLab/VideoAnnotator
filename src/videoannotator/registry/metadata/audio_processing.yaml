@@ -1,5 +1,12 @@
 name: audio_processing
 display_name: Audio Processing (Speech + Diarization)
+title: "Speech and speakers (deprecated)"
+summary: >-
+  Transcribes speech and says who spoke when, in one step. Use Speech and Speaker turns instead.
+homepage: https://github.com/openai/whisper
+benchmarks: []
+quality_note: >-
+  Deprecated: see Speech and Speaker turns for their benchmarks.
 description: Transcribe speech with Whisper and perform speaker diarization using pyannote.audio producing WebVTT + RTTM outputs.
 pipeline_family: audio
 variant: whisper-pyannote
@@ -29,18 +36,24 @@ outputs:
     file: speaker_diarization.rttm
 config_schema:
   whisper_model:
+    group: technical
+    label: "Whisper model size"
     type: string
     default: base
     description: Whisper model size
-  enable_diarization:
-    type: boolean
-    default: true
-    description: Perform speaker diarization
   min_speakers:
+    group: behavioural
+    label: "Fewest speakers"
+    unit: speakers
+    min: 1
     type: integer
     default: 1
     description: Minimum number of speakers to consider
   max_speakers:
+    group: behavioural
+    label: "Most speakers"
+    unit: speakers
+    min: 1
     type: integer
     default: 10
     description: Maximum number of speakers to consider

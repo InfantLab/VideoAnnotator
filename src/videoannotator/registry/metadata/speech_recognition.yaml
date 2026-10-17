@@ -1,5 +1,22 @@
 name: speech_recognition
 display_name: Speech Recognition
+title: "Speech: what was said"
+summary: >-
+  Transcribes speech into timed text, with the time of each word.
+homepage: https://github.com/openai/whisper
+benchmarks:
+  - name: "LibriSpeech test-clean"
+    measure: "WER %"
+    figure: "5.0"
+    source: https://arxiv.org/abs/2212.04356
+    note: "Whisper base, greedy decoding, Table 8"
+  - name: "LibriSpeech test-other"
+    measure: "WER %"
+    figure: "12.4"
+    source: https://arxiv.org/abs/2212.04356
+    note: "Whisper base, greedy decoding, Table 8"
+quality_note: >-
+  LibriSpeech is English read aloud by adults; none of these figures measures child-directed speech, infant vocalisations or overlapping talk.
 description: Speech transcription using OpenAI Whisper with word-level timestamps, producing WebVTT format output for subtitles and captions.
 pipeline_family: audio
 variant: whisper
@@ -20,54 +37,85 @@ outputs:
     file: speech_recognition.vtt
 config_schema:
   whisper_model:
+    group: technical
+    label: "Whisper model size"
     type: string
     default: base
     description: Whisper model size (tiny, base, small, medium, large, large-v2, large-v3)
   language:
+    group: behavioural
+    label: "Language"
     type: string
     default: null
     description: Language code (e.g., en, es, fr) or null for auto-detection
   task:
+    group: behavioural
+    label: "Transcribe or translate"
     type: string
     default: transcribe
     description: Task type - transcribe or translate (translate converts to English)
   beam_size:
+    group: technical
+    label: "Beam size"
+    min: 1
     type: integer
     default: 5
     description: Beam size for beam search decoding
   best_of:
+    group: technical
+    label: "Candidates when sampling"
+    min: 1
     type: integer
     default: 5
     description: Number of candidates when sampling
   temperature:
+    group: technical
+    label: "Sampling temperature"
+    min: 0
     type: float
     default: 0.0
     description: Temperature for sampling (0.0 for deterministic)
   patience:
+    group: technical
+    label: "Beam search patience"
     type: float
     default: 1.0
     description: Beam search patience factor
   length_penalty:
+    group: technical
+    label: "Length penalty"
     type: float
     default: 1.0
     description: Length penalty for beam search
   word_timestamps:
+    group: behavioural
+    label: "Time of each word"
     type: boolean
     default: true
     description: Generate word-level timestamps
   min_segment_duration:
+    group: behavioural
+    label: "Shortest segment"
+    unit: s
+    min: 0
     type: float
     default: 1.0
     description: Minimum segment duration in seconds
   prepend_punctuations:
+    group: technical
+    label: "Punctuation joined to the next word"
     type: string
     default: "\"'¿([{-"
     description: Punctuation marks to prepend to next word
   append_punctuations:
+    group: technical
+    label: "Punctuation joined to the previous word"
     type: string
     default: "\"'..,!?:)]},"
     description: Punctuation marks to append to previous word
   suppress_tokens:
+    group: technical
+    label: "Suppressed tokens"
     type: string
     default: null
     description: Comma-separated list of token IDs to suppress

@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import builtins
 import logging
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +62,15 @@ class PipelineConfigField:
     # input, same as before either field existed.
     widget: str | None = None  # e.g. "textarea" for a long free-text field
     enum: list[str] | None = None  # fixed set of valid string values
+    # spec 026: an unclassified setting is technical, so it never crowds the
+    # few a researcher is shown first.
+    group: str = "technical"
+    label: str | None = None
+    unit: str | None = None
+    min: float | None = None
+    max: float | None = None
+    # Shown only when every named setting has one of the listed values.
+    applies_when: dict[str, list[str]] | None = None
 
 
 @dataclass
@@ -101,6 +110,18 @@ class Citation:
 
     key: str
     bibtex: str
+
+
+@dataclass
+class Benchmark:
+    """A published evaluation of a pipeline's method (spec 026). `figure` is
+    quoted from `source` as published, never computed or rounded."""
+
+    name: str
+    measure: str
+    figure: str
+    source: str
+    note: str | None = None
 
 
 @dataclass
@@ -146,6 +167,21 @@ class PipelineMetadata:
     deprecated: DeprecationInfo | None = None
     # spec 025: what to cite for this pipeline (method and model papers).
     citations: list[Citation] = field(default_factory=list)
+    # spec 026: the pipeline guide. `benchmarks` is None when the metadata
+    # doesn't say, [] when it says none is published.
+    title: str | None = None
+    summary: str | None = None
+    homepage: str | None = None
+    benchmarks: list[Benchmark] | None = None
+    quality_note: str | None = None
+
+    @property
+    def guide_title(self) -> str:
+        return self.title or self.display_name
+
+    @property
+    def guide_summary(self) -> str:
+        return self.summary or self.description
 
 
 class PipelineRegistry:
@@ -238,9 +274,27 @@ class PipelineRegistry:
                 description=str(val.get("description", "")),
                 widget=str(val.get("widget")) if val.get("widget") else None,
                 enum=enum_values,
+                group=_parse_group(val.get("group"), source.name, key),
+                label=_optional_str(val.get("label")),
+                unit=_optional_str(val.get("unit")),
+                min=_optional_number(val.get("min")),
+                max=_optional_number(val.get("max")),
+                applies_when=_parse_applies_when(
+                    val.get("applies_when"), source.name, key
+                ),
             )
         if not config_schema:
             LOGGER.warning("Metadata %s has empty config_schema", source.name)
+        for key, cfg in config_schema.items():
+            if cfg.applies_when and any(
+                k not in config_schema for k in cfg.applies_when
+            ):
+                LOGGER.warning(
+                    "Metadata %s field '%s' applies_when names an unknown setting",
+                    source.name,
+                    key,
+                )
+                cfg.applies_when = None
         examples = raw.get("examples") or []
         if not isinstance(examples, list):
             LOGGER.warning("Metadata %s examples not a list", source.name)
@@ -341,6 +395,11 @@ class PipelineRegistry:
             family_default=bool(raw.get("family_default", False)),
             deprecated=_parse_deprecated(raw.get("deprecated"), source.name),
             citations=citations,
+            title=_optional_str(raw.get("title")),
+            summary=_optional_str(raw.get("summary")),
+            homepage=_optional_str(raw.get("homepage")),
+            benchmarks=_parse_benchmarks(raw.get("benchmarks"), source.name),
+            quality_note=_optional_str(raw.get("quality_note")),
         )
 
     def list(self, include_deprecated: bool = False) -> builtins.list[PipelineMetadata]:
@@ -364,6 +423,69 @@ class PipelineRegistry:
         return self._pipelines.get(name)
 
 
+def _optional_str(raw: Any) -> str | None:
+    return str(raw).strip() if isinstance(raw, str) and raw.strip() else None
+
+
+def _optional_number(raw: Any) -> float | None:
+    if isinstance(raw, bool) or not isinstance(raw, int | float):
+        return None
+    return raw
+
+
+def _parse_group(raw: Any, source_name: str, key: str) -> str:
+    if raw is None:
+        return "technical"
+    if raw in ("behavioural", "technical"):
+        return str(raw)
+    LOGGER.warning(
+        "Metadata %s field '%s' has unknown group %r; treated as technical",
+        source_name,
+        key,
+        raw,
+    )
+    return "technical"
+
+
+def _parse_applies_when(
+    raw: Any, source_name: str, key: str
+) -> dict[str, list[str]] | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict) or not all(
+        isinstance(v, list) and v for v in raw.values()
+    ):
+        LOGGER.warning(
+            "Metadata %s field '%s' has an invalid applies_when", source_name, key
+        )
+        return None
+    return {str(k): [str(x) for x in v] for k, v in raw.items()}
+
+
+def _parse_benchmarks(raw: Any, source_name: str) -> list[Benchmark] | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, list):
+        LOGGER.warning("Metadata %s benchmarks is not a list", source_name)
+        return None
+    benchmarks: list[Benchmark] = []
+    for item in raw:
+        fields = ("name", "measure", "figure", "source")
+        if not isinstance(item, dict) or not all(item.get(f) for f in fields):
+            LOGGER.warning("Metadata %s has an invalid benchmarks entry", source_name)
+            continue
+        benchmarks.append(
+            Benchmark(
+                name=str(item["name"]),
+                measure=str(item["measure"]),
+                figure=str(item["figure"]),
+                source=str(item["source"]),
+                note=_optional_str(item.get("note")),
+            )
+        )
+    return benchmarks
+
+
 def _parse_deprecated(raw: Any, source_name: str) -> DeprecationInfo | None:
     if raw is None:
         return None
@@ -381,6 +503,38 @@ def _parse_deprecated(raw: Any, source_name: str) -> DeprecationInfo | None:
 
 # Singleton-style accessor
 _registry_instance: PipelineRegistry | None = None
+
+
+def config_schema_dict(meta: PipelineMetadata) -> dict[str, Any]:
+    """A pipeline's settings as the API and `pipelines describe --json` give them."""
+    return {
+        k: {
+            "type": v.type,
+            "default": v.default,
+            "description": v.description,
+            "group": v.group,
+            "label": v.label,
+            "unit": v.unit,
+            "min": v.min,
+            "max": v.max,
+            "applies_when": v.applies_when,
+        }
+        for k, v in meta.config_schema.items()
+    }
+
+
+def guide_fields(meta: PipelineMetadata) -> dict[str, Any]:
+    """The pipeline guide (spec 026) as the API and the CLI give it."""
+    return {
+        "title": meta.title,
+        "summary": meta.summary,
+        "homepage": meta.homepage,
+        "benchmarks": None
+        if meta.benchmarks is None
+        else [asdict(b) for b in meta.benchmarks],
+        "quality_note": meta.quality_note,
+        "citations": [{"key": c.key, "bibtex": c.bibtex} for c in meta.citations],
+    }
 
 
 def get_registry() -> PipelineRegistry:

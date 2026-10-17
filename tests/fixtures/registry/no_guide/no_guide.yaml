@@ -1,0 +1,13 @@
+name: no_guide
+display_name: No Guide Pipeline
+description: Metadata written before spec 026, with none of the guide keys.
+module_path: tests.fixtures.stub_pipeline_module:StubPipeline
+outputs:
+  - format: JSON
+    types: [stub]
+config_schema:
+  threshold:
+    type: float
+    default: 0.5
+    description: A setting with no group or label.
+version: 1

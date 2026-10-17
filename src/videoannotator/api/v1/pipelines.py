@@ -12,7 +12,11 @@ from sqlalchemy.orm import Session
 from ...database.database import get_db
 from ...database.models import ExtrasInstallJob, ExtrasInstallJobStatus
 from ...registry.pipeline_loader import extras_available, install_hint, known_extras
-from ...registry.pipeline_registry import get_registry
+from ...registry.pipeline_registry import (
+    config_schema_dict,
+    get_registry,
+    guide_fields,
+)
 from .. import extras_install
 from ..errors import APIError
 from ..middleware.auth import require_admin
@@ -74,6 +78,14 @@ class PipelineInfo(BaseModel):
     available: bool = True
     install_hint: str | None = None
     readiness: PipelineReadiness | None = None
+    # spec 026: the pipeline guide. `benchmarks` is null when not stated, []
+    # when the metadata says none is published.
+    title: str | None = None
+    summary: str | None = None
+    homepage: str | None = None
+    benchmarks: list[dict[str, Any]] | None = None
+    quality_note: str | None = None
+    citations: list[dict[str, str]] = []
 
 
 class ExtrasGroupInfo(BaseModel):
@@ -221,18 +233,12 @@ async def list_pipelines(
                     backends=m.backends,
                     stability=m.stability,
                     outputs=[{"format": o.format, "types": o.types} for o in m.outputs],
-                    config_schema={
-                        k: {
-                            "type": v.type,
-                            "default": v.default,
-                            "description": v.description,
-                        }
-                        for k, v in m.config_schema.items()
-                    },
+                    config_schema=config_schema_dict(m),
                     examples=m.examples,
                     available=available,
                     install_hint=None if available else install_hint(m.requires_extras),
                     readiness=PipelineReadiness(**pipeline_readiness(m)),
+                    **guide_fields(m),
                 )
             )
         return PipelineListResponse(
@@ -394,14 +400,12 @@ async def get_pipeline_info(
             backends=meta.backends,
             stability=meta.stability,
             outputs=[{"format": o.format, "types": o.types} for o in meta.outputs],
-            config_schema={
-                k: {"type": v.type, "default": v.default, "description": v.description}
-                for k, v in meta.config_schema.items()
-            },
+            config_schema=config_schema_dict(meta),
             examples=meta.examples,
             available=available,
             install_hint=None if available else install_hint(meta.requires_extras),
             readiness=PipelineReadiness(**pipeline_readiness(meta)),
+            **guide_fields(meta),
         )
     except APIError:
         raise
@@ -605,6 +609,12 @@ class PipelineParameterSchema(BaseModel):
     description: str | None = None
     default: Any = None
     enum: list[PipelineParameterOption] | None = None
+    # spec 026
+    group: str = "technical"
+    unit: str | None = None
+    min: float | None = None
+    max: float | None = None
+    applies_when: dict[str, list[str]] | None = None
 
 
 class PipelineSchemaDescriptor(BaseModel):
@@ -612,6 +622,8 @@ class PipelineSchemaDescriptor(BaseModel):
     name: str
     description: str | None = None
     group: str | None = None
+    title: str | None = None
+    summary: str | None = None
 
 
 class PipelineSchemaResponse(BaseModel):
@@ -646,7 +658,7 @@ def _to_parameter_schema(name: str, field: Any) -> "PipelineParameterSchema":
     return PipelineParameterSchema(
         name=name,
         type=param_type,
-        label=name.replace("_", " ").title(),
+        label=field.label or name.replace("_", " ").title(),
         description=field.description or None,
         default=field.default,
         enum=(
@@ -654,6 +666,11 @@ def _to_parameter_schema(name: str, field: Any) -> "PipelineParameterSchema":
             if field.enum
             else None
         ),
+        group=field.group,
+        unit=field.unit,
+        min=field.min,
+        max=field.max,
+        applies_when=field.applies_when,
     )
 
 
@@ -689,6 +706,8 @@ async def get_pipeline_schema(
                 name=meta.display_name,
                 description=meta.description,
                 group=meta.pipeline_family,
+                title=meta.title,
+                summary=meta.summary,
             ),
             parameters=[
                 _to_parameter_schema(k, v) for k, v in meta.config_schema.items()

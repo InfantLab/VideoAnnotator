@@ -1,5 +1,27 @@
 name: face_analysis
 display_name: Face Analysis (DeepFace)
+title: "Faces: expression, age, gender"
+summary: >-
+  Finds faces in each sampled frame and estimates each face's expression, age and gender.
+homepage: https://github.com/serengil/deepface
+benchmarks:
+  - name: "WIDER FACE (hard)"
+    measure: "AP"
+    figure: "91.4%"
+    source: https://arxiv.org/abs/1905.00641
+    note: "RetinaFace, the face detector used here"
+  - name: "DeepFace age model"
+    measure: "MAE"
+    figure: "± 4.65"
+    source: https://github.com/serengil/deepface
+    note: "test data not named in the README"
+  - name: "DeepFace gender model"
+    measure: "accuracy"
+    figure: "97.44%"
+    source: https://github.com/serengil/deepface
+    note: "test data not named in the README"
+quality_note: >-
+  None of these figures is for infants or young children. DeepFace publishes no accuracy figure for its expression model.
 description: Standards-only face detection and analysis using DeepFace with emotion recognition, age, and gender prediction, producing COCO format output.
 pipeline_family: face
 variant: deepface
@@ -22,46 +44,78 @@ outputs:
     file: face_detections.json
 config_schema:
   detection_backend:
+    group: technical
+    label: "Face detector"
     type: string
     default: deepface
     description: Face detection backend (opencv, deepface, ssd, dlib, mtcnn, retinaface)
   emotion_backend:
+    group: technical
+    label: "Expression model"
     type: string
     default: deepface
     description: Emotion analysis backend (deepface, disabled)
   confidence_threshold:
+    group: technical
+    label: "Detection confidence"
+    min: 0
+    max: 1
     type: float
     default: 0.7
     description: Minimum confidence threshold for face detection
   min_face_size:
+    group: behavioural
+    label: "Smallest face"
+    unit: px
+    min: 1
     type: integer
     default: 30
     description: Minimum face size in pixels
   max_faces:
+    group: behavioural
+    label: "Most faces per frame"
+    unit: faces
+    min: 1
     type: integer
     default: 10
     description: Maximum number of faces to detect per frame
   scale_factor:
+    group: technical
+    label: "Haar cascade scale factor"
+    applies_when:
+      detection_backend: [opencv]
     type: float
     default: 1.1
     description: Scale factor for OpenCV Haar cascades
   min_neighbors:
+    group: technical
+    label: "Haar cascade neighbours"
+    applies_when:
+      detection_backend: [opencv]
     type: integer
     default: 5
     description: Minimum neighbors for OpenCV Haar cascades
   detect_emotions:
+    group: behavioural
+    label: "Expression"
     type: boolean
     default: true
     description: Enable emotion recognition
   detect_age:
+    group: behavioural
+    label: "Age"
     type: boolean
     default: true
     description: Enable age estimation
   detect_gender:
+    group: behavioural
+    label: "Gender"
     type: boolean
     default: true
     description: Enable gender prediction
   deepface:
+    group: technical
+    label: "DeepFace models"
     type: object
     default:
       emotion_model: VGG-Face
@@ -70,6 +124,8 @@ config_schema:
       enforce_detection: false
     description: DeepFace-specific configuration
   person_identity:
+    group: technical
+    label: "Link faces to people"
     type: object
     default:
       enabled: true

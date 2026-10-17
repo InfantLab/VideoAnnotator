@@ -1139,6 +1139,10 @@ def _pipelines_default(
     list_pipelines(server=server, detailed=detailed, json=json, format=format, all=all)
 
 
+def _list_label(p: dict[str, Any]) -> str:
+    return f"{p['name']}  {p['title']}" if p.get("title") else p["name"]
+
+
 @pipelines_app.command("list")
 def list_pipelines(
     server: str = typer.Option("http://localhost:18011", help="API server URL"),
@@ -1183,6 +1187,7 @@ def list_pipelines(
             # Build markdown table similar to generated spec (subset columns)
             cols = [
                 ("Name", lambda p: p.get("name", "")),
+                ("Title", lambda p: p.get("title") or "-"),
                 ("Display Name", lambda p: p.get("display_name") or p.get("name")),
                 ("Family", lambda p: p.get("pipeline_family") or "-"),
                 ("Variant", lambda p: p.get("variant") or "-"),
@@ -1214,10 +1219,10 @@ def list_pipelines(
         typer.echo(f"[OK] Pipelines: {len(pipelines)} found")
         for p in pipelines:
             if p.get("available") is False:
-                typer.echo(f"- {p['name']} [unavailable]")
+                typer.echo(f"- {_list_label(p)} [unavailable]")
                 typer.echo(f"  Install with: {p.get('install_hint', '')}")
             else:
-                typer.echo(f"- {p['name']}")
+                typer.echo(f"- {_list_label(p)}")
             if detailed:
                 typer.echo(f"  Display: {p.get('display_name', p['name'])}")
                 if p.get("pipeline_family"):
@@ -1248,6 +1253,113 @@ def list_pipelines(
             "[INFO] Ensure server is running: videoannotator server --port 18011"
         )
         raise typer.Exit(code=1)
+
+
+def _describe_value(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None or value == "":
+        return "-"
+    text = " ".join(str(value).split())
+    return text if len(text) <= 40 else text[:37] + "..."
+
+
+def _describe_setting(key: str, field: Any) -> str:
+    value = _describe_value(field.default)
+    if field.unit and value != "-":
+        value = f"{value} {field.unit}"
+    bounds = [f"min {field.min:g}"] if field.min is not None else []
+    bounds += [f"max {field.max:g}"] if field.max is not None else []
+    if bounds:
+        value = f"{value} ({', '.join(bounds)})"
+    label = field.label or key.replace("_", " ").title()
+    line = f"  {key:<22} {label:<26} {value}"
+    if field.applies_when:
+        conditions = " and ".join(
+            f"{k} is {' or '.join(v)}" for k, v in field.applies_when.items()
+        )
+        line += f"   only when {conditions}"
+    return line
+
+
+@pipelines_app.command("describe")
+def describe_pipeline(
+    name: str = typer.Argument(..., help="Pipeline name, e.g. face_analysis"),
+    json: bool = typer.Option(False, "--json", help="Output JSON for scripting"),
+):
+    """Say what a pipeline does, its settings, and where it comes from (no server needed)."""
+    import json as jsonlib
+
+    from .registry.pipeline_registry import (
+        config_schema_dict,
+        get_registry,
+        guide_fields,
+    )
+
+    meta = get_registry().get(name)
+    if meta is None:
+        typer.echo(
+            f"Unknown pipeline '{name}'. Run `videoannotator pipelines list`.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    if json:
+        payload = {
+            "name": meta.name,
+            "display_name": meta.display_name,
+            "description": meta.description,
+            **guide_fields(meta),
+            "config_schema": config_schema_dict(meta),
+        }
+        typer.echo(jsonlib.dumps(payload, indent=2))
+        return
+
+    if meta.deprecated:
+        instead = ", ".join(meta.deprecated.replacement) or "another pipeline"
+        typer.echo(
+            f"Deprecated: removed in {meta.deprecated.removal_version}; "
+            f"use {instead} instead."
+        )
+        typer.echo("")
+    typer.echo(f"{meta.guide_title}  ({meta.name})")
+    typer.echo(meta.guide_summary)
+
+    behavioural = {
+        k: f for k, f in meta.config_schema.items() if f.group == "behavioural"
+    }
+    technical = {
+        k: f for k, f in meta.config_schema.items() if f.group != "behavioural"
+    }
+    if behavioural:
+        typer.echo("")
+        typer.echo("What to measure")
+        for key, field in behavioural.items():
+            typer.echo(_describe_setting(key, field))
+    if technical:
+        typer.echo("")
+        typer.echo(f"Technical ({len(technical)})")
+        for key, field in technical.items():
+            typer.echo(_describe_setting(key, field))
+
+    typer.echo("")
+    typer.echo("About")
+    if meta.homepage:
+        typer.echo(f"  Homepage   {meta.homepage}")
+    if meta.quality_note:
+        typer.echo(f"  Quality    {meta.quality_note}")
+    if meta.benchmarks is None:
+        if not meta.quality_note:
+            typer.echo("  Benchmark  not stated")
+    elif not meta.benchmarks:
+        typer.echo("  Benchmark  No published benchmark")
+    for b in meta.benchmarks or []:
+        note = f" ({b.note})" if b.note else ""
+        typer.echo(f"  Benchmark  {b.name}, {b.measure} {b.figure}{note}")
+        typer.echo(f"             {b.source}")
+    if meta.citations:
+        typer.echo(f"  Cite       {', '.join(c.key for c in meta.citations)}")
+        typer.echo("             (--json includes the BibTeX)")
 
 
 def _require_api_key(api_key: str | None) -> str:

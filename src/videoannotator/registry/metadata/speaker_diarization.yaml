@@ -1,5 +1,25 @@
 name: speaker_diarization
 display_name: Speaker Diarization
+title: "Speaker turns: who spoke when"
+summary: >-
+  Splits the audio into turns and says which speaker each turn belongs to, without naming them.
+homepage: https://huggingface.co/pyannote/speaker-diarization-3.1
+benchmarks:
+  - name: "AMI (headset mix, only_words)"
+    measure: "DER %"
+    figure: "18.8"
+    source: https://huggingface.co/pyannote/speaker-diarization-3.1
+    note: "no forgiveness collar, overlapped speech evaluated"
+  - name: "DIHARD 3 (Full)"
+    measure: "DER %"
+    figure: "21.7"
+    source: https://huggingface.co/pyannote/speaker-diarization-3.1
+    note: "no forgiveness collar, overlapped speech evaluated"
+  - name: "VoxConverse (v0.3)"
+    measure: "DER %"
+    figure: "11.3"
+    source: https://huggingface.co/pyannote/speaker-diarization-3.1
+    note: "no forgiveness collar, overlapped speech evaluated"
 description: Speaker diarization using PyAnnote.audio to segment and identify different speakers with timestamps, producing RTTM format output.
 pipeline_family: audio
 variant: pyannote
@@ -19,18 +39,30 @@ outputs:
     file: speaker_diarization.rttm
 config_schema:
   model:
+    group: technical
+    label: "Diarization model"
     type: string
     default: pyannote/speaker-diarization-3.1
     description: PyAnnote model identifier from HuggingFace
   min_speakers:
+    group: behavioural
+    label: "Fewest speakers"
+    unit: speakers
+    min: 1
     type: integer
     default: 1
     description: Minimum number of speakers to consider
   max_speakers:
+    group: behavioural
+    label: "Most speakers"
+    unit: speakers
+    min: 1
     type: integer
     default: 10
     description: Maximum number of speakers to consider
   use_auth_token:
+    group: technical
+    label: "Use the Hugging Face token"
     type: boolean
     default: true
     description: Use HuggingFace authentication token (required for PyAnnote models)
