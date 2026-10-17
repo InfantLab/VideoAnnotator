@@ -1495,6 +1495,7 @@ export const PipelineSelectionStep = ({
                           notes={pipeline.readiness?.notes}
                           onCheckAgain={checkAgain}
                           isChecking={isCheckingAgain}
+                          isAdmin={isAdmin}
                         />
                       )}
                       {canInstallExtras && extraName && (mode === 'install' || mode === 'installing' || (mode === 'restart' && job?.status === 'completed')) && (

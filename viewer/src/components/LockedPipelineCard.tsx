@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ExtrasInstallJob, PipelineDescriptor, ReadinessItem } from "@/types/pipelines";
 import { RestartToActivate } from "@/components/RestartToActivate";
+import { HuggingFaceTokenSetup } from '@/components/HuggingFaceTokenSetup';
 import { PipelineAbout, PipelineTitle } from '@/components/PipelineGuide';
 import { pipelineSummary } from '@/lib/pipelineGuide';
 
@@ -75,15 +76,48 @@ interface ReadinessDetailsProps {
   /** Re-check the server, e.g. after starting Ollama or setting a token. */
   onCheckAgain?: () => void;
   isChecking?: boolean;
+  /** Whether this session can save a Hugging Face token (spec 031). */
+  isAdmin?: boolean | 'unknown';
 }
+
+const HUGGINGFACE_TOKEN = 'HUGGINGFACE_TOKEN';
 
 /**
  * Blockers and notes from a pipeline's readiness (VideoAnnotator spec 011).
- * Display only: secrets are the server's container configuration, so the viewer
- * says what to set and where, but never takes a value.
+ * A missing or rejected Hugging Face token becomes a guided panel that takes
+ * the token (spec 031); other secrets are the server's configuration, so the
+ * viewer says what to set and where.
  */
-export const ReadinessDetails = ({ blockers = [], notes = [], onCheckAgain, isChecking }: ReadinessDetailsProps) => {
+export const ReadinessDetails = ({
+  blockers = [],
+  notes = [],
+  onCheckAgain,
+  isChecking,
+  isAdmin = 'unknown'
+}: ReadinessDetailsProps) => {
   if (blockers.length === 0 && notes.length === 0) return null;
+  const tokenBlocker = blockers.find((b) => b.kind === 'secret' && b.name === HUGGINGFACE_TOKEN);
+  if (tokenBlocker) {
+    const licenceBlockers = blockers.filter((b) => b.kind === 'licence');
+    const licences = [...licenceBlockers, ...notes.filter((n) => n.kind === 'licence')];
+    const others = blockers.filter((b) => b !== tokenBlocker && b.kind !== 'licence');
+    const otherNotes = notes.filter((n) => n.kind !== 'licence');
+    return (
+      <>
+        <HuggingFaceTokenSetup
+          licences={licences}
+          notAccepted={licenceBlockers.map((b) => b.name)}
+          tokenHelpUrl={tokenBlocker.helpUrl}
+          isAdmin={isAdmin}
+          onCheckAgain={onCheckAgain}
+          isChecking={isChecking}
+        />
+        {(others.length > 0 || otherNotes.length > 0) && (
+          <ReadinessDetails blockers={others} notes={otherNotes} isAdmin={isAdmin} />
+        )}
+      </>
+    );
+  }
   return (
     <div className="mt-1 space-y-1">
       {blockers.map((b) => (

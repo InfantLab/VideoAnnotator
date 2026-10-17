@@ -16,7 +16,8 @@ import type {
   VlmPreviewResponse,
   ReadinessItem,
   PipelineReadiness,
-  ExtrasGroupInfo
+  ExtrasGroupInfo,
+  HuggingFaceTokenStatus
 } from '@/types/pipelines';
 import type { SystemHealthResponse } from '@/types/system';
 import type {
@@ -76,6 +77,18 @@ function mapGuide(record: Record<string, unknown>): Partial<PipelineDescriptor> 
     benchmarks,
     qualityNote: optionalString(record.quality_note),
     citations,
+  };
+}
+
+function mapTokenStatus(raw: Record<string, unknown>): HuggingFaceTokenStatus {
+  const source = raw.source;
+  const check = raw.check;
+  return {
+    set: raw.set === true,
+    source: source === 'environment' || source === 'saved' ? source : null,
+    envVar: optionalString(raw.env_var) ?? null,
+    account: optionalString(raw.account) ?? null,
+    check: check === 'ok' || check === 'invalid' || check === 'unknown' ? check : null,
   };
 }
 
@@ -625,6 +638,28 @@ class APIClient {
       { method: 'POST' }
     );
     return { bootId: response.boot_id };
+  }
+
+  /** Whether the server has a Hugging Face token (spec 031); never the token. */
+  async getHuggingFaceToken(): Promise<HuggingFaceTokenStatus> {
+    return mapTokenStatus(await this.request<Record<string, unknown>>('/api/v1/system/huggingface-token'));
+  }
+
+  /** Check and save a token on the server (admin). Rejected tokens throw an APIError (HF_TOKEN_REJECTED). */
+  async saveHuggingFaceToken(token: string): Promise<HuggingFaceTokenStatus> {
+    return mapTokenStatus(
+      await this.request<Record<string, unknown>>('/api/v1/system/huggingface-token', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+    );
+  }
+
+  async removeHuggingFaceToken(): Promise<HuggingFaceTokenStatus> {
+    return mapTokenStatus(
+      await this.request<Record<string, unknown>>('/api/v1/system/huggingface-token', { method: 'DELETE' })
+    );
   }
 
   async detailedHealth(): Promise<SystemHealthResponse> {

@@ -238,3 +238,13 @@ export interface VlmPreviewResponse {
   frames: Array<{ frameNumber: number | null; timestampSec: number | null; jpegBase64: string }>;
 }
 
+/** The server's Hugging Face token status (VideoAnnotator spec 031). Never carries the token. */
+export interface HuggingFaceTokenStatus {
+  set: boolean;
+  source: 'environment' | 'saved' | null;
+  /** The variable that sets it, when `source` is 'environment'. */
+  envVar: string | null;
+  account: string | null;
+  check: 'ok' | 'invalid' | 'unknown' | null;
+}
+
