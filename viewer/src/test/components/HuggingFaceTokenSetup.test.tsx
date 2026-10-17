@@ -1,13 +1,17 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 
 import { APIClient } from '@/api/client';
 import { APIError } from '@/api/handleError';
 import { HuggingFaceTokenCard } from '@/components/HuggingFaceTokenSetup';
 import { ReadinessDetails } from '@/components/LockedPipelineCard';
+import { API_TOKEN_STORAGE_KEY } from '@/lib/apiConnection';
 import type { ReadinessItem } from '@/types/pipelines';
+
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
 
 const tokenBlocker: ReadinessItem = {
   kind: 'secret',
@@ -33,7 +37,12 @@ const paste = (value: string) => {
   fireEvent.click(screen.getByRole('button', { name: 'Save and check' }));
 };
 
+// The test setup stubs localStorage; say a key is configured, as connecting the viewer would.
+const connect = () =>
+  vi.spyOn(localStorage, 'getItem').mockImplementation((key) => (key === API_TOKEN_STORAGE_KEY ? 'va_test' : null));
+
 describe('Hugging Face token setup (spec 031)', () => {
+  beforeEach(connect);
   afterEach(() => vi.restoreAllMocks());
 
   it('shows the three steps with the token page and the licence linked', () => {
@@ -87,6 +96,34 @@ describe('Hugging Face token setup (spec 031)', () => {
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent("the server's environment sets HF_TOKEN"));
   });
 
+  it('without an API key, says to connect first and offers the terminal, with no field', () => {
+    vi.spyOn(localStorage, 'getItem').mockReturnValue(null);
+    renderPanel('unknown');
+    expect(screen.queryByLabelText('Paste the token here')).not.toBeInTheDocument();
+    expect(screen.getByText(/once this viewer is connected to the server with an admin key/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'the steps in Settings' })).toHaveAttribute('href', '/settings');
+    expect(screen.getByText('videoannotator settings huggingface-token')).toBeInTheDocument();
+  });
+
+  it('turns a 401 into what to do, not the raw API message', async () => {
+    vi.spyOn(APIClient.prototype, 'saveHuggingFaceToken').mockRejectedValue(
+      new APIError('API key required for this endpoint', 401)
+    );
+    renderPanel('unknown');
+    paste(TOKEN);
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent("isn't connected with an API key");
+    expect(status).toHaveTextContent('videoannotator settings huggingface-token');
+    expect(status).not.toHaveTextContent('API key required for this endpoint');
+  });
+
+  it('turns a 403 into what to do', async () => {
+    vi.spyOn(APIClient.prototype, 'saveHuggingFaceToken').mockRejectedValue(new APIError('Admin required', 403));
+    renderPanel('unknown');
+    paste(TOKEN);
+    expect(await screen.findByRole('status')).toHaveTextContent("isn't an admin key");
+  });
+
   it('marks licences known not to be accepted', () => {
     render(
       <ReadinessDetails
@@ -100,6 +137,7 @@ describe('Hugging Face token setup (spec 031)', () => {
 });
 
 describe('Settings: Hugging Face token card (spec 031)', () => {
+  beforeEach(connect);
   afterEach(() => vi.restoreAllMocks());
 
   const renderCard = (isAdmin: boolean | 'unknown' = true) => {
@@ -140,5 +178,16 @@ describe('Settings: Hugging Face token card (spec 031)', () => {
     renderCard(false);
     expect(await screen.findByText(/^Not set\./)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add a token' })).not.toBeInTheDocument();
+  });
+
+  it('without an API key, explains how to connect instead of offering buttons', async () => {
+    vi.spyOn(localStorage, 'getItem').mockReturnValue(null);
+    vi.spyOn(APIClient.prototype, 'getHuggingFaceToken').mockResolvedValue({
+      set: false, source: null, envVar: null, account: null, check: null,
+    });
+    renderCard('unknown');
+    expect(await screen.findByText(/^Not set\./)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add a token' })).not.toBeInTheDocument();
+    expect(screen.getByText(/To add or change it from here/)).toBeInTheDocument();
   });
 });

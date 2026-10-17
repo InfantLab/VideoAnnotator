@@ -5,7 +5,9 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Circle, Loader2, XCircle } from 'lucide-react';
 
-import { apiClient } from '@/api/client';
+import { Link } from 'react-router-dom';
+
+import { apiClient, hasConfiguredApiToken } from '@/api/client';
 import { APIError, apiErrorEnvelope } from '@/api/handleError';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +19,7 @@ const TOKENS_PAGE = 'https://huggingface.co/settings/tokens';
 type Outcome =
   | { kind: 'saved'; status: HuggingFaceTokenStatus }
   | { kind: 'rejected' }
+  | { kind: 'unauthenticated' }
   | { kind: 'forbidden' }
   | { kind: 'failed'; message: string };
 
@@ -33,12 +36,52 @@ const outcomeMessage = (outcome: Outcome): string => {
     }
     case 'rejected':
       return 'Hugging Face rejected that token (expired, revoked or mis-pasted). Nothing was saved.';
+    case 'unauthenticated':
+      return "The server didn't take the token because this viewer isn't connected with an API key.";
     case 'forbidden':
-      return 'Only an admin can add the token.';
+      return "The server didn't take the token because this viewer's API key isn't an admin key.";
     case 'failed':
       return `Couldn't save the token: ${outcome.message}`;
   }
 };
+
+const outcomeOfError = (error: unknown): Outcome => {
+  if (apiErrorEnvelope(error).code === 'HF_TOKEN_REJECTED') return { kind: 'rejected' };
+  if (error instanceof APIError && error.status === 401) return { kind: 'unauthenticated' };
+  if (error instanceof APIError && error.status === 403) return { kind: 'forbidden' };
+  return { kind: 'failed', message: error instanceof Error ? error.message : String(error) };
+};
+
+const CLI_COMMAND = 'videoannotator settings huggingface-token';
+
+/** What to do when the viewer can't save the token itself. */
+const NextStep = ({ kind }: { kind: 'no-key' | 'unauthenticated' | 'forbidden' }) => (
+  <span className="text-muted-foreground">
+    {kind === 'forbidden' ? (
+      <>Ask whoever runs this VideoAnnotator, or make an admin key with </>
+    ) : (
+      <>
+        Connect this viewer first: open the link the server printed when it first started, or follow{' '}
+      </>
+    )}
+    <Link to="/settings" className="underline">
+      the steps in Settings
+    </Link>
+    . Or, on the server&apos;s computer, run{' '}
+    <code className="rounded bg-muted px-1">{CLI_COMMAND}</code>.
+  </span>
+);
+
+const OutcomeLine = ({ outcome }: { outcome: Outcome }) => (
+  <p
+    role="status"
+    className={`flex flex-wrap items-center gap-1 ${outcome.kind === 'saved' ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}`}
+  >
+    {outcome.kind === 'saved' && <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />}
+    {outcomeMessage(outcome)}
+    {(outcome.kind === 'unauthenticated' || outcome.kind === 'forbidden') && <NextStep kind={outcome.kind} />}
+  </p>
+);
 
 interface HuggingFaceTokenSetupProps {
   /** The pipeline's licence items (blockers: not accepted; notes: not checked yet). */
@@ -72,9 +115,7 @@ export const HuggingFaceTokenSetup = ({
       setToken('');
       onCheckAgain?.();
     } catch (error) {
-      if (apiErrorEnvelope(error).code === 'HF_TOKEN_REJECTED') setOutcome({ kind: 'rejected' });
-      else if (error instanceof APIError && error.status === 403) setOutcome({ kind: 'forbidden' });
-      else setOutcome({ kind: 'failed', message: error instanceof Error ? error.message : String(error) });
+      setOutcome(outcomeOfError(error));
     } finally {
       setSaving(false);
     }
@@ -122,6 +163,11 @@ export const HuggingFaceTokenSetup = ({
         <li>
           {isAdmin === false ? (
             <>Ask whoever runs this VideoAnnotator to add a Hugging Face token (here or in Settings).</>
+          ) : !hasConfiguredApiToken() ? (
+            <>
+              Paste the token here once this viewer is connected to the server with an admin key.{' '}
+              <NextStep kind="no-key" />
+            </>
           ) : (
             <form
               className="flex flex-wrap items-center gap-2"
@@ -151,15 +197,7 @@ export const HuggingFaceTokenSetup = ({
           )}
         </li>
       </ol>
-      {outcome && (
-        <p
-          role="status"
-          className={`flex items-center gap-1 ${outcome.kind === 'saved' ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}`}
-        >
-          {outcome.kind === 'saved' && <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />}
-          {outcomeMessage(outcome)}
-        </p>
-      )}
+      {outcome && <OutcomeLine outcome={outcome} />}
       {onCheckAgain && (
         <Button type="button" size="sm" variant="outline" className="h-6 px-2 text-[11px]" onClick={onCheckAgain} disabled={isChecking}>
           {isChecking ? <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden="true" /> : null}
@@ -196,9 +234,7 @@ export const HuggingFaceTokenCard = ({ isAdmin }: { isAdmin: boolean | 'unknown'
       setEditing(false);
     },
     onError: (error) => {
-      if (apiErrorEnvelope(error).code === 'HF_TOKEN_REJECTED') setOutcome({ kind: 'rejected' });
-      else if (error instanceof APIError && error.status === 403) setOutcome({ kind: 'forbidden' });
-      else setOutcome({ kind: 'failed', message: error instanceof Error ? error.message : String(error) });
+      setOutcome(outcomeOfError(error));
     },
   });
   const remove = useMutation({
@@ -234,7 +270,12 @@ export const HuggingFaceTokenCard = ({ isAdmin }: { isAdmin: boolean | 'unknown'
             The environment's token is the one used; one saved here wouldn't replace it.
           </p>
         )}
-        {isAdmin !== false && s && s.source !== 'environment' && !editing && (
+        {isAdmin !== false && s && s.source !== 'environment' && !editing && !hasConfiguredApiToken() && (
+          <p className="text-xs">
+            To add or change it from here: <NextStep kind="no-key" />
+          </p>
+        )}
+        {isAdmin !== false && s && s.source !== 'environment' && !editing && hasConfiguredApiToken() && (
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
               {s.set ? 'Change' : 'Add a token'}
@@ -280,9 +321,9 @@ export const HuggingFaceTokenCard = ({ isAdmin }: { isAdmin: boolean | 'unknown'
           </form>
         )}
         {outcome && (
-          <p role="status" className="text-xs text-muted-foreground">
-            {outcomeMessage(outcome)}
-          </p>
+          <div className="text-xs">
+            <OutcomeLine outcome={outcome} />
+          </div>
         )}
       </CardContent>
     </Card>
