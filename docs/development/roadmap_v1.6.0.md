@@ -37,7 +37,8 @@ for its own reason, outside use. The pilot follows the release, and a benchmark 
 **Target Release**: as soon as Phases 3b and 5c are done. No deadline (BCCCD dropped 2026-10-14). The
 pilot (and spec 024's T083) moved to v1.7.0's release candidates.
 **Current Status**: Phases 0–1 done bar non-blocking items; Phase 2 done bar the long-video checks
-(spec 024 walkthroughs done 2026-10-17); Phase 3 (Results Out, spec 025) built 2026-10-16
+(spec 024 walkthroughs done 2026-10-17); Phase 3 (Results Out, spec 025) built 2026-10-16; Phase 3b
+(pipeline guide, spec 026) built 2026-10-17; Phase 5c (spec 030) specified, not yet planned
 **Main Goal**: everything an outside lab will need under v1.7.0's new viewer, done and stable:
 install, pipelines, results out
 **Prerequisites**: v1.5.0 tagged, after spec 011's SC-001 manual run
@@ -590,6 +591,25 @@ job in the wizard from memory, although every job already stores its `selected_p
       Open: the CI end-to-end runs with Docker and Podman (first run on a push to `master`), and a
       pilot researcher on macOS (T083, with v1.7.0's pilot).
 
+- [x] **Fixes from 2026-10-16/17**, found while designing spec 023 and using the server daily:
+      - **API keys were written to the log** (security): request logging put every request's
+        headers, `Authorization: Bearer va_…` included, into `logs/api_server.log`, and auth
+        failures logged 10–16 key characters. Headers are no longer logged; a key appears only as a
+        sha256 fingerprint (`c2edfbd`). Anyone with logs from before this should delete them and
+        make a new key.
+      - **A terminal that says what matters** (`c2edfbd`): the server prints ready, each job
+        started/finished/failed (with duration, results folder or reason), pipeline installs and
+        stopping; per-request lines and library warnings go to `logs/` only. A viewer calling
+        without a working key gets one plain hint instead of a stream of 401s.
+      - **Hugging Face token from the viewer, Settings or the CLI, no restart** (spec 031:
+        `0ffd059`, `ab400a7`, `fdc5346`, `9e8b530`): an admin saves it to a 0600 file beside the
+        database, checked with Hugging Face first and never returned;
+        `videoannotator settings huggingface-token` does the same from a terminal.
+      - **Timeline colours that don't mislead** (`41a38d2`): every speaker had the same colour
+        (the hue came from the ID's first letter, always "S"); hues now come from each value's
+        rank. Timeline switches with no lane behind them are gone.
+      - **The version on every docs page**, and `videoannotator --version` (`79582bd`).
+
 **Not in this phase**: a visual redesign. It is v1.7.0's first phase (design in
 [`specs/023-viewer-overhaul`](../../specs/023-viewer-overhaul/spec.md), built by specs 026–029).
 
@@ -654,26 +674,34 @@ rc2 carries Phase 3.
 Each on the upstream evaluation plus a demo-clip check (principle: no model change without a reason
 on record). Done before the public release so its outputs are stable.
 
-- [ ] **Face** (if the Phase 1 review keeps a deepface-based pipeline): replace the default OpenCV
-      Haar-cascade detector (`face_pipeline.py`, `detector_backend: opencv`) with YuNet or
-      RetinaFace. Turn age and gender off by default: the models were trained on adults and say
-      nothing useful about infants. Choose the emotion model using Uwerikowe et al.'s comparison of
-      facial-emotion models on caregiver–child video.
-- [ ] **Speech**: `openai-whisper` (built from source at install) → faster-whisper with
-      large-v3-turbo.
-- [ ] **Diarization**: pyannote `speaker-diarization-3.1` → `speaker-diarization-community-1`,
-      which mainly improves speaker counting and keeps speaker identity consistent across a
-      recording. The pyannote.audio 4 library upgrade itself happens in Phase 1. Weigh NVIDIA
-      Streaming Sortformer alongside, with dependency health as a criterion: pyannote is what holds
-      torch at 2.11 (via the discontinued torchaudio) and upstream shows no plan to drop it.
-      Background and decision: `dependency_audit_v1.6.0.md` §8.
-- [ ] Before choosing: a half-day Sortformer spike (installs on torch 2.14 without
-      torchaudio? NeMo's telemetry? install size? demo-clip output). Audit §8.
-- [ ] Caspar: ask LAAC-LSCP about VTC 2's licence (the repository has none). VTC 2 also depends on
-      pyannote, so adopting it keeps the torch cap. Audit §8.
-- [ ] **Person**: `yolo11n-pose` → `yolo26n-pose`.
-- [ ] **OpenFace 3**: confirm `openface-test` is the maintained distribution (the Phase 1
-      audit keeps it at `==0.1.13`).
+Spec: [`specs/030-model-defaults`](../../specs/030-model-defaults/spec.md) (specified and clarified
+2026-10-17; next: plan, tasks). Library upgrades are checked on the demo clip on their own, before
+the model changes (FR-002). Each switch needs a real-model run on a GPU and a deliberate
+re-baseline; spec 026's benchmark entries change with each default. Backward compatibility is
+waived for this change (Principle V exception, recorded in the spec): old diarization and pose
+models stay reachable as a setting, the old speech runtime goes.
+
+- [ ] **Speech**: `openai-whisper` `base` → faster-whisper with `large-v3-turbo`, in two steps
+      (runtime with `base`, then the model). openai-whisper is removed (Q3), so v1.6.0rc1 is the
+      last version with it.
+- [ ] **Diarization**: pyannote `speaker-diarization-3.1` → `speaker-diarization-community-1`
+      (Q2): lower DER on 10 of 12 published sets, and one model licence to accept instead of three.
+- [ ] **Person**: `yolo11n-pose` → `yolo26n-pose` (COCO-pose mAP50-95 50.0 → 57.2). Ultralytics
+      stays for v1.6.0.
+- [ ] **Face**: age and gender off by default, and their models neither downloaded nor run when off.
+      Today `_deepface_actions()` (`pipelines/face_analysis/face_pipeline.py`) runs all three
+      models whenever any is on: a bug, fixed here. DeepFace's own expression model stays (Q1),
+      described in the guide as trained on adult faces; replacing `face_analysis` is later work.
+      The detector is already RetinaFace (replaced the Haar cascade earlier in v1.6.0); its reason
+      goes into the metadata and guide. Face analysis joins the demo-clip baseline if RetinaFace
+      finds faces in it.
+- [x] **OpenFace 3**: `openface-test` confirmed as the distribution CMU names (dormant since
+      2025-06, non-commercial licence); the `==0.1.13` pin stays. Spec 030 writes this into its
+      metadata (FR-026).
+- [ ] Caspar: ask LAAC-LSCP about VTC 2's licence (the repository has none). Open; record the
+      date asked. VTC 2 is a v1.7.0+ candidate whatever the answer.
+- Moved to v1.7.0 (2026-10-17, spec 030 Q2): the half-day Sortformer spike. It informs lifting the
+  torch cap later, not this release's default. Audit §8.
 
 **Benchmark: not in v1.6.0 or v1.7.0** (was Phase 5b).
 
@@ -728,6 +756,6 @@ the CLI with `--json` and through MCP; the pilot's measures.
 
 ---
 
-**Last Updated**: 2026-10-17 (rescoped as the consolidation release)
+**Last Updated**: 2026-10-17 (rescoped as the consolidation release; Phase 5c points at spec 030)
 **Target Release**: as soon as Phases 3b and 5c are done
 **Status**: Release candidates — Consolidation Release

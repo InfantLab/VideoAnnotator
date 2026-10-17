@@ -135,6 +135,11 @@ parts of the CLI still prompt interactively.
 Candidates, none committed (the Phase 1 pipeline review may promote some before the pilot):
 - **Voice Type Classifier**: key child, other child, female adult, male adult. Already standard in
   child-language research. VTC 2 depends on pyannote.audio and has no stated licence (audit §8).
+- **Diarization on Sortformer** (moved from v1.6.0 Phase 5c, 2026-10-17, spec 030 Q2): first a
+  half-day spike. Does NVIDIA Streaming Sortformer install and run on a torch newer than 2.11
+  without torchaudio? What does NeMo send over the network by default, and can it be switched off?
+  Install size? Output on the demo clip next to pyannote community-1's? Findings and the decision
+  go into the dependency audit §8 (spec 030 FR-028). pyannote is what holds torch at 2.11.
 - **Gaze target** (Gaze-LLE), for joint attention.
 - **Text-prompted segmentation and tracking** (SAM 3), e.g. "infant", "adult". Licence to check.
 
@@ -144,7 +149,7 @@ Candidates, none committed (the Phase 1 pipeline review may promote some before 
 
 ### Launch
 
-- [ ] Tag `v1.6.0`, GitHub release, Zenodo DOI, `CITATION.cff` updated.
+- [ ] Tag `v1.7.0`, GitHub release, Zenodo DOI, `CITATION.cff` updated.
 - [ ] Update `paper/paper.md` and its research impact statement with the pilot's use, and tell the
       editors on #10182.
 - [ ] Announce: mailing lists, webinar, conference tutorial.

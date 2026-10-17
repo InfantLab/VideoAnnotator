@@ -114,7 +114,7 @@ class TestPersonTrackingSizeAnalysisIntegration:
         """Test complete pipeline integration with size-based analysis."""
         # Setup mocks
         mock_video_capture_class.return_value = mock_video_capture
-        mock_yolo = Mock()
+        mock_yolo = Mock(ckpt_path=None)
         mock_yolo.track.return_value = mock_yolo_results
         mock_yolo_class.return_value = mock_yolo
 
