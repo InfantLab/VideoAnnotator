@@ -21,6 +21,12 @@ app = typer.Typer(
 )
 
 
+def _print_version(value: bool) -> None:
+    if value:
+        typer.echo(f"VideoAnnotator v{__version__}")
+        raise typer.Exit()
+
+
 @app.callback(invoke_without_command=True)
 def _default(
     ctx: typer.Context,
@@ -28,6 +34,13 @@ def _default(
         False,
         "--dev",
         help="Enable development mode: allows all CORS origins (*), disables auth",
+    ),
+    version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_print_version,
+        is_eager=True,
+        help="Show the version and exit.",
     ),
 ):
     """Start the API server when no subcommand is provided.

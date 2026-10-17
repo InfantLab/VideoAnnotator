@@ -261,6 +261,11 @@ user follows from GitHub.
 
 ### Changed
 
+- **The docs say which version they document.** Every page's header and browser tab read
+  "VideoAnnotator 1.6.0", and the footer says how to check yours. The version comes from
+  `pyproject.toml` when the site is built, so it can't drift, and a version bump now rebuilds the
+  site. `videoannotator --version` works too (before, only `videoannotator version` did).
+
 - **The viewer's docs links go to the documentation site.** The footer's "Docs" and Getting
   started's "Documentation" pointed at a DeepWiki of the archived `video-annotation-viewer` repo;
   they now open https://infantlab.github.io/VideoAnnotator/. Getting started no longer calls the
