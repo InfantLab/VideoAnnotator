@@ -47,13 +47,12 @@ export const Footer = () => {
               className="text-muted-foreground hover:text-foreground h-6 px-2 text-xs"
             >
               <a
-                href="https://deepwiki.com/InfantLab/video-annotation-viewer"
+                href="https://infantlab.github.io/VideoAnnotator/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1"
-                title="AI-powered interactive codebase documentation"
+                title="VideoAnnotator documentation"
               >
-                <span>🤖</span>
                 <span>Docs</span>
                 <ExternalLink className="w-2.5 h-2.5" />
               </a>

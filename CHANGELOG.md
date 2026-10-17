@@ -244,6 +244,11 @@ user follows from GitHub.
 
 ### Changed
 
+- **The viewer's docs links go to the documentation site.** The footer's "Docs" and Getting
+  started's "Documentation" pointed at a DeepWiki of the archived `video-annotation-viewer` repo;
+  they now open https://infantlab.github.io/VideoAnnotator/. Getting started no longer calls the
+  viewer "VAV".
+
 - **A container never shows its own folders** (spec 024). In a container with no folder shared,
   My folders lists nothing (it used to list the container's home, `/root`) and says how to share
   a folder; upload still works. Plain installs keep the home-folder default.
