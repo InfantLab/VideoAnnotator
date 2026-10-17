@@ -272,6 +272,15 @@ user follows from GitHub.
 
 ### Changed
 
+- **The server's terminal says only what matters.** It used to print two lines for every request
+  (including every viewer asset and the health check every two minutes) and a page of startup
+  internals. Now it shows a ready line, each job started, finished (with how long it took and
+  where the results are) or failed (with the reason), pipeline installs, warnings and errors, as
+  `15:12:03 Finished clip.mp4 [1a2b3c4d] in 1m 12s; results in ~/VideoAnnotator/…`. Everything
+  still goes to the log files in `logs/`. If the viewer is calling the server without a working
+  API key, the terminal says so once (and how to connect it) instead of a stream of 401s.
+  `videoannotator server --verbose` brings back every line, including uvicorn's per-request log.
+
 - **The docs say which version they document.** Every page's header and browser tab read
   "VideoAnnotator 1.6.0", and the footer says how to check yours. The version comes from
   `pyproject.toml` when the site is built, so it can't drift, and a version bump now rebuilds the
@@ -455,6 +464,13 @@ user follows from GitHub.
   `tests/fixtures/viewer_contract/` (real models, about a minute on a GPU; not run in CI).
 
 ### Fixed
+
+- **API keys were written into the log files** (security). Every request's headers, including
+  `Authorization: Bearer va_…`, went into `logs/api_server.log`, and rejected or expired keys were
+  logged with their first 10–16 characters. Logs now identify a key only by a short fingerprint
+  (`key:1a2b3c4d`) and never record headers. **If you ran an earlier version, delete the files in
+  `logs/` and make new API keys** (`videoannotator generate-token`); the old files may contain
+  your keys.
 
 - **The results player's timeline no longer misleads** (found 2026-10-16 in spec 023's
   inventory). Every speaker had the same colour on the timeline and the overlay, because the

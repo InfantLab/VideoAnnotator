@@ -67,15 +67,9 @@ class SQLiteStorageBackend(StorageBackend):
         # Create database engine
         self.engine = create_database_engine(self.database_url, echo=echo)
 
-        # Set up logging first
-        self.logger = logging.getLogger(__name__)
-        if not self.logger.handlers:
-            handler = logging.StreamHandler()
-            handler.setLevel(logging.INFO)
-            formatter = logging.Formatter("[%(levelname)s] %(message)s")
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
+        # Under videoannotator.database, so these reach logs/ and stay out of
+        # the terminal (logging_config).
+        self.logger = logging.getLogger("videoannotator.database.sqlite")
 
         # Log database creation for first-time users
         database_exists = self.database_path.exists()

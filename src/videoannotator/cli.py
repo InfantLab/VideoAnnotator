@@ -56,7 +56,7 @@ def _default(
 
     # Launch server with recommended defaults
     # NOTE: calling server() directly will run uvicorn and block the process.
-    server(host="0.0.0.0", port=18011, reload=False, workers=1, dev=dev)
+    server(host="0.0.0.0", port=18011, reload=False, workers=1, dev=dev, verbose=False)
 
 
 @app.command()
@@ -69,6 +69,12 @@ def server(
         False,
         "--dev",
         help="Enable development mode: allows all CORS origins (*), disables auth",
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        help="Show every log line in the terminal, including each request "
+        "(otherwise they go only to the log files)",
     ),
 ):
     """Start the VideoAnnotator API server.
@@ -111,6 +117,14 @@ def server(
 
     # The first-start API key message builds the viewer link from this.
     os.environ["API_PORT"] = str(port)
+    if verbose:
+        from .utils.logging_config import VERBOSE_ENV
+
+        os.environ[VERBOSE_ENV] = "1"
+    from .utils.logging_config import console_verbose
+
+    # uvicorn's own lines (one per request, startup chatter) only with --verbose.
+    uvicorn_level = "info" if console_verbose() else "warning"
     typer.echo(f"[START] Starting VideoAnnotator API server on http://{host}:{port}")
     typer.echo(f"[INFO] API documentation available at http://{host}:{port}/docs")
     from videoannotator.utils.logging_config import logs_dir
@@ -172,7 +186,8 @@ def server(
                 workers=workers
                 if not reload
                 else 1,  # Reload doesn't work with multiple workers
-                log_level="info",
+                log_level=uvicorn_level,
+                access_log=console_verbose(),
             )
         else:
             from .api import restart
@@ -182,7 +197,8 @@ def server(
                     "videoannotator.api.main:app",
                     host=host,
                     port=port,
-                    log_level="info",
+                    log_level=uvicorn_level,
+                    access_log=console_verbose(),
                     # Bounded, so an open SSE stream or long poll can't stall
                     # a requested restart indefinitely.
                     timeout_graceful_shutdown=10,

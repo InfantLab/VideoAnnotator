@@ -29,6 +29,7 @@ from packaging.utils import canonicalize_name
 from ..database import database as _db_module
 from ..database.models import ExtrasInstallJob, ExtrasInstallJobStatus
 from ..registry import pipeline_loader
+from ..utils.logging_config import console
 
 LOGGER = logging.getLogger("videoannotator.api.extras_install")
 
@@ -517,6 +518,9 @@ def run_install(job_id: str, extra_name: str) -> None:
 
         command, cwd = resolve_install_command(extra_name)
         LOGGER.info("Installing extras group %r: %s", extra_name, " ".join(command))
+        console().info(
+            f"Installing the {extra_name} pipelines (can take a few minutes)..."
+        )
         before, modules_before = _installed_distributions()
         try:
             result = subprocess.run(
@@ -546,18 +550,28 @@ def run_install(job_id: str, extra_name: str) -> None:
             modules = {**modules_after, **modules_before}
             outcome = decide_activation(before, after, modules)
             if outcome["activation"] == "restart_required":
-                LOGGER.warning(
+                LOGGER.info(
                     "Install of %r changed already-imported distributions, restart "
                     "required: %s",
                     extra_name,
                     outcome["conflicting_distributions"],
+                )
+                console().info(
+                    f"Installed the {extra_name} pipelines. Restart VideoAnnotator to "
+                    "use them (the viewer has a Restart now button)."
                 )
                 _mark_restart_required()
                 _restart_pending_extras.add(extra_name)
             else:
                 _activate_live()
                 LOGGER.info("Install of %r activated without a restart", extra_name)
+                console().info(f"Installed the {extra_name} pipelines; ready to use.")
             _activation[job_id] = outcome
+        else:
+            console().error(
+                f"Couldn't install the {extra_name} pipelines; the Pipelines page in "
+                "the viewer shows the installer's output."
+            )
 
         job.status = status
         job.finished_at = datetime.now()

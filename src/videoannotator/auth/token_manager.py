@@ -18,7 +18,7 @@ import jwt
 from videoannotator.database import database as db_module
 from videoannotator.database.crud import APIKeyCRUD, UserCRUD
 from videoannotator.database.models import APIKey
-from videoannotator.utils.logging_config import get_logger
+from videoannotator.utils.logging_config import get_logger, key_fingerprint
 
 logger = get_logger("api")
 
@@ -202,16 +202,16 @@ class SecureTokenManager:
                 api_key = APIKeyCRUD.get_by_token(db, token)
 
                 if not api_key:
-                    logger.warning(f"Invalid token used: {token[:16]}...")
+                    logger.info(f"Invalid API key used: {key_fingerprint(token)}")
                     return None
 
                 if not api_key.is_active:
-                    logger.warning(f"Inactive token used: {token[:16]}...")
+                    logger.info(f"Inactive API key used: {key_fingerprint(token)}")
                     return None
 
                 now = datetime.now(UTC).replace(tzinfo=None)
                 if api_key.expires_at and now > api_key.expires_at:
-                    logger.warning(f"Expired token used: {token[:16]}...")
+                    logger.info(f"Expired API key used: {key_fingerprint(token)}")
                     return None
 
                 # Update last used (async or optimized in CRUD?)

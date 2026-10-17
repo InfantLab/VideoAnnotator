@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
 
-from ..utils.logging_config import get_logger
+from ..utils.logging_config import console, get_logger
 from ..version import __version__ as videoannotator_version
 from .errors import register_error_handlers
 from .middleware import ErrorLoggingMiddleware, RequestLoggingMiddleware
@@ -243,12 +243,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # TODO: Initialize pipeline cache
 
+    console().info(
+        f"VideoAnnotator {videoannotator_version} is ready. Ctrl+C stops it."
+    )
+
     yield
 
     # Shutdown
     logger.info(
         "VideoAnnotator API server shutting down...", extra={"event": "shutdown"}
     )
+    console().info("Stopping...")
 
     if background_processing:
         from .background_tasks import stop_background_processing
@@ -258,6 +263,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "Background job processing stopped",
             extra={"component": "background_tasks"},
         )
+    console().info("Stopped.")
 
     # TODO: Cleanup pipeline resources
 

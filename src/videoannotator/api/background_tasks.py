@@ -9,12 +9,14 @@ import threading
 import time
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from ..batch.types import JobStatus
 from ..config_env import MAX_CONCURRENT_JOBS, WORKER_POLL_INTERVAL
+from ..results_folder import display_path, run_folder_of
 from ..storage.base import StorageBackend
-from ..utils.logging_config import get_logger
+from ..utils.logging_config import console, get_logger
 from .database import get_storage_backend
 
 logger = get_logger("api")
@@ -267,6 +269,7 @@ class BackgroundJobManager:
 
         try:
             logger.info(f"[PROCESS] Starting job {job_id}")
+            console().info(f"Started {_job_label(job)}: {_pipelines_label(job)}")
 
             # Process the job using the shared execution path in a thread pool
             loop = asyncio.get_event_loop()
@@ -274,12 +277,19 @@ class BackgroundJobManager:
 
             if job.status == JobStatus.COMPLETED:
                 logger.info(f"[SUCCESS] Completed job {job_id}")
+                console().info(
+                    f"Finished {_job_label(job)}{_took(job)}{_saved_to(job)}"
+                )
             elif job.status == JobStatus.CANCELLED:
                 logger.info(f"[CANCELLED] Job {job_id} cancelled during processing")
+                console().info(f"Cancelled {_job_label(job)}")
             else:
-                logger.error(
+                # Not logger.error too: the console line carries the reason, and
+                # logs/ gets both.
+                logger.info(
                     f"[FAILED] Job {job_id} processing failed: {job.error_message}"
                 )
+                console().error(f"Failed {_job_label(job)}: {_reason(job)}")
 
         except Exception as e:
             # Handle job failure
@@ -289,6 +299,7 @@ class BackgroundJobManager:
                 job.completed_at = datetime.fromtimestamp(time.time())
                 self.storage.save_job_metadata(job)
                 logger.error(f"[ERROR] Job {job_id} failed: {e}", exc_info=True)
+                console().error(f"Failed {_job_label(job)}: {_reason(job)}")
             except Exception as save_error:
                 logger.error(
                     f"Failed to save error state for job {job_id}: {save_error}"
@@ -382,3 +393,33 @@ async def background_job_lifespan():
         yield
     finally:
         await stop_background_processing()
+
+
+def _job_label(job) -> str:
+    name = Path(job.video_path).name if job.video_path else "a job"
+    return f"{name} [{job.job_id[:8]}]"
+
+
+def _pipelines_label(job) -> str:
+    return ", ".join(job.selected_pipelines or []) or "default pipelines"
+
+
+def _took(job) -> str:
+    if not (job.started_at and job.completed_at):
+        return ""
+    seconds = int((job.completed_at - job.started_at).total_seconds())
+    minutes, seconds = divmod(seconds, 60)
+    return f" in {minutes}m {seconds:02d}s" if minutes else f" in {seconds}s"
+
+
+def _saved_to(job) -> str:
+    try:
+        folder = run_folder_of(job)
+    except Exception:
+        return ""
+    return f"; results in {display_path(folder)}" if folder else ""
+
+
+def _reason(job) -> str:
+    first = (job.error_message or "unknown error").strip().splitlines()[0]
+    return first if len(first) <= 200 else first[:197] + "..."

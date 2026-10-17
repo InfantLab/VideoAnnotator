@@ -9,6 +9,7 @@ from sqlalchemy import and_, desc
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from ..utils.logging_config import key_fingerprint
 from .models import APIKey, Job, JobStatus, SavedDataset, SavedPipelinePreset, User
 
 
@@ -169,7 +170,7 @@ class APIKeyCRUD:
 
                 logger = logging.getLogger(__name__)
                 logger.warning(
-                    f"API key expired: {api_key[:10]}... (expired at {api_key_obj.expires_at})"
+                    f"API key expired: {key_fingerprint(api_key)} (expired at {api_key_obj.expires_at})"
                 )
                 return None
 
