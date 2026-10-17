@@ -40,8 +40,8 @@ New here? Start with **[Getting started](usage/GETTING_STARTED.md)**.
   [pre-commit hooks](development/PRE_COMMIT_GUIDE.md).
 - [Testing overview](testing/testing_overview.md), [testing standards](testing/testing_standards.md)
   and [coverage](testing/coverage_report.md)
-- [Roadmap for v1.6.0](development/roadmap_v1.6.0.md), then [v1.7.0](development/roadmap_v1.7.0.md)
-  and [v1.7 to v2.0](development/roadmap_v1.7_to_v2.0.md)
+- [Roadmap for v1.6.0](development/roadmap_v1.6.0.md) (consolidation), then [v1.7.0](development/roadmap_v1.7.0.md)
+  (public release), [v1.8.0](development/roadmap_v1.8.0.md) (plugins) and [v1.8 to v2.0](development/roadmap_v1.8_to_v2.0.md)
 - [Changelog](../CHANGELOG.md)
 
 ## Reviewing the software

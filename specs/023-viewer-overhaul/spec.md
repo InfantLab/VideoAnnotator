@@ -100,7 +100,7 @@ not "VLM" (jargon), not "AI analysis" (every pipeline is that).
 **Where the model runs is a live badge, not part of the name.** "Local · qwen3.5:9b on this
 computer" (or "on lab-server") when the endpoint is this machine or the lab's network; "Remote ·
 frames are sent to api.openai.com", prominent and in a warning colour, if a cloud endpoint is
-ever configured (v1.6.0's OpenAI-compatible connector makes that possible). A "(Local)" in the
+ever configured (v1.7.0's OpenAI-compatible connector makes that possible). A "(Local)" in the
 name would turn false the first time someone did, which Principle VI rules out; the badge stays
 true and, with today's Ollama-only setup, always says Local. The same badge belongs on Pipelines
 and, if not there already, in the methods paragraph. This matters to researchers: participants'
@@ -273,7 +273,7 @@ One video: everything found in it, from any run, on one time axis, with the valu
 | [028 Video page](../028-video-page/spec.md) | Player, lanes as controls, zoom, data beside the video, run per lane, notes, streaming instead of the zip and folder question | none strictly; reuses 027's timeline work |
 | [029 Videos and projects](../029-videos-and-projects/spec.md) | One Videos page with projects and folders, projects from datasets, settings that projects remember, workflows from presets, simplified New run, new nav, Home for first run, activity indicator, help in context | 028 (opening a video), 026 (New run) |
 
-Not in any of them yet: a real movement measure (theme 2; roadmap v1.7.0 Phase 3 computes it on
+Not in any of them yet: a real movement measure (theme 2; roadmap v1.8.0 Phase 3 computes it on
 the server), and human review of pipeline output (shelved).
 
 ## Starting point for the model (discussion of 2026-10-06, not settled; see Decisions above)
@@ -343,7 +343,7 @@ This needs research and thought before a spec. Proposed steps, each written up i
 1. **A better timeline for the existing temporal events**: speech, speakers, scenes, faces, VLM
    moments and the rest, made easier to read, compare and navigate.
 2. **New metrics on the timeline**, starting with **movement per person** over time. Related:
-   [roadmap_v1.7.0.md](../../docs/development/roadmap_v1.7.0.md) Phase 3 plans to compute movement
+   [roadmap_v1.8.0.md](../../docs/development/roadmap_v1.8.0.md) Phase 3 plans to compute movement
    on the server, per tracked person. The spec should decide whether to pull that forward or
    compute in the viewer first.
 3. **The underlying data, easier to reach**: from any overlay or timeline event to the values

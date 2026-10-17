@@ -231,7 +231,7 @@ local ML extra" as an assumption.
   [`docs/development/roadmap_v1.6.0.md`](../../docs/development/roadmap_v1.6.0.md) (plugin ecosystem
   + Ollama/llama.cpp local backend) and the v1.7.0–v2.0 arc (remote pipelines, HTTPDispatcher, VLM
   plugin, SlurmDispatcher/HPC, slim core) — see
-  [`docs/development/roadmap_v1.7_to_v2.0.md`](../../docs/development/roadmap_v1.7_to_v2.0.md).
+  [`docs/development/roadmap_v1.8_to_v2.0.md`](../../docs/development/roadmap_v1.8_to_v2.0.md).
   This phase's job is narrower and concrete: make sure nothing built now has to be undone to reach
   those.
 - **Security of remote/cloud dispatch** (the "secure" in "remote (secure) cloud services") is out

@@ -104,4 +104,4 @@ server process started, regardless of which extras group. See
 Does not cover the viewer's rendering of any of this (locked cards, progress bars, banners — that's
 the viewer project's own spec); does not cover cancelling an in-progress install (not in scope, see
 spec.md Assumptions); does not cover auto-restart (deferred, see spec.md Assumptions and
-`docs/development/roadmap_v1.7_to_v2.0.md`).
+`docs/development/roadmap_v1.8_to_v2.0.md`).

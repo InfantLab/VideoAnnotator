@@ -332,4 +332,4 @@ viewer lands on Videos.
 - Projects within projects, or any level above projects (Decision 5).
 - Per-project permissions beyond today's.
 - The Video page (spec 028) and Ask AI (spec 027) themselves.
-- Corpus overview charts (roadmap v1.6.0 Phase 6).
+- Corpus overview charts beyond the Videos page (spec 010; roadmap v1.7.0 Phase 1).

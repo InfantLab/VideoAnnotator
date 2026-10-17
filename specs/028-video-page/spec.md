@@ -321,7 +321,7 @@ open it from a folder; ‹ › move through the folder.
   can't disagree.
 - Notes live on the server, keyed to the video (not to a run), so they survive re-runs; this
   supersedes spec 023's "in the run folders unless the spec decides otherwise".
-- A real movement measure is not in this spec (spec 023 theme 2; roadmap v1.7.0 Phase 3).
+- A real movement measure is not in this spec (spec 023 theme 2; roadmap v1.8.0 Phase 3).
 
 ## Out of Scope
 

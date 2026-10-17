@@ -25,7 +25,7 @@ viewer/             # Video Annotation Viewer (React/Vite, Bun); built into src/
 tests/
 ├── unit/ integration/ pipelines/ api/ contract/
 specs/<NNN>-<slug>/  # spec-kit feature specs (spec.md, plan.md, tasks.md, ...)
-docs/development/roadmap_v1.{5,6,7}.0.md, roadmap_v1.7_to_v2.0.md  # release roadmap (v1.6.0 = public release)
+docs/development/roadmap_v1.{5,6,7,8}.0.md, roadmap_v1.8_to_v2.0.md  # release roadmap (v1.6.0 = quiet consolidation, v1.7.0 = public release with the new viewer, v1.8.0 = plugins)
 ```
 
 ## Commands

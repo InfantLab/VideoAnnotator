@@ -1,4 +1,9 @@
-# 🚀 VideoAnnotator v1.7.0 Development Roadmap
+# 🚀 VideoAnnotator v1.8.0 Development Roadmap
+
+> **Renumbered again 2026-10-17.** The public release moved from v1.6.0 to v1.7.0, so the viewer
+> overhaul ships before any publicity ([`roadmap_v1.7.0.md`](roadmap_v1.7.0.md)); v1.6.0 is a quiet
+> consolidation release ([`roadmap_v1.6.0.md`](roadmap_v1.6.0.md)). This plan moved from v1.7.0
+> to v1.8.0 unchanged except for version numbers.
 
 > **Renumbered 2026-09-24.** This plan was written as v1.6.0 (last updated 2026-07-08) and moved
 > here unchanged except for status marks. v1.6.0 is now the public release (see
@@ -8,13 +13,13 @@
 
 ## Release Overview
 
-VideoAnnotator v1.7.0 (planned as v1.6.0) is the **Plugin Ecosystem & Local LLM Backends Release**. It picks up the parts
+VideoAnnotator v1.8.0 (planned as v1.6.0, then v1.7.0) is the **Plugin Ecosystem & Local LLM Backends Release**. It picks up the parts
 of [`specs/003-modular-pipeline-architecture/spec.md`](../../specs/003-modular-pipeline-architecture/spec.md)
 that [`roadmap_v1.5.0.md`](roadmap_v1.5.0.md) deliberately deferred to keep the JOSS resubmission
 scope small, and adds a new capability: local LLM/VLM pipelines running against a user's own
 `ollama serve` or `llama.cpp` server instead of an in-process, bundled model.
 
-**Target Release**: After the v1.6.0 public release
+**Target Release**: After the v1.7.0 public release
 **Current Status**: Planning Phase
 **Main Goal**: Complete the plugin architecture seam; make current-generation local models usable
 without adding them as bundled, versioned dependencies
@@ -25,7 +30,7 @@ pipeline is just another `backends` entry in pipeline metadata).
 
 ---
 
-## 📋 v1.7.0 Deliverables
+## 📋 v1.8.0 Deliverables
 
 ### Phase 1: Plugin Ecosystem (User Story 3 of spec 003)
 
@@ -78,8 +83,8 @@ machine via `ollama serve` or a `llama.cpp` server, without VideoAnnotator vendo
       `/v1/chat/completions` client — reusing the already-proven client de-risked landing a working
       pipeline quickly. `backends: [ollama]` in the metadata leaves room for an `openai_compatible`
       backend (covering both Ollama's and `llama.cpp`'s compatible endpoint) alongside it later
-      without a pipeline redesign, but that second connector is still unbuilt. **Moved to v1.6.0**
-      (Phase 4 of [`roadmap_v1.6.0.md`](roadmap_v1.6.0.md)).
+      without a pipeline redesign, but that second connector is still unbuilt. **Moved to v1.7.0**
+      (Phase 2 of [`roadmap_v1.7.0.md`](roadmap_v1.7.0.md); planned for v1.6.0 until 2026-10-17).
 - [x] Gated behind a new `llm` extras group (`ollama` client + `cv2`; `httpx` was already core, so
       needed no new declaration).
 - [x] Uses `backends: list[str]` (`backends: [ollama]`) in the pipeline's metadata YAML.
@@ -175,6 +180,6 @@ deleted every cached model. Write a spec before implementing.
 
 ---
 
-**Last Updated**: 2026-09-24 (renumbered from v1.6.0; content last revised 2026-07-08)
-**Target Release**: After the v1.6.0 public release
+**Last Updated**: 2026-10-17 (renumbered from v1.7.0; before that from v1.6.0; content last revised 2026-07-08)
+**Target Release**: After the v1.7.0 public release
 **Status**: Planning Phase — Plugin Ecosystem Focus
