@@ -385,3 +385,95 @@ and telemetry.
 `torch>=1.8.0`; community-1 runs on the pyannote.audio 4.0.7 already installed. **No output
 format changes** (WebVTT, RTTM, COCO stay); output *content* changes for every switch, so every
 switch re-baselines the demo clip on purpose.
+
+---
+
+## Plan decisions (2026-10-17)
+
+Phase 0 of the plan: the open points above, decided for implementation. "Checked at step N" means
+the plan's step N verifies it on the demo clip before going on; the decision says what happens
+if the check fails.
+
+### Speech
+
+- **S1. Runtime integration.** `faster_whisper.WhisperModel(name_or_repo, device, compute_type)`
+  replaces `whisper.load_model`. `WhisperBasePipeline` keeps device selection, the CUDA→CPU
+  fallback and ffmpeg audio extraction. Removed with openai-whisper: the transformers (`"/"` in
+  the model id) branch, whose transcription was never implemented (`NotImplementedError`), and the
+  openai-whisper encoder helpers (`get_whisper_embedding`, `segment_audio`,
+  `_pad_or_trim_embedding`), which nothing outside their own tests calls. A model id with `/` now
+  means a CTranslate2 repository on Hugging Face, which faster-whisper loads directly.
+  *Alternatives*: keep both runtimes (rejected, Q3); transformers' Whisper (heavier, slower, needs
+  its own generation code).
+- **S2. Compute type.** New technical setting `compute_type`, default `default`: CTranslate2 keeps
+  the weights' stored type (float16) and converts where the device can't run it (float32 on CPU and
+  on GPUs below compute capability 7.0, such as a GTX 10-series). `use_fp16: false` maps to
+  `float32`, so existing configs keep their meaning. The effective type
+  (`WhisperModel.model.compute_type`) is recorded in provenance as the quantisation (Principle
+  III). *Alternatives*: `int8_float16` (less VRAM, but changes numerics by hardware; available as a
+  setting, not the default); `auto` (same hardware dependence).
+- **S3. GPU libraries.** CTranslate2 needs cuBLAS 12 and cuDNN 9 at run time. torch 2.11+cu126
+  installs NVIDIA's wheels, but CTranslate2 may not find them. Checked at step 5a on Linux: if it
+  doesn't, preload them from the `nvidia.cublas`/`nvidia.cudnn` packages before loading the model.
+  Either way, `initialize()` transcribes one second of silence, so a missing library fails during
+  initialize, where the existing CUDA→CPU fallback (`cuda_markers`) catches it and says so
+  (spec edge case), not mid-job.
+- **S4. Weights and provenance.** faster-whisper maps size names to repositories
+  (`faster_whisper.utils._MODELS`; `large-v3-turbo` → `mobiuslabsgmbh/faster-whisper-large-v3-turbo`,
+  which Hugging Face redirects to `dropbox-dash/…`). Weights go to the Hugging Face hub cache, already
+  inside the models directory. Provenance: `hub_ref(repo_id)` (repository + snapshot commit) plus
+  the compute type, replacing `whisper_ref`. The revision is recorded, not pinned (FR-007 asks for
+  recording; pinning would freeze a third-party repository we don't control either way). Which
+  repository id names the cache folder after the redirect is checked at step 5b, and the metadata
+  `weights:` entry (`cache: huggingface`, ~1,618 MB) uses it.
+- **S5. Translate.** `task: translate` with a model whose name contains `turbo` fails in
+  `initialize()`: "large-v3-turbo can't translate; set whisper_model to large-v3 or medium for
+  translation". Failing beats switching models silently: the output's model would then differ
+  from the configured one (FR-015).
+- **S6. Settings.** Each existing setting maps to a `transcribe()` argument of the same name; see
+  [contracts/speech-settings.md](contracts/speech-settings.md). `suppress_tokens` (a comma string
+  in our metadata) is parsed to a list of ints; unset keeps faster-whisper's `[-1]`, the same as
+  openai-whisper's `"-1"`. VAD stays off (`vad_filter=False`), as in openai-whisper.
+- **S7. First-run message.** The existing `log_model_download` line names the model and its
+  download size before loading; on CPU it adds that a smaller model is one setting away
+  (`whisper_model: small`). No automatic switch by hardware (spec Assumptions).
+- **S8. Old weights.** openai-whisper `.pt` files already in `<models>/whisper/` are left alone and
+  still listed on the Models page; nothing deletes a user's files.
+
+### Speaker turns
+
+- **D1.** Default `pyannote/speaker-diarization-community-1`. `requires_setup` lists only its
+  licence (SC-007). A config naming 3.1 still needs 3.1's and segmentation-3.0's licences; the
+  guide's setting description says so, and the readiness check (which looks at the default) does
+  not. `exclusive_speaker_diarization` is not used (spec Assumptions).
+
+### People
+
+- **P1.** ultralytics `>=8.4,<9` in the `person` extra. Step 4a checks `yolo11n-pose` under 8.4
+  against step 0 within the baseline tolerance, and the no-telemetry test (8.4 adds
+  `ultralytics-platform`). A difference beyond tolerance is investigated before 4b.
+- **P2.** YOLO26 is NMS-free end to end. Step 4b runs the demo clip with `iou_threshold` 0.7 and
+  0.3; identical outputs mean the setting has no effect with YOLO26, and its description says so
+  (FR-020). Otherwise it stays as is.
+- **P3.** Default `models/yolo/yolo26n-pose.pt`, resolved by `resolve_yolo_model()` as today;
+  Ultralytics downloads it on first use. Provenance stays `weights_ref` (sha256).
+
+### Faces
+
+- **F1.** `_deepface_actions()` returns only the enabled actions. With none enabled it keeps
+  `["emotion"]`, because DeepFace's `analyze()` needs one action; the result isn't written, as
+  today. The 6 MB emotion model makes this cheap; replacing `analyze()` with `extract_faces()` for
+  detection-only runs is a later change.
+- **F2.** `detect_age`/`detect_gender` default `false` in code and metadata; `weights:` lists
+  only RetinaFace and the expression model (SC-006: −1,080 MB).
+
+### Checks
+
+- **B1. One machine for every comparison.** The committed fixtures were made on an RTX 4060.
+  Each step is compared with the previous step's run on the same machine (step 0 first), so GPU
+  differences never enter a diff. The fixtures are regenerated once at step 6 on the
+  maintainer's machine; if that GPU differs from the RTX 4060, run twice and re-measure the
+  tolerances before committing.
+- **B2. Reasons in metadata.** A setting may carry `reason` (one sentence) and `reason_source` (a
+  link): why its default is what it is. Shown by `pipelines describe` and returned by the API;
+  the viewer doesn't show them yet. See [data-model.md](data-model.md).

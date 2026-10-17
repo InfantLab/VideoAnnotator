@@ -54,17 +54,14 @@ Backward Compatibility by Default). `/speckit-plan`'s Constitution Check gate ev
 against it.
 
 ## Current Plan
-<!-- SPECKIT START -->
-`specs/026-pipeline-guide/plan.md` (roadmap v1.6.0 Phase 3b): each pipeline's metadata
-(`registry/metadata/*.yaml`) gains a behavioural `title` and `summary`, `homepage`, `benchmarks`
-(figures quoted from sources) and per-setting `group` (behavioural/technical), `label`, `unit`,
-`min`/`max`, `applies_when`; the API returns them additively, `videoannotator pipelines describe`
-prints them with no server, and the viewer's Pipelines page and job wizard show them via
-`PipelineGuide`. v1.6.0 is now a quiet consolidation release; v1.7.0 is the public one with the
-viewer overhaul (design `specs/023-viewer-overhaul`, built by `027-ask-ai`, `028-video-page`,
-`029-videos-and-projects`). Model-default refresh (v1.6.0 Phase 5c) is `specs/030-model-defaults`.
-<!-- SPECKIT END -->
-
+`specs/030-model-defaults/plan.md` (roadmap v1.6.0 Phase 5c): faster-whisper `large-v3-turbo`
+replaces openai-whisper `base` (openai-whisper removed; Principle V exception), pyannote
+`speaker-diarization-community-1`, `yolo26n-pose` (ultralytics 8.4), face age/gender off with
+`_deepface_actions()` fixed. Each library upgrade checked on the demo clip before its model change;
+every comparison on one machine (quickstart). Settings gain optional `reason`/`reason_source`.
+v1.6.0 is a quiet consolidation release; v1.7.0 is the public one with the viewer overhaul (design
+`specs/023-viewer-overhaul`, built by `027-ask-ai`, `028-video-page`, `029-videos-and-projects`).
+Spec 026 (pipeline guide) is built.
 ## Recent Changes
 - 012-python-313-support: `requires-python` widens to `>=3.12,<3.14`; CI tests both;
   `.python-version` makes 3.13 the dev/Docker default; ruff/mypy targets stay at 3.12 (oldest
