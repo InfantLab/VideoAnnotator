@@ -55,15 +55,14 @@ against it.
 
 ## Current Plan
 <!-- SPECKIT START -->
-`specs/025-results-out/plan.md` (roadmap v1.6.0 Phase 3): results out of VideoAnnotator for
-analysis. One long-format table (CSV; Parquet with the `parquet` extra), one ELAN `.eaf` per video,
-and a methods paragraph with BibTeX, all built from the output files and their spec 017 provenance
-by `src/videoannotator/exporters/`, so `videoannotator export table|elan|methods <folder>` (no
-server), the API (`/export/...`, `/methods` on jobs, batches, datasets) and the viewer's Export menu
-agree. Plus R and Python notebooks in `examples/notebooks/`. Native outputs don't change. Before
-025: spec 024 (container launcher; T082 walkthrough open). After 025:
-the viewer overhaul, designed in `specs/023-viewer-overhaul` and split into `specs/026-pipeline-guide`,
-`027-ask-ai`, `028-video-page` and `029-videos-and-projects` (specified, not yet planned).
+`specs/026-pipeline-guide/plan.md` (roadmap v1.6.0 Phase 3b): each pipeline's metadata
+(`registry/metadata/*.yaml`) gains a behavioural `title` and `summary`, `homepage`, `benchmarks`
+(figures quoted from sources) and per-setting `group` (behavioural/technical), `label`, `unit`,
+`min`/`max`, `applies_when`; the API returns them additively, `videoannotator pipelines describe`
+prints them with no server, and the viewer's Pipelines page and job wizard show them via
+`PipelineGuide`. v1.6.0 is now a quiet consolidation release; v1.7.0 is the public one with the
+viewer overhaul (design `specs/023-viewer-overhaul`, built by `027-ask-ai`, `028-video-page`,
+`029-videos-and-projects`). Model-default refresh (v1.6.0 Phase 5c) is `specs/030-model-defaults`.
 <!-- SPECKIT END -->
 
 ## Recent Changes
