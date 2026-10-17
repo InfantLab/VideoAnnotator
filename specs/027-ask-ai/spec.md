@@ -11,7 +11,8 @@ it a few times before running it on their full videos. They must be taught what 
 (every few seconds; sometimes a burst of frames), whether the AI is local or remote, and that the
 prompt has to say what form the answer takes. Prompts they've tried must never be lost. A full
 sampling interface (every N seconds, X frames Y apart), and outputs to a timeline, a table and a
-video."
+video." (Clarified 2026-10-17: "to a video" means shown over the video in the main viewer, not a
+rendered video file.)
 
 ## Context
 
@@ -190,7 +191,8 @@ ends; stopping keeps the answers so far.
 ### User Story 6 - Answers out (Priority: P2)
 
 From the window, the researcher exports the answers as a table (one row per sample: time,
-frames, question, answer, reasoning, model) and as a video. A tally of distinct answers sits by
+frames, question, answer, reasoning, model). A run's answers also show on the video's own
+page (spec 028) as a lane and as a caption on the video at each moment. A tally of distinct answers sits by
 the table; when answers don't fall into a few values, a hint says to state the allowed answers in
 the question.
 
@@ -204,9 +206,9 @@ the question.
    answers is downloaded.
 2. **Given** more than 10 distinct answers in a run or try set, **When** the tally is shown,
    **Then** the hint appears.
-3. **Given** answers, **When** "Export → Video" is used, **Then**
-   [NEEDS CLARIFICATION: is this a copy of the video with each answer drawn on it (labels burned
-   in), or something else?]
+3. **Given** a finished run, **When** the video's page (spec 028) is opened, **Then** its answers
+   are a lane there, and the answer for the current moment is shown on the video, toggled like
+   any other overlay.
 
 ---
 
@@ -279,8 +281,8 @@ the question.
   sampling filled in, and "Save as workflow" (spec 029).
 
 **Out**
-- **FR-021**: Ask AI MUST export the answers shown as the spec 025 table, and as a video (User
-  Story 6, scenario 3).
+- **FR-021**: Ask AI MUST export the answers shown as the spec 025 table. No video file is
+  rendered: a run's answers are shown over the video on its Video page (spec 028 FR-022).
 
 ### Key Entities
 
@@ -323,6 +325,7 @@ the question.
 ## Out of Scope
 
 - Changing what models are supported, or adding cloud providers.
+- Rendering answers into a video file (clarified 2026-10-17: not wanted).
 - Human review or correction of answers (shelved, spec 023).
 - Running across many videos from this window beyond handing off to run setup (spec 029).
 - Prompt optimisation or automatic prompt suggestions.

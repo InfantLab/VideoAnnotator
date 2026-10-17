@@ -285,6 +285,9 @@ open it from a folder; ‹ › move through the folder.
   previous/next within it; otherwise it MUST list the video's projects.
 - **FR-021**: The header MUST offer Ask AI (spec 027) on this video, Run…, and Export (table, ELAN,
   methods: spec 025).
+- **FR-022**: Ask AI answers (spec 027) MUST be a lane like any other, with an overlay that shows
+  the answer for the current moment on the video (the latest sample at or before the playhead,
+  marked as sampled, as the VLM panel does today).
 
 ### Key Entities
 

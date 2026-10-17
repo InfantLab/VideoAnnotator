@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,5 +31,5 @@
 
 ## Notes
 
-- One clarification open: what "Export → Video" produces (User Story 6, scenario 3; FR-021). Named existing pieces (Ollama, the preview endpoint, `burst_offsets`) tie the spec to specs 009 and 020 and to FR-013's backward-compatibility promise; they are constraints, not design choices.
+- Clarified 2026-10-17: no rendered video; "outputs to a video" means answers shown over the video on the Video page (User Story 6, scenario 3; FR-021; spec 028 FR-022). Named existing pieces (Ollama, the preview endpoint, `burst_offsets`) tie the spec to specs 009 and 020 and to FR-013's backward-compatibility promise; they are constraints, not design choices.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`

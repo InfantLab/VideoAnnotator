@@ -129,7 +129,7 @@ so results come back in the same window, with no going back and forth.
 │ touch v3  ●  ●●   ●     ●●●     ●   ●            (click: seek)        │
 │ touch v2  ● ●  ●   ●   ●  ●●    ●●  ●                                 │
 ├───────────────────────────────────────────────────────────────────────┤
-│ Table: time · frames · answer · reasoning      [Export ▾ CSV · video] │
+│ Table: time · frames · answer · reasoning      [Export ▾]             │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -142,7 +142,8 @@ so results come back in the same window, with no going back and forth.
 - **Prompts compared as lanes**, one above the other; the table can show them side by side.
 - **Sampling**: every N seconds, over the whole video or a range, or at listed moments; per sample
   point, X frames spaced Y apart; an estimate of samples and time before starting.
-- **Outputs**: timeline lane, table (spec 025 CSV), video.
+- **Outputs**: timeline lane and table (spec 025 CSV) here; on the video's own page, the
+  answers are also an overlay on the video. No video file is rendered (clarified 2026-10-17).
 
 Gaps this exposes (to plan):
 - Burst spacing is tied to the interval today (`burst_offsets` are multiples of
@@ -150,8 +151,6 @@ Gaps this exposes (to plan):
   (default: the interval). No start/end range exists either.
 - Answers filling in during a run need the VLM pipeline to write as it goes (to check: it may
   only write at the end).
-- "Outputs to a video": to confirm whether this means an annotated video file (labels drawn on);
-  nothing renders one today.
 
 ### Pages
 
