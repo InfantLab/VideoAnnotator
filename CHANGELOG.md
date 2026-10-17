@@ -12,6 +12,17 @@ user follows from GitHub.
 
 ### Added
 
+- **Add the Hugging Face token from the viewer, no restart** (spec 031). Speaker turns needs a
+  Hugging Face token to download its models. Its card now walks through it: make a Read token,
+  accept each model's licence (each shown as accepted or not), paste the token and press **Save
+  and check**. The server checks it with Hugging Face, names the account, saves it next to the
+  database (readable only by the server's user, so it survives container recreation), and uses
+  it from the next job, with no file to edit and no restart. Admin only; anyone else is told who to
+  ask. **Settings → Hugging Face token** shows, changes or removes it, and
+  `videoannotator settings huggingface-token [--status|--remove]` does the same from a terminal.
+  The token is never sent back to the viewer, logged or exported. A token in the server's
+  environment (`HUGGINGFACE_TOKEN`, `HF_AUTH_TOKEN`, `HF_TOKEN`) still takes priority.
+
 - **A guide for every pipeline** (spec 026, roadmap v1.6.0 Phase 3b). Each pipeline now says what
   it finds in plain words ("Faces: expression, age, gender"), splits its settings into the few
   about *what* is measured (shown first, with units) and the technical ones (collapsed, with how
