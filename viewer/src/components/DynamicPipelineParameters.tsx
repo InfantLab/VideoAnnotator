@@ -14,6 +14,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { VlmModelPicker } from '@/components/VlmModelPicker';
 import { VlmPromptTestPanel } from '@/components/VlmPromptTestPanel';
 import { isUrlParameter, urlValueError } from '@/lib/pipelineUrlFields';
+import { pipelineSummary } from '@/lib/pipelineGuide';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronRight } from 'lucide-react';
 
 import type { PipelineDescriptor, PipelineParameterSchema } from '@/types/pipelines';
 
@@ -113,6 +116,30 @@ const resolveParameterValue = (
   return normalizeValue(parameter, pipelineConfig[name]);
 };
 
+/** Whether a setting differs from its default: an untouched field is never changed. */
+const isChanged = (parameter: PipelineParameterSchema, pipelineConfig: Record<string, unknown>) => {
+  const raw = pipelineConfig[parameter.name];
+  if (raw === undefined) return false;
+  return JSON.stringify(normalizeValue(parameter, raw)) !== JSON.stringify(getParameterDefault(parameter));
+};
+
+/**
+ * Spec 026 `applies_when`: hidden when another setting rules it out, but a
+ * value the user changed is never hidden, only marked as not used.
+ */
+const parameterState = (
+  parameter: PipelineParameterSchema,
+  parameters: PipelineParameterSchema[],
+  pipelineConfig: Record<string, unknown>
+): 'shown' | 'hidden' | 'not-applicable' => {
+  if (!parameter.appliesWhen) return 'shown';
+  const applies = Object.entries(parameter.appliesWhen).every(([name, values]) =>
+    values.includes(String(resolveParameterValue(parameters, pipelineConfig, name)))
+  );
+  if (applies) return 'shown';
+  return isChanged(parameter, pipelineConfig) ? 'not-applicable' : 'hidden';
+};
+
 const renderFieldDescription = (parameter: PipelineParameterSchema) => {
   const meta: string[] = [];
   if (parameter.required) meta.push('required');
@@ -164,15 +191,276 @@ export const DynamicPipelineParameters = ({
     <div className="space-y-6">
       {selectedPipelines.map((pipeline) => {
         const pipelineConfig = getPipelineConfig(config, pipeline.id);
+        const renderParameter = (parameter: PipelineParameterSchema) => {
+          const currentValue = normalizeValue(
+            parameter,
+            pipelineConfig[parameter.name]
+          );
+          const fieldHint = renderFieldDescription(parameter);
+
+          // vlm_annotation's `model` field: the one deliberate,
+          // narrowly-scoped pipeline-specific UI exception (spec
+          // 009 / viewer-handoff) — a live-populated picker instead
+          // of the generic free-text default. Every other
+          // pipeline/field still goes through the switch below.
+          if (pipeline.id === 'vlm_annotation' && parameter.name === 'model') {
+            return (
+              <VlmModelPicker
+                key={parameter.name}
+                value={typeof currentValue === 'string' ? currentValue : ''}
+                onChange={(value) => handleValueChange(pipeline.id, parameter, value)}
+                fieldId={`${pipeline.id}-${parameter.name}`}
+              />
+            );
+          }
+
+          switch (parameter.type) {
+            case 'boolean':
+              return (
+                <div
+                  key={parameter.name}
+                  className="flex items-center justify-between rounded border bg-muted/40 px-3 py-2"
+                >
+                  <div className="space-y-1">
+                    <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
+                      {parameter.label || parameter.name}
+                    </Label>
+                    {parameter.description && (
+                      <p className="text-xs text-muted-foreground">
+                        {parameter.description}
+                      </p>
+                    )}
+                    {fieldHint && (
+                      <p className="text-[11px] text-muted-foreground/80">{fieldHint}</p>
+                    )}
+                  </div>
+                  <Switch
+                    id={`${pipeline.id}-${parameter.name}`}
+                    checked={Boolean(currentValue)}
+                    onCheckedChange={(checked) =>
+                      handleValueChange(pipeline.id, parameter, checked)
+                    }
+                  />
+                </div>
+              );
+
+            case 'text':
+              return (
+                <div key={parameter.name} className="space-y-1">
+                  <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
+                    {parameter.label || parameter.name}
+                  </Label>
+                  <Textarea
+                    id={`${pipeline.id}-${parameter.name}`}
+                    value={typeof currentValue === 'string' ? currentValue : ''}
+                    rows={6}
+                    onChange={(event) =>
+                      handleValueChange(pipeline.id, parameter, event.target.value)
+                    }
+                  />
+                  {parameter.description && (
+                    <p className="text-xs text-muted-foreground">
+                      {parameter.description}
+                    </p>
+                  )}
+                  {fieldHint && (
+                    <p className="text-[11px] text-muted-foreground/80">{fieldHint}</p>
+                  )}
+                </div>
+              );
+
+            case 'integer':
+            case 'number':
+              return (
+                <div key={parameter.name} className="space-y-1">
+                  <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
+                    {parameter.label || parameter.name}
+                  </Label>
+                  <Input
+                    id={`${pipeline.id}-${parameter.name}`}
+                    type="number"
+                    value={typeof currentValue === 'number' || typeof currentValue === 'string' ? currentValue : ''}
+                    onChange={(event) => {
+                      const newValue = coerceNumber(
+                        event.target.value,
+                        typeof currentValue === 'number' ? currentValue : undefined
+                      );
+                      handleValueChange(pipeline.id, parameter, newValue);
+                    }}
+                    min={parameter.min}
+                    max={parameter.max}
+                    step={parameter.step}
+                  />
+                  {parameter.description && (
+                    <p className="text-xs text-muted-foreground">
+                      {parameter.description}
+                    </p>
+                  )}
+                  {fieldHint && (
+                    <p className="text-[11px] text-muted-foreground/80">{fieldHint}</p>
+                  )}
+                </div>
+              );
+
+            case 'enum':
+              return (
+                <div key={parameter.name} className="space-y-1">
+                  <Label className="text-sm">{parameter.label || parameter.name}</Label>
+                  <Select
+                    value={currentValue != null ? String(currentValue) : undefined}
+                    onValueChange={(value) => {
+                      const matched = (parameter.enum ?? []).find(
+                        (option) => String(option.value) === value
+                      );
+                      handleValueChange(
+                        pipeline.id,
+                        parameter,
+                        matched ? matched.value : value
+                      );
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select option" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(parameter.enum ?? []).map((option) => (
+                        <SelectItem key={String(option.value)} value={String(option.value)}>
+                          {option.label || String(option.value)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {parameter.description && (
+                    <p className="text-xs text-muted-foreground">
+                      {parameter.description}
+                    </p>
+                  )}
+                </div>
+              );
+
+            case 'multiselect':
+              return (
+                <div key={parameter.name} className="space-y-1">
+                  <Label className="text-sm">{parameter.label || parameter.name}</Label>
+                  <div className="flex flex-wrap gap-3 rounded border bg-muted/40 p-3">
+                    {(parameter.enum ?? []).map((option) => {
+                      const valueArray = Array.isArray(currentValue)
+                        ? (currentValue as unknown[])
+                        : [];
+                      const checked = valueArray.includes(option.value);
+                      return (
+                        <label key={String(option.value)} className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(checkboxValue) => {
+                              const nextValues = new Set(valueArray);
+                              if (checkboxValue === true) {
+                                nextValues.add(option.value);
+                              } else if (checkboxValue === false) {
+                                nextValues.delete(option.value);
+                              }
+                              handleValueChange(pipeline.id, parameter, Array.from(nextValues));
+                            }}
+                          />
+                          <span>{option.label || String(option.value)}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {parameter.description && (
+                    <p className="text-xs text-muted-foreground">
+                      {parameter.description}
+                    </p>
+                  )}
+                </div>
+              );
+
+            case 'object':
+              return (
+                <div key={parameter.name} className="space-y-1">
+                  <Label className="text-sm">{parameter.label || parameter.name}</Label>
+                  <Textarea
+                    value={JSON.stringify(currentValue ?? parameter.default ?? {}, null, 2)}
+                    className="font-mono text-xs"
+                    rows={6}
+                    onChange={(event) => {
+                      try {
+                        const parsed = JSON.parse(event.target.value);
+                        handleValueChange(pipeline.id, parameter, parsed);
+                      } catch (error) {
+                        // noop – keep previous value until valid JSON is provided
+                      }
+                    }}
+                  />
+                  {parameter.description && (
+                    <p className="text-xs text-muted-foreground">
+                      {parameter.description}
+                    </p>
+                  )}
+                </div>
+              );
+
+            default: {
+              const urlError = isUrlParameter(parameter)
+                ? urlValueError(currentValue)
+                : null;
+              return (
+                <div key={parameter.name} className="space-y-1">
+                  <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
+                    {parameter.label || parameter.name}
+                  </Label>
+                  <Input
+                    id={`${pipeline.id}-${parameter.name}`}
+                    value={String(currentValue ?? '')}
+                    onChange={(event) =>
+                      handleValueChange(pipeline.id, parameter, event.target.value)
+                    }
+                    {...(isUrlParameter(parameter) && {
+                      type: 'url',
+                      placeholder: 'Leave empty for the server default',
+                      'aria-invalid': urlError !== null
+                    })}
+                  />
+                  {urlError && (
+                    <p className="text-xs text-destructive">{urlError}</p>
+                  )}
+                  {parameter.description && (
+                    <p className="text-xs text-muted-foreground">
+                      {parameter.description}
+                    </p>
+                  )}
+                </div>
+              );
+            }
+          }
+        };
+
+        const parameters = pipeline.parameters ?? [];
+        // Servers before spec 026 send no groups: show everything, as before.
+        const grouped = parameters.some((p) => p.group !== undefined);
+        const states = new Map(
+          parameters.map((p) => [p.name, parameterState(p, parameters, pipelineConfig)] as const)
+        );
+        const visible = parameters.filter((p) => states.get(p.name) !== 'hidden');
+        const behavioural = grouped ? visible.filter((p) => p.group === 'behavioural') : visible;
+        const technical = grouped ? visible.filter((p) => p.group !== 'behavioural') : [];
+        const changedCount = technical.filter((p) => isChanged(p, pipelineConfig)).length;
+        const renderWithNote = (parameter: PipelineParameterSchema) =>
+          states.get(parameter.name) === 'not-applicable' ? (
+            <div key={parameter.name} className="space-y-1 opacity-70">
+              {renderParameter(parameter)}
+              <p className="text-[11px] text-amber-700 dark:text-amber-400">Not used with these settings</p>
+            </div>
+          ) : (
+            renderParameter(parameter)
+          );
 
         return (
           <div key={pipeline.id} className="rounded-lg border bg-card p-4 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h4 className="text-sm font-semibold text-foreground">{pipeline.name}</h4>
-                {pipeline.description && (
-                  <p className="text-xs text-muted-foreground">{pipeline.description}</p>
-                )}
+                <h4 className="text-sm font-semibold text-foreground">{pipeline.title ?? pipeline.name}</h4>
+                <p className="text-xs text-muted-foreground">{pipelineSummary(pipeline)}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                 {pipeline.version && <span>v{pipeline.version}</span>}
@@ -180,251 +468,22 @@ export const DynamicPipelineParameters = ({
               </div>
             </div>
 
-            {pipeline.parameters && pipeline.parameters.length > 0 ? (
+            {parameters.length > 0 ? (
               <div className="space-y-3">
-                {pipeline.parameters.map((parameter) => {
-                  const currentValue = normalizeValue(
-                    parameter,
-                    pipelineConfig[parameter.name]
-                  );
-                  const fieldHint = renderFieldDescription(parameter);
-
-                  // vlm_annotation's `model` field: the one deliberate,
-                  // narrowly-scoped pipeline-specific UI exception (spec
-                  // 009 / viewer-handoff) — a live-populated picker instead
-                  // of the generic free-text default. Every other
-                  // pipeline/field still goes through the switch below.
-                  if (pipeline.id === 'vlm_annotation' && parameter.name === 'model') {
-                    return (
-                      <VlmModelPicker
-                        key={parameter.name}
-                        value={typeof currentValue === 'string' ? currentValue : ''}
-                        onChange={(value) => handleValueChange(pipeline.id, parameter, value)}
-                        fieldId={`${pipeline.id}-${parameter.name}`}
-                      />
-                    );
-                  }
-
-                  switch (parameter.type) {
-                    case 'boolean':
-                      return (
-                        <div
-                          key={parameter.name}
-                          className="flex items-center justify-between rounded border bg-muted/40 px-3 py-2"
-                        >
-                          <div className="space-y-1">
-                            <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
-                              {parameter.label || parameter.name}
-                            </Label>
-                            {parameter.description && (
-                              <p className="text-xs text-muted-foreground">
-                                {parameter.description}
-                              </p>
-                            )}
-                            {fieldHint && (
-                              <p className="text-[11px] text-muted-foreground/80">{fieldHint}</p>
-                            )}
-                          </div>
-                          <Switch
-                            id={`${pipeline.id}-${parameter.name}`}
-                            checked={Boolean(currentValue)}
-                            onCheckedChange={(checked) =>
-                              handleValueChange(pipeline.id, parameter, checked)
-                            }
-                          />
-                        </div>
-                      );
-
-                    case 'text':
-                      return (
-                        <div key={parameter.name} className="space-y-1">
-                          <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
-                            {parameter.label || parameter.name}
-                          </Label>
-                          <Textarea
-                            id={`${pipeline.id}-${parameter.name}`}
-                            value={typeof currentValue === 'string' ? currentValue : ''}
-                            rows={6}
-                            onChange={(event) =>
-                              handleValueChange(pipeline.id, parameter, event.target.value)
-                            }
-                          />
-                          {parameter.description && (
-                            <p className="text-xs text-muted-foreground">
-                              {parameter.description}
-                            </p>
-                          )}
-                          {fieldHint && (
-                            <p className="text-[11px] text-muted-foreground/80">{fieldHint}</p>
-                          )}
-                        </div>
-                      );
-
-                    case 'integer':
-                    case 'number':
-                      return (
-                        <div key={parameter.name} className="space-y-1">
-                          <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
-                            {parameter.label || parameter.name}
-                          </Label>
-                          <Input
-                            id={`${pipeline.id}-${parameter.name}`}
-                            type="number"
-                            value={typeof currentValue === 'number' || typeof currentValue === 'string' ? currentValue : ''}
-                            onChange={(event) => {
-                              const newValue = coerceNumber(
-                                event.target.value,
-                                typeof currentValue === 'number' ? currentValue : undefined
-                              );
-                              handleValueChange(pipeline.id, parameter, newValue);
-                            }}
-                            min={parameter.min}
-                            max={parameter.max}
-                            step={parameter.step}
-                          />
-                          {parameter.description && (
-                            <p className="text-xs text-muted-foreground">
-                              {parameter.description}
-                            </p>
-                          )}
-                          {fieldHint && (
-                            <p className="text-[11px] text-muted-foreground/80">{fieldHint}</p>
-                          )}
-                        </div>
-                      );
-
-                    case 'enum':
-                      return (
-                        <div key={parameter.name} className="space-y-1">
-                          <Label className="text-sm">{parameter.label || parameter.name}</Label>
-                          <Select
-                            value={currentValue != null ? String(currentValue) : undefined}
-                            onValueChange={(value) => {
-                              const matched = (parameter.enum ?? []).find(
-                                (option) => String(option.value) === value
-                              );
-                              handleValueChange(
-                                pipeline.id,
-                                parameter,
-                                matched ? matched.value : value
-                              );
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select option" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(parameter.enum ?? []).map((option) => (
-                                <SelectItem key={String(option.value)} value={String(option.value)}>
-                                  {option.label || String(option.value)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {parameter.description && (
-                            <p className="text-xs text-muted-foreground">
-                              {parameter.description}
-                            </p>
-                          )}
-                        </div>
-                      );
-
-                    case 'multiselect':
-                      return (
-                        <div key={parameter.name} className="space-y-1">
-                          <Label className="text-sm">{parameter.label || parameter.name}</Label>
-                          <div className="flex flex-wrap gap-3 rounded border bg-muted/40 p-3">
-                            {(parameter.enum ?? []).map((option) => {
-                              const valueArray = Array.isArray(currentValue)
-                                ? (currentValue as unknown[])
-                                : [];
-                              const checked = valueArray.includes(option.value);
-                              return (
-                                <label key={String(option.value)} className="flex items-center gap-2 text-sm">
-                                  <Checkbox
-                                    checked={checked}
-                                    onCheckedChange={(checkboxValue) => {
-                                      const nextValues = new Set(valueArray);
-                                      if (checkboxValue === true) {
-                                        nextValues.add(option.value);
-                                      } else if (checkboxValue === false) {
-                                        nextValues.delete(option.value);
-                                      }
-                                      handleValueChange(pipeline.id, parameter, Array.from(nextValues));
-                                    }}
-                                  />
-                                  <span>{option.label || String(option.value)}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                          {parameter.description && (
-                            <p className="text-xs text-muted-foreground">
-                              {parameter.description}
-                            </p>
-                          )}
-                        </div>
-                      );
-
-                    case 'object':
-                      return (
-                        <div key={parameter.name} className="space-y-1">
-                          <Label className="text-sm">{parameter.label || parameter.name}</Label>
-                          <Textarea
-                            value={JSON.stringify(currentValue ?? parameter.default ?? {}, null, 2)}
-                            className="font-mono text-xs"
-                            rows={6}
-                            onChange={(event) => {
-                              try {
-                                const parsed = JSON.parse(event.target.value);
-                                handleValueChange(pipeline.id, parameter, parsed);
-                              } catch (error) {
-                                // noop – keep previous value until valid JSON is provided
-                              }
-                            }}
-                          />
-                          {parameter.description && (
-                            <p className="text-xs text-muted-foreground">
-                              {parameter.description}
-                            </p>
-                          )}
-                        </div>
-                      );
-
-                    default: {
-                      const urlError = isUrlParameter(parameter)
-                        ? urlValueError(currentValue)
-                        : null;
-                      return (
-                        <div key={parameter.name} className="space-y-1">
-                          <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
-                            {parameter.label || parameter.name}
-                          </Label>
-                          <Input
-                            id={`${pipeline.id}-${parameter.name}`}
-                            value={String(currentValue ?? '')}
-                            onChange={(event) =>
-                              handleValueChange(pipeline.id, parameter, event.target.value)
-                            }
-                            {...(isUrlParameter(parameter) && {
-                              type: 'url',
-                              placeholder: 'Leave empty for the server default',
-                              'aria-invalid': urlError !== null
-                            })}
-                          />
-                          {urlError && (
-                            <p className="text-xs text-destructive">{urlError}</p>
-                          )}
-                          {parameter.description && (
-                            <p className="text-xs text-muted-foreground">
-                              {parameter.description}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    }
-                  }
-                })}
+                {grouped && behavioural.length > 0 && (
+                  <h5 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">What to measure</h5>
+                )}
+                {behavioural.map(renderWithNote)}
+                {technical.length > 0 && (
+                  <Collapsible className="space-y-3">
+                    <CollapsibleTrigger className="flex w-full items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
+                      <ChevronRight className="h-3 w-3 transition-transform [[data-state=open]_&]:rotate-90" />
+                      Technical settings ({technical.length} ·{' '}
+                      {changedCount === 0 ? 'all at defaults' : `${changedCount} changed`})
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-3">{technical.map(renderWithNote)}</CollapsibleContent>
+                  </Collapsible>
+                )}
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">No configurable parameters for this pipeline.</p>

@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ExtrasInstallJob, PipelineDescriptor, ReadinessItem } from "@/types/pipelines";
 import { RestartToActivate } from "@/components/RestartToActivate";
+import { PipelineAbout, PipelineTitle } from '@/components/PipelineGuide';
+import { pipelineSummary } from '@/lib/pipelineGuide';
 
 interface LockedPipelineCardProps {
   pipeline: PipelineDescriptor;
@@ -26,7 +28,7 @@ interface LockedPipelineCardProps {
  * visible and explained, not silently omitted from the pipeline list.
  */
 export const LockedPipelineCard = ({ pipeline, badge = "Not installed", group, children }: LockedPipelineCardProps) => {
-  const description = pipeline.description ?? "No description provided.";
+  const description = pipelineSummary(pipeline);
 
   return (
     // Not aria-disabled/cursor-not-allowed: the card isn't a control, and both
@@ -36,13 +38,14 @@ export const LockedPipelineCard = ({ pipeline, badge = "Not installed", group, c
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <Lock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          <span className="text-sm font-medium text-foreground">{pipeline.name}</span>
+          <PipelineTitle pipeline={pipeline} />
         </div>
         <Badge variant="outline" className="text-[10px] px-1.5 py-0">
           {badge}
         </Badge>
       </div>
       <p className="text-xs text-muted-foreground">{description}</p>
+      <PipelineAbout pipeline={pipeline} />
       {group ? (
         <p className="text-xs text-muted-foreground">
           Installs the <span className="font-medium text-foreground">{group.name}</span> group

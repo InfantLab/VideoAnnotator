@@ -49,6 +49,51 @@ import type {
 import { APIError } from './handleError';
 import { API_TOKEN_STORAGE_KEY, API_URL_STORAGE_KEY, defaultApiUrl, normalizeApiUrl } from '@/lib/apiConnection';
 
+const optionalString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value ? value : undefined;
+
+const optionalNumber = (value: unknown): number | undefined =>
+  typeof value === 'number' ? value : undefined;
+
+/** The pipeline guide (VideoAnnotator spec 026); nulls become undefined. */
+function mapGuide(record: Record<string, unknown>): Partial<PipelineDescriptor> {
+  const benchmarks = Array.isArray(record.benchmarks)
+    ? (record.benchmarks as Record<string, unknown>[]).map((b) => ({
+        name: String(b.name),
+        measure: String(b.measure),
+        figure: String(b.figure),
+        source: String(b.source),
+        note: optionalString(b.note),
+      }))
+    : undefined;
+  const citations = Array.isArray(record.citations)
+    ? (record.citations as Record<string, unknown>[]).map((c) => ({ key: String(c.key), bibtex: String(c.bibtex) }))
+    : undefined;
+  return {
+    title: optionalString(record.title),
+    summary: optionalString(record.summary),
+    homepage: optionalString(record.homepage),
+    benchmarks,
+    qualityNote: optionalString(record.quality_note),
+    citations,
+  };
+}
+
+function mapParameter(raw: Record<string, unknown>): PipelineParameterSchema {
+  const appliesWhen = raw.applies_when ?? raw.appliesWhen;
+  return {
+    ...(raw as unknown as PipelineParameterSchema),
+    label: optionalString(raw.label),
+    description: optionalString(raw.description),
+    unit: optionalString(raw.unit),
+    group: optionalString(raw.group),
+    min: optionalNumber(raw.min),
+    max: optionalNumber(raw.max),
+    appliesWhen:
+      appliesWhen && typeof appliesWhen === 'object' ? (appliesWhen as Record<string, string[]>) : undefined,
+  };
+}
+
 const mapReadinessItems = (value: unknown): ReadinessItem[] =>
   Array.isArray(value)
     ? value
@@ -389,7 +434,8 @@ class APIClient {
         parameters: [],
         available: typeof available === 'boolean' ? available : undefined,
         installHint: typeof installHint === 'string' ? installHint : undefined,
-        readiness: mapReadiness(record.readiness)
+        readiness: mapReadiness(record.readiness),
+        ...mapGuide(record)
       };
     });
 
@@ -481,7 +527,7 @@ class APIClient {
               description: typeof record.description === 'string' ? record.description : undefined,
               group: typeof record.group === 'string' ? record.group : undefined
             },
-            parameters: parameters as PipelineParameterSchema[]
+            parameters: (parameters as Record<string, unknown>[]).map(mapParameter)
           };
         }
       } catch (error) {
