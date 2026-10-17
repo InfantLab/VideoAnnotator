@@ -1702,6 +1702,90 @@ def backup(
         typer.echo(f"[ERROR] Backup failed: {e}")
 
 
+settings_app = typer.Typer(help="Server settings kept on this machine.")
+app.add_typer(settings_app, name="settings")
+
+
+@settings_app.command("huggingface-token")
+def settings_huggingface_token(
+    remove: bool = typer.Option(False, "--remove", help="Delete the saved token."),
+    status: bool = typer.Option(False, "--status", help="Show whether one is set."),
+):
+    """Save a Hugging Face token where the server reads it (no restart needed).
+
+    Asks for the token without showing it; with no terminal (scripts, agents)
+    it reads one line from standard input, so it never goes on the command line.
+    """
+    import sys
+
+    from .api.readiness import check_huggingface_token
+    from .config_env import huggingface_token, huggingface_token_source
+    from .secrets_store import (
+        huggingface_token_path,
+        remove_saved_huggingface_token,
+        save_huggingface_token,
+    )
+
+    if remove:
+        removed = remove_saved_huggingface_token()
+        typer.echo(
+            "Removed the saved token." if removed else "No saved token to remove."
+        )
+        source, variable = huggingface_token_source()
+        if source == "environment":
+            typer.echo(f"{variable} in the environment still sets one.")
+        return
+
+    if status:
+        source, variable = huggingface_token_source()
+        token = huggingface_token()
+        if not token:
+            typer.echo("Not set.")
+            return
+        check, account = check_huggingface_token(token)
+        where = (
+            f"from {variable} in the environment"
+            if source == "environment"
+            else f"saved in {huggingface_token_path()}"
+        )
+        verdict = {
+            "ok": f"works (account: {account})" if account else "works",
+            "invalid": "rejected by Hugging Face",
+            "unknown": "couldn't check it with Hugging Face",
+        }[check]
+        typer.echo(f"Set, {where}; {verdict}.")
+        return
+
+    if sys.stdin.isatty():
+        typer.echo("Create a Read token at https://huggingface.co/settings/tokens")
+        token = typer.prompt("Hugging Face token", hide_input=True)
+    else:
+        token = sys.stdin.readline()
+    token = token.strip()
+    if not token:
+        typer.echo("No token given; nothing saved.", err=True)
+        raise typer.Exit(code=1)
+    check, account = check_huggingface_token(token)
+    if check == "invalid":
+        typer.echo(
+            "Hugging Face rejects this token (expired, revoked or mis-pasted). "
+            "Nothing saved.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    path = save_huggingface_token(token)
+    if check == "ok":
+        who = f" (account: {account})" if account else ""
+        typer.echo(f"Saved to {path}; Hugging Face accepts it{who}.")
+    else:
+        typer.echo(f"Saved to {path}; couldn't reach Hugging Face to check it yet.")
+    source, variable = huggingface_token_source()
+    if source == "environment":
+        typer.echo(
+            f"Note: {variable} in the environment is used instead while it's set."
+        )
+
+
 @app.command()
 def version():
     """Show version information."""

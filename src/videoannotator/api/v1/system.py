@@ -7,7 +7,10 @@ from typing import Any
 
 import psutil
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from pydantic import BaseModel
 
+from ... import secrets_store
+from ...config_env import huggingface_token, huggingface_token_source
 from ...registry.pipeline_registry import get_registry
 from ...version import __version__ as videoannotator_version
 from .. import extras_install, restart
@@ -15,7 +18,8 @@ from ..background_tasks import get_background_manager
 from ..database import check_database_health, get_database_info, get_storage_backend
 from ..errors import APIError
 from ..extras_install import ImportDeferredError, defer_import_during_install
-from ..middleware.auth import is_auth_required, require_admin
+from ..middleware.auth import is_auth_required, require_admin, validate_api_key
+from ..readiness import check_huggingface_token
 
 PROCESS_START_TIME = time.time()
 
@@ -530,3 +534,97 @@ async def get_database_info_endpoint():
             message=f"Failed to get database info: {e!s}",
             hint="Check database connection and server logs",
         ) from e
+
+
+# --- Hugging Face token (spec 031) ---
+
+
+class HuggingFaceTokenStatus(BaseModel):
+    """Whether the server has a Hugging Face token, and where from. Never the token."""
+
+    set: bool
+    source: str | None = None
+    env_var: str | None = None
+    account: str | None = None
+    check: str | None = None
+
+
+class HuggingFaceTokenRequest(BaseModel):
+    token: str
+
+
+def _token_status(
+    check: str | None = None, account: str | None = None
+) -> HuggingFaceTokenStatus:
+    source, env_var = huggingface_token_source()
+    token = huggingface_token()
+    if token and check is None:
+        check, account = check_huggingface_token(token)
+    return HuggingFaceTokenStatus(
+        set=token is not None,
+        source=source,
+        env_var=env_var,
+        account=account if token else None,
+        check=check if token else None,
+    )
+
+
+@router.get(
+    "/huggingface-token",
+    response_model=HuggingFaceTokenStatus,
+    summary="Whether the server has a Hugging Face token (never the token itself)",
+)
+async def get_huggingface_token(
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> HuggingFaceTokenStatus:
+    return _token_status()
+
+
+@router.put(
+    "/huggingface-token",
+    response_model=HuggingFaceTokenStatus,
+    summary="Save a Hugging Face token on this server (admin)",
+    description="""
+Checks the token with Hugging Face first. Rejected tokens aren't saved
+(`400 HF_TOKEN_REJECTED`). When Hugging Face can't be reached the token is saved
+and `check` is `unknown`. A token in the server's environment still takes
+priority (`source: environment`). Used from the next job and readiness check,
+no restart.
+""",
+)
+async def put_huggingface_token(
+    body: HuggingFaceTokenRequest,
+    user: dict[str, Any] = Depends(require_admin),
+) -> HuggingFaceTokenStatus:
+    token = body.token.strip()
+    if not token:
+        raise APIError(
+            status_code=400, code="HF_TOKEN_EMPTY", message="The token is empty."
+        )
+    check, account = check_huggingface_token(token)
+    if check == "invalid":
+        raise APIError(
+            status_code=400,
+            code="HF_TOKEN_REJECTED",
+            message=(
+                "Hugging Face rejects this token (expired, revoked or mis-pasted). "
+                "Nothing was saved."
+            ),
+            hint="Create a Read token at https://huggingface.co/settings/tokens",
+        )
+    secrets_store.save_huggingface_token(token)
+    if huggingface_token_source()[0] == "environment":
+        return _token_status()
+    return _token_status(check=check, account=account)
+
+
+@router.delete(
+    "/huggingface-token",
+    response_model=HuggingFaceTokenStatus,
+    summary="Remove the Hugging Face token saved on this server (admin)",
+)
+async def delete_huggingface_token(
+    user: dict[str, Any] = Depends(require_admin),
+) -> HuggingFaceTokenStatus:
+    secrets_store.remove_saved_huggingface_token()
+    return _token_status()

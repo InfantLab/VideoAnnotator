@@ -106,7 +106,7 @@ class TestStates:
         [blocker] = r["blockers"]
         assert blocker["kind"] == "secret"
         assert blocker["name"] == "HUGGINGFACE_TOKEN"
-        assert "Set HUGGINGFACE_TOKEN" in blocker["message"]
+        assert "set HUGGINGFACE_TOKEN in the server's environment" in blocker["message"]
         assert "server's environment" in blocker["message"]
         assert blocker["help_url"] == "https://huggingface.co/settings/tokens"
 
@@ -193,7 +193,7 @@ class TestHuggingFaceLicences:
         assert r["state"] == "needs_setup"
         [blocker] = r["blockers"]
         assert blocker["kind"] == "secret"
-        assert "rejects it" in blocker["message"]
+        assert "rejects the token" in blocker["message"]
         assert r["notes"] == []
 
     def test_unaccepted_licence_blocks_naming_the_tokens_account(self):
