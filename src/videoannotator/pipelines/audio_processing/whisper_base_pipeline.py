@@ -96,7 +96,7 @@ class WhisperBasePipeline(BasePipeline):
         Args:
             config: Configuration dictionary with the following options:
                 - whisper_model: faster-whisper size name or CTranslate2 repository
-                  (default: "base")
+                  (default: "large-v3-turbo")
                 - compute_type: CTranslate2 compute type (default: "default", the
                   weights' own type where the device supports it)
                 - sample_rate: Audio sample rate (default: 16000)
@@ -105,7 +105,7 @@ class WhisperBasePipeline(BasePipeline):
                 - normalize_audio: Normalize audio during preprocessing (default: True)
         """
         default_config = {
-            "whisper_model": "base",
+            "whisper_model": "large-v3-turbo",
             "compute_type": "default",
             "sample_rate": 16000,  # Whisper's preferred sample rate
             "device": "auto",  # "cpu", "cuda", or "auto"

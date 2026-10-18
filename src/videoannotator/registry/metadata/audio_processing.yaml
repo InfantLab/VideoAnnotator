@@ -39,8 +39,8 @@ config_schema:
     group: technical
     label: "Whisper model size"
     type: string
-    default: base
-    description: Whisper model size
+    default: large-v3-turbo
+    description: Whisper model (faster-whisper size name)
   min_speakers:
     group: behavioural
     label: "Fewest speakers"
@@ -78,8 +78,8 @@ requires_setup:
     description: Accept the pyannote/speaker-diarization-community-1 licence on Hugging Face, with the same account as the token.
     help_url: https://huggingface.co/pyannote/speaker-diarization-community-1
 weights:
-  - id: Systran/faster-whisper-base
-    approx_mb: 148
+  - id: mobiuslabsgmbh/faster-whisper-large-v3-turbo
+    approx_mb: 1622
     cache: huggingface
   - id: pyannote/speaker-diarization-community-1
     approx_mb: 34

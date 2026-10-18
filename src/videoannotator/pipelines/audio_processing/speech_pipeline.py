@@ -55,7 +55,7 @@ class SpeechPipeline(WhisperBasePipeline):
         """Initialize the speech pipeline with Whisper configuration defaults."""
         # Speech-specific config defaults
         speech_config = {
-            "whisper_model": "base",
+            "whisper_model": "large-v3-turbo",
             "language": None,
             "task": "transcribe",
             "beam_size": 5,

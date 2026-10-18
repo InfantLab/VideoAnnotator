@@ -272,7 +272,7 @@ class TestSpeechPipeline:
 
         assert "models" in info
         assert "config" in info
-        assert info["models"]["whisper_model"] == "base"
+        assert info["models"]["whisper_model"] == "large-v3-turbo"
 
     def test_speech_get_schema(self):
         """Test speech recognition schema generation."""

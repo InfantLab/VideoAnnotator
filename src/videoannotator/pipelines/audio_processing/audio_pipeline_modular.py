@@ -40,7 +40,7 @@ class AudioPipelineModular(BasePipeline):
             "pipelines": {
                 "speech_recognition": {
                     "enabled": True,
-                    "model": "base",
+                    "model": "large-v3-turbo",
                     "language": None,  # Auto-detect
                     "min_segment_duration": 1.0,
                     "word_timestamps": True,

@@ -93,3 +93,27 @@ Kept in `~/va-030/step5a`, compared with step 4b:
 - Pipeline time in the job: 3.45 s (openai-whisper 2.08 s), including the model load and the
   one-second warm-up transcription; transcribing the clip itself took 0.3 s.
 - openai-whisper and tiktoken uninstalled; nothing imports `whisper` any more.
+
+## Step 5b: Whisper `large-v3-turbo` (2026-10-18)
+
+Kept in `~/va-030/step5b`, compared with step 5a. First load downloaded
+`mobiuslabsgmbh/faster-whisper-large-v3-turbo` (Hugging Face serves it from
+`dropbox-dash/faster-whisper-large-v3-turbo`; the cache folder keeps the requested name, so the
+readiness check's weights entry uses it), revision `0a363e9161cb`, 1,622 MB, in 110 s including
+the download.
+
+| | step 5a (`base`) | step 5b (`large-v3-turbo`) |
+|---|---|---|
+| 1 | 0.000–1.320 Ready, baby girl? | 0.000–1.340 Ready, baby girl? |
+| 2 | 2.000–3.160 Good morning, girl. | 1.860–3.240 Good mommy girl. |
+| 3 | 4.440–6.040 Take a move! | 4.360–5.660 Peek-a-boo! |
+| 4 | 8.960–10.260 Go to smile, huh? | 8.760–10.260 Gotta smile, huh? |
+
+- 4 cues either way, at the same moments (starts within 0.2 s); 3 of 4 reworded. The clip is a
+  peekaboo game ("…Peekaboo_h265.mp4"): turbo hears "Peek-a-boo!" where base heard "Take a
+  move!". Which of the other two is right needs a listener.
+- Every other file identical.
+- GPU memory: about 3 GB (float32 on this GPU; float16 elsewhere would be about half). Pipeline
+  time in the job 7.7 s (5a 3.5 s), including load and warm-up; transcribing the clip 2.4 s.
+- Translate rule: `{"task": "translate"}` with the default fails at initialize naming large-v3 or
+  medium (unit tests); with `whisper_model: large-v3` it loads.

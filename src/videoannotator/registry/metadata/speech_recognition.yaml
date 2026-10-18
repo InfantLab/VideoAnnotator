@@ -5,18 +5,13 @@ summary: >-
   Transcribes speech into timed text, with the time of each word.
 homepage: https://github.com/SYSTRAN/faster-whisper
 benchmarks:
-  - name: "LibriSpeech test-clean"
-    measure: "WER %"
-    figure: "5.0"
-    source: https://arxiv.org/abs/2212.04356
-    note: "Whisper base, greedy decoding, Table 8"
-  - name: "LibriSpeech test-other"
-    measure: "WER %"
-    figure: "12.4"
-    source: https://arxiv.org/abs/2212.04356
-    note: "Whisper base, greedy decoding, Table 8"
+  - name: "Transcribing 13 minutes of audio (GPU, large-v2, beam 5)"
+    measure: "time"
+    figure: "1m03s (openai-whisper 2m23s)"
+    source: https://github.com/SYSTRAN/faster-whisper#benchmark
+    note: "faster-whisper fp16 against openai-whisper fp16, on an RTX 3070 Ti"
 quality_note: >-
-  LibriSpeech is English read aloud by adults; none of these figures measures child-directed speech, infant vocalisations or overlapping talk.
+  OpenAI publishes large-v3-turbo's accuracy only as charts: "Across languages, the turbo model performs similarly to large-v2", with larger drops for some languages such as Thai and Cantonese (github.com/openai/whisper/discussions/2363). No figure measures child-directed speech, infant vocalisations or overlapping talk. On a CPU, a smaller model (whisper_model small) is much faster.
 description: Speech transcription using OpenAI Whisper models on the faster-whisper runtime, with word-level timestamps, producing WebVTT format output.
 pipeline_family: audio
 variant: faster-whisper
@@ -40,10 +35,13 @@ config_schema:
     group: technical
     label: "Whisper model size"
     type: string
-    default: base
+    default: large-v3-turbo
     description: >-
       Whisper model: a size (tiny, base, small, medium, large-v3, large-v3-turbo, distil-large-v3)
-      or a CTranslate2 model repository on Hugging Face.
+      or a CTranslate2 model repository on Hugging Face. large-v3-turbo is a 1.6 GB download and
+      needs about 3 GB of GPU memory; on a CPU, small is much faster.
+    reason: "OpenAI's large-v3 with its decoder cut from 32 layers to 4: \"way faster, at the expense of a minor quality degradation\" (model card), and much larger than base, the default before v1.6.0 (809 M parameters vs 74 M)."
+    reason_source: https://huggingface.co/openai/whisper-large-v3-turbo
   language:
     group: behavioural
     label: "Language"
@@ -55,7 +53,9 @@ config_schema:
     label: "Transcribe or translate"
     type: string
     default: transcribe
-    description: Task type - transcribe or translate (translate converts to English)
+    description: >-
+      transcribe, or translate (into English). large-v3-turbo can't translate: set whisper_model to
+      large-v3 or medium for translation.
   beam_size:
     group: technical
     label: "Beam size"
@@ -135,8 +135,8 @@ config_schema:
 examples:
   - cli: videoannotator job submit demo.mp4 --pipelines speech_recognition
     description: Submit speech transcription job with default settings
-  - cli: videoannotator job submit demo.mp4 --pipelines speech_recognition --config '{"speech_recognition":{"whisper_model":"medium","language":"en"}}'
-    description: Use medium model with English language
+  - cli: videoannotator job submit demo.mp4 --pipelines speech_recognition --config '{"speech_recognition":{"whisper_model":"small","language":"en"}}'
+    description: A smaller, faster model (e.g. on a CPU), English only
   - api: |
       {
         "video_url": "demo.mp4",
@@ -144,12 +144,12 @@ examples:
         "config": {
           "speech_recognition": {
             "whisper_model": "large-v3",
-            "word_timestamps": true,
+            "task": "translate",
             "language": "es"
           }
         }
       }
-    description: Spanish transcription with large model via API
+    description: Spanish speech translated into English (large-v3, since turbo can't translate), via API
 version: 1
 stability: stable
 backends:
@@ -160,8 +160,8 @@ requirements:
 
 # spec 011: first run downloads the default Whisper model.
 weights:
-  - id: Systran/faster-whisper-base
-    approx_mb: 148
+  - id: mobiuslabsgmbh/faster-whisper-large-v3-turbo
+    approx_mb: 1622
     cache: huggingface
 
 # spec 025: cited by the methods paragraph (videoannotator export methods).

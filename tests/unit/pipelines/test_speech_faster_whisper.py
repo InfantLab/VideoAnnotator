@@ -88,6 +88,18 @@ def test_provenance_names_the_repository_snapshot_and_precision(faster_whisper, 
     assert ref.to_dict()["quantization"] == "float32"
 
 
+def test_default_is_large_v3_turbo(faster_whisper, cpu):
+    pipeline = SpeechPipeline()
+    assert pipeline.config["whisper_model"] == "large-v3-turbo"
+    pipeline.initialize()
+    faster_whisper.download.assert_called_once_with("large-v3-turbo")
+
+
+def test_default_translate_is_refused():
+    with pytest.raises(ValueError, match="can't translate"):
+        SpeechPipeline({"task": "translate"}).initialize()
+
+
 def test_use_fp16_false_means_float32(faster_whisper, cpu):
     SpeechPipeline({"use_fp16": False, "whisper_model": "base"}).initialize()
     assert faster_whisper.WhisperModel.call_args.kwargs["compute_type"] == "float32"
