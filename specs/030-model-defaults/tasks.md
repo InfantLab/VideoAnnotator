@@ -75,7 +75,7 @@ the new model and revision; metadata and guide give the reason and figure with a
 - [X] T016 [P] [US1] In `src/videoannotator/pipelines/audio_processing/diarization_pipeline.py`: default `model` `pyannote/speaker-diarization-community-1`; update docstrings naming 3.1
 - [X] T017 [P] [US1] In `src/videoannotator/registry/metadata/speaker_diarization.yaml` per contracts/metadata.md: `homepage`, `model.default` + `reason`/`reason_source`, `model.description` (other models need their own licences), `benchmarks` from the community-1 card (quote exactly; re-check the card), `requires_setup` (secret + community-1 licence only), `weights` (community-1, size from the Hub API), community-1 citation added (FR-012)
 - [X] T018 [US1] Update tests that assert the 3.1 default or three licences: `grep -rn "speaker-diarization-3.1\|segmentation-3.0" tests/ src/` and fix each (readiness tests, registry tests, viewer readiness copy if it names them: `grep -rn "segmentation-3.0" viewer/src`)
-- [ ] T019 [US1] [GPU] **Waiting for a Hugging Face token.** Demo-clip check into `~/va-030/step3`: only `.rttm` differs; turns and speaker count recorded in `checks.md`; Speaker turns card ready with a token whose account accepted community-1 (quickstart §3)
+- [X] T019 [US1] [GPU] Demo-clip check into `~/va-030/step3`: only `.rttm` differs; turns and speaker count recorded in `checks.md`; Speaker turns card ready with a token whose account accepted community-1 (quickstart §3)
 
 **Checkpoint**: commit "diarization: default to pyannote community-1".
 
@@ -116,14 +116,14 @@ the new model and revision; metadata and guide give the reason and figure with a
 records that model.
 
 - [X] T038 [P] [US2] Unit tests: `DiarizationPipeline({"model": "pyannote/speaker-diarization-3.1"})` loads that id (mocked `from_pretrained`) and records it via `hub_ref`; `PersonTrackingPipeline({"model": "yolo11n-pose.pt"})` resolves and records that file; a v1.5.0-style config with none of these keys initializes with the new defaults — in `tests/unit/pipelines/test_previous_models.py`
-- [ ] T039 [US2] [GPU] Half done: yolo11n-pose ran for real at step 4a (recorded as such); the 3.1 run waits for a token. One real job each with the two old-model configs on the demo clip; record in `checks.md` that they run and what provenance says (no baseline kept, FR-008)
+- [X] T039 [US2] [GPU] (yolo11n-pose at step 4a; 3.1 run beside community-1 at step 3, recorded with its revision) One real job each with the two old-model configs on the demo clip; record in `checks.md` that they run and what provenance says (no baseline kept, FR-008)
 
 ---
 
 ## Phase 6: Polish & release record (plan step 6)
 
 - [X] T040 CHANGELOG: under the unreleased v1.6.0 section, one entry per changed pipeline in the spec's format ("What the researcher sees"): old → new, why with source, demo-clip differences from `checks.md`, the setting that restores the old model (none for the speech runtime: say v1.6.0rc1 is the last with openai-whisper; Principle V exception); faces: age/gender off and ~1 GB less download (SC-001, SC-006)
-- [ ] T041 [GPU] Done except the `.rttm` (needs a token): Re-baseline per quickstart §4: replace `tests/fixtures/viewer_contract/demo_clip_*` from the final kept run (step 5b, rerun if anything changed since), keep `legacy/` as is; update the README there (date, what changed, GPU); baseline test green twice in a row on the same machine (re-measure `TOLERANCE` if the GPU isn't the RTX 4060); `cd viewer && bun run test:run` green
+- [X] T041 [GPU] Re-baseline per quickstart §4: replace `tests/fixtures/viewer_contract/demo_clip_*` from the final kept run (step 5b, rerun if anything changed since), keep `legacy/` as is; update the README there (date, what changed, GPU); baseline test green twice in a row on the same machine (re-measure `TOLERANCE` if the GPU isn't the RTX 4060); `cd viewer && bun run test:run` green
 - [X] T042 [P] Check every changed benchmark entry against its source and the guide output (`videoannotator pipelines describe <name>` for each of the four), SC-005
 - [X] T043 [P] Methods paragraph for a demo-clip job names every new model and revision (`videoannotator export methods <results folder>`), SC-004
 - [X] T044 [P] `audio` extra installs with no compiler: `uv pip install --dry-run` against a fresh venv on Linux; CI's install matrix covers macOS/Windows on push (SC-008); record

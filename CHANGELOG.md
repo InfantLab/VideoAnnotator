@@ -299,9 +299,10 @@ user follows from GitHub.
   - **Speaker turns: `pyannote/speaker-diarization-community-1`** (was `speaker-diarization-3.1`).
     pyannote's benchmark gives it a lower diarization error rate on 10 of 12 sets (AMI headset
     18.8 → 17.0 %, DIHARD 3 21.4 → 20.2 %), equal on VoxConverse, worse on REPERE (broadcast TV);
-    it counts speakers better, and setup asks for one model licence instead of three. Not yet run
-    on the demo clip (no Hugging Face token on the machine that ran the checks). To get the old
-    model: `{"speaker_diarization": {"model": "pyannote/speaker-diarization-3.1"}}`, with its
+    it counts speakers better, and setup asks for one model licence instead of three. Demo clip:
+    3 turns from one speaker where 3.1 gave 4 from two; 3.1 had split the mother's "Gotta smile,
+    huh?" and given its last half-second to a second speaker (checked by listening). To get the
+    old model: `{"speaker_diarization": {"model": "pyannote/speaker-diarization-3.1"}}`, with its
     licences accepted.
   - **People and pose: `yolo26n-pose`** (was `yolo11n-pose`), on ultralytics 8.4. COCO pose mAP
     50-95 57.2 vs 50.0 at the same size (Ultralytics). ultralytics 8.4 alone gave the same output.

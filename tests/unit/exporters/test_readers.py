@@ -154,8 +154,7 @@ def test_rttm_turns():
     assert [(e.start, e.end, e.track) for e in events] == [
         (0.638, 1.431, "SPEAKER_00"),
         (2.427, 3.44, "SPEAKER_00"),
-        (9.312, 9.97, "SPEAKER_00"),
-        (9.970, 10.426, "SPEAKER_01"),
+        (9.312, 10.426, "SPEAKER_00"),
     ]
     assert all(e.measures[0].label == e.track for e in events)
 

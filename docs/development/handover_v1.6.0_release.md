@@ -17,18 +17,10 @@ For the next session. Branch `1.6-dev`, all work committed locally, nothing push
 
 ## Next, in order
 
-1. **A run with a Hugging Face token** (accepted licence: `pyannote/speaker-diarization-community-1`).
-   This machine has none, so diarization never ran here. Save it with
-   `uv run videoannotator settings huggingface-token` (the baseline test passes a saved token to its
-   server), then:
-   - `VIDEOANNOTATOR_BASELINE_KEEP=~/va-030/step3b uv run --no-sync pytest tests/integration/test_output_baseline.py -m real_models -q`;
-     compare with `scripts/compare_demo_outputs.py ~/va-030/step5b ~/va-030/step3b` (only the
-     `.rttm` should differ); record turns and speaker count in checks.md step 3 and the
-     CHANGELOG's speaker-turns line (it says "not yet run").
-   - Copy the new `.rttm` and its `.provenance.json` over the fixtures, rerun the baseline test
-     (expect 8 of 8) and `cd viewer && bun run test:run` (the contract test compares the `.rttm`
-     with the legacy one exactly; it will need the same shape-only change as speech).
-   - One job naming `pyannote/speaker-diarization-3.1` (spec 030 T039).
+1. ~~A run with a Hugging Face token~~: done 2026-10-18. Community-1 gives one speaker where 3.1
+   gave two; listening showed 3.1 had split the mother's sentence. Fixtures complete; the
+   baseline passes 8 of 8. **Revoke the token pasted into the chat on 2026-10-18** if it isn't
+   already (Hugging Face rejected it by then; the saved one is a different token).
 2. **Re-run the R notebook** (`tests/manual/results_out_r_notebook.md`): its table was
    regenerated from the new fixtures.
 3. **Release** (ask before each outward step): optional `v1.6.0rc2`; PR `1.6-dev` → `master`
@@ -62,7 +54,6 @@ For the next session. Branch `1.6-dev`, all work committed locally, nothing push
 
 - The container has no git identity: commit with
   `git -c "user.name=Caspar Addyman" -c user.email=infantologist@gmail.com commit …`.
-- Test state 2026-10-18: full suite green (1881 passed); the real-model baseline passes 7 of 8 (the
-  `.rttm`, item 1). `bats` isn't installed here, so `pre-commit run --all-files` reports the
+- Test state 2026-10-18: full suite green; the real-model baseline passes 8 of 8 on the GTX 1060. `bats` isn't installed here, so `pre-commit run --all-files` reports the
   launcher hook failing; it also reformats about 20 old Markdown files (pre-existing drift).
 - `mkdocs` needs `uv sync --inexact --group docs`; build with `uv run --no-sync mkdocs build --strict`.

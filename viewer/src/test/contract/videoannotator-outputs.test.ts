@@ -166,15 +166,16 @@ describe.each([
     const { data: legacy } = await loadLikeArtifactsZipFrom(LEGACY);
     // Exact where the outputs are the same; the default models changed in
     // spec 030 (README), so for the rest compare their shape.
-    for (const track of ['speaker_diarization', 'vlm_annotations'] as const) {
-      expect(current[track], track).toEqual(legacy[track]);
-    }
+    expect(current.vlm_annotations).toEqual(legacy.vlm_annotations);
     for (const track of ['person_tracking', 'openface3_faces', 'scene_detection', 'speech_recognition'] as const) {
       expect(current[track]?.length, track).toBe(legacy[track]?.length);
     }
-    // Legacy faces came from another take (Haar cascade era); both must parse.
-    expect(current.face_analysis?.length).toBeGreaterThan(0);
-    expect(legacy.face_analysis?.length).toBeGreaterThan(0);
+    // Legacy faces came from another take (Haar cascade era), and 3.1 split the
+    // mother's last turn in two where community-1 doesn't; both must parse.
+    for (const track of ['face_analysis', 'speaker_diarization'] as const) {
+      expect(current[track]?.length, track).toBeGreaterThan(0);
+      expect(legacy[track]?.length, track).toBeGreaterThan(0);
+    }
     expect(Object.keys(strip(current)).sort()).toEqual(Object.keys(strip(legacy)).sort());
   });
 });
@@ -186,7 +187,6 @@ const EXPORTED_TIERS = [
   'scene_detection scenes',
   'speech_recognition speech',
   'speaker_diarization SPEAKER_00',
-  'speaker_diarization SPEAKER_01',
   'person_tracking person_demo_clip_001 (parent)',
   'person_tracking person_demo_clip_002 (parent)',
   'face_analysis faces',

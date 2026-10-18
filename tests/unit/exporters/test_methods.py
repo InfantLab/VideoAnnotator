@@ -62,7 +62,7 @@ def test_every_cited_key_is_in_the_bibtex(run_folder):
 def test_one_group_is_described_once(run_folder):
     described = describe(from_folder(run_folder))
     assert described.prose.startswith(
-        "The video was annotated automatically with VideoAnnotator 1.5.0"
+        "The video was annotated automatically with VideoAnnotator 1.6.0rc1"
     )
     assert described.summary["groups"] == 1
     assert (
@@ -199,4 +199,6 @@ def test_local_weights_are_named_by_file_not_path(tmp_path):
     prose = describe(from_folder(run)).prose
     assert "yolo26n-pose.pt (revision not recorded)" in prose
     assert "models/yolo/yolo26n-pose.pt (" not in prose
-    assert "pyannote/speaker-diarization-3.1" in prose  # a hub id keeps its owner
+    assert (
+        "pyannote/speaker-diarization-community-1" in prose
+    )  # a hub id keeps its owner

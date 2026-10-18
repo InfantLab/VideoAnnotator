@@ -56,7 +56,6 @@ def test_one_tier_per_pipeline_track(eaf):
         "scene_detection scenes",
         "speech_recognition speech",
         "speaker_diarization SPEAKER_00",
-        "speaker_diarization SPEAKER_01",
         "person_tracking person_demo_clip_001 (parent)",
         "person_tracking person_demo_clip_002 (parent)",
         "face_analysis faces",

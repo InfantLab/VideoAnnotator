@@ -38,8 +38,7 @@ for its own reason, outside use. The pilot follows the release, and a benchmark 
 pilot (and spec 024's T083) moved to v1.7.0's release candidates.
 **Current Status**: Phases 0–1 done bar non-blocking items; Phase 2 done bar the long-video checks
 (spec 024 walkthroughs done 2026-10-17); Phase 3 (Results Out, spec 025) built 2026-10-16; Phase 3b
-(pipeline guide, spec 026) built 2026-10-17; Phase 5c (spec 030) done 2026-10-18 bar the
-diarization check, which needs a Hugging Face token
+(pipeline guide, spec 026) built 2026-10-17; Phase 5c (spec 030) done 2026-10-18
 **Main Goal**: everything an outside lab will need under v1.7.0's new viewer, done and stable:
 install, pipelines, results out
 **Prerequisites**: v1.5.0 tagged, after spec 011's SC-001 manual run
@@ -689,8 +688,8 @@ models stay reachable as a setting, the old speech runtime goes.
       clip's 4 cues (hears "Peek-a-boo!"). A translate request with turbo now fails clearly.
 - [x] **Diarization**: pyannote `speaker-diarization-3.1` → `speaker-diarization-community-1`
       (Q2): lower DER on 10 of 12 published sets, and one model licence to accept instead of three.
-      Switched 2026-10-18. **Its demo-clip check and `.rttm` fixture wait for a run with a Hugging
-      Face token** (none on the machine that ran the others).
+      Switched 2026-10-18. Demo clip: one speaker where 3.1 found two; listening showed 3.1 had
+      split the mother's sentence, so community-1 stays.
 - [x] **Person**: `yolo11n-pose` → `yolo26n-pose` (COCO-pose mAP50-95 50.0 → 57.2). Ultralytics
       stays for v1.6.0. Done 2026-10-18 (ultralytics 8.4 first: same output; it had moved the
       analytics switch-off, now followed).
@@ -764,6 +763,6 @@ the CLI with `--json` and through MCP; the pilot's measures.
 
 ---
 
-**Last Updated**: 2026-10-18 (Phase 5c done bar the diarization check)
+**Last Updated**: 2026-10-18 (Phase 5c done)
 **Target Release**: as soon as Phases 3b and 5c are done
 **Status**: Release candidates — Consolidation Release

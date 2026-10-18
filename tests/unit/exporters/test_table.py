@@ -73,7 +73,7 @@ def test_measure_counts_match_the_native_files(run_folder):
     )
     assert count("scene") == len(coco("scene_detection"))
     assert count("vlm_label") == len(coco("vlm_annotation"))
-    assert count("speaker_turn") == 4
+    assert count("speaker_turn") == 3
     vtt = (FIXTURES / "demo_clip_speech_recognition.vtt").read_text()
     assert count("speech") == vtt.count("-->")
     assert count("action_unit") == sum(
@@ -112,7 +112,7 @@ def test_rows_are_ordered_by_video_then_time(run_folder):
 def test_events_are_numbered_per_pipeline(run_folder):
     table, _ = _csv(run_folder)
     turns = [r for r in table if r["pipeline"] == "speaker_diarization"]
-    assert [r["event"] for r in turns] == ["1", "2", "3", "4"]
+    assert [r["event"] for r in turns] == ["1", "2", "3"]
 
 
 def test_export_is_identical_when_repeated(run_folder):

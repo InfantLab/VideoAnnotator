@@ -165,4 +165,6 @@ Kept in `~/va-030/step3b`. Every other file identical to step 5b. Speaker turns:
   infant, which community-1 would then be merging into the mother. Half a second, so not
   conclusive: **needs a listener** (spec edge case: a lost speaker stops the switch until it is
   explained or the default is kept).
-- The `.rttm` fixture is held until that decision.
+- **Decision (maintainer, listening, 2026-10-18): it's the mother.** 3.1 split one sentence
+  between two speakers; community-1 is right here. Community-1 stays the default and its `.rttm`
+  (with its provenance) is the fixture.

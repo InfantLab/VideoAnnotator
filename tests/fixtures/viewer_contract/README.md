@@ -40,9 +40,9 @@ kept as step 5b in `specs/030-model-defaults/checks.md`: `face_detections.json` 
 clip's own (RetinaFace finds 19 faces in 11 frames; age and gender are off by default) and joins the
 baseline; `person_*` come from yolo26n-pose; `speech_recognition.vtt` from Whisper large-v3-turbo on
 faster-whisper. Scene and OpenFace 3 files changed only by GPU (scene's top score 0.6340 here,
-0.6352 on the RTX 4060) and `info.version`. `demo_clip_speaker_diarization.rttm` is **still the
-2026-10-04 output of speaker-diarization-3.1**: that machine had no Hugging Face token, so
-community-1's output replaces it at the next run with one. The tolerances were kept: two runs on
+0.6352 on the RTX 4060) and `info.version`. `demo_clip_speaker_diarization.rttm` comes from
+community-1 (same day, once a token was saved): 3 turns from one speaker, where 3.1 split the
+mother's last turn between two speakers (checked by listening). The tolerances were kept: two runs on
 the GTX 1060 gave identical files for every pipeline but person tracking (within 0.00004 %).
 
 `legacy/` keeps the previous set, without provenance, so both contract tests prove that older
