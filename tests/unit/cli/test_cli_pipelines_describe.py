@@ -30,7 +30,7 @@ def test_builtin_text_starts_with_title_and_summary():
     result = runner.invoke(app, ["pipelines", "describe", "face_analysis"])
     assert result.exit_code == 0, result.output
     lines = result.output.splitlines()
-    assert lines[0] == "Faces: expression, age, gender  (face_analysis)"
+    assert lines[0] == "Faces: where they are and their expression  (face_analysis)"
     assert lines[1].startswith("Finds faces")
     assert "About" in lines
 
@@ -39,7 +39,7 @@ def test_builtin_json_has_guide_fields():
     result = runner.invoke(app, ["pipelines", "describe", "face_analysis", "--json"])
     assert result.exit_code == 0, result.output
     data = json.loads(result.output)
-    assert data["title"] == "Faces: expression, age, gender"
+    assert data["title"] == "Faces: where they are and their expression"
     assert {"summary", "homepage", "benchmarks", "quality_note", "citations"} <= set(
         data
     )
@@ -74,6 +74,10 @@ def test_groups_units_and_conditions(use_fixture):
     assert measure < most < technical
     assert "10 things (min 1, max 100)" in out
     assert "only when backend is slow" in out
+    assert (
+        "Why this default: Fast finds as many things as slow on the hard "
+        "benchmark. (https://example.org/paper)"
+    ) in out
 
 
 def test_about_section(use_fixture):

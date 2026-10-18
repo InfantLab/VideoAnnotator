@@ -615,6 +615,9 @@ class PipelineParameterSchema(BaseModel):
     min: float | None = None
     max: float | None = None
     applies_when: dict[str, list[str]] | None = None
+    # spec 030
+    reason: str | None = None
+    reason_source: str | None = None
 
 
 class PipelineSchemaDescriptor(BaseModel):
@@ -671,6 +674,8 @@ def _to_parameter_schema(name: str, field: Any) -> "PipelineParameterSchema":
         min=field.min,
         max=field.max,
         applies_when=field.applies_when,
+        reason=field.reason,
+        reason_source=field.reason_source,
     )
 
 

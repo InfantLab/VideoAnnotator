@@ -26,7 +26,7 @@ benchmarks:
     source: https://arxiv.org/abs/2506.02891
     note: "OpenFace 3.0 (MTL) row, Table III"
 quality_note: >-
-  The paper reports a multitask model (these figures) and single-task ones; it does not say which the released package uses.
+  The paper reports a multitask model (these figures) and single-task ones; it does not say which the released package uses. Installed from `openface-test`, the package CMU's repository names; neither has changed since June 2025. Its licence allows non-commercial research use only.
 description: Generate 512-D face embeddings for recognition or clustering using OpenFace3.
 pipeline_family: face
 variant: openface3-embedding

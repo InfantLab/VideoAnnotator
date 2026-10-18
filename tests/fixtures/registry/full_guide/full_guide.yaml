@@ -26,6 +26,8 @@ config_schema:
     enum: [fast, slow]
     group: technical
     label: Detector
+    reason: Fast finds as many things as slow on the hard benchmark.
+    reason_source: https://example.org/paper
   most_things:
     type: integer
     default: 10
@@ -35,6 +37,7 @@ config_schema:
     unit: things
     min: 1
     max: 100
+    reason_source: https://example.org/no-reason-given
   slow_only:
     type: float
     default: 1.1

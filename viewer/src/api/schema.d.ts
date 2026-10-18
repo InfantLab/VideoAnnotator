@@ -1825,6 +1825,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/system/huggingface-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether the server has a Hugging Face token (never the token itself) */
+        get: operations["get_huggingface_token_api_v1_system_huggingface_token_get"];
+        /**
+         * Save a Hugging Face token on this server (admin)
+         * @description Checks the token with Hugging Face first. Rejected tokens aren't saved
+         *     (`400 HF_TOKEN_REJECTED`). When Hugging Face can't be reached the token is saved
+         *     and `check` is `unknown`. A token in the server's environment still takes
+         *     priority (`source: environment`). Used from the next job and readiness check,
+         *     no restart.
+         */
+        put: operations["put_huggingface_token_api_v1_system_huggingface_token_put"];
+        post?: never;
+        /** Remove the Hugging Face token saved on this server (admin) */
+        delete: operations["delete_huggingface_token_api_v1_system_huggingface_token_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/debug/server-info": {
         parameters: {
             query?: never;
@@ -2617,6 +2643,27 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** HuggingFaceTokenRequest */
+        HuggingFaceTokenRequest: {
+            /** Token */
+            token: string;
+        };
+        /**
+         * HuggingFaceTokenStatus
+         * @description Whether the server has a Hugging Face token, and where from. Never the token.
+         */
+        HuggingFaceTokenStatus: {
+            /** Set */
+            set: boolean;
+            /** Source */
+            source?: string | null;
+            /** Env Var */
+            env_var?: string | null;
+            /** Account */
+            account?: string | null;
+            /** Check */
+            check?: string | null;
+        };
         /** IngestAccessResponse */
         IngestAccessResponse: {
             /**
@@ -3017,6 +3064,25 @@ export interface components {
             /** Install Hint */
             install_hint?: string | null;
             readiness?: components["schemas"]["PipelineReadiness"] | null;
+            /** Title */
+            title?: string | null;
+            /** Summary */
+            summary?: string | null;
+            /** Homepage */
+            homepage?: string | null;
+            /** Benchmarks */
+            benchmarks?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Quality Note */
+            quality_note?: string | null;
+            /**
+             * Citations
+             * @default []
+             */
+            citations: {
+                [key: string]: string;
+            }[];
         };
         /**
          * PipelineListResponse
@@ -3061,6 +3127,25 @@ export interface components {
             default?: unknown;
             /** Enum */
             enum?: components["schemas"]["PipelineParameterOption"][] | null;
+            /**
+             * Group
+             * @default technical
+             */
+            group: string;
+            /** Unit */
+            unit?: string | null;
+            /** Min */
+            min?: number | null;
+            /** Max */
+            max?: number | null;
+            /** Applies When */
+            applies_when?: {
+                [key: string]: string[];
+            } | null;
+            /** Reason */
+            reason?: string | null;
+            /** Reason Source */
+            reason_source?: string | null;
         };
         /**
          * PipelineReadiness
@@ -3134,6 +3219,10 @@ export interface components {
             description?: string | null;
             /** Group */
             group?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Summary */
+            summary?: string | null;
         };
         /**
          * PipelineSchemaResponse
@@ -5366,6 +5455,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_huggingface_token_api_v1_system_huggingface_token_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HuggingFaceTokenStatus"];
+                };
+            };
+        };
+    };
+    put_huggingface_token_api_v1_system_huggingface_token_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HuggingFaceTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HuggingFaceTokenStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_huggingface_token_api_v1_system_huggingface_token_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HuggingFaceTokenStatus"];
                 };
             };
         };

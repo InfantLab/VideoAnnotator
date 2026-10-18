@@ -71,6 +71,9 @@ class PipelineConfigField:
     max: float | None = None
     # Shown only when every named setting has one of the listed values.
     applies_when: dict[str, list[str]] | None = None
+    # spec 030: why the default is what it is, and the evaluation it rests on.
+    reason: str | None = None
+    reason_source: str | None = None
 
 
 @dataclass
@@ -282,6 +285,8 @@ class PipelineRegistry:
                 applies_when=_parse_applies_when(
                     val.get("applies_when"), source.name, key
                 ),
+                reason=_optional_str(val.get("reason")),
+                reason_source=_parse_reason_source(val, source.name, key),
             )
         if not config_schema:
             LOGGER.warning("Metadata %s has empty config_schema", source.name)
@@ -427,6 +432,20 @@ def _optional_str(raw: Any) -> str | None:
     return str(raw).strip() if isinstance(raw, str) and raw.strip() else None
 
 
+def _parse_reason_source(val: dict[str, Any], source: str, key: str) -> str | None:
+    link = _optional_str(val.get("reason_source"))
+    if link is None:
+        return None
+    if not _optional_str(val.get("reason")) or not link.startswith("https://"):
+        LOGGER.warning(
+            "Metadata %s field '%s' reason_source needs a reason and an https link",
+            source,
+            key,
+        )
+        return None
+    return link
+
+
 def _optional_number(raw: Any) -> float | None:
     if isinstance(raw, bool) or not isinstance(raw, int | float):
         return None
@@ -518,6 +537,8 @@ def config_schema_dict(meta: PipelineMetadata) -> dict[str, Any]:
             "min": v.min,
             "max": v.max,
             "applies_when": v.applies_when,
+            "reason": v.reason,
+            "reason_source": v.reason_source,
         }
         for k, v in meta.config_schema.items()
     }

@@ -1308,6 +1308,9 @@ def _describe_setting(key: str, field: Any) -> str:
             f"{k} is {' or '.join(v)}" for k, v in field.applies_when.items()
         )
         line += f"   only when {conditions}"
+    if field.reason:
+        source = f" ({field.reason_source})" if field.reason_source else ""
+        line += f"\n  {'':<22} Why this default: {field.reason}{source}"
     return line
 
 

@@ -72,6 +72,18 @@ def test_unknown_group_is_technical_and_dangling_condition_dropped(caplog):
     assert "applies_when names an unknown setting" in caplog.text
 
 
+def test_reason_beside_a_default_and_a_source_without_one_dropped(caplog):
+    with caplog.at_level(logging.WARNING, logger="videoannotator.pipelines"):
+        meta = _load("full_guide")
+    backend = meta.config_schema["backend"]
+    assert backend.reason.startswith("Fast finds")
+    assert backend.reason_source == "https://example.org/paper"
+    most = meta.config_schema["most_things"]
+    assert (most.reason, most.reason_source) == (None, None)
+    assert "reason_source needs a reason" in caplog.text
+    assert meta.config_schema["slow_only"].reason is None
+
+
 def test_existing_fields_unchanged_by_guide_keys():
     meta = _load("full_guide")
     backend = meta.config_schema["backend"]

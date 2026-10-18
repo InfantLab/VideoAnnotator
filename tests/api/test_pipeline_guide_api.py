@@ -58,6 +58,7 @@ def test_builtin_carries_existing_and_guide_keys(client):
     field = detail["config_schema"]["detect_emotions"]
     assert {"type", "default", "description"} <= field.keys()
     assert {"group", "label", "unit", "min", "max", "applies_when"} <= field.keys()
+    assert {"reason", "reason_source"} <= field.keys()
 
 
 def test_list_and_detail_agree_on_guide(client):
@@ -87,6 +88,8 @@ def test_full_guide_fixture(client, fixture_registry):
     slow = d["config_schema"]["slow_only"]
     assert slow["group"] == "technical"
     assert slow["applies_when"] == {"backend": ["slow"]}
+    assert slow["reason"] is None
+    assert d["config_schema"]["backend"]["reason_source"] == "https://example.org/paper"
 
 
 def test_metadata_without_guide_gives_nulls(client, fixture_registry):
@@ -114,6 +117,7 @@ def test_schema_route_carries_groups_and_labels(client, fixture_registry):
     )
     assert params["slow_only"]["applies_when"] == {"backend": ["slow"]}
     assert params["odd_group"]["label"] == "Odd Group"
+    assert params["backend"]["reason"].startswith("Fast finds")
 
 
 def test_viewer_schema_fixture_is_current(client):
