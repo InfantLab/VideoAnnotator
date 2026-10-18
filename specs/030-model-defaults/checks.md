@@ -42,3 +42,10 @@ Kept in `~/va-030/step2`, compared with step 0:
   SC-006 met.
 - Two runs gave identical face output, so `face_analysis` joins the baseline with person
   tracking's tolerance (FR-024).
+
+## Step 3: speaker turns, community-1 (2026-10-18) — check not yet run
+
+Code and metadata switched. The demo-clip run waits for a Hugging Face token whose account has
+accepted community-1's licence (none on this machine; see step 0). The benchmark figures were
+checked against pyannote-audio's public README (the same table as the gated model card,
+"last updated in 2025-09"). Model repository: 10 files, 33.7 MB (Hub API).

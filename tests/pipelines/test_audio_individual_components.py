@@ -80,7 +80,7 @@ class TestDiarizationPipeline:
 
         # Check that model was loaded with correct parameters (robust to real/fake token)
         called_args, called_kwargs = mock_pyannote.from_pretrained.call_args
-        assert called_args[0] == "pyannote/speaker-diarization-3.1"
+        assert called_args[0] == "pyannote/speaker-diarization-community-1"
         import os
 
         expected_token = os.environ.get("HUGGINGFACE_TOKEN") or "FAKE_TOKEN_FOR_TESTING"

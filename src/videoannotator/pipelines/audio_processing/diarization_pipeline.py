@@ -46,7 +46,7 @@ class DiarizationPipeline(BasePipeline):
     def __init__(self, config: dict[str, Any] | None = None):
         """Initialize the diarization pipeline with optional configuration."""
         default_config = {
-            "model": "pyannote/speaker-diarization-3.1",
+            "model": "pyannote/speaker-diarization-community-1",
             "min_speakers": 1,
             "max_speakers": 10,
             "use_auth_token": True,

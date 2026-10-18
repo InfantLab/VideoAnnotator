@@ -72,9 +72,9 @@ the new model and revision; metadata and guide give the reason and figure with a
 
 ### Speaker turns (plan step 3)
 
-- [ ] T016 [P] [US1] In `src/videoannotator/pipelines/audio_processing/diarization_pipeline.py`: default `model` `pyannote/speaker-diarization-community-1`; update docstrings naming 3.1
-- [ ] T017 [P] [US1] In `src/videoannotator/registry/metadata/speaker_diarization.yaml` per contracts/metadata.md: `homepage`, `model.default` + `reason`/`reason_source`, `model.description` (other models need their own licences), `benchmarks` from the community-1 card (quote exactly; re-check the card), `requires_setup` (secret + community-1 licence only), `weights` (community-1, size from the Hub API), community-1 citation added (FR-012)
-- [ ] T018 [US1] Update tests that assert the 3.1 default or three licences: `grep -rn "speaker-diarization-3.1\|segmentation-3.0" tests/ src/` and fix each (readiness tests, registry tests, viewer readiness copy if it names them: `grep -rn "segmentation-3.0" viewer/src`)
+- [X] T016 [P] [US1] In `src/videoannotator/pipelines/audio_processing/diarization_pipeline.py`: default `model` `pyannote/speaker-diarization-community-1`; update docstrings naming 3.1
+- [X] T017 [P] [US1] In `src/videoannotator/registry/metadata/speaker_diarization.yaml` per contracts/metadata.md: `homepage`, `model.default` + `reason`/`reason_source`, `model.description` (other models need their own licences), `benchmarks` from the community-1 card (quote exactly; re-check the card), `requires_setup` (secret + community-1 licence only), `weights` (community-1, size from the Hub API), community-1 citation added (FR-012)
+- [X] T018 [US1] Update tests that assert the 3.1 default or three licences: `grep -rn "speaker-diarization-3.1\|segmentation-3.0" tests/ src/` and fix each (readiness tests, registry tests, viewer readiness copy if it names them: `grep -rn "segmentation-3.0" viewer/src`)
 - [ ] T019 [US1] [GPU] Demo-clip check into `~/va-030/step3`: only `.rttm` differs; turns and speaker count recorded in `checks.md`; Speaker turns card ready with a token whose account accepted community-1 (quickstart §3)
 
 **Checkpoint**: commit "diarization: default to pyannote community-1".
@@ -115,7 +115,7 @@ the new model and revision; metadata and guide give the reason and figure with a
 **Independent Test**: a config naming `pyannote/speaker-diarization-3.1` or `yolo11n-pose` runs and
 records that model.
 
-- [ ] T038 [P] [US2] Unit tests: `DiarizationPipeline({"model": "pyannote/speaker-diarization-3.1"})` loads that id (mocked `from_pretrained`) and records it via `hub_ref`; `PersonTrackingPipeline({"model": "yolo11n-pose.pt"})` resolves and records that file; a v1.5.0-style config with none of these keys initializes with the new defaults — in `tests/unit/pipelines/test_previous_models.py`
+- [X] T038 [P] [US2] Unit tests: `DiarizationPipeline({"model": "pyannote/speaker-diarization-3.1"})` loads that id (mocked `from_pretrained`) and records it via `hub_ref`; `PersonTrackingPipeline({"model": "yolo11n-pose.pt"})` resolves and records that file; a v1.5.0-style config with none of these keys initializes with the new defaults — in `tests/unit/pipelines/test_previous_models.py`
 - [ ] T039 [US2] [GPU] One real job each with the two old-model configs on the demo clip; record in `checks.md` that they run and what provenance says (no baseline kept, FR-008)
 
 ---

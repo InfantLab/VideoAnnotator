@@ -47,7 +47,7 @@ class AudioPipelineModular(BasePipeline):
                 },
                 "speaker_diarization": {
                     "enabled": True,
-                    "model": "pyannote/speaker-diarization-3.1",
+                    "model": "pyannote/speaker-diarization-community-1",
                     "min_speakers": 1,
                     "max_speakers": 10,
                     "use_auth_token": True,
