@@ -147,6 +147,26 @@ Candidates, none committed (the Phase 1 pipeline review may promote some before 
 
 ---
 
+### Phase 7: Test Audit (before the release candidates)
+
+The suite has grown to 1,934 tests in 159 files (2026-10-18), mostly by accretion. Spec 030 found
+waste: `tests/pipelines/test_audio_speech_pipeline.py` and `test_audio_individual_components.py`
+are near-copies; some tests can't fail (`test_whisper_base_pipeline_stage1.py` checks numpy
+imports, `test_embedding_shape_validation` asserts only if a method that doesn't exist does, the
+"integration" Whisper tests accept failure as success); about 290 lines mocked openai-whisper's
+own API and had to be deleted, not updated, when the runtime changed.
+
+- [ ] Inventory: per file, what behaviour it protects, run time, and whether it can fail.
+- [ ] Remove duplicates and tests that can't fail; merge the two audio files.
+- [ ] Tests mock at our boundary (what a pipeline sends a model, what it does with the answer),
+      not a library's internals, so a library swap changes the mock, not the test's meaning.
+- [ ] Slow or real-model tests carry their markers and stay out of the default run; record the
+      default run's time before and after.
+- [ ] Coverage stays at or above the constitution's 80%, measured on what's left, with the gaps
+      that matter (provenance, exporters, the job path) named.
+
+---
+
 ### Launch
 
 - [ ] Tag `v1.7.0`, GitHub release, Zenodo DOI, `CITATION.cff` updated.
