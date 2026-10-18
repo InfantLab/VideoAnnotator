@@ -59,6 +59,21 @@ range, and answers only appear when a run finishes.
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+## Clarifications
+
+### Session 2026-10-18
+
+- Q: How does "Try on 10 moments" choose its moments? → A: Spread evenly over the current
+  sampling's sample points (every k-th sample in the start–end range), so they land where a run
+  would sample.
+- Q: What happens to a try while a run is using the same model? → A: The try goes ahead of the
+  run's remaining samples; the run pauses between samples and carries on afterwards.
+- Q: Does the history keep copies of the frames sent? → A: No. It keeps times and settings;
+  frames are extracted again from the video when shown.
+- Q: Whose history is it when several people share one server? → A: Shared on the server, like
+  the prompt library; each entry records who made it, filterable to "mine"; stars and names are
+  shared.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - First answer in under a minute (Priority: P1)
@@ -110,6 +125,8 @@ any one can be restored exactly.
    two table columns on the same moments.
 4. **Given** a try on another video, **When** the history is opened, **Then** tries are listed for
    all videos, filterable to this one.
+5. **Given** a server shared by several people, **When** the history is opened, **Then** everyone's
+   entries are listed with who made each, filterable to the user's own.
 
 ---
 
@@ -222,6 +239,10 @@ the question.
   exist and says how many were sent.
 - A video already in a project opens Ask AI with that project's current Ask AI settings (spec 029).
 - Standalone mode (no server): Ask AI says it needs a server and a model, and what to do.
+- A try started during a run on the same model is answered before the run's next sample; the
+  run's answers so far and its progress are unaffected.
+- A history entry whose video has been moved or deleted keeps its question, settings and answers,
+  and says its frames are unavailable; it can still be restored onto another video.
 - Very long videos: the estimate warns when a run would take more than an hour.
 
 ## Requirements *(mandatory)*
@@ -241,10 +262,16 @@ the question.
 
 **Trying and history**
 - **FR-005**: "Try on this frame" and "Try on N moments" MUST return answers in the window without
-  creating a run.
+  creating a run. The N moments (10) MUST be sample points of the current sampling, spread evenly
+  over them (every k-th sample within start and end; all of them when there are N or fewer), so
+  a try's answers fall on the same moments as a run's and a repeated try on the same settings
+  uses the same moments.
 - **FR-006**: Every try and run MUST be kept in a persistent history (question, model, sampling,
   moments, answers, time), restorable in one action, with star and name; the existing prompt
-  library's records MUST appear in it.
+  library's records MUST appear in it. It MUST NOT store frames or images from the video: frames
+  are extracted again from the video when shown. It MUST be shared by everyone on the server,
+  like the prompt library: each entry records who made it, the history can be filtered to the
+  current user's entries, and stars and names are shared.
 - **FR-007**: Any two history entries on the same video MUST be comparable as two lanes and two
   table columns.
 - **FR-008**: Ask AI MUST offer example questions, each stating the form of the answer.
@@ -273,6 +300,9 @@ the question.
 **Runs**
 - **FR-017**: "Run on whole video" MUST start a background run whose answers appear in the window
   as each sample is answered.
+- **FR-017a**: A try MUST NOT wait behind a run on the same model: the run's next sample waits
+  while the try is answered, and the run then carries on. The run's estimate and progress MUST
+  account for the pause.
 - **FR-018**: A run MUST be stoppable, keeping the answers so far and recording that it was
   stopped.
 - **FR-019**: A finished or stopped run MUST be a normal run: its results folder (spec 022),
@@ -289,7 +319,8 @@ the question.
 - **Try**: a question, model and sampling applied to some moments of a video, not a run; kept in
   the history.
 - **History entry**: a try or a run, with everything needed to restore or compare it; star and
-  name optional.
+  name optional, shared by everyone on the server. Records who made it; refers to its video and
+  moments by time; holds no frames.
 - **Sampling**: interval, start, end, listed moments, frames per sample, frame spacing.
 - **Endpoint**: the model server's address, its classification (local or remote), and whether
   remote use was confirmed.
