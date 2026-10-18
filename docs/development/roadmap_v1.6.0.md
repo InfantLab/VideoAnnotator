@@ -743,7 +743,8 @@ pipeline against their own ELAN codes in the viewer's Compare page. Revisit afte
       the 8/8 demo-clip baseline stood in for it.
 - [x] Tag `v1.6.0`, GitHub release, `CITATION.cff` updated. No announcements. Released
       2026-10-18 (`31b26d9`, PR #12), after security updates for the dependencies Trivy and
-      `bun audit` flagged. Zenodo's version DOI: check it was minted. **PyPI not yet**: the repo
+      `bun audit` flagged. Zenodo: 10.5281/zenodo.23457429. Image `ghcr.io/infantlab/videoannotator:1.6.0`.
+      **PyPI not yet**: the repo
       has no `PYPI_API_TOKEN`; once it does, re-run the release workflow's `build-and-publish` job.
 - [x] Release notes say plainly that the viewer is being redesigned for v1.7.0, the public
       release.

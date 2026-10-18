@@ -26,8 +26,11 @@ For the next session. Branch `1.6-dev`, all work committed locally, nothing push
 3. ~~Release~~: **v1.6.0 released 2026-10-18** (PR #12 → `31b26d9`, tag `v1.6.0`). Still to do:
    - **PyPI**: add a PyPI API token as the `PYPI_API_TOKEN` repository secret (the project
      name `videoannotator` was free on 2026-10-18), then re-run the release run's
-     `build-and-publish` job. Two docs lines say `pip install videoannotator[...]`.
-   - **Zenodo**: confirm the version DOI was minted and add it to `CITATION.cff`.
+     `build-and-publish` job (run 39155338590). The package built and passed `twine check`;
+     only the upload failed. Alternative: register this repo as a PyPI trusted publisher and give
+     the job `permissions: id-token: write` (no secret needed). Two docs lines say `pip install videoannotator[...]`.
+   - Zenodo minted 10.5281/zenodo.23457429 (in `CITATION.cff`); GHCR has `1.6.0`; the launcher
+     is attached to the release.
    - Merge `master` back into `1.6-dev` (or start `1.7-dev` from `master`).
 
 ## Waiting on the maintainer

@@ -31,3 +31,10 @@ repository-code: "https://github.com/InfantLab/VideoAnnotator"
 version: "1.6.0"
 date-released: "2026-10-18"
 doi: "10.5281/zenodo.16961751"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.16961751"
+    description: "All versions (concept DOI)"
+  - type: doi
+    value: "10.5281/zenodo.23457429"
+    description: "v1.6.0"
