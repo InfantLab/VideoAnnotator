@@ -7,10 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Release candidate **1.6.0-rc1** (2026-10-14) is everything below, for testing the install a new
-user follows from GitHub.
+## [1.6.0] - 2026-10-18
+
+The consolidation release: one repository, current dependencies, a clean first contact, results
+out in formats researchers use (a tidy table, ELAN files, a methods paragraph), a guide for every
+pipeline, and new default models. Released quietly: the viewer is being redesigned for v1.7.0,
+the public release, so expect its pages to change. Results from v1.6.0 differ from v1.5's because
+the default models changed (see Changed); v1.6.0-rc1 was the last version with openai-whisper.
+v1.6.0-rc1 (2026-10-14) was a release candidate for testing the install from GitHub.
 
 ### Added
+
+- **Add the Hugging Face token from the viewer, no restart** (spec 031). Speaker turns needs a
+  Hugging Face token to download its models. Its card now walks through it: make a Read token,
+  accept each model's licence (each shown as accepted or not), paste the token and press **Save
+  and check**. The server checks it with Hugging Face, names the account, saves it next to the
+  database (readable only by the server's user, so it survives container recreation), and uses
+  it from the next job, with no file to edit and no restart. Admin only; anyone else is told who to
+  ask. **Settings → Hugging Face token** shows, changes or removes it, and
+  `videoannotator settings huggingface-token [--status|--remove]` does the same from a terminal.
+  The token is never sent back to the viewer, logged or exported. A token in the server's
+  environment (`HUGGINGFACE_TOKEN`, `HF_AUTH_TOKEN`, `HF_TOKEN`) still takes priority.
+
+- **A guide for every pipeline** (spec 026, roadmap v1.6.0 Phase 3b). Each pipeline now says what
+  it finds in plain words ("People: where they are and how they move"), splits its settings into the few
+  about *what* is measured (shown first, with units) and the technical ones (collapsed, with how
+  many differ from the defaults), hides settings that don't apply (the OpenCV-only face
+  thresholds, burst offsets outside burst mode) unless they've been changed, and gives its
+  homepage, its published benchmarks quoted from their sources, and what to cite. The figures
+  say what they measure: none of the face figures is for infants, and Whisper's are for English
+  read aloud by adults. Written once in each pipeline's metadata, so the viewer (Pipelines page,
+  the job wizard, Copy BibTeX), the API (new fields on `/pipelines`, `/pipelines/{name}` and
+  `/schema`, nothing renamed) and the CLI agree; `docs/pipelines_spec.md` has a section per
+  pipeline.
+- **`videoannotator pipelines describe <name> [--json]`** prints a pipeline's guide, settings and
+  sources without a server. `pipelines list` shows each pipeline's title.
+
+- **Results out: one table, ELAN files and a methods paragraph** (spec 025, roadmap Phase 3). An
+  outside lab can now take results into R or Python without writing a parser per pipeline.
+  - **The results table**: every pipeline's results in one CSV (or Parquet), one row per event
+    and measure, the same 19 columns for every pipeline (`run`, `video`, `pipeline`, `event`,
+    `track`, `start`, `end`, `measure`, `label`, `value`, `confidence`, a box, `model`,
+    `videoannotator_version`, `file`, …). Times are seconds from the start of the video for
+    every pipeline. Keypoints, landmarks and embeddings stay in the native files. Format version
+    1; later versions only add columns or measures.
+  - **ELAN files** (`.eaf`, EAF 3.0, validated against ELAN's schema): one per video, one tier per
+    pipeline track (scenes, speech, each speaker, each tracked person, faces, VLM labels), linked
+    to the video. Frame detections become "in view" spans; per-detection measures stay in the
+    table. The viewer still opens a file after a coder adds tiers in ELAN.
+  - **A methods paragraph** with BibTeX: each pipeline, its models with exact weight revisions,
+    settings that differ from the defaults, deterministic mode, VideoAnnotator's version, and
+    citations. A run's videos processed the same way are described once; differences are counted.
+    Anything not recorded says so. No video names, paths or ids. Pipeline metadata gains an
+    optional `citations` key (filled in for all eight shipped pipelines).
+  - **Everywhere**: the viewer's **Export** menu on job and run pages (and a table button on
+    saved datasets); `videoannotator export table|elan|methods <folder>`, which works on any
+    results folder with no server; and `GET /api/v1/{jobs,batches,datasets}/{id}/export/table`,
+    `.../export/elan`, `GET /api/v1/{jobs,batches}/{id}/methods`. All three read the same files
+    the same way, so they give the same result. Results from before provenance (v1.5.0) export
+    too, marked `not recorded`.
+  - **Parquet** is an optional extra, `pip install videoannotator[parquet]` (in `all`), so the core
+    install stays slim; an admin can install it from the viewer when it's first asked for.
+  - **Two worked notebooks** in `examples/notebooks/`, R Markdown and Jupyter, reading the demo
+    clip's table: speaking time per speaker, the transcript, who is in view when, facial
+    expression over time, going wide, and who is in view while someone speaks. The Python one
+    runs in CI; the R one before each release (`tests/manual/results_out_r_notebook.md`).
+  - Docs: [`docs/usage/exporting_results.md`](docs/usage/exporting_results.md).
 
 - **Start VideoAnnotator: a container that feels local** (spec 024). For researchers on their
   own computer, with Docker Desktop or Podman Desktop and no Python.
@@ -192,6 +254,14 @@ user follows from GitHub.
 
 ### Removed
 
+- **openai-whisper** (spec 030): speech recognition runs on faster-whisper. The `audio` extra no
+  longer builds a package from source at install. The unused Whisper embedding helpers and the
+  Hugging Face transformers branch of `WhisperBasePipeline` (its transcription was never
+  implemented) went with it.
+
+- **Two settings that did nothing** (spec 026): `scene_detection`'s `enable_clip_labels` and
+  `audio_processing`'s `enable_diarization` were never read by the code. A config that still sets
+  them runs as before; the validator says the field will be ignored.
 - Internal working documents moved out of the public docs into `docs/archive/`: the 2025
   client/server team handoffs and QA reports from `docs/testing/`, `docs/Figure 1.docx`, dated
   fix notes, the coding-agent setup guide and the v1.3 scripts audit.
@@ -212,6 +282,75 @@ user follows from GitHub.
   bundled configs had no effect and are gone.
 
 ### Changed
+
+- **Security updates for known advisories in dependencies** (Trivy and `bun audit` before the
+  release). Server: FastAPI 0.146 with Starlette 1.9 (was 0.47), anyio 4.14, urllib3 2.8, aiohttp
+  3.14, fsspec, mako, msgpack, soupsieve; lightning 2.6 for pyannote. Viewer: React Router's
+  router 1.23.4 (open-redirect fixes) in the shipped page; development tools (Lighthouse CI 0.15,
+  Playwright 1.64, and pinned fixes for tmp, basic-ftp and path-to-regexp). The demo-clip outputs
+  are identical before and after. Two high advisories have no fixed release yet, both in
+  development tools that never ship or run in CI: `braces` (Tailwind's build) and `extract-zip`
+  (Lighthouse's browser download).
+
+- **New default models** (spec 030, roadmap Phase 5c), so the public release's results come from
+  the defaults it keeps. Each changed on its upstream's published evaluation, after a run of the
+  demo clip compared with the same machine's previous run, one change at a time (library upgrades
+  first, with the old model). `videoannotator pipelines describe <name>` and the Pipelines page
+  give each default's reason and source ("Why this default"). Output formats are unchanged; their
+  content is not, so results from v1.5 and v1.6 differ. The comparisons are in
+  `specs/030-model-defaults/checks.md`.
+  - **Speech: Whisper `large-v3-turbo` on faster-whisper** (was `base` on openai-whisper). OpenAI's
+    card: large-v3 with its decoder cut from 32 layers to 4, "way faster, at the expense of a minor
+    quality degradation"; base is a tenth of its size. The new runtime alone gave the identical
+    transcript with `base`. With turbo, the demo clip keeps its 4 cues at the same moments and 3 are
+    reworded; it hears "Peek-a-boo!" in a peekaboo game where base heard "Take a move!". First use
+    downloads 1.6 GB, and it needs about 3 GB of GPU memory; on a CPU, `whisper_model: small` is
+    much faster. turbo can't translate, so `task: translate` with it now fails with a message
+    naming `large-v3` or `medium` (it used to return untranslated text). New setting
+    `compute_type`; the precision used is recorded in provenance and the methods paragraph ("at
+    float32"). To get the old model: `{"speech_recognition": {"whisper_model": "base"}}` (same
+    model on the new runtime; **v1.6.0rc1 is the last version with openai-whisper**, so v1.5
+    transcripts can't be reproduced bit for bit).
+  - **Speaker turns: `pyannote/speaker-diarization-community-1`** (was `speaker-diarization-3.1`).
+    pyannote's benchmark gives it a lower diarization error rate on 10 of 12 sets (AMI headset
+    18.8 → 17.0 %, DIHARD 3 21.4 → 20.2 %), equal on VoxConverse, worse on REPERE (broadcast TV);
+    it counts speakers better, and setup asks for one model licence instead of three. Demo clip:
+    3 turns from one speaker where 3.1 gave 4 from two; 3.1 had split the mother's "Gotta smile,
+    huh?" and given its last half-second to a second speaker (checked by listening). To get the
+    old model: `{"speaker_diarization": {"model": "pyannote/speaker-diarization-3.1"}}`, with its
+    licences accepted.
+  - **People and pose: `yolo26n-pose`** (was `yolo11n-pose`), on ultralytics 8.4. COCO pose mAP
+    50-95 57.2 vs 50.0 at the same size (Ultralytics). ultralytics 8.4 alone gave the same output.
+    Demo clip: the same people, tracks and labels; boxes overlap the old ones by a median IoU of
+    0.92, keypoints moved a median 19 px. `iou_threshold` has no effect with YOLO26 (it has no
+    suppression step), and says so. To get the old model:
+    `{"person_tracking": {"model": "yolo11n-pose.pt"}}`.
+  - **Faces: age and gender are off by default**, and when off their models are no longer
+    downloaded or run (they used to run whenever any attribute was on, and were only left out of
+    the file). Trained on adult faces, they say nothing useful about infants. A first face run
+    downloads 125 MB instead of 1.2 GB. Demo clip: the same 19 faces in 11 frames with identical
+    boxes and expressions. Face analysis is now part of the demo-clip output check. To get them
+    back: `{"face_analysis": {"detect_age": true, "detect_gender": true}}`.
+  - The deprecated `audio_processing` pipeline follows the speech and speaker-turn defaults.
+
+- **The server's terminal says only what matters.** It used to print two lines for every request
+  (including every viewer asset and the health check every two minutes) and a page of startup
+  internals. Now it shows a ready line, each job started, finished (with how long it took and
+  where the results are) or failed (with the reason), pipeline installs, warnings and errors, as
+  `15:12:03 Finished clip.mp4 [1a2b3c4d] in 1m 12s; results in ~/VideoAnnotator/…`. Everything
+  still goes to the log files in `logs/`. If the viewer is calling the server without a working
+  API key, the terminal says so once (and how to connect it) instead of a stream of 401s.
+  `videoannotator server --verbose` brings back every line, including uvicorn's per-request log.
+
+- **The docs say which version they document.** Every page's header and browser tab read
+  "VideoAnnotator 1.6.0", and the footer says how to check yours. The version comes from
+  `pyproject.toml` when the site is built, so it can't drift, and a version bump now rebuilds the
+  site. `videoannotator --version` works too (before, only `videoannotator version` did).
+
+- **The viewer's docs links go to the documentation site.** The footer's "Docs" and Getting
+  started's "Documentation" pointed at a DeepWiki of the archived `video-annotation-viewer` repo;
+  they now open https://infantlab.github.io/VideoAnnotator/. Getting started no longer calls the
+  viewer "VAV".
 
 - **A container never shows its own folders** (spec 024). In a container with no folder shared,
   My folders lists nothing (it used to list the container's home, `/root`) and says how to share
@@ -386,6 +525,26 @@ user follows from GitHub.
   `tests/fixtures/viewer_contract/` (real models, about a minute on a GPU; not run in CI).
 
 ### Fixed
+
+- **API keys were written into the log files** (security). Every request's headers, including
+  `Authorization: Bearer va_…`, went into `logs/api_server.log`, and rejected or expired keys were
+  logged with their first 10–16 characters. Logs now identify a key only by a short fingerprint
+  (`key:1a2b3c4d`) and never record headers. **If you ran an earlier version, delete the files in
+  `logs/` and make new API keys** (`videoannotator generate-token`); the old files may contain
+  your keys.
+
+- **The results player's timeline no longer misleads** (found 2026-10-16 in spec 023's
+  inventory). Every speaker had the same colour on the timeline and the overlay, because the
+  colour came from the ID's first letter and every diarization ID starts with "S"; VLM labels and
+  ELAN tiers could collide the same way. Each value now gets its own colour. The faces and
+  emotions rows had timeline switches with no lane behind them; they now say "overlay only". The
+  lane labelled as person tracking's timeline plots the largest person box's area, and now says
+  so ("size, not movement") instead of passing for motion.
+
+- **Person tracking's first run records its weights** (found 2026-10-16 with spec 025's methods
+  paragraph). The weights were hashed for provenance before ultralytics downloaded them, so a
+  first run recorded "weights file not found" and the methods said "revision not recorded". They
+  are now hashed after loading, from where ultralytics loaded them.
 
 - **A new install couldn't install pipelines from the viewer** (found in the first-time-user run,
   2026-10-05). Two faults, each enough on its own:

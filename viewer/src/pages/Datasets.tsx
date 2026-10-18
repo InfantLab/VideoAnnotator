@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Database, Download, HardDrive, Pencil, Play, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, Database, Download, HardDrive, Pencil, Play, Table2, Trash2, Upload } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import {
   AlertDialog,
@@ -70,6 +70,28 @@ const DatasetRow = ({ dataset, editable }: { dataset: SavedDataset; editable: bo
     downloadJSON(exportFileName('dataset', dataset.name), definition);
   };
 
+  // Every run of this dataset as one table (spec 025).
+  const [exportingTable, setExportingTable] = useState(false);
+  const exportTable = async () => {
+    setExportingTable(true);
+    setProblem(null);
+    try {
+      const { blob, filename } = await apiClient.exportResults({ kind: 'dataset', id: dataset.id }, 'table');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename ?? `${dataset.name}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (e) {
+      setProblem(parseApiError(e).message);
+    } finally {
+      setExportingTable(false);
+    }
+  };
+
   const total = dataset.video_manifest.reduce((sum, e) => sum + (e.size_bytes || 0), 0);
 
   return (
@@ -106,6 +128,16 @@ const DatasetRow = ({ dataset, editable }: { dataset: SavedDataset; editable: bo
           </Button>
           <Button size="sm" variant="ghost" onClick={exportIt} aria-label={`Export ${dataset.name}`}>
             <Download className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={exportTable}
+            disabled={exportingTable}
+            aria-label={`Results table for ${dataset.name}`}
+            title="Every run's results as one table (CSV)"
+          >
+            <Table2 className="h-4 w-4" />
           </Button>
           {editable && (
             <>

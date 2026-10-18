@@ -36,7 +36,7 @@ imply all five groups are equally slim.
 - A single `embedding` group holding CLIP/openface3/sentence-transformers shared code: rejected —
   no such shared module exists today; would require a real code split, out of scope for this phase
   (FR-001–FR-009 are about dependency *declaration*, not module *extraction*, which is v2.0 scope
-  per `roadmap_v1.7_to_v2.0.md`).
+  per `roadmap_v1.8_to_v2.0.md`).
 - Merging `face-laion` and `face-openface3` into one `face-extended` group: rejected — they have
   different dependency sets (`transformers`+`huggingface-hub` vs `openface-test`+`scipy`) and
   different licenses to track per constitution Engineering Standards; keeping them separate matches
@@ -135,5 +135,5 @@ touching `PipelineMetadata`, the registry loader, or the extras-naming scheme ag
 **Not yet needed, and correctly out of scope for this phase**: no changes to
 `api/job_processor.py` or `batch/batch_orchestrator.py`'s dispatch logic were required to prove
 this — those consolidate onto a shared dispatcher ABC in v1.6.0/v1.7.0 per
-`roadmap_v1.6.0.md`/`roadmap_v1.7_to_v2.0.md`, which is a separate (larger) piece of work than the
+`roadmap_v1.6.0.md`/`roadmap_v1.8_to_v2.0.md`, which is a separate (larger) piece of work than the
 metadata/loader schema this phase locks in.

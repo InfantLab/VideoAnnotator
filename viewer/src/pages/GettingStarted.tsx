@@ -76,7 +76,7 @@ export default function GettingStarted() {
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4">Getting Started</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Video Annotation Viewer (VAV) helps researchers visualize multimodal video annotations
+          VideoAnnotator&apos;s viewer helps researchers visualize multimodal video annotations
           with interactive overlays and a synchronized timeline.
         </p>
       </div>
@@ -91,7 +91,7 @@ export default function GettingStarted() {
       </Card>
 
       {/* Two Ways to Use */}
-      <h2 className="text-2xl font-bold text-center mb-6">Two Ways to Use VAV</h2>
+      <h2 className="text-2xl font-bold text-center mb-6">Two Ways to Use the Viewer</h2>
       <div className="grid md:grid-cols-2 gap-6 mb-12">
         {/* Local Files */}
         <Card className="p-6">
@@ -216,7 +216,7 @@ export default function GettingStarted() {
         <h2 className="text-xl font-bold mb-4">Need Help?</h2>
         <div className="grid sm:grid-cols-3 gap-4">
           <a
-            href="https://deepwiki.com/InfantLab/video-annotation-viewer"
+            href="https://infantlab.github.io/VideoAnnotator/"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"

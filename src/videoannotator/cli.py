@@ -21,6 +21,12 @@ app = typer.Typer(
 )
 
 
+def _print_version(value: bool) -> None:
+    if value:
+        typer.echo(f"VideoAnnotator v{__version__}")
+        raise typer.Exit()
+
+
 @app.callback(invoke_without_command=True)
 def _default(
     ctx: typer.Context,
@@ -28,6 +34,13 @@ def _default(
         False,
         "--dev",
         help="Enable development mode: allows all CORS origins (*), disables auth",
+    ),
+    version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_print_version,
+        is_eager=True,
+        help="Show the version and exit.",
     ),
 ):
     """Start the API server when no subcommand is provided.
@@ -43,7 +56,7 @@ def _default(
 
     # Launch server with recommended defaults
     # NOTE: calling server() directly will run uvicorn and block the process.
-    server(host="0.0.0.0", port=18011, reload=False, workers=1, dev=dev)
+    server(host="0.0.0.0", port=18011, reload=False, workers=1, dev=dev, verbose=False)
 
 
 @app.command()
@@ -56,6 +69,12 @@ def server(
         False,
         "--dev",
         help="Enable development mode: allows all CORS origins (*), disables auth",
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        help="Show every log line in the terminal, including each request "
+        "(otherwise they go only to the log files)",
     ),
 ):
     """Start the VideoAnnotator API server.
@@ -98,6 +117,14 @@ def server(
 
     # The first-start API key message builds the viewer link from this.
     os.environ["API_PORT"] = str(port)
+    if verbose:
+        from .utils.logging_config import VERBOSE_ENV
+
+        os.environ[VERBOSE_ENV] = "1"
+    from .utils.logging_config import console_verbose
+
+    # uvicorn's own lines (one per request, startup chatter) only with --verbose.
+    uvicorn_level = "info" if console_verbose() else "warning"
     typer.echo(f"[START] Starting VideoAnnotator API server on http://{host}:{port}")
     typer.echo(f"[INFO] API documentation available at http://{host}:{port}/docs")
     from videoannotator.utils.logging_config import logs_dir
@@ -159,7 +186,8 @@ def server(
                 workers=workers
                 if not reload
                 else 1,  # Reload doesn't work with multiple workers
-                log_level="info",
+                log_level=uvicorn_level,
+                access_log=console_verbose(),
             )
         else:
             from .api import restart
@@ -169,7 +197,8 @@ def server(
                     "videoannotator.api.main:app",
                     host=host,
                     port=port,
-                    log_level="info",
+                    log_level=uvicorn_level,
+                    access_log=console_verbose(),
                     # Bounded, so an open SSE stream or long poll can't stall
                     # a requested restart indefinitely.
                     timeout_graceful_shutdown=10,
@@ -916,6 +945,198 @@ def vlm_models(server: str = _SERVER_OPTION, api_key: str | None = _KEY_OPTION):
         typer.echo(f"  {name}")
 
 
+export_app = typer.Typer(
+    name="export",
+    help="Results out of VideoAnnotator: one table, ELAN files, a methods paragraph "
+    "(spec 025). Works on any results folder, with or without a server.",
+)
+app.add_typer(export_app, name="export")
+
+_FOLDER_ARGUMENT = typer.Argument(
+    ...,
+    help="A results folder: a video's, a run's, a folder of runs, or a downloaded "
+    "results zip, extracted",
+)
+_JSON_OPTION = typer.Option(
+    False, "--json", help="Print the export summary as JSON instead of text"
+)
+_EXPORT_SUFFIXES = (".csv", ".parquet", ".eaf", ".md", ".bib", ".zip")
+
+
+def _export_results(folder: Path) -> Any:
+    """The results under `folder`, or exit 1 saying why there are none."""
+    from .exporters.results_set import from_folder
+
+    try:
+        results = from_folder(folder)
+    except FileNotFoundError as e:
+        typer.echo(f"[ERROR] {e}", err=True)
+        raise typer.Exit(code=1) from e
+    if results.is_empty():
+        typer.echo(f"[ERROR] No VideoAnnotator results in {folder}", err=True)
+        for m in results.missing:
+            typer.echo(f"  {m.video}: {m.reason}", err=True)
+        raise typer.Exit(code=1)
+    return results
+
+
+def _export_path(folder: Path, output: str | None, default_name: str) -> Path | None:
+    """Where to write: `output`, stdout (`-`, as None), or `default_name` in `folder`."""
+    if output == "-":
+        return None
+    if output is None:
+        return folder / default_name
+    path = Path(output).expanduser()
+    if (
+        path.exists()
+        and not path.is_dir()
+        and path.suffix.lower() not in _EXPORT_SUFFIXES
+    ):
+        typer.echo(
+            f"[ERROR] {path} exists and isn't an export; choose another --output",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    return path
+
+
+def _report(summary: Any, output: str, as_json: bool) -> None:
+    if as_json:
+        typer.echo(json.dumps({**summary.to_dict(), "output": output}, indent=2))
+        return
+    pipelines = len(summary.pipelines)
+    typer.echo(
+        f"[OK] {summary.rows:,} rows, {summary.videos} video"
+        f"{'' if summary.videos == 1 else 's'}, {pipelines} pipeline"
+        f"{'' if pipelines == 1 else 's'} -> {output}",
+        err=output == "stdout",
+    )
+    for line in summary.lines():
+        typer.echo(f"  {line}", err=True)
+
+
+def _write_failed(path: Path, error: OSError) -> typer.Exit:
+    typer.echo(
+        f"[ERROR] Cannot write {path}: {error.strerror or error}. "
+        "Choose somewhere else with --output.",
+        err=True,
+    )
+    return typer.Exit(code=1)
+
+
+@export_app.command("table")
+def export_table(
+    folder: Path = _FOLDER_ARGUMENT,
+    format: str = typer.Option("csv", "--format", help="csv or parquet"),
+    output: str | None = typer.Option(
+        None,
+        "-o",
+        "--output",
+        help="File to write ('-' for stdout); default <folder>/<folder name>.<format>",
+    ),
+    as_json: bool = _JSON_OPTION,
+):
+    """One table of every pipeline's results: one row per event and measure."""
+    import sys
+
+    from .exporters.table import (
+        ParquetNotInstalled,
+        parquet_available,
+        write_csv,
+        write_parquet,
+    )
+
+    if format not in ("csv", "parquet"):
+        typer.echo("[ERROR] --format must be csv or parquet", err=True)
+        raise typer.Exit(code=2)
+    if format == "parquet" and not parquet_available():
+        typer.echo(f"[ERROR] {ParquetNotInstalled()}", err=True)
+        raise typer.Exit(code=3)
+    folder = folder.expanduser()
+    results = _export_results(folder)
+    path = _export_path(folder, output, f"{folder.resolve().name}.{format}")
+    if path is None:
+        if format == "parquet":
+            typer.echo("[ERROR] Parquet can't be written to stdout", err=True)
+            raise typer.Exit(code=2)
+        summary = write_csv(results, sys.stdout)
+        _report(summary, "stdout", as_json)
+        return
+    try:
+        if format == "parquet":
+            summary = write_parquet(results, path)
+        else:
+            with open(path, "w", encoding="utf-8", newline="") as out:
+                summary = write_csv(results, out)
+    except OSError as e:
+        raise _write_failed(path, e) from e
+    _report(summary, str(path), as_json)
+
+
+@export_app.command("elan")
+def export_elan(
+    folder: Path = _FOLDER_ARGUMENT,
+    output: Path | None = typer.Option(
+        None,
+        "-o",
+        "--output",
+        help="Folder to write the .eaf files to; default: each beside its results",
+    ),
+    as_json: bool = _JSON_OPTION,
+):
+    """One ELAN (.eaf) file per video, one tier per pipeline track."""
+    from .exporters.elan import beside_results, file_name, write_videos
+
+    results = _export_results(folder.expanduser())
+
+    def target(video: Any) -> Path:
+        if output is None:
+            return beside_results(video)
+        base = output.expanduser()
+        return (base / video.run if video.run else base) / file_name(video)
+
+    try:
+        summary = write_videos(results, target)
+    except OSError as e:
+        raise _write_failed(Path(e.filename or folder), e) from e
+    if as_json:
+        typer.echo(json.dumps({**summary.to_dict(), "output": str(output or folder)}))
+        return
+    where = output or "beside each video's results"
+    typer.echo(
+        f"[OK] {summary.videos} ELAN file{'' if summary.videos == 1 else 's'}, "
+        f"{summary.rows:,} annotations -> {where}"
+    )
+    for line in summary.lines():
+        typer.echo(f"  {line}", err=True)
+
+
+@export_app.command("methods")
+def export_methods(
+    folder: Path = _FOLDER_ARGUMENT,
+    output: str | None = typer.Option(
+        None, "-o", "--output", help="Markdown file to write; default: print it"
+    ),
+    as_json: bool = _JSON_OPTION,
+):
+    """A methods paragraph with BibTeX: models, exact weights, settings, citations."""
+    from .exporters.methods import describe
+
+    described = describe(_export_results(folder.expanduser()))
+    if as_json:
+        typer.echo(json.dumps(described.to_dict(), indent=2))
+        return
+    path = _export_path(folder, output or "-", "methods.md")
+    if path is None:
+        typer.echo(described.to_markdown())
+        return
+    try:
+        path.write_text(described.to_markdown(), encoding="utf-8")
+    except OSError as e:
+        raise _write_failed(path, e) from e
+    typer.echo(f"[OK] Methods for {described.summary['videos']} video(s) -> {path}")
+
+
 pipelines_app = typer.Typer(
     name="pipelines",
     help="Inspect and manage annotation pipelines",
@@ -945,6 +1166,10 @@ def _pipelines_default(
     if ctx.invoked_subcommand is not None:
         return
     list_pipelines(server=server, detailed=detailed, json=json, format=format, all=all)
+
+
+def _list_label(p: dict[str, Any]) -> str:
+    return f"{p['name']}  {p['title']}" if p.get("title") else p["name"]
 
 
 @pipelines_app.command("list")
@@ -991,6 +1216,7 @@ def list_pipelines(
             # Build markdown table similar to generated spec (subset columns)
             cols = [
                 ("Name", lambda p: p.get("name", "")),
+                ("Title", lambda p: p.get("title") or "-"),
                 ("Display Name", lambda p: p.get("display_name") or p.get("name")),
                 ("Family", lambda p: p.get("pipeline_family") or "-"),
                 ("Variant", lambda p: p.get("variant") or "-"),
@@ -1022,10 +1248,10 @@ def list_pipelines(
         typer.echo(f"[OK] Pipelines: {len(pipelines)} found")
         for p in pipelines:
             if p.get("available") is False:
-                typer.echo(f"- {p['name']} [unavailable]")
+                typer.echo(f"- {_list_label(p)} [unavailable]")
                 typer.echo(f"  Install with: {p.get('install_hint', '')}")
             else:
-                typer.echo(f"- {p['name']}")
+                typer.echo(f"- {_list_label(p)}")
             if detailed:
                 typer.echo(f"  Display: {p.get('display_name', p['name'])}")
                 if p.get("pipeline_family"):
@@ -1056,6 +1282,116 @@ def list_pipelines(
             "[INFO] Ensure server is running: videoannotator server --port 18011"
         )
         raise typer.Exit(code=1)
+
+
+def _describe_value(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None or value == "":
+        return "-"
+    text = " ".join(str(value).split())
+    return text if len(text) <= 40 else text[:37] + "..."
+
+
+def _describe_setting(key: str, field: Any) -> str:
+    value = _describe_value(field.default)
+    if field.unit and value != "-":
+        value = f"{value} {field.unit}"
+    bounds = [f"min {field.min:g}"] if field.min is not None else []
+    bounds += [f"max {field.max:g}"] if field.max is not None else []
+    if bounds:
+        value = f"{value} ({', '.join(bounds)})"
+    label = field.label or key.replace("_", " ").title()
+    line = f"  {key:<22} {label:<26} {value}"
+    if field.applies_when:
+        conditions = " and ".join(
+            f"{k} is {' or '.join(v)}" for k, v in field.applies_when.items()
+        )
+        line += f"   only when {conditions}"
+    if field.reason:
+        source = f" ({field.reason_source})" if field.reason_source else ""
+        line += f"\n  {'':<22} Why this default: {field.reason}{source}"
+    return line
+
+
+@pipelines_app.command("describe")
+def describe_pipeline(
+    name: str = typer.Argument(..., help="Pipeline name, e.g. face_analysis"),
+    json: bool = typer.Option(False, "--json", help="Output JSON for scripting"),
+):
+    """Say what a pipeline does, its settings, and where it comes from (no server needed)."""
+    import json as jsonlib
+
+    from .registry.pipeline_registry import (
+        config_schema_dict,
+        get_registry,
+        guide_fields,
+    )
+
+    meta = get_registry().get(name)
+    if meta is None:
+        typer.echo(
+            f"Unknown pipeline '{name}'. Run `videoannotator pipelines list`.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    if json:
+        payload = {
+            "name": meta.name,
+            "display_name": meta.display_name,
+            "description": meta.description,
+            **guide_fields(meta),
+            "config_schema": config_schema_dict(meta),
+        }
+        typer.echo(jsonlib.dumps(payload, indent=2))
+        return
+
+    if meta.deprecated:
+        instead = ", ".join(meta.deprecated.replacement) or "another pipeline"
+        typer.echo(
+            f"Deprecated: removed in {meta.deprecated.removal_version}; "
+            f"use {instead} instead."
+        )
+        typer.echo("")
+    typer.echo(f"{meta.guide_title}  ({meta.name})")
+    typer.echo(meta.guide_summary)
+
+    behavioural = {
+        k: f for k, f in meta.config_schema.items() if f.group == "behavioural"
+    }
+    technical = {
+        k: f for k, f in meta.config_schema.items() if f.group != "behavioural"
+    }
+    if behavioural:
+        typer.echo("")
+        typer.echo("What to measure")
+        for key, field in behavioural.items():
+            typer.echo(_describe_setting(key, field))
+    if technical:
+        typer.echo("")
+        typer.echo(f"Technical ({len(technical)})")
+        for key, field in technical.items():
+            typer.echo(_describe_setting(key, field))
+
+    typer.echo("")
+    typer.echo("About")
+    if meta.homepage:
+        typer.echo(f"  Homepage   {meta.homepage}")
+    if meta.quality_note:
+        typer.echo(f"  Quality    {meta.quality_note}")
+    if meta.benchmarks is None:
+        if not meta.quality_note:
+            typer.echo("  Benchmark  not stated")
+    elif not meta.benchmarks:
+        typer.echo("  Benchmark  No published benchmark")
+    for b in meta.benchmarks or []:
+        note = f" ({b.note})" if b.note else ""
+        typer.echo(f"  Benchmark  {b.name}, {b.measure} {b.figure}{note}")
+        typer.echo(f"             {b.source}")
+    if meta.citations:
+        typer.echo(f"  Cite       {', '.join(c.key for c in meta.citations)}")
+        typer.echo("             (--json includes the BibTeX)")
 
 
 def _require_api_key(api_key: str | None) -> str:
@@ -1383,6 +1719,98 @@ def backup(
         typer.echo(f"[ERROR] {e}")
     except Exception as e:
         typer.echo(f"[ERROR] Backup failed: {e}")
+
+
+settings_app = typer.Typer(help="Server settings kept on this machine.")
+app.add_typer(settings_app, name="settings")
+
+
+@settings_app.command("huggingface-token")
+def settings_huggingface_token(
+    remove: bool = typer.Option(False, "--remove", help="Delete the saved token."),
+    status: bool = typer.Option(False, "--status", help="Show whether one is set."),
+):
+    """Save a Hugging Face token where the server reads it (no restart needed).
+
+    Asks for the token without showing it; with no terminal (scripts, agents)
+    it reads one line from standard input, so it never goes on the command line.
+    """
+    import sys
+
+    from .api.readiness import check_huggingface_token
+    from .config_env import huggingface_token, huggingface_token_source
+    from .secrets_store import (
+        clean_huggingface_token,
+        huggingface_token_path,
+        mask_huggingface_token,
+        remove_saved_huggingface_token,
+        save_huggingface_token,
+        token_shape_problem,
+    )
+
+    if remove:
+        removed = remove_saved_huggingface_token()
+        typer.echo(
+            "Removed the saved token." if removed else "No saved token to remove."
+        )
+        source, variable = huggingface_token_source()
+        if source == "environment":
+            typer.echo(f"{variable} in the environment still sets one.")
+        return
+
+    if status:
+        source, variable = huggingface_token_source()
+        token = huggingface_token()
+        if not token:
+            typer.echo("Not set.")
+            return
+        check, account = check_huggingface_token(token)
+        where = (
+            f"from {variable} in the environment"
+            if source == "environment"
+            else f"saved in {huggingface_token_path()}"
+        )
+        verdict = {
+            "ok": f"works (account: {account})" if account else "works",
+            "invalid": "rejected by Hugging Face",
+            "unknown": "couldn't check it with Hugging Face",
+        }[check]
+        typer.echo(f"Set, {where}; {verdict}.")
+        return
+
+    if sys.stdin.isatty():
+        typer.echo("Create a Read token at https://huggingface.co/settings/tokens")
+        typer.echo("Paste it and press Enter (it isn't shown as you type).")
+        token = typer.prompt("Hugging Face token", hide_input=True)
+    else:
+        token = sys.stdin.readline()
+    token = clean_huggingface_token(token)
+    problem = token_shape_problem(token)
+    if problem:
+        typer.echo(
+            f"That isn't a Hugging Face token ({problem}). Nothing saved.", err=True
+        )
+        raise typer.Exit(code=1)
+    typer.echo(f"Got {mask_huggingface_token(token)} ({len(token)} characters).")
+    check, account = check_huggingface_token(token)
+    if check == "invalid":
+        typer.echo(
+            "Hugging Face rejects this token (expired, revoked or mis-pasted). "
+            "Nothing saved.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    path = save_huggingface_token(token)
+    if check == "ok":
+        who = f" (account: {account})" if account else ""
+        typer.echo(f"Saved to {path}; Hugging Face accepts it{who}.")
+    else:
+        typer.echo(f"Saved to {path}; couldn't reach Hugging Face to check it yet.")
+    source, variable = huggingface_token_source()
+    if source == "environment":
+        typer.echo(
+            f"Note: {variable} in the environment is used instead while it's set."
+        )
 
 
 @app.command()

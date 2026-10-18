@@ -1,13 +1,10 @@
 """Whisper Base Pipeline for VideoAnnotator.
 
-This module provides a base pipeline for Whisper-based audio processing
-tasks. It serves as a foundation for both speech recognition and voice
-emotion analysis.
+Loads a Whisper model on the faster-whisper runtime (CTranslate2) and extracts
+the audio it transcribes. `SpeechPipeline` does the transcription.
 """
 
 import gc
-import importlib
-import importlib.util as importlib_util
 import logging
 import tempfile
 import warnings
@@ -22,8 +19,7 @@ import torch
 from videoannotator.pipelines.base_pipeline import BasePipeline
 from videoannotator.utils.model_loader import log_model_download
 
-from ...models_dir import source_dir
-from ...provenance import whisper_ref
+from ...provenance import ModelRef
 from .ffmpeg_utils import check_ffmpeg_available
 from .ffmpeg_utils import extract_audio_from_video as ffmpeg_extract
 
@@ -41,28 +37,57 @@ logger = logging.getLogger(__name__)
 # Suppress librosa warnings that might indicate instability
 warnings.filterwarnings("ignore", category=UserWarning, module="librosa")
 
-# Try to import both standard Whisper and HF Whisper
-# Note: standard whisper is resolved lazily to keep imports light and to allow
-# unit tests to patch a module-level/instance-provided `whisper` object.
-whisper = None
+# Download sizes for the first-run message (Hugging Face Hub, model.bin).
+MODEL_SIZES_MB = {
+    "tiny": 75,
+    "base": 148,
+    "small": 484,
+    "medium": 1528,
+    "large-v3-turbo": 1622,
+    "turbo": 1622,
+    "large-v3": 3087,
+    "large": 3087,
+}
 
-try:
-    from transformers import WhisperForConditionalGeneration, WhisperProcessor
+CUDA_ERROR_MARKERS = (
+    "not compiled with cuda",
+    "cuda driver",
+    # torch built with CUDA on a machine without the NVIDIA driver
+    "no nvidia driver",
+    "no cuda gpus are available",
+    "cublas",
+    "cudnn",
+    "cuda error",
+    "cuda out of memory",
+    "cuda failed",
+)
 
-    HF_WHISPER_AVAILABLE = True
-except ImportError:
-    HF_WHISPER_AVAILABLE = False
-    logger.debug(
-        "Hugging Face transformers not available. Install with: pip install transformers"
-    )
+
+def faster_whisper_available() -> bool:
+    import importlib.util
+
+    return importlib.util.find_spec("faster_whisper") is not None
+
+
+def model_repository(model: str) -> str:
+    """The Hugging Face repository faster-whisper loads for a size name or id."""
+    if "/" in model or Path(model).is_dir():
+        return model
+    from faster_whisper.utils import _MODELS
+
+    if model not in _MODELS:
+        raise ValueError(
+            f"Unknown Whisper model '{model}'. Use one of "
+            f"{', '.join(_MODELS)}, or a CTranslate2 repository on Hugging Face."
+        )
+    return _MODELS[model]
 
 
 class WhisperBasePipeline(BasePipeline):
     """Base pipeline for Whisper-based audio processing tasks.
 
-    This class provides common functionality for loading Whisper models,
-    processing audio, and extracting embeddings. It supports both the
-    standard OpenAI Whisper package and Hugging Face Whisper models.
+    Loads the model on the faster-whisper runtime and extracts audio from
+    video. Subclasses transcribe.
     """
 
     def __init__(self, config: dict[str, Any] | None = None):
@@ -70,21 +95,21 @@ class WhisperBasePipeline(BasePipeline):
 
         Args:
             config: Configuration dictionary with the following options:
-                - whisper_model: Model ID or size (default: "base")
+                - whisper_model: faster-whisper size name or CTranslate2 repository
+                  (default: "large-v3-turbo")
+                - compute_type: CTranslate2 compute type (default: "default", the
+                  weights' own type where the device supports it)
                 - sample_rate: Audio sample rate (default: 16000)
                 - device: Device to use ("cpu", "cuda", "auto") (default: "auto")
-                - use_fp16: Use half precision when possible (default: True)
-                - cache_dir: Model cache directory (default: <models dir>/whisper)
-                - use_auth_token: Use HF auth token for gated models (default: False)
+                - use_fp16: False forces float32 (default: True)
                 - normalize_audio: Normalize audio during preprocessing (default: True)
         """
         default_config = {
-            "whisper_model": "base",  # Standard Whisper model or HF model ID
+            "whisper_model": "large-v3-turbo",
+            "compute_type": "default",
             "sample_rate": 16000,  # Whisper's preferred sample rate
             "device": "auto",  # "cpu", "cuda", or "auto"
-            "use_fp16": True,  # Use half precision when possible
-            "cache_dir": str(source_dir("whisper")),
-            "use_auth_token": False,  # Use HF auth token for gated models
+            "use_fp16": True,
             "normalize_audio": True,  # Normalize audio during preprocessing
         }
 
@@ -97,9 +122,7 @@ class WhisperBasePipeline(BasePipeline):
         self.logger = logging.getLogger(__name__)
         self.is_initialized: bool = False
         self.whisper_model: Any | None = None
-        self.whisper_processor: Any | None = None
         self.device: torch.device = torch.device("cpu")
-        self.model_type: str | None = None  # "standard" or "huggingface"
         # Fallback state flags (for diagnostics/tests)
         self.used_cuda_initially = False
         self.fell_back_to_cpu = False
@@ -133,44 +156,28 @@ class WhisperBasePipeline(BasePipeline):
 
         self.logger.info(f"Initializing WhisperBasePipeline with device: {self.device}")
 
-        # Load Whisper model with CUDA fallback handling
         try:
             self._load_whisper_model()
         except ImportError as e:
             # Optional dependency: allow the pipeline to exist but remain uninitialized.
-            # This enables environments without whisper installed (and unit tests that
-            # only validate device selection) to proceed without crashing.
+            # Downstream pipelines check `self.whisper_model` before inference.
             self.logger.warning(f"Whisper dependency unavailable: {e}")
-            # Consider the pipeline initialized (device selected, resources ready) even
-            # though the model itself is unavailable. Downstream pipelines should check
-            # `self.whisper_model` before attempting inference.
             self.is_initialized = True
             return
         except RuntimeError as e:
-            err_lower = str(e).lower()
-            cuda_markers = [
-                "not compiled with cuda",
-                "cuda driver",
-                # torch built with CUDA on a machine without the NVIDIA driver
-                "no nvidia driver",
-                "no cuda gpus are available",
-                "cublas",
-                "cudnn",
-                "cuda error",
-                "cuda out of memory",
-            ]
-            # Fallback only if CUDA was opportunistic (auto) and failed with a CUDA-specific issue
+            # Fallback only if CUDA was opportunistic (auto) and failed with a
+            # CUDA-specific issue, such as CTranslate2 not finding cuDNN.
             if (
                 self.used_cuda_initially
                 and requested_device == "auto"
-                and any(m in err_lower for m in cuda_markers)
+                and any(m in str(e).lower() for m in CUDA_ERROR_MARKERS)
             ):
                 self.logger.warning(
-                    "Opportunistic CUDA initialization failed. Falling back to CPU and retrying..."
+                    f"Speech recognition couldn't use the GPU ({e}); running on CPU."
                 )
-                self.logger.debug(f"CUDA initialization error details: {e}")
                 self.device = torch.device("cpu")
                 self.fell_back_to_cpu = True
+                self._model_refs.clear()
                 try:
                     self._load_whisper_model()
                 except Exception as retry_e:
@@ -178,167 +185,81 @@ class WhisperBasePipeline(BasePipeline):
                         f"Failed to load Whisper model after CPU fallback: {retry_e}"
                     ) from retry_e
             else:
-                # Explicit CUDA request or non-CUDA error: re-raise
                 raise
 
         self.is_initialized = True
         self.logger.info("WhisperBasePipeline initialized successfully")
 
+    def _compute_type(self) -> str:
+        if not self.config.get("use_fp16", True):
+            return "float32"
+        return str(self.config.get("compute_type") or "default")
+
     def _load_whisper_model(self) -> None:
-        """Load the appropriate Whisper model based on configuration.
+        """Load the configured model on the faster-whisper runtime.
 
-        This method supports both standard Whisper and Hugging Face
-        variants.
-        """
-        model_id = self.config["whisper_model"]
-        cache_dir = self.config.get("cache_dir")
-
-        # Determine model type (HuggingFace or standard)
-        if "/" in model_id:  # Likely a Hugging Face model
-            if not HF_WHISPER_AVAILABLE:
-                raise ImportError(
-                    "Hugging Face transformers not available. "
-                    "Install with: pip install transformers"
-                )
-            self._load_hf_whisper_model(model_id, cache_dir)
-            self.model_type = "huggingface"
-        else:  # Standard Whisper model
-            self._load_standard_whisper_model(model_id)
-            self.model_type = "standard"
-
-    def _get_standard_whisper_module(self):
-        """Resolve the standard `whisper` module.
-
-        Preference order:
-        1) Instance attribute `self.whisper` (used by SpeechPipeline; patchable in tests)
-        2) Module global `whisper` (cached after first import)
-        3) Lazy import of the `whisper` package
-        """
-
-        module = getattr(self, "whisper", None)
-        if module is not None:
-            return module
-
-        global whisper
-        if whisper is not None:
-            return whisper
-
-        if importlib_util.find_spec("whisper") is None:
-            raise ImportError(
-                "Standard whisper not available. Install with: pip install openai-whisper"
-            )
-
-        whisper = importlib.import_module("whisper")
-        return whisper
-
-    def _load_hf_whisper_model(
-        self, model_id: str, cache_dir: str | None = None
-    ) -> None:
-        """Load a Whisper model from Hugging Face.
-
-        Args:
-            model_id: Hugging Face model ID
-            cache_dir: Optional cache directory for model files
+        Weights go to the Hugging Face cache (inside the models directory).
+        One second of silence is transcribed straight away: CTranslate2 loads
+        some CUDA libraries only when it first runs, and a missing one should
+        fail here, where it can fall back to CPU, not halfway through a job.
         """
         try:
-            self.logger.info(f"Loading Hugging Face Whisper model: {model_id}")
-
-            # Check for auth token if needed
-            use_auth_token = self.config.get("use_auth_token", False)
-            auth_token = None
-
-            if use_auth_token:
-                from videoannotator.config_env import huggingface_token
-
-                auth_token = huggingface_token()
-                if not auth_token:
-                    self.logger.warning(
-                        "HUGGINGFACE_TOKEN not set but use_auth_token=True"
-                    )
-
-            # Load processor
-            processor_kwargs = {"cache_dir": cache_dir}
-            if auth_token:
-                processor_kwargs["token"] = auth_token
-
-            self.whisper_processor = WhisperProcessor.from_pretrained(
-                model_id, **processor_kwargs
-            )
-
-            # Load model
-            model_kwargs = {"cache_dir": cache_dir}
-            if auth_token:
-                model_kwargs["token"] = auth_token
-
-            # Add FP16 if requested and on GPU
-            if self.config.get("use_fp16", True) and self.device.type == "cuda":
-                model_kwargs["torch_dtype"] = torch.float16
-
-            model = WhisperForConditionalGeneration.from_pretrained(
-                model_id, **model_kwargs
-            )
-            # Handle meta tensor properly for newer PyTorch versions
-            try:
-                self.whisper_model = model.to(self.device)
-            except RuntimeError as e:
-                if "meta tensor" in str(e):
-                    self.whisper_model = model.to_empty(device=self.device)
-                else:
-                    raise
-
-            # Set to evaluation mode
-            self.whisper_model.eval()
-
-            self.logger.info(
-                f"HF Whisper model '{model_id}' loaded successfully to {self.device}"
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error loading HF Whisper model '{model_id}': {e}")
-            raise RuntimeError(f"Failed to load HF Whisper model: {e}") from e
-
-    def _load_standard_whisper_model(self, model_size: str) -> None:
-        """Load a standard Whisper model.
-
-        Args:
-            model_size: Model size ("tiny", "base", "small", "medium", "large")
-        """
-        try:
-            self.logger.info(f"Loading standard Whisper model: {model_size}")
-
-            # Handle FP16 for CUDA
-            _fp16 = self.config.get("use_fp16", True) and self.device.type == "cuda"
-
-            whisper_module = self._get_standard_whisper_module()
-
-            # Load model with enhanced logging
-            self.whisper_model = log_model_download(
-                f"OpenAI Whisper {model_size.upper()} Model",
-                f"whisper-{model_size}",
-                whisper_module.load_model,
-                model_size,
-                device=self.device.type,
-                download_root=self.config.get("cache_dir"),
-                in_memory=True,
-            )
-
-            self._model_refs.append(whisper_ref(whisper_module, model_size))
-            self.logger.info(
-                f"Standard Whisper model '{model_size}' loaded successfully to {self.device}"
-            )
-
+            from faster_whisper import WhisperModel
+            from faster_whisper.utils import download_model
         except ImportError as e:
-            # Missing optional dependency (e.g., openai-whisper not installed).
-            self.logger.error(
-                f"Error loading standard Whisper model '{model_size}': {e}"
+            raise ImportError(
+                "faster-whisper not available. Install the audio extra: "
+                "pip install 'videoannotator[audio]'"
+            ) from e
+
+        model = str(self.config["whisper_model"])
+        repository = model_repository(model)
+        size = MODEL_SIZES_MB.get(model)
+        hint = ""
+        if self.device.type == "cpu" and model not in ("tiny", "base", "small"):
+            hint = " On CPU a smaller model is much faster: whisper_model small."
+        self.logger.info(
+            f"Speech recognition model: {model} ({repository}"
+            + (f", about {size} MB to download on first use" if size else "")
+            + f").{hint}"
+        )
+        path = (
+            model
+            if Path(model).is_dir()
+            else log_model_download(
+                f"Whisper {model} (faster-whisper)", repository, download_model, model
             )
-            raise
+        )
+        try:
+            self.whisper_model = WhisperModel(
+                path, device=self.device.type, compute_type=self._compute_type()
+            )
+            segments, _info = self.whisper_model.transcribe(
+                np.zeros(16000, dtype=np.float32), beam_size=1, language="en"
+            )
+            list(segments)
         except Exception as e:
-            # Propagate to outer initialize logic for potential fallback handling
-            self.logger.error(
-                f"Error loading standard Whisper model '{model_size}': {e}"
-            )
+            self.whisper_model = None
             raise RuntimeError(str(e)) from e
+
+        # CTranslate2 runs float16 weights as float32 where the device can't.
+        quantization = (
+            str(getattr(self.whisper_model.model, "compute_type", "")) or None
+        )
+        revision = None if Path(model).is_dir() else Path(path).name
+        self._model_refs.append(
+            ModelRef(
+                repository,
+                "huggingface",
+                revision,
+                "git" if revision else "unknown",
+                None if revision else "local directory",
+                quantization=quantization,
+            )
+        )
+        self.logger.info(
+            f"Whisper '{model}' loaded on {self.device} ({quantization or 'default'})"
+        )
 
     def extract_audio_from_video(
         self, video_path: str | Path
@@ -429,213 +350,22 @@ class WhisperBasePipeline(BasePipeline):
             else:
                 raise RuntimeError(f"Failed to extract audio: {e}") from e
 
-    @torch.no_grad()
-    def get_whisper_embedding(
-        self, audio: np.ndarray, pad_or_trim: bool = True, target_seq_len: int = 1500
-    ) -> torch.Tensor | None:
-        """Extract Whisper embeddings from audio.
-
-        Args:
-            audio: Audio waveform as numpy array
-            pad_or_trim: Whether to pad/trim embedding to standard sequence length
-            target_seq_len: Target sequence length for embedding (default: 1500)
-
-        Returns:
-            Whisper embedding tensor
-        """
-        if not self.is_initialized:
-            self.initialize()
-
-        try:
-            # Process differently based on model type
-            if self.model_type == "huggingface":
-                processor = self.whisper_processor
-                model = self.whisper_model
-                if processor is None or model is None:
-                    raise RuntimeError("Whisper HF components not initialized")
-
-                # Process through HF Whisper
-                input_features = processor(
-                    audio, sampling_rate=self.config["sample_rate"], return_tensors="pt"
-                ).input_features.to(self.device)
-
-                # Ensure input features match model dtype for FP16 compatibility
-                if model.dtype != input_features.dtype:
-                    input_features = input_features.to(dtype=model.dtype)
-
-                # Get encoder outputs
-                encoder_outputs = model.get_encoder()(input_features)
-                embedding = encoder_outputs.last_hidden_state
-
-                # Handle sequence length if needed
-                if pad_or_trim:
-                    return self._pad_or_trim_embedding(embedding, target_seq_len)
-                return embedding
-
-            else:  # Standard Whisper
-                if self.whisper_model is None:
-                    raise RuntimeError("Whisper model not initialized")
-                # Convert audio to float32 if needed
-                if audio.dtype != np.float32:
-                    audio = audio.astype(np.float32)
-
-                # Use standard Whisper's encoder
-                audio_tensor = torch.from_numpy(audio).to(self.device)
-                embedding = self.whisper_model.embed_audio(audio_tensor)
-
-                # For standard Whisper, return the embedding
-                return embedding
-
-        except Exception as e:
-            self.logger.error(f"Error extracting Whisper embedding: {e}")
-            return None
-
-    def _pad_or_trim_embedding(
-        self, embedding: torch.Tensor, target_seq_len: int = 1500
-    ) -> torch.Tensor:
-        """Pad or trim embedding to the target sequence length.
-
-        Args:
-            embedding: Whisper embedding tensor
-            target_seq_len: Target sequence length
-
-        Returns:
-            Padded or trimmed embedding tensor
-        """
-        current_seq_len = embedding.shape[1]
-        embed_dim = embedding.shape[2]
-
-        if current_seq_len < target_seq_len:
-            # Pad with zeros using the same dtype and device as the embedding
-            padding = torch.zeros(
-                (1, target_seq_len - current_seq_len, embed_dim),
-                device=embedding.device,
-                dtype=embedding.dtype,
-            )
-            return torch.cat((embedding, padding), dim=1)
-        elif current_seq_len > target_seq_len:
-            # Trim to target length
-            return embedding[:, :target_seq_len, :]
-        else:
-            return embedding
-
-    def segment_audio(
-        self,
-        audio: np.ndarray,
-        sample_rate: int,
-        pps: float = 0.2,
-        start_time: float = 0.0,
-        end_time: float | None = None,
-        min_segment_duration: float = 1.0,
-        max_segment_duration: float = 30.0,
-        segment_overlap: float = 0.0,
-    ) -> list[dict[str, Any]]:
-        """Segment audio based on a fixed interval strategy.
-
-        Args:
-            audio: Audio waveform as numpy array
-            sample_rate: Sample rate of the audio
-            pps: Predictions per second (used for fixed interval segmentation)
-            start_time: Start time in seconds
-            end_time: End time in seconds (None = end of audio)
-            min_segment_duration: Minimum segment duration in seconds
-            max_segment_duration: Maximum segment duration in seconds
-            segment_overlap: Overlap between segments in seconds
-
-        Returns:
-            List of segment dictionaries with audio data and metadata
-        """
-        segments = []
-        audio_duration = len(audio) / sample_rate
-
-        if end_time is None or end_time > audio_duration:
-            end_time = audio_duration
-
-        self.logger.info("Segmenting audio using fixed interval mode")
-
-        # Calculate segment duration based on pps
-        segment_duration = end_time - start_time if pps <= 0 else 1.0 / pps
-
-        # Ensure segment duration is within bounds
-        segment_duration = max(
-            min_segment_duration, min(segment_duration, max_segment_duration)
-        )
-
-        self.logger.info(
-            f"Fixed interval segmentation: {segment_duration:.2f}s segments"
-        )
-
-        # Create segments
-        current_start = start_time
-        while current_start < end_time:
-            current_end = min(current_start + segment_duration, end_time)
-
-            # Skip segments that are too short
-            if current_end - current_start < min_segment_duration:
-                break
-
-            # Calculate audio indices
-            start_idx = int(current_start * sample_rate)
-            end_idx = int(current_end * sample_rate)
-
-            if start_idx >= len(audio) or start_idx >= end_idx:
-                break
-
-            # Create segment
-            segment = {
-                "start_time": current_start,
-                "end_time": current_end,
-                "audio": audio[start_idx:end_idx],
-                "speaker_id": None,  # No speaker ID for fixed interval
-            }
-
-            segments.append(segment)
-
-            # Move to next segment with potential overlap
-            current_start += segment_duration - segment_overlap
-
-        self.logger.info(f"Created {len(segments)} audio segments")
-        return segments
-
     def cleanup(self) -> None:
         """Clean up resources used by the pipeline."""
-        try:
-            # Release CUDA memory
-            if (
-                self.device.type == "cuda"
-                and self.whisper_model is not None
-                and hasattr(self.whisper_model, "to")
-            ):
-                self.whisper_model = self.whisper_model.to("cpu")
-
-                # Clear CUDA cache
-                torch.cuda.empty_cache()
-                gc.collect()
-
-            # Set models to None to help garbage collection
-            self.whisper_model = None
-            self.whisper_processor = None
-
-            self.logger.info("WhisperBasePipeline resources cleaned up")
-            self.is_initialized = False
-
-        except Exception as e:
-            self.logger.error(f"Error cleaning up resources: {e}")
+        # CTranslate2 frees its GPU memory when the model is released.
+        self.whisper_model = None
+        gc.collect()
+        if self.device.type == "cuda":
+            torch.cuda.empty_cache()
+        self.is_initialized = False
+        self.logger.info("WhisperBasePipeline resources cleaned up")
 
     def get_schema(self) -> dict[str, Any]:
-        """Return the output schema for this pipeline.
-
-        Returns:
-            Dictionary describing the output format
-        """
+        """Return the output schema for this pipeline."""
         return {
             "type": "whisper_base",
             "description": "Base Whisper pipeline for audio processing",
-            "output_format": {
-                "embeddings": "torch.Tensor",
-                "segments": "List[Dict[str, Any]]",
-                "audio_info": "Dict[str, Any]",
-            },
+            "output_format": {"audio_info": "Dict[str, Any]"},
         }
 
     def process(
@@ -646,69 +376,12 @@ class WhisperBasePipeline(BasePipeline):
         pps: float = 1.0,
         output_dir: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Process video/audio file to extract embeddings and segments.
-
-        Args:
-            video_path: Path to the video/audio file
-            start_time: Start time in seconds
-            end_time: End time in seconds (None = end of file)
-            pps: Predictions per second for segmentation
-            output_dir: Output directory (unused in base implementation)
+        """Extract the audio; subclasses transcribe it.
 
         Returns:
-            List of processing results
+            One entry with the audio's duration and sample rate.
         """
-        try:
-            # Ensure initialization
-            if not self.is_initialized:
-                self.initialize()
-
-            # Extract audio from video
-            audio, sample_rate = self.extract_audio_from_video(video_path)
-
-            # Segment the audio
-            segments = self.segment_audio(
-                audio=audio,
-                sample_rate=sample_rate,
-                pps=pps,
-                start_time=start_time,
-                end_time=end_time,
-            )
-
-            # Process each segment (basic implementation)
-            results = []
-            for i, segment in enumerate(segments):
-                try:
-                    # Extract embedding for this segment
-                    embedding = self.get_whisper_embedding(segment["audio"])
-
-                    result = {
-                        "segment_id": i,
-                        "start_time": segment["start_time"],
-                        "end_time": segment["end_time"],
-                        "duration": segment["end_time"] - segment["start_time"],
-                        "embedding_shape": list(embedding.shape)
-                        if embedding is not None
-                        else None,
-                        "has_embedding": embedding is not None,
-                        "audio_length": len(segment["audio"]),
-                    }
-                    results.append(result)
-
-                except Exception as e:
-                    self.logger.warning(f"Failed to process segment {i}: {e}")
-                    result = {
-                        "segment_id": i,
-                        "start_time": segment["start_time"],
-                        "end_time": segment["end_time"],
-                        "error": str(e),
-                        "has_embedding": False,
-                    }
-                    results.append(result)
-
-            self.logger.info(f"Processed {len(results)} segments from {video_path}")
-            return results
-
-        except Exception as e:
-            self.logger.error(f"Error processing {video_path}: {e}")
-            raise RuntimeError(f"Failed to process audio: {e}") from e
+        if not self.is_initialized:
+            self.initialize()
+        audio, sample_rate = self.extract_audio_from_video(video_path)
+        return [{"duration": len(audio) / sample_rate, "sample_rate": sample_rate}]

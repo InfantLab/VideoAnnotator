@@ -1,4 +1,8 @@
-"""mkdocs hook: links that leave the site point at the file on GitHub.
+"""mkdocs hooks: the version on every page, and links that leave the site
+point at the file on GitHub.
+
+The site is built from master, so it documents the latest release; the version
+comes from pyproject.toml at build time, never by hand, so it can't drift.
 
 The docs link to the code, the specs, CONTRIBUTING.md and the archive with
 relative paths, which work when reading them on GitHub. The site holds only
@@ -10,11 +14,30 @@ from __future__ import annotations
 
 import posixpath
 import re
+import tomllib
 from pathlib import Path
 
 LINK = re.compile(r"(\]\(\s*<?)([^)\s>#?]+)([^)\s>]*>?(?:\s+\"[^\"]*\")?\s*\))")
 EXTERNAL = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|//|#)", re.IGNORECASE)
 EXCLUDED = ("archive/", "development/handover_")
+
+
+def videoannotator_version(repo_root: Path) -> str:
+    with (repo_root / "pyproject.toml").open("rb") as f:
+        return tomllib.load(f)["project"]["version"]
+
+
+def on_config(config):
+    version = videoannotator_version(Path(config["docs_dir"]).resolve().parent)
+    # The header and every browser tab show the site name.
+    config["site_name"] = f"VideoAnnotator {version}"
+    config["copyright"] = (
+        f"Documentation for VideoAnnotator {version}. "
+        "Check yours with <code>videoannotator --version</code> "
+        "or in the viewer's Settings."
+    )
+    config["extra"]["videoannotator_version"] = version
+    return config
 
 
 def on_page_markdown(markdown, page, config, files):

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import { TokenSetup } from '@/components/TokenSetup';
+import { HuggingFaceTokenCard } from '@/components/HuggingFaceTokenSetup';
 import { ServerDiagnostics } from '@/components/ServerDiagnostics';
 import { VideosAndResultsCard } from '@/components/VideosAndResultsCard';
 import { GPUInfo } from '@/components/GPUInfo';
@@ -178,8 +179,9 @@ const CreateSettings = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="api">
+        <TabsContent value="api" className="space-y-4">
           <TokenSetup />
+          <HuggingFaceTokenCard isAdmin={isAdmin} />
         </TabsContent>
 
         <TabsContent value="server" className="space-y-4">

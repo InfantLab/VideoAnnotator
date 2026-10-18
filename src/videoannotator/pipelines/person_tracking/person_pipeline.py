@@ -29,7 +29,7 @@ from videoannotator.utils.size_based_person_analysis import run_size_based_analy
 # Optional imports
 try:
     from ultralytics import YOLO
-    from ultralytics.hub.utils import events as _ultralytics_events
+    from ultralytics.utils.events import events as _ultralytics_events
 
     # Ultralytics sends a Google Analytics event on every predict while its
     # global `sync` setting is on (the default). Switched off for this process
@@ -56,7 +56,7 @@ class PersonTrackingPipeline(BasePipeline):
             config: Optional configuration dictionary.
         """
         default_config = {
-            "model": "models/yolo/yolo11n-pose.pt",  # YOLO11 pose model
+            "model": "models/yolo/yolo26n-pose.pt",
             "conf_threshold": 0.4,
             "iou_threshold": 0.7,
             "track_mode": True,  # Enable tracking
@@ -333,7 +333,7 @@ class PersonTrackingPipeline(BasePipeline):
         }
 
     def _initialize_model(self):
-        """Initialize YOLO11 pose model with enhanced logging."""
+        """Initialize the YOLO pose model with enhanced logging."""
         if not YOLO_AVAILABLE:
             raise ImportError("ultralytics package required for person tracking")
 
@@ -341,14 +341,17 @@ class PersonTrackingPipeline(BasePipeline):
             # Load model with enhanced download logging
             # Load from the models directory; provenance keeps the configured name.
             model_path = resolve_yolo_model(self.config["model"])
-            self._model_refs.append(
-                weights_ref(self.config["model"], "ultralytics", model_path)
-            )
             self.model = log_model_download(
-                "YOLO11 Pose Detection Model",
+                "YOLO Pose Detection Model",
                 model_path,
                 YOLO,
                 model_path,
+            )
+            # After loading: on a first run the weights only exist once
+            # ultralytics has downloaded them, possibly elsewhere.
+            loaded_from = getattr(self.model, "ckpt_path", None) or model_path
+            self._model_refs.append(
+                weights_ref(self.config["model"], "ultralytics", loaded_from)
             )
             # ASCII-safe success marker
             self.logger.info(f"[OK] YOLO model ready: {self.config['model']}")

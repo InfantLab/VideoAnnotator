@@ -236,3 +236,28 @@ In order, each one small enough to review. The pipeline review's recommendations
    opencv `<5` cap. This is the path to Python 3.14, so do it before rc1 if Phase 5's benchmark
    allows, and add the 3.14 CI job with it.
 6. **Viewer dependencies** (separate audit).
+
+## 9. Model-default upgrades (spec 030, 2026-10-18)
+
+- **ultralytics 8.3.183 → 8.4.182** (`person`: `>=8.4,<9`, needed for YOLO26). Adds
+  `ultralytics-platform` (an SDK for Ultralytics' hosted platform, imported only when
+  `ultralytics.Platform` is used, which VideoAnnotator never does), `polars` and `nvidia-ml-py`;
+  drops `py-cpuinfo`. Analytics moved to `ultralytics.utils.events`; still switched off for the
+  process (`tests/unit/test_no_telemetry.py`). Same output on the demo clip with yolo11n-pose
+  (spec 030 checks.md, step 4a). Licence unchanged (AGPL-3.0).
+- **openai-whisper → faster-whisper 1.2.1** (`audio`: `>=1.2.1,<2`). Brings CTranslate2 4.8.3
+  (wheels for every supported platform and Python), PyAV, tokenizers and onnxruntime (used only by
+  its voice-activity filter, which we leave off); removes openai-whisper (the only package built
+  from source at install, and `[tool.uv.extra-build-dependencies]` with it) and tiktoken. No torch
+  dependency. On Linux, CTranslate2 found the CUDA 12 / cuDNN 9 libraries from torch's NVIDIA
+  wheels with no configuration. onnxruntime gets imported anyway (torchmetrics, via pyannote,
+  imports it when present), so its Windows telemetry is switched off when the audio pipelines
+  load. Same transcript on the demo clip with `base` (spec 030 checks.md, step 5a). All MIT.
+- **Security updates before v1.6.0 (2026-10-18)**: Trivy reported 2 critical and 19 high advisories
+  in `uv.lock` and `viewer/bun.lock`, none new in v1.6.0. Upgraded within our constraints:
+  fastapi 0.142 → 0.146 (starlette 0.47 → 1.9), anyio, urllib3, aiohttp, fsspec, mako, msgpack,
+  soupsieve, lightning/pytorch-lightning 2.5 → 2.6. Viewer: `bun audit fix`, react-router-dom 6.30
+  (@remix-run/router 1.23.4), @lhci/cli 0.15, @playwright/test 1.64, and `resolutions` for tmp,
+  basic-ftp and path-to-regexp (only Lighthouse CI uses them). Every demo-clip output identical
+  after. Left, with no fixed release published: `braces` 3.0.3 (Tailwind build) and
+  `extract-zip` 2.0.1 (Lighthouse/Puppeteer); both development-only.

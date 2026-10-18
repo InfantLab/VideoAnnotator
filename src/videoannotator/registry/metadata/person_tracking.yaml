@@ -1,8 +1,18 @@
 name: person_tracking
 display_name: Person Tracking & Pose
-description: Track persons with YOLO11 + ByteTrack producing COCO person + keypoint annotations.
+title: "People: where they are and how they move"
+summary: >-
+  Finds each person in each sampled frame, follows them through the video, and marks 17 body points (nose, shoulders, wrists, knees and so on).
+homepage: https://docs.ultralytics.com/tasks/pose/
+benchmarks:
+  - name: "COCO Keypoints val2017"
+    measure: "mAP pose 50-95 (e2e)"
+    figure: "57.2"
+    source: https://docs.ultralytics.com/models/yolo26/
+    note: "yolo26n-pose at 640 px, end-to-end (no NMS); yolo11n-pose, the previous default, 50.0"
+description: Track persons with YOLO26 pose + ByteTrack producing COCO person + keypoint annotations.
 pipeline_family: person
-variant: yolov11n-pose-bytetrack
+variant: yolo26n-pose-bytetrack
 module_path: videoannotator.pipelines.person_tracking:PersonTrackingPipeline
 requires_extras: [person]
 tasks:
@@ -22,18 +32,36 @@ outputs:
     file: person_tracks.json
 config_schema:
   model:
+    group: technical
+    label: "Pose model"
     type: string
-    default: models/yolo/yolo11n-pose.pt
-    description: YOLO pose model path or tag
+    default: models/yolo/yolo26n-pose.pt
+    description: >-
+      YOLO pose model: a file name Ultralytics knows (e.g. yolo11n-pose.pt, the default before
+      v1.6.0) or a path to weights.
+    reason: "Higher keypoint accuracy than yolo11n-pose at the same size: COCO pose mAP 50-95 57.2 vs 50.0."
+    reason_source: https://docs.ultralytics.com/models/yolo26/
   conf_threshold:
+    group: technical
+    label: "Detection confidence"
+    min: 0
+    max: 1
     type: float
     default: 0.4
     description: Detection confidence threshold
   iou_threshold:
+    group: technical
+    label: "Tracking overlap (IoU)"
+    min: 0
+    max: 1
     type: float
     default: 0.7
-    description: IoU threshold for NMS/tracking
+    description: >-
+      Overlap above which two detections count as one (non-maximum suppression). No effect with
+      YOLO26 models, the default since v1.6.0: they are end to end, with no suppression step.
   track_mode:
+    group: behavioural
+    label: "Follow each person through the video"
     type: boolean
     default: true
     description: Enable tracking logic
@@ -46,3 +74,28 @@ version: 1
 stability: beta
 backends:
   - pytorch
+
+# spec 025: cited by the methods paragraph (videoannotator export methods).
+citations:
+  - key: jocher2026yolo26
+    bibtex: |
+      @misc{jocher2026yolo26,
+        title = {Ultralytics {YOLO26}: Unified Real-Time End-to-End Vision Models},
+        author = {Jocher, Glenn and Qiu, Jing and Liu, Mengyu and Lyu, Shuai and Akyon, Fatih Cagatay and Kalfaoglu, Muhammet Esat},
+        year = {2026},
+        eprint = {2606.03748},
+        archivePrefix = {arXiv},
+        primaryClass = {cs.CV},
+        doi = {10.48550/arXiv.2606.03748},
+        url = {https://arxiv.org/abs/2606.03748}
+      }
+  - key: zhang2022bytetrack
+    bibtex: |
+      @inproceedings{zhang2022bytetrack,
+        author = {Zhang, Yifu and Sun, Peize and Jiang, Yi and Yu, Dongdong and Weng, Fucheng and Yuan, Zehuan and Luo, Ping and Liu, Wenyu and Wang, Xinggang},
+        title = {{ByteTrack}: Multi-Object Tracking by Associating Every Detection Box},
+        booktitle = {Computer Vision -- {ECCV} 2022},
+        pages = {1--21},
+        year = {2022},
+        doi = {10.1007/978-3-031-20047-2_1}
+      }

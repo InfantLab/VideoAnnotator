@@ -1,0 +1,164 @@
+---
+title: "VideoAnnotator results in R"
+output: html_document
+---
+
+This notebook reads VideoAnnotator's **results table**: every pipeline's results in one CSV, one
+row per event and measure, the same columns for every pipeline. It walks through a small analysis
+of the demo clip (a parent and infant playing peekaboo) that ships beside this notebook.
+
+**To use your own results**, export the table (the viewer's *Export → Table (CSV)* on a run or job
+page, or `videoannotator export table <results folder>`) and change `TABLE` below. Everything else
+runs unchanged; sections whose pipeline you didn't run say so and move on.
+
+Packages: `readr`, `dplyr`, `tidyr`, `ggplot2` (all in the tidyverse). The columns are documented
+in `docs/usage/exporting_results.md`.
+
+```{r setup, message = FALSE}
+TABLE <- "demo_clip_table.csv"
+
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Read every column with the type the table's contract gives it.
+results <- read_csv(
+  TABLE,
+  col_types = cols(
+    run = col_character(), video = col_character(), pipeline = col_character(),
+    event = col_integer(), track = col_character(), start = col_double(),
+    end = col_double(), frame = col_integer(), measure = col_character(),
+    label = col_character(), value = col_double(), confidence = col_double(),
+    x = col_double(), y = col_double(), width = col_double(), height = col_double(),
+    model = col_character(), videoannotator_version = col_character(),
+    file = col_character()
+  )
+)
+cat(nrow(results), "rows,", n_distinct(results$video), "video(s),",
+    n_distinct(results$pipeline), "pipelines\n")
+```
+
+## What's in the table
+
+Each row is one **measure** of one **event**. An event is something a pipeline found: a person in
+a frame, a face, a speech segment, a speaker turn, a scene, a VLM label. Its first row says what it
+is (`person`, `face`, `speech`…); further rows with the same `event` number are things measured
+about it (an emotion, an action-unit intensity, gaze). `start` and `end` are seconds from the start
+of the video; `end` is empty (`NA`) for something seen at one moment (a frame).
+
+```{r overview}
+results |> count(pipeline, measure, name = "rows")
+```
+
+## Who speaks, and for how long
+
+Speaker turns come from diarization (`speaker_turn` rows; `track` is the speaker). Speaker labels
+are anonymous (`SPEAKER_00`, …): diarization tells voices apart, it doesn't know who they are.
+
+```{r speaking-time}
+turns <- results |> filter(measure == "speaker_turn") |> mutate(duration = end - start)
+if (nrow(turns) == 0) {
+  cat("No speaker diarization in this table.\n")
+} else {
+  turns |> group_by(video, track) |> summarise(turns = n(), seconds = sum(duration), .groups = "drop")
+}
+```
+
+## What was said
+
+Speech recognition gives one `speech` row per segment, with the text in `label`.
+
+```{r speech}
+results |> filter(measure == "speech") |> select(video, start, end, label)
+```
+
+## Who is in view, when
+
+Person tracking gives one `person` row per detection, with a `track` that follows the same person
+across frames and a `label` (`parent`, `infant`, …). The labels come from a size heuristic, so check
+them: in the demo clip both detected people are labelled `parent`.
+
+```{r people}
+people <- results |> filter(measure == "person")
+if (nrow(people) == 0) {
+  cat("No person tracking in this table.\n")
+} else {
+  print(people |> group_by(track, label) |>
+          summarise(detections = n(), first = min(start), last = max(start), .groups = "drop"))
+  ggplot(people, aes(x = start, y = track)) +
+    geom_point(shape = "|", size = 6) +
+    labs(x = "seconds", y = NULL, title = "Detections per tracked person")
+}
+```
+
+## Facial expression over time
+
+Face pipelines measure several things per face. `emotion` rows hold the most likely expression in
+`label` with its probability in `confidence`; `emotion_score` rows hold every expression's score
+(`label` names it, `value` is the score). OpenFace adds `action_unit` rows (one per action unit).
+
+```{r expression}
+results |> filter(measure == "emotion") |> count(pipeline, label, name = "faces")
+
+units <- results |> filter(measure == "action_unit")
+if (nrow(units) > 0) {
+  units |>
+    group_by(label, start) |>
+    summarise(intensity = mean(value), .groups = "drop") |>
+    ggplot(aes(x = start, y = intensity, colour = label)) +
+    geom_line() + geom_point(size = 0.8) +
+    labs(x = "seconds", y = "intensity (mean over faces)", colour = NULL,
+         title = "OpenFace action units")
+}
+```
+
+## One row per event: going wide
+
+The long layout keeps every pipeline in the same columns. For per-face analysis you often want one
+row per face with a column per action unit: that's one `pivot_wider` call.
+
+```{r wide}
+if (nrow(units) == 0) {
+  cat("No OpenFace results in this table.\n")
+} else {
+  units |>
+    select(video, pipeline, event, start, label, value) |>
+    pivot_wider(names_from = label, values_from = value)
+}
+```
+
+## Who is in view while someone speaks
+
+Combining pipelines is a join on time. For each speaker turn, which tracked people were detected
+during it? People are sampled at moments, so a person counts as in view during a turn if any of
+their detections falls inside it.
+
+```{r overlap}
+if (nrow(turns) == 0 || nrow(people) == 0) {
+  cat("Needs both speaker diarization and person tracking.\n")
+} else {
+  turns |>
+    select(video, speaker = track, turn_start = start, turn_end = end) |>
+    left_join(people |> select(video, person = track, seen_at = start),
+              by = "video", relationship = "many-to-many") |>
+    filter(is.na(seen_at) | (seen_at >= turn_start & seen_at <= turn_end)) |>
+    group_by(video, speaker, turn_start, turn_end) |>
+    summarise(people_in_view = paste(sort(unique(na.omit(person))), collapse = ", "),
+              .groups = "drop") |>
+    right_join(turns |> select(video, speaker = track, turn_start = start, turn_end = end),
+               by = c("video", "speaker", "turn_start", "turn_end")) |>
+    mutate(people_in_view = coalesce(na_if(people_in_view, ""), "(none detected)")) |>
+    arrange(video, turn_start)
+}
+```
+
+## What made these results
+
+Every row names the models (`model`) and VideoAnnotator version that produced it; `not recorded`
+means the file came from a version that didn't record it. For a citable methods paragraph with
+exact weight revisions, use *Export → Methods paragraph* or `videoannotator export methods`.
+
+```{r provenance}
+results |> count(pipeline, model, videoannotator_version, name = "rows")
+```

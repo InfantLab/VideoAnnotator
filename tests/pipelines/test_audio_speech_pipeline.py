@@ -95,7 +95,7 @@ class TestDiarizationPipeline:
 
             # Check that model was loaded with correct parameters
             mock_pyannote.from_pretrained.assert_called_once_with(
-                "pyannote/speaker-diarization-3.1",
+                "pyannote/speaker-diarization-community-1",
                 token="FAKE_TOKEN_FOR_TESTING",
             )
 
@@ -115,8 +115,12 @@ class TestDiarizationPipeline:
 
     def test_diarization_pipeline_initialize_no_token(self):
         """Test initialization fails without HuggingFace token."""
-        # Clear environment variables
-        with patch.dict("os.environ", {}, clear=True):
+        # Not by clearing the environment: Windows needs USERPROFILE to find
+        # where a saved token would be.
+        with patch(
+            "videoannotator.pipelines.audio_processing.diarization_pipeline.huggingface_token",
+            return_value=None,
+        ):
             config = {}
             pipeline = DiarizationPipeline(config)
 
@@ -254,105 +258,6 @@ class TestSpeechPipeline:
         assert pipeline.config["language"] == "en"
         assert not pipeline.is_initialized
 
-    @patch(
-        "videoannotator.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE",
-        True,
-    )
-    @patch("torch.cuda.is_available", return_value=False)
-    @patch(
-        "videoannotator.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE",
-        True,
-    )
-    @patch("torch.cuda.is_available", return_value=True)
-    @patch(
-        "videoannotator.pipelines.audio_processing.speech_pipeline.whisper.load_model"
-    )
-    def test_speech_audio_processing(
-        self, mock_whisper_load_model, mock_cuda, mock_whisper, temp_audio_file
-    ):
-        """Test speech recognition processing (librosa.load is globally mocked.
-
-        by fixture).
-        """
-        # Mock whisper transcription result
-        mock_result = {
-            "text": "Hello world, this is a test.",
-            "language": "en",
-            "segments": [
-                {
-                    "id": 0,
-                    "start": 0.0,
-                    "end": 2.0,
-                    "text": "Hello world,",
-                    "tokens": [50364, 5751, 1002, 11, 50464],
-                    "temperature": 0.0,
-                    "avg_logprob": -0.5,
-                    "compression_ratio": 2.5,
-                    "no_speech_prob": 0.1,
-                    "words": [
-                        {
-                            "start": 0.0,
-                            "end": 0.5,
-                            "word": "Hello",
-                            "probability": 0.99,
-                        },
-                        {
-                            "start": 0.6,
-                            "end": 1.0,
-                            "word": "world,",
-                            "probability": 0.95,
-                        },
-                    ],
-                },
-                {
-                    "id": 1,
-                    "start": 2.0,
-                    "end": 4.0,
-                    "text": "this is a test.",
-                    "tokens": [50464, 341, 307, 257, 1500, 13, 50564],
-                    "temperature": 0.0,
-                    "avg_logprob": -0.4,
-                    "compression_ratio": 2.3,
-                    "no_speech_prob": 0.05,
-                    "words": [
-                        {"start": 2.0, "end": 2.3, "word": "this", "probability": 0.98},
-                        {"start": 2.4, "end": 2.6, "word": "is", "probability": 0.97},
-                        {"start": 2.7, "end": 2.8, "word": "a", "probability": 0.96},
-                        {
-                            "start": 2.9,
-                            "end": 3.2,
-                            "word": "test.",
-                            "probability": 0.94,
-                        },
-                    ],
-                },
-            ],
-        }
-
-        mock_model = Mock()
-        mock_model.transcribe.return_value = mock_result
-        mock_whisper_load_model.return_value = mock_model
-
-        config = {}
-        pipeline = SpeechPipeline(config)
-        pipeline.initialize()
-
-        # Process audio
-        result = pipeline.process(str(temp_audio_file))
-
-        assert isinstance(
-            result, list
-        )  # Should return list of results from BasePipeline
-        assert len(result) == 1
-        speech_result = result[0]
-        assert isinstance(speech_result, dict)
-        assert "transcript" in speech_result
-        assert "words" in speech_result
-        assert "metadata" in speech_result
-        assert speech_result["transcript"] == "Hello world, this is a test."
-
-        pipeline.cleanup()
-
     def test_speech_audio_file_not_found(self):
         """Test error handling for missing audio file."""
         config = {}
@@ -371,7 +276,7 @@ class TestSpeechPipeline:
 
         assert "models" in info
         assert "config" in info
-        assert info["models"]["whisper_model"] == "base"
+        assert info["models"]["whisper_model"] == "large-v3-turbo"
 
     def test_speech_get_schema(self):
         """Test speech recognition schema generation."""

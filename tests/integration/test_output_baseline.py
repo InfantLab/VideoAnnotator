@@ -17,6 +17,7 @@ regenerate the fixtures as tests/fixtures/viewer_contract/README.md describes.
 
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -26,7 +27,9 @@ from pathlib import Path
 import pytest
 import requests
 
+from videoannotator.config_env import huggingface_token
 from videoannotator.provenance import COMPANION_SUFFIX, VTT_MARKER, read_record
+from videoannotator.secrets_store import read_saved_huggingface_token
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BASELINE_DIR = REPO_ROOT / "tests" / "fixtures" / "viewer_contract"
@@ -36,15 +39,20 @@ DEMO_VIDEO = (
 # Fixture names and contents replace the participant code (viewer_contract/README.md).
 RENAMES = [("2UWdXP.joke1.rep3.take1.Peekaboo_h265", "demo_clip"), ("2UWdXP", "demo")]
 
-# face_analysis is left out: DeepFace detects no faces in the demo clip, so it writes
-# no file to compare.
+# face_analysis joined in spec 030: with the RetinaFace detector it finds faces in the
+# demo clip (the Haar cascade found none).
 PIPELINES = [
+    "face_analysis",
     "face_openface3_embedding",
     "person_tracking",
     "scene_detection",
     "speaker_diarization",
     "speech_recognition",
 ]
+
+# Spec 030: a folder to copy this run's outputs (and server.log) into, so runs can be
+# compared step by step with scripts/compare_demo_outputs.py.
+KEEP = os.environ.get("VIDEOANNOTATOR_BASELINE_KEEP")
 
 EXACT = [
     "scene_detection.json",
@@ -57,6 +65,8 @@ EXACT = [
 # 1.6% (abs 0.004). Bounds are about 10x that; a CPU run may need more.
 TOLERANCE = {
     "person_tracking.json": (1e-2, 1e-3),
+    # Two runs on a GTX 1060 were identical (spec 030 checks.md); person's bounds.
+    "face_detections.json": (1e-2, 1e-3),
     "openface3_analysis.json": (5e-2, 1e-2),
     "openface3_detailed.json": (5e-2, 1e-2),
 }
@@ -83,6 +93,24 @@ def _assert_within_tolerance(current, golden, rel: float, abs_: float = 0.0, pat
         assert current == golden, path
 
 
+def _users_saved_token() -> str | None:
+    """A token saved from the viewer or CLI (spec 031). It sits next to the
+    user's database; tests/conftest.py points the suite at a temporary one."""
+    suite_db = os.environ.get("VIDEOANNOTATOR_DB_PATH")
+    user_db = os.environ.get("VIDEOANNOTATOR_USER_DB_PATH", "")
+    try:
+        if user_db:
+            os.environ["VIDEOANNOTATOR_DB_PATH"] = user_db
+        else:
+            os.environ.pop("VIDEOANNOTATOR_DB_PATH", None)
+        return read_saved_huggingface_token()
+    finally:
+        if suite_db is None:
+            os.environ.pop("VIDEOANNOTATOR_DB_PATH", None)
+        else:
+            os.environ["VIDEOANNOTATOR_DB_PATH"] = suite_db
+
+
 def _free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
@@ -107,6 +135,9 @@ def current_outputs(tmp_path_factory) -> dict[str, str]:
         # tests/conftest.py turns this off for the suite; the server must process jobs.
         "VIDEOANNOTATOR_BACKGROUND_PROCESSING": "true",
     }
+    token = huggingface_token() or _users_saved_token()
+    if token:
+        env["HUGGINGFACE_TOKEN"] = token
     cli = Path(sys.executable).parent / "videoannotator"
     with (work / "server.log").open("w") as log:
         server = subprocess.Popen(
@@ -160,11 +191,18 @@ def current_outputs(tmp_path_factory) -> dict[str, str]:
         for old, new in RENAMES:
             name, text = name.replace(old, new), text.replace(old, new)
         outputs[name.removeprefix("demo_clip_")] = text
+    if KEEP:
+        keep = Path(KEEP).expanduser()
+        keep.mkdir(parents=True, exist_ok=True)
+        for suffix, text in outputs.items():
+            (keep / f"demo_clip_{suffix}").write_text(text)
+        shutil.copy(work / "server.log", keep / "server.log")
     return outputs
 
 
 def _without_run_details(suffix: str, text: str):
-    """The annotations only: provenance and creation times differ every run."""
+    """The annotations only: provenance, creation times and the version that
+    wrote them differ between runs and releases."""
     if suffix.endswith(".json"):
         data = json.loads(text)
         if isinstance(data, dict):
@@ -172,6 +210,8 @@ def _without_run_details(suffix: str, text: str):
             if isinstance(data.get("info"), dict):
                 data["info"].pop("date_created", None)
                 data["info"].pop("year", None)
+                # The release that wrote it; provenance says the same.
+                data["info"].pop("version", None)
         return data
     if suffix.endswith(".vtt"):
         text = "\n\n".join(

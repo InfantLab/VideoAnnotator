@@ -1,6 +1,13 @@
 name: audio_processing
 display_name: Audio Processing (Speech + Diarization)
-description: Transcribe speech with Whisper and perform speaker diarization using pyannote.audio producing WebVTT + RTTM outputs.
+title: "Speech and speakers (deprecated)"
+summary: >-
+  Transcribes speech and says who spoke when, in one step. Use Speech and Speaker turns instead.
+homepage: https://github.com/openai/whisper
+benchmarks: []
+quality_note: >-
+  Deprecated: see Speech and Speaker turns for their benchmarks.
+description: Transcribe speech with Whisper (faster-whisper) and perform speaker diarization using pyannote.audio producing WebVTT + RTTM outputs.
 pipeline_family: audio
 variant: whisper-pyannote
 # Short name 'audio' resolves here while this pipeline exists (spec 014).
@@ -29,18 +36,24 @@ outputs:
     file: speaker_diarization.rttm
 config_schema:
   whisper_model:
+    group: technical
+    label: "Whisper model size"
     type: string
-    default: base
-    description: Whisper model size
-  enable_diarization:
-    type: boolean
-    default: true
-    description: Perform speaker diarization
+    default: large-v3-turbo
+    description: Whisper model (faster-whisper size name)
   min_speakers:
+    group: behavioural
+    label: "Fewest speakers"
+    unit: speakers
+    min: 1
     type: integer
     default: 1
     description: Minimum number of speakers to consider
   max_speakers:
+    group: behavioural
+    label: "Most speakers"
+    unit: speakers
+    min: 1
     type: integer
     default: 10
     description: Maximum number of speakers to consider
@@ -50,6 +63,7 @@ examples:
 version: 1
 stability: beta
 backends:
+  - ctranslate2
   - pytorch
 
 # spec 011: diarization (on by default) needs a HF token + licences; see speaker_diarization.yaml.
@@ -60,21 +74,43 @@ requires_setup:
     description: A Hugging Face access token (to download the pyannote models)
     help_url: https://huggingface.co/settings/tokens
   - kind: licence
-    name: pyannote/speaker-diarization-3.1
-    description: Accept the pyannote/speaker-diarization-3.1 licence on Hugging Face, with the same account as the token.
-    help_url: https://huggingface.co/pyannote/speaker-diarization-3.1
-  - kind: licence
-    name: pyannote/segmentation-3.0
-    description: Accept the pyannote/segmentation-3.0 licence on Hugging Face too; speaker-diarization-3.1 uses it.
-    help_url: https://huggingface.co/pyannote/segmentation-3.0
-  - kind: licence
     name: pyannote/speaker-diarization-community-1
-    description: Accept the pyannote/speaker-diarization-community-1 licence too; pyannote.audio 4 loads part of every diarization pipeline (PLDA) from it, even with speaker-diarization-3.1.
+    description: Accept the pyannote/speaker-diarization-community-1 licence on Hugging Face, with the same account as the token.
     help_url: https://huggingface.co/pyannote/speaker-diarization-community-1
 weights:
-  - id: base
-    approx_mb: 140
-    cache: whisper
-  - id: pyannote/speaker-diarization-3.1
-    approx_mb: 35
+  - id: mobiuslabsgmbh/faster-whisper-large-v3-turbo
+    approx_mb: 1622
     cache: huggingface
+  - id: pyannote/speaker-diarization-community-1
+    approx_mb: 34
+    cache: huggingface
+
+# spec 025: cited by the methods paragraph (videoannotator export methods).
+citations:
+  - key: radford2023whisper
+    bibtex: |
+      @inproceedings{radford2023whisper,
+        author = {Radford, Alec and Kim, Jong Wook and Xu, Tao and Brockman, Greg and McLeavey, Christine and Sutskever, Ilya},
+        title = {Robust Speech Recognition via Large-Scale Weak Supervision},
+        booktitle = {Proceedings of the 40th International Conference on Machine Learning},
+        series = {Proceedings of Machine Learning Research},
+        volume = {202},
+        pages = {28492--28518},
+        year = {2023}
+      }
+  - key: plaquet2023powerset
+    bibtex: |
+      @inproceedings{plaquet2023powerset,
+        author = {Plaquet, Alexis and Bredin, Herv{\'e}},
+        title = {Powerset multi-class cross entropy loss for neural speaker diarization},
+        booktitle = {Proc. INTERSPEECH 2023},
+        year = {2023}
+      }
+  - key: bredin2023pyannote
+    bibtex: |
+      @inproceedings{bredin2023pyannote,
+        author = {Bredin, Herv{\'e}},
+        title = {{pyannote.audio} 2.1 speaker diarization pipeline: principle, benchmark, and recipe},
+        booktitle = {Proc. INTERSPEECH 2023},
+        year = {2023}
+      }

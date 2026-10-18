@@ -23,7 +23,7 @@ You choose videos and pipelines in the browser; VideoAnnotator runs them and kee
 | Pipeline | What you get | File format |
 |---|---|---|
 | Person tracking | Each person's box and 17-point pose, with an ID that follows them | COCO |
-| Face analysis | Faces with emotion, age and gender estimates | COCO |
+| Face analysis | Faces with emotion estimates (age and gender optional) | COCO |
 | Face embeddings (OpenFace 3) | A 512-number description of each face, for telling people apart | JSON |
 | Scene detection | Where the scene cuts, and what kind of place each scene is | JSON |
 | Speech recognition | A transcript with word timings (Whisper) | WebVTT |
@@ -37,10 +37,14 @@ The viewer then lets you:
 - Keep named lists of videos (datasets) to run studies on.
 - Write and test prompts for the VLM pipeline, and compare two models' labels against your own
   coding (ELAN `.eaf`).
+- Get every result out as **one table** for R or Python (CSV or Parquet, the same columns for
+  every pipeline), as **ELAN files** to check alongside your own coding, or as a **methods
+  paragraph** with citations. Worked [R and Python notebooks](examples/notebooks/) start from the
+  table.
 
 Every output file records what made it: the pipeline and VideoAnnotator version, the model and its
-exact weights, and the settings. That is what you need to report the method, and to get the same
-results again later.
+exact weights, and the settings. That is what you need to report the method (Export → Methods
+paragraph writes it for you), and to get the same results again later.
 
 ## Get started
 
@@ -66,7 +70,8 @@ You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) or
 3. **Run a job.** Choose **New job**, tick some videos and the pipelines to run. The first time
    you choose a pipeline, VideoAnnotator offers to install it. **Jobs** shows progress; open a
    finished job to see the results on the video. Results also go to a `VideoAnnotator` folder in
-   your home folder.
+   your home folder; **Export** on a run's page gives you all of them as one table for R or
+   Python.
 
 Allow about 1 GB of disk, plus up to 12 GB if you install every pipeline, and 16 GB of RAM. A
 GPU is optional. The VLM pipeline needs [Ollama](https://ollama.com) running on the same
@@ -82,6 +87,8 @@ and installing from source in your own Python environment
 - **[Documentation](docs/README.md)**: install options, every pipeline, output formats,
   configuration and troubleshooting.
 - **[Getting started](docs/usage/GETTING_STARTED.md)**: a first job, step by step.
+- **[Results out](docs/usage/exporting_results.md)**: the results table, ELAN files and the
+  methods paragraph, from the viewer, the command line (`videoannotator export`) or the API.
 - **[Command line and API](docs/usage/demo_commands.md)**: everything the viewer does can also be
   scripted, via `videoannotator` commands or the REST API (documented at
   http://127.0.0.1:18011/docs while the server runs).

@@ -5,7 +5,8 @@ name: Docs site
 on:
   push:
     branches: [master]
-    paths: [docs/**, mkdocs.yml, scripts/mkdocs_hooks.py]
+    # pyproject.toml: a version bump changes the version shown on every page.
+    paths: [docs/**, mkdocs.yml, scripts/mkdocs_hooks.py, pyproject.toml]
   workflow_dispatch:
 
 permissions:

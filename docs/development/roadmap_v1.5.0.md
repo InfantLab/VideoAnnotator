@@ -13,7 +13,7 @@ This release scopes down the full modular-pipeline-architecture design in
 to the subset that matters for the resubmission: a slim, extras-based install, and a runtime
 integration between VideoAnnotator and Video Annotation Viewer. The plugin-discovery and
 remote-dispatch seams from that spec are real and worth building, but they are not blocking a
-resubmission — they move to [`roadmap_v1.7.0.md`](roadmap_v1.7.0.md) (planned as v1.6.0 until
+resubmission — they move to [`roadmap_v1.8.0.md`](roadmap_v1.8.0.md) (now v1.8.0; planned as v1.6.0 until
 2026-09-24, when v1.6.0 became the public release: [`roadmap_v1.6.0.md`](roadmap_v1.6.0.md)).
 
 **Target Release**: Alongside/ahead of the JOSS resubmission (Phase 2 — /viewer integration —
@@ -42,7 +42,7 @@ source files, CUDA-only torch pin, stale `openai-whisper` pin) — see commits `
 - ✅ **LAION is opt-in, not default** — LAION Empathic-Insight (face and voice emotion) is an
   actively-changing external project with a narrow user base; it should not tax every install.
 
-**Out of scope for v1.5.0** (moved to v1.7.0 — see [`roadmap_v1.7.0.md`](roadmap_v1.7.0.md)):
+**Out of scope for v1.5.0** (moved to v1.8.0 — see [`roadmap_v1.8.0.md`](roadmap_v1.8.0.md)):
 - ❌ Third-party plugin discovery via `importlib.metadata.entry_points`
 - ❌ Dispatcher ABC / HTTPDispatcher / SlurmDispatcher seam
 - ❌ Cross-cutting utilities split into a sibling `videoannotator-utils` package

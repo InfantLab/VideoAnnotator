@@ -1,5 +1,12 @@
 name: scene_detection
 display_name: Scene Detection
+title: "Scenes: cuts and settings"
+summary: >-
+  Finds where the video cuts from one shot to another and labels the kind of setting each scene shows.
+homepage: https://www.scenedetect.com/
+benchmarks: []
+quality_note: >-
+  Neither PySceneDetect nor CLIP publishes an accuracy figure for finding cuts or labelling scene settings.
 description: Detect hard cuts and scene boundaries using PySceneDetect with semantic labeling via CLIP.
 pipeline_family: scene
 variant: pyscenedetect-clip
@@ -19,17 +26,20 @@ outputs:
     file: scene_detection.json
 config_schema:
   threshold:
+    group: technical
+    label: "Cut sensitivity (content score)"
+    min: 0
     type: float
     default: 30.0
     description: Scene cut detection threshold
   min_scene_length:
+    group: behavioural
+    label: "Shortest scene"
+    unit: s
+    min: 0
     type: float
     default: 1.0
     description: Minimum scene length in seconds
-  enable_clip_labels:
-    type: boolean
-    default: true
-    description: Use CLIP embeddings for environment labels
 examples:
   - cli: videoannotator job submit demo.mp4 --pipelines scene_detection
     description: Submit scene detection job
@@ -37,3 +47,41 @@ version: 1
 stability: beta
 backends:
   - pytorch
+
+# spec 025: cited by the methods paragraph (videoannotator export methods).
+citations:
+  - key: castellano_pyscenedetect
+    bibtex: |
+      @software{castellano_pyscenedetect,
+        author = {Castellano, Brandon},
+        title = {{PySceneDetect}: Video Scene Cut Detection and Analysis Tool},
+        url = {https://github.com/Breakthrough/PySceneDetect}
+      }
+  - key: radford2021clip
+    bibtex: |
+      @inproceedings{radford2021clip,
+        author = {Radford, Alec and Kim, Jong Wook and Hallacy, Chris and Ramesh, Aditya and Goh, Gabriel and Agarwal, Sandhini and Sastry, Girish and Askell, Amanda and Mishkin, Pamela and Clark, Jack and Krueger, Gretchen and Sutskever, Ilya},
+        title = {Learning Transferable Visual Models From Natural Language Supervision},
+        booktitle = {Proceedings of the 38th International Conference on Machine Learning},
+        series = {Proceedings of Machine Learning Research},
+        volume = {139},
+        pages = {8748--8763},
+        year = {2021}
+      }
+  - key: ilharco2021openclip
+    bibtex: |
+      @software{ilharco2021openclip,
+        author = {Ilharco, Gabriel and Wortsman, Mitchell and Wightman, Ross and Gordon, Cade and Carlini, Nicholas and Taori, Rohan and Dave, Achal and Shankar, Vaishaal and Namkoong, Hongseok and Miller, John and Hajishirzi, Hannaneh and Farhadi, Ali and Schmidt, Ludwig},
+        title = {{OpenCLIP}},
+        year = {2021},
+        publisher = {Zenodo},
+        doi = {10.5281/zenodo.5143773}
+      }
+  - key: schuhmann2022laion
+    bibtex: |
+      @inproceedings{schuhmann2022laion,
+        author = {Schuhmann, Christoph and Beaumont, Romain and Vencu, Richard and Gordon, Cade and Wightman, Ross and Cherti, Mehdi and Coombes, Theo and Katta, Aarush and Mullis, Clayton and Wortsman, Mitchell and Schramowski, Patrick and Kundurthy, Srivatsa and Crowson, Katherine and Schmidt, Ludwig and Kaczmarczyk, Robert and Jitsev, Jenia},
+        title = {{LAION-5B}: An open large-scale dataset for training next generation image-text models},
+        booktitle = {Advances in Neural Information Processing Systems 35, Datasets and Benchmarks Track},
+        year = {2022}
+      }

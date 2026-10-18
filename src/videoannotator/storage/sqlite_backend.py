@@ -67,15 +67,9 @@ class SQLiteStorageBackend(StorageBackend):
         # Create database engine
         self.engine = create_database_engine(self.database_url, echo=echo)
 
-        # Set up logging first
-        self.logger = logging.getLogger(__name__)
-        if not self.logger.handlers:
-            handler = logging.StreamHandler()
-            handler.setLevel(logging.INFO)
-            formatter = logging.Formatter("[%(levelname)s] %(message)s")
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
+        # Under videoannotator.database, so these reach logs/ and stay out of
+        # the terminal (logging_config).
+        self.logger = logging.getLogger("videoannotator.database.sqlite")
 
         # Log database creation for first-time users
         database_exists = self.database_path.exists()
@@ -447,6 +441,18 @@ class SQLiteStorageBackend(StorageBackend):
                 return [row[0] for row in query.order_by(Job.created_at.asc()).all()]
         except SQLAlchemyError as e:
             self.logger.error(f"[ERROR] Failed to list jobs for batch {batch_id}: {e}")
+            return []
+
+    def list_jobs_by_dataset(self, dataset_id: str) -> list[str]:
+        """Job IDs run from a saved dataset, oldest first (spec 025)."""
+        try:
+            with self.SessionLocal() as session:
+                query = session.query(Job.id).filter(Job.dataset_id == dataset_id)
+                return [row[0] for row in query.order_by(Job.created_at.asc()).all()]
+        except SQLAlchemyError as e:
+            self.logger.error(
+                f"[ERROR] Failed to list jobs for dataset {dataset_id}: {e}"
+            )
             return []
 
     def list_unbatched_jobs(self) -> list[str]:

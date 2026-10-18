@@ -40,11 +40,36 @@ class TestPersonTrackingPipeline:
         pipeline = PersonTrackingPipeline()
 
         # Verify current default configuration
-        assert pipeline.config["model"] == "models/yolo/yolo11n-pose.pt"
+        assert pipeline.config["model"] == "models/yolo/yolo26n-pose.pt"
         assert pipeline.config["conf_threshold"] == 0.4
         assert pipeline.config["iou_threshold"] == 0.7
         assert pipeline.config["tracker"] == "bytetrack"
         assert pipeline.config["track_mode"]
+
+    def test_weights_downloaded_on_first_run_are_recorded(self, tmp_path):
+        """Provenance (spec 017) hashes the weights after loading: on a first
+        run they only exist once ultralytics has downloaded them."""
+        module = "videoannotator.pipelines.person_tracking.person_pipeline"
+        downloaded = tmp_path / "yolo26n-pose.pt"
+        missing = tmp_path / "not-yet" / "yolo26n-pose.pt"
+
+        def load(*_args):
+            downloaded.write_bytes(b"weights")
+            return Mock(ckpt_path=str(downloaded))
+
+        pipeline = PersonTrackingPipeline()
+        with (
+            patch(f"{module}.YOLO_AVAILABLE", True),
+            patch(f"{module}.YOLO", Mock(), create=True),
+            patch(f"{module}.resolve_yolo_model", return_value=missing),
+            patch(f"{module}.log_model_download", side_effect=load),
+        ):
+            pipeline._initialize_model()
+
+        [ref] = pipeline.provenance_models()
+        assert ref.name == "models/yolo/yolo26n-pose.pt"
+        assert ref.revision_kind == "sha256"
+        assert ref.revision is not None
 
     def test_initialization_lifecycle(self):
         """Test pipeline initialization and cleanup lifecycle."""

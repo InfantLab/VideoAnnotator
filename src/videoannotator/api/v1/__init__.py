@@ -9,6 +9,7 @@ from .datasets import router as datasets_router
 from .debug import router as debug_router
 from .endpoints.artifacts import router as artifacts_router
 from .events import router as events_router
+from .exports import router as exports_router
 from .health import router as health_router
 from .ingest import router as ingest_router
 from .jobs import router as jobs_router
@@ -41,3 +42,4 @@ api_router.include_router(config_router, prefix="/config", tags=["config"])
 api_router.include_router(system_router, prefix="/system", tags=["system"])
 api_router.include_router(debug_router, prefix="/debug", tags=["debug"])
 api_router.include_router(events_router, prefix="/events", tags=["events"])
+api_router.include_router(exports_router, tags=["exports"])

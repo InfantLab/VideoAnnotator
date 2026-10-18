@@ -1,8 +1,20 @@
 name: speech_recognition
 display_name: Speech Recognition
-description: Speech transcription using OpenAI Whisper with word-level timestamps, producing WebVTT format output for subtitles and captions.
+title: "Speech: what was said"
+summary: >-
+  Transcribes speech into timed text, with the time of each word.
+homepage: https://github.com/SYSTRAN/faster-whisper
+benchmarks:
+  - name: "Transcribing 13 minutes of audio (GPU, large-v2, beam 5)"
+    measure: "time"
+    figure: "1m03s (openai-whisper 2m23s)"
+    source: https://github.com/SYSTRAN/faster-whisper#benchmark
+    note: "faster-whisper fp16 against openai-whisper fp16, on an RTX 3070 Ti"
+quality_note: >-
+  OpenAI publishes large-v3-turbo's accuracy only as charts: "Across languages, the turbo model performs similarly to large-v2", with larger drops for some languages such as Thai and Cantonese (github.com/openai/whisper/discussions/2363). No figure measures child-directed speech, infant vocalisations or overlapping talk. On a CPU, a smaller model (whisper_model small) is much faster.
+description: Speech transcription using OpenAI Whisper models on the faster-whisper runtime, with word-level timestamps, producing WebVTT format output.
 pipeline_family: audio
-variant: whisper
+variant: faster-whisper
 module_path: videoannotator.pipelines.audio_processing:SpeechPipeline
 requires_extras: [audio]
 tasks:
@@ -20,62 +32,111 @@ outputs:
     file: speech_recognition.vtt
 config_schema:
   whisper_model:
+    group: technical
+    label: "Whisper model size"
     type: string
-    default: base
-    description: Whisper model size (tiny, base, small, medium, large, large-v2, large-v3)
+    default: large-v3-turbo
+    description: >-
+      Whisper model: a size (tiny, base, small, medium, large-v3, large-v3-turbo, distil-large-v3)
+      or a CTranslate2 model repository on Hugging Face. large-v3-turbo is a 1.6 GB download and
+      needs about 3 GB of GPU memory; on a CPU, small is much faster.
+    reason: "OpenAI's large-v3 with its decoder cut from 32 layers to 4: \"way faster, at the expense of a minor quality degradation\" (model card), and much larger than base, the default before v1.6.0 (809 M parameters vs 74 M)."
+    reason_source: https://huggingface.co/openai/whisper-large-v3-turbo
   language:
+    group: behavioural
+    label: "Language"
     type: string
     default: null
     description: Language code (e.g., en, es, fr) or null for auto-detection
   task:
+    group: behavioural
+    label: "Transcribe or translate"
     type: string
     default: transcribe
-    description: Task type - transcribe or translate (translate converts to English)
+    description: >-
+      transcribe, or translate (into English). large-v3-turbo can't translate: set whisper_model to
+      large-v3 or medium for translation.
   beam_size:
+    group: technical
+    label: "Beam size"
+    min: 1
     type: integer
     default: 5
     description: Beam size for beam search decoding
   best_of:
+    group: technical
+    label: "Candidates when sampling"
+    min: 1
     type: integer
     default: 5
     description: Number of candidates when sampling
   temperature:
+    group: technical
+    label: "Sampling temperature"
+    min: 0
     type: float
     default: 0.0
     description: Temperature for sampling (0.0 for deterministic)
   patience:
+    group: technical
+    label: "Beam search patience"
     type: float
     default: 1.0
     description: Beam search patience factor
   length_penalty:
+    group: technical
+    label: "Length penalty"
     type: float
     default: 1.0
     description: Length penalty for beam search
+  compute_type:
+    group: technical
+    label: "Numeric precision"
+    type: string
+    default: default
+    description: >-
+      CTranslate2 compute type (default, float32, float16, int8, int8_float16). "default" keeps the
+      model's own precision where the device supports it; the type used is recorded in each
+      output's provenance.
   word_timestamps:
+    group: behavioural
+    label: "Time of each word"
     type: boolean
     default: true
     description: Generate word-level timestamps
   min_segment_duration:
+    group: behavioural
+    label: "Shortest segment"
+    unit: s
+    min: 0
     type: float
     default: 1.0
-    description: Minimum segment duration in seconds
+    description: >-
+      Has no effect: transcripts have never been split or merged by duration. Kept so existing
+      settings files stay valid.
   prepend_punctuations:
+    group: technical
+    label: "Punctuation joined to the next word"
     type: string
     default: "\"'¿([{-"
     description: Punctuation marks to prepend to next word
   append_punctuations:
+    group: technical
+    label: "Punctuation joined to the previous word"
     type: string
     default: "\"'..,!?:)]},"
     description: Punctuation marks to append to previous word
   suppress_tokens:
+    group: technical
+    label: "Suppressed tokens"
     type: string
     default: null
     description: Comma-separated list of token IDs to suppress
 examples:
   - cli: videoannotator job submit demo.mp4 --pipelines speech_recognition
     description: Submit speech transcription job with default settings
-  - cli: videoannotator job submit demo.mp4 --pipelines speech_recognition --config '{"speech_recognition":{"whisper_model":"medium","language":"en"}}'
-    description: Use medium model with English language
+  - cli: videoannotator job submit demo.mp4 --pipelines speech_recognition --config '{"speech_recognition":{"whisper_model":"small","language":"en"}}'
+    description: A smaller, faster model (e.g. on a CPU), English only
   - api: |
       {
         "video_url": "demo.mp4",
@@ -83,23 +144,36 @@ examples:
         "config": {
           "speech_recognition": {
             "whisper_model": "large-v3",
-            "word_timestamps": true,
+            "task": "translate",
             "language": "es"
           }
         }
       }
-    description: Spanish transcription with large model via API
+    description: Spanish speech translated into English (large-v3, since turbo can't translate), via API
 version: 1
 stability: stable
 backends:
-  - pytorch
+  - ctranslate2
 requirements:
   packages:
-    - openai-whisper
-    - ffmpeg-python
+    - faster-whisper
 
 # spec 011: first run downloads the default Whisper model.
 weights:
-  - id: base
-    approx_mb: 140
-    cache: whisper
+  - id: mobiuslabsgmbh/faster-whisper-large-v3-turbo
+    approx_mb: 1622
+    cache: huggingface
+
+# spec 025: cited by the methods paragraph (videoannotator export methods).
+citations:
+  - key: radford2023whisper
+    bibtex: |
+      @inproceedings{radford2023whisper,
+        author = {Radford, Alec and Kim, Jong Wook and Xu, Tao and Brockman, Greg and McLeavey, Christine and Sutskever, Ilya},
+        title = {Robust Speech Recognition via Large-Scale Weak Supervision},
+        booktitle = {Proceedings of the 40th International Conference on Machine Learning},
+        series = {Proceedings of Machine Learning Research},
+        volume = {202},
+        pages = {28492--28518},
+        year = {2023}
+      }

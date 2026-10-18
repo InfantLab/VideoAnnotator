@@ -1,5 +1,27 @@
 name: speaker_diarization
 display_name: Speaker Diarization
+title: "Speaker turns: who spoke when"
+summary: >-
+  Splits the audio into turns and says which speaker each turn belongs to, without naming them.
+homepage: https://huggingface.co/pyannote/speaker-diarization-community-1
+benchmarks:
+  - name: "AMI (IHM)"
+    measure: "DER %"
+    figure: "17.0"
+    source: https://github.com/pyannote/pyannote-audio#benchmark
+    note: "community-1; benchmark last updated 2025-09"
+  - name: "DIHARD 3 (full)"
+    measure: "DER %"
+    figure: "20.2"
+    source: https://github.com/pyannote/pyannote-audio#benchmark
+    note: "community-1; benchmark last updated 2025-09"
+  - name: "VoxConverse (v0.3)"
+    measure: "DER %"
+    figure: "11.2"
+    source: https://github.com/pyannote/pyannote-audio#benchmark
+    note: "community-1; benchmark last updated 2025-09"
+quality_note: >-
+  These sets are meetings, broadcasts and phone calls between adults; none measures parent–infant interaction or infant vocalisations.
 description: Speaker diarization using PyAnnote.audio to segment and identify different speakers with timestamps, producing RTTM format output.
 pipeline_family: audio
 variant: pyannote
@@ -19,18 +41,34 @@ outputs:
     file: speaker_diarization.rttm
 config_schema:
   model:
+    group: technical
+    label: "Diarization model"
     type: string
-    default: pyannote/speaker-diarization-3.1
-    description: PyAnnote model identifier from HuggingFace
+    default: pyannote/speaker-diarization-community-1
+    description: >-
+      pyannote pipeline on Hugging Face. Another one (e.g. pyannote/speaker-diarization-3.1) needs
+      its own licence, and those of the models it uses, accepted with the same account.
+    reason: "Lower diarization error than speaker-diarization-3.1 on 10 of 12 published sets (e.g. AMI headset 18.8 → 17.0 % DER), better speaker counting, and one licence to accept instead of three."
+    reason_source: https://github.com/pyannote/pyannote-audio#benchmark
   min_speakers:
+    group: behavioural
+    label: "Fewest speakers"
+    unit: speakers
+    min: 1
     type: integer
     default: 1
     description: Minimum number of speakers to consider
   max_speakers:
+    group: behavioural
+    label: "Most speakers"
+    unit: speakers
+    min: 1
     type: integer
     default: 10
     description: Maximum number of speakers to consider
   use_auth_token:
+    group: technical
+    label: "Use the Hugging Face token"
     type: boolean
     default: true
     description: Use HuggingFace authentication token (required for PyAnnote models)
@@ -57,7 +95,7 @@ requirements:
   environment:
     - HUGGINGFACE_TOKEN: HuggingFace authentication token for PyAnnote models
   packages:
-    - pyannote.audio>=3.0
+    - pyannote.audio>=4.0
 
 # spec 011: needs a HF token in the server env, plus accepted model licences.
 requires_setup:
@@ -67,18 +105,39 @@ requires_setup:
     description: A Hugging Face access token (to download the pyannote models)
     help_url: https://huggingface.co/settings/tokens
   - kind: licence
-    name: pyannote/speaker-diarization-3.1
-    description: Accept the pyannote/speaker-diarization-3.1 licence on Hugging Face, with the same account as the token.
-    help_url: https://huggingface.co/pyannote/speaker-diarization-3.1
-  - kind: licence
-    name: pyannote/segmentation-3.0
-    description: Accept the pyannote/segmentation-3.0 licence on Hugging Face too; speaker-diarization-3.1 uses it.
-    help_url: https://huggingface.co/pyannote/segmentation-3.0
-  - kind: licence
     name: pyannote/speaker-diarization-community-1
-    description: Accept the pyannote/speaker-diarization-community-1 licence too; pyannote.audio 4 loads part of every diarization pipeline (PLDA) from it, even with speaker-diarization-3.1.
+    description: Accept the pyannote/speaker-diarization-community-1 licence on Hugging Face, with the same account as the token.
     help_url: https://huggingface.co/pyannote/speaker-diarization-community-1
 weights:
-  - id: pyannote/speaker-diarization-3.1
-    approx_mb: 35
+  - id: pyannote/speaker-diarization-community-1
+    approx_mb: 34
     cache: huggingface
+
+# spec 025: cited by the methods paragraph (videoannotator export methods).
+citations:
+  - key: plaquet2023powerset
+    bibtex: |
+      @inproceedings{plaquet2023powerset,
+        author = {Plaquet, Alexis and Bredin, Herv{\'e}},
+        title = {Powerset multi-class cross entropy loss for neural speaker diarization},
+        booktitle = {Proc. INTERSPEECH 2023},
+        year = {2023}
+      }
+  # The default model is CC-BY-4.0, which asks for attribution.
+  - key: pyannote2025community1
+    bibtex: |
+      @misc{pyannote2025community1,
+        author = {{pyannote}},
+        title = {speaker-diarization-community-1},
+        year = {2025},
+        howpublished = {\url{https://huggingface.co/pyannote/speaker-diarization-community-1}},
+        note = {CC-BY-4.0}
+      }
+  - key: bredin2023pyannote
+    bibtex: |
+      @inproceedings{bredin2023pyannote,
+        author = {Bredin, Herv{\'e}},
+        title = {{pyannote.audio} 2.1 speaker diarization pipeline: principle, benchmark, and recipe},
+        booktitle = {Proc. INTERSPEECH 2023},
+        year = {2023}
+      }

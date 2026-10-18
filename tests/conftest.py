@@ -15,6 +15,11 @@ os.environ.setdefault("VIDEOANNOTATOR_BACKGROUND_PROCESSING", "false")
 # import keep the engine made then, so test_storage_env (below) is too late for
 # them, and they would open the user's real database.
 _import_time_db = Path(tempfile.mkdtemp(prefix="va-tests-")) / "import_time.db"
+# Kept for the real-model baseline test, which needs the Hugging Face token saved
+# next to the user's own database ("" means the default location).
+os.environ.setdefault(
+    "VIDEOANNOTATOR_USER_DB_PATH", os.environ.get("VIDEOANNOTATOR_DB_PATH", "")
+)
 os.environ["VIDEOANNOTATOR_DB_PATH"] = str(_import_time_db)
 os.environ["DATABASE_URL"] = f"sqlite:///{_import_time_db}"
 
@@ -344,21 +349,6 @@ def mock_yolo_model():
             [100, 100, 200, 200, 0.9, 0]  # x1, y1, x2, y2, confidence, class
         ]
     )
-    return model
-
-
-@pytest.fixture
-def mock_whisper_model():
-    """Mock Whisper model for testing."""
-    model = Mock()
-    model.transcribe.return_value = {
-        "text": "Hello world this is a test",
-        "language": "en",
-        "segments": [
-            {"start": 0.0, "end": 2.0, "text": "Hello world"},
-            {"start": 2.0, "end": 4.0, "text": "this is a test"},
-        ],
-    }
     return model
 
 

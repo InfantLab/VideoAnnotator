@@ -56,7 +56,7 @@ Evaluated against `.specify/memory/constitution.md` v1.0.0's Plan Gating checkli
 - **Principle III (Provenance & Reproducibility)**: PASS / not applicable — this phase adds no new
   annotation type, so no new provenance fields are required. Noted for later: v1.7.0's
   remote/HPC/VLM work (out of scope here) will need to extend provenance metadata per that
-  principle; flagged already in `roadmap_v1.7_to_v2.0.md`.
+  principle; flagged already in `roadmap_v1.8_to_v2.0.md`.
 - **Principle IV (Modular by Construction)**: PASS — this phase is a direct, literal
   implementation of this principle (it is currently violated: every heavy ML dep is unconditional
   today). This plan is what brings the codebase into compliance.

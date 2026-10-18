@@ -178,7 +178,7 @@ These tips address the most common macOS installation issues.
   chmod u+w ~/.zshrc
   # If .zshrc is missing, write PATH to ~/.zprofile instead for login shells
   ```
-- Hugging Face token (for speaker diarization): set `HUGGINGFACE_TOKEN` in a `.env` file or your shell. See Environment Setup guide.
+- Hugging Face token (for speaker diarization): paste it on the Speaker turns card in the viewer, or run `uv run videoannotator settings huggingface-token`; no restart needed. Environment variables still work. See the Environment Setup guide.
 - Viewer: available at `/viewer` on the running VideoAnnotator server, no separate setup. For
   standalone development of the viewer repo itself, use `npm run dev` (not `npm start`).
 
@@ -261,9 +261,9 @@ install that matches what you're doing:
 | I want to...                          | Install command                                | What you get |
 | -------------------------------------- | ----------------------------------------------- | ------------ |
 | Run only scene labelling               | `uv sync --extra scene`                         | torch, open-clip-torch, PySceneDetect — no face/audio/person deps |
-| Run only person tracking               | `uv sync --extra person`                        | torch, ultralytics (YOLO11), supervision |
+| Run only person tracking               | `uv sync --extra person`                        | torch, ultralytics (YOLO26) |
 | Run only face analysis (DeepFace)      | `uv sync --extra face`                          | deepface, imutils — **no torch** (the one torch-free pipeline family) |
-| Run only speech/diarization            | `uv sync --extra audio`                         | torch, torchaudio, librosa, openai-whisper, pyannote.audio |
+| Run only speech/diarization            | `uv sync --extra audio`                         | torch, torchaudio, librosa, faster-whisper, pyannote.audio |
 | Mix a few families                     | `uv sync --extra scene --extra person`          | union of the groups listed |
 | Run a slim API server (no local pipelines) | `uv sync`                                   | core only — useful if pipelines run on separate workers/nodes |
 | Reproduce the old "everything installed" behaviour | `uv sync --all-extras` (or `uv sync --extra all`) | every pipeline family |

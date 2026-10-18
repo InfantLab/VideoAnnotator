@@ -64,6 +64,8 @@ import type { Preset } from "@/types/presets";
 import { rememberRunSetup, totalDownloadLabel, weightsNotesFor } from "@/lib/runSetup";
 import { hasConfiguredApiToken } from "@/api/client";
 import { APIError, apiErrorEnvelope } from "@/api/handleError";
+import { PipelineAbout, PipelineTitle } from '@/components/PipelineGuide';
+import { pipelineSummary } from '@/lib/pipelineGuide';
 
 // Wizard steps
 const STEPS = [
@@ -1493,6 +1495,7 @@ export const PipelineSelectionStep = ({
                           notes={pipeline.readiness?.notes}
                           onCheckAgain={checkAgain}
                           isChecking={isCheckingAgain}
+                          isAdmin={isAdmin}
                         />
                       )}
                       {canInstallExtras && extraName && (mode === 'install' || mode === 'installing' || (mode === 'restart' && job?.status === 'completed')) && (
@@ -1516,12 +1519,12 @@ export const PipelineSelectionStep = ({
                 }
 
                 const checked = selectedPipelines.includes(pipeline.id);
-                const description = pipeline.description ?? 'No description provided.';
+                const description = pipelineSummary(pipeline);
                 if (manage) {
                   return (
                     <div key={pipeline.id} className="flex flex-col gap-1 rounded-lg border border-border bg-card p-3">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium text-foreground">{pipeline.name}</span>
+                        <PipelineTitle pipeline={pipeline} />
                         <div className="flex flex-wrap items-center gap-1.5">
                           <Badge className="text-[10px] px-1.5 py-0 bg-green-600 hover:bg-green-600">Ready</Badge>
                           {pipeline.version && (
@@ -1533,6 +1536,7 @@ export const PipelineSelectionStep = ({
                       </div>
                       <p className="text-xs text-muted-foreground">{description}</p>
                       <ReadinessDetails notes={pipeline.readiness?.notes} />
+                      <PipelineAbout pipeline={pipeline} defaultOpen />
                     </div>
                   );
                 }
@@ -1550,7 +1554,7 @@ export const PipelineSelectionStep = ({
                           checked={checked}
                           onChange={() => togglePipeline(pipeline.id)}
                         />
-                        <span className="text-sm font-medium text-foreground">{pipeline.name}</span>
+                        <PipelineTitle pipeline={pipeline} />
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5">
                         {pipeline.version && (
@@ -1572,6 +1576,7 @@ export const PipelineSelectionStep = ({
                     </div>
                     <p className="text-xs text-muted-foreground">{description}</p>
                     <ReadinessDetails notes={pipeline.readiness?.notes} />
+                    <PipelineAbout pipeline={pipeline} />
                   </label>
                 );
               })}

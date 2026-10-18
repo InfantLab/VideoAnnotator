@@ -1,7 +1,8 @@
-import { forwardRef, useEffect, useRef, useCallback, useState } from 'react';
+import { forwardRef, useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCue, RTTMSegment, SceneAnnotation, LAIONFaceAnnotation, COCO_SKELETON_CONNECTIONS, YOLO_POSE_PALETTE, YOLO_LIMB_COLORS, YOLO_KEYPOINT_COLORS, OpenFace3ActionUnit, OpenFace3ActionUnits } from '@/types/annotations';
 import { getDominantEmotion } from '@/lib/parsers/face';
 import { sampledAtTime } from '@/lib/sampledAtTime';
+import { categoryHues } from '@/lib/categoryColors';
 import type { OpenFace3Settings } from './openface3Settings';
 import { browserClaimFor, sniffVideoCodec, type VideoCodecInfo } from '@/lib/videoCodec';
 
@@ -82,6 +83,11 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         currentTime >= cue.startTime && currentTime <= cue.endTime
       ) || null;
     }, [currentTime, annotationData]);
+
+    const speakerHues = useMemo(
+      () => categoryHues((annotationData?.speaker_diarization ?? []).map((s) => s.speaker_id)),
+      [annotationData?.speaker_diarization],
+    );
 
     // Get current speaker data
     const getCurrentSpeakerData = useCallback((): RTTMSegment[] => {
@@ -221,13 +227,13 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
           ctx.fillRect(10, 60 + index * 35, 200, 30);
 
-          const hue = (speaker.speaker_id.charCodeAt(0) * 137.508) % 360;
+          const hue = speakerHues.get(speaker.speaker_id) ?? 0;
           ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
           ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
           ctx.fillText(`Speaker: ${speaker.speaker_id}`, 15, 80 + index * 35);
         });
       }
-    }, [overlaySettings.speakers, getCurrentSpeakerData]);
+    }, [overlaySettings.speakers, getCurrentSpeakerData, speakerHues]);
 
     // Draw scene overlay
     const drawScenes = useCallback((ctx: CanvasRenderingContext2D) => {

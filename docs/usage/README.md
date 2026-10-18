@@ -8,6 +8,7 @@ Welcome to the VideoAnnotator usage documentation.
 - **[Configuration](configuration.md)**: Detailed configuration guide (YAML & Environment Variables).
 - **[Environment Variables](environment_variables.md)**: Reference for all environment variables.
 - **[Accessing Results](accessing_results.md)**: How to download and view job results.
+- **[Results Out](exporting_results.md)**: One table of every pipeline's results for R or Python, ELAN files, and a methods paragraph.
 - **[Demo Commands](demo_commands.md)**: Copy-pasteable commands for common tasks.
 - **[Troubleshooting](troubleshooting.md)**: Common issues and solutions.
 

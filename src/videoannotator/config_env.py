@@ -14,6 +14,7 @@ from pathlib import Path
 from dotenv import dotenv_values, find_dotenv, load_dotenv
 
 from videoannotator.database_location import database_url
+from videoannotator.secrets_store import read_saved_huggingface_token
 
 
 def load_env_file() -> None:
@@ -315,12 +316,24 @@ HUGGINGFACE_TOKEN_ALIASES = ("HF_AUTH_TOKEN", "HF_TOKEN")
 
 
 def huggingface_token() -> str | None:
-    """The configured Hugging Face token, or None."""
+    """The configured Hugging Face token, or None: the environment's first, then
+    one saved on this server from the viewer or CLI (spec 031)."""
     for name in (HUGGINGFACE_TOKEN_ENV, *HUGGINGFACE_TOKEN_ALIASES):
         value = os.environ.get(name, "").strip()
         if value:
             return value
-    return None
+    return read_saved_huggingface_token()
+
+
+def huggingface_token_source() -> tuple[str | None, str | None]:
+    """Where `huggingface_token()` gets it: ("environment", variable),
+    ("saved", None), or (None, None) when there is none."""
+    for name in (HUGGINGFACE_TOKEN_ENV, *HUGGINGFACE_TOKEN_ALIASES):
+        if os.environ.get(name, "").strip():
+            return "environment", name
+    if read_saved_huggingface_token():
+        return "saved", None
+    return None, None
 
 
 # Ollama server for the vlm_annotation pipeline when a job doesn't name one.

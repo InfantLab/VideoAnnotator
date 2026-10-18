@@ -23,7 +23,12 @@ from typing import Any
 
 from packaging.requirements import Requirement
 
-from ..config_env import default_ollama_base_url, huggingface_token
+from ..config_env import (
+    HUGGINGFACE_TOKEN_ENV,
+    default_ollama_base_url,
+    huggingface_token,
+    huggingface_token_source,
+)
 from ..models_dir import source_dir
 from ..registry import pipeline_loader
 from ..registry.pipeline_loader import extras_available
@@ -239,12 +244,8 @@ def _licence_blockers_and_notes(
         return [
             {
                 "kind": "secret",
-                "name": "HUGGINGFACE_TOKEN",
-                "message": (
-                    "HUGGINGFACE_TOKEN is set, but Hugging Face rejects it (expired, "
-                    "revoked or mis-pasted). Create a new token, put it in the "
-                    "server's environment (e.g. .env) and restart the server."
-                ),
+                "name": HUGGINGFACE_TOKEN_ENV,
+                "message": _rejected_token_message(),
                 "help_url": "https://huggingface.co/settings/tokens",
             }
         ], []
@@ -256,6 +257,41 @@ def _licence_blockers_and_notes(
         elif state != "ok":
             notes.append(_licence_item(req, state))
     return blockers, notes
+
+
+def _rejected_token_message() -> str:
+    source, variable = huggingface_token_source()
+    if source == "environment":
+        # The environment's token wins over a saved one, so it's fixed there.
+        return (
+            f"Hugging Face rejects the token in {variable} (expired, revoked or "
+            "mis-pasted). Replace it in the server's environment and restart, or "
+            "remove it there and add one in Settings."
+        )
+    return (
+        "Hugging Face rejects the saved token (expired, revoked or mis-pasted). "
+        "An admin can replace it on this pipeline's card or in Settings."
+    )
+
+
+def _missing_secret_message(req: SetupRequirement) -> str:
+    what = req.description or "A secret this pipeline needs"
+    if req.name == HUGGINGFACE_TOKEN_ENV:
+        return (
+            f"{what} isn't set. An admin can add one on this pipeline's card or in "
+            f"Settings (or set {req.name} in the server's environment)."
+        )
+    return (
+        f"{what} isn't set. Set {req.name} in the server's environment (e.g. the "
+        "container env or .env) and restart the server."
+    )
+
+
+def check_huggingface_token(token: str) -> tuple[str, str | None]:
+    """Whether Hugging Face accepts `token` (ok | invalid | unknown), and its
+    account name when known. Fresh, not cached: used when a token is saved."""
+    status = _check_hf_access(token, ())
+    return status["token"], status["user"]
 
 
 def _licence_item(
@@ -334,6 +370,8 @@ def _weights_cached(weight: WeightSpec) -> bool:
 
 
 def _secret_is_set(name: str, aliases: list[str]) -> bool:
+    if name == HUGGINGFACE_TOKEN_ENV:
+        return huggingface_token() is not None
     return any(os.environ.get(n) for n in [name, *aliases])
 
 
@@ -361,16 +399,11 @@ def _blockers_and_notes(
     for req in meta.requires_setup:
         if req.kind == "secret":
             if not _secret_is_set(req.name, req.aliases):
-                what = req.description or "A secret this pipeline needs"
                 blockers.append(
                     {
                         "kind": "secret",
                         "name": req.name,
-                        "message": (
-                            f"{what} isn't set. Set {req.name} in the server's "
-                            "environment (e.g. the container env or .env) and "
-                            "restart the server."
-                        ),
+                        "message": _missing_secret_message(req),
                         "help_url": req.help_url,
                     }
                 )

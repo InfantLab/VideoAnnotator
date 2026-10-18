@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from ..auth.token_manager import get_token_manager
 from ..database.crud import APIKeyCRUD
 from ..database.database import SessionLocal  # Provides DB session factory
+from ..utils.logging_config import key_fingerprint
 
 # Security scheme for Bearer tokens
 security = HTTPBearer()
@@ -133,7 +134,8 @@ async def validate_optional_api_key(
 
             logger = logging.getLogger(__name__)
             logger.info(
-                f"Token {token[:10]}... not found in DB, falling back to TokenManager"
+                f"API key {key_fingerprint(token)} not found in DB, falling back to "
+                "TokenManager"
             )
         finally:
             db.close()

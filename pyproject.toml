@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "videoannotator"
-version = "1.6.0rc1"
+version = "1.6.0"
 description = "A modern, modular toolkit for analyzing, processing, and visualizing human interaction videos"
 readme = "README.md"
 license = "MIT"
@@ -120,8 +120,9 @@ audio = [
     "librosa>=0.10.0",
     # whisper_base_pipeline configures numba's threading layer for librosa.
     "numba>=0.60.0",
-    # sdist-only release; built from source at install (see tool.uv.extra-build-dependencies)
-    "openai-whisper>=20250625",
+    # Whisper on CTranslate2 (spec 030): wheels on every platform, no torch, no
+    # source build. Replaced openai-whisper in v1.6.0.
+    "faster-whisper>=1.2.1,<2",
     # Defensive upper bounds on the whole pyannote.* family: pyannote.audio
     # 3.3.2 itself declares its own pyannote.core/database/metrics/pipeline
     # deps unbounded too, so pinning only pyannote.audio wouldn't stop e.g.
@@ -163,7 +164,7 @@ person = [
     # `opencv-python` dependency, uncapped by either — pin the ceiling
     # explicitly here too; see `face` group's comment re: opencv-python 5.0.
     "opencv-python>=4.11.0.86,<5.0",
-    "ultralytics>=8.3.0",
+    "ultralytics>=8.4,<9",
     # ByteTrack (person_tracking's tracker) imports `lap`; ultralytics doesn't
     # declare it and pip-installs it at runtime instead, which fails offline.
     "lap>=0.5.12",
@@ -175,8 +176,12 @@ llm = [
     # cv2 is used for frame sampling (cv2.VideoCapture), same as `scene`.
     "opencv-python>=4.11.0.86,<5.0",
 ]
+# Exports the results table as Parquet (spec 025); CSV needs nothing extra.
+parquet = [
+    "pyarrow>=17",
+]
 all = [
-    "videoannotator[face,face-openface3,audio,scene,person,llm]"
+    "videoannotator[face,face-openface3,audio,scene,person,llm,parquet]"
 ]
 
 [tool.setuptools.package-data]
@@ -198,9 +203,6 @@ videoannotator = "videoannotator.cli:app"
 
 [tool.uv]
 # uv-native config - empty is fine for now
-
-[tool.uv.extra-build-dependencies]
-openai-whisper = ["setuptools", "wheel"]
 
 [[tool.uv.index]]
 name = "pytorch-cu126"
@@ -355,6 +357,8 @@ dev = [
     "ruff>=0.14.0",
     "types-PyYAML>=6.0.0",
     "types-requests>=2.31.0",
+    # Validates exported ELAN files against the EAF 3.0 schema (spec 025).
+    "xmlschema>=3.0",
 ]
 # The documentation site: `uv run --group docs mkdocs serve`.
 docs = [
@@ -369,7 +373,8 @@ notebooks = [
 [[tool.mypy.overrides]]
 module = [
     "cv2",
-    "whisper",
+    "faster_whisper.*",
+    "faster_whisper",
     "pyannote.*",
     "ultralytics",
     "sentence_transformers",

@@ -35,6 +35,22 @@ export interface PipelineParameterSchema {
   pattern?: string;
   enum?: PipelineParameterOption[];
   dependencies?: string[];
+  /** Shown only when every named setting has one of the listed values (VideoAnnotator spec 026). */
+  appliesWhen?: Record<string, string[]>;
+}
+
+/** A published evaluation of a pipeline's method; `figure` is quoted from `source` (spec 026). */
+export interface PipelineBenchmark {
+  name: string;
+  measure: string;
+  figure: string;
+  source: string;
+  note?: string;
+}
+
+export interface PipelineCitation {
+  key: string;
+  bibtex: string;
 }
 
 export interface PipelineCapability {
@@ -60,6 +76,14 @@ export interface PipelineDescriptor {
   installHint?: string;
   /** Where the pipeline stands and its next step (VideoAnnotator spec 011). Absent from older servers: fall back to `available`. */
   readiness?: PipelineReadiness;
+  /** The pipeline guide (spec 026); absent from older servers and metadata. */
+  title?: string;
+  summary?: string;
+  homepage?: string;
+  /** Undefined: not stated. Empty: the metadata says no benchmark is published. */
+  benchmarks?: PipelineBenchmark[];
+  qualityNote?: string;
+  citations?: PipelineCitation[];
 }
 
 /** A blocker (why a pipeline can't be used yet) or note (worth knowing, never blocking). */
@@ -212,5 +236,15 @@ export interface VlmPreviewResponse {
   tokensPerSec: number;
   /** The frame(s) the model was shown, small; absent from servers before spec 020. */
   frames: Array<{ frameNumber: number | null; timestampSec: number | null; jpegBase64: string }>;
+}
+
+/** The server's Hugging Face token status (VideoAnnotator spec 031). Never carries the token. */
+export interface HuggingFaceTokenStatus {
+  set: boolean;
+  source: 'environment' | 'saved' | null;
+  /** The variable that sets it, when `source` is 'environment'. */
+  envVar: string | null;
+  account: string | null;
+  check: 'ok' | 'invalid' | 'unknown' | null;
 }
 

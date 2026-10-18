@@ -2,7 +2,7 @@
 // (spec 022). Results go to one visible folder, but that only helps if the
 // viewer says where it is: researchers start here, not in a file browser.
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Copy, Check, Download, FolderOpen } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import { APIError } from '@/api/handleError';
@@ -17,13 +17,15 @@ interface ResultsLocationProps {
   label: string;
   /** Offer the whole run as one zip, without videos. */
   runZip?: { batchId: string };
+  /** More ways to get the results out, shown below the buttons (spec 025's Export). */
+  actions?: ReactNode;
 }
 
 function lastPart(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? 'results';
 }
 
-export function ResultsLocation({ folder, label, runZip }: ResultsLocationProps) {
+export function ResultsLocation({ folder, label, runZip, actions }: ResultsLocationProps) {
   const { canOpenFolders } = useIngestAccess();
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState<'open' | 'download' | null>(null);
@@ -113,6 +115,7 @@ export function ResultsLocation({ folder, label, runZip }: ResultsLocationProps)
             {message}
           </p>
         )}
+        {actions}
       </CardContent>
     </Card>
   );

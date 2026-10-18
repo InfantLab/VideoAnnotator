@@ -30,7 +30,7 @@ scene_detection:
 
 # Person Tracking Pipeline
 person_tracking:
-  model_name: "yolo11n-pose.pt"
+  model_name: "yolo26n-pose.pt"
   confidence_threshold: 0.5
   iou_threshold: 0.5
   track_mode: true

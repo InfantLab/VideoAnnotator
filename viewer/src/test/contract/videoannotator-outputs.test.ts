@@ -10,6 +10,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { parseElanFile } from '@/lib/parsers/elan';
 import { detectFileType, mergeAnnotationData } from '@/lib/parsers/merger';
 
 const CURRENT = path.resolve(__dirname, '../../../../tests/fixtures/viewer_contract');
@@ -36,9 +37,10 @@ const EXPECTED_TYPE: Record<string, string> = {
   'demo_clip_vlm_annotation.json': 'vlm_annotation',
 };
 
-// Re-captured with provenance (2026-10-04); the face-detection and VLM fixtures
-// come from another take and predate it (README).
+// Re-captured with provenance (2026-10-04, faces 2026-10-18); the VLM fixture
+// comes from another take and predates it (README).
 const RECORDED_TRACKS = [
+  'face_analysis',
   'person_tracking',
   'openface3_faces',
   'scene_detection',
@@ -149,7 +151,9 @@ describe.each([
       }
     }
     // Older COCO files carry only VideoAnnotator's version.
-    expect(data.provenance?.face_analysis).toEqual({ kind: 'partial', videoannotatorVersion: '1.5.0' });
+    if (isLegacy) {
+      expect(data.provenance?.face_analysis).toEqual({ kind: 'partial', videoannotatorVersion: '1.5.0' });
+    }
     expect(data.provenance?.vlm_annotations?.kind).toBe('partial');
   });
 
@@ -160,14 +164,47 @@ describe.each([
     };
     const { data: current } = await loadLikeArtifactsZipFrom(CURRENT);
     const { data: legacy } = await loadLikeArtifactsZipFrom(LEGACY);
-    // Exact where the outputs are; GPU-sampled tracks moved slightly with the
-    // 2026-10-04 torch-settings fix (README), so for those compare their shape.
-    for (const track of ['speech_recognition', 'speaker_diarization', 'face_analysis', 'vlm_annotations'] as const) {
-      expect(current[track], track).toEqual(legacy[track]);
-    }
-    for (const track of ['person_tracking', 'openface3_faces', 'scene_detection'] as const) {
+    // Exact where the outputs are the same; the default models changed in
+    // spec 030 (README), so for the rest compare their shape.
+    expect(current.vlm_annotations).toEqual(legacy.vlm_annotations);
+    for (const track of ['person_tracking', 'openface3_faces', 'scene_detection', 'speech_recognition'] as const) {
       expect(current[track]?.length, track).toBe(legacy[track]?.length);
     }
+    // Legacy faces came from another take (Haar cascade era), and 3.1 split the
+    // mother's last turn in two where community-1 doesn't; both must parse.
+    for (const track of ['face_analysis', 'speaker_diarization'] as const) {
+      expect(current[track]?.length, track).toBeGreaterThan(0);
+      expect(legacy[track]?.length, track).toBeGreaterThan(0);
+    }
     expect(Object.keys(strip(current)).sort()).toEqual(Object.keys(strip(legacy)).sort());
+  });
+});
+
+// Spec 025: VideoAnnotator's ELAN export opens in the viewer, before and after
+// a coder has added their own tier in ELAN (FR-022).
+const EXPORTED = path.join(CURRENT, 'exported');
+const EXPORTED_TIERS = [
+  'scene_detection scenes',
+  'speech_recognition speech',
+  'speaker_diarization SPEAKER_00',
+  'person_tracking person_demo_clip_001 (parent)',
+  'person_tracking person_demo_clip_002 (parent)',
+  'face_analysis faces',
+  'face_openface3_embedding faces',
+  'vlm_annotation labels',
+];
+
+describe('VideoAnnotator ELAN export → viewer', () => {
+  it.each([
+    ['as exported', 'demo_clip.eaf', EXPORTED_TIERS],
+    ['after editing in ELAN', 'demo_clip_edited_in_elan.eaf', [...EXPORTED_TIERS, 'Infant gaze']],
+  ])('opens %s and shows every tier', async (_label, name, tiers) => {
+    const file = fixtureIn(EXPORTED, name);
+    expect((await detectFileType(file)).type).toBe('elan_ground_truth');
+    // The parser the merger uses for an .eaf (merger.ts, elan_ground_truth).
+    const annotations = await parseElanFile(file);
+    expect([...new Set(annotations.map((a) => a.tier))].sort()).toEqual([...tiers].sort());
+    const speech = annotations.filter((a) => a.tier === 'speech_recognition speech');
+    expect(speech[0]).toMatchObject({ value: 'Ready, baby girl?', startSec: 0, endSec: 1.34 });
   });
 });

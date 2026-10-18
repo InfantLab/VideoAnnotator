@@ -240,7 +240,7 @@ repo's own `/speckit-specify`.
 - **Auto-restart-on-install** (the server automatically restarting itself once an install completes,
   removing the manual-restart step entirely) is explicitly deferred, not part of this spec. It is
   tracked as a future item on the longer-term roadmap
-  ([`docs/development/roadmap_v1.7_to_v2.0.md`](../../docs/development/roadmap_v1.7_to_v2.0.md))
+  ([`docs/development/roadmap_v1.8_to_v2.0.md`](../../docs/development/roadmap_v1.8_to_v2.0.md))
   once process-supervision/dispatcher seams from that phase of work exist to do it safely (avoiding
   interrupting in-flight annotation jobs).
 - **Saved pipeline configurations / dataset presets** (a user saving a named combination of dataset

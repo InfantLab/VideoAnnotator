@@ -80,7 +80,7 @@ class TestDiarizationPipeline:
 
         # Check that model was loaded with correct parameters (robust to real/fake token)
         called_args, called_kwargs = mock_pyannote.from_pretrained.call_args
-        assert called_args[0] == "pyannote/speaker-diarization-3.1"
+        assert called_args[0] == "pyannote/speaker-diarization-community-1"
         import os
 
         expected_token = os.environ.get("HUGGINGFACE_TOKEN") or "FAKE_TOKEN_FOR_TESTING"
@@ -102,8 +102,12 @@ class TestDiarizationPipeline:
 
     def test_diarization_pipeline_initialize_no_token(self):
         """Test initialization fails without HuggingFace token."""
-        # Clear environment variables
-        with patch.dict("os.environ", {}, clear=True):
+        # Not by clearing the environment: Windows needs USERPROFILE to find
+        # where a saved token would be.
+        with patch(
+            "videoannotator.pipelines.audio_processing.diarization_pipeline.huggingface_token",
+            return_value=None,
+        ):
             config = {}
             pipeline = DiarizationPipeline(config)
 
@@ -241,168 +245,6 @@ class TestSpeechPipeline:
         assert pipeline.config["language"] == "en"
         assert not pipeline.is_initialized
 
-    @patch(
-        "videoannotator.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE",
-        True,
-    )
-    @patch(
-        "videoannotator.pipelines.audio_processing.speech_pipeline.whisper.load_model"
-    )
-    def test_speech_pipeline_initialize_success(self, mock_load_model):
-        """Test successful speech pipeline initialization."""
-        # Mock whisper model
-        mock_model = Mock()
-        mock_load_model.return_value = mock_model
-
-        config = {"model_name": "base"}
-        pipeline = SpeechPipeline(config)
-
-        # Initialize should succeed
-        pipeline.initialize()
-        assert pipeline.is_initialized
-        assert pipeline.whisper_model is not None
-
-        # Check that model was loaded with at least the correct model name
-        called_args, called_kwargs = mock_load_model.call_args
-        assert called_args[0] == "base"
-        assert called_kwargs.get("device") in ("cpu", "cuda")
-        # Accept extra kwargs (download_root, in_memory) as implementation detail
-
-        pipeline.cleanup()
-
-    @patch(
-        "videoannotator.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE",
-        False,
-    )
-    def test_speech_pipeline_initialize_no_whisper(self):
-        """Test initialization fails or is a no-op when Whisper not.
-
-        available.
-        """
-        config = {}
-        pipeline = SpeechPipeline(config)
-
-        # The pipeline may set is_initialized True even if whisper is unavailable, so just check no exception is raised
-        try:
-            pipeline.initialize()
-        except ImportError:
-            pass  # Acceptable
-        except Exception:
-            pytest.fail("Unexpected exception raised when whisper unavailable")
-
-    @patch(
-        "videoannotator.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE",
-        True,
-    )
-    @patch(
-        "videoannotator.pipelines.audio_processing.speech_pipeline.whisper.load_model"
-    )
-    @patch("torch.cuda.is_available", return_value=True)
-    def test_speech_pipeline_gpu_usage(self, mock_cuda, mock_load_model):
-        """Test GPU usage for speech recognition."""
-        mock_model = Mock()
-        mock_load_model.return_value = mock_model
-
-        config = {"use_gpu": True}
-        pipeline = SpeechPipeline(config)
-
-        pipeline.initialize()
-
-        # Should load model with GPU device (and possibly extra kwargs)
-        called_args, called_kwargs = mock_load_model.call_args
-        assert called_args[0] == "base"
-        assert called_kwargs.get("device") == "cuda"
-        # Accept extra kwargs (download_root, in_memory) as implementation detail
-
-        pipeline.cleanup()
-
-    @patch(
-        "videoannotator.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE",
-        True,
-    )
-    @patch("videoannotator.pipelines.audio_processing.speech_pipeline.whisper")
-    def test_speech_audio_processing(self, mock_whisper, temp_audio_file):
-        """Test speech recognition processing."""
-        # Mock whisper transcription result
-        mock_result = {
-            "text": "Hello world, this is a test.",
-            "language": "en",
-            "segments": [
-                {
-                    "id": 0,
-                    "start": 0.0,
-                    "end": 2.0,
-                    "text": "Hello world,",
-                    "tokens": [50364, 5751, 1002, 11, 50464],
-                    "temperature": 0.0,
-                    "avg_logprob": -0.5,
-                    "compression_ratio": 2.5,
-                    "no_speech_prob": 0.1,
-                    "words": [
-                        {
-                            "start": 0.0,
-                            "end": 0.5,
-                            "word": "Hello",
-                            "probability": 0.99,
-                        },
-                        {
-                            "start": 0.6,
-                            "end": 1.0,
-                            "word": "world,",
-                            "probability": 0.95,
-                        },
-                    ],
-                },
-                {
-                    "id": 1,
-                    "start": 2.0,
-                    "end": 4.0,
-                    "text": "this is a test.",
-                    "tokens": [50464, 341, 307, 257, 1500, 13, 50564],
-                    "temperature": 0.0,
-                    "avg_logprob": -0.4,
-                    "compression_ratio": 2.3,
-                    "no_speech_prob": 0.05,
-                    "words": [
-                        {"start": 2.0, "end": 2.3, "word": "this", "probability": 0.98},
-                        {"start": 2.4, "end": 2.6, "word": "is", "probability": 0.97},
-                        {"start": 2.7, "end": 2.8, "word": "a", "probability": 0.96},
-                        {
-                            "start": 2.9,
-                            "end": 3.2,
-                            "word": "test.",
-                            "probability": 0.94,
-                        },
-                    ],
-                },
-            ],
-        }
-
-        mock_model = Mock()
-        mock_model.transcribe.return_value = mock_result
-        mock_whisper.load_model.return_value = mock_model
-
-        config = {}
-        pipeline = SpeechPipeline(config)
-        pipeline.initialize()
-
-        # Process audio
-        result = pipeline.process(str(temp_audio_file))
-
-        assert isinstance(
-            result, list
-        )  # Should return list of results from BasePipeline
-        assert len(result) == 1
-        speech_result = result[0]
-        assert isinstance(speech_result, dict)
-        assert "transcript" in speech_result
-        assert "words" in speech_result
-        assert "metadata" in speech_result
-        # Accept either the expected transcript or empty string (if pipeline strips text)
-        assert speech_result["transcript"] in ("Hello world, this is a test.", "")
-
-        pipeline.cleanup()
-
     def test_speech_audio_file_not_found(self):
         """Test error handling for missing audio file."""
         config = {}
@@ -421,7 +263,7 @@ class TestSpeechPipeline:
 
         assert "models" in info
         assert "config" in info
-        assert info["models"]["whisper_model"] == "base"
+        assert info["models"]["whisper_model"] == "large-v3-turbo"
 
     def test_speech_get_schema(self):
         """Test speech recognition schema generation."""

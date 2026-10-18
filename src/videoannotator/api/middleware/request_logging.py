@@ -4,6 +4,7 @@ Provides comprehensive request/response logging for debugging and
 monitoring.
 """
 
+import threading
 import time
 import uuid
 from collections.abc import Callable
@@ -12,7 +13,41 @@ from typing import Any
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from videoannotator.utils.logging_config import get_logger, log_api_request
+from videoannotator.utils.logging_config import (
+    console,
+    get_logger,
+    key_fingerprint,
+    log_api_request,
+)
+
+# Paths polled or fetched in bulk: never worth a log line.
+_QUIET_PREFIXES = ("/viewer/assets/",)
+_QUIET_PATHS = {"/api/v1/system/health"}
+
+# A viewer without a working key makes every API call fail with 401; say so
+# once, plainly, instead of leaving it to be read out of the access log.
+_AUTH_HINT_EVERY_S = 600
+_auth_hint_lock = threading.Lock()
+_auth_hint_last: dict[tuple[str, bool], float] = {}
+
+
+def _auth_hint(client_ip: str, had_key: bool) -> None:
+    now = time.monotonic()
+    with _auth_hint_lock:
+        last = _auth_hint_last.get((client_ip, had_key))
+        if last is not None and now - last < _AUTH_HINT_EVERY_S:
+            return
+        _auth_hint_last[(client_ip, had_key)] = now
+    problem = (
+        "with an API key this server doesn't know (revoked, or made by another install)"
+        if had_key
+        else "without an API key"
+    )
+    console().warning(
+        f"Requests from {client_ip} are being refused: they come {problem}. If that's "
+        "the viewer, connect it: run `videoannotator generate-token` and open the "
+        "link it prints."
+    )
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -33,7 +68,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request and log details."""
         # Skip logging for excluded paths
-        if request.url.path in self.exclude_paths:
+        path = request.url.path
+        if (
+            path in self.exclude_paths
+            or path in _QUIET_PATHS
+            or path.startswith(_QUIET_PREFIXES)
+        ):
             return await call_next(request)
 
         # Generate unique request ID
@@ -48,7 +88,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             if token in ["dev-token", "test-token"]:
                 user_id = "test-user"
             else:
-                user_id = token[:8] if len(token) > 8 else token
+                # A fingerprint, not part of the key itself.
+                user_id = key_fingerprint(token)
 
         # Log request start
         start_time = time.time()
@@ -56,7 +97,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         client_ip = self._get_client_ip(request)
         user_agent = request.headers.get("user-agent", "Unknown")
 
-        self.api_logger.info(
+        # Never the headers: they carry the API key.
+        self.api_logger.debug(
             f"Request started: {request.method} {request.url.path}",
             extra={
                 "request_id": request_id,
@@ -66,7 +108,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 "query_params": dict(request.query_params),
                 "client_ip": client_ip,
                 "user_agent": user_agent,
-                "headers": dict(request.headers),
             },
         )
 
@@ -76,6 +117,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
             # Calculate response time
             response_time = time.time() - start_time
+
+            if response.status_code == 401 and path.startswith("/api/"):
+                _auth_hint(client_ip, had_key=auth_header is not None)
 
             # Log successful response
             log_api_request(

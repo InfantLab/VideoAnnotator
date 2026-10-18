@@ -1,0 +1,210 @@
+{
+  "pipeline": {
+    "id": "face_analysis",
+    "name": "Face Analysis (DeepFace)",
+    "description": "Face detection (RetinaFace) and expression recognition using DeepFace, with optional age and gender estimation, producing COCO format output.",
+    "group": "face",
+    "title": "Faces: where they are and their expression",
+    "summary": "Finds faces in each sampled frame and estimates each face's expression. Can also estimate age and gender, which are off by default."
+  },
+  "parameters": [
+    {
+      "name": "detection_backend",
+      "type": "string",
+      "label": "Face detector",
+      "description": "Face detection backend (opencv, deepface, ssd, dlib, mtcnn, retinaface)",
+      "default": "deepface",
+      "enum": null,
+      "group": "technical",
+      "unit": null,
+      "min": null,
+      "max": null,
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
+    },
+    {
+      "name": "emotion_backend",
+      "type": "string",
+      "label": "Expression model",
+      "description": "Emotion analysis backend (deepface, disabled)",
+      "default": "deepface",
+      "enum": null,
+      "group": "technical",
+      "unit": null,
+      "min": null,
+      "max": null,
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
+    },
+    {
+      "name": "confidence_threshold",
+      "type": "number",
+      "label": "Detection confidence",
+      "description": "Minimum confidence threshold for face detection",
+      "default": 0.7,
+      "enum": null,
+      "group": "technical",
+      "unit": null,
+      "min": 0.0,
+      "max": 1.0,
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
+    },
+    {
+      "name": "min_face_size",
+      "type": "integer",
+      "label": "Smallest face",
+      "description": "Minimum face size in pixels",
+      "default": 30,
+      "enum": null,
+      "group": "behavioural",
+      "unit": "px",
+      "min": 1.0,
+      "max": null,
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
+    },
+    {
+      "name": "max_faces",
+      "type": "integer",
+      "label": "Most faces per frame",
+      "description": "Maximum number of faces to detect per frame",
+      "default": 10,
+      "enum": null,
+      "group": "behavioural",
+      "unit": "faces",
+      "min": 1.0,
+      "max": null,
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
+    },
+    {
+      "name": "scale_factor",
+      "type": "number",
+      "label": "Haar cascade scale factor",
+      "description": "Scale factor for OpenCV Haar cascades",
+      "default": 1.1,
+      "enum": null,
+      "group": "technical",
+      "unit": null,
+      "min": null,
+      "max": null,
+      "applies_when": {
+        "detection_backend": [
+          "opencv"
+        ]
+      },
+      "reason": null,
+      "reason_source": null
+    },
+    {
+      "name": "min_neighbors",
+      "type": "integer",
+      "label": "Haar cascade neighbours",
+      "description": "Minimum neighbors for OpenCV Haar cascades",
+      "default": 5,
+      "enum": null,
+      "group": "technical",
+      "unit": null,
+      "min": null,
+      "max": null,
+      "applies_when": {
+        "detection_backend": [
+          "opencv"
+        ]
+      },
+      "reason": null,
+      "reason_source": null
+    },
+    {
+      "name": "detect_emotions",
+      "type": "boolean",
+      "label": "Expression",
+      "description": "Enable emotion recognition",
+      "default": true,
+      "enum": null,
+      "group": "behavioural",
+      "unit": null,
+      "min": null,
+      "max": null,
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
+    },
+    {
+      "name": "detect_age",
+      "type": "boolean",
+      "label": "Age",
+      "description": "Enable age estimation (downloads a 540 MB model on first use)",
+      "default": false,
+      "enum": null,
+      "group": "behavioural",
+      "unit": null,
+      "min": null,
+      "max": null,
+      "applies_when": null,
+      "reason": "Off by default: the model was trained on adult faces and says nothing useful about infants.",
+      "reason_source": "https://github.com/serengil/deepface"
+    },
+    {
+      "name": "detect_gender",
+      "type": "boolean",
+      "label": "Gender",
+      "description": "Enable gender prediction (downloads a 540 MB model on first use)",
+      "default": false,
+      "enum": null,
+      "group": "behavioural",
+      "unit": null,
+      "min": null,
+      "max": null,
+      "applies_when": null,
+      "reason": "Off by default: the model was trained on adult faces and says nothing useful about infants.",
+      "reason_source": "https://github.com/serengil/deepface"
+    },
+    {
+      "name": "deepface",
+      "type": "object",
+      "label": "DeepFace models",
+      "description": "DeepFace-specific configuration",
+      "default": {
+        "emotion_model": "VGG-Face",
+        "age_gender_model": "VGG-Face",
+        "detector_backend": "retinaface",
+        "enforce_detection": false
+      },
+      "enum": null,
+      "group": "technical",
+      "unit": null,
+      "min": null,
+      "max": null,
+      "applies_when": null,
+      "reason": "RetinaFace detector: 91.4% AP on WIDER FACE's hard set, and the best detector in DeepFace's portfolio by its own account; the earlier OpenCV Haar cascade found no faces in the demo clip.",
+      "reason_source": "https://arxiv.org/abs/1905.00641"
+    },
+    {
+      "name": "person_identity",
+      "type": "object",
+      "label": "Link faces to people",
+      "description": "Person identity linking configuration",
+      "default": {
+        "enabled": true,
+        "link_to_persons": true,
+        "iou_threshold": 0.5,
+        "require_person_id": false
+      },
+      "enum": null,
+      "group": "technical",
+      "unit": null,
+      "min": null,
+      "max": null,
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
+    }
+  ]
+}

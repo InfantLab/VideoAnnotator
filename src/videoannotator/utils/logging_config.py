@@ -4,6 +4,7 @@ Provides structured logging with file rotation, request tracking, and
 comprehensive debugging support.
 """
 
+import hashlib
 import json
 import logging
 import logging.handlers
@@ -95,27 +96,65 @@ class StructuredFormatter(logging.Formatter):
         return json.dumps(log_entry)
 
 
-class APIRequestFormatter(logging.Formatter):
-    """Human-readable formatter for API requests."""
+# The terminal says only what a person running the server needs: messages sent
+# to this logger, and warnings and errors. Everything still goes to logs/.
+CONSOLE_LOGGER = "videoannotator.console"
+VERBOSE_ENV = "VIDEOANNOTATOR_VERBOSE"
+_LIBRARY_LOGGERS = ("py", "torch", "ultralytics", "transformers", "whisper")
+
+
+def key_fingerprint(token: str) -> str:
+    """Identifies an API key in logs without revealing any of it."""
+    return "key:" + hashlib.sha256(token.encode()).hexdigest()[:8]
+
+
+def console_verbose() -> bool:
+    """`videoannotator server --verbose`: every INFO line in the terminal, as before."""
+    return os.environ.get(VERBOSE_ENV, "").lower() in ("1", "true", "yes")
+
+
+def console() -> logging.Logger:
+    """The logger for lines meant for the person at the terminal."""
+    return logging.getLogger(CONSOLE_LOGGER)
+
+
+class ConsoleFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if console_verbose():
+            return True
+        if record.name == CONSOLE_LOGGER:
+            return True
+        # Library warnings (deprecations, CUDA notices) are for the log files.
+        if record.name.split(".")[0] in _LIBRARY_LOGGERS:
+            return record.levelno >= logging.ERROR
+        return record.levelno >= logging.WARNING
+
+
+class ConsoleFormatter(logging.Formatter):
+    """`15:12:03 Started clip.mp4 …`, `15:12:03 [WARNING] …`; tracebacks stay in
+    logs/errors.log unless --verbose."""
 
     def format(self, record: logging.LogRecord) -> str:
-        """Format log record for human readability."""
-        timestamp = datetime.fromtimestamp(record.created).strftime("%Y-%m-%d %H:%M:%S")
-
-        # Standard log format
-        base_format = f"{timestamp} - {record.levelname:8} - {record.name} - {record.getMessage()}"
-
-        # Add extra context if available
-        if hasattr(record, "request_id"):
-            base_format = f"[{record.request_id}] {base_format}"
-
-        if hasattr(record, "user_id"):
-            base_format = f"[user:{record.user_id}] {base_format}"
-
-        if hasattr(record, "endpoint"):
-            base_format = f"{base_format} - {record.endpoint}"
-
-        return base_format
+        when = datetime.fromtimestamp(record.created).strftime("%H:%M:%S")
+        tag = (
+            "[ERROR] "
+            if record.levelno >= logging.ERROR
+            else "[WARNING] "
+            if record.levelno >= logging.WARNING
+            else ""
+        )
+        source = (
+            f"{record.name}: "
+            if console_verbose() and record.name != CONSOLE_LOGGER
+            else ""
+        )
+        line = f"{when} {tag}{source}{record.getMessage()}"
+        if record.exc_info:
+            if console_verbose():
+                line += "\n" + "".join(traceback.format_exception(*record.exc_info))
+            else:
+                line += " (details in logs/errors.log)"
+        return line
 
 
 class VideoAnnotatorLoggingConfig:
@@ -155,8 +194,8 @@ class VideoAnnotatorLoggingConfig:
         # 1. Console Logger (human-readable)
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(logging.INFO)
-        console_formatter = APIRequestFormatter()
-        console_handler.setFormatter(console_formatter)
+        console_handler.addFilter(ConsoleFilter())
+        console_handler.setFormatter(ConsoleFormatter())
 
         # 2. Main API Server Logger (rotating file)
         api_handler = logging.handlers.RotatingFileHandler(
@@ -213,6 +252,14 @@ class VideoAnnotatorLoggingConfig:
         api_logger.addHandler(api_handler)
         api_logger.addHandler(error_handler)
         loggers["api"] = api_logger
+
+        terminal_logger = console()
+        terminal_logger.handlers.clear()
+        terminal_logger.addHandler(console_handler)
+        terminal_logger.addHandler(api_handler)
+        terminal_logger.setLevel(logging.INFO)
+        terminal_logger.propagate = False
+        loggers["console"] = terminal_logger
 
         # Request logger
         request_logger = logging.getLogger("videoannotator.requests")

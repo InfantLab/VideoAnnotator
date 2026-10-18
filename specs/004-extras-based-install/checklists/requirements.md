@@ -41,7 +41,7 @@ This spec is a **narrower, implementation-ready slice** of
 [`specs/003-modular-pipeline-architecture/spec.md`](../../003-modular-pipeline-architecture/spec.md),
 not a replacement. Spec 003 remains the source of truth for the full architecture (plugin discovery,
 dispatcher ABC, cross-cutting utils split) — those stay out of scope here and are tracked in
-`docs/development/roadmap_v1.6.0.md` and `roadmap_v1.7_to_v2.0.md`.
+`docs/development/roadmap_v1.6.0.md` and `roadmap_v1.8_to_v2.0.md`.
 
 One deliberate addition beyond spec 003's own scope: **User Story 3 and FR-010 through FR-012** are
 new requirements not present in spec 003, added because the user explicitly flagged that this

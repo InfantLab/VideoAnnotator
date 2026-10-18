@@ -14,6 +14,7 @@ import vavIcon from "@/assets/v-a-v.icon.png";
 import { JobCancelButton } from "@/components/JobCancelButton";
 import { JobDeleteButton } from "@/components/JobDeleteButton";
 import { ResultsLocation } from "@/components/ResultsLocation";
+import { ExportMenu } from "@/components/ExportMenu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { canCancelJob } from "@/hooks/useJobCancellation";
 import { canDeleteJob } from "@/hooks/useJobDeletion";
@@ -520,6 +521,7 @@ const CreateJobDetail = () => {
                 <Checkbox checked={includeVideo} onCheckedChange={(checked) => setIncludeVideo(checked === true)} />
                 Include the video in the download (it holds each pipeline&apos;s output either way)
               </label>
+              <ExportMenu scope={{ kind: "job", id: job.id }} />
             </div>
           </CardContent>
         </Card>

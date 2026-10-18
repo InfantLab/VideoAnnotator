@@ -1,5 +1,12 @@
 name: vlm_annotation
 display_name: VLM Frame Annotation
+title: "Ask AI: your question about each moment"
+summary: >-
+  Asks a vision-language model your question about frames sampled every few seconds, and records its answer and reasoning for each one.
+homepage: https://ollama.com/
+benchmarks: []
+quality_note: >-
+  Depends on the model you choose and on your question, so no figure applies to this pipeline as such. See your model's page, for example https://ollama.com/library/qwen3.5.
 description: >
   Classify or describe sampled video frames using a locally-hosted
   vision-language model served by Ollama, driven by a user-supplied prompt.
@@ -22,6 +29,8 @@ outputs:
     file: vlm_annotation.json
 config_schema:
   prompt:
+    group: behavioural
+    label: "Question"
     type: string
     default: |
       Classify as TOUCH only if:
@@ -37,6 +46,8 @@ config_schema:
       identically and independently to every sample point in the video.
     widget: textarea
   base_url:
+    group: technical
+    label: "Model server address"
     type: string
     default: ""
     description: >
@@ -44,10 +55,14 @@ config_schema:
       OLLAMA_BASE_URL (default http://127.0.0.1:11434; from a container with
       Ollama on the host, http://host.docker.internal:11434).
   model:
+    group: technical
+    label: "Model"
     type: string
     default: "qwen3.5:9b"
     description: Ollama model name/tag to use (must already be pulled).
   sampling_mode:
+    group: behavioural
+    label: "Frames per sample"
     type: string
     default: "single_frame"
     description: >
@@ -56,26 +71,41 @@ config_schema:
       comparing single-static-frame vs short-burst-context predictions.
     enum: [single_frame, frame_burst]
   frame_interval_sec:
+    group: behavioural
+    label: "Sample every"
+    unit: s
     type: float
     default: 5.0
     description: Seconds between sample points.
   burst_offsets:
+    group: technical
+    label: "Burst frame offsets"
+    applies_when:
+      sampling_mode: [frame_burst]
     type: list
     default: [-2, -1, 0, 1, 2]
     description: >
       Sampling-interval offsets around each anchor point (multiples of
       frame_interval_sec), used only when sampling_mode is "frame_burst".
   think:
+    group: technical
+    label: "Thinking mode"
     type: boolean
     default: false
     description: >
       Request the model's internal-monologue/thinking mode. Much slower
       (~50x); diagnostic use only, not for production sweeps.
   request_timeout_sec:
+    group: technical
+    label: "Time limit per answer"
+    unit: s
+    min: 1
     type: integer
     default: 240
     description: Per-request timeout in seconds.
   keep_alive:
+    group: technical
+    label: "Keep the model loaded for"
     type: string
     default: "2h"
     description: Ollama keep_alive duration for the loaded model.
@@ -93,3 +123,12 @@ requires_setup:
     name: ollama
     description: A running Ollama server with a vision model pulled
     help_url: https://ollama.com/download
+
+# spec 025: cited by the methods paragraph (videoannotator export methods).
+citations:
+  - key: ollama
+    bibtex: |
+      @software{ollama,
+        title = {Ollama},
+        url = {https://github.com/ollama/ollama}
+      }

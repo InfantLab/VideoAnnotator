@@ -106,7 +106,7 @@ class TestStates:
         [blocker] = r["blockers"]
         assert blocker["kind"] == "secret"
         assert blocker["name"] == "HUGGINGFACE_TOKEN"
-        assert "Set HUGGINGFACE_TOKEN" in blocker["message"]
+        assert "set HUGGINGFACE_TOKEN in the server's environment" in blocker["message"]
         assert "server's environment" in blocker["message"]
         assert blocker["help_url"] == "https://huggingface.co/settings/tokens"
 
@@ -193,7 +193,7 @@ class TestHuggingFaceLicences:
         assert r["state"] == "needs_setup"
         [blocker] = r["blockers"]
         assert blocker["kind"] == "secret"
-        assert "rejects it" in blocker["message"]
+        assert "rejects the token" in blocker["message"]
         assert r["notes"] == []
 
     def test_unaccepted_licence_blocks_naming_the_tokens_account(self):
@@ -379,7 +379,11 @@ class TestDeepFaceWeights:
         registry.load()
         meta = next(m for m in registry.list() if m.name == "face_analysis")
         assert {w.cache for w in meta.weights} == {"deepface"}
-        assert sum(w.approx_mb for w in meta.weights) > 1000
+        # Spec 030 SC-006: age and gender are off, so their 1,080 MB isn't fetched.
+        assert {w.id for w in meta.weights} == {
+            "retinaface.h5",
+            "facial_expression_model_weights.h5",
+        }
 
 
 class TestOllamaBaseUrl:

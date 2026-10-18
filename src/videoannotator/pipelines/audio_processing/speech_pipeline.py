@@ -1,14 +1,11 @@
 """Speech Recognition Pipeline for VideoAnnotator.
 
-This pipeline focuses specifically on speech recognition using OpenAI
-Whisper. It's designed to be separable from other audio processing
-functionality.
+Transcribes speech with Whisper on the faster-whisper runtime. It's designed
+to be separable from other audio processing functionality.
 """
 
-import importlib.util as importlib_util
 import logging
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
 import librosa
@@ -19,37 +16,30 @@ from videoannotator.config_env import load_env_file
 from videoannotator.version import __version__
 
 from .native_files import write_webvtt
-from .whisper_base_pipeline import WhisperBasePipeline
+from .whisper_base_pipeline import WhisperBasePipeline, faster_whisper_available
 
 load_env_file()
 
 logger = logging.getLogger(__name__)
 
-# Detect Whisper availability without importing the heavy module at top-level
-WHISPER_AVAILABLE = importlib_util.find_spec("whisper") is not None
+WHISPER_AVAILABLE = faster_whisper_available()
 if not WHISPER_AVAILABLE:
-    logger.warning("whisper not available. Speech recognition will be disabled.")
+    logger.warning("faster-whisper not available. Speech recognition will be disabled.")
 
 
-def _load_model(*args: Any, **kwargs: Any) -> Any:
-    try:
-        import whisper as openai_whisper
-    except ImportError:
-        raise ImportError(
-            "Standard whisper not available. Install with: pip install openai-whisper"
-        ) from None
-    return openai_whisper.load_model(*args, **kwargs)
-
-
-# A patchable module-level symbol for tests
-# (patch('...speech_pipeline.whisper.load_model')) that forwards to the real
-# package, imported lazily. It used to be a stub that always raised, even with
-# openai-whisper installed, so SpeechPipeline never loaded a model outside tests.
-whisper = SimpleNamespace(load_model=_load_model)
+def _suppress_tokens(value: Any) -> list[int] | None:
+    """Our setting is a comma-separated string; faster-whisper wants ints."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, int):
+        return [value]
+    if isinstance(value, list | tuple):
+        return [int(v) for v in value]
+    return [int(v) for v in str(value).split(",") if v.strip()]
 
 
 class SpeechPipeline(WhisperBasePipeline):
-    """Speech recognition pipeline using OpenAI Whisper.
+    """Speech recognition pipeline using Whisper (faster-whisper runtime).
 
     This implementation extends WhisperBasePipeline to leverage the
     shared Whisper functionality while focusing specifically on
@@ -65,7 +55,7 @@ class SpeechPipeline(WhisperBasePipeline):
         """Initialize the speech pipeline with Whisper configuration defaults."""
         # Speech-specific config defaults
         speech_config = {
-            "whisper_model": "base",  # Will use this as model ID for WhisperBasePipeline
+            "whisper_model": "large-v3-turbo",
             "language": None,
             "task": "transcribe",
             "beam_size": 5,
@@ -92,9 +82,15 @@ class SpeechPipeline(WhisperBasePipeline):
         super().__init__(speech_config)
         self.logger = logging.getLogger(__name__)
 
-        # Allow WhisperBasePipeline to prefer the (patchable) whisper symbol from
-        # this module.
-        self.whisper = whisper
+    def initialize(self) -> None:
+        """Refuse a translation the model can't do, then load the model."""
+        model = str(self.config.get("whisper_model", ""))
+        if self.config.get("task") == "translate" and "turbo" in model:
+            raise ValueError(
+                f"{model} can't translate: it returns the original language. "
+                "Set whisper_model to large-v3 or medium for translation."
+            )
+        super().initialize()
 
     def process(
         self,
@@ -131,6 +127,31 @@ class SpeechPipeline(WhisperBasePipeline):
             write_webvtt([result], out / f"{video_path.stem}_speech_recognition.vtt")
         return [result]
 
+    def _transcribe_options(self) -> dict[str, Any]:
+        """Our settings as faster-whisper's `transcribe()` arguments."""
+        options: dict[str, Any] = {
+            "language": self.config.get("language"),
+            "task": self.config.get("task", "transcribe"),
+            "beam_size": self.config.get("beam_size", 5),
+            "best_of": self.config.get("best_of", 5),
+            "temperature": self.config.get("temperature", 0.0),
+            "patience": self.config.get("patience", 1.0),
+            "length_penalty": self.config.get("length_penalty", 1.0),
+            "word_timestamps": self.config.get("word_timestamps", True),
+            "prepend_punctuations": self.config.get(
+                "prepend_punctuations", '"\'"¿([{-'
+            ),
+            "append_punctuations": self.config.get(
+                "append_punctuations", '"\'..,!?:")],'
+            ),
+            # openai-whisper had no voice-activity filter; keep transcripts comparable.
+            "vad_filter": False,
+        }
+        suppress = _suppress_tokens(self.config.get("suppress_tokens"))
+        if suppress is not None:
+            options["suppress_tokens"] = suppress
+        return options
+
     def transcribe_audio(self, audio: str | Path | np.ndarray) -> dict[str, Any]:
         """Perform speech recognition on audio.
 
@@ -151,166 +172,92 @@ class SpeechPipeline(WhisperBasePipeline):
         if not self.whisper_model:
             raise RuntimeError("Whisper model not initialized")
 
+        if isinstance(audio, str | Path):
+            audio_path = Path(audio)
+            if not audio_path.exists():
+                raise FileNotFoundError(f"Audio file not found: {audio_path}")
+            video_id = audio_path.stem
+            waveform, _sr = librosa.load(
+                audio_path, sr=self.config["sample_rate"], mono=True
+            )
+        elif isinstance(audio, np.ndarray):
+            video_id = "audio_segment"
+            waveform = audio
+        else:
+            raise TypeError(f"Unsupported audio input type: {type(audio).__name__}")
+
         try:
             self.logger.info("Performing speech recognition")
-
-            # Handle different audio input types
-            if isinstance(audio, (str, Path)):
-                audio_path = Path(audio)
-                if not audio_path.exists():
-                    raise FileNotFoundError(f"Audio file not found: {audio_path}")
-
-                # For standard Whisper, use the built-in transcribe method
-                if self.model_type == "standard":
-                    # Prepare Whisper options
-                    options = {
-                        "language": self.config.get("language"),
-                        "task": self.config.get("task", "transcribe"),
-                        "beam_size": self.config.get("beam_size", 5),
-                        "best_of": self.config.get("best_of", 5),
-                        "temperature": self.config.get("temperature", 0.0),
-                        "patience": self.config.get("patience", 1.0),
-                        "length_penalty": self.config.get("length_penalty", 1.0),
-                        "word_timestamps": self.config.get("word_timestamps", True),
-                        "prepend_punctuations": self.config.get(
-                            "prepend_punctuations", '"\'"¿([{-'
-                        ),
-                        "append_punctuations": self.config.get(
-                            "append_punctuations", '"\'..,!?:")],'
-                        ),
-                        "fp16": self.config.get("use_fp16", True)
-                        and torch.cuda.is_available(),
-                    }
-
-                    if self.config.get("suppress_tokens"):
-                        options["suppress_tokens"] = self.config["suppress_tokens"]
-
-                    # Transcribe audio
-                    result = self.whisper_model.transcribe(str(audio_path), **options)
-                    return self._process_transcription_result(result, audio_path.stem)
-
-                # For HuggingFace Whisper, load the audio and process
-                else:
-                    # Use the base pipeline's audio loading
-                    audio, _sr = librosa.load(
-                        audio_path, sr=self.config["sample_rate"], mono=True
-                    )
-
-            # Handle numpy array input (already loaded audio)
-            if isinstance(audio, np.ndarray):
-                if self.model_type == "standard":
-                    # For standard Whisper with waveform
-                    options = {
-                        "language": self.config.get("language"),
-                        "task": self.config.get("task", "transcribe"),
-                        "beam_size": self.config.get("beam_size", 5),
-                        "best_of": self.config.get("best_of", 5),
-                        "temperature": self.config.get("temperature", 0.0),
-                        "patience": self.config.get("patience", 1.0),
-                        "length_penalty": self.config.get("length_penalty", 1.0),
-                        "word_timestamps": self.config.get("word_timestamps", True),
-                        "prepend_punctuations": self.config.get(
-                            "prepend_punctuations", '"\'"¿([{-'
-                        ),
-                        "append_punctuations": self.config.get(
-                            "append_punctuations", '"\'..,!?:")],'
-                        ),
-                        "fp16": self.config.get("use_fp16", True)
-                        and torch.cuda.is_available(),
-                    }
-
-                    if self.config.get("suppress_tokens"):
-                        options["suppress_tokens"] = self.config["suppress_tokens"]
-
-                    # Transcribe audio waveform
-                    result = self.whisper_model.transcribe(audio, **options)
-                    return self._process_transcription_result(result, "audio_segment")
-
-                # For HuggingFace Whisper, process directly
-                else:
-                    # TODO: Implement HuggingFace Whisper transcription
-                    # This requires using the tokenizer and generation utilities
-                    raise NotImplementedError(
-                        "HuggingFace Whisper transcription not yet implemented"
-                    )
-
-        except (FileNotFoundError, NotImplementedError):
-            raise
+            segments, info = self.whisper_model.transcribe(
+                waveform.astype(np.float32), **self._transcribe_options()
+            )
+            # A generator: decoding happens here, so errors are raised here.
+            return self._process_transcription_result(list(segments), info, video_id)
         except Exception as e:
             raise RuntimeError(f"Speech recognition failed: {e}") from e
 
-        raise TypeError(f"Unsupported audio input type: {type(audio).__name__}")
-
     def _process_transcription_result(
-        self, result: dict[str, Any], video_id: str
+        self, segments: list[Any], info: Any, video_id: str
     ) -> dict[str, Any]:
-        """Process Whisper transcription result into standard format.
+        """Turn faster-whisper's segments into the result dict openai-whisper's
+        output used to fill, so the WebVTT and every reader are unchanged.
 
         Args:
-            result: Raw Whisper result
+            segments: faster-whisper `Segment`s
+            info: faster-whisper `TranscriptionInfo`
             video_id: Identifier for the video/audio
 
         Returns:
             Processed transcription result
         """
-        # Extract word-level timestamps
-        word_timestamps = []
-        if result.get("segments"):
-            for segment in result["segments"]:
-                if "words" in segment:
-                    for word_info in segment["words"]:
-                        word_timestamps.append(
-                            {
-                                "word": word_info["word"].strip(),
-                                "start": float(word_info["start"]),
-                                "end": float(word_info["end"]),
-                                "confidence": float(word_info.get("probability", 0.0)),
-                            }
-                        )
+        word_timestamps = [
+            {
+                "word": word.word.strip(),
+                "start": float(word.start),
+                "end": float(word.end),
+                "confidence": float(word.probability),
+            }
+            for segment in segments
+            for word in segment.words or []
+        ]
+        segment_dicts = [
+            {
+                "id": segment.id,
+                "start": float(segment.start),
+                "end": float(segment.end),
+                "text": segment.text.strip(),
+                "tokens": list(segment.tokens),
+                "temperature": float(segment.temperature or 0.0),
+                "avg_logprob": float(segment.avg_logprob),
+                "compression_ratio": float(segment.compression_ratio),
+                "no_speech_prob": float(segment.no_speech_prob),
+            }
+            for segment in segments
+        ]
+        end = segment_dicts[-1]["end"] if segment_dicts else 0.0
 
-        # Extract segment-level information
-        segments = []
-        if result.get("segments"):
-            for segment in result["segments"]:
-                segments.append(
-                    {
-                        "id": segment["id"],
-                        "start": float(segment["start"]),
-                        "end": float(segment["end"]),
-                        "text": segment["text"].strip(),
-                        "tokens": segment.get("tokens", []),
-                        "temperature": float(segment.get("temperature", 0.0)),
-                        "avg_logprob": float(segment.get("avg_logprob", 0.0)),
-                        "compression_ratio": float(
-                            segment.get("compression_ratio", 0.0)
-                        ),
-                        "no_speech_prob": float(segment.get("no_speech_prob", 0.0)),
-                    }
-                )
-
-        # Create result using dictionary format
         speech_result = {
             "video_id": video_id,
             "timestamp": 0.0,  # Start time
-            "transcript": result["text"].strip(),
-            "language": result.get("language", "unknown"),
+            "transcript": "".join(s.text for s in segments).strip(),
+            "language": getattr(info, "language", None) or "unknown",
             "confidence": 0.0,  # Whisper doesn't provide overall confidence
             "words": word_timestamps,
             "metadata": {
                 "model": self.config["whisper_model"],
                 "task": self.config.get("task", "transcribe"),
-                "num_segments": len(segments),
+                "num_segments": len(segment_dicts),
                 "num_words": len(word_timestamps),
                 "start_time": 0.0,
-                "end_time": segments[-1]["end"] if segments else 0.0,
-                "total_duration": segments[-1]["end"] if segments else 0.0,
-                "segments": segments,  # Store segment details in metadata
+                "end_time": end,
+                "total_duration": end,
+                "segments": segment_dicts,  # Store segment details in metadata
             },
         }
 
         self.logger.info(
             f"Speech recognition completed. "
-            f"Transcribed {len(segments)} segments with {len(word_timestamps)} words"
+            f"Transcribed {len(segment_dicts)} segments with {len(word_timestamps)} words"
         )
         return speech_result
 
@@ -364,6 +311,7 @@ class SpeechPipeline(WhisperBasePipeline):
                 "whisper_model": self.config["whisper_model"]
                 if WHISPER_AVAILABLE
                 else None,
+                "runtime": "faster-whisper",
             },
             "config": {
                 "model_name": self.config["whisper_model"],
@@ -372,6 +320,7 @@ class SpeechPipeline(WhisperBasePipeline):
                 "word_timestamps": self.config.get("word_timestamps", True),
                 "device": self.config.get("device", "auto"),
                 "use_fp16": self.config.get("use_fp16", True),
+                "compute_type": self.config.get("compute_type", "default"),
             },
             "requirements": {
                 "whisper_available": WHISPER_AVAILABLE,

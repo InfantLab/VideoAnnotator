@@ -25,7 +25,7 @@ viewer/             # Video Annotation Viewer (React/Vite, Bun); built into src/
 tests/
 ├── unit/ integration/ pipelines/ api/ contract/
 specs/<NNN>-<slug>/  # spec-kit feature specs (spec.md, plan.md, tasks.md, ...)
-docs/development/roadmap_v1.{5,6,7}.0.md, roadmap_v1.7_to_v2.0.md  # release roadmap (v1.6.0 = public release)
+docs/development/roadmap_v1.{5,6,7,8}.0.md, roadmap_v1.8_to_v2.0.md  # release roadmap (v1.6.0 = quiet consolidation, v1.7.0 = public release with the new viewer, v1.8.0 = plugins)
 ```
 
 ## Commands
@@ -54,16 +54,13 @@ Backward Compatibility by Default). `/speckit-plan`'s Constitution Check gate ev
 against it.
 
 ## Current Plan
-<!-- SPECKIT START -->
-`specs/024-container-feels-local/plan.md`: researchers start VideoAnnotator with `launcher/
-videoannotator-start` (sh, plus a PowerShell twin), which finds Docker or Podman, shares chosen
-folders read-only at their real paths (remembered in a host `start.conf`), runs the slim GHCR
-image on 127.0.0.1 and opens the viewer connected. App, installed pipelines (restored after
-updates and restarts), model weights, activity and the researcher's files each persist on their
-own. Inside a container the server never lists its own filesystem. After 024:
-`specs/023-viewer-overhaul` (needs research first).
-<!-- SPECKIT END -->
-
+`specs/030-model-defaults/plan.md` (roadmap v1.6.0 Phase 5c), built 2026-10-18: faster-whisper
+`large-v3-turbo` (openai-whisper removed; Principle V exception), pyannote
+`speaker-diarization-community-1`, `yolo26n-pose` (ultralytics 8.4), face age/gender off and not
+run. Open: the diarization demo-clip check and `.rttm` fixture need a Hugging Face token
+(`docs/development/handover_v1.6.0_release.md`). Then the quiet v1.6.0 release; v1.7.0 is the
+public one with the viewer overhaul (design `specs/023-viewer-overhaul`, built by `027-ask-ai`,
+`028-video-page`, `029-videos-and-projects`).
 ## Recent Changes
 - 012-python-313-support: `requires-python` widens to `>=3.12,<3.14`; CI tests both;
   `.python-version` makes 3.13 the dev/Docker default; ruff/mypy targets stay at 3.12 (oldest

@@ -59,6 +59,7 @@ nav:
       - Command-line examples: usage/demo_commands.md
       - Pipelines: usage/pipeline_specs.md
       - Getting your results: usage/accessing_results.md
+      - Results out (table, ELAN, methods): usage/exporting_results.md
       - Configuration: usage/configuration.md
       - Environment variables: usage/environment_variables.md
       - Connecting the viewer: usage/CLIENT_TOKEN_SETUP_GUIDE.md
@@ -82,5 +83,6 @@ nav:
       - VLM annotation pipeline: development/vlm_annotation_pipeline.md
       - Roadmap v1.6.0: development/roadmap_v1.6.0.md
       - Roadmap v1.7.0: development/roadmap_v1.7.0.md
-      - Roadmap v1.7 to v2.0: development/roadmap_v1.7_to_v2.0.md
+      - Roadmap v1.8.0: development/roadmap_v1.8.0.md
+      - Roadmap v1.8 to v2.0: development/roadmap_v1.8_to_v2.0.md
   - JOSS reviewers: GETTING_STARTED_REVIEWERS.md

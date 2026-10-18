@@ -1,5 +1,32 @@
 name: face_openface3_embedding
 display_name: OpenFace3 Face Embedding
+title: "Faces: action units, gaze, head pose"
+summary: >-
+  Finds faces in each sampled frame and measures facial action units, gaze direction, head pose and expression. Also describes each face in a way that tells people apart.
+homepage: https://github.com/CMU-MultiComp-Lab/OpenFace-3.0
+benchmarks:
+  - name: "DISFA"
+    measure: "action unit F1"
+    figure: "60"
+    source: https://arxiv.org/abs/2506.02891
+    note: "OpenFace 3.0 (MTL) row, Table III"
+  - name: "MPII"
+    measure: "gaze, difference in angle"
+    figure: "4.25"
+    source: https://arxiv.org/abs/2506.02891
+    note: "OpenFace 3.0 (MTL) row, Table III"
+  - name: "AffectNet"
+    measure: "8-emotion accuracy"
+    figure: "0.56"
+    source: https://arxiv.org/abs/2506.02891
+    note: "OpenFace 3.0 (MTL) row, Table III"
+  - name: "300W"
+    measure: "landmark NME (inter-ocular)"
+    figure: "2.87"
+    source: https://arxiv.org/abs/2506.02891
+    note: "OpenFace 3.0 (MTL) row, Table III"
+quality_note: >-
+  The paper reports a multitask model (these figures) and single-task ones; it does not say which the released package uses. Installed from `openface-test`, the package CMU's repository names; neither has changed since June 2025. Its licence allows non-commercial research use only.
 description: Generate 512-D face embeddings for recognition or clustering using OpenFace3.
 pipeline_family: face
 variant: openface3-embedding
@@ -21,6 +48,8 @@ outputs:
     file: openface3_detailed.json
 config_schema:
   model_path:
+    group: technical
+    label: "Face detector checkpoint"
     type: string
     default: ""
     description: >
@@ -28,10 +57,18 @@ config_schema:
       to use ./weights if present, else the nutPace/openface_weights model,
       downloaded on first run.
   batch_size:
+    group: technical
+    label: "Batch size"
+    unit: faces
+    min: 1
     type: integer
     default: 32
     description: Inference batch size
   min_face_size:
+    group: behavioural
+    label: "Smallest face"
+    unit: px
+    min: 1
     type: integer
     default: 32
     description: Minimum face size in pixels to consider
@@ -49,3 +86,16 @@ weights:
   - id: nutPace/openface_weights
     approx_mb: 282
     cache: huggingface
+
+# spec 025: cited by the methods paragraph (videoannotator export methods).
+citations:
+  - key: hu2025openface3
+    bibtex: |
+      @inproceedings{hu2025openface3,
+        author = {Hu, Jiewen and Mathur, Leena and Liang, Paul Pu and Morency, Louis-Philippe},
+        title = {{OpenFace} 3.0: A Lightweight Multitask System for Comprehensive Facial Behavior Analysis},
+        booktitle = {19th {IEEE} International Conference on Automatic Face and Gesture Recognition ({FG})},
+        year = {2025},
+        eprint = {2506.02891},
+        archiveprefix = {arXiv}
+      }
