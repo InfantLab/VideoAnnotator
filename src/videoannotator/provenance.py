@@ -45,12 +45,15 @@ class ModelRef:
     revision: str | None
     revision_kind: str  # sha256 | git | ollama-digest | unknown
     revision_note: str | None = None
+    # The precision the weights ran at, where the runtime chooses it (spec 030).
+    quantization: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """As stored in a record; `revision_note` only when there is one."""
+        """As stored in a record; the optional fields only when set."""
         data = asdict(self)
-        if data["revision_note"] is None:
-            del data["revision_note"]
+        for key in ("revision_note", "quantization"):
+            if data[key] is None:
+                del data[key]
         return data
 
 
@@ -190,25 +193,6 @@ def hub_ref(repo_id: str, source: str = "huggingface") -> ModelRef:
         return ModelRef(repo_id, source, None, "unknown", "not found in the Hub cache")
     # .../models--org--name/snapshots/<commit>/config.yaml
     return ModelRef(repo_id, source, Path(cached).parent.name, "git")
-
-
-def whisper_ref(whisper_module: Any, size: str) -> ModelRef:
-    """An openai-whisper checkpoint. Its download URL embeds the checkpoint's
-    sha256, which whisper verifies on load, so no hashing is needed."""
-    models = getattr(whisper_module, "_MODELS", None)
-    if models is None:  # the pipeline passes a patchable wrapper, not the module
-        try:
-            import whisper as openai_whisper
-
-            models = openai_whisper._MODELS
-        except Exception:
-            models = {}
-    url = models.get(size)
-    if not url:
-        return ModelRef(
-            f"whisper {size}", "openai-whisper", None, "unknown", "not a known size"
-        )
-    return ModelRef(f"whisper {size}", "openai-whisper", url.split("/")[-2], "sha256")
 
 
 def clip_ref(model: str, pretrained: str) -> ModelRef:

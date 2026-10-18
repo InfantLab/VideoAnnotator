@@ -120,8 +120,9 @@ audio = [
     "librosa>=0.10.0",
     # whisper_base_pipeline configures numba's threading layer for librosa.
     "numba>=0.60.0",
-    # sdist-only release; built from source at install (see tool.uv.extra-build-dependencies)
-    "openai-whisper>=20250625",
+    # Whisper on CTranslate2 (spec 030): wheels on every platform, no torch, no
+    # source build. Replaced openai-whisper in v1.6.0.
+    "faster-whisper>=1.2.1,<2",
     # Defensive upper bounds on the whole pyannote.* family: pyannote.audio
     # 3.3.2 itself declares its own pyannote.core/database/metrics/pipeline
     # deps unbounded too, so pinning only pyannote.audio wouldn't stop e.g.
@@ -202,9 +203,6 @@ videoannotator = "videoannotator.cli:app"
 
 [tool.uv]
 # uv-native config - empty is fine for now
-
-[tool.uv.extra-build-dependencies]
-openai-whisper = ["setuptools", "wheel"]
 
 [[tool.uv.index]]
 name = "pytorch-cu126"
@@ -375,7 +373,8 @@ notebooks = [
 [[tool.mypy.overrides]]
 module = [
     "cv2",
-    "whisper",
+    "faster_whisper.*",
+    "faster_whisper",
     "pyannote.*",
     "ultralytics",
     "sentence_transformers",

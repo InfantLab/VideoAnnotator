@@ -103,6 +103,7 @@ class _Model:
     source: str
     revision: str | None
     kind: str
+    quantization: str | None = None
 
 
 @dataclass(frozen=True)
@@ -130,9 +131,11 @@ def _short_name(model: _Model) -> str:
 
 def _model_text(model: _Model) -> str:
     if not model.revision:
-        return f"{_short_name(model)} (revision not recorded)"
-    word = _REVISION_WORDS.get(model.kind, "revision")
-    return f"{_short_name(model)} ({word} {model.revision[:12]})"
+        text = f"{_short_name(model)} (revision not recorded)"
+    else:
+        word = _REVISION_WORDS.get(model.kind, "revision")
+        text = f"{_short_name(model)} ({word} {model.revision[:12]})"
+    return f"{text} at {model.quantization}" if model.quantization else text
 
 
 def _setting_value(value: Any) -> str:
@@ -165,6 +168,7 @@ def _use(
             str(m.get("source") or ""),
             m.get("revision"),
             str(m.get("revision_kind") or "unknown"),
+            m.get("quantization"),
         )
         for m in record.get("models") or []
         if isinstance(m, dict) and m.get("name")

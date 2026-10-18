@@ -19,3 +19,16 @@ def test_ultralytics_events_off_once_person_tracking_is_imported():
     import videoannotator.pipelines.person_tracking.person_pipeline  # noqa: F401
 
     assert events.enabled is False
+
+
+def test_onnxruntime_telemetry_off_once_audio_pipelines_are_imported():
+    onnxruntime = pytest.importorskip("onnxruntime")
+    from unittest.mock import patch
+
+    import videoannotator.pipelines.audio_processing as audio
+
+    with patch.object(onnxruntime, "disable_telemetry_events") as disable:
+        import importlib
+
+        importlib.reload(audio)
+    disable.assert_called_once()

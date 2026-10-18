@@ -78,3 +78,18 @@ Kept in `~/va-030/step4b`, compared with step 4a. First run downloaded `yolo26n-
   source does: in Ultralytics 8.4 an end-to-end model's post-processing
   (`utils/nms.py`, the `end2end` branch) filters by confidence only and never reads the IoU
   threshold. Its description now says it has no effect with YOLO26.
+
+## Step 5a: openai-whisper → faster-whisper 1.2.1 (CTranslate2 4.8.3), still `base` (2026-10-18)
+
+Kept in `~/va-030/step5a`, compared with step 4b:
+
+- `speech_recognition.vtt`: **identical** (every cue's text and timing); only the provenance block
+  differs: `Systran/faster-whisper-base`, revision `ebe41f70d5b6`, quantization `float32`.
+- Every other file identical.
+- GPU libraries (research S3): CTranslate2 found cuBLAS and cuDNN from torch's NVIDIA wheels with
+  no help; no preload needed. This GPU (compute capability 6.1) supports `float32`, `int8` and
+  `int8_float32`, not `float16`, so `compute_type: default` ran as `float32` (CTranslate2 says so
+  in a warning, and provenance records it).
+- Pipeline time in the job: 3.45 s (openai-whisper 2.08 s), including the model load and the
+  one-second warm-up transcription; transcribing the clip itself took 0.3 s.
+- openai-whisper and tiktoken uninstalled; nothing imports `whisper` any more.

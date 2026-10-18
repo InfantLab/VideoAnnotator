@@ -348,21 +348,6 @@ def mock_yolo_model():
 
 
 @pytest.fixture
-def mock_whisper_model():
-    """Mock Whisper model for testing."""
-    model = Mock()
-    model.transcribe.return_value = {
-        "text": "Hello world this is a test",
-        "language": "en",
-        "segments": [
-            {"start": 0.0, "end": 2.0, "text": "Hello world"},
-            {"start": 2.0, "end": 4.0, "text": "this is a test"},
-        ],
-    }
-    return model
-
-
-@pytest.fixture
 def sample_config():
     """Sample configuration for testing."""
     return {

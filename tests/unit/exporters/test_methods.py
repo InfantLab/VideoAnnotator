@@ -176,6 +176,17 @@ def test_legacy_and_current_differ_by_version(tmp_path):
     assert "VideoAnnotator (version not recorded) was used" in described.prose
 
 
+def test_quantisation_recorded_with_a_model_is_named(tmp_path):
+    run = make_run(tmp_path, {"a": FIXTURES})
+    path = run / "a" / "demo_clip_person_tracking.json"
+    data = json.loads(path.read_text())
+    data["provenance"]["models"][0]["quantization"] = "float32"
+    path.write_text(json.dumps(data))
+    prose = describe(from_folder(run)).prose
+    assert "yolo11n-pose.pt (sha256 " in prose
+    assert ") at float32" in prose
+
+
 def test_local_weights_are_named_by_file_not_path(tmp_path):
     run = make_run(tmp_path, {"a": FIXTURES})
     path = run / "a" / "demo_clip_person_tracking.json"
@@ -184,5 +195,5 @@ def test_local_weights_are_named_by_file_not_path(tmp_path):
     path.write_text(json.dumps(data))
     prose = describe(from_folder(run)).prose
     assert "yolo11n-pose.pt (revision not recorded)" in prose
-    assert "models/yolo" not in prose
+    assert "models/yolo/yolo11n-pose.pt (" not in prose
     assert "pyannote/speaker-diarization-3.1" in prose  # a hub id keeps its owner

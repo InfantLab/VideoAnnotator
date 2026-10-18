@@ -261,9 +261,9 @@ install that matches what you're doing:
 | I want to...                          | Install command                                | What you get |
 | -------------------------------------- | ----------------------------------------------- | ------------ |
 | Run only scene labelling               | `uv sync --extra scene`                         | torch, open-clip-torch, PySceneDetect — no face/audio/person deps |
-| Run only person tracking               | `uv sync --extra person`                        | torch, ultralytics (YOLO11), supervision |
+| Run only person tracking               | `uv sync --extra person`                        | torch, ultralytics (YOLO26) |
 | Run only face analysis (DeepFace)      | `uv sync --extra face`                          | deepface, imutils — **no torch** (the one torch-free pipeline family) |
-| Run only speech/diarization            | `uv sync --extra audio`                         | torch, torchaudio, librosa, openai-whisper, pyannote.audio |
+| Run only speech/diarization            | `uv sync --extra audio`                         | torch, torchaudio, librosa, faster-whisper, pyannote.audio |
 | Mix a few families                     | `uv sync --extra scene --extra person`          | union of the groups listed |
 | Run a slim API server (no local pipelines) | `uv sync`                                   | core only — useful if pipelines run on separate workers/nodes |
 | Reproduce the old "everything installed" behaviour | `uv sync --all-extras` (or `uv sync --extra all`) | every pipeline family |

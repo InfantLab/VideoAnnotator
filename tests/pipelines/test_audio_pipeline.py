@@ -86,49 +86,6 @@ class TestAudioPipeline:
 
         pipeline.cleanup()
 
-    @patch("videoannotator.pipelines.audio_processing.speech_pipeline.whisper")
-    def test_speech_recognition_component(self, mock_whisper, temp_audio_file):
-        """Test speech recognition component within modular pipeline."""
-        # Mock whisper model
-        mock_model = Mock()
-        mock_model.transcribe.return_value = {
-            "text": "Hello world",
-            "segments": [{"start": 0.0, "end": 2.0, "text": "Hello world"}],
-        }
-        mock_whisper.load_model.return_value = mock_model
-
-        config = {
-            "pipelines": {
-                "speech_recognition": {"enabled": True, "model": "base"},
-                "speaker_diarization": {
-                    "enabled": False  # Disable to focus on speech recognition
-                },
-            }
-        }
-
-        pipeline = AudioPipeline(config)
-
-        try:
-            # Should process and return modular results
-            results = pipeline.process(str(temp_audio_file))
-            assert isinstance(results, list)
-
-            if results:
-                # Should have speech recognition results
-                speech_result = None
-                for result in results:
-                    if result.get("pipeline") == "speech_recognition":
-                        speech_result = result
-                        break
-
-                assert speech_result is not None
-                assert "data" in speech_result
-                assert "format" in speech_result
-                assert speech_result["format"] == "webvtt"
-
-        except Exception as e:
-            pytest.skip(f"Speech recognition test failed: {e}")
-
     @patch(
         "videoannotator.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE",
         True,

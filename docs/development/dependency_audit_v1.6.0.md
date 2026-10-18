@@ -245,3 +245,11 @@ In order, each one small enough to review. The pipeline review's recommendations
   drops `py-cpuinfo`. Analytics moved to `ultralytics.utils.events`; still switched off for the
   process (`tests/unit/test_no_telemetry.py`). Same output on the demo clip with yolo11n-pose
   (spec 030 checks.md, step 4a). Licence unchanged (AGPL-3.0).
+- **openai-whisper → faster-whisper 1.2.1** (`audio`: `>=1.2.1,<2`). Brings CTranslate2 4.8.3
+  (wheels for every supported platform and Python), PyAV, tokenizers and onnxruntime (used only by
+  its voice-activity filter, which we leave off); removes openai-whisper (the only package built
+  from source at install, and `[tool.uv.extra-build-dependencies]` with it) and tiktoken. No torch
+  dependency. On Linux, CTranslate2 found the CUDA 12 / cuDNN 9 libraries from torch's NVIDIA
+  wheels with no configuration. onnxruntime gets imported anyway (torchmetrics, via pyannote,
+  imports it when present), so its Windows telemetry is switched off when the audio pipelines
+  load. Same transcript on the demo clip with `base` (spec 030 checks.md, step 5a). All MIT.

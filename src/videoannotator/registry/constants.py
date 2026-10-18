@@ -70,6 +70,7 @@ BACKENDS = {
     "cpu",
     "cuda",
     "ollama",
+    "ctranslate2",
 }
 
 STABILITY = {"experimental", "beta", "stable", "deprecated"}

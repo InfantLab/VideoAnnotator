@@ -3,7 +3,7 @@ display_name: Speech Recognition
 title: "Speech: what was said"
 summary: >-
   Transcribes speech into timed text, with the time of each word.
-homepage: https://github.com/openai/whisper
+homepage: https://github.com/SYSTRAN/faster-whisper
 benchmarks:
   - name: "LibriSpeech test-clean"
     measure: "WER %"
@@ -17,9 +17,9 @@ benchmarks:
     note: "Whisper base, greedy decoding, Table 8"
 quality_note: >-
   LibriSpeech is English read aloud by adults; none of these figures measures child-directed speech, infant vocalisations or overlapping talk.
-description: Speech transcription using OpenAI Whisper with word-level timestamps, producing WebVTT format output for subtitles and captions.
+description: Speech transcription using OpenAI Whisper models on the faster-whisper runtime, with word-level timestamps, producing WebVTT format output.
 pipeline_family: audio
-variant: whisper
+variant: faster-whisper
 module_path: videoannotator.pipelines.audio_processing:SpeechPipeline
 requires_extras: [audio]
 tasks:
@@ -41,7 +41,9 @@ config_schema:
     label: "Whisper model size"
     type: string
     default: base
-    description: Whisper model size (tiny, base, small, medium, large, large-v2, large-v3)
+    description: >-
+      Whisper model: a size (tiny, base, small, medium, large-v3, large-v3-turbo, distil-large-v3)
+      or a CTranslate2 model repository on Hugging Face.
   language:
     group: behavioural
     label: "Language"
@@ -87,6 +89,15 @@ config_schema:
     type: float
     default: 1.0
     description: Length penalty for beam search
+  compute_type:
+    group: technical
+    label: "Numeric precision"
+    type: string
+    default: default
+    description: >-
+      CTranslate2 compute type (default, float32, float16, int8, int8_float16). "default" keeps the
+      model's own precision where the device supports it; the type used is recorded in each
+      output's provenance.
   word_timestamps:
     group: behavioural
     label: "Time of each word"
@@ -100,7 +111,9 @@ config_schema:
     min: 0
     type: float
     default: 1.0
-    description: Minimum segment duration in seconds
+    description: >-
+      Has no effect: transcripts have never been split or merged by duration. Kept so existing
+      settings files stay valid.
   prepend_punctuations:
     group: technical
     label: "Punctuation joined to the next word"
@@ -140,17 +153,16 @@ examples:
 version: 1
 stability: stable
 backends:
-  - pytorch
+  - ctranslate2
 requirements:
   packages:
-    - openai-whisper
-    - ffmpeg-python
+    - faster-whisper
 
 # spec 011: first run downloads the default Whisper model.
 weights:
-  - id: base
-    approx_mb: 140
-    cache: whisper
+  - id: Systran/faster-whisper-base
+    approx_mb: 148
+    cache: huggingface
 
 # spec 025: cited by the methods paragraph (videoannotator export methods).
 citations:

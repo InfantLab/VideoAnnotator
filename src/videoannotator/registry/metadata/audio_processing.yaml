@@ -7,7 +7,7 @@ homepage: https://github.com/openai/whisper
 benchmarks: []
 quality_note: >-
   Deprecated: see Speech and Speaker turns for their benchmarks.
-description: Transcribe speech with Whisper and perform speaker diarization using pyannote.audio producing WebVTT + RTTM outputs.
+description: Transcribe speech with Whisper (faster-whisper) and perform speaker diarization using pyannote.audio producing WebVTT + RTTM outputs.
 pipeline_family: audio
 variant: whisper-pyannote
 # Short name 'audio' resolves here while this pipeline exists (spec 014).
@@ -63,6 +63,7 @@ examples:
 version: 1
 stability: beta
 backends:
+  - ctranslate2
   - pytorch
 
 # spec 011: diarization (on by default) needs a HF token + licences; see speaker_diarization.yaml.
@@ -77,9 +78,9 @@ requires_setup:
     description: Accept the pyannote/speaker-diarization-community-1 licence on Hugging Face, with the same account as the token.
     help_url: https://huggingface.co/pyannote/speaker-diarization-community-1
 weights:
-  - id: base
-    approx_mb: 140
-    cache: whisper
+  - id: Systran/faster-whisper-base
+    approx_mb: 148
+    cache: huggingface
   - id: pyannote/speaker-diarization-community-1
     approx_mb: 34
     cache: huggingface

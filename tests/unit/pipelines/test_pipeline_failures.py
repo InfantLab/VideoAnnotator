@@ -55,7 +55,6 @@ def test_speech_recognition_raises_when_transcription_fails(tmp_path):
     video.write_bytes(b"")
     pipeline = SpeechPipeline({})
     pipeline.is_initialized = True
-    pipeline.model_type = "standard"
     pipeline.whisper_model = MagicMock()
     pipeline.whisper_model.transcribe.side_effect = RuntimeError("Triton cache")
 
