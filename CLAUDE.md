@@ -58,7 +58,8 @@ v1.6.0 released 2026-10-18 (tag `v1.6.0`, Zenodo 10.5281/zenodo.23457429; PyPI u
 pending a `PYPI_API_TOKEN` secret, see `docs/development/handover_v1.6.0_release.md`). Work now
 on `1.7-dev` toward v1.7.0, the public release (`docs/development/roadmap_v1.7.0.md`): the viewer
 overhaul (design `specs/023-viewer-overhaul`, built by `027-ask-ai`, `028-video-page`,
-`029-videos-and-projects`, all specified, none planned yet), connectors, docs, pilot.
+`029-videos-and-projects`), connectors, docs, pilot. Now: `specs/027-ask-ai/plan.md` (planned
+2026-10-18; next `/speckit-tasks`).
 ## Recent Changes
 - 012-python-313-support: `requires-python` widens to `>=3.12,<3.14`; CI tests both;
   `.python-version` makes 3.13 the dev/Docker default; ruff/mypy targets stay at 3.12 (oldest
