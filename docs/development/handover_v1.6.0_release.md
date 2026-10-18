@@ -23,10 +23,12 @@ For the next session. Branch `1.6-dev`, all work committed locally, nothing push
    already (Hugging Face rejected it by then; the saved one is a different token).
 2. **Re-run the R notebook** (`tests/manual/results_out_r_notebook.md`): its table was
    regenerated from the new fixtures.
-3. **Release** (ask before each outward step): optional `v1.6.0rc2`; PR `1.6-dev` → `master`
-   (spec 024's CI end-to-end runs start there; CI's install matrix confirms the `audio` extra on
-   macOS/Windows); tag `v1.6.0`; GitHub release whose notes say the viewer is being redesigned for
-   v1.7.0 and that v1.6.0rc1 was the last with openai-whisper; Zenodo DOI; `CITATION.cff`.
+3. ~~Release~~: **v1.6.0 released 2026-10-18** (PR #12 → `31b26d9`, tag `v1.6.0`). Still to do:
+   - **PyPI**: add a PyPI API token as the `PYPI_API_TOKEN` repository secret (the project
+     name `videoannotator` was free on 2026-10-18), then re-run the release run's
+     `build-and-publish` job. Two docs lines say `pip install videoannotator[...]`.
+   - **Zenodo**: confirm the version DOI was minted and add it to `CITATION.cff`.
+   - Merge `master` back into `1.6-dev` (or start `1.7-dev` from `master`).
 
 ## Waiting on the maintainer
 

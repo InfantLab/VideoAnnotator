@@ -739,9 +739,13 @@ pipeline against their own ELAN codes in the viewer's Compare page. Revisit afte
 
 ### Release (quiet)
 
-- [ ] `v1.6.0rc2` with Phase 3; then Phases 3b and 5c.
-- [ ] Tag `v1.6.0`, GitHub release, Zenodo DOI, `CITATION.cff` updated. No announcements.
-- [ ] Release notes say plainly that the viewer is being redesigned for v1.7.0, the public
+- [x] ~~`v1.6.0rc2` with Phase 3~~: skipped (maintainer, 2026-10-18); a real-video test run and
+      the 8/8 demo-clip baseline stood in for it.
+- [x] Tag `v1.6.0`, GitHub release, `CITATION.cff` updated. No announcements. Released
+      2026-10-18 (`31b26d9`, PR #12), after security updates for the dependencies Trivy and
+      `bun audit` flagged. Zenodo's version DOI: check it was minted. **PyPI not yet**: the repo
+      has no `PYPI_API_TOKEN`; once it does, re-run the release workflow's `build-and-publish` job.
+- [x] Release notes say plainly that the viewer is being redesigned for v1.7.0, the public
       release.
 
 ---
@@ -779,6 +783,6 @@ the CLI with `--json` and through MCP; the pilot's measures.
 
 ---
 
-**Last Updated**: 2026-10-18 (Phase 5c done)
+**Last Updated**: 2026-10-18 (released)
 **Target Release**: as soon as Phases 3b and 5c are done
 **Status**: Release candidates — Consolidation Release
