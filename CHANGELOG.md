@@ -24,7 +24,7 @@ user follows from GitHub.
   environment (`HUGGINGFACE_TOKEN`, `HF_AUTH_TOKEN`, `HF_TOKEN`) still takes priority.
 
 - **A guide for every pipeline** (spec 026, roadmap v1.6.0 Phase 3b). Each pipeline now says what
-  it finds in plain words ("Faces: expression, age, gender"), splits its settings into the few
+  it finds in plain words ("People: where they are and how they move"), splits its settings into the few
   about *what* is measured (shown first, with units) and the technical ones (collapsed, with how
   many differ from the defaults), hides settings that don't apply (the OpenCV-only face
   thresholds, burst offsets outside burst mode) unless they've been changed, and gives its
@@ -248,6 +248,11 @@ user follows from GitHub.
 
 ### Removed
 
+- **openai-whisper** (spec 030): speech recognition runs on faster-whisper. The `audio` extra no
+  longer builds a package from source at install. The unused Whisper embedding helpers and the
+  Hugging Face transformers branch of `WhisperBasePipeline` (its transcription was never
+  implemented) went with it.
+
 - **Two settings that did nothing** (spec 026): `scene_detection`'s `enable_clip_labels` and
   `audio_processing`'s `enable_diarization` were never read by the code. A config that still sets
   them runs as before; the validator says the field will be ignored.
@@ -271,6 +276,46 @@ user follows from GitHub.
   bundled configs had no effect and are gone.
 
 ### Changed
+
+- **New default models** (spec 030, roadmap Phase 5c), so the public release's results come from
+  the defaults it keeps. Each changed on its upstream's published evaluation, after a run of the
+  demo clip compared with the same machine's previous run, one change at a time (library upgrades
+  first, with the old model). `videoannotator pipelines describe <name>` and the Pipelines page
+  give each default's reason and source ("Why this default"). Output formats are unchanged; their
+  content is not, so results from v1.5 and v1.6 differ. The comparisons are in
+  `specs/030-model-defaults/checks.md`.
+  - **Speech: Whisper `large-v3-turbo` on faster-whisper** (was `base` on openai-whisper). OpenAI's
+    card: large-v3 with its decoder cut from 32 layers to 4, "way faster, at the expense of a minor
+    quality degradation"; base is a tenth of its size. The new runtime alone gave the identical
+    transcript with `base`. With turbo, the demo clip keeps its 4 cues at the same moments and 3 are
+    reworded; it hears "Peek-a-boo!" in a peekaboo game where base heard "Take a move!". First use
+    downloads 1.6 GB, and it needs about 3 GB of GPU memory; on a CPU, `whisper_model: small` is
+    much faster. turbo can't translate, so `task: translate` with it now fails with a message
+    naming `large-v3` or `medium` (it used to return untranslated text). New setting
+    `compute_type`; the precision used is recorded in provenance and the methods paragraph ("at
+    float32"). To get the old model: `{"speech_recognition": {"whisper_model": "base"}}` (same
+    model on the new runtime; **v1.6.0rc1 is the last version with openai-whisper**, so v1.5
+    transcripts can't be reproduced bit for bit).
+  - **Speaker turns: `pyannote/speaker-diarization-community-1`** (was `speaker-diarization-3.1`).
+    pyannote's benchmark gives it a lower diarization error rate on 10 of 12 sets (AMI headset
+    18.8 → 17.0 %, DIHARD 3 21.4 → 20.2 %), equal on VoxConverse, worse on REPERE (broadcast TV);
+    it counts speakers better, and setup asks for one model licence instead of three. Not yet run
+    on the demo clip (no Hugging Face token on the machine that ran the checks). To get the old
+    model: `{"speaker_diarization": {"model": "pyannote/speaker-diarization-3.1"}}`, with its
+    licences accepted.
+  - **People and pose: `yolo26n-pose`** (was `yolo11n-pose`), on ultralytics 8.4. COCO pose mAP
+    50-95 57.2 vs 50.0 at the same size (Ultralytics). ultralytics 8.4 alone gave the same output.
+    Demo clip: the same people, tracks and labels; boxes overlap the old ones by a median IoU of
+    0.92, keypoints moved a median 19 px. `iou_threshold` has no effect with YOLO26 (it has no
+    suppression step), and says so. To get the old model:
+    `{"person_tracking": {"model": "yolo11n-pose.pt"}}`.
+  - **Faces: age and gender are off by default**, and when off their models are no longer
+    downloaded or run (they used to run whenever any attribute was on, and were only left out of
+    the file). Trained on adult faces, they say nothing useful about infants. A first face run
+    downloads 125 MB instead of 1.2 GB. Demo clip: the same 19 faces in 11 frames with identical
+    boxes and expressions. Face analysis is now part of the demo-clip output check. To get them
+    back: `{"face_analysis": {"detect_age": true, "detect_gender": true}}`.
+  - The deprecated `audio_processing` pipeline follows the speech and speaker-turn defaults.
 
 - **The server's terminal says only what matters.** It used to print two lines for every request
   (including every viewer asset and the health check every two minutes) and a page of startup

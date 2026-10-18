@@ -35,6 +35,16 @@ predate it and carry only COCO's `info.version`. Person tracking's coordinates m
 0.005 px from the previous capture: that one was made with OpenFace's leaked cuDNN benchmark
 mode still on when YOLO ran (within the baseline test's tolerance, so it went unnoticed).
 
+Re-baselined 2026-10-18 (spec 030, new default models) on a GTX 1060 6GB, from the demo clip run
+kept as step 5b in `specs/030-model-defaults/checks.md`: `face_detections.json` is now the demo
+clip's own (RetinaFace finds 19 faces in 11 frames; age and gender are off by default) and joins the
+baseline; `person_*` come from yolo26n-pose; `speech_recognition.vtt` from Whisper large-v3-turbo on
+faster-whisper. Scene and OpenFace 3 files changed only by GPU (scene's top score 0.6340 here,
+0.6352 on the RTX 4060) and `info.version`. `demo_clip_speaker_diarization.rttm` is **still the
+2026-10-04 output of speaker-diarization-3.1**: that machine had no Hugging Face token, so
+community-1's output replaces it at the next run with one. The tolerances were kept: two runs on
+the GTX 1060 gave identical files for every pipeline but person tracking (within 0.00004 %).
+
 `legacy/` keeps the previous set, without provenance, so both contract tests prove that older
 outputs still open, parse the same, and are labelled "version not recorded".
 

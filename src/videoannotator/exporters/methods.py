@@ -30,8 +30,8 @@ from .results_set import ResultsSet
 PHRASES = {
     "person_tracking": "People were detected, their body pose estimated and tracked "
     "across frames",
-    "face_analysis": "Faces were detected and their emotional expression, age and "
-    "gender estimated",
+    # Age and gender only when switched on, which the settings list then says.
+    "face_analysis": "Faces were detected and their emotional expression estimated",
     "face_openface3_embedding": "Faces were detected and facial action units, head "
     "pose and gaze estimated",
     "scene_detection": "Scene changes were detected and each scene classified",

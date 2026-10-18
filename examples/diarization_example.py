@@ -32,7 +32,7 @@ def example_diarization(video_path: str, output_dir: str | None = None):
         # Configure the pipeline
         config = DiarizationPipelineConfig(
             # Token will be read from HUGGINGFACE_TOKEN environment variable
-            diarization_model="pyannote/speaker-diarization-3.1",
+            diarization_model="pyannote/speaker-diarization-community-1",
             use_gpu=True,  # Use GPU if available
         )
 

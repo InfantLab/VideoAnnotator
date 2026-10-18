@@ -41,7 +41,7 @@ def create_high_performance_config() -> dict[str, Any]:
             "skip_frames": 1,  # Process every frame
         },
         "person_tracking": {
-            "model_name": "yolo11x",  # Largest, most accurate model
+            "model_name": "yolo26x",  # Largest, most accurate model
             "confidence_threshold": 0.3,
             "iou_threshold": 0.5,
             "max_det": 300,
@@ -83,7 +83,7 @@ def create_lightweight_config() -> dict[str, Any]:
             "skip_frames": 5,  # Process every 5th frame
         },
         "person_tracking": {
-            "model_name": "yolo11n",  # Smallest, fastest model
+            "model_name": "yolo26n",  # Smallest, fastest model
             "confidence_threshold": 0.5,
             "iou_threshold": 0.7,
             "max_det": 100,
@@ -127,7 +127,7 @@ def create_research_config() -> dict[str, Any]:
             "classification_classes": ["indoor", "outdoor", "face", "object", "text"],
         },
         "person_tracking": {
-            "model_name": "yolo11x",
+            "model_name": "yolo26x",
             "confidence_threshold": 0.25,
             "iou_threshold": 0.4,
             "max_det": 500,
@@ -136,7 +136,7 @@ def create_research_config() -> dict[str, Any]:
             "frame_rate": 30,
             "enable_pose_estimation": True,
             "enable_tracking": True,
-            "pose_model": "yolo11x-pose",
+            "pose_model": "yolo26x-pose",
         },
         "face_analysis": {
             "backends": ["openface", "deepface"],

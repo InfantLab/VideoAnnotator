@@ -23,7 +23,7 @@ You choose videos and pipelines in the browser; VideoAnnotator runs them and kee
 | Pipeline | What you get | File format |
 |---|---|---|
 | Person tracking | Each person's box and 17-point pose, with an ID that follows them | COCO |
-| Face analysis | Faces with emotion, age and gender estimates | COCO |
+| Face analysis | Faces with emotion estimates (age and gender optional) | COCO |
 | Face embeddings (OpenFace 3) | A 512-number description of each face, for telling people apart | JSON |
 | Scene detection | Where the scene cuts, and what kind of place each scene is | JSON |
 | Speech recognition | A transcript with word timings (Whisper) | WebVTT |

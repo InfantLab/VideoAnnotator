@@ -90,8 +90,8 @@ def test_numbers_round_trip_exactly(run_folder):
     assert [float(row[k]) for k in ("x", "y", "width", "height")] == first["bbox"]
     assert row["end"] == ""  # a moment, not an interval
     assert row["track"] == first["person_id"]
-    assert row["model"] == "models/yolo/yolo11n-pose.pt"
-    assert row["videoannotator_version"] == "1.5.0"
+    assert row["model"] == "models/yolo/yolo26n-pose.pt"
+    assert row["videoannotator_version"] == "1.6.0rc1"
     assert row["file"] == "demo_clip_person_tracking.json"
 
 
@@ -178,7 +178,9 @@ def test_sources_hold_each_files_provenance(run_folder):
     assert by_file["demo_clip_speaker_diarization.rttm"]["pipeline"]["name"] == (
         "speaker_diarization"
     )
-    assert by_file["demo_clip_face_detections.json"] is None
+    assert by_file["demo_clip_face_detections.json"]["pipeline"]["name"] == (
+        "face_analysis"
+    )
 
 
 @pytest.mark.skipif(not parquet_available(), reason="pyarrow not installed")

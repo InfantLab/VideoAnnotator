@@ -37,9 +37,10 @@ const EXPECTED_TYPE: Record<string, string> = {
   'demo_clip_vlm_annotation.json': 'vlm_annotation',
 };
 
-// Re-captured with provenance (2026-10-04); the face-detection and VLM fixtures
-// come from another take and predate it (README).
+// Re-captured with provenance (2026-10-04, faces 2026-10-18); the VLM fixture
+// comes from another take and predates it (README).
 const RECORDED_TRACKS = [
+  'face_analysis',
   'person_tracking',
   'openface3_faces',
   'scene_detection',
@@ -150,7 +151,9 @@ describe.each([
       }
     }
     // Older COCO files carry only VideoAnnotator's version.
-    expect(data.provenance?.face_analysis).toEqual({ kind: 'partial', videoannotatorVersion: '1.5.0' });
+    if (isLegacy) {
+      expect(data.provenance?.face_analysis).toEqual({ kind: 'partial', videoannotatorVersion: '1.5.0' });
+    }
     expect(data.provenance?.vlm_annotations?.kind).toBe('partial');
   });
 
@@ -161,14 +164,17 @@ describe.each([
     };
     const { data: current } = await loadLikeArtifactsZipFrom(CURRENT);
     const { data: legacy } = await loadLikeArtifactsZipFrom(LEGACY);
-    // Exact where the outputs are; GPU-sampled tracks moved slightly with the
-    // 2026-10-04 torch-settings fix (README), so for those compare their shape.
-    for (const track of ['speech_recognition', 'speaker_diarization', 'face_analysis', 'vlm_annotations'] as const) {
+    // Exact where the outputs are the same; the default models changed in
+    // spec 030 (README), so for the rest compare their shape.
+    for (const track of ['speaker_diarization', 'vlm_annotations'] as const) {
       expect(current[track], track).toEqual(legacy[track]);
     }
-    for (const track of ['person_tracking', 'openface3_faces', 'scene_detection'] as const) {
+    for (const track of ['person_tracking', 'openface3_faces', 'scene_detection', 'speech_recognition'] as const) {
       expect(current[track]?.length, track).toBe(legacy[track]?.length);
     }
+    // Legacy faces came from another take (Haar cascade era); both must parse.
+    expect(current.face_analysis?.length).toBeGreaterThan(0);
+    expect(legacy.face_analysis?.length).toBeGreaterThan(0);
     expect(Object.keys(strip(current)).sort()).toEqual(Object.keys(strip(legacy)).sort());
   });
 });
@@ -199,6 +205,6 @@ describe('VideoAnnotator ELAN export → viewer', () => {
     const annotations = await parseElanFile(file);
     expect([...new Set(annotations.map((a) => a.tier))].sort()).toEqual([...tiers].sort());
     const speech = annotations.filter((a) => a.tier === 'speech_recognition speech');
-    expect(speech[0]).toMatchObject({ value: 'Ready, baby girl?', startSec: 0, endSec: 1.32 });
+    expect(speech[0]).toMatchObject({ value: 'Ready, baby girl?', startSec: 0, endSec: 1.34 });
   });
 });

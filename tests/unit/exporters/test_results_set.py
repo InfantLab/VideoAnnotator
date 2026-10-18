@@ -27,10 +27,11 @@ def test_a_run_folder_gives_one_video_per_folder(run_folder):
 def test_provenance_is_read_from_every_format(run_folder):
     files = {f.kind.kind: f for f in from_folder(run_folder).videos[0].files}
     assert files["rttm"].provenance["pipeline"]["name"] == "speaker_diarization"
-    assert files["webvtt"].provenance["models"][0]["name"] == "whisper base"
+    assert files["webvtt"].provenance["models"][0]["name"] == (
+        "mobiuslabsgmbh/faster-whisper-large-v3-turbo"
+    )
     assert files["person"].pipeline == "person_tracking"
-    # Recorded before provenance existed: falls back to the reader table.
-    assert files["face_deepface"].provenance is None
+    assert files["face_deepface"].provenance["pipeline"]["name"] == "face_analysis"
     assert files["face_deepface"].pipeline == "face_analysis"
 
 

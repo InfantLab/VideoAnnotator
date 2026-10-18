@@ -45,9 +45,11 @@ def test_person_tracking_one_event_per_detection(folder):
         )
 
 
-def test_deepface_face_emotion_age_gender():
-    native = _coco("demo_clip_face_detections.json")
-    events = read_deepface(FIXTURES / "demo_clip_face_detections.json").events
+@pytest.mark.parametrize("folder", [FIXTURES, LEGACY])
+def test_deepface_face_emotion_age_gender(folder):
+    """Age and gender are off by default since spec 030; the legacy file has them."""
+    native = _coco("demo_clip_face_detections.json", folder)
+    events = read_deepface(folder / "demo_clip_face_detections.json").events
     assert len(events) == len(native["annotations"])
     a, event = native["annotations"][0], events[0]
     by_measure = {}
@@ -61,8 +63,11 @@ def test_deepface_face_emotion_age_gender():
     assert {m.label: m.value for m in by_measure["emotion_score"]} == a[
         "emotion_scores"
     ]
-    assert by_measure["age"][0].value == a["age"]
-    assert by_measure["gender"][0].label == a["gender"]
+    if "age" in a:
+        assert by_measure["age"][0].value == a["age"]
+        assert by_measure["gender"][0].label == a["gender"]
+    else:
+        assert "age" not in by_measure and "gender" not in by_measure
     # face_id is an index within the frame, not a track.
     assert event.track == ""
 
@@ -159,16 +164,15 @@ def test_webvtt_cues_skip_the_provenance_note():
     events = read_webvtt(FIXTURES / "demo_clip_speech_recognition.vtt").events
     assert (events[0].start, events[0].end, events[0].measures[0].label) == (
         0.0,
-        1.32,
+        1.34,
         "Ready, baby girl?",
     )
     # The NOTE's JSON escapes "-->", so every arrow left is a cue's.
     text = (FIXTURES / "demo_clip_speech_recognition.vtt").read_text()
     assert len(events) == text.count("-->")
     legacy = read_webvtt(LEGACY / "demo_clip_speech_recognition.vtt").events
-    assert [e.measures[0].label for e in legacy] == [
-        e.measures[0].label for e in events
-    ]
+    # Whisper base then, large-v3-turbo now (spec 030): same cues, other words.
+    assert len(legacy) == len(events)
 
 
 def test_webvtt_multiline_cue_and_hour_less_times(tmp_path):

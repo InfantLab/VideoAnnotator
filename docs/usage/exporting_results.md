@@ -178,10 +178,12 @@ Add your own tiers in ELAN and save; the viewer still opens the file, showing bo
 For example (abridged):
 
 > All 40 videos were annotated automatically with VideoAnnotator 1.6.0
-> [@addyman2026videoannotator]. Speech was transcribed with whisper base (sha256 ed3a0b6b1c0e)
-> [@radford2023whisper]. Speaker turns were identified with pyannote/speaker-diarization-3.1
-> (revision 84fd25912480) [@plaquet2023powerset; @bredin2023pyannote]. GPU deterministic mode was
-> off. Settings not listed were the pipelines' defaults.
+> [@addyman2026videoannotator]. Speech was transcribed with
+> mobiuslabsgmbh/faster-whisper-large-v3-turbo (revision 0a363e9161cb) at float32
+> [@radford2023whisper]. Speaker turns were identified with
+> pyannote/speaker-diarization-community-1 (revision 3533c8cf8e36) [@plaquet2023powerset;
+> @pyannote2025community1; @bredin2023pyannote]. GPU deterministic mode was off. Settings not
+> listed were the pipelines' defaults.
 
 - Citations are `[@key]` keys for the BibTeX that comes with it (R Markdown, Quarto and Pandoc
   resolve them; reference managers import the BibTeX).

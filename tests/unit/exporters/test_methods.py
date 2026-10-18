@@ -65,7 +65,10 @@ def test_one_group_is_described_once(run_folder):
         "The video was annotated automatically with VideoAnnotator 1.5.0"
     )
     assert described.summary["groups"] == 1
-    assert "Speech was transcribed with whisper base" in described.prose
+    assert (
+        "Speech was transcribed with mobiuslabsgmbh/faster-whisper-large-v3-turbo"
+        in described.prose
+    )
     assert "GPU deterministic mode was off." in described.prose
 
 
@@ -76,7 +79,7 @@ def test_two_identical_videos_are_one_group(tmp_path):
     assert described.summary == {
         "videos": 2,
         "groups": 1,
-        "not_recorded": ["face_analysis", "vlm_annotation"],
+        "not_recorded": ["vlm_annotation"],
     }
 
 
@@ -98,7 +101,7 @@ def test_results_without_provenance_say_not_recorded(legacy_folder):
     assert "Speech was transcribed (model version not recorded)" in described.prose
     assert described.revisions == []
     # Nothing filled in from today's defaults.
-    assert "whisper base" not in described.prose
+    assert "faster-whisper" not in described.prose
 
 
 def test_vlm_prompt_is_identified_and_listed(tmp_path):
@@ -183,7 +186,7 @@ def test_quantisation_recorded_with_a_model_is_named(tmp_path):
     data["provenance"]["models"][0]["quantization"] = "float32"
     path.write_text(json.dumps(data))
     prose = describe(from_folder(run)).prose
-    assert "yolo11n-pose.pt (sha256 " in prose
+    assert "yolo26n-pose.pt (sha256 " in prose
     assert ") at float32" in prose
 
 
@@ -194,6 +197,6 @@ def test_local_weights_are_named_by_file_not_path(tmp_path):
     data["provenance"]["models"][0].update(revision=None, revision_kind="unknown")
     path.write_text(json.dumps(data))
     prose = describe(from_folder(run)).prose
-    assert "yolo11n-pose.pt (revision not recorded)" in prose
-    assert "models/yolo/yolo11n-pose.pt (" not in prose
+    assert "yolo26n-pose.pt (revision not recorded)" in prose
+    assert "models/yolo/yolo26n-pose.pt (" not in prose
     assert "pyannote/speaker-diarization-3.1" in prose  # a hub id keeps its owner

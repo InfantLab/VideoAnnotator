@@ -36,17 +36,17 @@
       "name": "person_tracking",
       "sub_pipeline": null
     },
-    "videoannotator_version": "1.5.0",
+    "videoannotator_version": "1.6.0rc1",
     "models": [
       {
-        "name": "models/yolo/yolo11n-pose.pt",
+        "name": "models/yolo/yolo26n-pose.pt",
         "source": "ultralytics",
-        "revision": "869e83fcdffdc7371fa4e34cd8e51c838cc729571d1635e5141e3075e9319dc0",
+        "revision": "eb3bb8268828aeaf515cec23a4bfafd793944a86fe9af94ba7823609c14522a9",
         "revision_kind": "sha256"
       }
     ],
     "settings": {
-      "model": "models/yolo/yolo11n-pose.pt",
+      "model": "models/yolo/yolo26n-pose.pt",
       "conf_threshold": 0.4,
       "iou_threshold": 0.7,
       "track_mode": true,
@@ -96,8 +96,8 @@
       "anomaly_detection": false,
       "cublas_workspace_config": ":4096:8"
     },
-    "created_at": "2026-10-04T14:03:10.879146+00:00",
-    "job_id": "3abaf9e3-14d4-458c-af01-734863dcb97a",
+    "created_at": "2026-10-18T13:57:48.649116+00:00",
+    "job_id": "10f91051-cfdf-4728-9ab4-d76f718ff349",
     "input": {
       "name": "demo_clip.mp4",
       "sha256": "0b809c13772c8cdff2a5355f958b5b70115cf8d5d7b461199d36056d3a8295b0"
