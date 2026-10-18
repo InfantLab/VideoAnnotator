@@ -2,10 +2,10 @@
   "pipeline": {
     "id": "face_analysis",
     "name": "Face Analysis (DeepFace)",
-    "description": "Standards-only face detection and analysis using DeepFace with emotion recognition, age, and gender prediction, producing COCO format output.",
+    "description": "Face detection (RetinaFace) and expression recognition using DeepFace, with optional age and gender estimation, producing COCO format output.",
     "group": "face",
-    "title": "Faces: expression, age, gender",
-    "summary": "Finds faces in each sampled frame and estimates each face's expression, age and gender."
+    "title": "Faces: where they are and their expression",
+    "summary": "Finds faces in each sampled frame and estimates each face's expression. Can also estimate age and gender, which are off by default."
   },
   "parameters": [
     {
@@ -19,7 +19,9 @@
       "unit": null,
       "min": null,
       "max": null,
-      "applies_when": null
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
     },
     {
       "name": "emotion_backend",
@@ -32,7 +34,9 @@
       "unit": null,
       "min": null,
       "max": null,
-      "applies_when": null
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
     },
     {
       "name": "confidence_threshold",
@@ -45,7 +49,9 @@
       "unit": null,
       "min": 0.0,
       "max": 1.0,
-      "applies_when": null
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
     },
     {
       "name": "min_face_size",
@@ -58,7 +64,9 @@
       "unit": "px",
       "min": 1.0,
       "max": null,
-      "applies_when": null
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
     },
     {
       "name": "max_faces",
@@ -71,7 +79,9 @@
       "unit": "faces",
       "min": 1.0,
       "max": null,
-      "applies_when": null
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
     },
     {
       "name": "scale_factor",
@@ -88,7 +98,9 @@
         "detection_backend": [
           "opencv"
         ]
-      }
+      },
+      "reason": null,
+      "reason_source": null
     },
     {
       "name": "min_neighbors",
@@ -105,7 +117,9 @@
         "detection_backend": [
           "opencv"
         ]
-      }
+      },
+      "reason": null,
+      "reason_source": null
     },
     {
       "name": "detect_emotions",
@@ -118,33 +132,39 @@
       "unit": null,
       "min": null,
       "max": null,
-      "applies_when": null
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
     },
     {
       "name": "detect_age",
       "type": "boolean",
       "label": "Age",
-      "description": "Enable age estimation",
-      "default": true,
+      "description": "Enable age estimation (downloads a 540 MB model on first use)",
+      "default": false,
       "enum": null,
       "group": "behavioural",
       "unit": null,
       "min": null,
       "max": null,
-      "applies_when": null
+      "applies_when": null,
+      "reason": "Off by default: the model was trained on adult faces and says nothing useful about infants.",
+      "reason_source": "https://github.com/serengil/deepface"
     },
     {
       "name": "detect_gender",
       "type": "boolean",
       "label": "Gender",
-      "description": "Enable gender prediction",
-      "default": true,
+      "description": "Enable gender prediction (downloads a 540 MB model on first use)",
+      "default": false,
       "enum": null,
       "group": "behavioural",
       "unit": null,
       "min": null,
       "max": null,
-      "applies_when": null
+      "applies_when": null,
+      "reason": "Off by default: the model was trained on adult faces and says nothing useful about infants.",
+      "reason_source": "https://github.com/serengil/deepface"
     },
     {
       "name": "deepface",
@@ -162,7 +182,9 @@
       "unit": null,
       "min": null,
       "max": null,
-      "applies_when": null
+      "applies_when": null,
+      "reason": "RetinaFace detector: 91.4% AP on WIDER FACE's hard set, and the best detector in DeepFace's portfolio by its own account; the earlier OpenCV Haar cascade found no faces in the demo clip.",
+      "reason_source": "https://arxiv.org/abs/1905.00641"
     },
     {
       "name": "person_identity",
@@ -180,7 +202,9 @@
       "unit": null,
       "min": null,
       "max": null,
-      "applies_when": null
+      "applies_when": null,
+      "reason": null,
+      "reason_source": null
     }
   ]
 }

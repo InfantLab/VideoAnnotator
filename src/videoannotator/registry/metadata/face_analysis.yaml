@@ -1,8 +1,8 @@
 name: face_analysis
 display_name: Face Analysis (DeepFace)
-title: "Faces: expression, age, gender"
+title: "Faces: where they are and their expression"
 summary: >-
-  Finds faces in each sampled frame and estimates each face's expression, age and gender.
+  Finds faces in each sampled frame and estimates each face's expression. Can also estimate age and gender, which are off by default.
 homepage: https://github.com/serengil/deepface
 benchmarks:
   - name: "WIDER FACE (hard)"
@@ -21,8 +21,8 @@ benchmarks:
     source: https://github.com/serengil/deepface
     note: "test data not named in the README"
 quality_note: >-
-  None of these figures is for infants or young children. DeepFace publishes no accuracy figure for its expression model.
-description: Standards-only face detection and analysis using DeepFace with emotion recognition, age, and gender prediction, producing COCO format output.
+  None of these figures is for infants or young children. DeepFace's expression model was trained on adult faces, and DeepFace publishes no accuracy figure for it.
+description: Face detection (RetinaFace) and expression recognition using DeepFace, with optional age and gender estimation, producing COCO format output.
 pipeline_family: face
 variant: deepface
 family_default: true
@@ -105,14 +105,18 @@ config_schema:
     group: behavioural
     label: "Age"
     type: boolean
-    default: true
-    description: Enable age estimation
+    default: false
+    description: Enable age estimation (downloads a 540 MB model on first use)
+    reason: "Off by default: the model was trained on adult faces and says nothing useful about infants."
+    reason_source: https://github.com/serengil/deepface
   detect_gender:
     group: behavioural
     label: "Gender"
     type: boolean
-    default: true
-    description: Enable gender prediction
+    default: false
+    description: Enable gender prediction (downloads a 540 MB model on first use)
+    reason: "Off by default: the model was trained on adult faces and says nothing useful about infants."
+    reason_source: https://github.com/serengil/deepface
   deepface:
     group: technical
     label: "DeepFace models"
@@ -123,6 +127,8 @@ config_schema:
       detector_backend: retinaface
       enforce_detection: false
     description: DeepFace-specific configuration
+    reason: "RetinaFace detector: 91.4% AP on WIDER FACE's hard set, and the best detector in DeepFace's portfolio by its own account; the earlier OpenCV Haar cascade found no faces in the demo clip."
+    reason_source: https://arxiv.org/abs/1905.00641
   person_identity:
     group: technical
     label: "Link faces to people"
@@ -151,7 +157,7 @@ examples:
           }
         }
       }
-    description: Full face analysis with RetinaFace detector via API
+    description: Age and gender switched on as well (off by default), via API
 version: 1
 stability: stable
 backends:
@@ -161,20 +167,14 @@ requirements:
   packages:
     - deepface
     - opencv-python
-# Models DeepFace fetches on first use: the default `retinaface` detector plus
-# the attribute models (emotion/age/gender all on by default).
+# Models DeepFace fetches on first use with the defaults: the `retinaface`
+# detector and the expression model (age and gender are off, spec 030).
 weights:
   - id: retinaface.h5
     approx_mb: 119
     cache: deepface
   - id: facial_expression_model_weights.h5
     approx_mb: 6
-    cache: deepface
-  - id: age_model_weights.h5
-    approx_mb: 540
-    cache: deepface
-  - id: gender_model_weights.h5
-    approx_mb: 540
     cache: deepface
 
 # spec 025: cited by the methods paragraph (videoannotator export methods).

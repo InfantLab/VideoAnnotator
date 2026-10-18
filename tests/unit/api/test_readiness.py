@@ -379,7 +379,11 @@ class TestDeepFaceWeights:
         registry.load()
         meta = next(m for m in registry.list() if m.name == "face_analysis")
         assert {w.cache for w in meta.weights} == {"deepface"}
-        assert sum(w.approx_mb for w in meta.weights) > 1000
+        # Spec 030 SC-006: age and gender are off, so their 1,080 MB isn't fetched.
+        assert {w.id for w in meta.weights} == {
+            "retinaface.h5",
+            "facial_expression_model_weights.h5",
+        }
 
 
 class TestOllamaBaseUrl:

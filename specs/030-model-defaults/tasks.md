@@ -25,10 +25,10 @@ comparison, with the `all` extra and the Hugging Face token.
 
 ## Phase 1: Setup (check tooling)
 
-- [ ] T001 In `tests/integration/test_output_baseline.py`: when `VIDEOANNOTATOR_BASELINE_KEEP` is set, add `face_analysis` to the job's pipelines and copy every output (after `RENAMES`, provenance included) plus `server.log` into that folder; behaviour without the variable unchanged
-- [ ] T002 [P] Create `scripts/compare_demo_outputs.py <before> <after>`: per file identical / within the baseline test's `TOLERANCE` / different (reuse `_without_run_details` logic by importing or copying it); for different files a summary per quickstart §2 (`.vtt` cues added/removed/reworded and largest timing shift; `.rttm` turns and speaker count; `person_*` people per frame, track count, keypoints per person; `face_detections` faces per frame and attribute keys present); ruff/mypy clean
-- [ ] T003 [P] Unit test for the comparison summary on small hand-made inputs in `tests/unit/test_compare_demo_outputs.py`
-- [ ] T004 [GPU] Step 0: run quickstart §1 into `~/va-030/step0` with today's code; record the GPU name and the causes of the current baseline failures (handover item 4: scene, diarization, OpenFace 3 ×2, person) in `specs/030-model-defaults/checks.md` (new file: one section per step, filled from T004 on)
+- [X] T001 In `tests/integration/test_output_baseline.py`: when `VIDEOANNOTATOR_BASELINE_KEEP` is set, add `face_analysis` to the job's pipelines and copy every output (after `RENAMES`, provenance included) plus `server.log` into that folder; behaviour without the variable unchanged
+- [X] T002 [P] Create `scripts/compare_demo_outputs.py <before> <after>`: per file identical / within the baseline test's `TOLERANCE` / different (reuse `_without_run_details` logic by importing or copying it); for different files a summary per quickstart §2 (`.vtt` cues added/removed/reworded and largest timing shift; `.rttm` turns and speaker count; `person_*` people per frame, track count, keypoints per person; `face_detections` faces per frame and attribute keys present); ruff/mypy clean
+- [X] T003 [P] Unit test for the comparison summary on small hand-made inputs in `tests/unit/test_compare_demo_outputs.py`
+- [X] T004 [GPU] Step 0: run quickstart §1 into `~/va-030/step0` with today's code; record the GPU name and the causes of the current baseline failures (handover item 4: scene, diarization, OpenFace 3 ×2, person) in `specs/030-model-defaults/checks.md` (new file: one section per step, filled from T004 on)
 
 **Checkpoint**: a "before" run exists on the comparison machine.
 
@@ -36,12 +36,12 @@ comparison, with the `all` extra and the Hugging Face token.
 
 ## Phase 2: Foundational (the reason beside a default)
 
-- [ ] T005 In `src/videoannotator/registry/pipeline_registry.py`: add `reason: str | None` and `reason_source: str | None` to `PipelineConfigField`; parse them; drop `reason_source` with a warning if `reason` is missing or the link isn't `https://` (data-model §1)
-- [ ] T006 In `src/videoannotator/api/v1/pipelines.py`: add nullable `reason`, `reason_source` to each config-field object in both pipeline routes (additive, next to spec 026's `group`/`label`)
-- [ ] T007 In `src/videoannotator/cli.py` (`pipelines describe`, near the `applies_when` printing): print `Why this default: <reason> (<reason_source>)` under a setting that has one
-- [ ] T008 [P] Tests: parsing and the warning in `tests/unit/registry/test_pipeline_guide.py`; API fields in `tests/api/test_pipeline_guide_api.py`; describe output in the existing `pipelines describe` CLI test
-- [ ] T009 [P] Regenerate the viewer's API types (`scripts/gen_viewer_api_types.sh`) if the OpenAPI schema changed, and run `cd viewer && bun run typecheck`; no viewer UI change
-- [ ] T010 Record unchanged defaults' reasons: RetinaFace detector in `src/videoannotator/registry/metadata/face_analysis.yaml` (`reason` on the detector setting if it is in `config_schema`, else in `quality_note`; plus a benchmark entry WIDER FACE hard AP 91.4 %, arXiv:1905.00641) (FR-025); OpenFace 3 status in `src/videoannotator/registry/metadata/face_openface3_embedding.yaml` (`openface-test` is the distribution CMU names, unchanged since 2025-06, non-commercial licence; pin stays) (FR-026)
+- [X] T005 In `src/videoannotator/registry/pipeline_registry.py`: add `reason: str | None` and `reason_source: str | None` to `PipelineConfigField`; parse them; drop `reason_source` with a warning if `reason` is missing or the link isn't `https://` (data-model §1)
+- [X] T006 In `src/videoannotator/api/v1/pipelines.py`: add nullable `reason`, `reason_source` to each config-field object in both pipeline routes (additive, next to spec 026's `group`/`label`)
+- [X] T007 In `src/videoannotator/cli.py` (`pipelines describe`, near the `applies_when` printing): print `Why this default: <reason> (<reason_source>)` under a setting that has one
+- [X] T008 [P] Tests: parsing and the warning in `tests/unit/registry/test_pipeline_guide.py`; API fields in `tests/api/test_pipeline_guide_api.py`; describe output in the existing `pipelines describe` CLI test
+- [X] T009 [P] Regenerate the viewer's API types (`scripts/gen_viewer_api_types.sh`) if the OpenAPI schema changed, and run `cd viewer && bun run typecheck`; no viewer UI change
+- [X] T010 Record unchanged defaults' reasons: RetinaFace detector in `src/videoannotator/registry/metadata/face_analysis.yaml` (`reason` on the detector setting if it is in `config_schema`, else in `quality_note`; plus a benchmark entry WIDER FACE hard AP 91.4 %, arXiv:1905.00641) (FR-025); OpenFace 3 status in `src/videoannotator/registry/metadata/face_openface3_embedding.yaml` (`openface-test` is the distribution CMU names, unchanged since 2025-06, non-commercial licence; pin stays) (FR-026)
 
 **Checkpoint**: `pytest tests/unit tests/api -q` green; commit "registry: a setting can say why its default".
 
@@ -53,11 +53,11 @@ comparison, with the `all` extra and the Hugging Face token.
 **Independent Test**: default face run has detections and expressions, no age/gender, and no
 age/gender weights downloaded; with `detect_age: true` only the age model is added.
 
-- [ ] T011 [US3] Unit tests first in `tests/unit/pipelines/test_face_actions.py`: `_deepface_actions()` for each combination of the three flags (only enabled actions; none enabled → `["emotion"]`); `_prepare_deepface_models()` asks for age/gender weights only when enabled; default config has both off
-- [ ] T012 [US3] In `src/videoannotator/pipelines/face_analysis/face_pipeline.py`: `detect_age`/`detect_gender` default `False` (default config and every `self.config.get(..., True)` for those two keys); `_deepface_actions()` returns only the enabled actions (research F1)
-- [ ] T013 [US3] In `src/videoannotator/registry/metadata/face_analysis.yaml`: `detect_age`/`detect_gender` `default: false` with `reason` and `reason_source` (contracts/metadata.md); remove the age/gender entries from `weights:`; update the example API body; `quality_note` says the expression model was trained on adult faces (FR-023)
-- [ ] T014 [US3] [GPU] Demo-clip check into `~/va-030/step2`: detections and emotions identical to step 0, no age/gender keys, no age/gender files under `<models>/deepface/.deepface/weights` after a run with an empty DeepFace home; record in `checks.md`
-- [ ] T015 [US3] If T014 shows faces in the demo clip: add `face_analysis` to `PIPELINES` and `face_detections.json` (or the name the job writes) to `TOLERANCE` in `tests/integration/test_output_baseline.py`, with a tolerance measured from two runs (FR-024); otherwise update the comment there to say RetinaFace also finds none
+- [X] T011 [US3] Unit tests first in `tests/unit/pipelines/test_face_actions.py`: `_deepface_actions()` for each combination of the three flags (only enabled actions; none enabled → `["emotion"]`); `_prepare_deepface_models()` asks for age/gender weights only when enabled; default config has both off
+- [X] T012 [US3] In `src/videoannotator/pipelines/face_analysis/face_pipeline.py`: `detect_age`/`detect_gender` default `False` (default config and every `self.config.get(..., True)` for those two keys); `_deepface_actions()` returns only the enabled actions (research F1)
+- [X] T013 [US3] In `src/videoannotator/registry/metadata/face_analysis.yaml`: `detect_age`/`detect_gender` `default: false` with `reason` and `reason_source` (contracts/metadata.md); remove the age/gender entries from `weights:`; update the example API body; `quality_note` says the expression model was trained on adult faces (FR-023)
+- [X] T014 [US3] [GPU] Demo-clip check into `~/va-030/step2`: detections and emotions identical to step 0, no age/gender keys, no age/gender files under `<models>/deepface/.deepface/weights` after a run with an empty DeepFace home; record in `checks.md`
+- [X] T015 [US3] If T014 shows faces in the demo clip: add `face_analysis` to `PIPELINES` and `face_detections.json` (or the name the job writes) to `TOLERANCE` in `tests/integration/test_output_baseline.py`, with a tolerance measured from two runs (FR-024); otherwise update the comment there to say RetinaFace also finds none
 
 **Checkpoint**: commit "face: age and gender off by default, and not run when off".
 

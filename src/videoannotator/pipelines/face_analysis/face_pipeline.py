@@ -145,8 +145,9 @@ class FaceAnalysisPipeline(BasePipeline):
             "max_faces": 10,  # Maximum faces to detect per frame
             # Analysis features
             "detect_emotions": True,
-            "detect_age": True,
-            "detect_gender": True,
+            # Off by default (spec 030): trained on adults, meaningless for infants.
+            "detect_age": False,
+            "detect_gender": False,
             # DeepFace settings
             "deepface": {
                 "emotion_model": "VGG-Face",
@@ -531,13 +532,15 @@ class FaceAnalysisPipeline(BasePipeline):
             self.config["detection_backend"] = "opencv"
 
     def _deepface_actions(self) -> list[str]:
-        if (
-            self.config.get("detect_emotions", True)
-            or self.config.get("detect_age", True)
-            or self.config.get("detect_gender", True)
-        ):
-            return ["emotion", "age", "gender"]
-        return ["emotion"]  # At least one action is required
+        """Only the attributes switched on, so the others' models are neither
+        downloaded nor run."""
+        flags = {
+            "emotion": self.config.get("detect_emotions", True),
+            "age": self.config.get("detect_age", False),
+            "gender": self.config.get("detect_gender", False),
+        }
+        # DeepFace.analyze() needs at least one action; emotion's model is 6 MB.
+        return [action for action, on in flags.items() if on] or ["emotion"]
 
     def _prepare_deepface_models(self) -> None:
         """Build DeepFace's attribute models up front, downloading any missing
@@ -742,11 +745,11 @@ class FaceAnalysisPipeline(BasePipeline):
                         )
 
                     # Age analysis
-                    if self.config.get("detect_age", True) and "age" in analysis:
+                    if self.config.get("detect_age", False) and "age" in analysis:
                         analysis_data["age"] = float(analysis["age"])
 
                     # Gender analysis
-                    if self.config.get("detect_gender", True) and "gender" in analysis:
+                    if self.config.get("detect_gender", False) and "gender" in analysis:
                         gender_scores = analysis.get("gender", {})
                         dominant_gender = analysis.get("dominant_gender", "unknown")
                         gender_confidence = (

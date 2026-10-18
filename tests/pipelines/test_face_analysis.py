@@ -393,8 +393,20 @@ class TestDeepFaceModelPreparation:
         built = [
             c.kwargs["model_name"] for c in mock_deepface.build_model.call_args_list
         ]
-        assert built == ["Emotion", "Age", "Gender", "retinaface"]
+        assert built == ["Emotion", "retinaface"]
         assert all(lock_held)
+
+    @patch("videoannotator.pipelines.face_analysis.face_pipeline.DeepFace")
+    def test_age_model_only_when_switched_on(self, mock_deepface, tmp_path):
+        pipeline = FaceAnalysisPipeline(
+            {"detection_backend": "deepface", "detect_age": True}
+        )
+        with patch.dict(os.environ, {"DEEPFACE_HOME": str(tmp_path)}):
+            pipeline._prepare_deepface_models()
+        built = [
+            c.kwargs["model_name"] for c in mock_deepface.build_model.call_args_list
+        ]
+        assert built == ["Emotion", "Age", "retinaface"]
 
     @patch("videoannotator.pipelines.face_analysis.face_pipeline.DeepFace")
     def test_build_failure_does_not_raise(self, mock_deepface, tmp_path):
@@ -403,6 +415,32 @@ class TestDeepFaceModelPreparation:
 
         with patch.dict(os.environ, {"DEEPFACE_HOME": str(tmp_path)}):
             pipeline._prepare_deepface_models()
+
+
+class TestDeepFaceActions:
+    """Spec 030: age and gender are off by default, and an attribute that is
+    off is not run (it used to be run whenever any attribute was on)."""
+
+    def test_defaults_run_expression_only(self):
+        pipeline = FaceAnalysisPipeline()
+        assert pipeline.config["detect_age"] is False
+        assert pipeline.config["detect_gender"] is False
+        assert pipeline._deepface_actions() == ["emotion"]
+
+    @pytest.mark.parametrize(
+        ("emotions", "age", "gender", "expected"),
+        [
+            (True, True, True, ["emotion", "age", "gender"]),
+            (True, False, True, ["emotion", "gender"]),
+            (False, True, False, ["age"]),
+            (False, False, False, ["emotion"]),
+        ],
+    )
+    def test_only_enabled_actions(self, emotions, age, gender, expected):
+        pipeline = FaceAnalysisPipeline(
+            {"detect_emotions": emotions, "detect_age": age, "detect_gender": gender}
+        )
+        assert pipeline._deepface_actions() == expected
 
 
 class TestDeepFaceNoFacePlaceholder:

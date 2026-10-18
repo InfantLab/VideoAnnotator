@@ -8,7 +8,7 @@ pyannote licences accepted, and about 2 minutes per run once weights are downloa
 
 The baseline test already runs the demo clip through a real server. With
 `VIDEOANNOTATOR_BASELINE_KEEP` set, it also copies each output (renamed as the fixtures are) into
-that folder, and adds `face_analysis` to the job:
+that folder:
 
 ```bash
 VIDEOANNOTATOR_BASELINE_KEEP=~/va-030/step0 \
