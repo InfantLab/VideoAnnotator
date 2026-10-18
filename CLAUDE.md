@@ -54,13 +54,11 @@ Backward Compatibility by Default). `/speckit-plan`'s Constitution Check gate ev
 against it.
 
 ## Current Plan
-`specs/030-model-defaults/plan.md` (roadmap v1.6.0 Phase 5c), built 2026-10-18: faster-whisper
-`large-v3-turbo` (openai-whisper removed; Principle V exception), pyannote
-`speaker-diarization-community-1`, `yolo26n-pose` (ultralytics 8.4), face age/gender off and not
-run. Open: the diarization demo-clip check and `.rttm` fixture need a Hugging Face token
-(`docs/development/handover_v1.6.0_release.md`). Then the quiet v1.6.0 release; v1.7.0 is the
-public one with the viewer overhaul (design `specs/023-viewer-overhaul`, built by `027-ask-ai`,
-`028-video-page`, `029-videos-and-projects`).
+v1.6.0 released 2026-10-18 (tag `v1.6.0`, Zenodo 10.5281/zenodo.23457429; PyPI upload still
+pending a `PYPI_API_TOKEN` secret, see `docs/development/handover_v1.6.0_release.md`). Work now
+on `1.7-dev` toward v1.7.0, the public release (`docs/development/roadmap_v1.7.0.md`): the viewer
+overhaul (design `specs/023-viewer-overhaul`, built by `027-ask-ai`, `028-video-page`,
+`029-videos-and-projects`, all specified, none planned yet), connectors, docs, pilot.
 ## Recent Changes
 - 012-python-313-support: `requires-python` widens to `>=3.12,<3.14`; CI tests both;
   `.python-version` makes 3.13 the dev/Docker default; ruff/mypy targets stay at 3.12 (oldest

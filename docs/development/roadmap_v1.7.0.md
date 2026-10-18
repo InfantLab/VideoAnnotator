@@ -15,8 +15,9 @@ redesigned viewer.
 without help, and a researcher new to AI video analysis can ask questions of a video and get
 systematic answers without help.
 **Target Release**: when the pilot's fixes are in. No deadline.
-**Current Status**: Planning. Viewer design done (spec 023); specs 026–029 specified 2026-10-16.
-**Prerequisites**: v1.6.0 tagged.
+**Current Status**: In development on `1.7-dev` (from 2026-10-18). Viewer design done (spec 023);
+specs 027–029 specified 2026-10-16, not yet planned.
+**Prerequisites**: v1.6.0 tagged. Done 2026-10-18.
 
 ---
 
@@ -208,6 +209,6 @@ own API and had to be deleted, not updated, when the runtime changed.
 
 ---
 
-**Last Updated**: 2026-10-17
+**Last Updated**: 2026-10-18
 **Target Release**: when the pilot's fixes are in
-**Status**: Planning Phase — Public Release
+**Status**: In development — Public Release

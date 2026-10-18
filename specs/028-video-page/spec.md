@@ -1,6 +1,6 @@
 # Feature Specification: Video Page
 
-**Feature Branch**: `028-video-page` (work lands on `1.6-dev`)
+**Feature Branch**: `028-video-page` (work lands on `1.7-dev`)
 **Created**: 2026-10-16
 **Status**: Draft
 **Design**: [spec 023](../023-viewer-overhaul/spec.md) (The Video page; themes 3, 5, 6, 10, 13),

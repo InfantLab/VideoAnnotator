@@ -1,6 +1,6 @@
 # Feature Specification: Videos and Projects
 
-**Feature Branch**: `029-videos-and-projects` (work lands on `1.6-dev`)
+**Feature Branch**: `029-videos-and-projects` (work lands on `1.7-dev`)
 **Created**: 2026-10-16
 **Status**: Draft
 **Design**: [spec 023](../023-viewer-overhaul/spec.md) (Decisions 1–8; Draft proposal: settings,

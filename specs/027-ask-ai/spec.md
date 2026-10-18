@@ -1,6 +1,6 @@
 # Feature Specification: Ask AI
 
-**Feature Branch**: `027-ask-ai` (work lands on `1.6-dev`)
+**Feature Branch**: `027-ask-ai` (work lands on `1.7-dev`)
 **Created**: 2026-10-16
 **Status**: Draft
 **Design**: [spec 023](../023-viewer-overhaul/spec.md) (Draft proposal: Ask AI; Decisions 1–8),
