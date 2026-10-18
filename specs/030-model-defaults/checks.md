@@ -144,3 +144,25 @@ the download.
 **Still open, needs a Hugging Face token** (with community-1's licence accepted): the step 3
 demo-clip check, the `.rttm` fixture, and a run naming `pyannote/speaker-diarization-3.1` (T019,
 T039, T041).
+
+## Step 3, run (2026-10-18, with a token): community-1 merges a second voice
+
+Kept in `~/va-030/step3b`. Every other file identical to step 5b. Speaker turns:
+
+| | 3.1 (fixture, RTX 4060; same on the GTX 1060) | community-1 (GTX 1060) |
+|---|---|---|
+| 1 | 0.638–1.431 SPEAKER_00 | 0.638–1.431 SPEAKER_00 |
+| 2 | 2.427–3.440 SPEAKER_00 | 2.427–3.440 SPEAKER_00 |
+| 3 | 9.312–9.970 SPEAKER_00 | 9.312–10.426 SPEAKER_00 |
+| 4 | 9.970–10.426 **SPEAKER_01** | — |
+
+- 3.1 run on this GPU reproduces the fixture exactly, so the difference is the model, not the
+  hardware. Both record their revisions (3.1 `84fd25912480`, community-1 `3533c8cf8e36`).
+- Speech in the same stretch: "Gotta smile, huh?" 8.76–10.26 (turbo).
+- Pitch (librosa pyin, 80–1000 Hz): turn 1 median 474 Hz, turn 2 median 292 Hz; 3.1's
+  SPEAKER_01 stretch median **752 Hz** (14 voiced frames, 90th percentile 764 Hz); 9.31–9.97 had
+  no voiced frames. 752 Hz is high even for infant-directed speech, so SPEAKER_01 may be the
+  infant, which community-1 would then be merging into the mother. Half a second, so not
+  conclusive: **needs a listener** (spec edge case: a lost speaker stops the switch until it is
+  explained or the default is kept).
+- The `.rttm` fixture is held until that decision.

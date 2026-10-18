@@ -15,6 +15,11 @@ os.environ.setdefault("VIDEOANNOTATOR_BACKGROUND_PROCESSING", "false")
 # import keep the engine made then, so test_storage_env (below) is too late for
 # them, and they would open the user's real database.
 _import_time_db = Path(tempfile.mkdtemp(prefix="va-tests-")) / "import_time.db"
+# Kept for the real-model baseline test, which needs the Hugging Face token saved
+# next to the user's own database ("" means the default location).
+os.environ.setdefault(
+    "VIDEOANNOTATOR_USER_DB_PATH", os.environ.get("VIDEOANNOTATOR_DB_PATH", "")
+)
 os.environ["VIDEOANNOTATOR_DB_PATH"] = str(_import_time_db)
 os.environ["DATABASE_URL"] = f"sqlite:///{_import_time_db}"
 

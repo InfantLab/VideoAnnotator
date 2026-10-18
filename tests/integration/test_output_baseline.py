@@ -29,6 +29,7 @@ import requests
 
 from videoannotator.config_env import huggingface_token
 from videoannotator.provenance import COMPANION_SUFFIX, VTT_MARKER, read_record
+from videoannotator.secrets_store import read_saved_huggingface_token
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BASELINE_DIR = REPO_ROOT / "tests" / "fixtures" / "viewer_contract"
@@ -92,6 +93,24 @@ def _assert_within_tolerance(current, golden, rel: float, abs_: float = 0.0, pat
         assert current == golden, path
 
 
+def _users_saved_token() -> str | None:
+    """A token saved from the viewer or CLI (spec 031). It sits next to the
+    user's database; tests/conftest.py points the suite at a temporary one."""
+    suite_db = os.environ.get("VIDEOANNOTATOR_DB_PATH")
+    user_db = os.environ.get("VIDEOANNOTATOR_USER_DB_PATH", "")
+    try:
+        if user_db:
+            os.environ["VIDEOANNOTATOR_DB_PATH"] = user_db
+        else:
+            os.environ.pop("VIDEOANNOTATOR_DB_PATH", None)
+        return read_saved_huggingface_token()
+    finally:
+        if suite_db is None:
+            os.environ.pop("VIDEOANNOTATOR_DB_PATH", None)
+        else:
+            os.environ["VIDEOANNOTATOR_DB_PATH"] = suite_db
+
+
 def _free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
@@ -116,9 +135,7 @@ def current_outputs(tmp_path_factory) -> dict[str, str]:
         # tests/conftest.py turns this off for the suite; the server must process jobs.
         "VIDEOANNOTATOR_BACKGROUND_PROCESSING": "true",
     }
-    # A token saved from the viewer or CLI (spec 031) sits next to the real
-    # database, which this server doesn't use.
-    token = huggingface_token()
+    token = huggingface_token() or _users_saved_token()
     if token:
         env["HUGGINGFACE_TOKEN"] = token
     cli = Path(sys.executable).parent / "videoannotator"
