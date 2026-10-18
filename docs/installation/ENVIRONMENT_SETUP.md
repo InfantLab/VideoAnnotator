@@ -9,8 +9,7 @@ The VideoAnnotator project uses PyAnnote for speaker diarization, which requires
 1. Go to [HuggingFace Settings](https://huggingface.co/settings/tokens)
 2. Create a new token with "Read" permissions
 3. Signed in as the same account, accept the licence on each model page the viewer lists on the
-   Speaker turns card (today `pyannote/speaker-diarization-3.1`, `pyannote/segmentation-3.0` and
-   `pyannote/speaker-diarization-community-1`)
+   Speaker turns card (since v1.6.0 just one, `pyannote/speaker-diarization-community-1`)
 
 ### 2. Give the token to VideoAnnotator
 
@@ -112,11 +111,11 @@ If configured correctly, you should see:
 **"Authentication failed"**
 
 - Verify your token is valid at [HuggingFace Settings](https://huggingface.co/settings/tokens)
-- Make sure you've accepted the terms for pyannote/speaker-diarization-3.1
+- Make sure you've accepted the terms for pyannote/speaker-diarization-community-1
 - Try regenerating your token if it's old
 
 **"Model access denied"**
 
-- Go to [pyannote/speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1)
+- Go to [pyannote/speaker-diarization-community-1](https://huggingface.co/pyannote/speaker-diarization-community-1)
 - Click "Agree and access repository"
 - Wait a few minutes for permissions to propagate

@@ -40,7 +40,7 @@ class TestPersonTrackingPipeline:
         pipeline = PersonTrackingPipeline()
 
         # Verify current default configuration
-        assert pipeline.config["model"] == "models/yolo/yolo11n-pose.pt"
+        assert pipeline.config["model"] == "models/yolo/yolo26n-pose.pt"
         assert pipeline.config["conf_threshold"] == 0.4
         assert pipeline.config["iou_threshold"] == 0.7
         assert pipeline.config["tracker"] == "bytetrack"
@@ -50,8 +50,8 @@ class TestPersonTrackingPipeline:
         """Provenance (spec 017) hashes the weights after loading: on a first
         run they only exist once ultralytics has downloaded them."""
         module = "videoannotator.pipelines.person_tracking.person_pipeline"
-        downloaded = tmp_path / "yolo11n-pose.pt"
-        missing = tmp_path / "not-yet" / "yolo11n-pose.pt"
+        downloaded = tmp_path / "yolo26n-pose.pt"
+        missing = tmp_path / "not-yet" / "yolo26n-pose.pt"
 
         def load(*_args):
             downloaded.write_bytes(b"weights")
@@ -67,7 +67,7 @@ class TestPersonTrackingPipeline:
             pipeline._initialize_model()
 
         [ref] = pipeline.provenance_models()
-        assert ref.name == "models/yolo/yolo11n-pose.pt"
+        assert ref.name == "models/yolo/yolo26n-pose.pt"
         assert ref.revision_kind == "sha256"
         assert ref.revision is not None
 

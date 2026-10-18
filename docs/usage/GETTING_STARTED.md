@@ -257,7 +257,7 @@ scene_detection:
   enabled: true
 
 person_tracking:
-  model: "yolo11n-pose.pt"
+  model: "yolo26n-pose.pt"
   conf_threshold: 0.4
   iou_threshold: 0.7
   track_mode: true

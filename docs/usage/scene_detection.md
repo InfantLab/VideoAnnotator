@@ -66,7 +66,7 @@ clip:
   prompts: ["living room", "clinic", "outdoor", "nursery"]
 
 tracking:
-  model: yolo11n-pose
+  model: yolo26n-pose
   track_mode: true
   conf_thresh: 0.4
 ```

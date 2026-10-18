@@ -17,7 +17,7 @@ scene_detection:
 
 # Person Tracking Pipeline
 person_tracking:
-  model_name: "yolo11n-pose.pt" # Nano model for speed
+  model_name: "yolo26n-pose.pt" # Nano model for speed
   confidence_threshold: 0.6 # Higher threshold for precision
   iou_threshold: 0.6
   track_mode: false # Disable tracking to save resources

@@ -56,7 +56,7 @@ class PersonTrackingPipeline(BasePipeline):
             config: Optional configuration dictionary.
         """
         default_config = {
-            "model": "models/yolo/yolo11n-pose.pt",  # YOLO11 pose model
+            "model": "models/yolo/yolo26n-pose.pt",
             "conf_threshold": 0.4,
             "iou_threshold": 0.7,
             "track_mode": True,  # Enable tracking
@@ -333,7 +333,7 @@ class PersonTrackingPipeline(BasePipeline):
         }
 
     def _initialize_model(self):
-        """Initialize YOLO11 pose model with enhanced logging."""
+        """Initialize the YOLO pose model with enhanced logging."""
         if not YOLO_AVAILABLE:
             raise ImportError("ultralytics package required for person tracking")
 
@@ -342,7 +342,7 @@ class PersonTrackingPipeline(BasePipeline):
             # Load from the models directory; provenance keeps the configured name.
             model_path = resolve_yolo_model(self.config["model"])
             self.model = log_model_download(
-                "YOLO11 Pose Detection Model",
+                "YOLO Pose Detection Model",
                 model_path,
                 YOLO,
                 model_path,

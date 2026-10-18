@@ -35,7 +35,7 @@ scene_detection:
 ```yaml
 person_tracking:
   # YOLO11 model settings
-  model_name: "yolo11n-pose.pt" # YOLO11 pose model
+  model_name: "yolo26n-pose.pt" # YOLO26 pose model
   confidence_threshold: 0.5 # Detection confidence threshold
   iou_threshold: 0.5 # IoU threshold for NMS
 

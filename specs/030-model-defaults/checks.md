@@ -62,3 +62,19 @@ Kept in `~/va-030/step4a`, compared with step 2:
   not installed; the switch-off now targets the new module and the no-telemetry test follows it.
   New dependencies: `ultralytics-platform` (imported only if `ultralytics.Platform` is used; we
   don't), `polars`, `nvidia-ml-py`; `py-cpuinfo` dropped.
+
+## Step 4b: yolo26n-pose (2026-10-18)
+
+Kept in `~/va-030/step4b`, compared with step 4a. First run downloaded `yolo26n-pose.pt`
+(7,878,574 bytes) to `<models>/yolo/`.
+
+- `person_tracking.json`: the same 22 detections in 11 frames, the same 2 tracks with the same
+  person labels, 17 keypoints each. Boxes: IoU with yolo11n's median 0.923, minimum 0.776.
+  Keypoints moved a median 19.3 px (largest 99 px). Mean detection score 0.648 (was 0.716).
+  Visible keypoints 112 (was 116). `person_tracks.json` identical.
+- Every other file identical.
+- `iou_threshold` (research P2): 0.7, 0.3 and 0.05 give identical output on the demo clip for
+  both yolo26n-pose and yolo11n-pose, which says nothing (two people who never overlap). The
+  source does: in Ultralytics 8.4 an end-to-end model's post-processing
+  (`utils/nms.py`, the `end2end` branch) filters by confidence only and never reads the IoU
+  threshold. Its description now says it has no effect with YOLO26.

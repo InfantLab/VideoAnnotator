@@ -6,13 +6,13 @@ summary: >-
 homepage: https://docs.ultralytics.com/tasks/pose/
 benchmarks:
   - name: "COCO Keypoints val2017"
-    measure: "mAP pose 50-95"
-    figure: "50.0"
-    source: https://github.com/ultralytics/ultralytics/blob/v8.3.183/docs/en/macros/yolo-pose-perf.md
-    note: "yolo11n-pose at 640 px; dataset as named on the Ultralytics pose docs"
-description: Track persons with YOLO11 + ByteTrack producing COCO person + keypoint annotations.
+    measure: "mAP pose 50-95 (e2e)"
+    figure: "57.2"
+    source: https://docs.ultralytics.com/models/yolo26/
+    note: "yolo26n-pose at 640 px, end-to-end (no NMS); yolo11n-pose, the previous default, 50.0"
+description: Track persons with YOLO26 pose + ByteTrack producing COCO person + keypoint annotations.
 pipeline_family: person
-variant: yolov11n-pose-bytetrack
+variant: yolo26n-pose-bytetrack
 module_path: videoannotator.pipelines.person_tracking:PersonTrackingPipeline
 requires_extras: [person]
 tasks:
@@ -35,8 +35,12 @@ config_schema:
     group: technical
     label: "Pose model"
     type: string
-    default: models/yolo/yolo11n-pose.pt
-    description: YOLO pose model path or tag
+    default: models/yolo/yolo26n-pose.pt
+    description: >-
+      YOLO pose model: a file name Ultralytics knows (e.g. yolo11n-pose.pt, the default before
+      v1.6.0) or a path to weights.
+    reason: "Higher keypoint accuracy than yolo11n-pose at the same size: COCO pose mAP 50-95 57.2 vs 50.0."
+    reason_source: https://docs.ultralytics.com/models/yolo26/
   conf_threshold:
     group: technical
     label: "Detection confidence"
@@ -52,7 +56,9 @@ config_schema:
     max: 1
     type: float
     default: 0.7
-    description: IoU threshold for NMS/tracking
+    description: >-
+      Overlap above which two detections count as one (non-maximum suppression). No effect with
+      YOLO26 models, the default since v1.6.0: they are end to end, with no suppression step.
   track_mode:
     group: behavioural
     label: "Follow each person through the video"
@@ -71,15 +77,17 @@ backends:
 
 # spec 025: cited by the methods paragraph (videoannotator export methods).
 citations:
-  - key: jocher2024yolo11
+  - key: jocher2026yolo26
     bibtex: |
-      @software{jocher2024yolo11,
-        author = {Jocher, Glenn and Qiu, Jing},
-        title = {Ultralytics {YOLO11}},
-        version = {11.0.0},
-        year = {2024},
-        url = {https://github.com/ultralytics/ultralytics},
-        license = {AGPL-3.0}
+      @misc{jocher2026yolo26,
+        title = {Ultralytics {YOLO26}: Unified Real-Time End-to-End Vision Models},
+        author = {Jocher, Glenn and Qiu, Jing and Liu, Mengyu and Lyu, Shuai and Akyon, Fatih Cagatay and Kalfaoglu, Muhammet Esat},
+        year = {2026},
+        eprint = {2606.03748},
+        archivePrefix = {arXiv},
+        primaryClass = {cs.CV},
+        doi = {10.48550/arXiv.2606.03748},
+        url = {https://arxiv.org/abs/2606.03748}
       }
   - key: zhang2022bytetrack
     bibtex: |
