@@ -132,7 +132,8 @@ server, and prints the viewer login link once the server is up. It is safe to re
 options (port, extras to install, non-interactive use). To shorten the commands, add
 `source /path/to/VideoAnnotator/scripts/shell_aliases.sh` to your `~/.bashrc` or `~/.zshrc`: then
 `va-start` runs the script and `va` runs `uv run videoannotator`, from any folder. The dev
-container sets these up for you.
+container sets these up for you, and also puts `va` and `videoannotator` on the PATH as commands,
+so they work in scripts and non-interactive shells too.
 
 **Viewer**: `/viewer` serves a bundled build of Video Annotation Viewer, pre-configured to talk to
 this server (same-origin, no setup needed). It also runs on its own — see
