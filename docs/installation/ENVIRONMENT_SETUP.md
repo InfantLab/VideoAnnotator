@@ -26,13 +26,13 @@ Configuration → Hugging Face token**.
 #### Option B: From a terminal
 
 ```bash
-videoannotator settings huggingface-token            # asks for it, without showing it
-videoannotator settings huggingface-token --status   # set? which account?
-videoannotator settings huggingface-token --remove
+uv run videoannotator settings huggingface-token            # asks for it, without showing it
+uv run videoannotator settings huggingface-token --status   # set? which account?
+uv run videoannotator settings huggingface-token --remove
 ```
 
 With no terminal (a script or an agent), it reads the token from standard input:
-`printf '%s\n' "$TOKEN" | videoannotator settings huggingface-token`.
+`printf '%s\n' "$TOKEN" | uv run videoannotator settings huggingface-token`.
 
 Options A and B save the token in a file next to the database (`huggingface_token`, readable only
 by you), so in the container it survives being recreated.

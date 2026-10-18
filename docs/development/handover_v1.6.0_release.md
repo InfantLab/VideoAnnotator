@@ -19,7 +19,7 @@ For the next session. Branch `1.6-dev`, all work committed locally, nothing push
 
 1. **A run with a Hugging Face token** (accepted licence: `pyannote/speaker-diarization-community-1`).
    This machine has none, so diarization never ran here. Save it with
-   `videoannotator settings huggingface-token` (the baseline test passes a saved token to its
+   `uv run videoannotator settings huggingface-token` (the baseline test passes a saved token to its
    server), then:
    - `VIDEOANNOTATOR_BASELINE_KEEP=~/va-030/step3b uv run --no-sync pytest tests/integration/test_output_baseline.py -m real_models -q`;
      compare with `scripts/compare_demo_outputs.py ~/va-030/step5b ~/va-030/step3b` (only the

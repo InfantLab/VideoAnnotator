@@ -178,7 +178,7 @@ These tips address the most common macOS installation issues.
   chmod u+w ~/.zshrc
   # If .zshrc is missing, write PATH to ~/.zprofile instead for login shells
   ```
-- Hugging Face token (for speaker diarization): paste it on the Speaker turns card in the viewer, or run `videoannotator settings huggingface-token`; no restart needed. Environment variables still work. See the Environment Setup guide.
+- Hugging Face token (for speaker diarization): paste it on the Speaker turns card in the viewer, or run `uv run videoannotator settings huggingface-token`; no restart needed. Environment variables still work. See the Environment Setup guide.
 - Viewer: available at `/viewer` on the running VideoAnnotator server, no separate setup. For
   standalone development of the viewer repo itself, use `npm run dev` (not `npm start`).
 
