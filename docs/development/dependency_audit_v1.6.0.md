@@ -236,3 +236,12 @@ In order, each one small enough to review. The pipeline review's recommendations
    opencv `<5` cap. This is the path to Python 3.14, so do it before rc1 if Phase 5's benchmark
    allows, and add the 3.14 CI job with it.
 6. **Viewer dependencies** (separate audit).
+
+## 9. Model-default upgrades (spec 030, 2026-10-18)
+
+- **ultralytics 8.3.183 → 8.4.182** (`person`: `>=8.4,<9`, needed for YOLO26). Adds
+  `ultralytics-platform` (an SDK for Ultralytics' hosted platform, imported only when
+  `ultralytics.Platform` is used, which VideoAnnotator never does), `polars` and `nvidia-ml-py`;
+  drops `py-cpuinfo`. Analytics moved to `ultralytics.utils.events`; still switched off for the
+  process (`tests/unit/test_no_telemetry.py`). Same output on the demo clip with yolo11n-pose
+  (spec 030 checks.md, step 4a). Licence unchanged (AGPL-3.0).

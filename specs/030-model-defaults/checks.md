@@ -49,3 +49,16 @@ Code and metadata switched. The demo-clip run waits for a Hugging Face token who
 accepted community-1's licence (none on this machine; see step 0). The benchmark figures were
 checked against pyannote-audio's public README (the same table as the gated model card,
 "last updated in 2025-09"). Model repository: 10 files, 33.7 MB (Hub API).
+
+## Step 4a: ultralytics 8.3.183 → 8.4.182, still yolo11n-pose (2026-10-18)
+
+Kept in `~/va-030/step4a`, compared with step 2:
+
+- `person_tracking.json`: within tolerance; the largest difference is a box area of 108,749.994
+  vs 108,750.035 px² (0.00004 %). `person_tracks.json` identical.
+- Every other file identical.
+- 8.4 moved Ultralytics' analytics object from `ultralytics.hub.utils` (gone) to
+  `ultralytics.utils.events`. The old import would have made person tracking report itself as
+  not installed; the switch-off now targets the new module and the no-telemetry test follows it.
+  New dependencies: `ultralytics-platform` (imported only if `ultralytics.Platform` is used; we
+  don't), `polars`, `nvidia-ml-py`; `py-cpuinfo` dropped.

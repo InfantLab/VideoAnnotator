@@ -14,7 +14,7 @@ def test_library_telemetry_off_by_default():
 
 def test_ultralytics_events_off_once_person_tracking_is_imported():
     pytest.importorskip("ultralytics")
-    from ultralytics.hub.utils import events
+    from ultralytics.utils.events import events
 
     import videoannotator.pipelines.person_tracking.person_pipeline  # noqa: F401
 
