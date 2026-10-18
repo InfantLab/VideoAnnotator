@@ -146,3 +146,12 @@ def test_token_never_in_responses_or_logs(admin, caplog):
         bodies.append(admin.put(URL, json={"token": TOKEN}).text)
     assert all(TOKEN not in b for b in bodies)
     assert TOKEN not in caplog.text
+
+
+def test_a_malformed_token_is_refused_before_asking_the_hub(admin):
+    with patch.object(readiness, "_hf_get") as hub:
+        resp = admin.put(URL, json={"token": "hf_short"})
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "HF_TOKEN_MALFORMED"
+    hub.assert_not_called()
+    assert secrets_store.read_saved_huggingface_token() is None

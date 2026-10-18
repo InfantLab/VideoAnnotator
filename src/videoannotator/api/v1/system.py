@@ -596,10 +596,18 @@ async def put_huggingface_token(
     body: HuggingFaceTokenRequest,
     user: dict[str, Any] = Depends(require_admin),
 ) -> HuggingFaceTokenStatus:
-    token = body.token.strip()
+    token = secrets_store.clean_huggingface_token(body.token)
     if not token:
         raise APIError(
             status_code=400, code="HF_TOKEN_EMPTY", message="The token is empty."
+        )
+    problem = secrets_store.token_shape_problem(token)
+    if problem:
+        raise APIError(
+            status_code=400,
+            code="HF_TOKEN_MALFORMED",
+            message=f"That isn't a Hugging Face token ({problem}). Nothing was saved.",
+            hint="Copy the whole token from https://huggingface.co/settings/tokens",
         )
     check, account = check_huggingface_token(token)
     if check == "invalid":

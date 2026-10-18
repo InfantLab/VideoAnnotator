@@ -70,3 +70,22 @@ def test_status_names_the_environment_variable(monkeypatch):
     with patch.object(readiness, "_hf_get", side_effect=_hub(200)):
         out = _run("--status").output
     assert "from HF_TOKEN in the environment" in out
+
+
+def test_a_bracketed_paste_is_cleaned_and_shown_masked():
+    with patch.object(readiness, "_hf_get", side_effect=_hub(200)):
+        result = _run(stdin=f"\x1b[200~{TOKEN}\x1b[201~ \n")
+    assert result.exit_code == 0, result.output
+    assert f"Got hf_SEC…T123 ({len(TOKEN)} characters)." in result.output
+    assert TOKEN not in result.output
+    assert secrets_store.read_saved_huggingface_token() == TOKEN
+
+
+def test_a_malformed_token_is_never_saved_even_if_the_hub_is_unreachable():
+    """It used to be: an unsendable header looked like a network error."""
+    with patch.object(readiness, "_hf_get", return_value=(None, b"")) as hub:
+        result = _run(stdin="hf_abc def\x07\n")
+    assert result.exit_code == 1
+    assert "isn't a Hugging Face token" in result.output
+    hub.assert_not_called()
+    assert secrets_store.read_saved_huggingface_token() is None

@@ -234,6 +234,9 @@ htmlcov/
 
 # Database files
 videoannotator.db
+# The Hugging Face token saved next to the database (spec 031)
+huggingface_token
+huggingface_token.tmp
 test_*.db
 *.sqlite
 *.sqlite3

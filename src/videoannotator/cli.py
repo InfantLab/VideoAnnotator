@@ -1740,9 +1740,12 @@ def settings_huggingface_token(
     from .api.readiness import check_huggingface_token
     from .config_env import huggingface_token, huggingface_token_source
     from .secrets_store import (
+        clean_huggingface_token,
         huggingface_token_path,
+        mask_huggingface_token,
         remove_saved_huggingface_token,
         save_huggingface_token,
+        token_shape_problem,
     )
 
     if remove:
@@ -1777,13 +1780,18 @@ def settings_huggingface_token(
 
     if sys.stdin.isatty():
         typer.echo("Create a Read token at https://huggingface.co/settings/tokens")
+        typer.echo("Paste it and press Enter (it isn't shown as you type).")
         token = typer.prompt("Hugging Face token", hide_input=True)
     else:
         token = sys.stdin.readline()
-    token = token.strip()
-    if not token:
-        typer.echo("No token given; nothing saved.", err=True)
+    token = clean_huggingface_token(token)
+    problem = token_shape_problem(token)
+    if problem:
+        typer.echo(
+            f"That isn't a Hugging Face token ({problem}). Nothing saved.", err=True
+        )
         raise typer.Exit(code=1)
+    typer.echo(f"Got {mask_huggingface_token(token)} ({len(token)} characters).")
     check, account = check_huggingface_token(token)
     if check == "invalid":
         typer.echo(
