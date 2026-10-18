@@ -47,7 +47,7 @@ Write-Step "Installed videoannotator-start in $dir."
 
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
 if (-not $userPath) { $userPath = '' }
-if (($userPath.Split(';') | Where-Object { $_ -ieq $dir }).Count -eq 0) {
+if (@($userPath.Split(';') | Where-Object { $_ -ieq $dir }).Count -eq 0) {
     [Environment]::SetEnvironmentVariable('Path', ($userPath.TrimEnd(';') + ";$dir").TrimStart(';'), 'User')
     Write-Step 'Added it to your PATH: open a new terminal to use videoannotator-start.'
 }
