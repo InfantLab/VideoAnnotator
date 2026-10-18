@@ -56,8 +56,9 @@ class TestWhisperBasePipelineAdvanced:
         assert pipeline.device.type == "cpu"
         assert pipeline.fell_back_to_cpu
 
+    @patch.object(SpeechPipeline, "_load_whisper_model")
     @patch("torch.cuda.is_available")
-    def test_device_detection_cuda_unavailable(self, mock_cuda):
+    def test_device_detection_cuda_unavailable(self, mock_cuda, _mock_load):
         """Test device detection when CUDA is unavailable."""
         mock_cuda.return_value = False
 
@@ -73,7 +74,8 @@ class TestWhisperBasePipelineAdvanced:
             SpeechPipeline,
         )
 
-        pipeline = SpeechPipeline()
+        # The smallest real model: the default is a 1.6 GB download.
+        pipeline = SpeechPipeline({"whisper_model": "tiny"})
 
         # Test with mock embeddings
         mock_embedding = torch.randn(1, 100, 768)
@@ -97,7 +99,8 @@ class TestWhisperBasePipelineIntegrationAdvanced:
             SpeechPipeline,
         )
 
-        pipeline = SpeechPipeline()
+        # The smallest real model: the default is a 1.6 GB download.
+        pipeline = SpeechPipeline({"whisper_model": "tiny"})
 
         # Should handle initialization gracefully
         try:
@@ -115,7 +118,8 @@ class TestWhisperBasePipelineIntegrationAdvanced:
             SpeechPipeline,
         )
 
-        pipeline = SpeechPipeline()
+        # The smallest real model: the default is a 1.6 GB download.
+        pipeline = SpeechPipeline({"whisper_model": "tiny"})
 
         try:
             pipeline.initialize()

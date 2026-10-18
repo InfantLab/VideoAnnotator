@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Release candidate **1.6.0-rc1** (2026-10-14) is everything below, for testing the install a new
-user follows from GitHub.
+## [1.6.0] - 2026-10-18
+
+The consolidation release: one repository, current dependencies, a clean first contact, results
+out in formats researchers use (a tidy table, ELAN files, a methods paragraph), a guide for every
+pipeline, and new default models. Released quietly: the viewer is being redesigned for v1.7.0,
+the public release, so expect its pages to change. Results from v1.6.0 differ from v1.5's because
+the default models changed (see Changed); v1.6.0-rc1 was the last version with openai-whisper.
+v1.6.0-rc1 (2026-10-14) was a release candidate for testing the install from GitHub.
 
 ### Added
 
