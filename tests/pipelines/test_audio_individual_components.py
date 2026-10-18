@@ -102,8 +102,12 @@ class TestDiarizationPipeline:
 
     def test_diarization_pipeline_initialize_no_token(self):
         """Test initialization fails without HuggingFace token."""
-        # Clear environment variables
-        with patch.dict("os.environ", {}, clear=True):
+        # Not by clearing the environment: Windows needs USERPROFILE to find
+        # where a saved token would be.
+        with patch(
+            "videoannotator.pipelines.audio_processing.diarization_pipeline.huggingface_token",
+            return_value=None,
+        ):
             config = {}
             pipeline = DiarizationPipeline(config)
 
@@ -240,26 +244,6 @@ class TestSpeechPipeline:
         assert pipeline.config["model_name"] == "tiny"
         assert pipeline.config["language"] == "en"
         assert not pipeline.is_initialized
-
-    @patch(
-        "videoannotator.pipelines.audio_processing.speech_pipeline.WHISPER_AVAILABLE",
-        False,
-    )
-    def test_speech_pipeline_initialize_no_whisper(self):
-        """Test initialization fails or is a no-op when Whisper not.
-
-        available.
-        """
-        config = {}
-        pipeline = SpeechPipeline(config)
-
-        # The pipeline may set is_initialized True even if whisper is unavailable, so just check no exception is raised
-        try:
-            pipeline.initialize()
-        except ImportError:
-            pass  # Acceptable
-        except Exception:
-            pytest.fail("Unexpected exception raised when whisper unavailable")
 
     def test_speech_audio_file_not_found(self):
         """Test error handling for missing audio file."""

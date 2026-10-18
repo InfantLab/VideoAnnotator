@@ -176,9 +176,9 @@ def test_webvtt_cues_skip_the_provenance_note():
 
 def test_webvtt_multiline_cue_and_hour_less_times(tmp_path):
     path = tmp_path / "x_speech_recognition.vtt"
-    path.write_text(
-        "WEBVTT\r\n\r\ncue-1\r\n01:02.500 --> 01:04.000\r\nline one\r\nline two\r\n",
-        encoding="utf-8",
+    # Bytes, so Windows' text mode doesn't turn \r\n into \r\r\n.
+    path.write_bytes(
+        b"WEBVTT\r\n\r\ncue-1\r\n01:02.500 --> 01:04.000\r\nline one\r\nline two\r\n"
     )
     [event] = read_webvtt(path).events
     assert (event.start, event.end, event.measures[0].label) == (

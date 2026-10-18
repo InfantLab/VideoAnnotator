@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import stat
+import sys
 
 import pytest
 
@@ -23,7 +24,8 @@ def test_save_read_remove(tmp_path):
     path = secrets_store.save_huggingface_token(f"  {SAVED}  ")
     assert path == tmp_path / "huggingface_token"
     assert secrets_store.read_saved_huggingface_token() == SAVED
-    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    if sys.platform != "win32":  # no Unix permission bits on Windows
+        assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert secrets_store.remove_saved_huggingface_token() is True
     assert secrets_store.read_saved_huggingface_token() is None
     assert secrets_store.remove_saved_huggingface_token() is False

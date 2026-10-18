@@ -115,8 +115,12 @@ class TestDiarizationPipeline:
 
     def test_diarization_pipeline_initialize_no_token(self):
         """Test initialization fails without HuggingFace token."""
-        # Clear environment variables
-        with patch.dict("os.environ", {}, clear=True):
+        # Not by clearing the environment: Windows needs USERPROFILE to find
+        # where a saved token would be.
+        with patch(
+            "videoannotator.pipelines.audio_processing.diarization_pipeline.huggingface_token",
+            return_value=None,
+        ):
             config = {}
             pipeline = DiarizationPipeline(config)
 
