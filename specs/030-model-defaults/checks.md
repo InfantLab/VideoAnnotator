@@ -117,3 +117,30 @@ the download.
   time in the job 7.7 s (5a 3.5 s), including load and warm-up; transcribing the clip 2.4 s.
 - Translate rule: `{"task": "translate"}` with the default fails at initialize naming large-v3 or
   medium (unit tests); with `whisper_model: large-v3` it loads.
+
+## Step 6: re-baseline and release record (2026-10-18)
+
+- Fixtures replaced from step 5b, except `demo_clip_speaker_diarization.rttm` (still 3.1's, from
+  2026-10-04). Baseline test on a fresh run: 7 of 8 pass; the `.rttm` fails because diarization
+  can't run without a token. The fresh run's other files were identical to step 5b's, which is
+  the "twice on the same machine" check; tolerances kept.
+- Viewer contract test: 722 passed (legacy comparison now by shape where models changed).
+- Methods paragraph (SC-004) for the step 5b run names `yolo26n-pose.pt (sha256 eb3bb8268828)`,
+  `mobiuslabsgmbh/faster-whisper-large-v3-turbo (revision 0a363e9161cb) at float32`, `DeepFace
+  Emotion` and the RetinaFace detector, with `jocher2026yolo26` cited. Its face sentence no longer
+  claims age and gender.
+- Benchmarks (SC-005) checked against their sources while writing them: YOLO26n-pose 57.2
+  (Ultralytics `yolo-pose-perf.md`), community-1 AMI IHM 17.0 / DIHARD 3 20.2 / VoxConverse 11.2
+  (pyannote-audio README, the same table as the gated card), faster-whisper 1m03s vs 2m23s
+  (faster-whisper README). The 7.83 mean WER research.md quoted for turbo is no longer on its
+  model card, so it isn't used; the guide quotes OpenAI's own words instead.
+- Install (SC-008): every new `audio` package has wheels for Linux, macOS and Windows on Python
+  3.12 and 3.13 in the lock (faster-whisper is pure Python); nothing is built from source. CI's
+  install matrix confirms on push.
+- Telemetry: onnxruntime (new, via faster-whisper; torchmetrics imports it) has its Windows
+  telemetry switched off when the audio pipelines load; Ultralytics' analytics switch-off follows
+  8.4's move. Both covered by `tests/unit/test_no_telemetry.py`.
+
+**Still open, needs a Hugging Face token** (with community-1's licence accepted): the step 3
+demo-clip check, the `.rttm` fixture, and a run naming `pyannote/speaker-diarization-3.1` (T019,
+T039, T041).

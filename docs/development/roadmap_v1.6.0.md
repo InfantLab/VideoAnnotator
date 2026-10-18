@@ -38,7 +38,8 @@ for its own reason, outside use. The pilot follows the release, and a benchmark 
 pilot (and spec 024's T083) moved to v1.7.0's release candidates.
 **Current Status**: Phases 0–1 done bar non-blocking items; Phase 2 done bar the long-video checks
 (spec 024 walkthroughs done 2026-10-17); Phase 3 (Results Out, spec 025) built 2026-10-16; Phase 3b
-(pipeline guide, spec 026) built 2026-10-17; Phase 5c (spec 030) specified, not yet planned
+(pipeline guide, spec 026) built 2026-10-17; Phase 5c (spec 030) done 2026-10-18 bar the
+diarization check, which needs a Hugging Face token
 **Main Goal**: everything an outside lab will need under v1.7.0's new viewer, done and stable:
 install, pipelines, results out
 **Prerequisites**: v1.5.0 tagged, after spec 011's SC-001 manual run
@@ -681,20 +682,27 @@ re-baseline; spec 026's benchmark entries change with each default. Backward com
 waived for this change (Principle V exception, recorded in the spec): old diarization and pose
 models stay reachable as a setting, the old speech runtime goes.
 
-- [ ] **Speech**: `openai-whisper` `base` → faster-whisper with `large-v3-turbo`, in two steps
+- [x] **Speech**: `openai-whisper` `base` → faster-whisper with `large-v3-turbo`, in two steps
       (runtime with `base`, then the model). openai-whisper is removed (Q3), so v1.6.0rc1 is the
       last version with it.
-- [ ] **Diarization**: pyannote `speaker-diarization-3.1` → `speaker-diarization-community-1`
+      Done 2026-10-18: the runtime alone gave the identical transcript; turbo rewords 3 of the demo
+      clip's 4 cues (hears "Peek-a-boo!"). A translate request with turbo now fails clearly.
+- [x] **Diarization**: pyannote `speaker-diarization-3.1` → `speaker-diarization-community-1`
       (Q2): lower DER on 10 of 12 published sets, and one model licence to accept instead of three.
-- [ ] **Person**: `yolo11n-pose` → `yolo26n-pose` (COCO-pose mAP50-95 50.0 → 57.2). Ultralytics
-      stays for v1.6.0.
-- [ ] **Face**: age and gender off by default, and their models neither downloaded nor run when off.
+      Switched 2026-10-18. **Its demo-clip check and `.rttm` fixture wait for a run with a Hugging
+      Face token** (none on the machine that ran the others).
+- [x] **Person**: `yolo11n-pose` → `yolo26n-pose` (COCO-pose mAP50-95 50.0 → 57.2). Ultralytics
+      stays for v1.6.0. Done 2026-10-18 (ultralytics 8.4 first: same output; it had moved the
+      analytics switch-off, now followed).
+- [x] **Face**: age and gender off by default, and their models neither downloaded nor run when off.
       Today `_deepface_actions()` (`pipelines/face_analysis/face_pipeline.py`) runs all three
       models whenever any is on: a bug, fixed here. DeepFace's own expression model stays (Q1),
       described in the guide as trained on adult faces; replacing `face_analysis` is later work.
       The detector is already RetinaFace (replaced the Haar cascade earlier in v1.6.0); its reason
       goes into the metadata and guide. Face analysis joins the demo-clip baseline if RetinaFace
       finds faces in it.
+      Done 2026-10-18: 125 MB first download instead of 1.2 GB; RetinaFace finds 19 faces in the
+      demo clip, so face analysis joined the baseline.
 - [x] **OpenFace 3**: `openface-test` confirmed as the distribution CMU names (dormant since
       2025-06, non-commercial licence); the `==0.1.13` pin stays. Spec 030 writes this into its
       metadata (FR-026).
@@ -746,7 +754,7 @@ Overview, now spec 029's Videos page), Phase 7 (Docs and Tutorials) and the Laun
 - [x] Every version constraint in `pyproject.toml` and the viewer's `package.json` has a recorded
       reason in the dependency audit, and the release supports Python 3.13 (3.14 as soon as
       TensorFlow does).
-- [ ] Every change of default model has its reason in the CHANGELOG (Phase 5c).
+- [x] Every change of default model has its reason in the CHANGELOG (Phase 5c).
 - [x] The viewer has zero TypeScript errors (checked 2026-10-16).
 - [ ] The viewer has no placeholder pages.
 - [ ] Nothing leaves the user's machine unless they switched on a hosted backend.
@@ -756,6 +764,6 @@ the CLI with `--json` and through MCP; the pilot's measures.
 
 ---
 
-**Last Updated**: 2026-10-17 (rescoped as the consolidation release; Phase 5c points at spec 030)
+**Last Updated**: 2026-10-18 (Phase 5c done bar the diarization check)
 **Target Release**: as soon as Phases 3b and 5c are done
 **Status**: Release candidates — Consolidation Release
