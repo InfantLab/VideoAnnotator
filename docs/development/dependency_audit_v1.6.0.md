@@ -253,3 +253,11 @@ In order, each one small enough to review. The pipeline review's recommendations
   wheels with no configuration. onnxruntime gets imported anyway (torchmetrics, via pyannote,
   imports it when present), so its Windows telemetry is switched off when the audio pipelines
   load. Same transcript on the demo clip with `base` (spec 030 checks.md, step 5a). All MIT.
+- **Security updates before v1.6.0 (2026-10-18)**: Trivy reported 2 critical and 19 high advisories
+  in `uv.lock` and `viewer/bun.lock`, none new in v1.6.0. Upgraded within our constraints:
+  fastapi 0.142 → 0.146 (starlette 0.47 → 1.9), anyio, urllib3, aiohttp, fsspec, mako, msgpack,
+  soupsieve, lightning/pytorch-lightning 2.5 → 2.6. Viewer: `bun audit fix`, react-router-dom 6.30
+  (@remix-run/router 1.23.4), @lhci/cli 0.15, @playwright/test 1.64, and `resolutions` for tmp,
+  basic-ftp and path-to-regexp (only Lighthouse CI uses them). Every demo-clip output identical
+  after. Left, with no fixed release published: `braces` 3.0.3 (Tailwind build) and
+  `extract-zip` 2.0.1 (Lighthouse/Puppeteer); both development-only.

@@ -201,7 +201,8 @@ def current_outputs(tmp_path_factory) -> dict[str, str]:
 
 
 def _without_run_details(suffix: str, text: str):
-    """The annotations only: provenance and creation times differ every run."""
+    """The annotations only: provenance, creation times and the version that
+    wrote them differ between runs and releases."""
     if suffix.endswith(".json"):
         data = json.loads(text)
         if isinstance(data, dict):
@@ -209,6 +210,8 @@ def _without_run_details(suffix: str, text: str):
             if isinstance(data.get("info"), dict):
                 data["info"].pop("date_created", None)
                 data["info"].pop("year", None)
+                # The release that wrote it; provenance says the same.
+                data["info"].pop("version", None)
         return data
     if suffix.endswith(".vtt"):
         text = "\n\n".join(

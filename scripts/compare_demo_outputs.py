@@ -39,6 +39,8 @@ def normalise(suffix: str, text: str) -> Any:
             if isinstance(data.get("info"), dict):
                 data["info"].pop("date_created", None)
                 data["info"].pop("year", None)
+                # The release that wrote it; provenance says the same.
+                data["info"].pop("version", None)
         return data
     if suffix.endswith(".vtt"):
         text = "\n\n".join(

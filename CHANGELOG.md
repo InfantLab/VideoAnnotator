@@ -283,6 +283,15 @@ v1.6.0-rc1 (2026-10-14) was a release candidate for testing the install from Git
 
 ### Changed
 
+- **Security updates for known advisories in dependencies** (Trivy and `bun audit` before the
+  release). Server: FastAPI 0.146 with Starlette 1.9 (was 0.47), anyio 4.14, urllib3 2.8, aiohttp
+  3.14, fsspec, mako, msgpack, soupsieve; lightning 2.6 for pyannote. Viewer: React Router's
+  router 1.23.4 (open-redirect fixes) in the shipped page; development tools (Lighthouse CI 0.15,
+  Playwright 1.64, and pinned fixes for tmp, basic-ftp and path-to-regexp). The demo-clip outputs
+  are identical before and after. Two high advisories have no fixed release yet, both in
+  development tools that never ship or run in CI: `braces` (Tailwind's build) and `extract-zip`
+  (Lighthouse's browser download).
+
 - **New default models** (spec 030, roadmap Phase 5c), so the public release's results come from
   the defaults it keeps. Each changed on its upstream's published evaluation, after a run of the
   demo clip compared with the same machine's previous run, one change at a time (library upgrades
