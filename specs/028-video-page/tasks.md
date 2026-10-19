@@ -24,8 +24,8 @@ identity (`git -c user.name=… -c user.email=…`).
 
 ## Phase 1: Setup
 
-- [ ] T001 Create `tests/unit/test_viewer_table_fixture.py`: builds rows with `exporters.table.video_rows` for the demo-clip files in `tests/fixtures/viewer_contract/` (one `VideoResults` with `run=""`, `video="demo_clip"`), writes them as CSV (`table.write_csv` format) to a temp file, and compares with the committed `tests/fixtures/viewer_contract/expected_table.csv`; with `UPDATE_FIXTURES=1` it rewrites the committed file instead. Run it once with `UPDATE_FIXTURES=1` and commit the CSV
-- [ ] T002 [P] Create `scripts/make_long_run_fixture.py` that writes `tests/fixtures/video_page/long_run/` deterministically (seeded): an hour-long COCO person-tracking file with 4 tracks sampled at 5 fps (≈ 40,000 detections over a 3,600 s video), a WebVTT with 2,000 cues, an RTTM with 3 speakers and 6,000 turns, and a `README.md` saying how it was made; the files are generated in CI by the Vitest setup if absent (do not commit files over 5 MB; commit the script and README)
+- [X] T001 Create `tests/unit/test_viewer_table_fixture.py`: builds rows with `exporters.table.video_rows` for the demo-clip files in `tests/fixtures/viewer_contract/` (one `VideoResults` with `run=""`, `video="demo_clip"`), writes them as CSV (`table.write_csv` format) to a temp file, and compares with the committed `tests/fixtures/viewer_contract/expected_table.csv`; with `UPDATE_FIXTURES=1` it rewrites the committed file instead. Run it once with `UPDATE_FIXTURES=1` and commit the CSV
+- [X] T002 [P] Create `scripts/make_long_run_fixture.py` that writes `tests/fixtures/video_page/long_run/` deterministically (seeded): an hour-long COCO person-tracking file with 4 tracks sampled at 5 fps (≈ 40,000 detections over a 3,600 s video), a WebVTT with 2,000 cues, an RTTM with 3 speakers and 6,000 turns, and a `README.md` saying how it was made; the files are generated in CI by the Vitest setup if absent (do not commit files over 5 MB; commit the script and README)
 
 ---
 
