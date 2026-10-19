@@ -82,35 +82,6 @@ class TestFaceAnalysisPipeline:
         assert "height" in metadata
 
 
-@pytest.mark.integration
-class TestFaceAnalysisIntegration:
-    """Integration tests for face analysis pipeline."""
-
-    @pytest.mark.skipif(
-        not os.getenv("TEST_INTEGRATION"),
-        reason="Integration tests disabled. Set TEST_INTEGRATION=1 to enable",
-    )
-    def test_full_pipeline_processing(self, temp_video_file):
-        """Test complete face analysis pipeline processing."""
-        pipeline = FaceAnalysisPipeline()
-
-        try:
-            pipeline.initialize()
-            results = pipeline.process(str(temp_video_file))
-
-            # Should return COCO format annotations
-            assert isinstance(results, list)
-
-            # Results should contain required COCO fields
-            for result in results:
-                assert "annotations" in result or len(result) == 0  # Empty results OK
-
-        except Exception as e:
-            pytest.skip(f"Integration test failed: {e}")
-        finally:
-            pipeline.cleanup()
-
-
 @pytest.mark.performance
 class TestFaceAnalysisPerformance:
     """Performance and efficiency tests."""
@@ -193,10 +164,6 @@ class TestDeepFaceAnalysis:
         assert hasattr(pipeline, "_detect_faces_deepface")
         assert callable(pipeline._detect_faces_deepface)
 
-    @pytest.mark.skipif(
-        not os.getenv("TEST_DEEPFACE"),
-        reason="DeepFace tests disabled. Set TEST_DEEPFACE=1 to enable",
-    )
     @patch("videoannotator.pipelines.face_analysis.face_pipeline.DeepFace")
     def test_deepface_analysis_with_mock(self, mock_deepface):
         """Test DeepFace analysis with mocked DeepFace library."""
@@ -248,62 +215,23 @@ class TestDeepFaceAnalysis:
         finally:
             pipeline.cleanup()
 
-    def test_deepface_error_handling(self):
-        """Test DeepFace error handling with invalid frame."""
-        config = {"detection_backend": "deepface"}
-        pipeline = FaceAnalysisPipeline(config)
-        pipeline.initialize()
+    @patch("videoannotator.pipelines.face_analysis.face_pipeline.DeepFace")
+    def test_analysis_and_fallback_both_failing_gives_no_faces(self, mock_deepface):
+        mock_deepface.analyze.side_effect = ValueError("Face could not be detected")
+        mock_deepface.extract_faces.side_effect = ValueError("detector crashed")
+        pipeline = FaceAnalysisPipeline({"detection_backend": "deepface"})
 
-        empty_frame = np.zeros((10, 10, 3), dtype=np.uint8)
+        annotations = pipeline._detect_faces_deepface(
+            frame=np.zeros((10, 10, 3), dtype=np.uint8),
+            timestamp=0.0,
+            video_id="test",
+            frame_number=1,
+            width=10,
+            height=10,
+        )
 
-        try:
-            annotations = pipeline._detect_faces_deepface(
-                frame=empty_frame,
-                timestamp=0.0,
-                video_id="test",
-                frame_number=1,
-                width=10,
-                height=10,
-            )
-
-            assert isinstance(annotations, list)
-
-        except Exception as e:
-            assert "No face" in str(e) or "face could not be detected" in str(e)
-        finally:
-            pipeline.cleanup()
-
-
-@pytest.mark.integration
-class TestDeepFaceIntegration:
-    """Integration tests for DeepFace analysis."""
-
-    @pytest.mark.skipif(
-        not os.getenv("TEST_INTEGRATION"),
-        reason="Integration tests disabled. Set TEST_INTEGRATION=1 to enable",
-    )
-    def test_deepface_full_pipeline(self, temp_video_file):
-        """Test complete DeepFace analysis pipeline."""
-        config = {
-            "detection_backend": "deepface",
-            "detect_emotions": True,
-            "detect_age": True,
-            "detect_gender": True,
-            "deepface": {"detector_backend": "opencv", "enforce_detection": False},
-        }
-
-        pipeline = FaceAnalysisPipeline(config)
-
-        try:
-            pipeline.initialize()
-            results = pipeline.process(str(temp_video_file))
-
-            assert isinstance(results, list)
-
-        except Exception as e:
-            pytest.skip(f"DeepFace integration test failed: {e}")
-        finally:
-            pipeline.cleanup()
+        assert annotations == []
+        mock_deepface.extract_faces.assert_called_once()
 
 
 # Placeholder classes for future test expansion

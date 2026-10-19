@@ -50,7 +50,7 @@ def test_write_rttm(tmp_path):
 
 
 def test_speech_pipeline_writes_vtt_into_output_dir(tmp_path):
-    pytest.importorskip("whisper")
+    pytest.importorskip("faster_whisper")
     from videoannotator.pipelines.audio_processing.speech_pipeline import (
         SpeechPipeline,
     )

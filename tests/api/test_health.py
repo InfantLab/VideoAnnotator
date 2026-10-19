@@ -148,10 +148,9 @@ class TestHealthStatusCodes:
         """Test detailed health returns 200 when systems are healthy."""
         response = client.get("/api/v1/health?detailed=true")
 
-        # If system is actually healthy, should be 200
-        data = response.json()
-        if data["status"] == "ok":
-            assert response.status_code == 200
+        # The suite's temporary database and storage are healthy.
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
 
     @patch("videoannotator.api.v1.health._check_database_status")
     def test_detailed_health_returns_503_when_database_unhealthy(

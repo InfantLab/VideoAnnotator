@@ -73,7 +73,6 @@ class TestDiarizationPipeline:
     )
     def test_diarization_pipeline_initialize_success(self, mock_pyannote):
         """Test successful diarization pipeline initialization."""
-        import os
         from unittest import mock as unittest_mock
 
         # Patch environment to use fake token
@@ -126,12 +125,6 @@ class TestDiarizationPipeline:
 
             with pytest.raises(ValueError, match="HuggingFace token required"):
                 pipeline.initialize()
-
-    @pytest.mark.skip(reason="GPU functionality not implemented in DiarizationPipeline")
-    def test_diarization_pipeline_gpu_usage(self):
-        """Test GPU usage configuration (not implemented)."""
-        # TODO: Implement GPU support in DiarizationPipeline and remove skip.
-        pass
 
     @patch(
         "videoannotator.pipelines.audio_processing.diarization_pipeline.PYANNOTE_AVAILABLE",
@@ -287,69 +280,6 @@ class TestSpeechPipeline:
         assert "properties" in schema
         assert "transcript" in schema["properties"]
         assert "confidence" in schema["properties"]
-
-
-@pytest.mark.integration
-class TestDiarizationSpeechIntegration:
-    """Integration tests for diarization and speech pipelines."""
-
-    @pytest.mark.skipif(
-        not os.getenv("HUGGINGFACE_TOKEN"),
-        reason="Requires HUGGINGFACE_TOKEN environment variable",
-    )
-    @pytest.mark.skipif(
-        not os.getenv("TEST_INTEGRATION"),
-        reason="Integration tests disabled. Set TEST_INTEGRATION=1 to enable",
-    )
-    def test_real_diarization_pipeline(self, temp_audio_file):
-        """Test real diarization with actual models."""
-        config = {
-            "use_gpu": False,  # Use CPU for testing
-            "min_speakers": 1,
-            "max_speakers": 3,
-        }
-
-        pipeline = DiarizationPipeline(config)
-
-        try:
-            with pipeline:
-                results = pipeline.process(str(temp_audio_file))
-
-                assert isinstance(results, list)  # Should return list from BasePipeline
-                assert len(results) >= 1
-                assert isinstance(results[0], dict)
-
-        except ImportError:
-            pytest.skip("PyAnnote not available for integration test")
-        except Exception as e:
-            pytest.skip(f"Integration test failed: {e}")
-
-    @pytest.mark.skipif(
-        not os.getenv("TEST_INTEGRATION"),
-        reason="Integration tests disabled. Set TEST_INTEGRATION=1 to enable",
-    )
-    def test_real_speech_recognition(self, temp_audio_file):
-        """Test real speech recognition with actual models."""
-        config = {
-            "model_name": "tiny",  # Smallest model for testing
-            "language": "en",
-            "use_gpu": False,
-        }
-
-        pipeline = SpeechPipeline(config)
-
-        try:
-            with pipeline:
-                results = pipeline.process(str(temp_audio_file))
-
-                assert isinstance(results, list)  # Should return list from BasePipeline
-                assert len(results) >= 1
-                assert isinstance(results[0], dict)
-
-        except ImportError:
-            pytest.skip("Whisper not available for integration test")
-        except Exception as e:
-            pytest.skip(f"Integration test failed: {e}")
 
 
 @pytest.mark.performance

@@ -4,7 +4,6 @@ Tests current scene detection and video analysis capabilities. Living
 documentation for scene detection functionality.
 """
 
-import os
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -60,35 +59,6 @@ class TestSceneDetectionPipeline:
         assert isinstance(schema, dict)
 
 
-@pytest.mark.integration
-class TestSceneDetectionIntegration:
-    """Integration tests for scene detection pipeline."""
-
-    @pytest.mark.skipif(
-        not os.getenv("TEST_INTEGRATION"),
-        reason="Integration tests disabled. Set TEST_INTEGRATION=1 to enable",
-    )
-    def test_full_pipeline_processing(self, temp_video_file):
-        """Test complete scene detection pipeline processing."""
-        pipeline = SceneDetectionPipeline()
-
-        try:
-            pipeline.initialize()
-            results = pipeline.process(str(temp_video_file))
-
-            # Should return scene detection results
-            assert isinstance(results, list)
-
-            # Results should contain scene information
-            for result in results:
-                assert isinstance(result, dict)
-
-        except Exception as e:
-            pytest.skip(f"Integration test failed: {e}")
-        finally:
-            pipeline.cleanup()
-
-
 @pytest.mark.performance
 class TestSceneDetectionPerformance:
     """Performance and efficiency tests."""
@@ -116,28 +86,3 @@ class TestSceneDetectionPerformance:
                 assert isinstance(result, list)
 
             pipeline.cleanup()
-
-
-# Placeholder classes for future test expansion
-class TestSceneDetectionAdvanced:
-    """Placeholder for advanced scene detection features."""
-
-    def test_adaptive_threshold_placeholder(self):
-        """Placeholder: Test adaptive threshold when fully implemented."""
-        pytest.skip("Adaptive threshold tests - implement when feature is stable")
-
-    def test_scene_classification_placeholder(self):
-        """Placeholder: Test scene classification when implemented."""
-        pytest.skip("Scene classification tests - implement when feature is ready")
-
-    def test_transition_detection_placeholder(self):
-        """Placeholder: Test transition detection accuracy when optimized."""
-        pytest.skip(
-            "Transition detection tests - implement when metrics system is ready"
-        )
-
-    def test_multi_modal_scene_analysis_placeholder(self):
-        """Placeholder: Test multi-modal scene analysis when implemented."""
-        pytest.skip(
-            "Multi-modal analysis tests - implement when audio-visual integration is ready"
-        )

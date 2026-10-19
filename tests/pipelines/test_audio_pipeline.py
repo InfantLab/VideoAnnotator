@@ -4,7 +4,6 @@ Tests cover the modular audio pipeline coordinator that manages separate
 speech recognition and speaker diarization pipelines.
 """
 
-import os
 from unittest.mock import Mock, patch
 
 import pytest
@@ -205,56 +204,6 @@ class TestAudioPipeline:
             assert "format" in result
             assert "data" in result
             assert isinstance(result["data"], list)
-
-
-@pytest.mark.integration
-class TestAudioPipelineIntegration:
-    """Integration tests for modular audio processing pipeline."""
-
-    @pytest.mark.skipif(
-        not os.getenv("TEST_INTEGRATION"),
-        reason="Integration tests disabled. Set TEST_INTEGRATION=1 to enable",
-    )
-    def test_full_modular_audio_processing_pipeline(self, temp_video_file):
-        """Test complete modular audio processing with real video."""
-        config = {
-            "pipelines": {
-                "speech_recognition": {"enabled": True, "model": "base"},
-                "speaker_diarization": {
-                    "enabled": True,
-                    "model": "pyannote/speaker-diarization-3.1",
-                },
-            }
-        }
-
-        pipeline = AudioPipeline(config)
-
-        try:
-            pipeline.initialize()
-            results = pipeline.process(str(temp_video_file))
-
-            # Should return list of pipeline results
-            assert isinstance(results, list)
-
-            # Should have results from both pipelines
-            pipeline_names = {result.get("pipeline") for result in results}
-            expected_pipelines = {"speech_recognition", "speaker_diarization"}
-            assert pipeline_names.intersection(expected_pipelines)
-
-            # Results should be properly formatted
-            for result in results:
-                assert "pipeline" in result
-                assert "format" in result
-                assert "data" in result
-
-        except ImportError:
-            pytest.skip(
-                "Audio processing dependencies not available for integration test"
-            )
-        except Exception as e:
-            pytest.skip(f"Integration test failed: {e}")
-        finally:
-            pipeline.cleanup()
 
 
 @pytest.mark.performance

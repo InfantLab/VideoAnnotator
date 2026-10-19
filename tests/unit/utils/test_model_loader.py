@@ -156,17 +156,6 @@ class TestSetupDownloadLogging:
             mock_handler_instance.setLevel.assert_called_with(logging.INFO)
             mock_handler_instance.setFormatter.assert_called_once()
 
-    def test_handler_setup(self):
-        """Test that stream handler is configured."""
-        # Create a temporary logger to test
-        logger = logging.getLogger("test_model_loader")
-
-        with patch("logging.basicConfig"):
-            setup_download_logging()
-
-        # Test that we can log without errors
-        logger.info("Test message")
-
 
 class TestLogFirstRunInfo:
     """Test the log_first_run_info function."""

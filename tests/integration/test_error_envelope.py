@@ -75,31 +75,6 @@ class TestErrorEnvelopeFormat:
         assert "hint" in error
         assert len(error["hint"]) > 0  # Should have helpful hint
 
-    def test_config_validation_error_uses_error_envelope(self, client, tmp_path):
-        """Test that config validation errors return ErrorEnvelope.
-
-        Skip for now since triggering validation errors requires complex setup.
-        The error envelope format is verified by the InvalidConfigException
-        handler and other tests.
-        """
-        pytest.skip(
-            "Config validation error testing requires complex setup; format verified by handler"
-        )
-
-    def test_500_internal_error_uses_error_envelope(self, client):
-        """Test that 500 internal errors return ErrorEnvelope.
-
-        This test verifies the error envelope format for 500 errors.
-        Since we can't easily trigger a 500 error without complex mocking,
-        we verify that the error handlers are properly registered and
-        the format is consistent with other error types.
-        """
-        # For now, skip this test as triggering genuine 500 errors is complex
-        # The format is verified by other tests and the handlers are registered
-        pytest.skip(
-            "500 error testing requires complex mocking; format verified by handler implementation"
-        )
-
     def test_pipeline_not_found_uses_error_envelope(self, client):
         """Test that pipeline not found errors return ErrorEnvelope."""
         # Request non-existent pipeline
@@ -121,17 +96,6 @@ class TestErrorEnvelopeFormat:
         # Verify specific error details
         assert error["code"] == "PIPELINE_NOT_FOUND"
         assert "nonexistent-pipeline" in error["message"]
-
-    def test_job_already_completed_uses_error_envelope(self, client, tmp_path):
-        """Test that job already completed errors return ErrorEnvelope.
-
-        Skip for now since the job submission flow has changed.
-        The error envelope format is verified by the JobAlreadyCompletedException
-        handler and other tests.
-        """
-        pytest.skip(
-            "Job completion error testing requires updated job flow; format verified by handler"
-        )
 
     def test_error_envelope_timestamp_format(self, client):
         """Test that ErrorEnvelope timestamps are in ISO format."""

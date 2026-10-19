@@ -35,16 +35,6 @@ class TestEnhancedLoggingIntegration:
         assert "Welcome to VideoAnnotator" in text
         assert "FIRST RUN" in text
 
-    def test_cli_logging_setup(self, caplog):
-        """Test that CLI logging setup works correctly."""
-        # Simulate what CLI does
-        with caplog.at_level(logging.INFO):
-            setup_download_logging()
-            # Simulate checking if models directory exists
-            models_dir = Path("./models")
-            if not models_dir.exists():
-                log_first_run_info()
-
     def test_person_pipeline_logging_integration(self, caplog):
         """Test enhanced logging integration with person pipeline loading.
 

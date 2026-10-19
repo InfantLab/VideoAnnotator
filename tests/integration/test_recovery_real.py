@@ -368,25 +368,16 @@ class TestFailureRecoveryRealistic:
         ]
 
         for i, error in enumerate(errors):
-            # Check if should retry
-            should_retry = self.recovery.should_retry(job, error)
+            assert self.recovery.should_retry(job, error)
+            updated_job = self.recovery.prepare_retry(job, error)
+            assert updated_job.retry_count == i + 1
 
-            if should_retry:
-                # Prepare for retry
-                updated_job = self.recovery.prepare_retry(job, error)
-                assert updated_job.retry_count == i + 1
+            delay = self.recovery.calculate_retry_delay(job)
+            expected_delay = min(1.0 * (2**i), 60.0)
+            assert delay == expected_delay
 
-                # Calculate delay
-                delay = self.recovery.calculate_retry_delay(job)
-                expected_delay = min(1.0 * (2**i), 60.0)
-                assert delay == expected_delay
-            else:
-                break
-
-        # Should eventually stop retrying
-        final_should_retry = self.recovery.should_retry(job, Exception("Final error"))
-        if job.retry_count >= 3:
-            assert final_should_retry is False
+        assert job.retry_count == 3
+        assert self.recovery.should_retry(job, Exception("Final error")) is False
 
     def test_realistic_partial_failure_scenario(self):
         """Test realistic partial failure scenario."""

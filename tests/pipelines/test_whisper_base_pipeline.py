@@ -1,19 +1,12 @@
-"""WhisperBasePipeline Tests - Complete Version.
-
-Extended test suite for the WhisperBasePipeline component.
-This builds on the Stage 1 basic tests with more comprehensive coverage.
-"""
+"""Speech pipeline device choice: CUDA, CPU, and the fall back without a driver."""
 
 from unittest.mock import patch
 
 import pytest
 
-# Import the basic Stage 1 tests - commented out as file doesn't exist
-# from tests.test_whisper_base_pipeline_stage1 import *
-
-# Try importing with proper dependencies
+# The tests patch torch.cuda, so torch must be importable.
 try:
-    import torch
+    import torch  # noqa: F401
 
     from videoannotator.pipelines.audio_processing.speech_pipeline import SpeechPipeline
 
@@ -65,67 +58,4 @@ class TestWhisperBasePipelineAdvanced:
         pipeline = SpeechPipeline({"device": "auto"})
         pipeline.initialize()
 
-        if pipeline.is_initialized:
-            assert pipeline.device.type == "cpu"
-
-    def test_embedding_shape_validation(self):
-        """Test embedding shape validation logic."""
-        from videoannotator.pipelines.audio_processing.speech_pipeline import (
-            SpeechPipeline,
-        )
-
-        # The smallest real model: the default is a 1.6 GB download.
-        pipeline = SpeechPipeline({"whisper_model": "tiny"})
-
-        # Test with mock embeddings
-        mock_embedding = torch.randn(1, 100, 768)
-
-        # Test padding logic
-        if hasattr(pipeline, "_pad_or_truncate_embeddings"):
-            result = pipeline._pad_or_truncate_embeddings(
-                mock_embedding, target_length=1500
-            )
-            assert result.shape == (1, 1500, 768)
-
-
-@pytest.mark.integration
-@pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch not available")
-class TestWhisperBasePipelineIntegrationAdvanced:
-    """Integration tests for WhisperBasePipeline."""
-
-    def test_initialization_with_real_dependencies(self):
-        """Test initialization with real PyTorch."""
-        from videoannotator.pipelines.audio_processing.speech_pipeline import (
-            SpeechPipeline,
-        )
-
-        # The smallest real model: the default is a 1.6 GB download.
-        pipeline = SpeechPipeline({"whisper_model": "tiny"})
-
-        # Should handle initialization gracefully
-        try:
-            pipeline.initialize()
-            # If successful, should have device set
-            if pipeline.is_initialized:
-                assert pipeline.device is not None
-        except Exception as e:
-            # Should fail gracefully with informative error
-            assert "whisper" in str(e).lower() or "model" in str(e).lower()
-
-    def test_cleanup_with_real_resources(self):
-        """Test cleanup with real resources."""
-        from videoannotator.pipelines.audio_processing.speech_pipeline import (
-            SpeechPipeline,
-        )
-
-        # The smallest real model: the default is a 1.6 GB download.
-        pipeline = SpeechPipeline({"whisper_model": "tiny"})
-
-        try:
-            pipeline.initialize()
-        except Exception:
-            pass  # Initialization might fail, that's OK
-
-            # Cleanup should always work
-            pipeline.cleanup()
-            assert not pipeline.is_initialized
+        assert pipeline.device.type == "cpu"

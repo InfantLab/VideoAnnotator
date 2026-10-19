@@ -277,12 +277,8 @@ class TestFileStorageBackendErrorHandling:
         job = BatchJob()
         job.video_path = None  # This might cause issues
 
-        # Should handle gracefully or raise appropriate error
-        try:
-            self.storage.save_job_metadata(job)
-        except (TypeError, ValueError):
-            # Expected for invalid data
-            pass
+        self.storage.save_job_metadata(job)
+        assert self.storage.load_job_metadata(job.job_id).video_path is None
 
     @pytest.mark.skipif(
         os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0),

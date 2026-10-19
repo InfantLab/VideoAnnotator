@@ -5,7 +5,6 @@ YOLO11-based pipeline. Living documentation for person tracking
 capabilities.
 """
 
-import os
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -98,35 +97,6 @@ class TestPersonTrackingPipeline:
         assert schema["items"]["type"] == "object"
         assert "bbox" in schema["items"]["properties"]
         assert "keypoints" in schema["items"]["properties"]
-
-
-@pytest.mark.integration
-class TestPersonTrackingIntegration:
-    """Integration tests for person tracking pipeline."""
-
-    @pytest.mark.skipif(
-        not os.getenv("TEST_INTEGRATION"),
-        reason="Integration tests disabled. Set TEST_INTEGRATION=1 to enable",
-    )
-    def test_full_pipeline_processing(self, temp_video_file):
-        """Test complete person tracking pipeline processing."""
-        pipeline = PersonTrackingPipeline()
-
-        try:
-            pipeline.initialize()
-            results = pipeline.process(str(temp_video_file))
-
-            # Should return COCO format annotations
-            assert isinstance(results, list)
-
-            # Results should contain required COCO fields
-            for result in results:
-                assert "annotations" in result or len(result) == 0  # Empty results OK
-
-        except Exception as e:
-            pytest.skip(f"Integration test failed: {e}")
-        finally:
-            pipeline.cleanup()
 
 
 @pytest.mark.performance

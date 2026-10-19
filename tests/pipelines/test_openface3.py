@@ -38,13 +38,6 @@ from videoannotator.version import __version__
 class TestOpenFace3Availability:
     """Test OpenFace 3.0 availability and installation."""
 
-    def test_openface3_availability_check(self):
-        """Test if OpenFace 3.0 is properly detected."""
-        # This test will pass regardless of actual installation
-        # In CI/CD, OPENFACE3_AVAILABLE might be False
-
-    assert isinstance(OPENFACE3_AVAILABLE, bool)
-
     @pytest.mark.skipif(not OPENFACE3_AVAILABLE, reason="OpenFace 3.0 not available")
     def test_openface3_imports(self):
         """Test that OpenFace 3.0 imports work when available."""
