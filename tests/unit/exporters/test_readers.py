@@ -222,3 +222,14 @@ def test_malformed_files_raise_reader_error(tmp_path, reader, content):
 def test_classify(name, expected):
     kind, stem = classify(Path(name))
     assert (kind.kind if kind else None, stem) == expected
+
+
+def test_vlm_ignores_the_fields_a_run_adds_as_it_goes():
+    """Spec 027: frame_times, status, vlm_progress and vlm_skipped are additive."""
+    path = FIXTURES / "ask_ai" / "demo_clip_vlm_annotation_stopped.json"
+    stopped = read_vlm(path)
+    plain = read_vlm(FIXTURES / "demo_clip_vlm_annotation.json")
+    assert len(stopped.events) == 3
+    assert stopped.events[:2] == plain.events[:2]
+    assert stopped.annotated_model == plain.annotated_model
+    assert [m.label for m in stopped.events[2].measures][0] == "ERROR: model timed out"

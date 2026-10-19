@@ -240,10 +240,18 @@ def _run_one_pipeline(
                     "job",
                     job_id=job.job_id,
                 )
+            # Spec 027: a pipeline that can stop between samples keeps what it
+            # has when the job is cancelled, instead of only between pipelines.
+            set_stop_check = getattr(pipeline, "set_stop_check", None)
+            if callable(set_stop_check):
+                set_stop_check(lambda: _cancellation_requested(job.job_id, storage))
             try:
                 annotations = _process(pipeline, pipeline_name, pipeline_class, job)
                 # Some load a model only when it's first needed (scene's CLIP).
                 record["models"] = [m.to_dict() for m in _models(pipeline)]
+                run_summary = getattr(pipeline, "run_summary", None)
+                if callable(run_summary) and record.get("vlm") is not None:
+                    record["vlm"].update(run_summary())
             finally:
                 try:
                     pipeline.cleanup()

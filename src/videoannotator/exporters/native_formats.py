@@ -18,6 +18,7 @@ Usage:
 
 import json
 import logging
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
@@ -152,6 +153,8 @@ def export_coco_json(
     images: list[dict[str, Any]],
     output_path: str,
     categories: list[dict[str, Any]] | None = None,
+    extra: dict[str, Any] | None = None,
+    validate: bool = True,
 ) -> Any | None:
     """Export to COCO JSON format using native structure.
 
@@ -160,6 +163,9 @@ def export_coco_json(
         images: List of COCO image dictionaries
         output_path: Path to save COCO JSON file
         categories: List of category dictionaries (default: person category)
+        extra: Additional top-level keys (spec 027: a VLM run's progress)
+        validate: Load the file back with pycocotools; off for the rewrites
+            made while a run is still going
 
     Returns:
         COCO object for validation and further use
@@ -184,11 +190,18 @@ def export_coco_json(
         "images": images,
         "annotations": annotations,
         "categories": categories,
+        **(extra or {}),
     }
 
-    # Save to file
-    with open(output_path, "w") as f:
+    # Written aside and moved into place, so a reader polling the file while a
+    # run rewrites it never sees half of it.
+    temp_path = f"{output_path}.tmp"
+    with open(temp_path, "w") as f:
         json.dump(coco_data, f, indent=2)
+    os.replace(temp_path, output_path)
+
+    if not validate:
+        return None
 
     # Load and validate with official COCO API
     try:

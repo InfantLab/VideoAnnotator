@@ -52,3 +52,8 @@ To regenerate after an intended output change: run the same job, take the files 
 storage folder, replace these keeping the `demo_clip_` names (and the participant-code
 replacement above), then run `pytest tests/integration/test_output_baseline.py` and
 `cd viewer && bun run test:run`. Record what changed in the CHANGELOG.
+
+`ask_ai/demo_clip_vlm_annotation_stopped.json` (spec 027): the first three annotations of
+`demo_clip_vlm_annotation.json` as a run stopped after 4 of 7 samples writes them, with the
+additive fields: per annotation `frame_times` and `status` (one `error`), top-level `vlm_progress`
+and `vlm_skipped`. Readers must see the same annotations as without those fields.

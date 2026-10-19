@@ -13,6 +13,8 @@ question, so both are supported here rather than picking one.
 import hashlib
 import logging
 import re
+import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +30,7 @@ from videoannotator.pipelines.base_pipeline import BasePipeline
 from videoannotator.provenance import ModelRef
 
 from . import frames, sampling
+from .gate import gate_for
 from .ollama_client import OllamaVLMClient
 
 logger = logging.getLogger(__name__)
@@ -100,6 +103,8 @@ class VLMAnnotationPipeline(BasePipeline):
         super().__init__(default_config)
         self.logger = logging.getLogger(__name__)
         self._client: OllamaVLMClient | None = None
+        self._stop_check: Callable[[], bool] | None = None
+        self._summary: dict[str, Any] = {}
 
     # ------------------------------------------------------------------
     # BasePipeline interface
@@ -143,6 +148,16 @@ class VLMAnnotationPipeline(BasePipeline):
             "endpoint_host": endpoint.host,
         }
 
+    def set_stop_check(self, check: Callable[[], bool]) -> None:
+        """Asked before each sample; when it says stop, the run keeps what it
+        has and returns normally (spec 027 R7). Optional and duck-typed, like
+        provenance_vlm: BasePipeline doesn't change."""
+        self._stop_check = check
+
+    def run_summary(self) -> dict[str, Any]:
+        """How far the last `process()` got, for the provenance record."""
+        return dict(self._summary)
+
     def cleanup(self) -> None:
         self._client = None
         self.is_initialized = False
@@ -177,13 +192,36 @@ class VLMAnnotationPipeline(BasePipeline):
             raise ValueError(f"Could not open video file: {video_path}")
 
         annotations: list[dict[str, Any]] = []
+        skipped: list[dict[str, Any]] = []
         consecutive_failures = 0
         answered = 0
+        done = 0
+        stopped_early = False
         last_call_error: str | None = None
         last_frame_error: str | None = None
         abort_reason: str | None = None
+        last_write = 0.0
+        gate = gate_for(self.config["base_url"], self.config["model"])
+
+        def progress(finished: bool) -> dict[str, Any]:
+            return {
+                "vlm_progress": {
+                    "planned": len(sample_points),
+                    "done": done,
+                    "finished": finished,
+                    "stopped_early": stopped_early,
+                },
+                "vlm_skipped": skipped,
+            }
+
         try:
             for i, anchor_t in enumerate(sample_points):
+                if self._stop_check is not None and self._stop_check():
+                    stopped_early = True
+                    self.logger.info(
+                        f"Stopped after {done} of {len(sample_points)} samples"
+                    )
+                    break
                 context_offsets: list[int] | None
                 if sampling_mode == "frame_burst":
                     offsets = self.config["burst_offsets"]
@@ -201,7 +239,9 @@ class VLMAnnotationPipeline(BasePipeline):
                         f"{video_metadata['video_id']}; skipping sample point"
                     )
                     consecutive_failures += 1
+                    done += 1
                     last_frame_error = f"no readable frame at t={anchor_t:.2f}s"
+                    skipped.append({"t": anchor_t, "reason": "no readable frame"})
                     if (
                         consecutive_failures
                         >= self.config["abort_after_consecutive_failures"]
@@ -213,16 +253,18 @@ class VLMAnnotationPipeline(BasePipeline):
                         break
                     continue
 
-                result = self._client.chat(
-                    model=self.config["model"],
-                    prompt=self.config["prompt"],
-                    images=images,
-                    think=self.config["think"],
-                    keep_alive=self.config["keep_alive"],
-                    options=self.config["options"],
-                    max_retries=self.config["max_retries"],
-                    retry_backoff_sec=self.config["retry_backoff_sec"],
-                )
+                with gate.acquire("run"):
+                    result = self._client.chat(
+                        model=self.config["model"],
+                        prompt=self.config["prompt"],
+                        images=images,
+                        think=self.config["think"],
+                        keep_alive=self.config["keep_alive"],
+                        options=self.config["options"],
+                        max_retries=self.config["max_retries"],
+                        retry_backoff_sec=self.config["retry_backoff_sec"],
+                    )
+                done += 1
 
                 if result.error:
                     consecutive_failures += 1
@@ -246,6 +288,13 @@ class VLMAnnotationPipeline(BasePipeline):
                         sampling_mode=sampling_mode,
                         context_frame_offsets=context_offsets,
                         context_frame_numbers=frame_numbers,
+                        frame_times=[
+                            round(n / video_metadata["fps"], 3)
+                            if video_metadata["fps"]
+                            else anchor_t
+                            for n in frame_numbers
+                        ],
+                        status="error" if result.error else "answered",
                         label=label,
                         reasoning=result.thinking or result.raw_text,
                         raw_response=result.raw_text,
@@ -260,6 +309,16 @@ class VLMAnnotationPipeline(BasePipeline):
                         tokens_per_sec=round(result.tokens_per_sec, 2),
                     )
                 )
+                # Answers as they come (R6): at most once a second.
+                if output_dir and time.monotonic() - last_write >= 1.0:
+                    self._save_coco_annotations(
+                        annotations,
+                        output_dir,
+                        video_metadata,
+                        extra=progress(False),
+                        validate=False,
+                    )
+                    last_write = time.monotonic()
 
                 if (
                     consecutive_failures
@@ -271,17 +330,25 @@ class VLMAnnotationPipeline(BasePipeline):
         finally:
             cap.release()
 
-        if output_dir and annotations:
-            self._save_coco_annotations(annotations, output_dir, video_metadata)
+        self._summary = {
+            "samples_planned": len(sample_points),
+            "samples_answered": answered,
+            "stopped_early": stopped_early,
+        }
+        if output_dir and (annotations or skipped or stopped_early):
+            self._save_coco_annotations(
+                annotations, output_dir, video_metadata, extra=progress(True)
+            )
 
-        # Kept in the output folder above for diagnosis, but a run that stopped
-        # early or got no answer at all is a failure, not a result.
+        # Kept in the output folder above for diagnosis, but a run that gave up
+        # or got no answer at all is a failure, not a result. One the user
+        # stopped is a result: what it has so far.
         last_error = last_call_error or last_frame_error
         if abort_reason:
             raise RuntimeError(
                 f"VLM annotation aborted after {abort_reason}; last error: {last_error}"
             )
-        if sample_points and answered == 0:
+        if sample_points and answered == 0 and not stopped_early:
             raise RuntimeError(
                 f"No sample point got an answer from the model; last error: "
                 f"{last_error}"
@@ -367,6 +434,8 @@ class VLMAnnotationPipeline(BasePipeline):
         annotations: list[dict[str, Any]],
         output_dir: str,
         video_metadata: dict[str, Any],
+        extra: dict[str, Any] | None = None,
+        validate: bool = True,
     ) -> None:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
@@ -399,7 +468,11 @@ class VLMAnnotationPipeline(BasePipeline):
         ]
 
         coco_path = output_path / f"{video_metadata['video_id']}_vlm_annotation.json"
-        export_coco_json(annotations, images, str(coco_path), categories)
+        export_coco_json(
+            annotations, images, str(coco_path), categories, extra, validate
+        )
+        if not validate:
+            return
 
         validation_result = validate_coco_json(str(coco_path), "vlm_annotation")
         if validation_result.is_valid:
