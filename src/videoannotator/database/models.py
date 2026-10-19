@@ -399,7 +399,7 @@ class PromptUse(Base):
         String(64), ForeignKey("prompts.sha256"), nullable=False, index=True
     )
     model = Column(String(200), nullable=False)
-    kind = Column(String(20), nullable=False)  # job | preview
+    kind = Column(String(20), nullable=False)  # job | preview | try
     job_id = Column(String(64), nullable=True, index=True)
     user_id = Column(String(64), nullable=True)
     used_at = Column(DateTime(timezone=True), nullable=False)
@@ -417,3 +417,46 @@ class ExtrasInstallJobStatus:
 
     ALL_STATUSES: ClassVar[list[str]] = [PENDING, RUNNING, COMPLETED, FAILED]
     ORPHANABLE_STATUSES: ClassVar[list[str]] = [PENDING, RUNNING]
+
+
+class AskEntry(Base):
+    """One try or run from Ask AI, kept for everyone on the server (spec 027).
+
+    The question's text lives once in `prompts`; a try's answers are kept
+    here, a run's are read from its results. No frames are stored.
+    """
+
+    __tablename__ = "ask_entries"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    kind = Column(String(8), nullable=False)  # try | run | draft
+    status = Column(String(12), nullable=False)  # running | done | stopped | failed
+    prompt_sha256 = Column(String(64), ForeignKey("prompts.sha256"), nullable=False)
+    model = Column(String(200), nullable=False)
+    base_url = Column(String(500), nullable=False)
+    endpoint_class = Column(String(8), nullable=False)  # local | remote
+    sampling = Column(JSON, nullable=False, default=dict)
+    think = Column(Boolean, nullable=False, default=False)
+    video_path = Column(String(1000), nullable=False, index=True)
+    video_name = Column(String(255), nullable=False)
+    video_sha256 = Column(String(64), nullable=True)
+    moments = Column(JSON, nullable=True)
+    answers = Column(JSON, nullable=True)
+    job_id = Column(String(64), nullable=True, index=True)
+    user_id = Column(String(64), nullable=True, index=True)
+    name = Column(String(200), nullable=True)
+    starred = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+
+    prompt = relationship("Prompt")
+
+
+class EndpointConfirmation(Base):
+    """Someone agreed that frames may be sent to this remote model server."""
+
+    __tablename__ = "endpoint_confirmations"
+
+    base_url = Column(String(500), primary_key=True)
+    confirmed_by = Column(String(64), nullable=True)
+    confirmed_at = Column(DateTime(timezone=True), nullable=False)

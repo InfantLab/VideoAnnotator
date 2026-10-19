@@ -29,6 +29,28 @@ def prompt_sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def ensure_prompt(db: Session, text: str, user_id: str | None = None) -> Prompt:
+    """The library entry for `text`, created without a use (spec 027: a draft
+    question, or a run whose use the job records when it starts)."""
+    sha = prompt_sha256(text)
+    prompt = db.get(Prompt, sha)
+    if prompt is None:
+        now = datetime.now(UTC)
+        prompt = Prompt(
+            sha256=sha,
+            text=text,
+            tags=[],
+            starred=False,
+            hidden=False,
+            first_used_at=now,
+            last_used_at=now,
+            first_user_id=user_id,
+        )
+        db.add(prompt)
+        db.flush()
+    return prompt
+
+
 def record_use(
     db: Session,
     text: str,

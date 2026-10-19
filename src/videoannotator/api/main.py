@@ -108,6 +108,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error(f"Database table creation failed: {e}")
         # Don't fail startup if this fails, but log prominently
 
+    # spec 027: a try being answered when the server stopped will never finish.
+    try:
+        from .. import ask_history
+        from ..database.database import SessionLocal
+
+        with SessionLocal() as db:
+            stopped = ask_history.stop_running_tries(db)
+        if stopped:
+            logger.info(f"Marked {stopped} unfinished Ask AI tries as stopped")
+    except Exception as e:
+        logger.error(f"Could not mark unfinished Ask AI tries as stopped: {e}")
+
     # Run database migrations (v1.3.0)
     try:
         from ..database.migrations import migrate_to_v1_3_0
