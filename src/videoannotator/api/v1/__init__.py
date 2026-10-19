@@ -18,6 +18,7 @@ from .presets import router as presets_router
 from .prompts import router as prompts_router
 from .results import router as results_router
 from .system import router as system_router
+from .videos import router as videos_router
 from .vlm import router as vlm_router
 
 # Create main API router
@@ -38,6 +39,7 @@ api_router.include_router(datasets_router, prefix="/datasets", tags=["datasets"]
 api_router.include_router(presets_router, prefix="/presets", tags=["presets"])
 api_router.include_router(prompts_router, prefix="/prompts", tags=["prompts"])
 api_router.include_router(vlm_router, prefix="/vlm", tags=["vlm"])
+api_router.include_router(videos_router, prefix="/videos", tags=["videos"])
 api_router.include_router(config_router, prefix="/config", tags=["config"])
 api_router.include_router(system_router, prefix="/system", tags=["system"])
 api_router.include_router(debug_router, prefix="/debug", tags=["debug"])

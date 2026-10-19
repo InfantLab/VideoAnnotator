@@ -93,6 +93,17 @@ class StorageBackend(ABC):
         """
         pass
 
+    def has_video_path(self, video_path: str) -> bool:
+        """Whether some job read its video from `video_path` (spec 027)."""
+        for job_id in self.list_jobs():
+            try:
+                job = self.load_job_metadata(job_id)
+            except Exception:
+                continue
+            if job is not None and str(job.video_path) == video_path:
+                return True
+        return False
+
     @abstractmethod
     def list_jobs_by_batch(self, batch_id: str) -> list[str]:
         """List job IDs sharing a given batch identifier (spec 008).

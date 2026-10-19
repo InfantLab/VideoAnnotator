@@ -423,6 +423,17 @@ class SQLiteStorageBackend(StorageBackend):
             self.logger.error(f"[ERROR] Failed to list jobs: {e}")
             return []
 
+    def has_video_path(self, video_path: str) -> bool:
+        try:
+            with self.SessionLocal() as session:
+                return (
+                    session.query(Job.id).filter(Job.video_path == video_path).first()
+                    is not None
+                )
+        except SQLAlchemyError as e:
+            self.logger.error(f"[ERROR] Failed to look up video {video_path}: {e}")
+            return False
+
     def list_reruns(self, job_id: str) -> list[str]:
         """Jobs that run `job_id` again, oldest first (spec 019)."""
         try:
