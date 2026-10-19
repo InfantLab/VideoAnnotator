@@ -145,7 +145,9 @@ async function extractVideoInfo(videoFile: File): Promise<StandardAnnotationData
  */
 export async function mergeAnnotationData(
     detectedFiles: DetectedFile[],
-    onProgress?: ProgressCallback
+    onProgress?: ProgressCallback,
+    // A video streamed from the server (spec 028) isn't a File to read; the page says what it knows.
+    options: { videoInfo?: StandardAnnotationData['video_info'] } = {}
 ): Promise<ParseResult> {
     // DEBUG: Log incoming files
     console.log('🔍 mergeAnnotationData called with', detectedFiles.length, 'detected files:');
@@ -325,13 +327,14 @@ export async function mergeAnnotationData(
         processedFiles++;
     }
 
-    // Extract video information
-    if (!videoFile) {
-        throw new Error('No video file provided');
+    let video_info = options.videoInfo;
+    if (!video_info) {
+        if (!videoFile) {
+            throw new Error('No video file provided');
+        }
+        onProgress?.('Extracting video metadata', processedFiles, totalFiles + 1);
+        video_info = await extractVideoInfo(videoFile);
     }
-
-    onProgress?.('Extracting video metadata', processedFiles, totalFiles + 1);
-    const video_info = await extractVideoInfo(videoFile);
 
     // Create unified annotation data
     const data: StandardAnnotationData = {

@@ -1542,6 +1542,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/videos/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every run on one video, with its files, and the projects holding it */
+        get: operations["video_runs_api_v1_videos_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/videos/stream-token": {
         parameters: {
             query?: never;
@@ -3655,6 +3672,17 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** PipelineRunInfo */
+        PipelineRunInfo: {
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /** Error */
+            error?: string | null;
+            /** Files */
+            files?: components["schemas"]["RunFile"][];
+        };
         /** PipelineSchemaDescriptor */
         PipelineSchemaDescriptor: {
             /** Id */
@@ -3804,6 +3832,13 @@ export interface components {
             /** Jpeg Base64 */
             jpeg_base64: string;
         };
+        /** ProjectRef */
+        ProjectRef: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /** PromptListResponse */
         PromptListResponse: {
             /** Prompts */
@@ -3943,6 +3978,40 @@ export interface components {
             answers: components["schemas"]["Answer"][];
             /** Skipped */
             skipped: components["schemas"]["Skipped"][];
+        };
+        /** RunFile */
+        RunFile: {
+            /** Name */
+            name: string;
+            /**
+             * Kind
+             * @description result, provenance or other
+             */
+            kind: string;
+            /** Download Url */
+            download_url: string;
+        };
+        /** RunInfo */
+        RunInfo: {
+            /** Job Id */
+            job_id: string;
+            /** Status */
+            status: string;
+            /** Created At */
+            created_at?: string | null;
+            /** Completed At */
+            completed_at?: string | null;
+            /** Batch Id */
+            batch_id?: string | null;
+            /** Dataset Id */
+            dataset_id?: string | null;
+            /**
+             * Run Name
+             * @description The run folder's name (spec 022), when it has one
+             */
+            run_name?: string | null;
+            /** Pipelines */
+            pipelines?: components["schemas"]["PipelineRunInfo"][];
         };
         /** RunRequest */
         RunRequest: {
@@ -4152,6 +4221,28 @@ export interface components {
             last_seen_at?: string | null;
             /** Relative Path */
             relative_path?: string | null;
+        };
+        /** VideoRunsResponse */
+        VideoRunsResponse: {
+            /** Path */
+            path: string;
+            /** Name */
+            name: string;
+            /** Available */
+            available: boolean;
+            /** Unavailable Reason */
+            unavailable_reason?: string | null;
+            /** Duration Sec */
+            duration_sec?: number | null;
+            /**
+             * Sha256
+             * @description From a run's provenance; null when unknown (never computed here)
+             */
+            sha256?: string | null;
+            /** Runs */
+            runs: components["schemas"]["RunInfo"][];
+            /** Projects */
+            projects: components["schemas"]["ProjectRef"][];
         };
         /** VideoUploadResponse */
         VideoUploadResponse: {
@@ -5932,6 +6023,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoUploadResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    video_runs_api_v1_videos_runs_get: {
+        parameters: {
+            query?: {
+                /** @description The video's path on the server */
+                path?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoRunsResponse"];
                 };
             };
             /** @description Validation Error */

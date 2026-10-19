@@ -451,3 +451,104 @@ export function adjacentEvent(rows: LaneRow[], t: number, direction: 1 | -1): nu
   }
   return best;
 }
+
+export const ROW_HEIGHT = 18;
+export const NUMERIC_ROW_HEIGHT = 32;
+
+export const rowHeight = (row: Pick<LaneRow, 'form'>): number => (row.form === 'numeric' ? NUMERIC_ROW_HEIGHT : ROW_HEIGHT);
+
+/** More events in view than pixel columns: drawn as density, and labelled so. */
+export function showsDensity(row: LaneRow, view: ViewRange, width: number): boolean {
+  if (row.form === 'numeric' || width <= 0) return false;
+  const [from, to] = visibleSlice(row.events, view, row.maxDuration);
+  return to - from > width;
+}
+
+/**
+ * The event under time `t` in `row`: a span or presence bar containing it, or
+ * the nearest moment or sample within `tolerance` seconds.
+ */
+export function eventAt(row: LaneRow, t: number, tolerance: number): LaneEvent | null {
+  const [from, to] = visibleSlice(row.events, { start: t - tolerance, end: t + tolerance }, row.maxDuration);
+  let best: LaneEvent | null = null;
+  let bestDistance = Infinity;
+  for (let i = from; i < to; i++) {
+    const e = row.events[i];
+    const end = e.end ?? e.start;
+    const distance = t < e.start ? e.start - t : t > end ? t - end : 0;
+    if (distance <= tolerance && distance < bestDistance) {
+      best = e;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+export const formatValue = (v: number): string =>
+  Math.abs(v) >= 100 || Number.isInteger(v) ? String(Math.round(v)) : v.toFixed(2);
+
+export const MIN_VIEW_SEC = 1;
+
+const clampView = (start: number, span: number, duration: number): ViewRange => {
+  const length = Math.min(Math.max(span, Math.min(MIN_VIEW_SEC, duration)), duration);
+  const from = Math.min(Math.max(0, start), Math.max(0, duration - length));
+  return { start: from, end: from + length };
+};
+
+export const fullView = (duration: number): ViewRange => ({ start: 0, end: Math.max(duration, 0) });
+
+/** Zoom by `factor` (< 1 is in) keeping `anchor` where it is; never under a second. */
+export function zoomView(view: ViewRange, factor: number, anchor: number, duration: number): ViewRange {
+  const span = view.end - view.start;
+  const next = Math.min(duration, Math.max(Math.min(MIN_VIEW_SEC, duration), span * factor));
+  const ratio = span > 0 ? (anchor - view.start) / span : 0.5;
+  return clampView(anchor - ratio * next, next, duration);
+}
+
+export const panView = (view: ViewRange, seconds: number, duration: number): ViewRange =>
+  clampView(view.start + seconds, view.end - view.start, duration);
+
+/** While playing, the view pages forward when the playhead leaves it (US1.3). */
+export function followView(view: ViewRange, t: number, duration: number): ViewRange {
+  if (t >= view.start && t <= view.end) return view;
+  return clampView(t, view.end - view.start, duration);
+}
+
+export const centreView = (view: ViewRange, t: number, duration: number): ViewRange =>
+  clampView(t - (view.end - view.start) / 2, view.end - view.start, duration);
+
+export const LANE_HEADER_WIDTH = 200;
+
+/** What a lane shows and what made it, for its label's tooltip (SC-002). */
+export function laneTooltip(lane: Lane): string {
+  const made = lane.pipeline ? ` Made by ${lane.pipeline}` : '';
+  const run = lane.run ? `, ${lane.run.label}` : '';
+  return `${lane.label}: ${lane.description}.${made}${run}.`;
+}
+
+export function rowTooltip(lane: Lane, row: LaneRow): string {
+  const scale =
+    row.form === 'numeric' && row.min !== undefined && row.max !== undefined
+      ? ` Scale ${formatValue(row.min)} to ${formatValue(row.max)}${row.unit ? ` ${row.unit}` : ''}.`
+      : '';
+  const what = row.description ?? lane.description;
+  return `${row.label} (${lane.label}): ${what}.${scale}${lane.pipeline ? ` From ${lane.pipeline}.` : ''}`;
+}
+
+/** One zoom step halves (or doubles) the view. */
+export const ZOOM_STEP = 0.5;
+
+/**
+ * The video's frame rate as the results record it (frame number over time);
+ * null when no result gives both. Not the parsers' default of 30.
+ */
+export function frameRateFromRows(rows: Pick<Row, 'frame' | 'start'>[]): number | null {
+  const rates: number[] = [];
+  for (const r of rows) {
+    if (r.frame !== null && r.frame > 0 && r.start > 0) rates.push(r.frame / r.start);
+    if (rates.length >= 501) break;
+  }
+  if (!rates.length) return null;
+  rates.sort((a, b) => a - b);
+  return Math.round(rates[Math.floor(rates.length / 2)] * 1000) / 1000;
+}

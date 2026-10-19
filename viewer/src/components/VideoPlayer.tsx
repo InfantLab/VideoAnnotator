@@ -4,6 +4,7 @@ import { getDominantEmotion } from '@/lib/parsers/face';
 import { sampledAtTime } from '@/lib/sampledAtTime';
 import { categoryHues } from '@/lib/categoryColors';
 import type { OpenFace3Settings } from './openface3Settings';
+import { openface3SettingsFromLanes, overlaySettingsFromLanes } from '@/lib/laneOverlays';
 import { browserClaimFor, sniffVideoCodec, type VideoCodecInfo } from '@/lib/videoCodec';
 
 /** Why the picture isn't showing, as the browser reported it. */
@@ -16,6 +17,17 @@ interface PlaybackProblem {
   message?: string;
 }
 
+/** A row key on the People lane: the table's `track` (spec 025). */
+const personKey = (p: COCOPersonAnnotation) => (p.person_id ? String(p.person_id) : p.track_id !== undefined && p.track_id !== null ? String(p.track_id) : '');
+
+const absoluteUrl = (url: string) => {
+  try {
+    return new URL(url, window.location.href).href;
+  } catch {
+    return url;
+  }
+};
+
 const MEDIA_ERROR_NAMES: Record<number, string> = {
   1: 'MEDIA_ERR_ABORTED',
   2: 'MEDIA_ERR_NETWORK',
@@ -25,22 +37,35 @@ const MEDIA_ERROR_NAMES: Record<number, string> = {
 
 interface VideoPlayerProps {
   videoFile: File | null;
+  /** A video streamed from the server (spec 028); used as the `src` as given. */
+  videoUrl?: string;
   /** The video is gone; say where it was expected instead of playing (spec 022). */
   missingVideoMessage?: string;
   annotationData: StandardAnnotationData;
   currentTime: number;
-  overlaySettings: OverlaySettings;
+  overlaySettings?: OverlaySettings;
   openface3Settings?: OpenFace3Settings;
+  /** Overlay switches by lane kind (spec 028); when given, they replace the two above. */
+  overlays?: Record<string, boolean>;
   onTimeUpdate: (time: number) => void;
   onDurationChange: (duration: number) => void;
   onPlayStateChange: (playing: boolean) => void;
 }
 
 export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
-  ({ videoFile, missingVideoMessage, annotationData, currentTime, overlaySettings, openface3Settings, onTimeUpdate, onDurationChange, onPlayStateChange }, ref) => {
+  ({ videoFile, videoUrl: streamUrl, missingVideoMessage, annotationData, currentTime, overlaySettings: overlaySettingsProp, openface3Settings: openface3SettingsProp, overlays, onTimeUpdate, onDurationChange, onPlayStateChange }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [videoUrl, setVideoUrl] = useState<string>('');
+    const [objectUrl, setObjectUrl] = useState<string>('');
+    const videoUrl = streamUrl ?? objectUrl;
+    const overlaySettings = useMemo(
+      () => (overlays ? overlaySettingsFromLanes(overlays) : overlaySettingsProp ?? overlaySettingsFromLanes({})),
+      [overlays, overlaySettingsProp],
+    );
+    const openface3Settings = useMemo(
+      () => (overlays ? openface3SettingsFromLanes(overlays) : openface3SettingsProp),
+      [overlays, openface3SettingsProp],
+    );
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     // Set when the browser can't show the picture (a black frame otherwise).
     // Keyed to the URL it happened on, so a late event from a previous video,
@@ -51,11 +76,11 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
 
     // Create video URL from file
     useEffect(() => {
-      if (videoFile) {
+      if (videoFile && !streamUrl) {
         setProblem(null);
         setCodec(null);
         const url = URL.createObjectURL(videoFile);
-        setVideoUrl(url);
+        setObjectUrl(url);
         let cancelled = false;
         // Evidence for the message: what the container itself says the codec is.
         sniffVideoCodec(videoFile).then((info) => {
@@ -66,7 +91,17 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           URL.revokeObjectURL(url);
         };
       }
-    }, [videoFile]);
+    }, [videoFile, streamUrl]);
+
+    // A streamed video's codec isn't sniffed (that reads the file); errors still give the message.
+    useEffect(() => {
+      if (streamUrl) setCodec(null);
+    }, [streamUrl]);
+
+    const personHues = useMemo(
+      () => categoryHues((annotationData?.person_tracking ?? []).map(personKey)),
+      [annotationData?.person_tracking],
+    );
 
     // Get current pose data based on current time
     const getCurrentPoseData = useCallback((): COCOPersonAnnotation[] => {
@@ -172,8 +207,8 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           const scaledWidth = person.bbox[2] * scaleX;
           const scaledHeight = person.bbox[3] * scaleY;
 
-          // Use person-specific color based on track_id or index
-          const hue = ((person.track_id || index) * 137.508) % 360;
+          // The same colour as the person's row on the timeline (spec 028 FR-003).
+          const hue = personHues.get(personKey(person)) ?? (index * 137.508) % 360;
           ctx.strokeStyle = `hsl(${hue}, 70%, 40%)`;
           ctx.lineWidth = 1;
           ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
@@ -188,7 +223,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           }
         }
       });
-    }, [overlaySettings.pose, dimensions]);
+    }, [overlaySettings.pose, dimensions, personHues]);
 
     // Draw subtitle overlay (from WebVTT)
     const drawSubtitles = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -735,7 +770,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     }, [onDurationChange, ref]);
 
     /** The element's events only count for the video on screen now, never an empty or revoked source. */
-    const isCurrentSource = (el: HTMLVideoElement) => !!videoUrl && el.currentSrc === videoUrl;
+    const isCurrentSource = (el: HTMLVideoElement) => !!videoUrl && el.currentSrc === absoluteUrl(videoUrl);
 
     // First frame's data is in. A width of 0 here means the audio decoded and
     // the picture didn't (seen: HEVC in Chrome with hardware decoding off).
@@ -874,13 +909,13 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           {playbackProblem && (
             <PlaybackProblemNotice problem={playbackProblem} codec={codec} />
           )}
-          {!videoFile && missingVideoMessage && (
+          {!videoFile && !streamUrl && missingVideoMessage && (
             <div role="alert" className="absolute inset-0 flex items-center justify-center p-6">
               <div className="max-w-lg rounded-lg border border-border bg-card/95 p-4 text-sm text-foreground shadow-lg">
                 <p className="font-medium">{missingVideoMessage}</p>
                 <p className="mt-1 text-muted-foreground">
-                  Every annotation this job produced is still shown on the timeline. Put the video
-                  back, or run it again from where it is now, to play it.
+                  Every result for this video is still shown on the timeline. Put the video back, or
+                  run it again from where it is now, to play it.
                 </p>
               </div>
             </div>

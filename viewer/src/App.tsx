@@ -23,6 +23,7 @@ const JobDetail = lazy(() => import("./pages/JobDetail"));
 const NewJob = lazy(() => import("./pages/NewJob"));
 const Settings = lazy(() => import("./pages/Settings"));
 const JobResultsViewer = lazy(() => import("./pages/JobResultsViewer"));
+const VideoPage = lazy(() => import("./pages/VideoPage"));
 const Results = lazy(() => import("./pages/Results"));
 const Datasets = lazy(() => import("./pages/Datasets"));
 const Compare = lazy(() => import("./pages/Compare"));
@@ -53,6 +54,7 @@ const App = () => (
                   {/* Full-screen routes (no shared nav) */}
                   <Route path="/viewer" element={page(<Index />)} />
                   <Route path="/view/:jobId" element={page(<JobResultsViewer />)} />
+                  <Route path="/video" element={page(<VideoPage />)} />
 
                   {/* Routes with shared AppLayout navigation */}
                   <Route element={<AppLayout />}>

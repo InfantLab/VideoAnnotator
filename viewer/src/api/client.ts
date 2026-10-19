@@ -45,6 +45,7 @@ import type {
   UploadedVideo,
 } from '@/types/ask';
 import type { JobResults } from '@/lib/jobOutcome';
+import type { VideoRuns } from '@/types/video';
 import type { Preset, PresetCreateRequest, PresetListResponse } from '@/types/presets';
 import type { LibraryPrompt, PromptListResponse, PromptUpdateRequest } from '@/types/prompts';
 import type {
@@ -1107,6 +1108,17 @@ class APIClient {
   streamUrl(path: string, token: string): string {
     const base = getApiBaseUrl().replace(/\/$/, '');
     return `${base}/api/v1/videos/stream?${new URLSearchParams({ path, token })}`;
+  }
+
+  /** Every run on one video, with its files, and the projects holding it (spec 028). */
+  async getVideoRuns(path: string): Promise<VideoRuns> {
+    return this.request(`/api/v1/videos/runs?${new URLSearchParams({ path })}`);
+  }
+
+  /** One result file, by the `download_url` the server listed for it (spec 028 R4). */
+  async downloadResultFile(url: string, name: string): Promise<File> {
+    const blob = await (await this.fetchRaw(url)).blob();
+    return new File([blob], name);
   }
 
   async createTry(body: AskTryRequest): Promise<AskEntry> {
