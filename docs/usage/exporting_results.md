@@ -16,7 +16,7 @@ results folder: one on your computer, one a colleague sent you, or one from an o
 
 ## In the viewer
 
-On a finished job's page or a run's page, click **Export**:
+On a finished job's page, a run's page, or a video's [Video page](video_page.md), click **Export**:
 
 - **Table (CSV)** / **Table (Parquet)**: downloads the table.
 - **ELAN files (.eaf)**: one file for a job; a zip with one file per video for a run.

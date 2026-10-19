@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The Video page** (spec 028): one video, every run's results on labelled lanes that are also
+  their controls, the results table beside it, and your own notes. `/video?path=…`; `/view/<job>`
+  opens it on that run. The video streams from the server (no zip download, no folder question)
+  and only the shown runs' files are fetched. Lanes are made from the results (one per kind
+  present, a row per speaker, person or face track, the same colours as on the video), with zoom,
+  pan, a visible-range bar, density when crowded, numeric charts with their scale, hover and
+  click to seek, `[` / `]` through the selected lane, and the frame number in the readout. Click
+  a lane's name to fold it, its eye to hide its overlay; **Layers** does all at once; choices are
+  remembered. Each lane names its run; its menu shows another run or compares two, and **About**
+  lists the settings that differ. The **Data** tab follows playback and links both ways with the
+  timeline. **Notes**: `N` at a moment, `Shift+N` twice for a span, kept on the server with the
+  video. Opened from a run, project or folder, ‹ › move through it. Standalone `/viewer` uses the
+  same page. How-to: `docs/usage/video_page.md`.
+- **`GET /api/v1/videos/runs`**: every run on a video with its files, and the projects holding it.
+- **`/api/v1/videos/notes`**: researchers' notes on a video (list, add, change, delete).
+- **Results table format version 2**: a last column, `author`, and a `note` measure (pipeline
+  `notes`) for researchers' notes, once per video per export. Columns 1–19 are unchanged. The
+  export summary gains `researcher_notes`, and says when notes couldn't be included (an export
+  without the server's database). **ELAN**: a `Notes (researcher)` tier with its author as
+  `ANNOTATOR` (one per author when several).
+
 - **Ask AI** (spec 027): one window to ask a vision model about your video. Drop a video (stored
   once on the server), pick one in a shared folder, or reopen a recent one; write a question or
   start from an example; **Try on this frame** or **Try on 10 moments**, and see the answer, the

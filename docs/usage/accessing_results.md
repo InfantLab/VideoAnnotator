@@ -2,6 +2,8 @@
 
 This page describes where VideoAnnotator stores outputs and how to retrieve them using the CLI or HTTP API.
 
+> To look at a video's results, open it on [the Video page](video_page.md).
+>
 > For analysis, export everything as one table (CSV or Parquet), as ELAN files, or as a methods
 > paragraph: see [Results out](exporting_results.md).
 
