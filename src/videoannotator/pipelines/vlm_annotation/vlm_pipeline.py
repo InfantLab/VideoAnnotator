@@ -26,7 +26,7 @@ from videoannotator.exporters.native_formats import (
 from videoannotator.pipelines.base_pipeline import BasePipeline
 from videoannotator.provenance import ModelRef
 
-from . import sampling
+from . import frames, sampling
 from .ollama_client import OllamaVLMClient
 
 logger = logging.getLogger(__name__)
@@ -307,26 +307,7 @@ class VLMAnnotationPipeline(BasePipeline):
     # Video / frame helpers
 
     def _get_video_metadata(self, video_path: str) -> dict[str, Any]:
-        import cv2
-
-        cap = cv2.VideoCapture(video_path)
-        if not cap.isOpened():
-            raise ValueError(f"Could not open video file: {video_path}")
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        duration = total_frames / fps if fps > 0 else 0
-        cap.release()
-        return {
-            "video_id": Path(video_path).stem,
-            "filepath": video_path,
-            "width": width,
-            "height": height,
-            "fps": fps,
-            "duration": duration,
-            "total_frames": total_frames,
-        }
+        return frames.video_metadata(video_path)
 
     def _planned_points(
         self, duration: float, start_time: float = 0.0, end_time: float | None = None
@@ -344,30 +325,13 @@ class VLMAnnotationPipeline(BasePipeline):
         last = duration if end_time is None else end_time
         return [t for t in points if start_time <= t <= last]
 
-    @staticmethod
-    def _seek_frame_jpeg(
-        cap, fps: float, timestamp_sec: float
-    ) -> tuple[int, bytes] | None:
-        import cv2
-
-        frame_number = max(0, round(timestamp_sec * fps))
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
-        ret, frame = cap.read()
-        if not ret:
-            return None
-        ok, buf = cv2.imencode(".jpg", frame)
-        if not ok:
-            return None
-        return frame_number, buf.tobytes()
-
     def _read_single(
         self, cap, video_metadata: dict[str, Any], anchor_t: float
     ) -> tuple[list[int], list[bytes], None]:
-        result = self._seek_frame_jpeg(cap, video_metadata["fps"], anchor_t)
-        if result is None:
-            return [], [], None
-        frame_number, jpeg_bytes = result
-        return [frame_number], [jpeg_bytes], None
+        sent = frames.read_sample(
+            cap, video_metadata["fps"], video_metadata["duration"], anchor_t, None, 0.0
+        )
+        return [f.frame_number for f in sent], [f.jpeg for f in sent], None
 
     def _read_burst(
         self,
@@ -377,20 +341,19 @@ class VLMAnnotationPipeline(BasePipeline):
         spacing_sec: float,
         offsets: list[int],
     ) -> tuple[list[int], list[bytes], list[int]]:
-        frame_numbers: list[int] = []
-        images: list[bytes] = []
-        used_offsets: list[int] = []
-        for off, t in sampling.burst_times(
-            anchor_t, offsets, spacing_sec, video_metadata["duration"]
-        ):
-            result = self._seek_frame_jpeg(cap, video_metadata["fps"], t)
-            if result is None:
-                continue
-            frame_number, jpeg_bytes = result
-            frame_numbers.append(frame_number)
-            images.append(jpeg_bytes)
-            used_offsets.append(off)
-        return frame_numbers, images, used_offsets
+        sent = frames.read_sample(
+            cap,
+            video_metadata["fps"],
+            video_metadata["duration"],
+            anchor_t,
+            offsets,
+            spacing_sec,
+        )
+        return (
+            [f.frame_number for f in sent],
+            [f.jpeg for f in sent],
+            [f.offset for f in sent],
+        )
 
     # ------------------------------------------------------------------
     # Output

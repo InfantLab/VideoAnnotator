@@ -14,9 +14,11 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from ...config_env import default_ollama_base_url
 from ...diagnostics.ollama import unreachable_hint
+from ...pipelines.vlm_annotation import frames as vlm_frames
 from ...pipelines.vlm_annotation.ollama_client import (
     OllamaUnavailableError,
     OllamaVLMClient,
@@ -144,6 +146,10 @@ async def preview_vlm_prompt(
     burst_offsets: str | None = Form(
         None, description="JSON-encoded list[int], e.g. '[-2,-1,0,1,2]'"
     ),
+    burst_spacing_sec: float | None = Form(
+        None,
+        description="Seconds between burst frames; frame_interval_sec when omitted",
+    ),
     think: bool = Form(False),
     base_url: str | None = Form(None),
     _user: dict[str, Any] | None = Depends(validate_api_key),
@@ -186,19 +192,53 @@ async def preview_vlm_prompt(
             hint="Provide video_path + timestamp_sec instead of image.",
         )
 
+    image_bytes = await image.read() if image is not None else None
+    # cv2 and the model call block for seconds to minutes: off the event loop,
+    # so the server keeps answering everyone else meanwhile.
+    return await run_in_threadpool(
+        _answer_preview,
+        image_bytes=image_bytes,
+        video_path=video_path,
+        timestamp_sec=timestamp_sec,
+        prompt=prompt,
+        model=model,
+        sampling_mode=sampling_mode,
+        frame_interval_sec=frame_interval_sec,
+        burst_offsets=burst_offsets,
+        burst_spacing_sec=burst_spacing_sec,
+        think=think,
+        base_url=base_url,
+        user_id=str(_user["id"]) if _user and _user.get("id") else None,
+    )
+
+
+def _answer_preview(
+    *,
+    image_bytes: bytes | None,
+    video_path: str | None,
+    timestamp_sec: float | None,
+    prompt: str,
+    model: str,
+    sampling_mode: str,
+    frame_interval_sec: float,
+    burst_offsets: str | None,
+    burst_spacing_sec: float | None,
+    think: bool,
+    base_url: str,
+    user_id: str | None,
+) -> VlmPreviewResponse:
     images: list[bytes]
     frame_numbers: list[int | None]
     fps = 0.0
-    if have_image:
-        assert image is not None
-        images = [await image.read()]
+    if image_bytes is not None:
+        images = [image_bytes]
         frame_numbers = [None]
     else:
         frame_numbers, images, fps = _extract_video_frames(
             video_path=video_path,  # type: ignore[arg-type]
             timestamp_sec=timestamp_sec,  # type: ignore[arg-type]
             sampling_mode=sampling_mode,
-            frame_interval_sec=frame_interval_sec,
+            spacing_sec=burst_spacing_sec or frame_interval_sec,
             burst_offsets=burst_offsets,
             base_url=base_url,
         )
@@ -225,19 +265,14 @@ async def preview_vlm_prompt(
             f"{base_url} is reachable.",
         )
 
-    record_use_quietly(
-        prompt,
-        model,
-        "preview",
-        user_id=str(_user["id"]) if _user and _user.get("id") else None,
-    )
+    record_use_quietly(prompt, model, "preview", user_id=user_id)
     label = _parse_label(result.raw_text)
     return VlmPreviewResponse(
         frames=[
             PreviewFrame(
                 frame_number=n,
                 timestamp_sec=round(n / fps, 3) if n is not None and fps else None,
-                jpeg_base64=_thumbnail(image),
+                jpeg_base64=vlm_frames.thumbnail(image),
             )
             for n, image in zip(frame_numbers, images, strict=True)
         ],
@@ -257,7 +292,7 @@ def _extract_video_frames(
     video_path: str,
     timestamp_sec: float,
     sampling_mode: str,
-    frame_interval_sec: float,
+    spacing_sec: float,
     burst_offsets: str | None,
     base_url: str,
 ) -> tuple[list[int | None], list[bytes], float]:
@@ -304,7 +339,7 @@ def _extract_video_frames(
                 else VLMAnnotationPipeline({}).config["burst_offsets"]
             )
             frame_numbers, images, _context_offsets = pipeline._read_burst(
-                cap, video_metadata, timestamp_sec, frame_interval_sec, offsets
+                cap, video_metadata, timestamp_sec, spacing_sec, offsets
             )
         else:
             frame_numbers, images, _context_offsets = pipeline._read_single(
@@ -321,20 +356,3 @@ def _extract_video_frames(
             f"in '{video_path}'",
         )
     return list(frame_numbers), images, video_metadata["fps"]
-
-
-def _thumbnail(jpeg: bytes, width: int = 320) -> str:
-    """`jpeg` scaled down to `width` px wide, base64-encoded."""
-    import base64
-
-    import cv2
-    import numpy as np
-
-    frame = cv2.imdecode(np.frombuffer(jpeg, np.uint8), cv2.IMREAD_COLOR)
-    if frame is not None and frame.shape[1] > width:
-        height = round(frame.shape[0] * width / frame.shape[1])
-        frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
-        ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-        if ok:
-            jpeg = buf.tobytes()
-    return base64.b64encode(jpeg).decode("ascii")
