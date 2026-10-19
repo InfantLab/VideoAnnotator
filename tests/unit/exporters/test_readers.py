@@ -232,4 +232,4 @@ def test_vlm_ignores_the_fields_a_run_adds_as_it_goes():
     assert len(stopped.events) == 3
     assert stopped.events[:2] == plain.events[:2]
     assert stopped.annotated_model == plain.annotated_model
-    assert [m.label for m in stopped.events[2].measures][0] == "ERROR: model timed out"
+    assert stopped.events[2].measures[0].label == "ERROR: model timed out"
