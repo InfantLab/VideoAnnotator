@@ -29,11 +29,14 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
+from ...database.database import get_db
 from ...database_location import database_path
-from ...results_folder import display_path
+from ...results_folder import display_path, video_unavailable_reason
 from ...storage.config import get_storage_root
+from ...video_runs import projects_for, runs_for, sha256_for
 from ..database import get_storage_backend
 from ..errors import APIError
 from ..middleware.auth import validate_api_key
@@ -55,17 +58,35 @@ def _within(path: Path, root: Path) -> bool:
     return path == root or root in path.parents
 
 
+def _not_allowed(resolved: Path) -> APIError:
+    return APIError(
+        status_code=403,
+        code="PATH_NOT_ALLOWED",
+        message=f"{display_path(resolved)} isn't in a folder shared with "
+        "VideoAnnotator",
+        hint="Upload the video, or choose one in a folder shared with the server.",
+    )
+
+
+def _path_required() -> APIError:
+    return APIError(
+        status_code=422,
+        code="VIDEO_PATH_REQUIRED",
+        message="Say which video to use.",
+    )
+
+
+def _in_readable_folder(resolved: Path) -> bool:
+    return any(_within(resolved, root) for root in [*allowed_roots(), videos_root()])
+
+
 def readable_video(raw_path: str) -> Path:
     """`raw_path` resolved, if Ask AI may read it; else the API error saying why.
 
     Resolved first (symlinks included), so `..` can't escape a folder.
     """
     if not raw_path or not raw_path.strip():
-        raise APIError(
-            status_code=422,
-            code="VIDEO_PATH_REQUIRED",
-            message="Say which video to use.",
-        )
+        raise _path_required()
     try:
         resolved = Path(raw_path.strip()).expanduser().resolve()
     except (OSError, RuntimeError) as e:
@@ -76,18 +97,12 @@ def readable_video(raw_path: str) -> Path:
         ) from e
 
     allowed = (
-        any(_within(resolved, root) for root in [*allowed_roots(), videos_root()])
+        _in_readable_folder(resolved)
         or get_storage_backend().has_video_path(raw_path.strip())
         or get_storage_backend().has_video_path(str(resolved))
     )
     if not allowed:
-        raise APIError(
-            status_code=403,
-            code="PATH_NOT_ALLOWED",
-            message=f"{display_path(resolved)} isn't in a folder shared with "
-            "VideoAnnotator",
-            hint="Upload the video, or choose one in a folder shared with the server.",
-        )
+        raise _not_allowed(resolved)
     if not resolved.is_file():
         raise APIError(
             status_code=404,
@@ -165,6 +180,95 @@ async def upload_video(
         sha256=sha,
         name=target.name,
         duration_sec=video_duration(target),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Runs on a video (spec 028)
+# ---------------------------------------------------------------------------
+
+
+class RunFile(BaseModel):
+    name: str
+    kind: str = Field(description="result, provenance or other")
+    download_url: str
+
+
+class PipelineRunInfo(BaseModel):
+    name: str
+    status: str
+    error: str | None = None
+    files: list[RunFile] = Field(default_factory=list)
+
+
+class RunInfo(BaseModel):
+    job_id: str
+    status: str
+    created_at: datetime | None = None
+    completed_at: datetime | None = None
+    batch_id: str | None = None
+    dataset_id: str | None = None
+    run_name: str | None = Field(
+        default=None, description="The run folder's name (spec 022), when it has one"
+    )
+    pipelines: list[PipelineRunInfo] = Field(default_factory=list)
+
+
+class ProjectRef(BaseModel):
+    id: str
+    name: str
+
+
+class VideoRunsResponse(BaseModel):
+    path: str
+    name: str
+    available: bool
+    unavailable_reason: str | None = None
+    duration_sec: float | None = None
+    sha256: str | None = Field(
+        default=None,
+        description="From a run's provenance; null when unknown (never computed here)",
+    )
+    runs: list[RunInfo]
+    projects: list[ProjectRef]
+
+
+@router.get(
+    "/runs",
+    response_model=VideoRunsResponse,
+    summary="Every run on one video, with its files, and the projects holding it",
+)
+async def video_runs(
+    path: str = Query("", description="The video's path on the server"),
+    db: Session = Depends(get_db),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> VideoRunsResponse:
+    if not path.strip():
+        raise _path_required()
+    try:
+        resolved = Path(path.strip()).expanduser().resolve()
+    except (OSError, RuntimeError) as e:
+        raise _not_allowed(Path(path.strip())) from e
+
+    runs = runs_for(get_storage_backend(), resolved)
+    if not runs and not _in_readable_folder(resolved):
+        raise _not_allowed(resolved)
+    available = resolved.is_file()
+    if not available and not runs:
+        raise APIError(
+            status_code=404,
+            code="VIDEO_NOT_FOUND",
+            message=f"No video at '{resolved}': it may have been moved or deleted.",
+        )
+    return VideoRunsResponse(
+        path=str(resolved),
+        name=resolved.name,
+        available=available,
+        unavailable_reason=None if available else video_unavailable_reason(resolved),
+        duration_sec=video_duration(resolved) if available else None,
+        sha256=sha256_for(runs),
+        runs=[RunInfo.model_validate(r.to_dict()) for r in runs],
+        projects=[ProjectRef(**p) for p in projects_for(db, resolved, runs)],
     )
 
 
