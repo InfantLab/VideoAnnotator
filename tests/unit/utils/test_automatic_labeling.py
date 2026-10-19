@@ -67,6 +67,13 @@ class TestLabelerInit:
         labeler = AutomaticPersonLabeler(config=cfg)
         assert labeler.config["size_based"]["enabled"] is False
 
+    def test_partial_config_keeps_the_other_defaults(self):
+        labeler = AutomaticPersonLabeler(config={"size_based": {"adult_label": "a"}})
+        assert labeler.config["size_based"]["adult_label"] == "a"
+        assert labeler.config["size_based"]["height_threshold"] == 0.4
+        assert labeler.config["position_based"]["enabled"] is True
+        labeler.label_persons_automatic([], [])
+
 
 # ---------------------------------------------------------------------------
 # _group_detections_by_person

@@ -2087,12 +2087,6 @@ def storage_cleanup(
                 if len(result.errors) > 5:
                     typer.echo(f"  ... and {len(result.errors) - 5} more")
 
-        # Exit code based on result
-        if result.errors:
-            raise typer.Exit(1)
-        else:
-            raise typer.Exit(0)
-
     except Exception as e:
         if json_output:
             typer.echo(
@@ -2101,7 +2095,9 @@ def storage_cleanup(
             )
         else:
             typer.echo(f"[ERROR] Cleanup failed: {e}", err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
+
+    raise typer.Exit(1 if result.errors else 0)
 
 
 @app.command("validate-emotion")

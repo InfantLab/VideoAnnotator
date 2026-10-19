@@ -12,6 +12,8 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from videoannotator.database.models import Job, JobStatus
 from videoannotator.storage.cleanup import (
@@ -311,16 +313,29 @@ class TestFindOldJobs:
         with pytest.raises(ValueError, match="disabled"):
             find_old_jobs()
 
-    def test_accepts_override(self):
-        """Test accepts retention_days override parameter."""
-        # Should not raise even if config is None
+    def test_override_finds_only_jobs_finished_before_the_cutoff(
+        self, tmp_path, monkeypatch
+    ):
+        import videoannotator.database.database as db_module
+
+        engine = create_engine(f"sqlite:///{tmp_path / 'jobs.db'}")
+        db_module.Base.metadata.create_all(engine)
+        monkeypatch.setattr(db_module, "SessionLocal", sessionmaker(bind=engine))
+        now = datetime.now()
+        with db_module.SessionLocal() as db:
+            for name, status, completed in [
+                ("old.mp4", JobStatus.COMPLETED, now - timedelta(days=40)),
+                ("recent.mp4", JobStatus.COMPLETED, now - timedelta(days=5)),
+                ("running.mp4", JobStatus.RUNNING, None),
+            ]:
+                db.add(Job(video_path=name, status=status, completed_at=completed))
+            db.commit()
+
+        # Cleanup is off in config; the override still applies.
         with patch("videoannotator.storage.cleanup.STORAGE_RETENTION_DAYS", None):
-            # This would query database, but we just test it doesn't raise
-            try:
-                find_old_jobs(retention_days=30)
-            except Exception as e:
-                # Database errors are okay for this test
-                assert "disabled" not in str(e).lower()
+            found = find_old_jobs(retention_days=30)
+
+        assert [job.video_path for job in found] == ["old.mp4"]
 
 
 class TestCleanupOldJobs:

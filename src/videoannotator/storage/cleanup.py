@@ -111,9 +111,9 @@ def find_old_jobs(retention_days: int | None = None) -> list[Job]:
     cutoff_date = datetime.now() - timedelta(days=days)
 
     # Query jobs in terminal states older than retention period
-    from videoannotator.database.session import get_session
+    from videoannotator.database import database as db_module
 
-    with get_session() as session:
+    with db_module.SessionLocal() as session:
         jobs = (
             session.query(Job)
             .filter(Job.status.in_(TERMINAL_STATES))

@@ -28,7 +28,13 @@ class AutomaticPersonLabeler:
         Args:
             config: Configuration dict with labeling parameters
         """
-        self.config = config or self._default_config()
+        # Per section, so a config naming only size_based keeps the other sections.
+        self.config = self._default_config()
+        for key, value in (config or {}).items():
+            if isinstance(value, dict) and isinstance(self.config.get(key), dict):
+                self.config[key] = {**self.config[key], **value}
+            else:
+                self.config[key] = value
 
     def _default_config(self) -> dict:
         """Return the default configuration for automatic labeling."""

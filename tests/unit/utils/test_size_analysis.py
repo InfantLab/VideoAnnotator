@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-pytest.importorskip("cv2", reason="requires the `person` extra")
+cv2 = pytest.importorskip("cv2", reason="requires the `person` extra")
 
 from videoannotator.pipelines.person_tracking.person_pipeline import (
     PersonTrackingPipeline,
@@ -22,10 +22,10 @@ class TestPersonTrackingSizeAnalysisIntegration:
         mock_cap = Mock()
         mock_cap.isOpened.return_value = True
         mock_cap.get.side_effect = lambda prop: {
-            0: 30.0,  # CAP_PROP_FPS
-            3: 640,  # CAP_PROP_FRAME_WIDTH
-            4: 480,  # CAP_PROP_FRAME_HEIGHT
-            7: 300,  # CAP_PROP_FRAME_COUNT
+            cv2.CAP_PROP_FPS: 30.0,
+            cv2.CAP_PROP_FRAME_WIDTH: 640,
+            cv2.CAP_PROP_FRAME_HEIGHT: 480,
+            cv2.CAP_PROP_FRAME_COUNT: 300,
         }.get(prop, 0)
         return mock_cap
 
@@ -34,11 +34,6 @@ class TestPersonTrackingSizeAnalysisIntegration:
         """Mock YOLO inference results with person detections."""
         # Create mock results for adult (tall) and child (short) persons
         mock_result = Mock()
-
-        # Mock boxes for two persons with different heights
-        mock_boxes = Mock()
-        mock_boxes.cpu.return_value = mock_boxes
-        mock_boxes.numpy.return_value = mock_boxes
 
         # Create mock box objects
         mock_box_adult = Mock()
@@ -53,8 +48,10 @@ class TestPersonTrackingSizeAnalysisIntegration:
         mock_box_child.conf = [0.8]
         mock_box_child.id = [2]  # Track ID 2
 
-        mock_boxes.__iter__ = Mock(return_value=iter([mock_box_adult, mock_box_child]))
-        mock_result.boxes = mock_boxes
+        mock_result.boxes.cpu.return_value.numpy.return_value = [
+            mock_box_adult,
+            mock_box_child,
+        ]
         mock_result.keypoints = None  # No keypoints for simplicity
 
         return [mock_result]
@@ -129,33 +126,16 @@ class TestPersonTrackingSizeAnalysisIntegration:
         # Process with temporary output directory
         # Note: This test uses mocked video and YOLO, so we can pass any path
         with tempfile.TemporaryDirectory() as temp_dir:
-            try:
-                annotations = pipeline.process(
-                    video_path="test_video.mp4",
-                    start_time=0.0,
-                    end_time=1.0,
-                    pps=1,
-                    output_dir=temp_dir,
-                )
-            except Exception:
-                # If mocking fails or video processing has issues, skip this test
-                pytest.skip("Video processing with mocks failed")
+            annotations = pipeline.process(
+                video_path="test_video.mp4",
+                start_time=0.0,
+                end_time=1.0,
+                pps=1,
+                output_dir=temp_dir,
+            )
 
-        # Verify we got annotations (may be empty if mocks don't work)
-        # Just verify the pipeline runs without crashing
-        assert annotations is not None
-
-        # Verify person IDs were assigned
-        person_ids = set()
-        for ann in annotations:
-            if "person_id" in ann:
-                person_ids.add(ann["person_id"])
-
-        # If no persons detected, mocks didn't work - skip test
-        if len(person_ids) == 0:
-            pytest.skip("Mocked video processing did not produce person detections")
-
-        assert len(person_ids) == 2  # Two persons detected
+        person_ids = {ann["person_id"] for ann in annotations if "person_id" in ann}
+        assert len(person_ids) == 2
 
         # Verify automatic labeling occurred
         labeled_annotations = [ann for ann in annotations if "person_label" in ann]
