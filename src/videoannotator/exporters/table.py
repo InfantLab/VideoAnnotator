@@ -277,3 +277,70 @@ def write_parquet(results: ResultsSet, path: str | Path) -> ExportSummary:
             }
         )
     return summary
+
+
+def vlm_coco_from_answers(
+    answers: list[dict[str, Any]], *, video_stem: str, model: str
+) -> dict[str, Any]:
+    """Ask AI try answers as the COCO file a vlm_annotation run writes (spec 027
+    R16), so a try's table has a run's columns and measures. Skipped samples
+    aren't annotations, as in a run; a model error is labelled as a run labels it.
+    """
+    annotations = []
+    images = []
+    for number, answer in enumerate(answers, 1):
+        status = answer.get("status")
+        if status == "skipped":
+            continue
+        frames = answer.get("frame_numbers") or [0]
+        center = int(frames[len(frames) // 2])
+        image_id = f"{video_stem}_frame_{center:06d}"
+        label = (
+            f"ERROR: {answer.get('error')}"
+            if status == "error"
+            else answer.get("label")
+        )
+        annotations.append(
+            {
+                "id": number,
+                "image_id": image_id,
+                "category_id": 1,
+                "timestamp_sec": answer.get("t"),
+                "frame_number": center,
+                "context_frame_numbers": frames,
+                "frame_times": answer.get("frame_times") or [],
+                "status": status,
+                "label": label,
+                "reasoning": answer.get("reasoning"),
+                "raw_response": answer.get("raw_response"),
+                "model": model,
+                "backend": "ollama",
+            }
+        )
+        images.append(
+            {"id": image_id, "frame_number": center, "timestamp": answer.get("t")}
+        )
+    return {
+        "images": images,
+        "annotations": annotations,
+        "categories": [{"id": 1, "name": "vlm_annotation"}],
+    }
+
+
+def write_vlm_answers_csv(
+    answers: list[dict[str, Any]], *, video_stem: str, model: str, out: TextIO
+) -> ExportSummary:
+    """A try's table, through the same reader and row builder as a run's."""
+    import tempfile
+
+    from .results_set import from_folder
+
+    with tempfile.TemporaryDirectory() as folder:
+        path = Path(folder) / f"{video_stem}_vlm_annotation.json"
+        path.write_text(
+            json.dumps(
+                vlm_coco_from_answers(answers, video_stem=video_stem, model=model)
+            ),
+            encoding="utf-8",
+        )
+        return write_csv(from_folder(folder), out)

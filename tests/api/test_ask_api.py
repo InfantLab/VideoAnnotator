@@ -597,3 +597,61 @@ def ask_threads_waiting() -> int:
     from videoannotator.pipelines.vlm_annotation.gate import gate_for
 
     return gate_for(LOCAL, MODEL)._tries_waiting
+
+
+class TestExport:
+    def test_a_tries_table_has_a_runs_columns(self, video, fake_model):
+        import csv
+        import io
+        import json
+
+        from videoannotator.api.database import get_storage_backend
+        from videoannotator.batch.result_files import job_folder
+
+        fake_model.answer = "NO_TOUCH"
+        tried = _until_done(_try(video, count=2, sampling={"interval": 2}).json()["id"])
+        r = client.get(f"/api/v1/ask/entries/{tried['id']}/export/table")
+        assert r.status_code == 200, r.text
+        assert r.headers["content-type"].startswith("text/csv")
+        try_rows = list(csv.reader(io.StringIO(r.text)))
+
+        run = _run(video).json()
+        job = get_storage_backend().load_job_metadata(run["job_id"])
+        folder = job_folder(job)
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "p01_t1_vlm_annotation.json").write_text(
+            json.dumps(
+                {
+                    "images": [{"id": "p01_t1_frame_000000", "frame_number": 0}],
+                    "annotations": [
+                        {
+                            "id": 1,
+                            "image_id": "p01_t1_frame_000000",
+                            "category_id": 1,
+                            "timestamp_sec": 0.0,
+                            "frame_number": 0,
+                            "label": "TOUCH",
+                            "reasoning": "TOUCH",
+                            "model": MODEL,
+                        }
+                    ],
+                    "categories": [{"id": 1, "name": "vlm_annotation"}],
+                }
+            )
+        )
+        redirect = client.get(
+            f"/api/v1/ask/entries/{run['id']}/export/table", follow_redirects=False
+        )
+        assert redirect.status_code == 307
+        assert redirect.headers["location"] == (
+            f"/api/v1/jobs/{run['job_id']}/export/table"
+        )
+        run_rows = list(
+            csv.reader(io.StringIO(client.get(redirect.headers["location"]).text))
+        )
+        assert try_rows[0] == run_rows[0]
+        labels = [row[try_rows[0].index("label")] for row in try_rows[1:]]
+        assert labels == ["NO_TOUCH", "NO_TOUCH"]
+        assert {row[try_rows[0].index("measure")] for row in try_rows[1:]} == {
+            "vlm_label"
+        }

@@ -14,6 +14,7 @@ model server and video checks below never block the event loop.
 
 from __future__ import annotations
 
+import io
 import json
 import logging
 import threading
@@ -23,6 +24,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Response
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -34,6 +36,7 @@ from ...database.database import get_db
 from ...database.models import AskEntry, EndpointConfirmation, Prompt
 from ...diagnostics.ollama import unreachable_hint
 from ...endpoints import classify_endpoint, normalise_base_url
+from ...exporters.table import write_vlm_answers_csv
 from ...pipelines.vlm_annotation import frames as vlm_frames
 from ...pipelines.vlm_annotation import sampling as vlm_sampling
 from ...pipelines.vlm_annotation.gate import gate_for
@@ -46,7 +49,7 @@ from ...pipelines.vlm_annotation.vlm_pipeline import (
     _parse_label,
 )
 from ...registry.pipeline_loader import extras_available
-from ...results_folder import RunFolder, run_name
+from ...results_folder import RunFolder, run_name, sanitize_component
 from ...storage.manager import get_storage_provider
 from ..database import get_storage_backend
 from ..errors import APIError
@@ -951,3 +954,37 @@ def _planned_for(job: Any) -> int:
         )
     except Exception:
         return 0
+
+
+# ---------------------------------------------------------------------------
+# Export
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/entries/{entry_id}/export/table",
+    summary="The entry's answers as the spec 025 table (CSV)",
+    description="A run's entry redirects to its job's table.",
+    response_class=Response,
+)
+def export_entry_table(
+    entry_id: str,
+    db: Session = Depends(get_db),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Response:
+    entry = _get_or_404(db, entry_id)
+    if entry.kind == "run" and entry.job_id:
+        return RedirectResponse(
+            f"/api/v1/jobs/{entry.job_id}/export/table", status_code=307
+        )
+    out = io.StringIO()
+    stem = Path(entry.video_path).stem
+    write_vlm_answers_csv(
+        entry.answers or [], video_stem=stem, model=entry.model, out=out
+    )
+    name = sanitize_component(entry.name or stem, "answers")
+    return Response(
+        content=out.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{name}_answers.csv"'},
+    )
