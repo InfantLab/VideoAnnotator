@@ -546,7 +546,7 @@ class TestRuns:
                         "stopped_early": False,
                     },
                     "vlm_skipped": [{"t": 2.5, "reason": "no readable frame"}],
-                }  # fmt: skip
+                }
             )
         )
         body = client.get(url).json()
