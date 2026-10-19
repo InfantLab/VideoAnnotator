@@ -12,7 +12,6 @@ import { isDemoJobId, getDemoLabel } from '@/lib/localLibrary/installDemoDataset
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { failedPipelinesOf } from '@/lib/jobOutcome';
-import { BatchNavigation } from '@/components/BatchNavigation';
 import { videoPageLink } from '@/lib/videoLinks';
 
 const JobResultsViewerForJob = ({ jobId }: { jobId: string | undefined }) => {
@@ -143,7 +142,6 @@ const JobResultsViewerForJob = ({ jobId }: { jobId: string | undefined }) => {
            backLabel={backName}
            backPath={backPath}
            failedPipelines={failedPipelines}
-           headerNav={batchId && jobId ? <BatchNavigation jobId={jobId} batchId={batchId} /> : undefined}
            missingVideoMessage={missingVideoMessage}
          />
       </ErrorBoundary>

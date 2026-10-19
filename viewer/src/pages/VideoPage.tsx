@@ -6,6 +6,7 @@ import { useNotes } from '@/hooks/useNotes';
 import { useRunFiles } from '@/hooks/useRunFiles';
 import { useVideoRuns } from '@/hooks/useVideoRuns';
 import { useVideoStream } from '@/hooks/useVideoStream';
+import { parseFrom } from '@/lib/listNavigation';
 import type { RunControls } from '@/components/lanes/RunMenu';
 import {
   defaultSelection,
@@ -23,8 +24,15 @@ import {
  * streamed from the server. `/video?path=…[&from=…][&run=<job id>][&t=<seconds>]`.
  */
 export default function VideoPage() {
+  const [params] = useSearchParams();
+  // Moving to the next video in a list starts that video afresh (its runs, its choices).
+  return <VideoPageFor key={params.get('path') ?? ''} />;
+}
+
+function VideoPageFor() {
   const [params, setParams] = useSearchParams();
   const path = params.get('path') ?? '';
+  const context = useMemo(() => parseFrom(params.get('from')), [params]);
   const preferredRun = params.get('run');
   const startAt = Number(params.get('t')) || 0;
 
@@ -111,6 +119,9 @@ export default function VideoPage() {
         provenance: files.provenance,
         files: files.files,
         notes,
+        context,
+        projects: info.projects,
+        preferredRun,
       }}
     />
   );

@@ -12,11 +12,14 @@ import type { ProvenanceByRun, RunFileRef } from '@/hooks/useRunFiles';
 import { AboutPanel } from '@/components/video/AboutPanel';
 import { DataTable } from '@/components/video/DataTable';
 import { KeysHelp } from '@/components/video/KeysHelp';
+import { HeaderActions, VideoContext } from '@/components/video/Header';
+import { DebugPanel } from '@/components/DebugPanel';
+import type { ListContext } from '@/lib/listNavigation';
 import { NoteEditor, type EditingNote } from '@/components/video/NoteEditor';
 import { NotesList } from '@/components/video/NotesList';
 import type { NotesApi } from '@/hooks/useNotes';
 import { NOTES_KIND } from '@/lib/laneKinds';
-import type { VideoNote } from '@/types/video';
+import type { ProjectRef, VideoNote } from '@/types/video';
 import { PlayerBar } from '@/components/video/PlayerBar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -144,6 +147,11 @@ export interface VideoSource {
   files?: RunFileRef[];
   /** The video's notes on the server; absent for local files (spec 028 US6). */
   notes?: NotesApi;
+  /** The list it was opened from (`from=`), and the projects holding it (spec 028 US7). */
+  context?: ListContext | null;
+  projects?: ProjectRef[];
+  /** The `run=` job, to place the video in a run's list. */
+  preferredRun?: string | null;
 }
 
 interface VideoViewProps {
@@ -316,7 +324,17 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
   };
   const editNote = (note: VideoNote) => setEditing({ id: note.id, start: note.start_sec, end: note.end_sec ?? null, text: note.text });
 
+  const [debugOpen, setDebugOpen] = useState(false);
+  const shownRuns = useMemo(() => {
+    const seen = new Map<string, RunRef>();
+    for (const lane of lanes) if (lane.run && !seen.has(lane.run.id)) seen.set(lane.run.id, lane.run);
+    return [...seen.values()];
+  }, [lanes]);
+  const context = source.context ?? null;
+  const backTo = context?.kind === 'run' ? `/batches/${encodeURIComponent(context.id)}` : context?.kind === 'project' ? '/datasets' : null;
+
   useVideoKeys({
+    toggleDebug: () => setDebugOpen((open) => !open),
     note: newNote,
     spanNote,
     playPause,
@@ -349,15 +367,25 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          aria-label="Back"
-          title="Back"
-          onClick={() => (onBack ? onBack() : window.history.length > 1 ? navigate(-1) : navigate('/'))}
+          aria-label={backTo ? 'Back to the list' : 'Back'}
+          title={backTo ? 'Back to the list' : 'Back'}
+          onClick={() =>
+            onBack ? onBack() : backTo ? navigate(backTo) : window.history.length > 1 ? navigate(-1) : navigate('/')
+          }
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="min-w-0 max-w-[16rem] truncate text-sm font-semibold" title={source.path ?? source.name}>
           {source.name}
         </h1>
+        {source.path && (
+          <VideoContext
+            path={source.path}
+            context={source.context ?? null}
+            run={source.preferredRun}
+            projects={source.projects ?? []}
+          />
+        )}
         <div className="mx-2 h-6 w-px bg-border" />
         <PlayerBar
           isPlaying={isPlaying}
@@ -389,6 +417,12 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
               Note
             </Button>
           )}
+          <HeaderActions
+            latestRun={source.local ? null : runRefs[0] ?? null}
+            shownRuns={source.local ? [] : shownRuns}
+            onDebug={() => setDebugOpen(true)}
+            onLoadOther={source.local ? onBack : undefined}
+          />
           <KeysHelp />
           <Button
             variant="ghost"
@@ -490,6 +524,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
         )}
       </div>
 
+      <DebugPanel isOpen={debugOpen} onClose={() => setDebugOpen(false)} />
       <HeightHandle
         height={timelineHeight}
         onResize={setDraggedHeight}
