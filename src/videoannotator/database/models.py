@@ -8,6 +8,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -460,3 +461,27 @@ class EndpointConfirmation(Base):
     base_url = Column(String(500), primary_key=True)
     confirmed_by = Column(String(64), nullable=True)
     confirmed_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class VideoNote(Base):
+    """A researcher's note at a moment or over a span of one video (spec 028 R9).
+
+    Keyed to the video (its resolved server path), not a run, so notes survive
+    re-runs. Every signed-in user sees and may edit every note; each records who
+    wrote it and who last changed it. Never pipeline output: exports mark it.
+    """
+
+    __tablename__ = "video_notes"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    video_path = Column(String(1000), nullable=False, index=True)
+    video_name = Column(String(255), nullable=False)
+    video_sha256 = Column(String(64), nullable=True)
+    start_sec = Column(Float, nullable=False)
+    end_sec = Column(Float, nullable=True)
+    text = Column(Text, nullable=False)
+    author_id = Column(String(64), nullable=False)
+    author_name = Column(String(200), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=True)
+    updated_by = Column(String(64), nullable=True)

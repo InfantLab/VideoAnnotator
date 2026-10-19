@@ -138,10 +138,10 @@ identity (`git -c user.name=… -c user.email=…`).
 
 ### Server
 
-- [ ] T040 [US6] In `src/videoannotator/database/models.py`: `VideoNote` (table `video_notes`) per data-model.md, index on `video_path`; created by the existing `create_all`; test in the existing models test that the table is created
-- [ ] T041 [US6] Create `src/videoannotator/video_notes.py`: `create(db, *, path, start, end, text, user) -> VideoNote` (trims text; swaps start/end when reversed; validates per contracts/api.md; fills name and `video_sha256` via `video_runs.sha256_for` when known), `list_for(db, path)`, `update(db, id, fields, user)`, `delete(db, id)`, `for_media_path(db, path) -> list[VideoNote]` (resolved), `to_dict`
-- [ ] T042 [US6] Routes in `src/videoannotator/api/v1/videos.py` (or `video_notes` router included under `/videos/notes`): `GET`, `POST`, `PATCH /{id}`, `DELETE /{id}` per contracts/api.md; path rule as `/videos/runs`; author from the signed-in user (`validate_api_key`: id and name/email)
-- [ ] T043 [P] [US6] Tests `tests/unit/test_video_notes.py` (validation, swap, trim, order, sha filled when known) and `tests/api/test_video_notes_api.py` (CRUD round trip; 422 codes; 404; another signed-in user may edit and is recorded as `updated_by`; needs the API key)
+- [X] T040 [US6] In `src/videoannotator/database/models.py`: `VideoNote` (table `video_notes`) per data-model.md, index on `video_path`; created by the existing `create_all`; test in the existing models test that the table is created
+- [X] T041 [US6] Create `src/videoannotator/video_notes.py`: `create(db, *, path, start, end, text, user) -> VideoNote` (trims text; swaps start/end when reversed; validates per contracts/api.md; fills name and `video_sha256` via `video_runs.sha256_for` when known), `list_for(db, path)`, `update(db, id, fields, user)`, `delete(db, id)`, `for_media_path(db, path) -> list[VideoNote]` (resolved), `to_dict`
+- [X] T042 [US6] Routes in `src/videoannotator/api/v1/videos.py` (or `video_notes` router included under `/videos/notes`): `GET`, `POST`, `PATCH /{id}`, `DELETE /{id}` per contracts/api.md; path rule as `/videos/runs`; author from the signed-in user (`validate_api_key`: id and name/email)
+- [X] T043 [P] [US6] Tests `tests/unit/test_video_notes.py` (validation, swap, trim, order, sha filled when known) and `tests/api/test_video_notes_api.py` (CRUD round trip; 422 codes; 404; another signed-in user may edit and is recorded as `updated_by`; needs the API key)
 
 ### Exports
 

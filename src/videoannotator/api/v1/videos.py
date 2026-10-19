@@ -28,10 +28,11 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from ... import video_notes
 from ...database.database import get_db
 from ...database_location import database_path
 from ...results_folder import display_path, video_unavailable_reason
@@ -233,6 +234,30 @@ class VideoRunsResponse(BaseModel):
     projects: list[ProjectRef]
 
 
+def _video_for_page(raw_path: str) -> tuple[Path, list[Any]]:
+    """The video a Video page shows, resolved, with its runs (spec 028).
+
+    Allowed when a job read it (even if it has moved since) or it is in a
+    folder Ask AI may read; else 403. A missing file no job read is 404.
+    """
+    if not raw_path or not raw_path.strip():
+        raise _path_required()
+    try:
+        resolved = Path(raw_path.strip()).expanduser().resolve()
+    except (OSError, RuntimeError) as e:
+        raise _not_allowed(Path(raw_path.strip())) from e
+    runs = runs_for(get_storage_backend(), resolved)
+    if not runs and not _in_readable_folder(resolved):
+        raise _not_allowed(resolved)
+    if not runs and not resolved.is_file():
+        raise APIError(
+            status_code=404,
+            code="VIDEO_NOT_FOUND",
+            message=f"No video at '{resolved}': it may have been moved or deleted.",
+        )
+    return resolved, runs
+
+
 @router.get(
     "/runs",
     response_model=VideoRunsResponse,
@@ -243,23 +268,8 @@ async def video_runs(
     db: Session = Depends(get_db),
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> VideoRunsResponse:
-    if not path.strip():
-        raise _path_required()
-    try:
-        resolved = Path(path.strip()).expanduser().resolve()
-    except (OSError, RuntimeError) as e:
-        raise _not_allowed(Path(path.strip())) from e
-
-    runs = runs_for(get_storage_backend(), resolved)
-    if not runs and not _in_readable_folder(resolved):
-        raise _not_allowed(resolved)
+    resolved, runs = _video_for_page(path)
     available = resolved.is_file()
-    if not available and not runs:
-        raise APIError(
-            status_code=404,
-            code="VIDEO_NOT_FOUND",
-            message=f"No video at '{resolved}': it may have been moved or deleted.",
-        )
     return VideoRunsResponse(
         path=str(resolved),
         name=resolved.name,
@@ -270,6 +280,135 @@ async def video_runs(
         runs=[RunInfo.model_validate(r.to_dict()) for r in runs],
         projects=[ProjectRef(**p) for p in projects_for(db, resolved, runs)],
     )
+
+
+# ---------------------------------------------------------------------------
+# Notes on a video (spec 028 R9)
+# ---------------------------------------------------------------------------
+
+
+class Note(BaseModel):
+    id: str
+    video_path: str
+    start_sec: float
+    end_sec: float | None = None
+    text: str
+    author_id: str
+    author_name: str
+    created_at: datetime
+    updated_at: datetime | None = None
+    updated_by: str | None = None
+
+
+class NotesResponse(BaseModel):
+    notes: list[Note]
+
+
+class NoteCreate(BaseModel):
+    path: str
+    start_sec: float
+    end_sec: float | None = None
+    text: str
+
+
+class NoteUpdate(BaseModel):
+    text: str | None = None
+    start_sec: float | None = None
+    end_sec: float | None = None
+
+
+def _note_error(e: video_notes.NoteError) -> APIError:
+    return APIError(status_code=422, code=e.code, message=e.message)
+
+
+def _note_not_found(note_id: str) -> APIError:
+    return APIError(
+        status_code=404, code="NOTE_NOT_FOUND", message=f"No note {note_id}."
+    )
+
+
+def _duration_of(path: Path) -> float | None:
+    return video_duration(path) if path.is_file() else None
+
+
+@router.get("/notes", response_model=NotesResponse, summary="Notes on one video")
+async def list_notes(
+    path: str = Query("", description="The video's path on the server"),
+    db: Session = Depends(get_db),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> NotesResponse:
+    resolved, _ = _video_for_page(path)
+    notes = video_notes.list_for(db, resolved)
+    return NotesResponse(notes=[Note(**video_notes.to_dict(n)) for n in notes])
+
+
+@router.post(
+    "/notes", response_model=Note, status_code=201, summary="Add a note to a video"
+)
+async def create_note(
+    body: NoteCreate,
+    db: Session = Depends(get_db),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Note:
+    resolved, runs = _video_for_page(body.path)
+    try:
+        note = video_notes.create(
+            db,
+            path=resolved,
+            start=body.start_sec,
+            end=body.end_sec,
+            text=body.text,
+            user=user,
+            duration=_duration_of(resolved),
+            sha256=sha256_for(runs),
+        )
+    except video_notes.NoteError as e:
+        raise _note_error(e) from e
+    return Note(**video_notes.to_dict(note))
+
+
+@router.patch("/notes/{note_id}", response_model=Note, summary="Change a note")
+async def update_note(
+    note_id: str,
+    body: NoteUpdate,
+    db: Session = Depends(get_db),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Note:
+    fields = body.model_dump(exclude_unset=True)
+    changes: dict[str, Any] = {}
+    if "text" in fields:
+        changes["text"] = fields["text"] or ""
+    if "start_sec" in fields and fields["start_sec"] is not None:
+        changes["start"] = fields["start_sec"]
+    if "end_sec" in fields:
+        changes["end"] = fields["end_sec"]
+    try:
+        existing = video_notes.get(db, note_id)
+        note = video_notes.update(
+            db,
+            note_id,
+            user=user,
+            duration=_duration_of(Path(existing.video_path)),
+            **changes,
+        )
+    except video_notes.NoteNotFound as e:
+        raise _note_not_found(note_id) from e
+    except video_notes.NoteError as e:
+        raise _note_error(e) from e
+    return Note(**video_notes.to_dict(note))
+
+
+@router.delete("/notes/{note_id}", status_code=204, summary="Delete a note")
+async def delete_note(
+    note_id: str,
+    db: Session = Depends(get_db),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Response:
+    try:
+        video_notes.delete(db, note_id)
+    except video_notes.NoteNotFound as e:
+        raise _note_not_found(note_id) from e
+    return Response(status_code=204)
 
 
 # ---------------------------------------------------------------------------
