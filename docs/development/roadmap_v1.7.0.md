@@ -53,7 +53,12 @@ tools, decisions, journeys). Built by, in order:
       (from presets), the new nav, help in context. Takes over v1.6.0's Phase 6 (corpus
       overview); [`specs/010-corpus-analysis-foundations`](../../specs/010-corpus-analysis-foundations/spec.md)
       to be reconciled with it.
-- [ ] Try the sketches on one or two researchers before 027's plan (spec 023 Process step 5).
+- [ ] Movement metrics (spec to write, after 029; pulled forward from v1.8.0 Phase 3): simple
+      per-person measures computed on the server, such as average frame-to-frame deltas of pose
+      keypoints, added to the output additively and shown as numeric lanes on the Video page.
+      Replaces the person-box-area lane as the movement view.
+- Researchers try the design through pilot feedback after release, not before (spec 023,
+  clarified 2026-10-19).
 
 ---
 
@@ -191,7 +196,6 @@ found three real bugs hidden by tests that couldn't fail).
 - Remote and HPC dispatch ([`roadmap_v1.8_to_v2.0.md`](roadmap_v1.8_to_v2.0.md)).
 - A benchmark of our own (see v1.6.0, Phase 5c).
 - Human review or correction of pipeline output (shelved, spec 023).
-- A movement measure per person (v1.8.0 Phase 3, server-side post-processing).
 
 ---
 

@@ -1,11 +1,11 @@
 # Feature Specification: Viewer Overhaul (design)
 
-**Feature Branch**: `023-viewer-overhaul` (work lands on `1.6-dev`)
+**Feature Branch**: `023-viewer-overhaul` (work began on `1.6-dev`, continues on `1.7-dev`)
 **Created**: 2026-10-06
 **Updated**: 2026-10-06, scope widened from the results player to the whole viewer experience;
 2026-10-16, themes 7–13, research, decisions, draft proposal, journeys, and the split into
 specs 026–029
-**Status**: Design. Research, decisions, a draft proposal and journeys are here; it is built by
+**Status**: Design. Research, decisions, the agreed proposal and journeys are here; it is built by
 specs 026–029 (see [Split into specs](#split-into-specs)).
 **Sequence**: the spec after [022](../022-videos-read-in-place/spec.md) (videos and results where
 you expect them).
@@ -19,6 +19,20 @@ The roadmap had a visual redesign as "decided after the pilot"
 ([roadmap_v1.6.0.md](../../docs/development/roadmap_v1.6.0.md), Out of Scope). This placeholder
 first recorded the decision to make it the next spec after 022, scoped to the results player. While
 checking 022 (2026-10-06), it became clear the bigger problem is the experience as a whole.
+
+## Clarifications
+
+### Session 2026-10-19
+
+- Q: Is the draft proposal adopted? → A: Yes: agreed, closing open questions 3–5; pilot feedback
+  may revise it.
+- Q: Which journeys must be excellent for rc1 and the pilot? → A: Both in journeys.md, equally:
+  New to AI analysis, and Experienced in manual coding.
+- Q: Where is movement per person computed? → A: On the server, in v1.7.0 (pulled forward from
+  v1.8.0 Phase 3), as its own spec after 029: simple metrics such as average frame-to-frame deltas
+  of pose keypoints per person, shown on the Video page; nothing computed in the viewer.
+- Q: How do we learn what researchers need (Process step 2)? → A: No separate study; collect
+  pilot feedback after the v1.7.0 release.
 
 ## The problem
 
@@ -69,10 +83,10 @@ shows and how a researcher moves through it.
    researchers already use: "session" is a recording session, "analysis" is the statistics,
    "pass" is coding-tool jargon. Revisit only if pilot users stumble on it.
 
-## Draft proposal (2026-10-16, for review)
+## Proposal (2026-10-16, agreed 2026-10-19)
 
-Agreed in discussion so far, not yet tried on researchers. Journeys (Process step 5) will be
-checked against it.
+Agreed, and built by specs 026–029; not yet tried on researchers, so pilot feedback may revise
+it. Journeys (Process step 5) are checked against it.
 
 ### Settings: light touch, three layers
 
@@ -273,8 +287,9 @@ One video: everything found in it, from any run, on one time axis, with the valu
 | [028 Video page](../028-video-page/spec.md) | Player, lanes as controls, zoom, data beside the video, run per lane, notes, streaming instead of the zip and folder question | none strictly; reuses 027's timeline work |
 | [029 Videos and projects](../029-videos-and-projects/spec.md) | One Videos page with projects and folders, projects from datasets, settings that projects remember, workflows from presets, simplified New run, new nav, Home for first run, activity indicator, help in context | 028 (opening a video), 026 (New run) |
 
-Not in any of them yet: a real movement measure (theme 2; roadmap v1.8.0 Phase 3 computes it on
-the server), and human review of pipeline output (shelved).
+After them: simple movement metrics per person (theme 2), such as average frame-to-frame deltas
+of pose keypoints, computed on the server as roadmap v1.8.0 Phase 3 describes but pulled forward
+into v1.7.0, as its own spec after 029; the Video page shows them as numeric lanes. Not in any spec: human review of pipeline output (shelved).
 
 ## Starting point for the model (discussion of 2026-10-06, not settled; see Decisions above)
 
@@ -310,10 +325,13 @@ the fact ("run this on more videos?", "keep these together?"), never demanded up
    and an optional project as the only grouping.
 2. ~~Can a video be in more than one project? Is a saved dataset a project?~~ Yes to both
    (Decisions 6 and 7). Still open: what simplifying datasets into projects means in practice.
-3. Where do settings live, and how do they vary: project defaults, versions, per-run overrides?
-4. What does a light-touch user see, and when does the structure appear?
-5. Which pages survive, merge or go: Home, Jobs, Results, Datasets, Prompts, Workbench, Compare?
-6. Which two or three journeys must be excellent for rc1 and the pilot?
+3. ~~Where do settings live, and how do they vary?~~ Settled by the proposal's three layers: runs
+   record what they used, projects remember current settings, workflows only when asked.
+4. ~~What does a light-touch user see, and when does the structure appear?~~ Settled by the
+   proposal: Ask AI and Home need no project; projects are made after the fact.
+5. ~~Which pages survive, merge or go?~~ Settled by the proposal's Pages table.
+6. ~~Which two or three journeys must be excellent for rc1 and the pilot?~~ Both in
+   [journeys.md](journeys.md), equally: New to AI analysis, and Experienced in manual coding.
 
 ## Process
 
@@ -325,17 +343,18 @@ This needs research and thought before a spec. Proposed steps, each written up i
 2. **Users and tasks**: who uses it (a tinkerer with VLMs, a lab coding a corpus, a student
    reviewing someone else's results) and their main tasks, in their own words. Ask pilot labs and
    psychologist colleagues, not only us. Cold start: people can't say how they'll use a tool
-   they've never had, so asking what they want of it gives little. Approach still to decide.
+   they've never had, so asking what they want of it gives little. Decided (2026-10-19): no
+   separate study before release; pilot feedback after v1.7.0 is the check, and may revise the
+   proposal.
 3. **Comparable tools**: how researchers already organise video coding work (ELAN, BORIS, Datavyu,
    Label Studio, DeepLabCut's GUI, FiftyOne, Noldus Observer). Which of their words and structures
    researchers already know. Desk research done: [comparable-tools.md](comparable-tools.md);
    hands-on tries still to do.
 4. **Model and vocabulary**: settle the hierarchy, the words, and what lives at each level,
-   including settings. Hierarchy and words settled (Decisions 1–8); settings (open question 3)
-   still to do.
+   including settings. Done: Decisions 1–8 and the proposal.
 5. **Journeys and wireframes**: the chosen journeys step by step, and the navigation, as sketches.
-   Try them on one or two researchers before specifying. Begun: [journeys.md](journeys.md)
-   (New to AI analysis; experienced in manual coding), each checked against the draft proposal.
+   Tried on researchers through pilot feedback after v1.7.0 (step 2), not before. Begun: [journeys.md](journeys.md)
+   (New to AI analysis; experienced in manual coding), each checked against the proposal.
 6. **Specify**: `/speckit-specify` from the above.
 
 ## Themes to cover (from the original placeholder; now one part of the whole)
@@ -344,8 +363,9 @@ This needs research and thought before a spec. Proposed steps, each written up i
    moments and the rest, made easier to read, compare and navigate.
 2. **New metrics on the timeline**, starting with **movement per person** over time. Related:
    [roadmap_v1.8.0.md](../../docs/development/roadmap_v1.8.0.md) Phase 3 plans to compute movement
-   on the server, per tracked person. The spec should decide whether to pull that forward or
-   compute in the viewer first.
+   on the server, per tracked person. Decided (2026-10-19): pull simple server-side metrics forward
+   into v1.7.0 (e.g. average frame-to-frame deltas of pose keypoints, per person), as their own
+   spec after 029, so the viewer can show them; nothing is computed in the viewer.
 3. **The underlying data, easier to reach**: from any overlay or timeline event to the values
    behind it, and out to a file. Related: roadmap v1.6.0 Phase 3 (tidy export).
 4. **A more modern interface** across the viewer.
@@ -415,6 +435,6 @@ Each with what the viewer does today (checked in `viewer/src/` at `a4edb1a`).
   says which pipeline it came from (spec 017), and researcher notes stay visibly distinct from
   pipeline output.
 - Standalone mode (dropping in files, no server) keeps working.
-- Results are in the run folders defined by spec 022. Researcher annotations will be stored there
-  too unless the spec decides otherwise.
+- Results are in the run folders defined by spec 022. Researcher notes are not: they are stored on
+  the server keyed to the video, so they survive re-runs (spec 028, FR-018).
 - The API can grow to support the new model, but additively (constitution, Principle V).

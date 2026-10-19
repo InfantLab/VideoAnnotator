@@ -116,6 +116,10 @@ plugin/backend seam from Phase 1 is real, not aspirational.
 
 ### Phase 3: Server-Side Timeseries Post-Processing (pandas)
 
+> **Moved to v1.7.0 (2026-10-19)** for simple metrics (per-person average deltas of pose
+> keypoints), so the new viewer can show them; see `roadmap_v1.7.0.md` Phase 1 and spec 023.
+> What remains here is extending the pattern to other pipelines.
+
 **Problem**: Per-frame annotations (person bounding boxes/keypoints) ship as static per-frame COCO
 records; anything temporal — e.g. how far a tracked person moved between frames — is currently left
 to Video Annotation Viewer to compute client-side, where compute is more constrained than the
