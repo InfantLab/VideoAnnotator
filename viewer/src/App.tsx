@@ -10,6 +10,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppLayout } from "@/components/AppLayout";
 import { lazy, Suspense, type ReactNode } from "react";
 import Home from "./pages/Home";
+import { AskRedirect } from "./components/ask/AskRedirect";
 
 // Every page but Home loads on first visit, keeping the initial bundle within
 // the constitution's 300 KB gzipped (it was one 300+ KB chunk).
@@ -24,9 +25,8 @@ const Settings = lazy(() => import("./pages/Settings"));
 const JobResultsViewer = lazy(() => import("./pages/JobResultsViewer"));
 const Results = lazy(() => import("./pages/Results"));
 const Datasets = lazy(() => import("./pages/Datasets"));
-const Prompts = lazy(() => import("./pages/Prompts"));
-const Workbench = lazy(() => import("./pages/Workbench"));
 const Compare = lazy(() => import("./pages/Compare"));
+const AskAI = lazy(() => import("./pages/AskAI"));
 const Pipelines = lazy(() => import("./pages/Pipelines"));
 
 /** Per page, so the navigation stays on screen while a page loads. */
@@ -68,10 +68,12 @@ const App = () => (
                     <Route path="/batches" element={<Navigate to="/jobs" replace />} />
                     <Route path="/batches/:batchId" element={page(<BatchDetail />)} />
                     <Route path="/datasets" element={page(<Datasets />)} />
-                    <Route path="/prompts" element={page(<Prompts />)} />
+                    {/* Ask AI replaced the Prompts page and the Workbench (spec 027); old links still land. */}
+                    <Route path="/prompts" element={<AskRedirect history />} />
                     <Route path="/pipelines" element={page(<Pipelines />)} />
-                    <Route path="/workbench" element={page(<Workbench />)} />
+                    <Route path="/workbench" element={<AskRedirect />} />
                     <Route path="/compare" element={page(<Compare />)} />
+                    <Route path="/ask" element={page(<AskAI />)} />
                     <Route path="/settings" element={page(<Settings />)} />
                   </Route>
 

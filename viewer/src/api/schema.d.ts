@@ -1484,6 +1484,9 @@ export interface paths {
          *     server (FR-004). Distinguishes "server unreachable" (503) from "reachable
          *     but zero models pulled" (200 with an empty list) -- both are valid states a
          *     researcher needs to tell apart, not one generic failure (FR-005).
+         *
+         *     `endpoint` says whether the server is on this computer or local network
+         *     (`local`) or elsewhere (`remote`), decided by address (spec 027 R9).
          */
         get: operations["list_vlm_models_api_v1_vlm_models_get"];
         put?: never;
@@ -1516,6 +1519,250 @@ export interface paths {
          *     own burst-window/clamping logic exactly (edge case).
          */
         post: operations["preview_vlm_prompt_api_v1_vlm_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a video once, to use in Ask AI and later runs */
+        post: operations["upload_video_api_v1_videos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos/stream-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A short-lived token to play a video in the browser */
+        post: operations["stream_token_api_v1_videos_stream_token_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Play a video (range requests); the token is the credential */
+        get: operations["stream_video_api_v1_videos_stream_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ask/tries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Try a question on one moment or a few, without a run */
+        post: operations["create_try_api_v1_ask_tries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ask/entries/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One history entry (polled while a try is running) */
+        get: operations["get_entry_api_v1_ask_entries__entry_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete an entry (its author or an admin); a run stays */
+        delete: operations["delete_entry_api_v1_ask_entries__entry_id__delete"];
+        options?: never;
+        head?: never;
+        /** Name or star an entry (seen by everyone on the server) */
+        patch: operations["update_entry_api_v1_ask_entries__entry_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/ask/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The history: every try and run, newest first, starred first
+         * @description Entries are shared by everyone on the server; `mine=true` keeps the caller's own.
+         *     The first page lists starred entries first. `library` lists prompts from the
+         *     prompt library that no entry uses yet, so their records still appear; it is
+         *     empty when filtered by video and after the first page.
+         */
+        get: operations["list_entries_api_v1_ask_entries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ask/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Keep a question that hasn't been tried yet
+         * @description Saved before another entry is restored over it, so it isn't lost.
+         */
+        post: operations["create_draft_api_v1_ask_drafts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ask/frames": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The frames one sample would send, without asking a model */
+        get: operations["sample_frames_api_v1_ask_frames_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ask/endpoint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where the model runs: on this computer or network, or remote
+         * @description Works even when the model server is unreachable, so the badge always shows.
+         */
+        get: operations["get_endpoint_api_v1_ask_endpoint_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ask/endpoints/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Agree that frames may be sent to this remote model server
+         * @description Recorded for everyone on the server (FR-015).
+         */
+        post: operations["confirm_endpoint_api_v1_ask_endpoints_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ask/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run the question on the whole video (or its range) as a job
+         * @description An ordinary vlm_annotation job, with its history entry. Stop it with POST /jobs/{job_id}/cancel: the answers so far are kept.
+         */
+        post: operations["create_run_api_v1_ask_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ask/runs/{job_id}/answers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A run's answers so far (polled while it goes) */
+        get: operations["run_answers_api_v1_ask_runs__job_id__answers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ask/entries/{entry_id}/export/table": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The entry's answers as the spec 025 table (CSV)
+         * @description A run's entry redirects to its job's table.
+         */
+        get: operations["export_entry_table_api_v1_ask_entries__entry_id__export_table_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2227,6 +2474,36 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Answer */
+        Answer: {
+            /** T */
+            t: number;
+            /**
+             * Frame Numbers
+             * @default []
+             */
+            frame_numbers: number[];
+            /**
+             * Frame Times
+             * @default []
+             */
+            frame_times: number[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "answered" | "error" | "skipped";
+            /** Label */
+            label?: string | null;
+            /** Reasoning */
+            reasoning?: string | null;
+            /** Raw Response */
+            raw_response?: string | null;
+            /** Error */
+            error?: string | null;
+            /** Total Time */
+            total_time?: number | null;
+        };
         /** BatchCancelResponse */
         BatchCancelResponse: {
             /** Batch Id */
@@ -2362,6 +2639,11 @@ export interface components {
              */
             burst_offsets?: string | null;
             /**
+             * Burst Spacing Sec
+             * @description Seconds between burst frames; frame_interval_sec when omitted
+             */
+            burst_spacing_sec?: number | null;
+            /**
              * Think
              * @default false
              */
@@ -2401,6 +2683,19 @@ export interface components {
              * @description Saved dataset (spec 007) this job was submitted from, if any. Purely informational -- not validated against /api/v1/datasets.
              */
             dataset_id?: string | null;
+        };
+        /** Body_upload_video_api_v1_videos_post */
+        Body_upload_video_api_v1_videos_post: {
+            /**
+             * Video
+             * @description The video file
+             */
+            video: string;
+        };
+        /** ConfirmRequest */
+        ConfirmRequest: {
+            /** Base Url */
+            base_url: string;
         };
         /**
          * ConflictingDistribution
@@ -2552,6 +2847,124 @@ export interface components {
             /** Server Selection */
             server_selection?: boolean | null;
         };
+        /** DraftRequest */
+        DraftRequest: {
+            /** Video Path */
+            video_path: string;
+            /** Prompt */
+            prompt: string;
+            /** Model */
+            model: string;
+            /** Base Url */
+            base_url?: string | null;
+            /**
+             * Think
+             * @default false
+             */
+            think: boolean;
+            /** @default {
+             *       "interval": 5,
+             *       "start": 0,
+             *       "frames": 1
+             *     } */
+            sampling: components["schemas"]["Sampling"];
+        };
+        /** EndpointState */
+        EndpointState: {
+            /** Base Url */
+            base_url: string;
+            /** Host */
+            host: string;
+            /**
+             * Class
+             * @enum {string}
+             */
+            class: "local" | "remote";
+            /** Confirmed */
+            confirmed: boolean;
+        };
+        /** EntriesResponse */
+        EntriesResponse: {
+            /** Entries */
+            entries: components["schemas"]["Entry"][];
+            /** Library */
+            library: components["schemas"]["LibraryPrompt"][];
+            /** Next Before */
+            next_before?: string | null;
+        };
+        /** Entry */
+        Entry: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "try" | "run" | "draft";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "done" | "stopped" | "failed";
+            /** Prompt */
+            prompt: string;
+            /** Prompt Sha256 */
+            prompt_sha256: string;
+            /** Model */
+            model: string;
+            /** Base Url */
+            base_url: string;
+            /**
+             * Endpoint Class
+             * @enum {string}
+             */
+            endpoint_class: "local" | "remote";
+            sampling: components["schemas"]["Sampling"];
+            /** Think */
+            think: boolean;
+            /** Video Path */
+            video_path: string;
+            /** Video Name */
+            video_name: string;
+            /** Video Sha256 */
+            video_sha256?: string | null;
+            /** Moments */
+            moments?: number[] | null;
+            /** Answers */
+            answers?: components["schemas"]["Answer"][] | null;
+            /** Job Id */
+            job_id?: string | null;
+            /** User Id */
+            user_id?: string | null;
+            /** Name */
+            name?: string | null;
+            /**
+             * Starred
+             * @default false
+             */
+            starred: boolean;
+            /** Created At */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+            /**
+             * Job Status
+             * @description Runs: the job's status
+             */
+            job_status?: string | null;
+            /**
+             * Progress
+             * @description Runs: percent done
+             */
+            progress?: number | null;
+        };
+        /** EntryPatch */
+        EntryPatch: {
+            /** Name */
+            name?: string | null;
+            /** Starred */
+            starred?: boolean | null;
+        };
         /**
          * ExtrasGroupInfo
          * @description One installable extras group (spec 011 contract §2).
@@ -2637,6 +3050,18 @@ export interface components {
              * @description The same location as the researcher's own machine shows it (differs from `path` under Docker)
              */
             display_path: string;
+        };
+        /** FramesResponse */
+        FramesResponse: {
+            /** T */
+            t: number;
+            /** Frames */
+            frames: components["schemas"]["SampleFrameOut"][];
+            /**
+             * Requested
+             * @description More than len(frames) when clipped
+             */
+            requested: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2990,6 +3415,27 @@ export interface components {
             result_path?: string | null;
             /** Error Message */
             error_message?: string | null;
+        };
+        /** LibraryPrompt */
+        LibraryPrompt: {
+            /** Sha256 */
+            sha256: string;
+            /** Text */
+            text: string;
+            /** Name */
+            name?: string | null;
+            /**
+             * Models
+             * @default []
+             */
+            models: string[];
+            /**
+             * Starred
+             * @default false
+             */
+            starred: boolean;
+            /** Last Used At */
+            last_used_at?: string | null;
         };
         /** OpenFolderRequest */
         OpenFolderRequest: {
@@ -3483,6 +3929,76 @@ export interface components {
             /** Download Url */
             download_url: string;
         };
+        /** RunAnswers */
+        RunAnswers: {
+            /** Status */
+            status: string;
+            /** Planned */
+            planned: number;
+            /** Done */
+            done: number;
+            /** Stopped Early */
+            stopped_early: boolean;
+            /** Answers */
+            answers: components["schemas"]["Answer"][];
+            /** Skipped */
+            skipped: components["schemas"]["Skipped"][];
+        };
+        /** RunRequest */
+        RunRequest: {
+            /** Video Path */
+            video_path: string;
+            /** Prompt */
+            prompt: string;
+            /** Model */
+            model: string;
+            /** Base Url */
+            base_url?: string | null;
+            /**
+             * Think
+             * @default false
+             */
+            think: boolean;
+            /** @default {
+             *       "interval": 5,
+             *       "start": 0,
+             *       "frames": 1
+             *     } */
+            sampling: components["schemas"]["Sampling"];
+        };
+        /** SampleFrameOut */
+        SampleFrameOut: {
+            /** Frame Number */
+            frame_number: number;
+            /** Timestamp Sec */
+            timestamp_sec: number;
+            /** Jpeg Base64 */
+            jpeg_base64: string;
+        };
+        /** Sampling */
+        Sampling: {
+            /**
+             * Interval
+             * @default 5
+             */
+            interval: number;
+            /**
+             * Start
+             * @default 0
+             */
+            start: number;
+            /** End */
+            end?: number | null;
+            /** Moments */
+            moments?: number[] | null;
+            /**
+             * Frames
+             * @default 1
+             */
+            frames: number;
+            /** Spacing */
+            spacing?: number | null;
+        };
         /** ScannedVideo */
         ScannedVideo: {
             /** Relative Path */
@@ -3519,6 +4035,13 @@ export interface components {
              */
             stop_requested: boolean;
         };
+        /** Skipped */
+        Skipped: {
+            /** T */
+            t: number;
+            /** Reason */
+            reason: string;
+        };
         /** StopSharingRequest */
         StopSharingRequest: {
             /**
@@ -3550,6 +4073,59 @@ export interface components {
             /** Missing */
             missing: number;
         };
+        /** StreamTokenRequest */
+        StreamTokenRequest: {
+            /** Path */
+            path: string;
+        };
+        /** StreamTokenResponse */
+        StreamTokenResponse: {
+            /** Token */
+            token: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Path */
+            path: string;
+            /** Name */
+            name: string;
+            /** Duration Sec */
+            duration_sec?: number | null;
+        };
+        /** TryRequest */
+        TryRequest: {
+            /** Video Path */
+            video_path: string;
+            /** Prompt */
+            prompt: string;
+            /** Model */
+            model: string;
+            /** Base Url */
+            base_url?: string | null;
+            /**
+             * Think
+             * @default false
+             */
+            think: boolean;
+            /** @default {
+             *       "interval": 5,
+             *       "start": 0,
+             *       "frames": 1
+             *     } */
+            sampling: components["schemas"]["Sampling"];
+            /**
+             * At
+             * @description One moment: "Try on this frame"
+             */
+            at?: number | null;
+            /**
+             * Count
+             * @description "Try on N moments"
+             */
+            count?: number | null;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -3577,12 +4153,36 @@ export interface components {
             /** Relative Path */
             relative_path?: string | null;
         };
+        /** VideoUploadResponse */
+        VideoUploadResponse: {
+            /** Path */
+            path: string;
+            /** Sha256 */
+            sha256: string;
+            /** Name */
+            name: string;
+            /** Duration Sec */
+            duration_sec?: number | null;
+        };
+        /** VlmEndpoint */
+        VlmEndpoint: {
+            /** Host */
+            host: string;
+            /**
+             * Class
+             * @description local or remote
+             */
+            class: string;
+            /** Confirmed */
+            confirmed: boolean;
+        };
         /** VlmModelsResponse */
         VlmModelsResponse: {
             /** Base Url */
             base_url: string;
             /** Models */
             models: string[];
+            endpoint?: components["schemas"]["VlmEndpoint"] | null;
         };
         /** VlmPreviewResponse */
         VlmPreviewResponse: {
@@ -5300,6 +5900,490 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["VlmPreviewResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_video_api_v1_videos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_video_api_v1_videos_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoUploadResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_token_api_v1_videos_stream_token_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StreamTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StreamTokenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_video_api_v1_videos_stream_get: {
+        parameters: {
+            query: {
+                path: string;
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_try_api_v1_ask_tries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_entry_api_v1_ask_entries__entry_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_entry_api_v1_ask_entries__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_entry_api_v1_ask_entries__entry_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntryPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_entries_api_v1_ask_entries_get: {
+        parameters: {
+            query?: {
+                video_path?: string | null;
+                mine?: boolean;
+                starred?: boolean | null;
+                limit?: number;
+                before?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntriesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_draft_api_v1_ask_drafts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sample_frames_api_v1_ask_frames_get: {
+        parameters: {
+            query: {
+                path: string;
+                t: number;
+                interval?: number;
+                frames?: number;
+                spacing?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FramesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_endpoint_api_v1_ask_endpoint_get: {
+        parameters: {
+            query?: {
+                base_url?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_endpoint_api_v1_ask_endpoints_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_run_api_v1_ask_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_answers_api_v1_ask_runs__job_id__answers_get: {
+        parameters: {
+            query?: {
+                after?: number;
+            };
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunAnswers"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_entry_table_api_v1_ask_entries__entry_id__export_table_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

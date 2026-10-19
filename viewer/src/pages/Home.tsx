@@ -15,6 +15,7 @@ import {
   Play,
   RotateCcw,
   Server,
+  Sparkles,
   Star,
 } from 'lucide-react';
 
@@ -245,12 +246,19 @@ export default function Home() {
       </Card>
 
       {/* Primary actions */}
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
-        <Button size="lg" className="h-auto py-4 justify-start gap-3" disabled={!connected} onClick={() => navigate('/jobs/new')}>
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <Button size="lg" className="h-auto py-4 justify-start gap-3" disabled={!connected} onClick={() => navigate('/ask')}>
+          <Sparkles className="h-5 w-5" />
+          <span className="text-left">
+            <span className="block font-semibold">Ask AI about a video</span>
+            <span className="block text-xs opacity-80 font-normal">Try a question on a frame, then the whole video</span>
+          </span>
+        </Button>
+        <Button size="lg" variant="outline" className="h-auto py-4 justify-start gap-3" disabled={!connected} onClick={() => navigate('/jobs/new')}>
           <Play className="h-5 w-5" />
           <span className="text-left">
             <span className="block font-semibold">Run pipelines on videos</span>
-            <span className="block text-xs opacity-80 font-normal">Start a new job on the server</span>
+            <span className="block text-xs text-muted-foreground font-normal">Start a new job on the server</span>
           </span>
         </Button>
         <Button
@@ -380,16 +388,16 @@ export default function Home() {
           <Card className="p-4 space-y-2">
             <div className="flex items-center justify-between">
               <div className="font-semibold flex items-center gap-2">
-                <MessageSquareText className="h-4 w-4" /> Starred prompts
+                <MessageSquareText className="h-4 w-4" /> Starred questions
               </div>
-              <Link to="/prompts" className="text-sm underline underline-offset-2">
+              <Link to="/ask?history=open" className="text-sm underline underline-offset-2">
                 All
               </Link>
             </div>
             {starred.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Star the VLM prompts you reuse on the <Link className="underline" to="/prompts">Prompts</Link> page;
-                try new ones in the <Link className="underline" to="/workbench">workbench</Link>.
+                Star the questions you reuse in <Link className="underline" to="/ask?history=open">Ask AI</Link>&apos;s
+                history.
               </p>
             ) : (
               <ul className="space-y-1">

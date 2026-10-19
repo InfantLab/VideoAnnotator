@@ -12,7 +12,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { VlmModelPicker } from '@/components/VlmModelPicker';
-import { VlmPromptTestPanel } from '@/components/VlmPromptTestPanel';
+import { OpenInAskAI } from '@/components/ask/OpenInAskAI';
 import { isUrlParameter, urlValueError } from '@/lib/pipelineUrlFields';
 import { pipelineSummary } from '@/lib/pipelineGuide';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -27,11 +27,6 @@ interface DynamicPipelineParametersProps {
   onConfigChange: (
     updater: (prev: Record<string, unknown>) => Record<string, unknown>
   ) => void;
-  /** A representative selected video, threaded down so vlm_annotation's
-   * "test this prompt" slot has something to extract a frame from
-   * (VideoAnnotator spec 009 / viewer-handoff #2). Optional: every other
-   * pipeline's generic form ignores it entirely. */
-  previewVideoFile?: File;
 }
 
 const getPipelineConfig = (
@@ -102,7 +97,7 @@ const normalizeValue = (parameter: PipelineParameterSchema, value: unknown) => {
  * The same normalized/defaulted value a field's widget currently displays
  * (schema default until the user actually edits it), by name — since raw
  * `pipelineConfig[name]` is `undefined` until then, a consumer outside the
- * parameter-render loop (e.g. VlmPromptTestPanel) that read the raw config
+ * parameter-render loop (e.g. the Open in Ask AI link) that read the raw config
  * directly would see an empty value even while the form visibly shows a
  * default like the pipeline's own DEFAULT_PROMPT or default model.
  */
@@ -154,8 +149,7 @@ export const DynamicPipelineParameters = ({
   pipelines,
   selectedPipelineIds,
   config,
-  onConfigChange,
-  previewVideoFile
+  onConfigChange
 }: DynamicPipelineParametersProps) => {
   const selectedPipelines = useMemo(
     () => pipelines.filter((pipeline) => selectedPipelineIds.includes(pipeline.id)),
@@ -490,14 +484,13 @@ export const DynamicPipelineParameters = ({
             )}
 
             {pipeline.id === 'vlm_annotation' && (
-              <VlmPromptTestPanel
-                prompt={String(
-                  resolveParameterValue(pipeline.parameters, pipelineConfig, 'prompt') ?? ''
+              <OpenInAskAI
+                config={Object.fromEntries(
+                  (pipeline.parameters ?? []).map((p) => [
+                    p.name,
+                    resolveParameterValue(pipeline.parameters, pipelineConfig, p.name),
+                  ])
                 )}
-                model={String(
-                  resolveParameterValue(pipeline.parameters, pipelineConfig, 'model') ?? ''
-                )}
-                videoFile={previewVideoFile}
               />
             )}
           </div>

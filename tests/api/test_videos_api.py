@@ -94,7 +94,10 @@ def test_path_outside_the_allowed_places_is_refused(tmp_path, ingest_root):
 def test_a_shared_folder_video_is_readable(ingest_root):
     video = ingest_root / "clip.avi"
     video.write_bytes(synthetic_video_bytes_avi())
-    assert _token(str(video)).status_code == 200
+    r = _token(str(video))
+    assert r.status_code == 200
+    assert r.json()["name"] == "clip.avi"
+    assert r.json()["duration_sec"] == pytest.approx(2.0, abs=0.2)
 
 
 def test_missing_video_in_a_shared_folder_is_not_found(ingest_root):

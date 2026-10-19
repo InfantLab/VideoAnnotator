@@ -43,6 +43,7 @@ const renderHome = () =>
           <Route path="/" element={<Home />} />
           <Route path="/jobs/new" element={<Wizard />} />
           <Route path="/view/:id" element={<p>viewer</p>} />
+          <Route path="/ask" element={<p>ask ai</p>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -58,6 +59,13 @@ describe('Home dashboard', () => {
     } as never);
     vi.mocked(apiClient.listDatasets).mockResolvedValue({ datasets: [], total: 0 });
     vi.mocked(apiClient.listPrompts).mockResolvedValue({ prompts: [], total: 0 } as never);
+  });
+
+  it('leads to Ask AI', async () => {
+    vi.mocked(apiClient.getJobs).mockResolvedValue({ jobs: [], total: 0 } as never);
+    renderHome();
+    await userEvent.click(await screen.findByRole('button', { name: /Ask AI about a video/ }));
+    expect(await screen.findByText('ask ai')).toBeInTheDocument();
   });
 
   it('shows the setup checklist on a new install, with pipeline readiness', async () => {

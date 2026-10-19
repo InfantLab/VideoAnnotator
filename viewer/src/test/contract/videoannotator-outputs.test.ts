@@ -60,6 +60,26 @@ async function loadLikeArtifactsZipFrom(dir: string) {
   return mergeAnnotationData(detected);
 }
 
+function fakeVideoMetadata() {
+  vi.spyOn(console, 'log').mockImplementation(() => {});
+  // jsdom can't decode video; report metadata as soon as a source is set.
+  const createElement = document.createElement.bind(document);
+  vi.spyOn(document, 'createElement').mockImplementation((tag: string, options?: ElementCreationOptions) => {
+    const element = createElement(tag, options);
+    if (tag === 'video') {
+      Object.defineProperties(element, {
+        duration: { value: 20 },
+        videoWidth: { value: 1280 },
+        videoHeight: { value: 720 },
+        src: { set: () => queueMicrotask(() => (element as HTMLVideoElement).onloadedmetadata?.(new Event('loadedmetadata'))) },
+      });
+    }
+    return element;
+  });
+  URL.createObjectURL = vi.fn(() => 'blob:video');
+  URL.revokeObjectURL = vi.fn();
+}
+
 describe.each([
   ['current', CURRENT],
   ['legacy (no provenance)', LEGACY],
@@ -69,25 +89,7 @@ describe.each([
   const loadLikeArtifactsZip = () => loadLikeArtifactsZipFrom(FIXTURES);
   const isLegacy = FIXTURES === LEGACY;
 
-  beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    // jsdom can't decode video; report metadata as soon as a source is set.
-    const createElement = document.createElement.bind(document);
-    vi.spyOn(document, 'createElement').mockImplementation((tag: string, options?: ElementCreationOptions) => {
-      const element = createElement(tag, options);
-      if (tag === 'video') {
-        Object.defineProperties(element, {
-          duration: { value: 20 },
-          videoWidth: { value: 1280 },
-          videoHeight: { value: 720 },
-          src: { set: () => queueMicrotask(() => (element as HTMLVideoElement).onloadedmetadata?.(new Event('loadedmetadata'))) },
-        });
-      }
-      return element;
-    });
-    URL.createObjectURL = vi.fn(() => 'blob:video');
-    URL.revokeObjectURL = vi.fn();
-  });
+  beforeEach(fakeVideoMetadata);
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -206,5 +208,26 @@ describe('VideoAnnotator ELAN export → viewer', () => {
     expect([...new Set(annotations.map((a) => a.tier))].sort()).toEqual([...tiers].sort());
     const speech = annotations.filter((a) => a.tier === 'speech_recognition speech');
     expect(speech[0]).toMatchObject({ value: 'Ready, baby girl?', startSec: 0, endSec: 1.34 });
+  });
+});
+
+// Spec 027: a run from Ask AI, stopped after 4 of 7 samples, writes the same
+// annotations with additive fields (frame_times, status, vlm_progress, vlm_skipped).
+describe('a stopped Ask AI run → viewer', () => {
+  const ASK_AI = path.join(CURRENT, 'ask_ai');
+  beforeEach(fakeVideoMetadata);
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reads the same annotations as a run without the new fields', async () => {
+    const stopped = fixtureIn(ASK_AI, 'demo_clip_vlm_annotation_stopped.json');
+    const detected = await detectFileType(stopped);
+    expect(detected.type).toBe('vlm_annotation');
+    const video = { file: new File(['video'], 'demo_clip.mp4', { type: 'video/mp4' }), type: 'video' as const, confidence: 1 };
+    const { data, metadata } = await mergeAnnotationData([detected, video]);
+    expect(metadata.warnings).toEqual([]);
+    expect(data.vlm_annotations).toHaveLength(3);
+
+    const plain = await mergeAnnotationData([await detectFileType(fixtureIn(CURRENT, 'demo_clip_vlm_annotation.json')), video]);
+    expect(data.vlm_annotations?.slice(0, 2)).toEqual(plain.data.vlm_annotations?.slice(0, 2));
   });
 });

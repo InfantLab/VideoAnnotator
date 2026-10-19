@@ -135,7 +135,9 @@ Stored once per content (research R12).
 
 ### `POST /videos/stream-token`
 
-Body `{ "path": "…" }` → `{ "token": "…", "expires_at": "…" }`. Path must be readable under the
+Body `{ "path": "…" }` → `{ "token": "…", "expires_at": "…", "path": "…", "name": "…",
+"duration_sec": 132.4 }` (the duration from the server's decoder, so the timeline draws even when
+the browser can't play the codec). Path must be readable under the
 rules above.
 
 ### `GET /videos/stream?path=&token=` (no API key; the token is the credential)

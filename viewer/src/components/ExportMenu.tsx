@@ -8,7 +8,7 @@ import { apiClient, type ExportScope } from '@/api/client';
 import { apiErrorEnvelope } from '@/api/handleError';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { summaryLines } from '@/lib/exports';
+import { saveBlob, summaryLines } from '@/lib/exports';
 
 const MethodsDialog = lazy(() => import('./MethodsDialog'));
 
@@ -19,17 +19,6 @@ const FALLBACK_NAMES: Record<Exclude<Busy, null>, string> = {
   parquet: 'results.parquet',
   elan: 'results.eaf',
 };
-
-function saveBlob(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
-}
 
 interface ExportMenuProps {
   scope: ExportScope;

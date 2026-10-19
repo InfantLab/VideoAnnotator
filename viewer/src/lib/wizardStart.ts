@@ -43,3 +43,13 @@ export function wizardStartOf(state: unknown): WizardStart | null {
 export function settingsOf(job: { selected_pipelines?: string[] | null; config?: Record<string, unknown> | null }): StartSettings {
   return { selectedPipelines: job.selected_pipelines ?? null, config: job.config ?? null };
 }
+
+/** "Run on more videos" from Ask AI (spec 027 FR-020): its question, model and sampling. */
+export function askWizardStart(question: string, model: string, config: Record<string, unknown>): WizardStart {
+  return {
+    mode: 'settings',
+    label: `Ask AI (${model})`,
+    selectedPipelines: ['vlm_annotation'],
+    config: { vlm_annotation: { ...config, prompt: question, model } },
+  };
+}

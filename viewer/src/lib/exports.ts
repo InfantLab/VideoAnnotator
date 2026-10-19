@@ -27,3 +27,29 @@ export function methodsMarkdown(methods: MethodsDescription): string {
   }
   return parts.join('\n');
 }
+
+/** Hand `blob` to the browser as a download called `name`. */
+export function saveBlob(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/** Several files as one zip (Ask AI's tables, one per shown entry). */
+export async function zipBlobs(files: Array<{ name: string; blob: Blob }>): Promise<Blob> {
+  const zip = await import('@zip.js/zip.js');
+  const writer = new zip.ZipWriter(new zip.BlobWriter('application/zip'));
+  const used = new Set<string>();
+  for (const { name, blob } of files) {
+    let unique = name;
+    for (let n = 2; used.has(unique); n++) unique = name.replace(/(\.[^.]+)?$/, ` ${n}$1`);
+    used.add(unique);
+    await writer.add(unique, new zip.BlobReader(blob));
+  }
+  return writer.close();
+}

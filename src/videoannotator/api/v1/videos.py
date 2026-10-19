@@ -216,6 +216,8 @@ class StreamTokenResponse(BaseModel):
     token: str
     expires_at: datetime
     path: str
+    name: str
+    duration_sec: float | None = None
 
 
 @router.post(
@@ -233,6 +235,10 @@ async def stream_token(
         token=token,
         expires_at=datetime.fromtimestamp(expires, UTC),
         path=str(path),
+        name=path.name,
+        # From the server's decoder: the window can draw the timeline even
+        # when this browser can't play the video's codec.
+        duration_sec=video_duration(path),
     )
 
 

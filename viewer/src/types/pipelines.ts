@@ -3,6 +3,8 @@
  * and parameter schema introspection.
  */
 
+import type { ModelEndpoint } from './ask';
+
 export type PipelineParameterType =
   | 'boolean'
   | 'string'
@@ -206,36 +208,8 @@ export interface ExtrasInstallJob {
 export interface VlmModelsResponse {
   baseUrl: string;
   models: string[];
-}
-
-/** Request for POST /api/v1/vlm/preview — test a prompt against one frame
- * (or burst) without creating a job. Exactly one of `image` or
- * (`videoPath` + `timestampSec`) must be provided. */
-export interface VlmPreviewRequest {
-  image?: Blob;
-  videoPath?: string;
-  timestampSec?: number;
-  prompt: string;
-  model: string;
-  samplingMode?: 'single_frame' | 'frame_burst';
-  frameIntervalSec?: number;
-  burstOffsets?: number[];
-  think?: boolean;
-  baseUrl?: string;
-}
-
-/** Response from POST /api/v1/vlm/preview. */
-export interface VlmPreviewResponse {
-  label: string;
-  reasoning: string;
-  rawResponse: string;
-  totalTime: number;
-  loadTime: number;
-  promptTokens: number;
-  respTokens: number;
-  tokensPerSec: number;
-  /** The frame(s) the model was shown, small; absent from servers before spec 020. */
-  frames: Array<{ frameNumber: number | null; timestampSec: number | null; jpegBase64: string }>;
+  /** Where the model server is, decided by the server (spec 027 R9). */
+  endpoint?: ModelEndpoint;
 }
 
 /** The server's Hugging Face token status (VideoAnnotator spec 031). Never carries the token. */

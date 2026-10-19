@@ -6,17 +6,17 @@ import { ConnectionErrorBanner } from '@/components/ConnectionErrorBanner';
 import { useServerCapabilitiesContext } from '@/contexts/ServerCapabilitiesContext';
 import { isCorsOrNetworkError } from '@/lib/connectionUtils';
 import { APP_NAME } from '@/utils/version';
-import { BookOpen, Briefcase, Database, Layers, MessageSquareText, PlusCircle, Settings } from 'lucide-react';
+import { BookOpen, Briefcase, Database, Layers, PlusCircle, Settings, Sparkles } from 'lucide-react';
 import vavIcon from '@/assets/v-a-v.icon.png';
 
-// In the order of the work: run videos, follow jobs, look at results. Datasets
-// (videos to run) and Prompts feed new jobs. Opening local files is under Results.
+// In the order of the work: ask about a video, run videos, follow jobs, look at
+// results. Datasets (videos to run) feed new jobs. Opening local files is under Results.
 const navItems = [
+  { path: '/ask', label: 'Ask AI', icon: Sparkles },
   { path: '/jobs/new', label: 'New job', icon: PlusCircle },
   { path: '/jobs', label: 'Jobs', icon: Briefcase },
   { path: '/results', label: 'Results', icon: BookOpen },
   { path: '/datasets', label: 'Datasets', icon: Database },
-  { path: '/prompts', label: 'Prompts', icon: MessageSquareText },
   { path: '/pipelines', label: 'Pipelines', icon: Layers },
 ];
 
