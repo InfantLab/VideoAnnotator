@@ -24,6 +24,7 @@ import { queueLabel } from "@/lib/queuePosition";
 import { RunAgainActions } from "@/components/RunAgainActions";
 import { CompareWith } from "@/components/CompareWith";
 import { settingsOf, wizardState } from "@/lib/wizardStart";
+import { videoPageLink } from '@/lib/videoLinks';
 
 const CreateJobDetail = () => {
   const { jobId } = useParams<{ jobId: string }>();
@@ -106,7 +107,7 @@ const CreateJobDetail = () => {
       return;
     }
 
-    navigate(`/view/${job.id}`);
+    navigate(videoPageLink(job));
   };
 
   // The job's results zip; the video only when asked for (spec 022).

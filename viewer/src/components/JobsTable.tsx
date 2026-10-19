@@ -34,6 +34,7 @@ import { queueLabel } from '@/lib/queuePosition';
 import { settingsOf, wizardState } from '@/lib/wizardStart';
 import { formatDuration, formatFileSize, progressOf, videoFieldsOf } from '@/lib/jobRow';
 import { JobStatusBadge } from '@/components/JobStatusBadge';
+import { videoPageLink } from '@/lib/videoLinks';
 
 interface JobsTableProps {
   jobs: JobResponse[];
@@ -186,7 +187,7 @@ export function JobsTable({
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/view/${job.id}`);
+                                navigate(videoPageLink(job));
                               }}
                             >
                               <Eye className="h-4 w-4 mr-1" />

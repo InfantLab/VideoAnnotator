@@ -31,6 +31,7 @@ import { getJobDatasetIndex, getRootDirHandle } from '@/lib/localLibrary/library
 import { settingsOf, wizardState } from '@/lib/wizardStart';
 import type { PipelineDescriptor } from '@/types/pipelines';
 import { APP_NAME, GITHUB_URL, VERSION } from '@/utils/version';
+import { videoPageLink } from '@/lib/videoLinks';
 
 const SETUP_HIDDEN_KEY = 'vav.home.setupHidden';
 
@@ -106,7 +107,7 @@ function RecentRun({ job }: { job: JobResponse }) {
           {job.status === 'completed' && (
             <>
               <Button size="sm" asChild>
-                <Link to={`/view/${job.id}`}>
+                <Link to={videoPageLink(job)}>
                   <Eye className="h-4 w-4 mr-1" /> View
                 </Link>
               </Button>

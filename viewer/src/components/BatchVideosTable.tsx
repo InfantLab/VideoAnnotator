@@ -31,6 +31,7 @@ import {
   videoFieldsOf,
   type VideoOutcome,
 } from '@/lib/jobRow';
+import { videoPageLink } from '@/lib/videoLinks';
 
 // Below this a search box is clutter; the whole run fits on screen.
 const SEARCH_FROM = 10;
@@ -213,7 +214,7 @@ export function BatchVideosTable({ jobs, active, preparing = false }: BatchVideo
                         className="h-7"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/view/${job.id}`);
+                          navigate(videoPageLink(job));
                         }}
                       >
                         <Eye className="h-4 w-4 mr-1" />

@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { failedPipelinesOf } from '@/lib/jobOutcome';
 import { BatchNavigation } from '@/components/BatchNavigation';
+import { videoPageLink } from '@/lib/videoLinks';
 
 const JobResultsViewerForJob = ({ jobId }: { jobId: string | undefined }) => {
   const navigate = useNavigate();
@@ -163,11 +164,53 @@ const JobResultsViewerForJob = ({ jobId }: { jobId: string | undefined }) => {
   );
 };
 
+/**
+ * `/view/<job id>` opens the Video page for the job's video, starting on this
+ * run (spec 028 R1; Principle V keeps the old address working).
+ */
+const RedirectToVideoPage = ({ jobId }: { jobId: string | undefined }) => {
+  const navigate = useNavigate();
+  const { data: job, error } = useQuery({
+    queryKey: ['job', jobId],
+    queryFn: () => apiClient.getJob(jobId!),
+    enabled: !!jobId,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (job?.video_path) navigate(videoPageLink(job), { replace: true });
+  }, [job, navigate]);
+
+  if (error || !jobId || (job && !job.video_path)) {
+    const message = !jobId
+      ? 'No run was named in this address.'
+      : error
+        ? (error as Error).message
+        : 'This run has no video recorded, so its results have nothing to play against.';
+    return (
+      <div className="container mx-auto p-8 max-w-2xl">
+        <Button variant="ghost" onClick={() => navigate('/jobs')} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Failed to load results</AlertTitle>
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+  return <div className="p-8 text-sm text-muted-foreground">Opening the video…</div>;
+};
+
 // Keyed by job: moving to the next video in a batch changes only the URL, and
 // the downloader's state would otherwise keep showing the previous video.
 const JobResultsViewer = () => {
   const { jobId } = useParams<{ jobId: string }>();
-  return <JobResultsViewerForJob key={jobId} jobId={jobId} />;
+  // Demo results live only in this browser's library until spec 029.
+  if (jobId && isDemoJobId(jobId)) return <JobResultsViewerForJob key={jobId} jobId={jobId} />;
+  return <RedirectToVideoPage key={jobId} jobId={jobId} />;
 };
 
 export default JobResultsViewer;

@@ -21,9 +21,18 @@ import {
   mergeAnnotationData
 } from '@/lib/parsers/merger';
 
+export interface LoadedFiles {
+  video: File | null;
+  /** Every result file, as given (the Video page builds its table from their text). */
+  results: File[];
+  data: StandardAnnotationData;
+}
+
 interface FileUploaderProps {
   onVideoLoad: (file: File) => void;
   onAnnotationLoad: (data: StandardAnnotationData) => void;
+  /** Called with everything loaded, once the files are read (spec 028 standalone mode). */
+  onFilesLoaded?: (loaded: LoadedFiles) => void;
 }
 
 interface FileStatus {
@@ -61,7 +70,7 @@ const FileTypeLabel = ({ type, confidence }: { type: DetectedFileType; confidenc
   );
 };
 
-export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProps) => {
+export const FileUploader = ({ onVideoLoad, onAnnotationLoad, onFilesLoaded }: FileUploaderProps) => {
   const [fileStatuses, setFileStatuses] = useState<FileStatus[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
@@ -165,6 +174,11 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
       }
 
       onAnnotationLoad(result.data);
+      onFilesLoaded?.({
+        video: videoFile ?? null,
+        results: fileStatuses.filter((f) => f.detected.type !== 'video' && f.detected.type !== 'audio').map((f) => f.file),
+        data: result.data,
+      });
 
     } catch (error) {
       showErrorToast(toast, parseApiError(error));
@@ -181,7 +195,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad }: FileUploaderProp
       setProcessingStage('');
       setProcessingProgress(0);
     }
-  }, [fileStatuses, onVideoLoad, onAnnotationLoad, toast]);
+  }, [fileStatuses, onVideoLoad, onAnnotationLoad, onFilesLoaded, toast]);
 
   const handleFileInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;

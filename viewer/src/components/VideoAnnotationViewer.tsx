@@ -4,7 +4,7 @@ import { Timeline } from './Timeline';
 import { UnifiedControls } from './UnifiedControls';
 import { VideoControls } from './VideoControls';
 import { FileViewer } from './FileViewer';
-import { FileUploader } from './FileUploader';
+import { FileUploader, type LoadedFiles } from './FileUploader';
 import { Footer } from './Footer';
 import { DebugPanel } from './DebugPanel';
 import { VlmAnnotationPanel } from './VlmAnnotationPanel';
@@ -32,6 +32,8 @@ interface VideoAnnotationViewerProps {
   failedPipelines?: Record<string, string>;
   /** Shown in the header after the video's name (e.g. batch previous/next). */
   headerNav?: React.ReactNode;
+  /** Standalone `/viewer`: files once loaded go to the Video page instead (spec 028). */
+  onLocalFiles?: (loaded: LoadedFiles) => void;
   /**
    * Set when the job's video is gone (spec 022): its annotations are still
    * shown, and the player says where the video was expected.
@@ -48,6 +50,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
   failedPipelines = {},
   headerNav,
   missingVideoMessage,
+  onLocalFiles,
 }) => {
   const navigate = useNavigate();
   const [videoFile, setVideoFile] = useState<File | null>(initialVideoFile);
@@ -200,6 +203,7 @@ export const VideoAnnotationViewer: React.FC<VideoAnnotationViewerProps> = ({
             <FileUploader
               onVideoLoad={handleVideoLoad}
               onAnnotationLoad={handleAnnotationLoad}
+              onFilesLoaded={onLocalFiles}
             />
 
             {/* Saved results */}
