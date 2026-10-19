@@ -669,3 +669,56 @@ def sample_frames(
         ],
         requested=frames,
     )
+
+
+class EndpointState(BaseModel):
+    base_url: str
+    host: str
+    class_: Literal["local", "remote"] = Field(alias="class")
+    confirmed: bool
+
+    model_config = {"populate_by_name": True}
+
+
+@router.get(
+    "/endpoint",
+    response_model=EndpointState,
+    response_model_by_alias=True,
+    summary="Where the model runs: on this computer or network, or remote",
+    description="Works even when the model server is unreachable, so the badge "
+    "always shows.",
+)
+def get_endpoint(
+    base_url: str | None = None,
+    db: Session = Depends(get_db),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> EndpointState:
+    return EndpointState(**endpoint_state(db, base_url or default_ollama_base_url()))
+
+
+class ConfirmRequest(BaseModel):
+    base_url: str
+
+
+@router.post(
+    "/endpoints/confirm",
+    status_code=204,
+    summary="Agree that frames may be sent to this remote model server",
+    description="Recorded for everyone on the server (FR-015).",
+)
+def confirm_endpoint(
+    body: ConfirmRequest,
+    db: Session = Depends(get_db),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Response:
+    key = normalise_base_url(body.base_url)
+    if db.get(EndpointConfirmation, key) is None:
+        db.add(
+            EndpointConfirmation(
+                base_url=key,
+                confirmed_by=_user_id(user),
+                confirmed_at=datetime.now(UTC),
+            )
+        )
+        db.commit()
+    return Response(status_code=204)

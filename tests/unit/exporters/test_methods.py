@@ -202,3 +202,43 @@ def test_local_weights_are_named_by_file_not_path(tmp_path):
     assert (
         "pyannote/speaker-diarization-community-1" in prose
     )  # a hub id keeps its owner
+
+
+@pytest.mark.parametrize(
+    ("endpoint_class", "host", "wording"),
+    [
+        ("local", "127.0.0.1", "running on this computer"),
+        ("local", "localhost", "running on this computer"),
+        ("local", "host.docker.internal", "running on this computer"),
+        ("local", "lab-gpu", "running on the local network"),
+        ("remote", "api.example.com", "running on a remote server"),
+        (None, None, None),
+    ],
+)
+def test_vlm_says_where_the_model_ran_without_naming_it(
+    tmp_path, endpoint_class, host, wording
+):
+    """Spec 027 FR-016; the server stays unnamed (FR-029)."""
+    run = make_run(tmp_path, {"a": FIXTURES})
+    path = run / "a" / "demo_clip_vlm_annotation.json"
+    data = json.loads(path.read_text())
+    vlm = {"prompt_sha256": "a" * 64, "base_url": f"http://{host}:11434"}
+    if endpoint_class:
+        vlm.update(endpoint_class=endpoint_class, endpoint_host=host)
+    data["provenance"] = {
+        "schema_version": 1,
+        "pipeline": {"name": "vlm_annotation", "sub_pipeline": None},
+        "videoannotator_version": "1.7.0",
+        "models": [{"name": "qwen3.5:9b", "source": "ollama"}],
+        "settings": {"model": "qwen3.5:9b"},
+        "determinism": {},
+        "vlm": vlm,
+    }
+    path.write_text(json.dumps(data))
+    prose = describe(from_folder(run)).prose
+    if wording:
+        assert wording in prose
+    else:
+        assert "running on" not in prose
+    if host and host not in ("localhost", "127.0.0.1"):
+        assert host not in prose

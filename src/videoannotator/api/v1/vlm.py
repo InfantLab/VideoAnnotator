@@ -13,10 +13,12 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
 from ...config_env import default_ollama_base_url
+from ...database.database import get_db
 from ...diagnostics.ollama import unreachable_hint
 from ...pipelines.vlm_annotation import frames as vlm_frames
 from ...pipelines.vlm_annotation.ollama_client import (
@@ -46,24 +48,38 @@ logger = logging.getLogger("videoannotator.api")
 router = APIRouter()
 
 
+class VlmEndpoint(BaseModel):
+    host: str
+    class_: str = Field(alias="class", description="local or remote")
+    confirmed: bool
+
+    model_config = {"populate_by_name": True}
+
+
 class VlmModelsResponse(BaseModel):
     base_url: str
     models: list[str]
+    endpoint: VlmEndpoint | None = None
 
 
 @router.get(
     "/models",
     response_model=VlmModelsResponse,
+    response_model_by_alias=True,
     summary="List models available on the configured Ollama server",
     description="""
 Lists the vision-language models currently pulled on the configured Ollama
 server (FR-004). Distinguishes "server unreachable" (503) from "reachable
 but zero models pulled" (200 with an empty list) -- both are valid states a
 researcher needs to tell apart, not one generic failure (FR-005).
+
+`endpoint` says whether the server is on this computer or local network
+(`local`) or elsewhere (`remote`), decided by address (spec 027 R9).
 """,
 )
-async def list_vlm_models(
+def list_vlm_models(
     base_url: str | None = None,
+    db: Session = Depends(get_db),
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> VlmModelsResponse:
     """List models pulled on the configured Ollama server."""
@@ -81,7 +97,16 @@ async def list_vlm_models(
             message=f"Cannot reach Ollama server at {base_url}",
             hint=f"{e} {unreachable_hint(base_url)}",
         ) from e
-    return VlmModelsResponse(base_url=base_url, models=models)
+    from .ask import endpoint_state
+
+    state = endpoint_state(db, base_url)
+    return VlmModelsResponse(
+        base_url=base_url,
+        models=models,
+        endpoint=VlmEndpoint(
+            host=state["host"], class_=state["class"], confirmed=state["confirmed"]
+        ),
+    )
 
 
 class PreviewFrame(BaseModel):

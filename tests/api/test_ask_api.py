@@ -390,3 +390,82 @@ class TestSampling:
     def test_listed_moments_are_tried_exactly(self, video):
         r = _try(video, count=10, sampling={"moments": [3.5, 0.5, 2.0]})
         assert r.json()["moments"] == [0.5, 2.0, 3.5]
+
+
+REMOTE = "https://api.example.com"
+
+
+@pytest.fixture
+def remote_resolves(monkeypatch):
+    import socket
+
+    from videoannotator import endpoints
+
+    real = socket.getaddrinfo
+
+    def fake(host, *args, **kwargs):
+        if host == "api.example.com":
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))]
+        return real(host, *args, **kwargs)
+
+    monkeypatch.setattr(endpoints.socket, "getaddrinfo", fake)
+
+
+class TestEndpoint:
+    def test_remote_unconfirmed_is_refused_until_confirmed(
+        self, video, remote_resolves, as_users
+    ):
+        r = _try(video, base_url=REMOTE)
+        assert r.status_code == 409
+        assert r.json()["error"]["code"] == "REMOTE_NOT_CONFIRMED"
+        assert "api.example.com" in r.json()["error"]["message"]
+
+        state = client.get("/api/v1/ask/endpoint", params={"base_url": REMOTE}).json()
+        assert state == {
+            "base_url": REMOTE,
+            "host": "api.example.com",
+            "class": "remote",
+            "confirmed": False,
+        }
+
+        r = client.post(
+            "/api/v1/ask/endpoints/confirm",
+            json={"base_url": REMOTE + "/"},
+            headers=as_users("irene"),
+        )
+        assert r.status_code == 204
+        r = client.post(
+            "/api/v1/ask/tries",
+            json={
+                "video_path": video,
+                "prompt": "Touch?",
+                "model": MODEL,
+                "base_url": REMOTE,
+                "at": 1.0,
+            },
+            headers=as_users("caspar"),
+        )
+        assert r.status_code == 201, r.text
+        assert r.json()["endpoint_class"] == "remote"
+        _until_done(r.json()["id"])
+        seen = client.get(
+            "/api/v1/ask/endpoint",
+            params={"base_url": REMOTE},
+            headers=as_users("caspar"),
+        ).json()
+        assert seen["confirmed"] is True
+
+    def test_local_is_always_confirmed(self):
+        state = client.get("/api/v1/ask/endpoint", params={"base_url": LOCAL}).json()
+        assert (state["class"], state["confirmed"]) == ("local", True)
+
+    def test_models_list_says_where_the_server_is(self, monkeypatch):
+        from videoannotator.api.v1 import vlm
+
+        monkeypatch.setattr(vlm, "OllamaVLMClient", FakeModelServer)
+        body = client.get("/api/v1/vlm/models", params={"base_url": LOCAL}).json()
+        assert body["endpoint"] == {
+            "host": "127.0.0.1",
+            "class": "local",
+            "confirmed": True,
+        }

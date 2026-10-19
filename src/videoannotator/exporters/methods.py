@@ -13,6 +13,7 @@ Contract: specs/025-results-out/contracts/elan-and-methods.md.
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import re
 from collections import Counter
@@ -118,6 +119,25 @@ class _Use:
     deterministic: bool | None
     prompt_sha256: str | None
     quantization: str | None
+    where: str | None = None
+
+
+# Where a model ran, without naming the server (FR-029).
+_THIS_COMPUTER_HOSTS = {"localhost", "host.docker.internal"}
+
+
+def _where(vlm: dict[str, Any]) -> str | None:
+    cls = vlm.get("endpoint_class")
+    if cls == "remote":
+        return "on a remote server"
+    if cls != "local":
+        return None
+    host = str(vlm.get("endpoint_host") or "").strip("[]").lower()
+    try:
+        loopback = ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        loopback = host in _THIS_COMPUTER_HOSTS
+    return "on this computer" if loopback else "on the local network"
 
 
 def _short_name(model: _Model) -> str:
@@ -186,6 +206,7 @@ def _use(
         deterministic=determinism.get("deterministic") if determinism else None,
         prompt_sha256=vlm.get("prompt_sha256"),
         quantization=vlm.get("quantization"),
+        where=_where(vlm),
     )
 
 
@@ -242,6 +263,8 @@ class _Writer:
             text += " with " + ", ".join(_model_text(m) for m in use.models)
         if use.quantization:
             text += f", quantised {use.quantization}"
+        if use.where:
+            text += f", running {use.where}"
         if use.prompt_sha256:
             text += f", using prompt {use.prompt_sha256[:12]} (full text below)"
         if use.settings:

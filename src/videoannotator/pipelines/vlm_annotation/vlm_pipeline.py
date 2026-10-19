@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from videoannotator.config_env import default_ollama_base_url
+from videoannotator.endpoints import classify_endpoint
 from videoannotator.exporters.native_formats import (
     create_coco_annotation,
     create_coco_image_entry,
@@ -130,6 +131,7 @@ class VLMAnnotationPipeline(BasePipeline):
     def provenance_vlm(self) -> dict[str, Any]:
         """The VLM-specific provenance fields (spec 017 FR-003)."""
         details = getattr(self, "_vlm_details", {})
+        endpoint = classify_endpoint(self.config["base_url"])
         return {
             "prompt_sha256": hashlib.sha256(
                 self.config["prompt"].encode("utf-8")
@@ -137,6 +139,8 @@ class VLMAnnotationPipeline(BasePipeline):
             "model_digest": details.get("digest"),
             "quantization": details.get("quantization"),
             "base_url": self.config["base_url"],
+            "endpoint_class": endpoint.cls,
+            "endpoint_host": endpoint.host,
         }
 
     def cleanup(self) -> None:
