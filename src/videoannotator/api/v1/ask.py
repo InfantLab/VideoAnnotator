@@ -622,3 +622,50 @@ def create_draft(
         user_id=_user_id(user),
     )
     return _entry(entry)
+
+
+class SampleFrameOut(BaseModel):
+    frame_number: int
+    timestamp_sec: float
+    jpeg_base64: str
+
+
+class FramesResponse(BaseModel):
+    t: float
+    frames: list[SampleFrameOut]
+    requested: int = Field(description="More than len(frames) when clipped")
+
+
+@router.get(
+    "/frames",
+    response_model=FramesResponse,
+    summary="The frames one sample would send, without asking a model",
+)
+def sample_frames(
+    path: str,
+    t: float,
+    interval: float = 5.0,
+    frames: int = 1,
+    spacing: float | None = None,
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> FramesResponse:
+    video = readable_video(path)
+    meta = video_info(str(video))
+    check_sampling(
+        Sampling(interval=interval, frames=frames, spacing=spacing),
+        float(meta["duration"]),
+    )
+    offsets = None if frames == 1 else vlm_sampling.burst_offsets_for(frames)
+    sent, _ = vlm_frames.read_sample_from(str(video), t, offsets, spacing or interval)
+    return FramesResponse(
+        t=t,
+        frames=[
+            SampleFrameOut(
+                frame_number=f.frame_number,
+                timestamp_sec=f.time,
+                jpeg_base64=vlm_frames.thumbnail(f.jpeg),
+            )
+            for f in sent
+        ],
+        requested=frames,
+    )

@@ -58,10 +58,10 @@ def write_synthetic_video_avi(
             # Deterministic per-frame pattern (no randomness)
             frame[:, :, 0] = (frame_idx * 7) % 255
             frame[:, :, 1] = (
-                np.arange(spec.width, dtype=np.uint8)[None, :] + frame_idx * 3
+                np.arange(spec.width, dtype=np.uint8)[None, :] + (frame_idx * 3) % 256
             ) % 255
             frame[:, :, 2] = (
-                np.arange(spec.height, dtype=np.uint8)[:, None] + frame_idx * 5
+                np.arange(spec.height, dtype=np.uint8)[:, None] + (frame_idx * 5) % 256
             ) % 255
             writer.write(frame)
     finally:

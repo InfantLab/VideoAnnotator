@@ -339,3 +339,54 @@ class TestHistory:
         assert r.status_code == 201
         assert (r.json()["kind"], r.json()["status"]) == ("draft", "done")
         assert r.json()["answers"] is None
+
+
+class TestSampling:
+    def test_frames_of_a_burst(self, video, fake_model):
+        r = client.get(
+            "/api/v1/ask/frames",
+            params={"path": video, "t": 2.0, "frames": 3, "spacing": 0.5},
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["requested"] == 3
+        assert [f["timestamp_sec"] for f in body["frames"]] == [1.5, 2.0, 2.5]
+        assert [f["frame_number"] for f in body["frames"]] == [15, 20, 25]
+        assert all(f["jpeg_base64"] for f in body["frames"])
+        assert fake_model.calls == []
+
+    def test_frames_near_the_end_are_fewer(self, video):
+        body = client.get(
+            "/api/v1/ask/frames",
+            params={"path": video, "t": 4.8, "frames": 3, "spacing": 0.5},
+        ).json()
+        assert body["requested"] == 3
+        assert [f["timestamp_sec"] for f in body["frames"]] == [4.3, 4.8]
+
+    def test_count_tries_the_moments_of_the_shared_cases(self, ingest_root):
+        import json
+        from pathlib import Path
+
+        cases = json.loads(
+            (
+                Path(__file__).parent.parent
+                / "fixtures"
+                / "ask_ai"
+                / "sampling_cases.json"
+            ).read_text()
+        )
+        case = next(c for c in cases if c["name"] == "count 10 of 40 points")
+        long_video = ingest_root / "long.avi"
+        write_synthetic_video_avi(
+            long_video,
+            SyntheticVideoSpec(fps=1, num_frames=int(case["duration"])),
+        )
+        r = _try(str(long_video), count=10, sampling={"interval": case["interval"]})
+        assert r.status_code == 201, r.text
+        assert r.json()["moments"] == case["expect"]["chosen"]
+        done = _until_done(r.json()["id"])
+        assert [a["t"] for a in done["answers"]] == case["expect"]["chosen"]
+
+    def test_listed_moments_are_tried_exactly(self, video):
+        r = _try(video, count=10, sampling={"moments": [3.5, 0.5, 2.0]})
+        assert r.json()["moments"] == [0.5, 2.0, 3.5]
