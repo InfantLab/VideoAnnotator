@@ -42,9 +42,10 @@ Object.defineProperty(HTMLMediaElement.prototype, 'load', {
 })
 
 // Mock canvas context (for overlay rendering tests)
-HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation((contextId) => {
+HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation(function (this: HTMLCanvasElement, contextId) {
   if (contextId === '2d') {
     return {
+      canvas: this,
       clearRect: vi.fn(),
       fillRect: vi.fn(),
       strokeRect: vi.fn(),

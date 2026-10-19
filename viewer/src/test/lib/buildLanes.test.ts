@@ -157,3 +157,28 @@ describe('the visible slice and density', () => {
     expect(samplingInterval([5])).toBeNull();
   });
 });
+
+describe('zoom, pan and follow', () => {
+  const D = 3600;
+  it('zooms around an anchor, never under a second', async () => {
+    const { zoomView } = await import('@/lib/lanes');
+    expect(zoomView({ start: 0, end: 100 }, 0.5, 50, D)).toEqual({ start: 25, end: 75 });
+    let view = { start: 0, end: 4 };
+    for (let i = 0; i < 10; i++) view = zoomView(view, 0.5, 2, D);
+    expect(view.end - view.start).toBe(1);
+    expect(zoomView({ start: 0, end: 3000 }, 2, 0, D)).toEqual({ start: 0, end: D });
+  });
+
+  it('pans within the video', async () => {
+    const { panView } = await import('@/lib/lanes');
+    expect(panView({ start: 10, end: 20 }, -50, D)).toEqual({ start: 0, end: 10 });
+    expect(panView({ start: 10, end: 20 }, 5000, D)).toEqual({ start: D - 10, end: D });
+  });
+
+  it('pages forward when the playhead leaves the view', async () => {
+    const { followView } = await import('@/lib/lanes');
+    const view = { start: 0, end: 10 };
+    expect(followView(view, 5, D)).toBe(view);
+    expect(followView(view, 10.1, D)).toEqual({ start: 10.1, end: 20.1 });
+  });
+});
