@@ -17,11 +17,12 @@ describe('the Video page timeline', () => {
   it('has one lane per kind of result present, and none for kinds absent', async () => {
     renderVideoPage();
     await lanesLoaded();
-    const kinds = new Set(screen.getAllByRole('group').map((g) => g.dataset.kind));
-    expect(kinds).toEqual(
-      new Set(['speech', 'speakers', 'people', 'faces', 'emotion', 'scenes', 'ask_ai', 'action_units', 'head_pose', 'gaze', 'person_area']),
+    const groups = screen.getAllByRole('group').map((g) => g.dataset.kind);
+    expect(new Set(groups)).toEqual(
+      new Set(['speech', 'speakers', 'people', 'faces', 'emotion', 'scenes', 'ask_ai', 'action_units', 'head_pose', 'gaze', 'person_area', 'notes']),
     );
-    expect(kinds.has('notes')).toBe(false);
+    // The researcher's own lane is always there, last.
+    expect(groups[groups.length - 1]).toBe('notes');
   });
 
   it('labels every row', async () => {
@@ -36,9 +37,14 @@ describe('the Video page timeline', () => {
   it('gives every lane and row label a tooltip saying what it shows and what made it', async () => {
     renderVideoPage();
     await lanesLoaded();
-    for (const label of [...screen.getAllByTestId('lane-label'), ...screen.getAllByTestId('row-label')]) {
-      expect(label.getAttribute('title')).toMatch(/: .+\. (Made by|From) \w+/);
+    const pipelineLanes = screen.getAllByRole('group').filter((g) => g.dataset.kind !== 'notes');
+    for (const lane of pipelineLanes) {
+      for (const label of [...within(lane).getAllByTestId('lane-label'), ...within(lane).getAllByTestId('row-label')]) {
+        expect(label.getAttribute('title')).toMatch(/: .+\. (Made by|From) \w+/);
+      }
     }
+    const notes = screen.getAllByRole('group').find((g) => g.dataset.kind === 'notes')!;
+    expect(within(notes).getByTestId('lane-label').getAttribute('title')).toMatch(/not pipeline output/);
   });
 
   it('gives a run with both face pipelines two Faces lanes, each naming its pipeline', async () => {

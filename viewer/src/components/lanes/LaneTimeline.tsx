@@ -236,7 +236,7 @@ export function LaneTimeline({
             return (
               <div
                 key={lane.id}
-                className="flex border-b border-border/50"
+                className={lane.kind === 'notes' ? 'flex border-y border-dashed border-amber-500/70' : 'flex border-b border-border/50'}
                 role="group"
                 aria-label={lane.label}
                 data-testid={`lane-${lane.id}`}
@@ -289,6 +289,10 @@ export function LaneTimeline({
                   {lane.status === 'failed' ? (
                     <p className="px-2 text-xs leading-[18px] text-destructive" data-testid="lane-failed">
                       Failed: {lane.error}
+                    </p>
+                  ) : lane.status === 'empty' ? (
+                    <p className="px-2 text-[10px] leading-[18px] text-muted-foreground" data-testid="lane-empty">
+                      {lane.error}
                     </p>
                   ) : collapsed ? (
                     <div style={{ height: laneHeight(lane, true) }} />

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, PanelRightClose, PanelRightOpen, Sparkles } from 'lucide-react';
+import { ArrowLeft, PanelRightClose, PanelRightOpen, Sparkles, StickyNote } from 'lucide-react';
 
 import { apiClient } from '@/api/client';
 import { VideoPlayer } from '@/components/VideoPlayer';
@@ -12,6 +12,11 @@ import type { ProvenanceByRun, RunFileRef } from '@/hooks/useRunFiles';
 import { AboutPanel } from '@/components/video/AboutPanel';
 import { DataTable } from '@/components/video/DataTable';
 import { KeysHelp } from '@/components/video/KeysHelp';
+import { NoteEditor, type EditingNote } from '@/components/video/NoteEditor';
+import { NotesList } from '@/components/video/NotesList';
+import type { NotesApi } from '@/hooks/useNotes';
+import { NOTES_KIND } from '@/lib/laneKinds';
+import type { VideoNote } from '@/types/video';
 import { PlayerBar } from '@/components/video/PlayerBar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -22,6 +27,7 @@ import {
   adjacentEvent,
   buildLanes,
   followView,
+  formatClockTenths,
   frameRateFromRows,
   fullView,
   zoomView,
@@ -39,7 +45,7 @@ import {
   saveLanePrefs,
   type LanePrefs,
 } from '@/lib/lanePrefs';
-import type { Row } from '@/lib/table/rows';
+import { noteRow, type Row } from '@/lib/table/rows';
 import type { StandardAnnotationData } from '@/types/annotations';
 
 const SIDE_PANEL_WIDTH = 360;
@@ -136,6 +142,8 @@ export interface VideoSource {
   provenance?: ProvenanceByRun;
   /** Result files with their download addresses, for About. */
   files?: RunFileRef[];
+  /** The video's notes on the server; absent for local files (spec 028 US6). */
+  notes?: NotesApi;
 }
 
 interface VideoViewProps {
@@ -157,8 +165,40 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
     for (const f of source.files ?? []) if (f.compare) keys.add(`${f.jobId}/${f.pipeline}`);
     return keys;
   }, [source.files]);
-  const lanes = useMemo(() => buildLanes(files.rows, runRefs, failed, compared), [files.rows, runRefs, failed, compared]);
-  const frameRate = useMemo(() => frameRateFromRows(files.rows), [files.rows]);
+  const notes = source.notes;
+  // The table's rows and the notes as `note` rows, in time order; which note each row is.
+  const { rows, noteAt } = useMemo(() => {
+    const stem = source.name.replace(/\.[^.]+$/, '');
+    const all: { row: Row; note?: VideoNote }[] = [
+      ...source.rows.map((row) => ({ row })),
+      ...(notes?.notes ?? []).map((note, i) => ({ row: noteRow(note, stem, i + 1), note })),
+    ];
+    all.sort((a, b) => a.row.start - b.row.start);
+    return { rows: all.map((x) => x.row), noteAt: all.map((x) => x.note) };
+  }, [source.rows, source.name, notes?.notes]);
+  const lanes = useMemo(() => {
+    const built = buildLanes(rows, runRefs, failed, compared);
+    if (built.some((l) => l.kind === NOTES_KIND.kind)) return built;
+    // The Notes lane is always there, last, saying how to add one (or why not).
+    return [
+      ...built,
+      {
+        id: 'notes',
+        kind: NOTES_KIND.kind,
+        pipeline: null,
+        label: NOTES_KIND.label,
+        description: NOTES_KIND.description,
+        run: null,
+        form: NOTES_KIND.form,
+        rows: [],
+        status: 'empty' as const,
+        error: notes ? 'N: note · Shift+N twice: span' : 'Notes need a server',
+        overlay: null,
+        source: [],
+      },
+    ];
+  }, [rows, runRefs, failed, compared, notes]);
+  const frameRate = useMemo(() => frameRateFromRows(source.rows), [source.rows]);
 
 
   const { currentUser } = useCurrentUser();
@@ -191,7 +231,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [elementDuration, setElementDuration] = useState(0);
-  const lastEnd = useMemo(() => files.rows.reduce((m, r) => Math.max(m, r.end ?? r.start), 0), [files.rows]);
+  const lastEnd = useMemo(() => source.rows.reduce((m, r) => Math.max(m, r.end ?? r.start), 0), [source.rows]);
   const duration = elementDuration || source.durationHint || lastEnd;
 
   const [chosenView, setChosenView] = useState<ViewRange | null>(null);
@@ -249,7 +289,36 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
     [selectedLane, currentTime, seek],
   );
 
+  const [editing, setEditing] = useState<EditingNote | null>(null);
+  const [spanStart, setSpanStart] = useState<number | null>(null);
+  const newNote = useCallback(() => {
+    if (!notes) return;
+    setSpanStart(null);
+    setEditing({ start: currentTime, end: null, text: '' });
+  }, [notes, currentTime]);
+  const spanNote = useCallback(() => {
+    if (!notes) return;
+    if (spanStart === null) {
+      setSpanStart(currentTime);
+      return;
+    }
+    if (Math.abs(currentTime - spanStart) < 1e-3) return;
+    setEditing({ start: Math.min(spanStart, currentTime), end: Math.max(spanStart, currentTime), text: '' });
+    setSpanStart(null);
+  }, [notes, spanStart, currentTime]);
+  const saveNote = (text: string) => {
+    if (!notes || !editing) return;
+    const done = editing.id
+      ? notes.update(editing.id, { text })
+      : notes.create({ start: editing.start, end: editing.end, text });
+    setEditing(null);
+    void done.catch(() => {});
+  };
+  const editNote = (note: VideoNote) => setEditing({ id: note.id, start: note.start_sec, end: note.end_sec ?? null, text: note.text });
+
   useVideoKeys({
+    note: newNote,
+    spanNote,
     playPause,
     step: (seconds) => seek(currentTime + seconds),
     frameStep: (direction) => seek(currentTime + direction / (frameRate ?? FALLBACK_FPS)),
@@ -259,6 +328,13 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
     zoomOut: () => setChosenView(zoomView(view, 1 / ZOOM_STEP, currentTime, duration)),
     fit: () => setChosenView(fullView(duration)),
   });
+
+  const selectRow = (index: number) => {
+    setSelectedRow(index);
+    const note = noteAt[index];
+    if (note) editNote(note);
+    else setTab('data');
+  };
 
   const annotationData = useMemo<StandardAnnotationData>(
     () => files.parsed ?? { video_info: { filename: source.name, duration, width: 0, height: 0 } },
@@ -307,6 +383,12 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
               </Link>
             </Button>
           )}
+          {notes && (
+            <Button variant="ghost" size="sm" className="h-8" onClick={newNote} title="A note at this moment (N); Shift+N twice for a span">
+              <StickyNote className="mr-1 h-4 w-4" />
+              Note
+            </Button>
+          )}
           <KeysHelp />
           <Button
             variant="ghost"
@@ -335,6 +417,22 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
             onDurationChange={onDurationChange}
             onPlayStateChange={setIsPlaying}
           />
+          {editing && notes && (
+            <NoteEditor
+              key={editing.id ?? `new-${editing.start}`}
+              note={editing}
+              onSave={saveNote}
+              onCancel={() => setEditing(null)}
+              onDelete={
+                editing.id
+                  ? () => {
+                      void notes.remove(editing.id!).catch(() => {});
+                      setEditing(null);
+                    }
+                  : undefined
+              }
+            />
+          )}
         </div>
         {panelOpen && (
           <aside className="flex shrink-0 flex-col border-l" style={{ width: SIDE_PANEL_WIDTH }} data-testid="side-panel">
@@ -347,11 +445,11 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
               </TabsList>
               <TabsContent value="data" className="mt-0 min-h-0 flex-1">
                 <DataTable
-                  rows={files.rows}
+                  rows={rows}
                   currentTime={currentTime}
                   selectedRow={selectedRow}
                   onRowClick={(index) => {
-                    const row = files.rows[index];
+                    const row = rows[index];
                     setSelectedRow(index);
                     const laneId = laneOfRow.get(index);
                     if (laneId) setSelectedLaneId(laneId);
@@ -362,10 +460,20 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
                   runLabels={runLabels}
                 />
               </TabsContent>
-              <TabsContent value="notes" className="px-3 text-xs text-muted-foreground" data-testid="notes-tab">
-                {source.local
-                  ? 'Notes need a server: they are kept with the video there, for everyone using it.'
-                  : 'Notes on this video will be listed here.'}
+              <TabsContent value="notes" className="min-h-0 flex-1 overflow-auto px-3 text-xs" data-testid="notes-tab">
+                {notes ? (
+                  <NotesList
+                    notes={notes.notes}
+                    onSeek={seek}
+                    onEdit={editNote}
+                    onDelete={(note) => void notes.remove(note.id).catch(() => {})}
+                  />
+                ) : (
+                  <p className="text-muted-foreground">
+                    Notes need a server: they are kept with the video there, for everyone using it.
+                  </p>
+                )}
+                {notes?.error && <p className="mt-2 text-destructive">{notes.error.message}</p>}
               </TabsContent>
               <TabsContent value="runs" className="min-h-0 flex-1 overflow-auto px-3 text-xs">
                 {source.local ? (
@@ -404,16 +512,18 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
             selectedLaneId={selectedLane?.id ?? null}
             onSelectLane={setSelectedLaneId}
             selectedRow={selectedRow}
-            onSelectRow={(index) => {
-              setSelectedRow(index);
-              setTab('data');
-            }}
+            onSelectRow={selectRow}
             toggles={toggles}
             runControls={source.runControls}
             toolbar={
               <>
                 <LayersMenu lanes={lanes} toggles={toggles} showLanes={showLanes} setOverlays={setOverlays} />
                 {files.loading && <span className="text-xs text-muted-foreground">Loading results…</span>}
+                {spanStart !== null && (
+                  <span className="text-xs text-amber-600" data-testid="span-pending">
+                    Span from {formatClockTenths(spanStart)}: Shift+N again to end it
+                  </span>
+                )}
               </>
             }
           />

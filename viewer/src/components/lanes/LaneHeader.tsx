@@ -88,7 +88,7 @@ export function LaneHeader({ lane, selected, densityRows, onSelect, toggles }: L
           data-testid="lane-label"
         >
           {collapsed ? <ChevronRight className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />}
-          <span className="truncate">{lane.label}</span>
+          <span className={cn('truncate', lane.kind === 'notes' && 'italic text-amber-700 dark:text-amber-400')}>{lane.label}</span>
         </button>
         {overlay === 'faces.openface3' && <OpenFace3Menu toggles={toggles} />}
       </div>

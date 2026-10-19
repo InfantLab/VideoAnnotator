@@ -82,8 +82,10 @@ export function DataTable({ rows, currentTime, selectedRow, onRowClick, filter, 
     }
   }, [selectedRow]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const first = Math.max(0, Math.floor(scrollTop / DATA_ROW_HEIGHT) - OVERSCAN);
-  const last = Math.min(shown.length, Math.ceil((scrollTop + viewport) / DATA_ROW_HEIGHT) + OVERSCAN);
+  // A filter that shortens the list can leave the old scroll position past its end.
+  const top = Math.min(scrollTop, Math.max(0, shown.length * DATA_ROW_HEIGHT - viewport));
+  const first = Math.max(0, Math.floor(top / DATA_ROW_HEIGHT) - OVERSCAN);
+  const last = Math.min(shown.length, Math.ceil((top + viewport) / DATA_ROW_HEIGHT) + OVERSCAN);
 
   return (
     <div className="flex h-full min-h-0 flex-col text-xs" data-testid="data-table">
@@ -149,6 +151,7 @@ export function DataTable({ rows, currentTime, selectedRow, onRowClick, filter, 
                 className={cn(
                   'absolute inset-x-0 flex cursor-pointer items-center gap-2 px-3 hover:bg-muted/60',
                   position === highlight && 'bg-primary/15',
+                  row.measure === 'note' && 'italic text-amber-700 dark:text-amber-400',
                   selectedRow === index && 'outline outline-1 outline-primary',
                 )}
                 style={{ top: position * DATA_ROW_HEIGHT, height: DATA_ROW_HEIGHT }}
@@ -159,6 +162,7 @@ export function DataTable({ rows, currentTime, selectedRow, onRowClick, filter, 
                 }}
                 data-testid="data-row"
                 data-row={index}
+                data-note={row.measure === 'note' || undefined}
               >
                 <span role="cell" className="w-12 shrink-0 font-mono text-muted-foreground">
                   {formatClockTenths(row.start)}

@@ -346,7 +346,8 @@ export function buildLanes(
     return {
       id,
       kind: group.kind,
-      pipeline: group.pipeline,
+      // Notes are the researcher's, not a pipeline's output.
+      pipeline: group.kind === 'notes' ? null : group.pipeline,
       label: spec.label,
       description: spec.description,
       run: runById.get(group.run) ?? (group.run ? { id: group.run, label: group.run } : null),

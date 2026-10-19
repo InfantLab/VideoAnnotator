@@ -13,7 +13,7 @@ import { vi } from 'vitest';
 
 import { getApiClient } from '@/api/client';
 import VideoPage from '@/pages/VideoPage';
-import type { VideoRuns } from '@/types/video';
+import type { VideoNote, VideoNoteCreate, VideoNoteUpdate, VideoRuns } from '@/types/video';
 
 export const FIXTURES = path.resolve(__dirname, '../../../tests/fixtures/viewer_contract');
 export const VIDEO_PATH = '/data/pk/demo_clip.mp4';
@@ -69,7 +69,7 @@ export function demoVideoRuns(over: Partial<VideoRuns> = {}): VideoRuns {
 }
 
 /** Mocks the API the page uses; returns the spies. */
-export function mockVideoApi(runs: VideoRuns = demoVideoRuns()) {
+export function mockVideoApi(runs: VideoRuns = demoVideoRuns(), notes: VideoNote[] = []) {
   vi.spyOn(console, 'log').mockImplementation(() => {});
   // `apiClient` is a Proxy onto this client; its methods live on the prototype.
   const client = Object.getPrototypeOf(getApiClient());
@@ -81,6 +81,33 @@ export function mockVideoApi(runs: VideoRuns = demoVideoRuns()) {
       path: runs.path,
       name: runs.name,
       duration_sec: runs.duration_sec,
+    }),
+    notes,
+    listNotes: vi.spyOn(client, 'listNotes').mockImplementation(async () => [...notes]),
+    createNote: vi.spyOn(client, 'createNote').mockImplementation(async (body: VideoNoteCreate) => {
+      const end = body.end_sec ?? null;
+      const created: VideoNote = {
+        id: `note-${notes.length + 1}`,
+        video_path: body.path,
+        start_sec: end !== null ? Math.min(body.start_sec, end) : body.start_sec,
+        end_sec: end !== null ? Math.max(body.start_sec, end) : null,
+        text: body.text.trim(),
+        author_id: 'u1',
+        author_name: 'alice',
+        created_at: new Date(Date.UTC(2026, 9, 19, 10, notes.length)).toISOString(),
+        updated_at: null,
+        updated_by: null,
+      };
+      notes.push(created);
+      return created;
+    }),
+    updateNote: vi.spyOn(client, 'updateNote').mockImplementation(async (id: string, body: VideoNoteUpdate) => {
+      const found = notes.find((n) => n.id === id)!;
+      Object.assign(found, body.text !== undefined && body.text !== null ? { text: body.text } : {});
+      return found;
+    }),
+    deleteNote: vi.spyOn(client, 'deleteNote').mockImplementation(async (id: string) => {
+      notes.splice(notes.findIndex((n) => n.id === id), 1);
     }),
     downloadResultFile: vi
       .spyOn(client, 'downloadResultFile')
@@ -102,9 +129,9 @@ export function renderVideoPage(search = `?path=${encodeURIComponent(VIDEO_PATH)
   );
 }
 
-/** Waits until the lanes are drawn from the fetched files. */
+/** Waits until the lanes are drawn from the fetched files (the Notes lane is there from the start). */
 export async function lanesLoaded() {
-  await screen.findAllByTestId('lane-label', {}, { timeout: 5000 });
+  await screen.findAllByTestId('row-label', {}, { timeout: 5000 });
 }
 
 /** Every element 1000 px wide from x = 0, so clicks map to times. */

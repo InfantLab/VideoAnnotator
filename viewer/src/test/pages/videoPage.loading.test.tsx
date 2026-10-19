@@ -164,12 +164,15 @@ describe('standalone /viewer', () => {
       </QueryClientProvider>,
     );
     await lanesLoaded();
-    expect(new Set(screen.getAllByRole('group').map((g) => g.dataset.kind))).toEqual(new Set(['speech', 'speakers']));
+    expect(new Set(screen.getAllByRole('group').map((g) => g.dataset.kind))).toEqual(new Set(['speech', 'speakers', 'notes']));
+    expect(screen.getByTestId('lane-empty')).toHaveTextContent('Notes need a server');
+    fireEvent.keyDown(window, { key: 'n' });
+    expect(screen.queryByTestId('note-editor')).toBeNull();
     expect(screen.queryAllByTestId('lane-run')).toHaveLength(0);
     expect(api.getVideoRuns).not.toHaveBeenCalled();
     expect(api.streamToken).not.toHaveBeenCalled();
     expect(screen.queryByRole('link', { name: /Ask AI/ })).toBeNull();
     fireEvent.mouseDown(screen.getByRole('tab', { name: 'Notes' }));
-    expect(await screen.findByText(/Notes need a server/)).toBeInTheDocument();
+    expect(await screen.findByTestId('notes-tab')).toHaveTextContent(/Notes need a server/);
   });
 });

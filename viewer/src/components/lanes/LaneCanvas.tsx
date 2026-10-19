@@ -65,10 +65,47 @@ function drawNumeric(ctx: CanvasRenderingContext2D, row: LaneRow, events: LaneEv
   ctx.fillText(`${formatValue(min)}${unit}`, width - 44, top + height - 2);
 }
 
-function drawRow(ctx: CanvasRenderingContext2D, row: LaneRow, view: ViewRange, width: number, top: number, selectedRow?: number | null) {
+const NOTE_COLOUR = 'hsl(38, 92%, 50%)';
+
+/** Researchers' notes: outlined, never filled like pipeline output (Principle VI). */
+function drawNotes(ctx: CanvasRenderingContext2D, events: LaneEvent[], view: ViewRange, width: number, top: number, height: number) {
+  ctx.strokeStyle = NOTE_COLOUR;
+  ctx.fillStyle = 'hsla(38, 92%, 50%, 0.18)';
+  ctx.lineWidth = 1.5;
+  for (const e of events) {
+    const start = x(e.start, view, width);
+    if (e.end === null) {
+      ctx.beginPath();
+      ctx.moveTo(start - 4, top + 2);
+      ctx.lineTo(start + 4, top + 2);
+      ctx.lineTo(start, top + height - 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      continue;
+    }
+    const end = x(e.end, view, width);
+    ctx.fillRect(start, top + 2, Math.max(2, end - start), height - 4);
+    ctx.strokeRect(start, top + 2, Math.max(2, end - start), height - 4);
+  }
+}
+
+function drawRow(
+  ctx: CanvasRenderingContext2D,
+  row: LaneRow,
+  view: ViewRange,
+  width: number,
+  top: number,
+  selectedRow?: number | null,
+  notes = false,
+) {
   const height = rowHeight(row);
   const [from, to] = visibleSlice(row.events, view, row.maxDuration);
   const events = row.events.slice(from, to);
+  if (notes) {
+    drawNotes(ctx, events, view, width, top, height);
+    return;
+  }
   if (row.form === 'numeric') {
     drawNumeric(ctx, row, events, view, width, top, height);
     return;
@@ -80,7 +117,7 @@ function drawRow(ctx: CanvasRenderingContext2D, row: LaneRow, view: ViewRange, w
   ctx.fillStyle = row.colour;
   for (const e of events) {
     const start = x(e.start, view, width);
-    if (row.form === 'moment') {
+    if (row.form === 'moment' || (row.form === 'span' && e.end === null)) {
       ctx.fillRect(start - 1, top + 2, 2, height - 4);
       continue;
     }
@@ -125,7 +162,7 @@ export function LaneCanvas({ lane, view, width, selectedRow }: LaneCanvasProps) 
     ctx.clearRect(0, 0, width, height);
     let top = 0;
     for (const row of lane.rows) {
-      drawRow(ctx, row, view, width, top, selectedRow);
+      drawRow(ctx, row, view, width, top, selectedRow, lane.kind === 'notes');
       top += rowHeight(row);
     }
   }, [lane, view, width, height, selectedRow]);

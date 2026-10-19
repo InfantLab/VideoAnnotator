@@ -153,10 +153,10 @@ identity (`git -c user.name=… -c user.email=…`).
 
 ### Viewer
 
-- [ ] T048 [US6] Create `viewer/src/hooks/useNotes.ts` (list/create/update/delete with optimistic update and rollback on error) and client methods in `viewer/src/api/client.ts`
-- [ ] T049 [US6] Notes on the page: `N` creates a moment note at the current time and opens its editor focused (Enter saves, Esc on empty cancels); `Shift+N` starts a span (a marker shows) and the second `Shift+N` ends it and opens the editor; a "Note" button does the same; the Notes lane is always last, outlined and labelled "Notes (yours)", never inside a pipeline lane; clicking a note opens a popover to edit or delete
-- [ ] T050 [US6] Create `viewer/src/components/video/NotesList.tsx` (the Notes tab: time, text, author; edit, delete, click to seek) and add note rows to the Data tab (`rowsFromParsed` output plus notes as `note` rows, styled as notes)
-- [ ] T051 [P] [US6] Tests `viewer/src/test/components/notes.test.tsx`: N creates and focuses; Esc cancels empty; Shift+N twice makes a span in either order; typing "n" in search makes no note; notes lane last and styled distinctly; note rows in the Data tab; standalone shows "needs a server"
+- [X] T048 [US6] Create `viewer/src/hooks/useNotes.ts` (list/create/update/delete with optimistic update and rollback on error) and client methods in `viewer/src/api/client.ts`
+- [X] T049 [US6] Notes on the page: `N` creates a moment note at the current time and opens its editor focused (Enter saves, Esc on empty cancels); `Shift+N` starts a span (a marker shows) and the second `Shift+N` ends it and opens the editor; a "Note" button does the same; the Notes lane is always last, outlined and labelled "Notes (yours)", never inside a pipeline lane; clicking a note opens a popover to edit or delete
+- [X] T050 [US6] Create `viewer/src/components/video/NotesList.tsx` (the Notes tab: time, text, author; edit, delete, click to seek) and add note rows to the Data tab (`rowsFromParsed` output plus notes as `note` rows, styled as notes)
+- [X] T051 [P] [US6] Tests `viewer/src/test/components/notes.test.tsx`: N creates and focuses; Esc cancels empty; Shift+N twice makes a span in either order; typing "n" in search makes no note; notes lane last and styled distinctly; note rows in the Data tab; standalone shows "needs a server"
 
 **Checkpoint**: US6's scenarios pass; table and ELAN exports carry notes.
 

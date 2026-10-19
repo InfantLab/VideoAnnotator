@@ -530,3 +530,36 @@ export function videoRows(read: ReadFile[], video: string, run = ''): Row[] {
 export function rowsFromFiles(files: SourceFile[], video: string, run = ''): Row[] {
   return videoRows(readFiles(files).read, video, run);
 }
+
+export const NOTES_PIPELINE = 'notes';
+export const NOTE_MEASURE = 'note';
+
+/** A researcher's note as the exporter writes it (table format 2): run empty, pipeline `notes`. */
+export function noteRow(
+  note: { start_sec: number; end_sec?: number | null; text: string; author_name: string },
+  video: string,
+  event: number,
+): Row {
+  return {
+    run: '',
+    video,
+    pipeline: NOTES_PIPELINE,
+    event,
+    track: '',
+    start: note.start_sec,
+    end: note.end_sec ?? null,
+    frame: null,
+    measure: NOTE_MEASURE,
+    label: note.text,
+    value: null,
+    confidence: null,
+    x: null,
+    y: null,
+    width: null,
+    height: null,
+    model: '',
+    videoannotator_version: '',
+    file: '',
+    author: note.author_name,
+  };
+}

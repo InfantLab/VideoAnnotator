@@ -10,6 +10,9 @@ export interface VideoKeyHandlers {
   zoomIn: () => void;
   zoomOut: () => void;
   fit: () => void;
+  /** `N`: a note at this moment; `Shift+N`: start or end a span note (spec 028 US6). */
+  note?: () => void;
+  spanNote?: () => void;
   toggleDebug?: () => void;
 }
 
@@ -66,6 +69,10 @@ export function useVideoKeys(handlers: VideoKeyHandlers, enabled = true): void {
           return run(h.zoomOut);
         case '0':
           return run(h.fit);
+        case 'n':
+        case 'N':
+          if (e.shiftKey ? h.spanNote : h.note) return run((e.shiftKey ? h.spanNote : h.note)!);
+          return;
       }
     };
     window.addEventListener('keydown', onKeyDown);

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { VideoView } from '@/components/video/VideoView';
+import { useNotes } from '@/hooks/useNotes';
 import { useRunFiles } from '@/hooks/useRunFiles';
 import { useVideoRuns } from '@/hooks/useVideoRuns';
 import { useVideoStream } from '@/hooks/useVideoStream';
@@ -71,6 +72,7 @@ export default function VideoPage() {
   const runRefs = useMemo(() => (runs ?? []).map(runRef), [runs]);
   const failed = useMemo(() => failedPipelines(runs ?? [], selection), [runs, selection]);
 
+  const notes = useNotes(info?.path);
   const videoRef = useRef<HTMLVideoElement>(null);
   const stream = useVideoStream(info?.path, !!info?.available, videoRef);
 
@@ -108,6 +110,7 @@ export default function VideoPage() {
         runControls,
         provenance: files.provenance,
         files: files.files,
+        notes,
       }}
     />
   );

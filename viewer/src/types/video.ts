@@ -8,3 +8,6 @@ export type VideoRun = Schemas['RunInfo'];
 export type VideoRunPipeline = Schemas['PipelineRunInfo'];
 export type VideoRunFile = Schemas['RunFile'];
 export type ProjectRef = Schemas['ProjectRef'];
+export type VideoNote = Schemas['Note'];
+export type VideoNoteCreate = Schemas['NoteCreate'];
+export type VideoNoteUpdate = Schemas['NoteUpdate'];

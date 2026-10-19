@@ -45,7 +45,7 @@ import type {
   UploadedVideo,
 } from '@/types/ask';
 import type { JobResults } from '@/lib/jobOutcome';
-import type { VideoRuns } from '@/types/video';
+import type { VideoNote, VideoNoteCreate, VideoNoteUpdate, VideoRuns } from '@/types/video';
 import type { Preset, PresetCreateRequest, PresetListResponse } from '@/types/presets';
 import type { LibraryPrompt, PromptListResponse, PromptUpdateRequest } from '@/types/prompts';
 import type {
@@ -1119,6 +1119,24 @@ class APIClient {
   async downloadResultFile(url: string, name: string): Promise<File> {
     const blob = await (await this.fetchRaw(url)).blob();
     return new File([blob], name);
+  }
+
+  /** A video's notes, by start (spec 028). */
+  async listNotes(path: string): Promise<VideoNote[]> {
+    const response = await this.request<{ notes: VideoNote[] }>(`/api/v1/videos/notes?${new URLSearchParams({ path })}`);
+    return response.notes;
+  }
+
+  async createNote(body: VideoNoteCreate): Promise<VideoNote> {
+    return this.request('/api/v1/videos/notes', { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  async updateNote(id: string, body: VideoNoteUpdate): Promise<VideoNote> {
+    return this.request(`/api/v1/videos/notes/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(body) });
+  }
+
+  async deleteNote(id: string): Promise<void> {
+    await this.request(`/api/v1/videos/notes/${encodeURIComponent(id)}`, { method: 'DELETE' });
   }
 
   async createTry(body: AskTryRequest): Promise<AskEntry> {

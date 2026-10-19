@@ -1559,6 +1559,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/videos/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notes on one video */
+        get: operations["list_notes_api_v1_videos_notes_get"];
+        put?: never;
+        /** Add a note to a video */
+        post: operations["create_note_api_v1_videos_notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos/notes/{note_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a note */
+        delete: operations["delete_note_api_v1_videos_notes__note_id__delete"];
+        options?: never;
+        head?: never;
+        /** Change a note */
+        patch: operations["update_note_api_v1_videos_notes__note_id__patch"];
+        trace?: never;
+    };
     "/api/v1/videos/stream-token": {
         parameters: {
             query?: never;
@@ -3453,6 +3489,57 @@ export interface components {
             starred: boolean;
             /** Last Used At */
             last_used_at?: string | null;
+        };
+        /** Note */
+        Note: {
+            /** Id */
+            id: string;
+            /** Video Path */
+            video_path: string;
+            /** Start Sec */
+            start_sec: number;
+            /** End Sec */
+            end_sec?: number | null;
+            /** Text */
+            text: string;
+            /** Author Id */
+            author_id: string;
+            /** Author Name */
+            author_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Updated By */
+            updated_by?: string | null;
+        };
+        /** NoteCreate */
+        NoteCreate: {
+            /** Path */
+            path: string;
+            /** Start Sec */
+            start_sec: number;
+            /** End Sec */
+            end_sec?: number | null;
+            /** Text */
+            text: string;
+        };
+        /** NoteUpdate */
+        NoteUpdate: {
+            /** Text */
+            text?: string | null;
+            /** Start Sec */
+            start_sec?: number | null;
+            /** End Sec */
+            end_sec?: number | null;
+        };
+        /** NotesResponse */
+        NotesResponse: {
+            /** Notes */
+            notes: components["schemas"]["Note"][];
         };
         /** OpenFolderRequest */
         OpenFolderRequest: {
@@ -6055,6 +6142,135 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoRunsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notes_api_v1_videos_notes_get: {
+        parameters: {
+            query?: {
+                /** @description The video's path on the server */
+                path?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_note_api_v1_videos_notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Note"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_note_api_v1_videos_notes__note_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_note_api_v1_videos_notes__note_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Note"];
                 };
             };
             /** @description Validation Error */
