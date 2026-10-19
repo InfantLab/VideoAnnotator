@@ -3,7 +3,7 @@ import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { LaneCanvas } from '@/components/lanes/LaneCanvas';
-import { LaneHeader } from '@/components/lanes/LaneHeader';
+import { LaneHeader, type LaneToggles } from '@/components/lanes/LaneHeader';
 import { Playhead } from '@/components/lanes/Playhead';
 import { RangeBar } from '@/components/lanes/RangeBar';
 import { TimeAxis } from '@/components/lanes/TimeAxis';
@@ -14,6 +14,7 @@ import {
   formatClockTenths,
   formatValue,
   fullView,
+  laneHeight,
   panView,
   rowHeight,
   showsDensity,
@@ -39,6 +40,7 @@ interface LaneTimelineProps {
   onSelectRow?: (row: number) => void;
   /** Left of the zoom buttons (Layers, spec 028 US2). */
   toolbar?: ReactNode;
+  toggles: LaneToggles;
 }
 
 interface Hover {
@@ -105,6 +107,7 @@ export function LaneTimeline({
   selectedRow,
   onSelectRow,
   toolbar,
+  toggles,
 }: LaneTimelineProps) {
   const container = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -224,7 +227,8 @@ export function LaneTimeline({
           )}
 
           {lanes.map((lane) => {
-            const densityRows = new Set(lane.rows.filter((row) => showsDensity(row, view, width)).map((row) => row.key));
+            const collapsed = toggles.collapsed(lane.kind);
+            const densityRows = collapsed ? new Set<string>() : new Set(lane.rows.filter((row) => showsDensity(row, view, width)).map((row) => row.key));
             return (
               <div
                 key={lane.id}
@@ -239,6 +243,7 @@ export function LaneTimeline({
                   selected={lane.id === selectedLaneId}
                   densityRows={densityRows}
                   onSelect={() => onSelectLane(lane.id)}
+                  toggles={toggles}
                 />
                 <div
                   className="relative min-w-0 flex-1 cursor-crosshair"
@@ -253,6 +258,7 @@ export function LaneTimeline({
                     if (d.moved) onViewChange(panView(d.view, -(e.clientX - d.x) * secondsPerPixel(e.currentTarget), duration));
                   }}
                   onMouseMove={(e) => {
+                    if (collapsed) return;
                     const hit = hitAt(lane, e);
                     const box = container.current?.getBoundingClientRect();
                     setHover(
@@ -267,7 +273,7 @@ export function LaneTimeline({
                     drag.current = null;
                     if (dragged) return;
                     onSelectLane(lane.id);
-                    const hit = hitAt(lane, e);
+                    const hit = collapsed ? null : hitAt(lane, e);
                     if (hit?.event) {
                       onSeek(hit.event.start);
                       onSelectRow?.(hit.event.row);
@@ -280,6 +286,8 @@ export function LaneTimeline({
                     <p className="px-2 text-xs leading-[18px] text-destructive" data-testid="lane-failed">
                       Failed: {lane.error}
                     </p>
+                  ) : collapsed ? (
+                    <div style={{ height: laneHeight(lane, true) }} />
                   ) : (
                     <LaneCanvas lane={lane} view={view} width={width} selectedRow={selectedRow} />
                   )}

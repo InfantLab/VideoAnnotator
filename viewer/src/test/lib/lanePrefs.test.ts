@@ -24,7 +24,9 @@ describe('lane preferences', () => {
   it('shows a kind it has never seen, expanded with its overlay on', () => {
     const prefs = defaultLanePrefs();
     expect(isCollapsed(prefs, 'other:blink/rate')).toBe(false);
+    expect(overlayOn(prefs, 'other.overlay')).toBe(true);
     expect(overlayOn(prefs, 'faces.landmarks')).toBe(true);
+    expect(overlayOn(prefs, 'faces.gaze')).toBe(false);
   });
 
   it('maps overlay switches saved under their old names onto lane kinds', async () => {

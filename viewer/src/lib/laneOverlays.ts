@@ -27,6 +27,11 @@ export const OPENFACE3_OVERLAYS = [
   { key: 'faces.action_units', label: 'Action units', setting: 'action_units' },
 ] as const;
 
+/** Overlays that start off: OpenFace 3's busier drawings, as its controls had them. */
+export const OVERLAY_DEFAULTS: Record<string, boolean> = Object.fromEntries(
+  OPENFACE3_OVERLAYS.map(({ key, setting }) => [key, defaultOpenFace3Settings[setting]]),
+);
+
 export function openface3SettingsFromLanes(overlays: Record<string, boolean>): OpenFace3Settings {
   const settings: OpenFace3Settings = {
     ...defaultOpenFace3Settings,

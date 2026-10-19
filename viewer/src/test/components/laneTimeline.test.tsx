@@ -71,7 +71,7 @@ describe('the Video page timeline', () => {
   it('steps to the next and previous event of the selected lane, not another\'s', async () => {
     renderVideoPage();
     await lanesLoaded();
-    fireEvent.click(within(lane('speakers')[0]).getByTestId('lane-label'));
+    fireEvent.click(within(lane('speakers')[0]).getByTestId('row-label'));
     fireEvent.keyDown(window, { key: ']' });
     // The first speaker turn (0.638 s), not the second speech cue.
     expect(readout()).toMatch(/^0:00\.6 /);

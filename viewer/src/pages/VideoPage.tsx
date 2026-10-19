@@ -5,7 +5,9 @@ import { ArrowLeft, PanelRightClose, PanelRightOpen, Sparkles } from 'lucide-rea
 
 import { apiClient } from '@/api/client';
 import { VideoPlayer } from '@/components/VideoPlayer';
+import type { LaneToggles } from '@/components/lanes/LaneHeader';
 import { LaneTimeline } from '@/components/lanes/LaneTimeline';
+import { LayersMenu } from '@/components/lanes/LayersMenu';
 import { KeysHelp } from '@/components/video/KeysHelp';
 import { PlayerBar } from '@/components/video/PlayerBar';
 import { Button } from '@/components/ui/button';
@@ -24,11 +26,60 @@ import {
   zoomView,
   type ViewRange,
 } from '@/lib/lanes';
-import { defaultLanePrefs, lanePrefsKey, loadLanePrefs, saveLanePrefs, type LanePrefs } from '@/lib/lanePrefs';
+import {
+  TIMELINE_HEIGHT,
+  defaultLanePrefs,
+  isCollapsed,
+  lanePrefsKey,
+  loadLanePrefs,
+  overlayOn,
+  saveLanePrefs,
+  type LanePrefs,
+} from '@/lib/lanePrefs';
 import { defaultSelection, failedPipelines, runRef } from '@/lib/videoRuns';
 import type { StandardAnnotationData } from '@/types/annotations';
 
 const SIDE_PANEL_WIDTH = 360;
+const MAX_TIMELINE_SHARE = 0.7;
+
+const clampTimelineHeight = (h: number) =>
+  Math.round(Math.min(Math.max(h, TIMELINE_HEIGHT.min), window.innerHeight * MAX_TIMELINE_SHARE));
+
+/** The timeline's top edge: drag to make it taller or shorter (spec 028 FR-007). */
+function HeightHandle({ height, onResize, onDone }: { height: number; onResize: (h: number) => void; onDone: (h: number) => void }) {
+  const start = useRef<{ y: number; height: number } | null>(null);
+  const last = useRef(height);
+  return (
+    <div
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label="Timeline height"
+      aria-valuenow={height}
+      tabIndex={0}
+      className="h-1.5 shrink-0 cursor-row-resize bg-border/60 hover:bg-primary/40"
+      data-testid="timeline-resize"
+      onPointerDown={(e) => {
+        start.current = { y: e.clientY, height };
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+      }}
+      onPointerMove={(e) => {
+        if (!start.current) return;
+        last.current = clampTimelineHeight(start.current.height + start.current.y - e.clientY);
+        onResize(last.current);
+      }}
+      onPointerUp={() => {
+        if (start.current) onDone(last.current);
+        start.current = null;
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+        e.preventDefault();
+        e.stopPropagation();
+        onDone(clampTimelineHeight(height + (e.key === 'ArrowUp' ? 20 : -20)));
+      }}
+    />
+  );
+}
 const FALLBACK_FPS = 30;
 
 /** Lane preferences, loaded once per user and saved on every change. */
@@ -90,7 +141,30 @@ export default function VideoPage() {
   const videoUrl = info && token.data ? apiClient.streamUrl(info.path, token.data.token) : undefined;
 
   const { currentUser } = useCurrentUser();
-  const [prefs, updatePrefs] = useLanePrefs(lanePrefsKey(apiClient.baseURL, currentUser ? String(currentUser.id) : null));
+  const [prefs, updatePrefs] = useLanePrefs(lanePrefsKey(apiClient.baseURL || window.location.origin, currentUser ? String(currentUser.id) : null));
+
+  const toggles = useMemo<LaneToggles>(
+    () => ({
+      collapsed: (kind) => isCollapsed(prefs, kind),
+      overlayOn: (key) => overlayOn(prefs, key),
+      toggleCollapsed: (kind) =>
+        updatePrefs((p) => ({ ...p, collapsed: { ...p.collapsed, [kind]: !isCollapsed(p, kind) } })),
+      setOverlay: (key, on) => updatePrefs((p) => ({ ...p, overlay: { ...p.overlay, [key]: on } })),
+    }),
+    [prefs, updatePrefs],
+  );
+  const showLanes = useCallback(
+    (kinds: string[], shown: boolean) =>
+      updatePrefs((p) => ({ ...p, collapsed: { ...p.collapsed, ...Object.fromEntries(kinds.map((k) => [k, !shown])) } })),
+    [updatePrefs],
+  );
+  const setOverlays = useCallback(
+    (keys: string[], on: boolean) =>
+      updatePrefs((p) => ({ ...p, overlay: { ...p.overlay, ...Object.fromEntries(keys.map((k) => [k, on])) } })),
+    [updatePrefs],
+  );
+  const [draggedHeight, setDraggedHeight] = useState<number | null>(null);
+  const timelineHeight = draggedHeight ?? prefs.timelineHeight;
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -281,7 +355,15 @@ export default function VideoPage() {
         )}
       </div>
 
-      <div className="shrink-0" style={{ height: prefs.timelineHeight }}>
+      <HeightHandle
+        height={timelineHeight}
+        onResize={setDraggedHeight}
+        onDone={(h) => {
+          setDraggedHeight(null);
+          updatePrefs((p) => ({ ...p, timelineHeight: h }));
+        }}
+      />
+      <div className="shrink-0" style={{ height: timelineHeight }} data-testid="timeline-area">
         {files.error ? (
           <p className="border-t p-3 text-xs text-destructive">Could not load the results: {files.error.message}</p>
         ) : (
@@ -294,7 +376,13 @@ export default function VideoPage() {
             onSeek={seek}
             selectedLaneId={selectedLane?.id ?? null}
             onSelectLane={setSelectedLaneId}
-            toolbar={files.loading ? <span className="text-xs text-muted-foreground">Loading results…</span> : null}
+            toggles={toggles}
+            toolbar={
+              <>
+                <LayersMenu lanes={lanes} toggles={toggles} showLanes={showLanes} setOverlays={setOverlays} />
+                {files.loading && <span className="text-xs text-muted-foreground">Loading results…</span>}
+              </>
+            }
           />
         )}
       </div>

@@ -5,6 +5,7 @@
  * when the browser can't store it, the defaults are used and nothing breaks.
  */
 import { OLD_OVERLAY_KEYS } from '@/lib/laneKinds';
+import { OVERLAY_DEFAULTS } from '@/lib/laneOverlays';
 import { idbGet, idbSet } from '@/lib/persistence/idbKv';
 
 export interface LanePrefs {
@@ -30,9 +31,9 @@ export const defaultLanePrefs = (): LanePrefs => ({
 export const lanePrefsKey = (serverUrl?: string | null, userId?: string | null): string =>
   serverUrl ? `lanePrefs:${serverUrl}:${userId ?? 'anonymous'}` : 'lanePrefs:local';
 
-/** Unknown kinds are shown, expanded, with their overlay on. */
+/** Unknown kinds are shown, expanded, with their overlay on (OpenFace 3's busier drawings start off). */
 export const isCollapsed = (prefs: LanePrefs, kind: string): boolean => prefs.collapsed[kind] ?? false;
-export const overlayOn = (prefs: LanePrefs, key: string): boolean => prefs.overlay[key] ?? true;
+export const overlayOn = (prefs: LanePrefs, key: string): boolean => prefs.overlay[key] ?? OVERLAY_DEFAULTS[key] ?? true;
 
 const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 

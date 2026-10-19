@@ -552,3 +552,7 @@ export function frameRateFromRows(rows: Pick<Row, 'frame' | 'start'>[]): number 
   rates.sort((a, b) => a - b);
   return Math.round(rates[Math.floor(rates.length / 2)] * 1000) / 1000;
 }
+
+/** A collapsed lane is its label row only (spec 028 US2.1). */
+export const laneHeight = (lane: Pick<Lane, 'rows'>, collapsed = false): number =>
+  collapsed ? ROW_HEIGHT : Math.max(ROW_HEIGHT, lane.rows.reduce((sum, row) => sum + rowHeight(row), 0));

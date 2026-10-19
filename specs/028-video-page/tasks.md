@@ -77,11 +77,12 @@ identity (`git -c user.name=… -c user.email=…`).
 **Goal**: lanes and overlays toggled from labels, eyes and Layers; remembered.
 **Independent test**: every overlay and lane can be shown and hidden from the lanes or Layers; no controls card.
 
-- [ ] T023 [US2] In `LaneHeader`: clicking the label collapses/expands (collapsed = label row only); an eye toggles the overlay for kinds with one (none for others); Faces gets an overlay menu with the OpenFace 3 toggles from `OpenFace3Controls` (landmarks, gaze, head pose, action units); all saved through `lanePrefs`
-- [ ] T024 [US2] Create `viewer/src/components/lanes/LayersMenu.tsx`: every lane with both toggles; "all" and "none" for lanes and for overlays
-- [ ] T025 [US2] Timeline height: a drag handle on the timeline's top edge (min 120 px, max 70% of the viewport), saved in `lanePrefs`
-- [ ] T026 [US2] Layout budget at 1440×900 (SC-003): header and player controls in one 48 px row, no footer on the Video page, default timeline height 200 px with lanes scrolling inside it, side panel 360 px; measure the video area on the old player and the new page and record both in `specs/028-video-page/checks.md`
-- [ ] T027 [P] [US2] Tests `viewer/src/test/components/laneToggles.test.tsx`: label collapses; eye hides that overlay only; no eye on kinds without an overlay; Layers none/all; preferences restored after remount; the page renders no `UnifiedControls`
+- [X] T023 [US2] In `LaneHeader`: clicking the label collapses/expands (collapsed = label row only); an eye toggles the overlay for kinds with one (none for others); Faces gets an overlay menu with the OpenFace 3 toggles from `OpenFace3Controls` (landmarks, gaze, head pose, action units); all saved through `lanePrefs`
+- [X] T024 [US2] Create `viewer/src/components/lanes/LayersMenu.tsx`: every lane with both toggles; "all" and "none" for lanes and for overlays
+- [X] T025 [US2] Timeline height: a drag handle on the timeline's top edge (min 120 px, max 70% of the viewport), saved in `lanePrefs`
+- [X] T026 [US2] Layout budget at 1440×900 (SC-003): header and player controls in one 48 px row, no footer on the Video page, default timeline height 200 px with lanes scrolling inside it, side panel 360 px; measure the video area on the old player and the new page and record both in `specs/028-video-page/checks.md`
+  - *Recorded as a bound from the CSS* (jsdom has no layout): new 1080 × 607.5 vs at most 1056 × 594 for the old. The browser measurement is left to T062.
+- [X] T027 [P] [US2] Tests `viewer/src/test/components/laneToggles.test.tsx`: label collapses; eye hides that overlay only; no eye on kinds without an overlay; Layers none/all; preferences restored after remount; the page renders no `UnifiedControls`
 
 **Checkpoint**: US2's scenarios pass; the video column fills the space the card used.
 
