@@ -77,6 +77,43 @@ config_schema:
     type: float
     default: 5.0
     description: Seconds between sample points.
+  start_sec:
+    group: technical
+    label: "From"
+    unit: s
+    min: 0
+    type: float
+    default: 0.0
+    description: First sample point, in seconds from the start of the video.
+  end_sec:
+    group: technical
+    label: "To"
+    unit: s
+    min: 0
+    type: float
+    default: null
+    description: >
+      Last possible sample point, in seconds. Leave empty for the end of the
+      video.
+  moments_sec:
+    group: technical
+    label: "Only at these moments"
+    type: list
+    default: null
+    description: >
+      Seconds to sample at, e.g. [12, 47, 90]. When set, replaces "Sample
+      every", "From" and "To"; moments outside the video are left out.
+  burst_spacing_sec:
+    group: behavioural
+    label: "Frames apart"
+    unit: s
+    applies_when:
+      sampling_mode: [frame_burst]
+    type: float
+    default: null
+    description: >
+      Seconds between the frames of one sample. Leave empty to use "Sample
+      every", as before this setting existed.
   burst_offsets:
     group: technical
     label: "Burst frame offsets"
@@ -85,8 +122,9 @@ config_schema:
     type: list
     default: [-2, -1, 0, 1, 2]
     description: >
-      Sampling-interval offsets around each anchor point (multiples of
-      frame_interval_sec), used only when sampling_mode is "frame_burst".
+      Offsets around each anchor point, in multiples of the frame spacing
+      (the sample interval unless Frames apart is set), used only when
+      sampling_mode is "frame_burst".
   think:
     group: technical
     label: "Thinking mode"

@@ -1,0 +1,567 @@
+[
+  {
+    "name": "defaults: every 5 s over 32 s",
+    "duration": 32.0,
+    "interval": 5.0,
+    "start": 0.0,
+    "end": null,
+    "moments": null,
+    "frames": 1,
+    "spacing": null,
+    "count": 10,
+    "expect": {
+      "points": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0,
+        25.0,
+        30.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          0.0
+        ]
+      ],
+      "chosen": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0,
+        25.0,
+        30.0
+      ]
+    }
+  },
+  {
+    "name": "range 10-20 s",
+    "duration": 32.0,
+    "interval": 5.0,
+    "start": 10.0,
+    "end": 20.0,
+    "moments": null,
+    "frames": 1,
+    "spacing": null,
+    "count": 10,
+    "expect": {
+      "points": [
+        10.0,
+        15.0,
+        20.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          10.0
+        ]
+      ],
+      "chosen": [
+        10.0,
+        15.0,
+        20.0
+      ]
+    }
+  },
+  {
+    "name": "end past the duration",
+    "duration": 12.0,
+    "interval": 5.0,
+    "start": 0.0,
+    "end": 60.0,
+    "moments": null,
+    "frames": 1,
+    "spacing": null,
+    "count": 10,
+    "expect": {
+      "points": [
+        0.0,
+        5.0,
+        10.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          0.0
+        ]
+      ],
+      "chosen": [
+        0.0,
+        5.0,
+        10.0
+      ]
+    }
+  },
+  {
+    "name": "listed moments: unsorted, duplicate, one past the end",
+    "duration": 100.0,
+    "interval": 5.0,
+    "start": 0.0,
+    "end": null,
+    "moments": [
+      47.0,
+      12.0,
+      90.0,
+      12.0,
+      130.0
+    ],
+    "frames": 1,
+    "spacing": null,
+    "count": 10,
+    "expect": {
+      "points": [
+        12.0,
+        47.0,
+        90.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          12.0
+        ]
+      ],
+      "chosen": [
+        12.0,
+        47.0,
+        90.0
+      ]
+    }
+  },
+  {
+    "name": "1 frame",
+    "duration": 20.0,
+    "interval": 5.0,
+    "start": 0.0,
+    "end": null,
+    "moments": null,
+    "frames": 1,
+    "spacing": null,
+    "count": 10,
+    "expect": {
+      "points": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          0.0
+        ]
+      ],
+      "chosen": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0
+      ]
+    }
+  },
+  {
+    "name": "3 frames 0.5 s apart",
+    "duration": 20.0,
+    "interval": 5.0,
+    "start": 2.0,
+    "end": null,
+    "moments": null,
+    "frames": 3,
+    "spacing": 0.5,
+    "count": 10,
+    "expect": {
+      "points": [
+        2.0,
+        7.0,
+        12.0,
+        17.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          -1,
+          1.5
+        ],
+        [
+          0,
+          2.0
+        ],
+        [
+          1,
+          2.5
+        ]
+      ],
+      "chosen": [
+        2.0,
+        7.0,
+        12.0,
+        17.0
+      ]
+    }
+  },
+  {
+    "name": "4 frames: offsets -2..1",
+    "duration": 20.0,
+    "interval": 5.0,
+    "start": 5.0,
+    "end": null,
+    "moments": null,
+    "frames": 4,
+    "spacing": 1.0,
+    "count": 10,
+    "expect": {
+      "points": [
+        5.0,
+        10.0,
+        15.0,
+        20.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          -2,
+          3.0
+        ],
+        [
+          -1,
+          4.0
+        ],
+        [
+          0,
+          5.0
+        ],
+        [
+          1,
+          6.0
+        ]
+      ],
+      "chosen": [
+        5.0,
+        10.0,
+        15.0,
+        20.0
+      ]
+    }
+  },
+  {
+    "name": "burst clipped at 0",
+    "duration": 20.0,
+    "interval": 5.0,
+    "start": 0.0,
+    "end": null,
+    "moments": null,
+    "frames": 3,
+    "spacing": 0.5,
+    "count": 10,
+    "expect": {
+      "points": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          0.0
+        ],
+        [
+          1,
+          0.5
+        ]
+      ],
+      "chosen": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0
+      ]
+    }
+  },
+  {
+    "name": "burst clipped at the end",
+    "duration": 10.0,
+    "interval": 5.0,
+    "start": 0.0,
+    "end": null,
+    "moments": [
+      9.8
+    ],
+    "frames": 3,
+    "spacing": 0.5,
+    "count": 10,
+    "expect": {
+      "points": [
+        9.8
+      ],
+      "burst_times_at_first_point": [
+        [
+          -1,
+          9.3
+        ],
+        [
+          0,
+          9.8
+        ]
+      ],
+      "chosen": [
+        9.8
+      ]
+    }
+  },
+  {
+    "name": "spacing unset: burst frames one interval apart",
+    "duration": 30.0,
+    "interval": 5.0,
+    "start": 10.0,
+    "end": null,
+    "moments": null,
+    "frames": 3,
+    "spacing": null,
+    "count": 10,
+    "expect": {
+      "points": [
+        10.0,
+        15.0,
+        20.0,
+        25.0,
+        30.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          -1,
+          5.0
+        ],
+        [
+          0,
+          10.0
+        ],
+        [
+          1,
+          15.0
+        ]
+      ],
+      "chosen": [
+        10.0,
+        15.0,
+        20.0,
+        25.0,
+        30.0
+      ]
+    }
+  },
+  {
+    "name": "count 10 of 40 points",
+    "duration": 199.0,
+    "interval": 5.0,
+    "start": 0.0,
+    "end": null,
+    "moments": null,
+    "frames": 1,
+    "spacing": null,
+    "count": 10,
+    "expect": {
+      "points": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0,
+        25.0,
+        30.0,
+        35.0,
+        40.0,
+        45.0,
+        50.0,
+        55.0,
+        60.0,
+        65.0,
+        70.0,
+        75.0,
+        80.0,
+        85.0,
+        90.0,
+        95.0,
+        100.0,
+        105.0,
+        110.0,
+        115.0,
+        120.0,
+        125.0,
+        130.0,
+        135.0,
+        140.0,
+        145.0,
+        150.0,
+        155.0,
+        160.0,
+        165.0,
+        170.0,
+        175.0,
+        180.0,
+        185.0,
+        190.0,
+        195.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          0.0
+        ]
+      ],
+      "chosen": [
+        0.0,
+        20.0,
+        45.0,
+        65.0,
+        85.0,
+        110.0,
+        130.0,
+        150.0,
+        175.0,
+        195.0
+      ]
+    }
+  },
+  {
+    "name": "count 10 of 6 points: all",
+    "duration": 25.0,
+    "interval": 5.0,
+    "start": 0.0,
+    "end": null,
+    "moments": null,
+    "frames": 1,
+    "spacing": null,
+    "count": 10,
+    "expect": {
+      "points": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0,
+        25.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          0.0
+        ]
+      ],
+      "chosen": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0,
+        25.0
+      ]
+    }
+  },
+  {
+    "name": "count 1: the middle",
+    "duration": 20.0,
+    "interval": 5.0,
+    "start": 0.0,
+    "end": null,
+    "moments": null,
+    "frames": 1,
+    "spacing": null,
+    "count": 1,
+    "expect": {
+      "points": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          0.0
+        ]
+      ],
+      "chosen": [
+        10.0
+      ]
+    }
+  },
+  {
+    "name": "count 3 of 4 points: half rounds up",
+    "duration": 15.0,
+    "interval": 5.0,
+    "start": 0.0,
+    "end": null,
+    "moments": null,
+    "frames": 1,
+    "spacing": null,
+    "count": 3,
+    "expect": {
+      "points": [
+        0.0,
+        5.0,
+        10.0,
+        15.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          0.0
+        ]
+      ],
+      "chosen": [
+        0.0,
+        10.0,
+        15.0
+      ]
+    }
+  },
+  {
+    "name": "fractional interval",
+    "duration": 1.0,
+    "interval": 0.1,
+    "start": 0.0,
+    "end": null,
+    "moments": null,
+    "frames": 1,
+    "spacing": null,
+    "count": 10,
+    "expect": {
+      "points": [
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          0.0
+        ]
+      ],
+      "chosen": [
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0
+      ]
+    }
+  }
+]

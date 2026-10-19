@@ -26,6 +26,7 @@ from videoannotator.exporters.native_formats import (
 from videoannotator.pipelines.base_pipeline import BasePipeline
 from videoannotator.provenance import ModelRef
 
+from . import sampling
 from .ollama_client import OllamaVLMClient
 
 logger = logging.getLogger(__name__)
@@ -76,6 +77,10 @@ class VLMAnnotationPipeline(BasePipeline):
             "sampling_mode": "single_frame",  # or "frame_burst"
             "frame_interval_sec": 5.0,
             "burst_offsets": [-2, -1, 0, 1, 2],
+            "start_sec": 0.0,
+            "end_sec": None,  # None: the end of the video
+            "moments_sec": None,  # when set, replaces the interval grid
+            "burst_spacing_sec": None,  # None: frame_interval_sec, as before
             "think": False,
             "request_timeout_sec": 240,
             "keep_alive": "2h",
@@ -151,11 +156,15 @@ class VLMAnnotationPipeline(BasePipeline):
         assert self._client is not None
 
         video_metadata = self._get_video_metadata(video_path)
-        end_time = end_time if end_time is not None else video_metadata["duration"]
         frame_interval_sec = float(self.config["frame_interval_sec"])
         sampling_mode = self.config["sampling_mode"]
+        burst_spacing_sec = float(
+            self.config.get("burst_spacing_sec") or frame_interval_sec
+        )
 
-        sample_points = self._sample_points(start_time, end_time, frame_interval_sec)
+        sample_points = self._planned_points(
+            video_metadata["duration"], start_time, end_time
+        )
 
         import cv2
 
@@ -175,7 +184,7 @@ class VLMAnnotationPipeline(BasePipeline):
                 if sampling_mode == "frame_burst":
                     offsets = self.config["burst_offsets"]
                     frame_numbers, images, context_offsets = self._read_burst(
-                        cap, video_metadata, anchor_t, frame_interval_sec, offsets
+                        cap, video_metadata, anchor_t, burst_spacing_sec, offsets
                     )
                 else:
                     frame_numbers, images, context_offsets = self._read_single(
@@ -319,16 +328,21 @@ class VLMAnnotationPipeline(BasePipeline):
             "total_frames": total_frames,
         }
 
-    @staticmethod
-    def _sample_points(
-        start_time: float, end_time: float, frame_interval_sec: float
+    def _planned_points(
+        self, duration: float, start_time: float = 0.0, end_time: float | None = None
     ) -> list[float]:
-        points = []
-        t = start_time
-        while t <= end_time:
-            points.append(round(t, 3))
-            t += frame_interval_sec
-        return points
+        """The config's points (the viewer draws the same ones), narrowed by
+        `process()`'s own range when a caller passes one; the job runner passes
+        the whole video."""
+        points = sampling.sample_points(
+            duration,
+            float(self.config["frame_interval_sec"]),
+            float(self.config.get("start_sec") or 0.0),
+            self.config.get("end_sec"),
+            self.config.get("moments_sec"),
+        )
+        last = duration if end_time is None else end_time
+        return [t for t in points if start_time <= t <= last]
 
     @staticmethod
     def _seek_frame_jpeg(
@@ -360,17 +374,15 @@ class VLMAnnotationPipeline(BasePipeline):
         cap,
         video_metadata: dict[str, Any],
         anchor_t: float,
-        frame_interval_sec: float,
+        spacing_sec: float,
         offsets: list[int],
     ) -> tuple[list[int], list[bytes], list[int]]:
-        duration = video_metadata["duration"]
         frame_numbers: list[int] = []
         images: list[bytes] = []
         used_offsets: list[int] = []
-        for off in offsets:
-            t = anchor_t + off * frame_interval_sec
-            if t < 0 or t > duration:
-                continue
+        for off, t in sampling.burst_times(
+            anchor_t, offsets, spacing_sec, video_metadata["duration"]
+        ):
             result = self._seek_frame_jpeg(cap, video_metadata["fps"], t)
             if result is None:
                 continue

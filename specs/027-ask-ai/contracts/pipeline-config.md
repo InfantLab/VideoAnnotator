@@ -7,10 +7,13 @@ meant.
 
 | Key | Type | Default | Registry metadata (spec 026) |
 |---|---|---|---|
-| `start_sec` | float | `0.0` | behavioural, label "From", unit s |
-| `end_sec` | float \| null | `null` | behavioural, label "To", unit s, null = end of video |
-| `moments_sec` | list[float] \| null | `null` | behavioural, label "Only at these moments" |
+| `start_sec` | float | `0.0` | technical, label "From", unit s |
+| `end_sec` | float \| null | `null` | technical, label "To", unit s, null = end of video |
+| `moments_sec` | list[float] \| null | `null` | technical, label "Only at these moments" |
 | `burst_spacing_sec` | float \| null | `null` | behavioural, label "Frames apart", unit s, `applies_when: sampling_mode: [frame_burst]` |
+
+Range and moments are `technical` (shown under more settings in run setup) because spec 026
+SC-002 allows at most five behavioural settings; Ask AI shows them in its own sampling controls.
 
 `burst_offsets` keeps its meaning; its description changes to "multiples of the frame spacing
 (the sample interval unless Frames apart is set)".
