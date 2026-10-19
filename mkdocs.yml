@@ -56,6 +56,7 @@ nav:
       - Installation troubleshooting: installation/troubleshooting.md
   - Use:
       - Getting started: usage/GETTING_STARTED.md
+      - Ask AI: usage/ask_ai.md
       - Command-line examples: usage/demo_commands.md
       - Pipelines: usage/pipeline_specs.md
       - Getting your results: usage/accessing_results.md

@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Ask AI** (spec 027): one window to ask a vision model about your video. Drop a video (stored
+  once on the server), pick one in a shared folder, or reopen a recent one; write a question or
+  start from an example; **Try on this frame** or **Try on 10 moments**, and see the answer, the
+  model's reasoning and the frames it was sent beside the video, with a marker on a timeline below
+  it. Sampling (every N seconds, from/to, listed moments, several frames per sample and how far
+  apart) is drawn as ticks as you change it, with the sample count and how long a run would take.
+  Every try and run is kept in a history on the server, shared by everyone using it: restore,
+  name, star, and show up to four side by side as lanes and table columns. A badge says where the
+  model runs (on this computer, on the local network, or remote); frames go to a remote model
+  server only after someone has agreed to it. **Run on whole video** shows answers as they come,
+  **Stop** keeps them, **Run on more videos** opens run setup filled in, and **Export table**
+  gives the answers as the spec 025 table. How-to: `docs/usage/ask_ai.md`.
+- **`vlm_annotation` sampling settings**: `start_sec`, `end_sec`, `moments_sec` and
+  `burst_spacing_sec` (seconds between a burst's frames). All default to what a config meant
+  before (burst frames one interval apart).
+- **Runs show answers as they come and can be stopped keeping them**: the `vlm_annotation` file is
+  rewritten after each answer (atomically, at most once a second) with `vlm_progress` and
+  `vlm_skipped`; each annotation gains `frame_times` and `status`. Cancelling such a job writes
+  the answers so far and records `stopped_early`; the job is `cancelled`, its result `completed`,
+  and it exports like any other. Provenance records whether the model was local or remote.
+- **`/api/v1/videos`**: upload a video once by content, and play it in the browser through a
+  short-lived token with range requests (no whole-file download first).
+- **`/api/v1/ask`**: tries, history entries, runs and their answers, sample frames, and where the
+  model server is.
+
+### Changed
+
+- Ask AI replaces the Workbench and Prompts pages and the wizard's prompt test panel, which
+  becomes a link to Ask AI. `/workbench` and `/prompts` still open, in Ask AI.
+- `POST /api/v1/vlm/preview` no longer holds up the server while the model answers, and accepts
+  `burst_spacing_sec`.
+- `GET /api/v1/vlm/models` says whether the model server is local or remote (`endpoint`).
+
 ## [1.6.0] - 2026-10-18
 
 The consolidation release: one repository, current dependencies, a clean first contact, results

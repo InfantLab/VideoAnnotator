@@ -515,7 +515,8 @@ export function useSSE(jobId?: string) {
 /getting-started      - First-run guide
 /results              - Results kept on this computer (opened jobs, demos); /library redirects here
 /datasets             - Saved datasets: lists of videos to run jobs on (on the server)
-/prompts              - VLM prompt library; /workbench and /compare for prompt work
+/ask                  - Ask AI (spec 027): try a question on a video, history, runs; /workbench and /prompts redirect here
+/compare              - Compare two runs' VLM answers
 /jobs                 - Jobs and runs (batches)
 /jobs/new             - Job creation wizard
 /jobs/:jobId          - Job detail page

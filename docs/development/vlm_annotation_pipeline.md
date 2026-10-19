@@ -83,7 +83,8 @@ src/videoannotator/registry/metadata/vlm_annotation.yaml   config_schema, requir
   - `single_frame` — one image per sample point. Ported from
     `core/inference.py`.
   - `frame_burst` — a window of frames (`burst_offsets`, default
-    `[-2,-1,0,1,2]`, in units of `frame_interval_sec`) attached to *one* chat
+    `[-2,-1,0,1,2]`, in units of `burst_spacing_sec`, which defaults to
+    `frame_interval_sec`) attached to *one* chat
     call as multiple `images` list entries. Ported from
     `core/context_inference.py`. **This is not true video/temporal input** —
     it's several still JPEGs in one message, exactly like the research repo's
@@ -100,6 +101,27 @@ src/videoannotator/registry/metadata/vlm_annotation.yaml   config_schema, requir
   `resp_tokens`, `tokens_per_sec`). Written to
   `{output_dir}/{video_id}_vlm_annotation.json` and validated with
   `pycocotools` on write, same as `scene_detection`.
+- **Answers as they come** (spec 027): the file is rewritten (to a temporary
+  name, then moved into place) after each answer, at most once a second, and
+  at the end. Each annotation also has `frame_times` and `status`
+  (`answered` | `error`); the top level has `vlm_progress`
+  (`{planned, done, finished, stopped_early}`) and `vlm_skipped` (sample
+  points whose frames couldn't be read, `{t, reason}`: listed, never
+  answered). Readers that don't know these keys see the same annotations.
+- **Stopping keeps the answers**: the job runner gives the pipeline a stop
+  check (`set_stop_check`), asked before each sample. Cancelling the job
+  (`POST /api/v1/jobs/{id}/cancel`) makes the pipeline write what it has and
+  return normally: the job is `cancelled`, its `vlm_annotation` result
+  `completed`, and the provenance's `vlm` block says `stopped_early`,
+  `samples_planned` and `samples_answered`, with `endpoint_class`
+  (`local` | `remote`) and `endpoint_host`.
+- **Tries go first**: every model call holds a per-model gate in the server
+  process (`gate.py`); a run's next sample waits while an Ask AI try is
+  waiting. A job run by a separate `videoannotator worker` process doesn't
+  share the gate.
+- **Where samples fall** is one set of functions (`sampling.py`), mirrored in
+  the viewer (`viewer/src/lib/sampling.ts`) and pinned by
+  `tests/fixtures/ask_ai/sampling_cases.json`.
 
 ## Configuration reference
 
@@ -113,7 +135,11 @@ by pipeline name: `{"vlm_annotation": {"prompt": "...", ...}}`.
 | `model` | string | `qwen3.5:9b` | Must already be pulled (`ollama pull <name>`) — nothing is auto-downloaded |
 | `sampling_mode` | string | `single_frame` | `single_frame` or `frame_burst` |
 | `frame_interval_sec` | float | `5.0` | Seconds between sample points |
-| `burst_offsets` | list[int] | `[-2,-1,0,1,2]` | `frame_burst` only, in units of `frame_interval_sec` |
+| `start_sec` | float | `0.0` | First sample point |
+| `end_sec` | float \| null | `null` | Last possible sample point; `null` is the end of the video |
+| `moments_sec` | list[float] \| null | `null` | Sample only at these seconds; replaces the interval grid (and `start_sec`/`end_sec`). Moments outside the video are left out |
+| `burst_offsets` | list[int] | `[-2,-1,0,1,2]` | `frame_burst` only, in multiples of the frame spacing |
+| `burst_spacing_sec` | float \| null | `null` | `frame_burst` only: seconds between a sample's frames; `null` is `frame_interval_sec`, as before this setting existed. A frame outside the video is dropped, and the annotation lists only the frames sent |
 | `think` | boolean | `false` | Ollama "thinking" mode — ~50x slower, diagnostic use only |
 | `request_timeout_sec` | integer | `240` | Per-request timeout |
 | `keep_alive` | string | `"2h"` | How long Ollama keeps the model loaded between calls |
@@ -166,11 +192,13 @@ by pipeline name: `{"vlm_annotation": {"prompt": "...", ...}}`.
 ```python
 from videoannotator.pipelines.vlm_annotation import VLMAnnotationPipeline
 
-pipeline = VLMAnnotationPipeline({
-    "model": "qwen3.5:9b",
-    "sampling_mode": "single_frame",   # or "frame_burst"
-    "frame_interval_sec": 5.0,
-})
+pipeline = VLMAnnotationPipeline(
+    {
+        "model": "qwen3.5:9b",
+        "sampling_mode": "single_frame",  # or "frame_burst"
+        "frame_interval_sec": 5.0,
+    }
+)
 annotations = pipeline.process(
     video_path="path/to/your/video.mp4",
     output_dir="path/to/output_dir",
