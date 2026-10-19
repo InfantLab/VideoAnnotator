@@ -17,17 +17,17 @@ from __future__ import annotations
 import logging
 import threading
 import uuid
+from datetime import UTC, datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ... import ask_history
 from ...config_env import default_ollama_base_url
-from ...database import database as db_module
 from ...database.database import get_db
-from ...database.models import EndpointConfirmation
+from ...database.models import AskEntry, EndpointConfirmation, Prompt
 from ...diagnostics.ollama import unreachable_hint
 from ...endpoints import classify_endpoint, normalise_base_url
 from ...pipelines.vlm_annotation import frames as vlm_frames
@@ -285,7 +285,7 @@ def _answer_try(
     defaults = VLMAnnotationPipeline({}).config
     gate = gate_for(base_url, model)
     status = "done"
-    with db_module.SessionLocal() as db:
+    with ask_history.own_session() as db:
         try:
             client = OllamaVLMClient(
                 base_url=base_url, timeout=int(defaults["request_timeout_sec"])
@@ -435,3 +435,190 @@ def get_entry(
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> Entry:
     return _entry(_get_or_404(db, entry_id))
+
+
+class LibraryPrompt(BaseModel):
+    sha256: str
+    text: str
+    name: str | None = None
+    models: list[str] = []
+    starred: bool = False
+    last_used_at: str | None = None
+
+
+class EntriesResponse(BaseModel):
+    entries: list[Entry]
+    library: list[LibraryPrompt]
+    next_before: str | None = None
+
+
+def _parse_before(before: str | None) -> datetime | None:
+    if not before:
+        return None
+    try:
+        value = datetime.fromisoformat(before.replace("Z", "+00:00"))
+    except ValueError as e:
+        raise APIError(
+            status_code=422, code="INVALID_BEFORE", message="`before` is not a time."
+        ) from e
+    return value if value.tzinfo else value.replace(tzinfo=UTC)
+
+
+@router.get(
+    "/entries",
+    response_model=EntriesResponse,
+    summary="The history: every try and run, newest first, starred first",
+    description="""
+Entries are shared by everyone on the server; `mine=true` keeps the caller's own.
+The first page lists starred entries first. `library` lists prompts from the
+prompt library that no entry uses yet, so their records still appear; it is
+empty when filtered by video and after the first page.
+""",
+)
+def list_entries(
+    video_path: str | None = None,
+    mine: bool = False,
+    starred: bool | None = None,
+    limit: int = Query(50, ge=1, le=500),
+    before: str | None = None,
+    db: Session = Depends(get_db),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> EntriesResponse:
+    before_at = _parse_before(before)
+    query = db.query(AskEntry)
+    if video_path:
+        query = query.filter(AskEntry.video_path == video_path)
+    me = _user_id(user)
+    if mine:
+        query = query.filter(AskEntry.user_id == me)
+    if starred is not None:
+        query = query.filter(AskEntry.starred.is_(starred))
+
+    pinned: list[AskEntry] = []
+    rest = query
+    if starred is None:
+        rest = query.filter(AskEntry.starred.is_(False))
+        if before_at is None:
+            pinned = (
+                query.filter(AskEntry.starred.is_(True))
+                .order_by(AskEntry.created_at.desc())
+                .all()
+            )
+    if before_at is not None:
+        rest = rest.filter(AskEntry.created_at < before_at)
+    page = rest.order_by(AskEntry.created_at.desc()).limit(limit + 1).all()
+    more = len(page) > limit
+    page = page[:limit]
+
+    library: list[LibraryPrompt] = []
+    if not video_path and before_at is None:
+        used = db.query(AskEntry.prompt_sha256).distinct()
+        prompts = db.query(Prompt).filter(
+            Prompt.hidden.is_(False), Prompt.sha256.not_in(used)
+        )
+        if mine:
+            prompts = prompts.filter(Prompt.first_user_id == me)
+        for p in prompts.order_by(Prompt.last_used_at.desc()).limit(200):
+            library.append(
+                LibraryPrompt(
+                    sha256=p.sha256,
+                    text=p.text,
+                    name=p.name,
+                    models=sorted({u.model for u in p.uses}),
+                    starred=bool(p.starred),
+                    last_used_at=ask_history._iso(p.last_used_at),
+                )
+            )
+
+    return EntriesResponse(
+        entries=[_entry(e) for e in [*pinned, *page]],
+        library=library,
+        next_before=ask_history._iso(page[-1].created_at) if more and page else None,
+    )
+
+
+class EntryPatch(BaseModel):
+    name: str | None = None
+    starred: bool | None = None
+
+
+@router.patch(
+    "/entries/{entry_id}",
+    response_model=Entry,
+    summary="Name or star an entry (seen by everyone on the server)",
+)
+def update_entry(
+    entry_id: str,
+    body: EntryPatch,
+    db: Session = Depends(get_db),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Entry:
+    entry = _get_or_404(db, entry_id)
+    if body.name is not None:
+        entry.name = body.name.strip() or None
+    if body.starred is not None:
+        entry.starred = body.starred
+    db.commit()
+    return _entry(entry)
+
+
+@router.delete(
+    "/entries/{entry_id}",
+    status_code=204,
+    summary="Delete an entry (its author or an admin); a run stays",
+)
+def delete_entry(
+    entry_id: str,
+    db: Session = Depends(get_db),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Response:
+    entry = _get_or_404(db, entry_id)
+    me = _user_id(user)
+    is_admin = bool(user and user.get("is_admin"))
+    if entry.user_id and user is not None and me != entry.user_id and not is_admin:
+        raise APIError(
+            status_code=403,
+            code="NOT_YOUR_ENTRY",
+            message="Only the person who made this, or an admin, can delete it.",
+        )
+    db.delete(entry)
+    db.commit()
+    return Response(status_code=204)
+
+
+class DraftRequest(BaseModel):
+    video_path: str
+    prompt: str
+    model: str
+    base_url: str | None = None
+    think: bool = False
+    sampling: Sampling = Sampling()
+
+
+@router.post(
+    "/drafts",
+    response_model=Entry,
+    status_code=201,
+    summary="Keep a question that hasn't been tried yet",
+    description="Saved before another entry is restored over it, so it isn't lost.",
+)
+def create_draft(
+    body: DraftRequest,
+    db: Session = Depends(get_db),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Entry:
+    path = readable_video(body.video_path)
+    base_url = body.base_url or default_ollama_base_url()
+    entry = ask_history.create_entry(
+        db,
+        kind="draft",
+        prompt=body.prompt.replace("\r\n", "\n"),
+        model=body.model,
+        base_url=base_url,
+        endpoint_class=classify_endpoint(base_url).cls,
+        sampling=body.sampling.model_dump(),
+        think=body.think,
+        video_path=str(path),
+        user_id=_user_id(user),
+    )
+    return _entry(entry)

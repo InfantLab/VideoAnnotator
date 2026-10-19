@@ -12,7 +12,12 @@ from videoannotator.api.database import reset_storage_backend
 from videoannotator.api.main import app
 from videoannotator.api.v1 import ask
 from videoannotator.database import database as db_module
-from videoannotator.database.models import AskEntry, EndpointConfirmation, PromptUse
+from videoannotator.database.models import (
+    AskEntry,
+    EndpointConfirmation,
+    Prompt,
+    PromptUse,
+)
 from videoannotator.pipelines.vlm_annotation.ollama_client import (
     OllamaUnavailableError,
     VLMCallResult,
@@ -59,6 +64,7 @@ def fake_model(monkeypatch):
         db.query(AskEntry).delete()
         db.query(EndpointConfirmation).delete()
         db.query(PromptUse).delete()
+        db.query(Prompt).delete()
         db.commit()
     FakeModelServer.models = [MODEL]
     FakeModelServer.reachable = True
@@ -200,3 +206,136 @@ class TestTries:
 
     def test_unknown_entry(self):
         assert client.get(f"/api/v1/ask/entries/{'0' * 8}").status_code == 404
+
+
+USERS = {
+    "irene": {"id": "u-irene", "username": "irene", "is_admin": False},
+    "caspar": {"id": "u-caspar", "username": "caspar", "is_admin": False},
+    "admin": {"id": "u-admin", "username": "root", "is_admin": True},
+}
+
+
+@pytest.fixture
+def as_users():
+    from fastapi import Request
+
+    from videoannotator.api.middleware.auth import validate_api_key
+
+    def by_header(request: Request):
+        return USERS.get(request.headers.get("X-Test-User", ""))
+
+    app.dependency_overrides[validate_api_key] = by_header
+    yield lambda name: {"X-Test-User": name}
+    app.dependency_overrides.pop(validate_api_key, None)
+
+
+def _try_as(video, headers, prompt):
+    r = client.post(
+        "/api/v1/ask/tries",
+        json={
+            "video_path": video,
+            "prompt": prompt,
+            "model": MODEL,
+            "base_url": LOCAL,
+            "at": 1.0,
+        },
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+    return _until_done(r.json()["id"])
+
+
+class TestHistory:
+    def test_tries_listed_newest_first_with_who(self, video, as_users):
+        for i in range(5):
+            _try_as(video, as_users("irene"), f"Wording {i}")
+        entries = client.get("/api/v1/ask/entries").json()["entries"]
+        assert [e["prompt"] for e in entries] == [
+            f"Wording {i}" for i in range(4, -1, -1)
+        ]
+        assert {e["user_id"] for e in entries} == {"u-irene"}
+
+    def test_mine_filters_by_caller(self, video, as_users):
+        _try_as(video, as_users("irene"), "Irene's")
+        _try_as(video, as_users("caspar"), "Caspar's")
+        mine = client.get(
+            "/api/v1/ask/entries", params={"mine": True}, headers=as_users("caspar")
+        ).json()["entries"]
+        assert [e["prompt"] for e in mine] == ["Caspar's"]
+        everyone = client.get("/api/v1/ask/entries", headers=as_users("caspar"))
+        assert len(everyone.json()["entries"]) == 2
+
+    def test_filter_by_video(self, video, ingest_root):
+        other = ingest_root / "other.avi"
+        write_synthetic_video_avi(other, SyntheticVideoSpec(fps=10, num_frames=20))
+        _until_done(_try(video).json()["id"])
+        _until_done(_try(str(other)).json()["id"])
+        r = client.get("/api/v1/ask/entries", params={"video_path": str(other)}).json()
+        assert [e["video_name"] for e in r["entries"]] == ["other.avi"]
+        assert r["library"] == []
+
+    def test_library_prompt_without_entry_appears_until_tried(self, video):
+        from videoannotator import prompt_library
+
+        with db_module.SessionLocal() as db:
+            prompt_library.record_use(db, "From the old Prompts page", MODEL, "preview")
+        library = client.get("/api/v1/ask/entries").json()["library"]
+        assert [p["text"] for p in library] == ["From the old Prompts page"]
+        assert library[0]["models"] == [MODEL]
+        _until_done(_try(video, prompt="From the old Prompts page").json()["id"])
+        r = client.get("/api/v1/ask/entries").json()
+        assert r["library"] == []
+        assert [e["prompt"] for e in r["entries"]] == ["From the old Prompts page"]
+
+    def test_name_and_star_seen_by_another_user(self, video, as_users):
+        entry = _try_as(video, as_users("irene"), "Touch?")
+        r = client.patch(
+            f"/api/v1/ask/entries/{entry['id']}",
+            json={"name": "touch v1", "starred": True},
+            headers=as_users("irene"),
+        )
+        assert r.status_code == 200
+        seen = client.get(
+            f"/api/v1/ask/entries/{entry['id']}", headers=as_users("caspar")
+        ).json()
+        assert (seen["name"], seen["starred"]) == ("touch v1", True)
+
+    def test_starred_first_then_newest(self, video):
+        ids = [
+            _until_done(_try(video, prompt=f"q{i}").json()["id"])["id"]
+            for i in range(3)
+        ]
+        client.patch(f"/api/v1/ask/entries/{ids[0]}", json={"starred": True})
+        entries = client.get("/api/v1/ask/entries").json()["entries"]
+        assert [e["prompt"] for e in entries] == ["q0", "q2", "q1"]
+
+    def test_paging_with_before(self, video):
+        for i in range(5):
+            _until_done(_try(video, prompt=f"q{i}").json()["id"])
+        first = client.get("/api/v1/ask/entries", params={"limit": 2}).json()
+        assert [e["prompt"] for e in first["entries"]] == ["q4", "q3"]
+        second = client.get(
+            "/api/v1/ask/entries", params={"limit": 2, "before": first["next_before"]}
+        ).json()
+        assert [e["prompt"] for e in second["entries"]] == ["q2", "q1"]
+
+    def test_delete_by_non_author_refused(self, video, as_users):
+        entry = _try_as(video, as_users("irene"), "Touch?")
+        url = f"/api/v1/ask/entries/{entry['id']}"
+        assert client.delete(url, headers=as_users("caspar")).status_code == 403
+        assert client.delete(url, headers=as_users("admin")).status_code == 204
+        assert client.get(url).status_code == 404
+
+    def test_draft_is_kept_without_answers(self, video):
+        r = client.post(
+            "/api/v1/ask/drafts",
+            json={
+                "video_path": video,
+                "prompt": "Not tried yet",
+                "model": MODEL,
+                "base_url": LOCAL,
+            },
+        )
+        assert r.status_code == 201
+        assert (r.json()["kind"], r.json()["status"]) == ("draft", "done")
+        assert r.json()["answers"] is None

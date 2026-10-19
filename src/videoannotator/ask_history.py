@@ -12,10 +12,38 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session
+from sqlalchemy.pool import NullPool
 
 from . import prompt_library
 from .database.models import AskEntry
+
+_own_engines: dict[str, Engine] = {}
+
+
+def own_session() -> Session:
+    """A session on its own connection, for a thread that outlives a request.
+
+    The app's SQLite engine shares one connection between threads
+    (StaticPool); two threads using it at once can crash the interpreter, and
+    a try's worker writes while requests read. SQLite's file locking orders
+    separate connections safely.
+    """
+    from .database import database as db_module
+
+    url = db_module.engine.url
+    if url.get_backend_name() != "sqlite" or url.database in (None, "", ":memory:"):
+        return db_module.SessionLocal()
+    key = url.render_as_string(hide_password=False)
+    engine = _own_engines.get(key)
+    if engine is None:
+        engine = _own_engines[key] = create_engine(
+            url,
+            connect_args={"check_same_thread": False, "timeout": 30},
+            poolclass=NullPool,
+        )
+    return Session(bind=engine, autoflush=False)
 
 
 def _id(entry_id: str | uuid.UUID) -> uuid.UUID:

@@ -69,6 +69,11 @@ prompt library that have no entry, so their records still appear (FR-006); empty
 video. An Entry includes `prompt` (the text), `user_id`, and for runs `job_id` and the job's
 status and progress.
 
+### `POST /ask/drafts` → `201 Entry`
+
+Body as `POST /ask/tries` without `at`/`count`. Keeps a question that was never tried
+(`kind: draft`, no answers) before another entry is restored over it (US2 scenario 2).
+
 ### `GET /ask/entries/{id}` → `Entry`
 
 Polled every second while a try is `running`.
