@@ -3,6 +3,7 @@ import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCu
 import { getDominantEmotion } from '@/lib/parsers/face';
 import { sampledAtTime } from '@/lib/sampledAtTime';
 import { categoryHues } from '@/lib/categoryColors';
+import { formatClockTenths } from '@/lib/lanes';
 import type { OpenFace3Settings } from './openface3Settings';
 import { openface3SettingsFromLanes, overlaySettingsFromLanes } from '@/lib/laneOverlays';
 import { browserClaimFor, sniffVideoCodec, type VideoCodecInfo } from '@/lib/videoCodec';
@@ -97,6 +98,14 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     useEffect(() => {
       if (streamUrl) setCodec(null);
     }, [streamUrl]);
+
+    // Ask AI on the Video page (spec 028 FR-022): the latest answer at or before the
+    // playhead, held as the other sampled overlays are, and marked as sampled.
+    const vlmSamples = useMemo(
+      () => (annotationData?.vlm_annotations ?? []).map((a) => ({ timestamp: a.timestamp_sec, label: a.label })),
+      [annotationData?.vlm_annotations],
+    );
+    const vlmNow = overlays && overlays.ask_ai !== false ? sampledAtTime(vlmSamples, currentTime)[0] : undefined;
 
     const personHues = useMemo(
       () => categoryHues((annotationData?.person_tracking ?? []).map(personKey)),
@@ -906,6 +915,15 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
             ref={canvasRef}
             className="absolute inset-0 pointer-events-none"
           />
+          {vlmNow && (
+            <div
+              className="pointer-events-none absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-white"
+              data-testid="vlm-overlay"
+            >
+              <span className="font-medium">Ask AI: {vlmNow.label}</span>
+              <span className="ml-2 text-white/70">sampled at {formatClockTenths(vlmNow.timestamp)}</span>
+            </div>
+          )}
           {playbackProblem && (
             <PlaybackProblemNotice problem={playbackProblem} codec={codec} />
           )}

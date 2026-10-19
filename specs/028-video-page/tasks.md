@@ -178,10 +178,12 @@ identity (`git -c user.name=… -c user.email=…`).
 
 ## Phase 10: Polish & cross-cutting
 
-- [ ] T055 Ask AI lane overlay (FR-022): on the video, the latest `vlm_label` at or before the playhead, held no longer than the sampling interval, marked "sampled at m:ss.s" (`lib/sampledAtTime.ts`); remove `VlmAnnotationPanel` from the page
+- [X] T055 Ask AI lane overlay (FR-022): on the video, the latest `vlm_label` at or before the playhead, held no longer than the sampling interval, marked "sampled at m:ss.s" (`lib/sampledAtTime.ts`); remove `VlmAnnotationPanel` from the page
+  - *Held with `sampledAtTime`* (the old panel's rule, up to 1.5× the sampling interval), drawn only on the Video page, switched by the Ask AI lane's eye.
 - [ ] T056 Remove from the page and then delete once unimported: `UnifiedControls`, `OverlayControls`, `TimelineControls`, `FileViewer`, `VlmAnnotationPanel`, `OpenFace3Controls` (its settings now in the Faces menu), the old `Timeline` if unused (`grep -rn` each); move `DebugPanel` and "Load different files" into ⋯; update `VideoAnnotationViewer` users or delete it if `VideoPage` replaced all
-- [ ] T057 [P] Viewer contract test (`viewer/src/test/contract/videoannotator-outputs.test.ts`): lanes build from every fixture without an `other:` lane for a known measure
-- [ ] T058 [P] Empty and error states: a video with no runs shows the video, an empty timeline and "Run…"; a failed pipeline's lane shows its reason; `/videos/runs` errors show the API's message and hint
+  - *Partly done (2026-10-19)*: the Video page uses none of them; `OverlayControls`, `TimelineControls`, `BatchNavigation` are deleted. `VideoAnnotationViewer` (with `UnifiedControls`, `FileViewer`, `VlmAnnotationPanel`, `OpenFace3Controls`, `Timeline`) still serves demo results from the local library and `/viewer`'s file-upload screen; it goes with the local library in spec 029.
+- [X] T057 [P] Viewer contract test (`viewer/src/test/contract/videoannotator-outputs.test.ts`): lanes build from every fixture without an `other:` lane for a known measure
+- [X] T058 [P] Empty and error states: a video with no runs shows the video, an empty timeline and "Run…"; a failed pipeline's lane shows its reason; `/videos/runs` errors show the API's message and hint
 - [ ] T059 Docs: a Video page how-to in `docs/` replacing the results-player page(s) (find them with `grep -rln "View data\|results player\|UnifiedControls" docs/`), the table contract v2 (spec 025's doc page), the API reference for `/videos/runs` and `/videos/notes`, `CHANGELOG.md` (Unreleased: Video page; table format version 2 adds `author` and `note` rows)
 - [ ] T060 Bundle and build: `bash scripts/build_viewer.sh`; confirm the initial bundle stays within 300 KB gzipped (Video page in its own chunk); commit `src/videoannotator/viewer_static/`
 - [ ] T061 Full gates: `pytest tests/`, `ruff check .`, `mypy src/videoannotator`, `pre-commit run --all-files`, viewer lint/tsc/tests

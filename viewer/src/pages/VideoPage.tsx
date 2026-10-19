@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
+import { apiErrorEnvelope } from '@/api/handleError';
 import { VideoView } from '@/components/video/VideoView';
 import { useNotes } from '@/hooks/useNotes';
 import { useRunFiles } from '@/hooks/useRunFiles';
@@ -91,8 +92,14 @@ function VideoPageFor() {
     return <PageMessage title="Loading…" />;
   }
   if (runsQuery.error || !info) {
-    const error = runsQuery.error as { message?: string; hint?: string } | null;
-    return <PageMessage title="Can't open this video" body={error?.message ?? 'The server did not answer.'} hint={error?.hint} />;
+    const envelope = runsQuery.error ? apiErrorEnvelope(runsQuery.error) : null;
+    return (
+      <PageMessage
+        title="Can't open this video"
+        body={runsQuery.error instanceof Error ? runsQuery.error.message : 'The server did not answer.'}
+        hint={envelope?.hint ?? undefined}
+      />
+    );
   }
 
   return (

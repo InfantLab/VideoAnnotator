@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { getApiClient } from '@/api/client';
+import { APIError } from '@/api/handleError';
 import { LocalVideo } from '@/components/video/LocalVideo';
 import JobResultsViewer from '@/pages/JobResultsViewer';
 import {
@@ -174,5 +175,41 @@ describe('standalone /viewer', () => {
     expect(screen.queryByRole('link', { name: /Ask AI/ })).toBeNull();
     fireEvent.mouseDown(screen.getByRole('tab', { name: 'Notes' }));
     expect(await screen.findByTestId('notes-tab')).toHaveTextContent(/Notes need a server/);
+  });
+});
+
+describe('empty and error states', () => {
+  it('a video with no runs shows the video, an empty timeline and Run…', async () => {
+    const api = mockVideoApi(demoVideoRuns({ runs: [] }));
+    wideLayout();
+    const { container } = renderVideoPage();
+    expect(await screen.findByTestId('lanes-empty')).toHaveTextContent('No results for this video yet');
+    expect(screen.getByRole('button', { name: /Run…/ })).toBeInTheDocument();
+    await waitFor(() => expect(container.querySelector('video')?.getAttribute('src')).toContain('/api/v1/videos/stream'));
+    expect(api.downloadResultFile).not.toHaveBeenCalled();
+  });
+
+  it("a failed pipeline's lane shows why it failed", async () => {
+    const run = demoRun('job-1');
+    run.pipelines = run.pipelines.map((p) =>
+      p.name === 'scene_detection' ? { ...p, status: 'failed', error: 'CUDA out of memory', files: [] } : p,
+    );
+    mockVideoApi(demoVideoRuns({ runs: [run] }));
+    wideLayout();
+    renderVideoPage();
+    await lanesLoaded();
+    expect(screen.getByTestId('lane-failed')).toHaveTextContent('Failed: CUDA out of memory');
+  });
+
+  it("shows the server's message and hint when the video can't be opened", async () => {
+    const api = mockVideoApi();
+    api.getVideoRuns.mockRejectedValue(
+      new APIError("/elsewhere/x.mp4 isn't in a folder shared with VideoAnnotator", 403, undefined, {
+        error: { code: 'PATH_NOT_ALLOWED', hint: 'Upload the video, or choose one in a folder shared with the server.' },
+      }),
+    );
+    renderVideoPage();
+    expect(await screen.findByRole('alert')).toHaveTextContent("isn't in a folder shared with VideoAnnotator");
+    expect(screen.getByText(/Upload the video, or choose one/)).toBeInTheDocument();
   });
 });

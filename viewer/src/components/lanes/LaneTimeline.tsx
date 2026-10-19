@@ -224,9 +224,9 @@ export function LaneTimeline({
             </div>
           </div>
 
-          {lanes.length === 0 && (
+          {lanes.every((l) => l.kind === 'notes') && (
             <p className="px-3 py-4 text-xs text-muted-foreground" data-testid="lanes-empty">
-              No results for this video yet.
+              No results for this video yet. Run… (at the top) runs pipelines on it.
             </p>
           )}
 

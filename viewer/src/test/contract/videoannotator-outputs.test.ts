@@ -231,3 +231,23 @@ describe('a stopped Ask AI run → viewer', () => {
     expect(data.vlm_annotations?.slice(0, 2)).toEqual(plain.data.vlm_annotations?.slice(0, 2));
   });
 });
+
+// Spec 028: every measure VideoAnnotator writes has a lane of its own on the
+// Video page; a generic `other:` lane is only for outputs the viewer doesn't know.
+describe('VideoAnnotator outputs → Video page lanes', () => {
+  it.each([
+    ['current', CURRENT],
+    ['legacy', LEGACY],
+    ['stopped Ask AI run', path.join(CURRENT, 'ask_ai')],
+  ])('builds lanes from the %s fixtures with no generic lane', async (_name, dir) => {
+    const { rowsFromFiles } = await import('@/lib/table/rows');
+    const { buildLanes } = await import('@/lib/lanes');
+    const files = readdirSync(dir)
+      .filter((name) => name.startsWith('demo_clip_'))
+      // Named as a run writes it (the fixture's name marks it as the stopped one).
+      .map((name) => ({ name: name.replace('_stopped', ''), text: readFileSync(path.join(dir, name), 'utf8') }));
+    const lanes = buildLanes(rowsFromFiles(files, 'demo_clip'), []);
+    expect(lanes.length).toBeGreaterThan(0);
+    expect(lanes.filter((l) => l.kind.startsWith('other:')).map((l) => l.kind)).toEqual([]);
+  });
+});

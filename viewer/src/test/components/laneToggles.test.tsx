@@ -98,6 +98,17 @@ describe('lanes as the controls', () => {
     expect(within(lane('speech')[0]).getByTestId('lane-eye')).toHaveAttribute('aria-pressed', 'false');
   });
 
+  it('shows the Ask AI answer for this moment on the video, marked as sampled; its eye hides it', async () => {
+    renderVideoPage();
+    await lanesLoaded();
+    // Samples every 5 s: at 6 s the answer is the one sampled at 5 s.
+    fireEvent.click(within(lane('speakers')[0]).getByTestId(/^lane-body-/), { clientX: 300, clientY: 5 });
+    expect(screen.getByTestId('vlm-overlay')).toHaveTextContent('Ask AI: NO_TOUCH');
+    expect(screen.getByTestId('vlm-overlay')).toHaveTextContent('sampled at 0:05.0');
+    fireEvent.click(within(lane('ask_ai')[0]).getByTestId('lane-eye'));
+    expect(screen.queryByTestId('vlm-overlay')).toBeNull();
+  });
+
   it('has no controls card', async () => {
     renderVideoPage();
     await lanesLoaded();
