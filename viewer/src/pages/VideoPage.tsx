@@ -8,6 +8,7 @@ import { VideoPlayer } from '@/components/VideoPlayer';
 import type { LaneToggles } from '@/components/lanes/LaneHeader';
 import { LaneTimeline } from '@/components/lanes/LaneTimeline';
 import { LayersMenu } from '@/components/lanes/LayersMenu';
+import { DataTable } from '@/components/video/DataTable';
 import { KeysHelp } from '@/components/video/KeysHelp';
 import { PlayerBar } from '@/components/video/PlayerBar';
 import { Button } from '@/components/ui/button';
@@ -178,6 +179,14 @@ export default function VideoPage() {
   const view = chosenView && chosenView.end <= duration + 1e-6 ? chosenView : fullView(duration);
 
   const [selectedLaneId, setSelectedLaneId] = useState<string | null>(null);
+  const [selectedRow, setSelectedRow] = useState<number | null>(null);
+  const [tab, setTab] = useState('data');
+  const laneOfRow = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const lane of lanes) for (const row of lane.rows) for (const e of row.events) if (!map.has(e.row)) map.set(e.row, lane.id);
+    return map;
+  }, [lanes]);
+  const runLabels = useMemo(() => Object.fromEntries(runRefs.map((r) => [r.id, r.label])), [runRefs]);
   const selectedLane = lanes.find((l) => l.id === selectedLaneId) ?? lanes.find((l) => l.status === 'ok') ?? null;
 
   const seek = useCallback(
@@ -319,15 +328,29 @@ export default function VideoPage() {
         </div>
         {panelOpen && (
           <aside className="flex shrink-0 flex-col border-l" style={{ width: SIDE_PANEL_WIDTH }} data-testid="side-panel">
-            <Tabs defaultValue="data" className="flex min-h-0 flex-1 flex-col">
+            <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
               <TabsList className="m-2 grid grid-cols-4">
                 <TabsTrigger value="data">Data</TabsTrigger>
                 <TabsTrigger value="notes">Notes</TabsTrigger>
                 <TabsTrigger value="runs">Runs</TabsTrigger>
                 <TabsTrigger value="about">About</TabsTrigger>
               </TabsList>
-              <TabsContent value="data" className="min-h-0 flex-1 overflow-auto px-3 text-xs text-muted-foreground">
-                {files.rows.length.toLocaleString()} rows of results for this video.
+              <TabsContent value="data" className="mt-0 min-h-0 flex-1">
+                <DataTable
+                  rows={files.rows}
+                  currentTime={currentTime}
+                  selectedRow={selectedRow}
+                  onRowClick={(index) => {
+                    const row = files.rows[index];
+                    setSelectedRow(index);
+                    const laneId = laneOfRow.get(index);
+                    if (laneId) setSelectedLaneId(laneId);
+                    if (row) seek(row.start);
+                  }}
+                  filter={prefs.dataFilter}
+                  onFilterChange={(kind) => updatePrefs((p) => ({ ...p, dataFilter: kind }))}
+                  runLabels={runLabels}
+                />
               </TabsContent>
               <TabsContent value="notes" className="px-3 text-xs text-muted-foreground">
                 Notes on this video will be listed here.
@@ -376,6 +399,11 @@ export default function VideoPage() {
             onSeek={seek}
             selectedLaneId={selectedLane?.id ?? null}
             onSelectLane={setSelectedLaneId}
+            selectedRow={selectedRow}
+            onSelectRow={(index) => {
+              setSelectedRow(index);
+              setTab('data');
+            }}
             toggles={toggles}
             toolbar={
               <>

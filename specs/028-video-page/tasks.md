@@ -93,9 +93,9 @@ identity (`git -c user.name=… -c user.email=…`).
 **Goal**: the Data tab: rows of the spec 025 table following playback.
 **Independent test**: the highlighted row tracks the playhead; clicking a row seeks; filter to Speakers.
 
-- [ ] T028 [US3] Create `viewer/src/components/video/DataTable.tsx`: windowed list (fixed row height; renders only visible rows plus a margin) of the rows from `useRunFiles` for the shown runs, columns time, lane, row, value/label (full row in a hover/expand); highlights the row at or before the playhead (binary search on start) and scrolls it into view until the user scrolls; a "Follow playback" button resumes; lane filter and search (label, value, track; case-insensitive); "n of N rows"
-- [ ] T029 [US3] Link table and timeline (SC-005): clicking a row seeks to its start and selects its lane; clicking an event in a lane selects its row (via the event's row index)
-- [ ] T030 [P] [US3] Tests `viewer/src/test/components/dataTable.test.tsx`: same rows and order as `rowsFromParsed`; highlight follows `currentTime`; user scroll stops following; filter and search counts; 50,000 rows render fewer than 200 DOM rows; row click seeks; event click selects row
+- [X] T028 [US3] Create `viewer/src/components/video/DataTable.tsx`: windowed list (fixed row height; renders only visible rows plus a margin) of the rows from `useRunFiles` for the shown runs, columns time, lane, row, value/label (full row in a hover/expand); highlights the row at or before the playhead (binary search on start) and scrolls it into view until the user scrolls; a "Follow playback" button resumes; lane filter and search (label, value, track; case-insensitive); "n of N rows"
+- [X] T029 [US3] Link table and timeline (SC-005): clicking a row seeks to its start and selects its lane; clicking an event in a lane selects its row (via the event's row index)
+- [X] T030 [P] [US3] Tests `viewer/src/test/components/dataTable.test.tsx`: same rows and order as `rowsFromParsed`; highlight follows `currentTime`; user scroll stops following; filter and search counts; 50,000 rows render fewer than 200 DOM rows; row click seeks; event click selects row
 
 **Checkpoint**: US3's scenarios pass.
 

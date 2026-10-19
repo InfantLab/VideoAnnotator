@@ -212,3 +212,20 @@ export const OLD_OVERLAY_KEYS: Record<string, string> = {
   faces: 'faces',
   emotions: 'emotion',
 };
+
+/** Where a measure without a lane of its own sits in the Data tab's lane filter. */
+const UNDRAWN_KIND: Record<string, string> = {
+  emotion_score: 'emotion',
+  age: 'faces',
+  gender: 'faces',
+  vlm_reasoning: 'ask_ai',
+  action_unit_presence: 'action_units',
+  scene_score: 'scenes',
+};
+
+/** The lane kind a table row is filed under in the Data tab: every row has one. */
+export function tableKindOf(row: Pick<Row, 'pipeline' | 'measure' | 'value'>): LaneKind {
+  const drawn = kindOf(row);
+  if (drawn) return drawn;
+  return laneKind(UNDRAWN_KIND[row.measure])!;
+}
