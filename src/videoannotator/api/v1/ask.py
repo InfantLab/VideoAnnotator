@@ -924,8 +924,13 @@ def run_answers(
     planned = progress.get("planned")
     if planned is None:
         planned = _planned_for(job)
+    status = _RUN_STATUS.get(job_status, "running")
+    # Stop takes effect between samples: until the call in progress returns
+    # and the pipeline writes its last answer, the run is still going.
+    if status == "stopped" and data and progress.get("finished") is False:
+        status = "running"
     return RunAnswers(
-        status=_RUN_STATUS.get(job_status, "running"),
+        status=status,
         planned=int(planned or 0),
         done=int(progress.get("done") or len(annotations)) if data else 0,
         stopped_early=bool(progress.get("stopped_early")),

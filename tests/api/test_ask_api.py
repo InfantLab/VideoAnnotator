@@ -655,3 +655,29 @@ class TestExport:
         assert {row[try_rows[0].index("measure")] for row in try_rows[1:]} == {
             "vlm_label"
         }
+
+
+def test_a_stopped_run_reads_as_running_until_its_last_answer_is_written(video):
+    import json
+
+    from videoannotator.api.database import get_storage_backend
+    from videoannotator.batch.result_files import job_folder
+    from videoannotator.batch.types import JobStatus
+
+    run = _run(video).json()
+    storage = get_storage_backend()
+    job = storage.load_job_metadata(run["job_id"])
+    job.status = JobStatus.CANCELLED
+    storage.save_job_metadata(job)
+    folder = job_folder(job)
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / "p01_t1_vlm_annotation.json"
+    url = f"/api/v1/ask/runs/{run['job_id']}/answers"
+
+    progress = {"planned": 2, "done": 1, "finished": False, "stopped_early": False}
+    path.write_text(json.dumps({"annotations": [], "vlm_progress": progress}))
+    assert client.get(url).json()["status"] == "running"
+
+    progress.update(finished=True, stopped_early=True)
+    path.write_text(json.dumps({"annotations": [], "vlm_progress": progress}))
+    assert client.get(url).json()["status"] == "stopped"

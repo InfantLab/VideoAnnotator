@@ -2,7 +2,7 @@
 
 **Feature Branch**: `027-ask-ai` (work lands on `1.7-dev`)
 **Created**: 2026-10-16
-**Status**: Draft
+**Status**: Built 2026-10-19 (walk-through with a vision model pending: [checks.md](checks.md))
 **Design**: [spec 023](../023-viewer-overhaul/spec.md) (Draft proposal: Ask AI; Decisions 1–8),
 journey 1 in [journeys.md](../023-viewer-overhaul/journeys.md)
 **Input**: User description: "A researcher new to AI video analysis gives it a video, asks

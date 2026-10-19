@@ -42,7 +42,9 @@ tools, decisions, journeys). Built by, in order:
 
 - [ ] [`specs/027-ask-ai`](../../specs/027-ask-ai/spec.md): the VLM window. First answer in under a
       minute, prompt history never lost, sampling shown on the timeline, a live local/remote
-      badge; the pipeline gains frame spacing, ranges and answers as they come.
+      badge; the pipeline gains frame spacing, ranges and answers as they come. Built 2026-10-19
+      ([checks](../../specs/027-ask-ai/checks.md)); the walk-through with a vision model is still
+      to do.
 - [ ] [`specs/028-video-page`](../../specs/028-video-page/spec.md): lanes as controls, one row per
       person or speaker, zoom, the data table beside the video, the run per lane, notes;
       streamed, with no folder question.
@@ -157,8 +159,12 @@ imports, `test_embedding_shape_validation` asserts only if a method that doesn't
 "integration" Whisper tests accept failure as success); about 290 lines mocked openai-whisper's
 own API and had to be deleted, not updated, when the runtime changed.
 
-- [ ] Inventory: per file, what behaviour it protects, run time, and whether it can fail.
-- [ ] Remove duplicates and tests that can't fail; merge the two audio files.
+Findings and progress: [`test_audit_v1.7.0.md`](test_audit_v1.7.0.md) (started 2026-10-19; it
+found three real bugs hidden by tests that couldn't fail).
+
+- [x] Inventory: per file, what behaviour it protects, run time, and whether it can fail.
+- [ ] Remove duplicates and tests that can't fail; merge the two audio files. (Mostly done; four
+      file deletions and the recovery-test merge remain.)
 - [ ] Tests mock at our boundary (what a pipeline sends a model, what it does with the answer),
       not a library's internals, so a library swap changes the mock, not the test's meaning.
 - [ ] Slow or real-model tests carry their markers and stay out of the default run; record the
