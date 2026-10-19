@@ -14,10 +14,12 @@ model server and video checks below never block the event loop.
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Response
@@ -25,6 +27,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ... import ask_history
+from ...batch.result_files import job_folder
+from ...batch.types import BatchJob, JobStatus
 from ...config_env import default_ollama_base_url
 from ...database.database import get_db
 from ...database.models import AskEntry, EndpointConfirmation, Prompt
@@ -42,6 +46,9 @@ from ...pipelines.vlm_annotation.vlm_pipeline import (
     _parse_label,
 )
 from ...registry.pipeline_loader import extras_available
+from ...results_folder import RunFolder, run_name
+from ...storage.manager import get_storage_provider
+from ..database import get_storage_backend
 from ..errors import APIError
 from ..middleware.auth import validate_api_key
 from .exceptions import PipelineUnavailableException
@@ -434,7 +441,7 @@ def get_entry(
     db: Session = Depends(get_db),
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> Entry:
-    return _entry(_get_or_404(db, entry_id))
+    return _entry_with_run(db, _get_or_404(db, entry_id))
 
 
 class LibraryPrompt(BaseModel):
@@ -531,7 +538,7 @@ def list_entries(
             )
 
     return EntriesResponse(
-        entries=[_entry(e) for e in [*pinned, *page]],
+        entries=[_entry_with_run(db, e) for e in [*pinned, *page]],
         library=library,
         next_before=ask_history._iso(page[-1].created_at) if more and page else None,
     )
@@ -559,7 +566,7 @@ def update_entry(
     if body.starred is not None:
         entry.starred = body.starred
     db.commit()
-    return _entry(entry)
+    return _entry_with_run(db, entry)
 
 
 @router.delete(
@@ -722,3 +729,225 @@ def confirm_endpoint(
         )
         db.commit()
     return Response(status_code=204)
+
+
+# ---------------------------------------------------------------------------
+# Runs
+# ---------------------------------------------------------------------------
+
+_RUN_STATUS = {
+    "pending": "running",
+    "running": "running",
+    "retrying": "running",
+    "completed": "done",
+    "cancelled": "stopped",
+    "failed": "failed",
+}
+
+
+def _load_job(job_id: str | None) -> Any:
+    if not job_id:
+        return None
+    try:
+        return get_storage_backend().load_job_metadata(job_id)
+    except Exception:
+        return None
+
+
+def _entry_with_run(db: Session, entry: Any) -> Entry:
+    """An entry; a run's follows its job, and is settled once the job is."""
+    out = _entry(entry)
+    if entry.kind != "run":
+        return out
+    job = _load_job(entry.job_id)
+    if job is None:
+        return out
+    job_status = getattr(job.status, "value", job.status)
+    status = _RUN_STATUS.get(str(job_status), "running")
+    if status != "running" and status != entry.status:
+        ask_history.finish(db, entry.id, status)
+        out = _entry(entry)
+    out.status = status  # type: ignore[assignment]
+    out.job_status = str(job_status)
+    out.progress = float(job.progress_percentage or 0)
+    return out
+
+
+class RunRequest(BaseModel):
+    video_path: str
+    prompt: str
+    model: str
+    base_url: str | None = None
+    think: bool = False
+    sampling: Sampling = Sampling()
+
+
+@router.post(
+    "/runs",
+    response_model=Entry,
+    status_code=201,
+    summary="Run the question on the whole video (or its range) as a job",
+    description="An ordinary vlm_annotation job, with its history entry. Stop it "
+    "with POST /jobs/{job_id}/cancel: the answers so far are kept.",
+)
+def create_run(
+    body: RunRequest,
+    db: Session = Depends(get_db),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Entry:
+    require_llm()
+    path = readable_video(body.video_path)
+    meta = video_info(str(path))
+    check_sampling(body.sampling, float(meta["duration"]))
+    if not sample_points_for(body.sampling, float(meta["duration"])):
+        raise _invalid("start", "These settings give no moments to sample.")
+    base_url = body.base_url or default_ollama_base_url()
+    state = require_confirmed(db, base_url)
+    require_model(base_url, body.model)
+
+    prompt = body.prompt.replace("\r\n", "\n")
+    config = {
+        "vlm_annotation": {
+            **sampling_to_config(body.sampling),
+            "prompt": prompt,
+            "model": body.model,
+            "base_url": base_url,
+            "think": body.think,
+        }
+    }
+    job = BatchJob(
+        # Read in place, never copied (spec 022).
+        video_path=path,
+        config=config,
+        status=JobStatus.PENDING,
+        selected_pipelines=["vlm_annotation"],
+    )
+    run = RunFolder.create(
+        run_name(video=path),
+        batch_id=None,
+        pipelines=["vlm_annotation"],
+        config=config,
+    )
+    run.add_video(job, path, size_bytes=path.stat().st_size)
+    provider = get_storage_provider()
+    provider.create_job_dir(job.job_id)
+    job.storage_path = provider.get_absolute_path(job.job_id, "")
+    get_storage_backend().save_job_metadata(job)
+
+    entry = ask_history.create_entry(
+        db,
+        kind="run",
+        prompt=prompt,
+        model=body.model,
+        base_url=base_url,
+        endpoint_class=state["class"],
+        sampling=body.sampling.model_dump(),
+        think=body.think,
+        video_path=str(path),
+        job_id=job.job_id,
+        user_id=_user_id(user),
+    )
+    return _entry_with_run(db, entry)
+
+
+class Skipped(BaseModel):
+    t: float
+    reason: str
+
+
+class RunAnswers(BaseModel):
+    status: str
+    planned: int
+    done: int
+    stopped_early: bool
+    answers: list[Answer]
+    skipped: list[Skipped]
+
+
+# The last readable copy of each run's results, for a read that lands while the
+# file is unreadable (a network share's hiccup; the rewrite itself is atomic).
+_last_readable: dict[str, dict[str, Any]] = {}
+
+
+def _answer_from_annotation(a: dict[str, Any]) -> Answer:
+    label = a.get("label")
+    status = a.get("status") or (
+        "error" if isinstance(label, str) and label.startswith("ERROR:") else "answered"
+    )
+    numbers = [int(n) for n in a.get("context_frame_numbers") or []]
+    if not numbers and a.get("frame_number") is not None:
+        numbers = [int(a["frame_number"])]
+    return Answer(
+        t=float(a.get("timestamp_sec") or 0.0),
+        frame_numbers=numbers,
+        frame_times=[float(t) for t in a.get("frame_times") or []],
+        status=status,
+        label=None if status == "error" else label,
+        reasoning=a.get("reasoning"),
+        raw_response=a.get("raw_response"),
+        error=label[len("ERROR: ") :]
+        if status == "error" and isinstance(label, str)
+        else None,
+        total_time=a.get("total_time"),
+    )
+
+
+@router.get(
+    "/runs/{job_id}/answers",
+    response_model=RunAnswers,
+    summary="A run's answers so far (polled while it goes)",
+)
+def run_answers(
+    job_id: str,
+    after: int = Query(0, ge=0),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> RunAnswers:
+    job = _load_job(job_id)
+    if job is None:
+        raise APIError(
+            status_code=404, code="JOB_NOT_FOUND", message=f"No run {job_id}"
+        )
+    job_status = str(getattr(job.status, "value", job.status))
+    stem = Path(str(job.video_path)).stem
+    path = job_folder(job) / f"{stem}_vlm_annotation.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        _last_readable[job_id] = data
+    except (OSError, ValueError):
+        data = _last_readable.get(job_id, {})
+
+    annotations = [a for a in data.get("annotations") or [] if isinstance(a, dict)]
+    progress = data.get("vlm_progress") or {}
+    planned = progress.get("planned")
+    if planned is None:
+        planned = _planned_for(job)
+    return RunAnswers(
+        status=_RUN_STATUS.get(job_status, "running"),
+        planned=int(planned or 0),
+        done=int(progress.get("done") or len(annotations)) if data else 0,
+        stopped_early=bool(progress.get("stopped_early")),
+        answers=[_answer_from_annotation(a) for a in annotations[after:]],
+        skipped=[
+            Skipped(t=float(s.get("t", 0.0)), reason=str(s.get("reason", "")))
+            for s in data.get("vlm_skipped") or []
+            if isinstance(s, dict)
+        ],
+    )
+
+
+def _planned_for(job: Any) -> int:
+    """Before the first answer: the samples the run's config will take."""
+    try:
+        config = (job.config or {}).get("vlm_annotation", {})
+        duration = float(vlm_frames.video_metadata(str(job.video_path))["duration"])
+        return len(
+            vlm_sampling.sample_points(
+                duration,
+                float(config.get("frame_interval_sec", 5.0)),
+                float(config.get("start_sec") or 0.0),
+                config.get("end_sec"),
+                config.get("moments_sec"),
+            )
+        )
+    except Exception:
+        return 0

@@ -469,3 +469,131 @@ class TestEndpoint:
             "class": "local",
             "confirmed": True,
         }
+
+
+def _run(video, **kwargs):
+    body = {"video_path": video, "prompt": "Touch?", "model": MODEL, "base_url": LOCAL}
+    body.update(kwargs)
+    return client.post("/api/v1/ask/runs", json=body)
+
+
+class TestRuns:
+    def test_a_run_is_a_job_with_the_mapped_config(self, video):
+        from videoannotator.api.database import get_storage_backend
+
+        r = _run(
+            video,
+            sampling={
+                "interval": 2,
+                "start": 1,
+                "end": 4,
+                "frames": 3,
+                "spacing": 0.25,
+            },
+        )
+        assert r.status_code == 201, r.text
+        entry = r.json()
+        assert (entry["kind"], entry["status"]) == ("run", "running")
+        assert entry["job_status"] == "pending"
+        job = get_storage_backend().load_job_metadata(entry["job_id"])
+        assert job.selected_pipelines == ["vlm_annotation"]
+        assert str(job.video_path) == video
+        config = job.config["vlm_annotation"]
+        assert config["frame_interval_sec"] == 2
+        assert (config["start_sec"], config["end_sec"]) == (1, 4)
+        assert config["sampling_mode"] == "frame_burst"
+        assert config["burst_offsets"] == [-1, 0, 1]
+        assert config["burst_spacing_sec"] == 0.25
+        assert config["base_url"] == LOCAL
+        assert config["prompt"] == "Touch?"
+
+    def test_listed_moments_in_the_config(self, video):
+        from videoannotator.api.database import get_storage_backend
+
+        entry = _run(video, sampling={"moments": [3, 1, 1]}).json()
+        config = get_storage_backend().load_job_metadata(entry["job_id"]).config
+        assert config["vlm_annotation"]["moments_sec"] == [1, 3]
+        assert config["vlm_annotation"]["sampling_mode"] == "single_frame"
+
+    def test_answers_page_with_after(self, video):
+        import json
+
+        from videoannotator.api.database import get_storage_backend
+        from videoannotator.batch.result_files import job_folder
+
+        entry = _run(video).json()
+        url = f"/api/v1/ask/runs/{entry['job_id']}/answers"
+        before = client.get(url).json()
+        assert (before["done"], before["answers"], before["planned"]) == (0, [], 2)
+
+        job = get_storage_backend().load_job_metadata(entry["job_id"])
+        folder = job_folder(job)
+        folder.mkdir(parents=True, exist_ok=True)
+        annotations = [
+            {"timestamp_sec": 0.0, "context_frame_numbers": [0], "label": "TOUCH",
+             "status": "answered", "frame_times": [0.0], "total_time": 1.0},
+            {"timestamp_sec": 5.0, "context_frame_numbers": [50],
+             "label": "ERROR: timed out"},
+        ]  # fmt: skip
+        (folder / "p01_t1_vlm_annotation.json").write_text(
+            json.dumps(
+                {
+                    "annotations": annotations,
+                    "vlm_progress": {
+                        "planned": 4,
+                        "done": 3,
+                        "finished": False,
+                        "stopped_early": False,
+                    },
+                    "vlm_skipped": [{"t": 2.5, "reason": "no readable frame"}],
+                }  # fmt: skip
+            )
+        )
+        body = client.get(url).json()
+        assert (body["planned"], body["done"]) == (4, 3)
+        assert [a["status"] for a in body["answers"]] == ["answered", "error"]
+        assert body["answers"][1]["error"] == "timed out"
+        assert body["answers"][1]["label"] is None
+        assert body["skipped"] == [{"t": 2.5, "reason": "no readable frame"}]
+        later = client.get(url, params={"after": 1}).json()
+        assert [a["t"] for a in later["answers"]] == [5.0]
+
+    def test_a_try_during_a_run_goes_before_the_runs_next_sample(
+        self, video, monkeypatch
+    ):
+        from tests.fixtures.fake_vlm import FakeTryVLM, FakeVLM
+        from videoannotator.api.database import get_storage_backend
+        from videoannotator.batch.job_execution import run_job_pipelines
+        from videoannotator.pipelines.vlm_annotation import vlm_pipeline
+
+        FakeVLM.reset()
+        FakeVLM.hold_run_call = 2
+        monkeypatch.setattr(vlm_pipeline, "OllamaVLMClient", FakeVLM)
+        monkeypatch.setattr(ask, "OllamaVLMClient", FakeTryVLM)
+
+        entry = _run(video, sampling={"interval": 1}).json()
+        storage = get_storage_backend()
+        job = storage.load_job_metadata(entry["job_id"])
+        runner = threading.Thread(
+            target=run_job_pipelines,
+            args=(job, storage, {"vlm_annotation": vlm_pipeline.VLMAnnotationPipeline}),
+        )
+        runner.start()
+        try:
+            assert FakeVLM.held.wait(10)
+            tried = _try(video)
+            assert tried.status_code == 201, tried.text
+            deadline = time.monotonic() + 5
+            while ask_threads_waiting() == 0 and time.monotonic() < deadline:
+                time.sleep(0.01)
+        finally:
+            FakeVLM.release.set()
+        _until_done(tried.json()["id"])
+        runner.join(20)
+        assert FakeVLM.log[:3] == ["run-1", "run-2", "try"]
+
+
+def ask_threads_waiting() -> int:
+    from videoannotator.pipelines.vlm_annotation.gate import gate_for
+
+    return gate_for(LOCAL, MODEL)._tries_waiting
