@@ -9,6 +9,8 @@ interval after its last detection. VLM labels hold until the next sample, as
 the viewer draws them (constitution Principle VI). Continuous measures (action
 units, gaze, scores) and per-detection attributes (emotion, age) stay in the
 table: ELAN codes what happens when, not every frame's measurements.
+Researchers' notes (spec 028) get a tier of their own, `Notes (researcher)`,
+with its author as ANNOTATOR; one tier per author when several wrote notes.
 
 Contract: specs/025-results-out/contracts/elan-and-methods.md.
 """
@@ -28,7 +30,17 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 from ..version import __version__
 from .readers import TABLE_FORMAT_VERSION, Row
 from .results_set import ResultsSet, VideoResults
-from .table import ExportSummary, read_video, video_rows
+from .table import (
+    NO_NOTES_DATABASE,
+    NOTE_MEASURE,
+    ExportSummary,
+    NotesFor,
+    NotesUnavailable,
+    note_rows,
+    notes_path,
+    read_video,
+    video_rows,
+)
 
 LINGUISTIC_TYPE = "videoannotator"
 IN_VIEW = "in view"
@@ -36,7 +48,16 @@ SCHEMA_URL = "http://www.mpi.nl/tools/elan/EAFv3.0.xsd"
 
 _INTERVALS = {"scene": "scenes", "speech": "speech"}
 _DETECTIONS = {"person", "face"}
-_TIER_ORDER = ("scene", "speech", "speaker_turn", "person", "face", "vlm_label")
+_TIER_ORDER = (
+    "scene",
+    "speech",
+    "speaker_turn",
+    "person",
+    "face",
+    "vlm_label",
+    NOTE_MEASURE,
+)
+NOTES_TIER = "Notes (researcher)"
 
 
 @dataclass
@@ -51,6 +72,7 @@ class Tier:
     tier_id: str
     order: tuple[int, str]
     annotations: list[Annotation]
+    annotator: str | None = None
 
 
 def _ms(seconds: float) -> int:
@@ -98,9 +120,12 @@ def tiers(rows: list[Row]) -> tuple[list[Tier], list[str]]:
     detections: dict[tuple[str, str, str], list[Row]] = defaultdict(list)
     vlm: dict[str, list[Row]] = defaultdict(list)
     intervals: dict[tuple[str, str, str], list[Row]] = defaultdict(list)
+    notes: dict[str, list[Row]] = defaultdict(list)
 
     for row in rows:
-        if row.measure in _DETECTIONS:
+        if row.measure == NOTE_MEASURE:
+            notes[row.author].append(row)
+        elif row.measure in _DETECTIONS:
             detections[(row.pipeline, row.measure, row.track)].append(row)
             pipelines_times[row.pipeline].add(row.start)
         elif row.measure == "vlm_label":
@@ -145,6 +170,22 @@ def tiers(rows: list[Row]) -> tuple[list[Tier], list[str]]:
                 f"{pipeline} labels",
                 (_TIER_ORDER.index("vlm_label"), pipeline),
                 _held(samples, spacing),
+            )
+        )
+
+    for author, group in notes.items():
+        tier_id = NOTES_TIER if len(notes) == 1 else f"Notes (researcher: {author})"
+        result.append(
+            Tier(
+                tier_id,
+                (_TIER_ORDER.index(NOTE_MEASURE), tier_id),
+                [
+                    _annotation(
+                        r.start, r.end if r.end is not None else r.start, r.label or ""
+                    )
+                    for r in group
+                ],
+                annotator=author or None,
             )
         )
 
@@ -206,9 +247,10 @@ def build(
     annotation_number = 0
     tier_elements = []
     for tier in video_tiers:
-        element = ET.Element(
-            "TIER", {"LINGUISTIC_TYPE_REF": LINGUISTIC_TYPE, "TIER_ID": tier.tier_id}
-        )
+        attributes = {"LINGUISTIC_TYPE_REF": LINGUISTIC_TYPE, "TIER_ID": tier.tier_id}
+        if tier.annotator:
+            attributes["ANNOTATOR"] = tier.annotator
+        element = ET.Element("TIER", attributes)
         for a in tier.annotations:
             annotation_number += 1
             first, second = f"ts{len(slots) + 1}", f"ts{len(slots) + 2}"
@@ -262,14 +304,31 @@ def _left_out_note(measures: set[str]) -> list[str]:
 
 
 def write_videos(
-    results: ResultsSet, target: Callable[[VideoResults], Path]
+    results: ResultsSet,
+    target: Callable[[VideoResults], Path],
+    notes_for: NotesFor | None = None,
 ) -> ExportSummary:
-    """Write one .eaf per video to `target(video) -> Path`."""
+    """Write one .eaf per video to `target(video) -> Path`. Each file of a video
+    carries its notes (`notes_for`), so each opens complete on its own."""
     summary = ExportSummary()
     left_out: set[str] = set()
     pipelines: set[str] = set()
+    noted: set[str] = set()
     for video in results.videos:
         rows = video_rows(video, read_video(video))
+        path_of_video = notes_path(video)
+        if notes_for is not None and path_of_video is not None:
+            try:
+                notes = notes_for(video)
+            except NotesUnavailable:
+                notes_for = None
+                summary.notes.append(NO_NOTES_DATABASE)
+                notes = []
+            if notes:
+                rows = rows + note_rows(notes, Path(path_of_video).stem)
+                if notes[0].video_path not in noted:
+                    noted.add(notes[0].video_path)
+                    summary.researcher_notes += len(notes)
         if not rows:
             continue
         tree, count, measures = build(video, rows)
@@ -283,7 +342,7 @@ def write_videos(
     summary.pipelines = sorted(pipelines)
     summary.skipped = [s.to_dict() for s in results.skipped]
     summary.missing = [m.to_dict() for m in results.missing]
-    summary.notes = list(results.notes)
+    summary.notes = list(results.notes) + summary.notes
     summary.left_out = _left_out_note(left_out)
     return summary
 

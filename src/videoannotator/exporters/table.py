@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import csv
 import json
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TextIO
@@ -26,6 +26,18 @@ from .readers import (
 from .results_set import ResultFile, ResultsSet, SkippedFile, VideoResults
 
 PARQUET_EXTRA = "parquet"
+NOTES_PIPELINE = "notes"
+NOTE_MEASURE = "note"
+NO_NOTES_DATABASE = "notes not included: no database"
+
+
+class NotesUnavailable(RuntimeError):
+    """The notes database can't be read (an export of a copied folder)."""
+
+
+# A video's researcher notes (spec 028): objects with `start_sec`, `end_sec`,
+# `text`, `author_name` and `video_path`, in table order.
+NotesFor = Callable[[VideoResults], list[Any]]
 PARQUET_HINT = f"pip install videoannotator[{PARQUET_EXTRA}]"
 
 
@@ -51,6 +63,8 @@ class ExportSummary:
     notes: list[str] = field(default_factory=list)
     left_out: list[str] = field(default_factory=list)
     sources: list[dict[str, Any]] = field(default_factory=list)
+    # Researchers' notes included as `note` rows (table format 2).
+    researcher_notes: int = 0
 
     def to_dict(self, *, sources: bool = False) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -62,6 +76,7 @@ class ExportSummary:
             "missing": self.missing,
             "notes": self.notes,
             "left_out": self.left_out,
+            "researcher_notes": self.researcher_notes,
             "truncated": False,
         }
         if sources:
@@ -170,11 +185,87 @@ def video_rows(video: VideoResults, read: list[_ReadFile] | None = None) -> list
     return rows
 
 
-def rows(results: ResultsSet, summary: ExportSummary | None = None) -> Iterator[Row]:
-    """Every row of `results`, video by video; fills in `summary` as it goes."""
+def notes_path(video: VideoResults) -> str | None:
+    """Where a video's notes are filed: the video the run read."""
+    return video.media_path or video.video_path
+
+
+def note_rows(notes: list[Any], video: str) -> list[Row]:
+    """A video's notes as table rows (contracts/table-v2.md): run empty, pipeline
+    `notes`, numbered within the video in order."""
+    from ..version import __version__
+
+    return [
+        Row(
+            run="",
+            video=video,
+            pipeline=NOTES_PIPELINE,
+            event=number,
+            track="",
+            start=note.start_sec,
+            end=note.end_sec,
+            frame=None,
+            measure=NOTE_MEASURE,
+            label=note.text,
+            value=None,
+            confidence=None,
+            x=None,
+            y=None,
+            width=None,
+            height=None,
+            model="",
+            videoannotator_version=__version__,
+            file="",
+            author=note.author_name,
+        )
+        for number, note in enumerate(notes, 1)
+    ]
+
+
+class _Notes:
+    """Each video's notes once per export, however many runs of it it covers."""
+
+    def __init__(self, notes_for: NotesFor | None, summary: ExportSummary):
+        self.notes_for = notes_for
+        self.summary = summary
+        self.seen: set[str] = set()
+
+    def rows_for(self, video: VideoResults) -> list[Row]:
+        path = notes_path(video)
+        if self.notes_for is None or path is None:
+            return []
+        try:
+            notes = self.notes_for(video)
+        except NotesUnavailable:
+            self.notes_for = None
+            self.summary.notes.append(NO_NOTES_DATABASE)
+            return []
+        if not notes:
+            return []
+        key = notes[0].video_path
+        if key in self.seen:
+            return []
+        self.seen.add(key)
+        self.summary.researcher_notes += len(notes)
+        return note_rows(notes, Path(path).stem)
+
+
+def rows(
+    results: ResultsSet,
+    summary: ExportSummary | None = None,
+    notes_for: NotesFor | None = None,
+) -> Iterator[Row]:
+    """Every row of `results`, video by video; fills in `summary` as it goes.
+    A video's notes (`notes_for`) come once, before its first run's rows."""
     summary = summary if summary is not None else ExportSummary()
+    notes = _Notes(notes_for, summary)
     pipelines: set[str] = set()
     for video in results.videos:
+        researcher = notes.rows_for(video)
+        if researcher:
+            summary.rows += len(researcher)
+            pipelines.add(NOTES_PIPELINE)
+            yield from researcher
         read = read_video(video)
         video_table = video_rows(video, read)
         summary.sources += [
@@ -194,7 +285,7 @@ def rows(results: ResultsSet, summary: ExportSummary | None = None) -> Iterator[
     summary.pipelines = sorted(pipelines)
     summary.skipped = [s.to_dict() for s in results.skipped]
     summary.missing = [m.to_dict() for m in results.missing]
-    summary.notes = list(results.notes)
+    summary.notes = list(results.notes) + summary.notes
 
 
 def _cell(value: Any) -> str:
@@ -205,12 +296,14 @@ def _cell(value: Any) -> str:
     return str(value)
 
 
-def write_csv(results: ResultsSet, out: TextIO) -> ExportSummary:
+def write_csv(
+    results: ResultsSet, out: TextIO, notes_for: NotesFor | None = None
+) -> ExportSummary:
     """Write the table to `out` (opened with newline="")."""
     summary = ExportSummary()
     writer = csv.writer(out, lineterminator="\n")
     writer.writerow(COLUMNS)
-    for row in rows(results, summary):
+    for row in rows(results, summary, notes_for):
         writer.writerow([_cell(v) for v in row.values()])
     return summary
 
@@ -228,7 +321,9 @@ _INTEGER_COLUMNS = {"event", "frame"}
 _NUMBER_COLUMNS = {"start", "end", "value", "confidence", "x", "y", "width", "height"}
 
 
-def write_parquet(results: ResultsSet, path: str | Path) -> ExportSummary:
+def write_parquet(
+    results: ResultsSet, path: str | Path, notes_for: NotesFor | None = None
+) -> ExportSummary:
     """Write the table to a Parquet file at `path`."""
     if not parquet_available():
         raise ParquetNotInstalled()
@@ -262,7 +357,7 @@ def write_parquet(results: ResultsSet, path: str | Path) -> ExportSummary:
         batch.clear()
 
     with pq.ParquetWriter(str(path), schema) as writer:
-        for row in rows(results, summary):
+        for row in rows(results, summary, notes_for):
             batch.append(row)
             if len(batch) >= 50_000:
                 flush(writer)

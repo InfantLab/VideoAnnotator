@@ -49,7 +49,7 @@ def test_json_summary(run_folder, tmp_path):
     assert result.exit_code == 0
     summary = json.loads(result.stdout)
     assert summary["output"] == str(out)
-    assert summary["videos"] == 1 and summary["table_format_version"] == 1
+    assert summary["videos"] == 1 and summary["table_format_version"] == 2
 
 
 def test_refuses_to_overwrite_a_file_that_isnt_an_export(run_folder, tmp_path):

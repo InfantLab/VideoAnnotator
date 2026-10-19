@@ -10,7 +10,7 @@
  * this file against them. Change both sides together.
  */
 
-export const TABLE_FORMAT_VERSION = 1;
+export const TABLE_FORMAT_VERSION = 2;
 export const NOT_RECORDED = 'not recorded';
 
 export const COLUMNS = [

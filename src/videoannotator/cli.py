@@ -1024,6 +1024,36 @@ def _write_failed(path: Path, error: OSError) -> typer.Exit:
     return typer.Exit(code=1)
 
 
+def _export_notes_for() -> Any:
+    """Each video's researcher notes for an export (spec 028), from this
+    machine's database; an export of a copied folder may have none, and says so."""
+    from . import video_notes
+    from .database_location import database_path, database_url
+    from .exporters.table import NotesUnavailable, notes_path
+
+    def unavailable(_video: Any) -> list[Any]:
+        raise NotesUnavailable()
+
+    if database_url().startswith("sqlite") and not database_path().is_file():
+        return unavailable
+    try:
+        from sqlalchemy.exc import SQLAlchemyError
+
+        from .database.database import SessionLocal
+
+        db = SessionLocal()
+    except Exception:
+        return unavailable
+
+    def notes_for(video: Any) -> list[Any]:
+        try:
+            return video_notes.for_media_path(db, notes_path(video))
+        except SQLAlchemyError as e:
+            raise NotesUnavailable() from e
+
+    return notes_for
+
+
 @export_app.command("table")
 def export_table(
     folder: Path = _FOLDER_ARGUMENT,
@@ -1059,15 +1089,16 @@ def export_table(
         if format == "parquet":
             typer.echo("[ERROR] Parquet can't be written to stdout", err=True)
             raise typer.Exit(code=2)
-        summary = write_csv(results, sys.stdout)
+        summary = write_csv(results, sys.stdout, _export_notes_for())
         _report(summary, "stdout", as_json)
         return
     try:
+        notes_for = _export_notes_for()
         if format == "parquet":
-            summary = write_parquet(results, path)
+            summary = write_parquet(results, path, notes_for)
         else:
             with open(path, "w", encoding="utf-8", newline="") as out:
-                summary = write_csv(results, out)
+                summary = write_csv(results, out, notes_for)
     except OSError as e:
         raise _write_failed(path, e) from e
     _report(summary, str(path), as_json)
@@ -1096,7 +1127,7 @@ def export_elan(
         return (base / video.run if video.run else base) / file_name(video)
 
     try:
-        summary = write_videos(results, target)
+        summary = write_videos(results, target, _export_notes_for())
     except OSError as e:
         raise _write_failed(Path(e.filename or folder), e) from e
     if as_json:

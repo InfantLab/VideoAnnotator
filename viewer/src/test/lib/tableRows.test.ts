@@ -60,8 +60,7 @@ describe('the table twin (lib/table/rows.ts)', () => {
   const rows = rowsFromFiles(files(FIXTURES), 'demo_clip');
 
   it('has the exporter\'s columns, author last', () => {
-    // The fixture gains `author` with table format version 2 (spec 028 T047).
-    expect([...COLUMNS].filter((c) => c !== 'author')).toEqual(header);
+    expect([...COLUMNS]).toEqual(header);
     expect(COLUMNS[COLUMNS.length - 1]).toBe('author');
   });
 

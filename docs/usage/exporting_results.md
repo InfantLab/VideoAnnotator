@@ -89,6 +89,7 @@ the same columns whatever pipelines you ran; turn it wide in one call (`tidyr::p
 | `model` | the models that made the row, from the file's provenance; `not recorded` without it |
 | `videoannotator_version` | the version that made the file; `not recorded` without provenance |
 | `file` | the result file the row came from |
+| `author` | who wrote a researcher's note (`note` rows); empty on every pipeline row |
 
 CSV files are UTF-8 with a header row; missing values are empty fields.
 
@@ -114,9 +115,15 @@ CSV files are UTF-8 with a header row; missing values are empty fields.
 | speech_recognition | `speech` | the words | | |
 | vlm_annotation | `vlm_label` | the model's label | | |
 | | `vlm_reasoning` | its reasoning, when different from the label | | |
+| notes (researchers' notes, not a pipeline) | `note` | the note's text | | |
 
 When speech and speaker turns came from `audio_processing`, their rows say `audio_processing`; the
 `measure` tells them apart.
+
+Notes are the ones written on the video's page (Notes, `N`). They belong to the video, not a run, so
+their `run` is empty and a video's notes appear once per export, however many runs of it the export
+covers; `end` is empty for a note at a moment. An export from a copied folder, without the server's
+database, has no notes and says so in its summary.
 
 Not in the table: pose keypoints, facial landmarks, face embeddings (one number is meaningless on
 its own; they are in the result files the `file` column names).
@@ -150,8 +157,9 @@ metadata holds the export summary, including every source file's provenance reco
 
 ### Stability
 
-The table has a format version (1). Later versions only add columns (at the end) or measures, so
-code written against it keeps working.
+The table has a format version (2). Later versions only add columns (at the end) or measures, so
+code written against it keeps working: version 2 added the `author` column and the `note` measure;
+columns 1 to 19 are as in version 1.
 
 ## ELAN files
 
@@ -165,6 +173,7 @@ One `.eaf` per video, linked to the video where its location is known. Tiers:
 | `person_tracking <person> (<label>)` (one per tracked person) | `in view` |
 | `face_analysis faces`, `face_openface3_embedding faces` | `in view` (a face is detected) |
 | `vlm_annotation labels` | each label, until the next sample |
+| `Notes (researcher)` (`ANNOTATOR` = its author; one tier per author when several wrote notes) | each note: a span as written, a moment as an instant |
 
 Pipelines sample frames, so "in view" joins consecutive detections of the same person while the
 gap is at most twice the sampling interval, and lasts one interval past the last detection. Numbers

@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-TABLE_FORMAT_VERSION = 1
+TABLE_FORMAT_VERSION = 2
 NOT_RECORDED = "not recorded"
 
 COLUMNS = (
@@ -40,6 +40,8 @@ COLUMNS = (
     "model",
     "videoannotator_version",
     "file",
+    # Version 2 (spec 028): who wrote a researcher's note; empty on pipeline rows.
+    "author",
 )
 
 
@@ -92,6 +94,7 @@ class Row:
     model: str
     videoannotator_version: str
     file: str
+    author: str = ""
 
     def values(self) -> tuple[Any, ...]:
         return tuple(getattr(self, c) for c in COLUMNS)

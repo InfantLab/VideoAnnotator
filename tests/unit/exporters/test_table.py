@@ -198,7 +198,7 @@ def test_parquet_has_the_same_rows_typed(run_folder, tmp_path):
     first = table.slice(0, 1).to_pylist()[0]
     assert first["start"] == float(csv_rows[0]["start"])
     meta = pq.read_metadata(path).metadata
-    assert meta[b"videoannotator.table_format_version"] == b"1"
+    assert meta[b"videoannotator.table_format_version"] == b"2"
     stored = json.loads(meta[b"videoannotator.export_summary"])
     assert stored["rows"] == summary.rows and stored["sources"]
 

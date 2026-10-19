@@ -65,6 +65,8 @@ class VideoResults:
     files: list[ResultFile] = field(default_factory=list)
     skipped: list[SkippedFile] = field(default_factory=list)
     media_path: str | None = None
+    # Where the job read the video, even when it has moved since (notes, spec 028).
+    video_path: str | None = None
 
 
 @dataclass
@@ -270,8 +272,10 @@ def from_jobs(jobs: Iterable[Any]) -> ResultsSet:
             if found is not None and found.skipped:
                 results.videos.append(found)
             continue
-        if video_path is not None and video_path.is_file():
-            found.media_path = str(video_path)
+        if video_path is not None:
+            found.video_path = str(video_path)
+            if video_path.is_file():
+                found.media_path = str(video_path)
         results.videos.append(found)
         if status not in ("completed", "failed", "cancelled"):
             results.notes.append(

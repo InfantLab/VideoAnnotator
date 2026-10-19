@@ -24,6 +24,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from sqlalchemy.orm import Session
 from starlette.background import BackgroundTask
 
+from ... import video_notes
 from ...database.crud import SavedDatasetCRUD
 from ...database.database import get_db
 from ...exporters.elan import file_name, write_videos
@@ -33,6 +34,8 @@ from ...exporters.table import (
     PARQUET_EXTRA,
     PARQUET_HINT,
     ExportSummary,
+    NotesFor,
+    notes_path,
     parquet_available,
     write_csv,
     write_parquet,
@@ -169,12 +172,21 @@ def _check_format(format: str) -> None:
         )
 
 
-async def _table(results: ResultsSet, format: str, name: str) -> FileResponse:
+def _notes_for(db: Session) -> NotesFor:
+    """Each video's researcher notes (spec 028), found by the video the run read."""
+    return lambda video: video_notes.for_media_path(db, notes_path(video))
+
+
+async def _table(
+    results: ResultsSet, format: str, name: str, db: Session
+) -> FileResponse:
+    notes_for = _notes_for(db)
+
     def write(path: FilePath) -> ExportSummary:
         if format == "parquet":
-            return write_parquet(results, path)
+            return write_parquet(results, path, notes_for)
         with open(path, "w", encoding="utf-8", newline="") as out:
-            return write_csv(results, out)
+            return write_csv(results, out, notes_for)
 
     return await _file_response(
         write, f".{format}", f"{name}.{format}", TABLE_TYPES[format]
@@ -200,12 +212,13 @@ async def export_job_table(
     job_id: str = Path(..., description="The job's id"),
     format: str = _FORMAT,
     storage: StorageBackend = Depends(get_storage),
+    db: Session = Depends(get_db),
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> FileResponse:
     _check_format(format)
     job = _job_or_404(storage, job_id)
     results = _results_or_409([job], f"Job {job_id}")
-    return await _table(results, format, _video_name(job))
+    return await _table(results, format, _video_name(job), db)
 
 
 @router.get(
@@ -218,12 +231,13 @@ async def export_batch_table(
     batch_id: str = Path(..., description="The run's batch identifier"),
     format: str = _FORMAT,
     storage: StorageBackend = Depends(get_storage),
+    db: Session = Depends(get_db),
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> FileResponse:
     _check_format(format)
     jobs = _batch_or_404(storage, batch_id)
     results = _results_or_409(jobs, "This run")
-    return await _table(results, format, _run_name(jobs))
+    return await _table(results, format, _run_name(jobs), db)
 
 
 @router.get(
@@ -256,7 +270,9 @@ async def export_dataset_table(
             message=f"Dataset '{dataset.name}' hasn't been run yet",
         )
     results = _results_or_409(jobs, f"Dataset '{dataset.name}'")
-    return await _table(results, format, sanitize_component(dataset.name, "Dataset"))
+    return await _table(
+        results, format, sanitize_component(dataset.name, "Dataset"), db
+    )
 
 
 _METHODS_DESCRIPTION = """
@@ -336,13 +352,14 @@ measures stay in the table; the summary header's `left_out` says which.
 async def export_job_elan(
     job_id: str = Path(..., description="The job's id"),
     storage: StorageBackend = Depends(get_storage),
+    db: Session = Depends(get_db),
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> FileResponse:
     job = _job_or_404(storage, job_id)
     results = _results_or_409([job], f"Job {job_id}")
 
     def write(path: FilePath) -> ExportSummary:
-        return write_videos(results, lambda _video: path)
+        return write_videos(results, lambda _video: path, _notes_for(db))
 
     return await _file_response(
         write, ".eaf", f"{_video_name(job)}.eaf", "application/xml"
@@ -358,6 +375,7 @@ async def export_job_elan(
 async def export_batch_elan(
     batch_id: str = Path(..., description="The run's batch identifier"),
     storage: StorageBackend = Depends(get_storage),
+    db: Session = Depends(get_db),
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> FileResponse:
     jobs = _batch_or_404(storage, batch_id)
@@ -372,6 +390,7 @@ async def export_batch_elan(
                 lambda video: (
                     base / sanitize_component(video.run or run) / file_name(video)
                 ),
+                _notes_for(db),
             )
             with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
                 for eaf in sorted(base.rglob("*.eaf")):
