@@ -225,7 +225,8 @@ the question.
    **Then** the hint appears.
 3. **Given** a finished run, **When** the video's page (spec 028) is opened, **Then** its answers
    are a lane there, and the answer for the current moment is shown on the video, toggled like
-   any other overlay.
+   any other overlay. *Verified by spec 028 (FR-022); 027 makes the run's answers readable there
+   (T062).*
 
 ---
 
@@ -237,7 +238,8 @@ the question.
 - A model error on one sample shows as an error marker in the lane, distinct from an answer.
 - A burst that would reach before the start or past the end of the video uses the frames that
   exist and says how many were sent.
-- A video already in a project opens Ask AI with that project's current Ask AI settings (spec 029).
+- *(Built with spec 029.)* A video already in a project opens Ask AI with that project's current
+  Ask AI settings.
 - Standalone mode (no server): Ask AI says it needs a server and a model, and what to do.
 - A try started during a run on the same model is answered before the run's next sample; the
   run's answers so far and its progress are unaffected.
@@ -339,15 +341,20 @@ the question.
   returning it.
 - **SC-005**: Shown the badge, users correctly say whether their video leaves the computer
   (target: all test users).
-- **SC-006**: Researchers can get from a working question to a run on a folder of videos in two
-  actions.
+- **SC-006**: From a working question, a run on a folder of videos takes three steps: Run on
+  more videos, choose the folder, start; the question and sampling are already filled in.
 
 ## Assumptions
 
 - The model server is Ollama today (spec 009); the local/remote rule is about the endpoint's
   address, so it holds for the OpenAI-compatible connector when it arrives.
-- Tries use the existing preview endpoint (spec 020), extended for the new sampling settings.
-- The history extends the prompt library (spec 020) rather than adding a separate store.
+- Tries are recorded and answered by the server (research R4), reusing the preview endpoint's
+  frame extraction and model call; the preview endpoint stays for other callers.
+- The history is its own record of tries and runs, pointing at the prompt library for the
+  question's text; every try is still recorded as a use in the library (research R11).
+- Any signed-in user may use any video the server can read (uploaded through Ask AI, from an
+  earlier run, or under the allowed folders): no admin step, so a small lab's first users aren't
+  blocked (2026-10-19). Picking a server folder in a file browser keeps its existing rules.
 - The timeline here is the one spec 028 builds for the Video page; whichever spec lands first
   builds it, the other reuses it.
 - "Private network address" means loopback, the RFC 1918 ranges and link-local; a host name is

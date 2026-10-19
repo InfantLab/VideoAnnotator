@@ -220,8 +220,11 @@ shared, SC-002).
 
 The browser plays it through `GET /api/v1/videos/stream?path=…&token=…` (range requests) with a
 short-lived token from `POST /api/v1/videos/stream-token`: an HMAC of path and expiry (1 hour)
-with a per-server secret, so a `<video>` element can send it. Paths are checked against the
-allowed roots and the uploads folder, as browse does. Spec 028 FR-013 reuses this.
+with a per-server secret, so a `<video>` element can send it. A path is usable when it is under
+the allowed roots, the uploads folder, or is an earlier run's video, for **any signed-in user**:
+no admin or same-machine check (decided 2026-10-19: admin roles add friction for small labs,
+which is most first users; everyone on a server sees everything, as with the history). Browsing
+server folders keeps its existing rules. Spec 028 FR-013 reuses this.
 
 **Alternatives**: a cookie session (a second auth mechanism beside API keys); blob download (no
 playback until the whole file is fetched: today's problem).

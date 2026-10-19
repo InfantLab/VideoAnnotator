@@ -10,8 +10,8 @@ existing is altered), additive pipeline config keys, and additive provenance fie
 | Column | Type | Notes |
 |---|---|---|
 | `id` | GUID, PK | |
-| `kind` | str(8) | `try` \| `run` |
-| `status` | str(12) | `running` \| `done` \| `stopped` \| `failed` (tries); runs mirror their job |
+| `kind` | str(8) | `try` \| `run` \| `draft` (a question saved before restoring another, never tried) |
+| `status` | str(12) | `running` \| `done` \| `stopped` \| `failed`; runs follow their job: pending/running → `running`, completed → `done`, cancelled → `stopped`, failed → `failed`; drafts `done` |
 | `prompt_sha256` | str(64), FK `prompts.sha256` | the question; text lives once in `prompts` |
 | `model` | str(200) | |
 | `base_url` | str(500) | as resolved by the server |

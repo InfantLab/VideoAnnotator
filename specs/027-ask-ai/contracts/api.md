@@ -21,6 +21,11 @@ Adds `endpoint`:
 
 `class` is `local` or `remote` (research R9). `confirmed` is always true for `local`.
 
+### `GET /ask/endpoint`
+
+`{ "base_url": "…", "host": "…", "class": "local", "confirmed": true }`: works even when the
+model server is unreachable, so the badge always shows.
+
 ### `POST /ask/endpoints/confirm`
 
 Body `{ "base_url": "https://api.example.com" }` → `204`. Records the confirmation for everyone
@@ -43,7 +48,8 @@ R3: "Try on N moments", default 10). Returns the entry at once with `status: run
 `moments` filled; answers arrive in the background (research R4) and jump ahead of any run on
 the same model (R5). Records a `try` use in the prompt library.
 
-Errors: `404 VIDEO_NOT_FOUND`, `403 PATH_NOT_ALLOWED` (outside allowed roots and uploads),
+Errors: `404 VIDEO_NOT_FOUND`, `403 PATH_NOT_ALLOWED` (not under the allowed roots or uploads,
+and not an earlier run's video; any signed-in user may use any of those),
 `422 INVALID_SAMPLING`, `409 REMOTE_NOT_CONFIRMED`, `503 OLLAMA_UNREACHABLE` (with the
 "what's missing" hint of US1 scenario 4).
 
