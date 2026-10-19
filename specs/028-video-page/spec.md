@@ -291,7 +291,8 @@ open it from a folder; ‹ › move through the folder.
 
 ### Key Entities
 
-- **Lane**: one kind of result from one run, with rows; visible or collapsed; overlay on or off.
+- **Lane**: one kind of result from one pipeline in one run, with rows; visible or collapsed;
+  overlay on or off.
 - **Row**: one person, speaker, face track or label within a lane.
 - **Note**: a moment or span on a video, text, author, created and edited times.
 - **Lane preferences**: per user, which lanes and overlays are shown.
@@ -302,9 +303,12 @@ open it from a folder; ‹ › move through the folder.
 
 - **SC-001**: A video's page starts playback within 3 seconds on a local network, whatever the
   file size.
-- **SC-002**: New users correctly name every lane and row on the demo video (target: all test
-  users).
-- **SC-003**: The video area is at least 30% larger than today's at the same window size.
+- **SC-002**: Every lane and row label has a tooltip saying what it shows and which pipeline made
+  it; in the pilot after release, researchers name every lane on the demo video without help
+  (spec 023: checked through pilot feedback).
+- **SC-003**: At 1440×900, with the Data tab open and the timeline at its default height, the
+  video area is no smaller than today's, while the timeline shows every lane of the demo video
+  labelled.
 - **SC-004**: With an hour-long video and 50,000 events, zooming, panning and playback stay smooth
   (no visible stutter).
 - **SC-005**: Every value in the table can be reached from the timeline in one click and vice
@@ -321,7 +325,9 @@ open it from a folder; ‹ › move through the folder.
   can't disagree.
 - Notes live on the server, keyed to the video (not to a run), so they survive re-runs; this
   supersedes spec 023's "in the run folders unless the spec decides otherwise".
-- A real movement measure is not in this spec (spec 023 theme 2; roadmap v1.8.0 Phase 3).
+- A real movement measure is not in this spec: simple per-person movement metrics, computed on
+  the server, come in their own v1.7.0 spec after 029 (spec 023 theme 2, clarified 2026-10-19)
+  and will appear here as numeric lanes.
 
 ## Out of Scope
 

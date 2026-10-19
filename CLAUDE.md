@@ -59,7 +59,8 @@ pending a `PYPI_API_TOKEN` secret, see `docs/development/handover_v1.6.0_release
 on `1.7-dev` toward v1.7.0, the public release (`docs/development/roadmap_v1.7.0.md`): the viewer
 overhaul (design `specs/023-viewer-overhaul`, built by `027-ask-ai`, `028-video-page`,
 `029-videos-and-projects`), connectors, docs, pilot. 027 built 2026-10-19 (`specs/027-ask-ai/checks.md`:
-the walk-through with a vision model is still to do, T068); next: spec 028.
+the walk-through with a vision model is still to do, T068). 028 planned 2026-10-19
+(`specs/028-video-page/plan.md`); next: `/speckit-tasks` for 028.
 ## Recent Changes
 - 012-python-313-support: `requires-python` widens to `>=3.12,<3.14`; CI tests both;
   `.python-version` makes 3.13 the dev/Docker default; ruff/mypy targets stay at 3.12 (oldest
