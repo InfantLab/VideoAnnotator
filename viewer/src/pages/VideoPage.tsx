@@ -1,18 +1,28 @@
-import { useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { VideoView } from '@/components/video/VideoView';
 import { useRunFiles } from '@/hooks/useRunFiles';
 import { useVideoRuns } from '@/hooks/useVideoRuns';
 import { useVideoStream } from '@/hooks/useVideoStream';
-import { defaultSelection, failedPipelines, runRef } from '@/lib/videoRuns';
+import type { RunControls } from '@/components/lanes/RunMenu';
+import {
+  defaultSelection,
+  failedPipelines,
+  picksOf,
+  runOptions,
+  runRef,
+  sharedRun,
+  type RunPick,
+  type RunSelection,
+} from '@/lib/videoRuns';
 
 /**
  * The Video page (spec 028): one video, every run's results on labelled lanes,
  * streamed from the server. `/video?path=…[&from=…][&run=<job id>][&t=<seconds>]`.
  */
 export default function VideoPage() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const path = params.get('path') ?? '';
   const preferredRun = params.get('run');
   const startAt = Number(params.get('t')) || 0;
@@ -21,8 +31,43 @@ export default function VideoPage() {
   const info = runsQuery.data;
   const runs = info?.runs;
 
-  const selection = useMemo(() => defaultSelection(runs ?? [], preferredRun), [runs, preferredRun]);
-  const files = useRunFiles(runs, selection, { name: info?.name ?? '', duration: info?.duration_sec ?? 0 });
+  // The run each pipeline starts on comes from the address; a lane's menu changes it here.
+  const initial = useMemo(() => defaultSelection(runs ?? [], preferredRun), [runs, preferredRun]);
+  const [chosen, setChosen] = useState<RunSelection>({});
+  const [compare, setCompare] = useState<RunPick[]>([]);
+  const selection = useMemo(() => ({ ...initial, ...chosen }), [initial, chosen]);
+  const picks = useMemo(() => picksOf(selection, compare), [selection, compare]);
+  const files = useRunFiles(runs, picks, { name: info?.name ?? '', duration: info?.duration_sec ?? 0 });
+
+  const choose = useCallback(
+    (pipeline: string, jobId: string) => {
+      const next = { ...selection, [pipeline]: jobId };
+      setChosen((c) => ({ ...c, [pipeline]: jobId }));
+      setCompare((list) => list.filter((c) => !(c.pipeline === pipeline && c.jobId === jobId)));
+      const shared = sharedRun(next);
+      setParams(
+        (p) => {
+          const out = new URLSearchParams(p);
+          if (shared) out.set('run', shared);
+          else out.delete('run');
+          return out;
+        },
+        { replace: true },
+      );
+    },
+    [selection, setParams],
+  );
+  const runControls = useMemo<RunControls>(
+    () => ({
+      options: (pipeline) => runOptions(runs ?? [], pipeline),
+      isCompare: (pipeline, jobId) => compare.some((c) => c.pipeline === pipeline && c.jobId === jobId),
+      choose,
+      compare: (pipeline, jobId) =>
+        setCompare((list) => (list.some((c) => c.pipeline === pipeline && c.jobId === jobId) ? list : [...list, { pipeline, jobId }])),
+      removeCompare: (pipeline, jobId) => setCompare((list) => list.filter((c) => !(c.pipeline === pipeline && c.jobId === jobId))),
+    }),
+    [runs, compare, choose],
+  );
   const runRefs = useMemo(() => (runs ?? []).map(runRef), [runs]);
   const failed = useMemo(() => failedPipelines(runs ?? [], selection), [runs, selection]);
 
@@ -60,6 +105,9 @@ export default function VideoPage() {
         failed,
         loading: files.loading,
         error: files.error,
+        runControls,
+        provenance: files.provenance,
+        files: files.files,
       }}
     />
   );

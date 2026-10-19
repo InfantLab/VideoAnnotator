@@ -319,7 +319,13 @@ function laneOrder(kind: string): number {
  * in the kind table's order; a failed pipeline with no rows gets a lane saying
  * why. `rows[i].run` names the run (a job id; '' for local files).
  */
-export function buildLanes(rows: Row[], runs: RunRef[], failed: FailedPipeline[] = []): Lane[] {
+export function buildLanes(
+  rows: Row[],
+  runs: RunRef[],
+  failed: FailedPipeline[] = [],
+  /** `${run}/${pipeline}` of compared runs: their lanes go right below the chosen run's. */
+  compared: Set<string> = new Set(),
+): Lane[] {
   const groups = new Map<string, Group>();
   const add = (spec: LaneKind, row: Row, index: number) => {
     const id = `${spec.kind}|${row.pipeline}|${row.run}`;
@@ -389,6 +395,7 @@ export function buildLanes(rows: Row[], runs: RunRef[], failed: FailedPipeline[]
       laneOrder(a.kind) - laneOrder(b.kind) ||
       a.kind.localeCompare(b.kind) ||
       (a.pipeline ?? '').localeCompare(b.pipeline ?? '') ||
+      Number(compared.has(`${a.run?.id ?? ''}/${a.pipeline}`)) - Number(compared.has(`${b.run?.id ?? ''}/${b.pipeline}`)) ||
       (a.run?.label ?? '').localeCompare(b.run?.label ?? ''),
   );
 }

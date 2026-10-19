@@ -122,10 +122,10 @@ identity (`git -c user.name=… -c user.email=…`).
 **Goal**: each lane names its run; another run or a comparison from the lane's menu.
 **Independent test**: faces run twice with different thresholds; both lanes shown; About lists the threshold.
 
-- [ ] T036 [US5] Create `viewer/src/lib/settingsDiff.ts`: `settingsDiff(a: Provenance, b: Provenance): {key, a, b}[]` over the pipeline's recorded `settings` (nested keys flattened with `.`; equal values omitted; missing provenance → `not recorded`); tests in `viewer/src/test/lib/settingsDiff.test.ts`
-- [ ] T037 [US5] In `LaneHeader`, the run menu: lists the runs with this pipeline (date, status, run name; failed ones disabled with their reason); choosing one sets the lane's run (lane, overlay, table rows switch; saved in page state and the `run` URL parameter only when all lanes share one); "Compare with…" adds a lane of the same kind for the other run directly below, labelled with its run, removable
-- [ ] T038 [US5] Create `viewer/src/components/video/AboutPanel.tsx`: per lane, pipeline, model, version, settings and run from provenance (`not recorded` without), the raw files with download links (replacing `FileViewer`); for a compared pair, the differing settings from `settingsDiff`
-- [ ] T039 [P] [US5] Tests `viewer/src/test/components/runs.test.tsx`: default newest completed run; `run=` override; switching run changes rows; compare adds an adjacent lane; About lists the differing threshold
+- [X] T036 [US5] Create `viewer/src/lib/settingsDiff.ts`: `settingsDiff(a: Provenance, b: Provenance): {key, a, b}[]` over the pipeline's recorded `settings` (nested keys flattened with `.`; equal values omitted; missing provenance → `not recorded`); tests in `viewer/src/test/lib/settingsDiff.test.ts`
+- [X] T037 [US5] In `LaneHeader`, the run menu: lists the runs with this pipeline (date, status, run name; failed ones disabled with their reason); choosing one sets the lane's run (lane, overlay, table rows switch; saved in page state and the `run` URL parameter only when all lanes share one); "Compare with…" adds a lane of the same kind for the other run directly below, labelled with its run, removable
+- [X] T038 [US5] Create `viewer/src/components/video/AboutPanel.tsx`: per lane, pipeline, model, version, settings and run from provenance (`not recorded` without), the raw files with download links (replacing `FileViewer`); for a compared pair, the differing settings from `settingsDiff`
+- [X] T039 [P] [US5] Tests `viewer/src/test/components/runs.test.tsx`: default newest completed run; `run=` override; switching run changes rows; compare adds an adjacent lane; About lists the differing threshold
 
 **Checkpoint**: US5's scenarios pass.
 

@@ -7,6 +7,9 @@ import { VideoPlayer } from '@/components/VideoPlayer';
 import type { LaneToggles } from '@/components/lanes/LaneHeader';
 import { LaneTimeline } from '@/components/lanes/LaneTimeline';
 import { LayersMenu } from '@/components/lanes/LayersMenu';
+import type { RunControls } from '@/components/lanes/RunMenu';
+import type { ProvenanceByRun, RunFileRef } from '@/hooks/useRunFiles';
+import { AboutPanel } from '@/components/video/AboutPanel';
 import { DataTable } from '@/components/video/DataTable';
 import { KeysHelp } from '@/components/video/KeysHelp';
 import { PlayerBar } from '@/components/video/PlayerBar';
@@ -127,6 +130,12 @@ export interface VideoSource {
   error: Error | null;
   /** Standalone `/viewer`: no runs, no context, notes need a server. */
   local?: boolean;
+  /** Choosing and comparing runs (server only). */
+  runControls?: RunControls;
+  /** `${run}/${pipeline}` → provenance record, for About. */
+  provenance?: ProvenanceByRun;
+  /** Result files with their download addresses, for About. */
+  files?: RunFileRef[];
 }
 
 interface VideoViewProps {
@@ -143,7 +152,12 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
   const files = source;
   const runRefs = source.runs;
   const failed = source.failed;
-  const lanes = useMemo(() => buildLanes(files.rows, runRefs, failed), [files.rows, runRefs, failed]);
+  const compared = useMemo(() => {
+    const keys = new Set<string>();
+    for (const f of source.files ?? []) if (f.compare) keys.add(`${f.jobId}/${f.pipeline}`);
+    return keys;
+  }, [source.files]);
+  const lanes = useMemo(() => buildLanes(files.rows, runRefs, failed, compared), [files.rows, runRefs, failed, compared]);
   const frameRate = useMemo(() => frameRateFromRows(files.rows), [files.rows]);
 
 
@@ -361,19 +375,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
                 )}
               </TabsContent>
               <TabsContent value="about" className="min-h-0 flex-1 overflow-auto px-3 text-xs">
-                <ul className="space-y-2">
-                  {lanes.map((lane) => (
-                    <li key={lane.id}>
-                      <span className="font-medium">{lane.label}</span>
-                      <span className="text-muted-foreground">
-                        {' '}
-                        · {lane.pipeline ?? 'notes'}
-                        {lane.run ? ` · ${lane.run.label}` : ''}
-                      </span>
-                      {lane.source.length > 0 && <div className="text-muted-foreground">{lane.source.join(', ')}</div>}
-                    </li>
-                  ))}
-                </ul>
+                <AboutPanel lanes={lanes} provenance={source.provenance ?? {}} files={source.files ?? []} compared={compared} />
               </TabsContent>
             </Tabs>
           </aside>
@@ -407,6 +409,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
               setTab('data');
             }}
             toggles={toggles}
+            runControls={source.runControls}
             toolbar={
               <>
                 <LayersMenu lanes={lanes} toggles={toggles} showLanes={showLanes} setOverlays={setOverlays} />

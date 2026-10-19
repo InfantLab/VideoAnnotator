@@ -47,3 +47,41 @@ export function runRef(run: VideoRun): RunRef {
   const label = run.run_name ?? (date && !Number.isNaN(date.getTime()) ? `run ${DAY.format(date)}` : `run ${run.job_id.slice(0, 8)}`);
   return { id: run.job_id, label, date: when ?? null };
 }
+
+/** One pipeline's results from one run, as a lane; `compare` adds it below the chosen one. */
+export interface RunPick {
+  pipeline: string;
+  jobId: string;
+  compare?: boolean;
+}
+
+export function picksOf(selection: RunSelection, compare: RunPick[] = []): RunPick[] {
+  const chosen = Object.entries(selection).map(([pipeline, jobId]) => ({ pipeline, jobId }));
+  const extra = compare
+    .filter((c) => selection[c.pipeline] !== c.jobId)
+    .map((c) => ({ pipeline: c.pipeline, jobId: c.jobId, compare: true }));
+  return [...chosen, ...extra];
+}
+
+/** A run a lane's menu offers for one pipeline. */
+export interface RunOption extends RunRef {
+  status: string;
+  error: string | null;
+  /** Completed with a result file: a lane can show it. */
+  usable: boolean;
+}
+
+/** The runs on this video with `pipeline`, newest first. */
+export function runOptions(runs: VideoRun[], pipeline: string): RunOption[] {
+  return runs.flatMap((run) => {
+    const p = run.pipelines.find((x) => x.name === pipeline);
+    if (!p) return [];
+    return [{ ...runRef(run), status: p.status, error: p.error ?? null, usable: completed(run, pipeline) }];
+  });
+}
+
+/** The `run=` address parameter: the one job every chosen pipeline shows, else none. */
+export function sharedRun(selection: RunSelection): string | null {
+  const jobs = new Set(Object.values(selection));
+  return jobs.size === 1 ? [...jobs][0] : null;
+}

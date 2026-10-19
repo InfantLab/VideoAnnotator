@@ -6,6 +6,7 @@ import { LaneCanvas } from '@/components/lanes/LaneCanvas';
 import { LaneHeader, type LaneToggles } from '@/components/lanes/LaneHeader';
 import { Playhead } from '@/components/lanes/Playhead';
 import { RangeBar } from '@/components/lanes/RangeBar';
+import { RunMenu, type RunControls } from '@/components/lanes/RunMenu';
 import { TimeAxis } from '@/components/lanes/TimeAxis';
 import {
   LANE_HEADER_WIDTH,
@@ -41,6 +42,8 @@ interface LaneTimelineProps {
   /** Left of the zoom buttons (Layers, spec 028 US2). */
   toolbar?: ReactNode;
   toggles: LaneToggles;
+  /** The run menu on each lane; plain run labels without it (local files). */
+  runControls?: RunControls;
 }
 
 interface Hover {
@@ -108,6 +111,7 @@ export function LaneTimeline({
   onSelectRow,
   toolbar,
   toggles,
+  runControls,
 }: LaneTimelineProps) {
   const container = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -291,11 +295,14 @@ export function LaneTimeline({
                   ) : (
                     <LaneCanvas lane={lane} view={view} width={width} selectedRow={selectedRow} />
                   )}
-                  {lane.run && (
-                    <span className="pointer-events-none absolute right-1 top-0 text-[10px] text-muted-foreground" data-testid="lane-run">
-                      {lane.run.label}
-                    </span>
-                  )}
+                  {lane.run &&
+                    (runControls ? (
+                      <RunMenu lane={lane} controls={runControls} />
+                    ) : (
+                      <span className="pointer-events-none absolute right-1 top-0 text-[10px] text-muted-foreground" data-testid="lane-run">
+                        {lane.run.label}
+                      </span>
+                    ))}
                 </div>
               </div>
             );

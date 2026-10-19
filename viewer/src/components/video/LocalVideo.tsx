@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { LoadedFiles } from '@/components/FileUploader';
 import { VideoView } from '@/components/video/VideoView';
-import { rowsFromFiles, type Row } from '@/lib/table/rows';
+import { readFiles, videoRows, type Row } from '@/lib/table/rows';
+import type { ProvenanceByRun } from '@/hooks/useRunFiles';
 
 /**
  * Standalone `/viewer` on the Video page (spec 028 T034): the files a researcher
@@ -12,6 +13,7 @@ import { rowsFromFiles, type Row } from '@/lib/table/rows';
 export function LocalVideo({ loaded, onClose }: { loaded: LoadedFiles; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [provenance, setProvenance] = useState<ProvenanceByRun>({});
   const [error, setError] = useState<Error | null>(null);
   const name = loaded.video?.name ?? loaded.data.video_info.filename ?? 'Local files';
 
@@ -20,8 +22,9 @@ export function LocalVideo({ loaded, onClose }: { loaded: LoadedFiles; onClose: 
     Promise.all(loaded.results.map(async (f) => ({ name: f.name, text: await f.text() })))
       .then((texts) => {
         if (cancelled) return;
-        const built = rowsFromFiles(texts, name.replace(/\.[^.]+$/, ''));
-        setRows(built.sort((a, b) => a.start - b.start));
+        const { read } = readFiles(texts);
+        setProvenance(Object.fromEntries(read.map((r) => [`/${r.pipeline}`, r.provenance])));
+        setRows(videoRows(read, name.replace(/\.[^.]+$/, '')).sort((a, b) => a.start - b.start));
       })
       .catch((e) => !cancelled && setError(e instanceof Error ? e : new Error(String(e))));
     return () => {
@@ -46,6 +49,7 @@ export function LocalVideo({ loaded, onClose }: { loaded: LoadedFiles; onClose: 
         loading: rows === null && !error,
         error,
         local: true,
+        provenance,
       }}
     />
   );
