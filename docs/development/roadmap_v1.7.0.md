@@ -167,15 +167,21 @@ own API and had to be deleted, not updated, when the runtime changed.
 Findings and progress: [`test_audit_v1.7.0.md`](test_audit_v1.7.0.md) (started 2026-10-19; it
 found three real bugs hidden by tests that couldn't fail).
 
+The remaining work is [`specs/032-test-strategy`](../../specs/032-test-strategy/spec.md)
+(2026-10-19): journeys in a real browser, the success criteria as checks, the viewer/server
+seam, API fuzzing, mutation reports, and the coverage gate.
+
 - [x] Inventory: per file, what behaviour it protects, run time, and whether it can fail.
-- [ ] Remove duplicates and tests that can't fail; merge the two audio files. (Mostly done; four
-      file deletions and the recovery-test merge remain.)
-- [ ] Tests mock at our boundary (what a pipeline sends a model, what it does with the answer),
+- [x] Remove duplicates and tests that can't fail; merge the two audio files. (The recovery-test
+      merge moved to spec 032.)
+- [x] Tests mock at our boundary (what a pipeline sends a model, what it does with the answer),
       not a library's internals, so a library swap changes the mock, not the test's meaning.
-- [ ] Slow or real-model tests carry their markers and stay out of the default run; record the
-      default run's time before and after.
+      (Already so after spec 030; the audit names two hand-built YOLO results to revisit.)
+- [x] Slow or real-model tests carry their markers and stay out of the default run; record the
+      default run's time before and after. (100 s before, 88 s after.)
 - [ ] Coverage stays at or above the constitution's 80%, measured on what's left, with the gaps
-      that matter (provenance, exporters, the job path) named.
+      that matter (provenance, exporters, the job path) named. (Gaps named in the audit; the gate
+      and the route to 80% are spec 032 User Story 5.)
 
 ---
 
