@@ -122,3 +122,28 @@ def test_an_empty_path():
 def test_needs_the_api_key(monkeypatch, tmp_path):
     monkeypatch.setenv("AUTH_REQUIRED", "true")
     assert _runs(str(tmp_path / "x.mp4")).status_code == 401
+
+
+def test_the_page_of_an_upload_lists_its_reruns_run(tmp_path):
+    """The 2026-10-20 bug: "Run again" on an uploaded video stores a new copy,
+    and the Video page of the first copy didn't show that run (spec 029 R1)."""
+    upload = client.post(
+        "/api/v1/jobs/",
+        files={"video": ("rerun_me.avi", synthetic_video_bytes_avi(), "video/avi")},
+        data={"selected_pipelines": "scene_detection"},
+    )
+    assert upload.status_code == 201, upload.text
+    first_id = upload.json()["id"]
+    storage = get_storage_backend()
+    first = storage.load_job_metadata(first_id)
+    first.status = JobStatus.COMPLETED
+    storage.save_job_metadata(first)
+    rerun = client.post(f"/api/v1/jobs/{first_id}/rerun", json={})
+    assert rerun.status_code == 201, rerun.text
+    rerun_body = rerun.json()
+
+    for asked in (str(first.video_path), rerun_body["video_path"]):
+        body = _runs(asked).json()
+        assert [r["job_id"] for r in body["runs"]] == [rerun_body["id"], first_id]
+        assert body["paths"][0] == str(Path(rerun_body["video_path"]).resolve())
+        assert len(body["paths"]) == 2

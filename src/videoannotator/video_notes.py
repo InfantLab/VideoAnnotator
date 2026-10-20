@@ -105,11 +105,15 @@ def create(
     return note
 
 
-def list_for(db: Any, path: str | Path) -> list[VideoNote]:
-    """The video's notes, by start then creation."""
+def list_for(
+    db: Any, path: str | Path, also: list[str] | None = None
+) -> list[VideoNote]:
+    """The video's notes, by start then creation; `also` are its other paths
+    (spec 029 R1), so notes made on an upload stay with its reruns' copies."""
+    paths = {_resolved(path), *(_resolved(p) for p in also or [])}
     return (
         db.query(VideoNote)
-        .filter(VideoNote.video_path == _resolved(path))
+        .filter(VideoNote.video_path.in_(paths))
         .order_by(VideoNote.start_sec, VideoNote.created_at)
         .all()
     )

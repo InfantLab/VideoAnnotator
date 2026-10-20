@@ -1,9 +1,9 @@
-"""Every run on one video, and the projects that hold it (spec 028 R2).
+"""Every run on one video (spec 028 R2).
 
-A video is its resolved server path (R1): every job whose `video_path`
-resolves to it is one of its runs, whichever spelling or symlink the job was
-given. A scan of the jobs, as `has_video_path` is; spec 029's video list will
-index it.
+A video is every path the server can tell holds one file (spec 029 R1): every
+job whose `video_path` is one of them is one of its runs, whichever spelling,
+symlink or stored copy the job was given. The projects that hold it come from
+`projects.py`.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ from .batch.result_files import pipeline_result_files
 from .exporters.readers import classify
 from .provenance import COMPANION_SUFFIX
 from .results_folder import run_folder_of
+from .video_index import Video, cached_index
 
 logger = logging.getLogger(__name__)
 
@@ -76,13 +77,6 @@ class RunInfo:
         }
 
 
-def _resolved(path: Any) -> Path | None:
-    try:
-        return Path(str(path)).expanduser().resolve()
-    except (OSError, RuntimeError):
-        return None
-
-
 def _file_kind(path: Path) -> str:
     if path.name.lower().endswith(COMPANION_SUFFIX):
         return "provenance"
@@ -133,57 +127,28 @@ def _run_info(job: Any) -> RunInfo:
     )
 
 
-def runs_for(storage: Any, path: Path) -> list[RunInfo]:
-    """Every job that read the video at `path` (resolved), newest first."""
+def video_of(storage: Any, path: Path | str) -> Video | None:
+    """The video (every path of one file, spec 029 R1) that `path` is one of."""
+    from .storage.config import get_storage_root
+
+    return cached_index(storage, uploads_root=get_storage_root()).video_for(path)
+
+
+def runs_for(storage: Any, path: Path | str) -> list[RunInfo]:
+    """Every job that read the video at `path`, under any of its paths,
+    newest first."""
+    video = video_of(storage, path)
+    if video is None:
+        return []
     runs = []
-    for job_id in storage.list_jobs():
+    for summary in video.jobs:
         try:
-            job = storage.load_job_metadata(job_id)
+            job = storage.load_job_metadata(summary.job_id)
         except Exception:
             continue
-        if job is None or not job.video_path or _resolved(job.video_path) != path:
-            continue
-        runs.append(_run_info(job))
+        if job is not None:
+            runs.append(_run_info(job))
     return sorted(runs, key=_created, reverse=True)
-
-
-def _in_folder(path: Path, folder: Path, recursive: bool) -> bool:
-    return path.parent == folder or (recursive and folder in path.parents)
-
-
-def _manifest_lists(dataset: Any, path: Path, folder: Path) -> bool:
-    relative = path.relative_to(folder).as_posix()
-    for entry in dataset.video_manifest or []:
-        if not isinstance(entry, dict):
-            continue
-        if entry.get("relative_path"):
-            if entry["relative_path"] == relative:
-                return True
-        elif entry.get("filename") == path.name:
-            return True
-    return False
-
-
-def projects_for(db: Any, path: Path, runs: list[RunInfo]) -> list[dict[str, str]]:
-    """The saved datasets that hold the video: by a run's `dataset_id`, or
-    because the video is in the dataset's server folder (and, for a chosen
-    subset of it, in its manifest)."""
-    from .database.models import SavedDataset
-
-    ids = {r.dataset_id for r in runs if r.dataset_id}
-    found = []
-    for dataset in db.query(SavedDataset).all():
-        holds = str(dataset.id) in ids
-        folder = _resolved(dataset.server_folder) if dataset.server_folder else None
-        if not holds and folder is not None:
-            holds = _in_folder(
-                path, folder, bool(dataset.server_folder_recursive)
-            ) and (
-                not dataset.server_selection or _manifest_lists(dataset, path, folder)
-            )
-        if holds:
-            found.append({"id": str(dataset.id), "name": dataset.name})
-    return sorted(found, key=lambda d: d["name"].lower())
 
 
 def _sha256(record: Any) -> str | None:

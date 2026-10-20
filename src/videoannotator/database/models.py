@@ -319,6 +319,8 @@ class SavedDataset(Base):
     server_folder_recursive = Column(Boolean, nullable=False, default=False)
     # Spec 022: the manifest is a chosen subset of server_folder, not the folder.
     server_selection = Column(Boolean, nullable=False, default=False)
+    # Spec 029 R5: the settings a new run on the project starts from.
+    current_settings = Column(JSON, nullable=True)
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -352,6 +354,10 @@ class SavedPipelinePreset(Base):
     selected_pipelines = Column(JSON, nullable=False, default=list)
     config = Column(JSON, nullable=False, default=dict)
     tags = Column(JSON, nullable=True, default=dict)
+    # Spec 029 R7: a workflow's table format, ELAN and methods choices, and
+    # the project or run it was saved from.
+    export_choices = Column(JSON, nullable=True)
+    source = Column(JSON, nullable=True)
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -361,6 +367,21 @@ class SavedPipelinePreset(Base):
     def __repr__(self):
         """Return a concise representation of the SavedPipelinePreset."""
         return f"<SavedPipelinePreset(id={self.id}, name={self.name!r})>"
+
+
+class UserPreference(Base):
+    """A small per-user setting, such as the last run's settings (spec 029 R6).
+
+    `user_key` is the user's id, or `anonymous` when the server runs without
+    sign-in, so there is always a row to keep.
+    """
+
+    __tablename__ = "user_preferences"
+
+    user_key = Column(String(64), primary_key=True)
+    name = Column(String(100), primary_key=True)
+    value = Column(JSON, nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class Prompt(Base):

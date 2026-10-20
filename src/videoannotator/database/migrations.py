@@ -236,6 +236,7 @@ def migrate_to_v1_3_0() -> bool:
                     ("server_folder", "VARCHAR(1000)"),
                     ("server_folder_recursive", "BOOLEAN NOT NULL DEFAULT 0"),
                     ("server_selection", "BOOLEAN NOT NULL DEFAULT 0"),  # spec 022
+                    ("current_settings", "JSON"),  # spec 029
                 ):
                     if column not in dataset_cols:
                         logger.info(f"[MIGRATION] Adding saved_datasets.{column}")
@@ -245,6 +246,25 @@ def migrate_to_v1_3_0() -> bool:
                             )
                         )
                         migrations_applied.append(f"saved_datasets.{column}")
+
+            # spec 029: workflows
+            if "saved_pipeline_presets" in tables:
+                result = conn.execute(
+                    text("PRAGMA table_info('saved_pipeline_presets')")
+                )
+                preset_cols = {row[1] for row in result}
+                for column in ("export_choices", "source"):
+                    if column not in preset_cols:
+                        logger.info(
+                            f"[MIGRATION] Adding saved_pipeline_presets.{column}"
+                        )
+                        conn.execute(
+                            text(
+                                "ALTER TABLE saved_pipeline_presets "
+                                f"ADD COLUMN {column} JSON"
+                            )
+                        )
+                        migrations_applied.append(f"saved_pipeline_presets.{column}")
 
             conn.commit()
 

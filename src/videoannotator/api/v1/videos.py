@@ -35,9 +35,10 @@ from sqlalchemy.orm import Session
 from ... import video_notes
 from ...database.database import get_db
 from ...database_location import database_path
+from ...projects import catalog_for
 from ...results_folder import display_path, video_unavailable_reason
 from ...storage.config import get_storage_root
-from ...video_runs import projects_for, runs_for, sha256_for
+from ...video_runs import runs_for, sha256_for, video_of
 from ..database import get_storage_backend
 from ..errors import APIError
 from ..middleware.auth import validate_api_key
@@ -222,6 +223,11 @@ class ProjectRef(BaseModel):
 
 class VideoRunsResponse(BaseModel):
     path: str
+    paths: list[str] = Field(
+        default_factory=list,
+        description="Every path of this video, newest first (spec 029 R1): "
+        "an upload and the copies its reruns made",
+    )
     name: str
     available: bool
     unavailable_reason: str | None = None
@@ -237,6 +243,8 @@ class VideoRunsResponse(BaseModel):
 def _video_for_page(raw_path: str) -> tuple[Path, list[Any]]:
     """The video a Video page shows, resolved, with its runs (spec 028).
 
+    Any of its paths opens it (spec 029 R1); the path returned is the one to
+    play: the asked one if it is there, else its newest existing one.
     Allowed when a job read it (even if it has moved since) or it is in a
     folder Ask AI may read; else 403. A missing file no job read is 404.
     """
@@ -255,6 +263,10 @@ def _video_for_page(raw_path: str) -> tuple[Path, list[Any]]:
             code="VIDEO_NOT_FOUND",
             message=f"No video at '{resolved}': it may have been moved or deleted.",
         )
+    if not resolved.is_file():
+        video = video_of(get_storage_backend(), resolved)
+        if video is not None and video.available:
+            resolved = Path(video.path)
     return resolved, runs
 
 
@@ -270,15 +282,20 @@ async def video_runs(
 ) -> VideoRunsResponse:
     resolved, runs = _video_for_page(path)
     available = resolved.is_file()
+    storage = get_storage_backend()
+    video = video_of(storage, resolved)
+    catalog = catalog_for(storage, db)
+    key = catalog.index.key_of(resolved)
     return VideoRunsResponse(
         path=str(resolved),
+        paths=video.paths if video is not None else [str(resolved)],
         name=resolved.name,
         available=available,
         unavailable_reason=None if available else video_unavailable_reason(resolved),
         duration_sec=video_duration(resolved) if available else None,
         sha256=sha256_for(runs),
         runs=[RunInfo.model_validate(r.to_dict()) for r in runs],
-        projects=[ProjectRef(**p) for p in projects_for(db, resolved, runs)],
+        projects=[ProjectRef(**p) for p in catalog.projects_of(key)] if key else [],
     )
 
 
@@ -338,7 +355,8 @@ async def list_notes(
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> NotesResponse:
     resolved, _ = _video_for_page(path)
-    notes = video_notes.list_for(db, resolved)
+    video = video_of(get_storage_backend(), resolved)
+    notes = video_notes.list_for(db, resolved, video.paths if video else None)
     return NotesResponse(notes=[Note(**video_notes.to_dict(n)) for n in notes])
 
 

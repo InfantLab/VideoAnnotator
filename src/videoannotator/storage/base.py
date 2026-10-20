@@ -3,10 +3,78 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 if TYPE_CHECKING:
     from ..batch.types import BatchJob, BatchReport
+
+
+class PipelineSummary(NamedTuple):
+    status: str
+    error: str | None
+    sha256: str | None
+
+
+@dataclass
+class JobSummary:
+    """What spec 029's video list needs of a job, without its results."""
+
+    job_id: str
+    video_path: str | None
+    status: str
+    created_at: datetime | None
+    completed_at: datetime | None
+    batch_id: str | None = None
+    batch_name: str | None = None
+    dataset_id: str | None = None
+    rerun_of: str | None = None
+    storage_path: str | None = None
+    output_dir: str | None = None
+    selected_pipelines: list[str] | None = None
+    config: dict[str, Any] | None = None
+    started_at: datetime | None = None
+    pipelines: dict[str, PipelineSummary] = field(default_factory=dict)
+
+
+def provenance_sha256(record: Any) -> str | None:
+    """The input video's sha256 a provenance record holds (spec 017), if any."""
+    if not isinstance(record, dict):
+        return None
+    sha = (record.get("input") or {}).get("sha256")
+    return sha if isinstance(sha, str) and sha else None
+
+
+def _value(status: Any) -> str:
+    return str(getattr(status, "value", status))
+
+
+def summary_of(job: BatchJob) -> JobSummary:
+    return JobSummary(
+        job_id=job.job_id,
+        video_path=str(job.video_path) if job.video_path else None,
+        status=_value(job.status),
+        created_at=job.created_at,
+        completed_at=job.completed_at,
+        batch_id=job.batch_id,
+        batch_name=job.batch_name,
+        dataset_id=job.dataset_id,
+        rerun_of=job.rerun_of,
+        storage_path=str(job.storage_path) if job.storage_path else None,
+        output_dir=str(job.output_dir) if job.output_dir else None,
+        selected_pipelines=job.selected_pipelines,
+        config=job.config,
+        started_at=job.started_at,
+        pipelines={
+            name: PipelineSummary(
+                _value(result.status),
+                result.error_message,
+                provenance_sha256(result.provenance),
+            )
+            for name, result in (job.pipeline_results or {}).items()
+        },
+    )
 
 
 class StorageBackend(ABC):
@@ -103,6 +171,26 @@ class StorageBackend(ABC):
             if job is not None and str(job.video_path) == video_path:
                 return True
         return False
+
+    def job_summaries(self) -> list[JobSummary]:
+        """Every job, oldest first, without loading result files (spec 029).
+        Backends with a query language override this per-job load."""
+        summaries = []
+        for job_id in self.list_jobs():
+            try:
+                job = self.load_job_metadata(job_id)
+            except Exception:
+                continue
+            if job is not None:
+                summaries.append(summary_of(job))
+        return sorted(
+            summaries, key=lambda s: s.created_at.timestamp() if s.created_at else 0
+        )
+
+    def jobs_signature(self) -> tuple[Any, ...]:
+        """Changes whenever a job is added, removed or moves on; spec 029's
+        video index rebuilds only then. The default always differs."""
+        return (object(),)
 
     @abstractmethod
     def list_jobs_by_batch(self, batch_id: str) -> list[str]:

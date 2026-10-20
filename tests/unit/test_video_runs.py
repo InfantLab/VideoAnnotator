@@ -8,7 +8,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from videoannotator.batch.types import BatchJob, JobStatus, PipelineResult
-from videoannotator.video_runs import projects_for, runs_for, sha256_for
+from videoannotator.projects import build_catalog
+from videoannotator.storage.base import StorageBackend
+from videoannotator.video_index import build_index
+from videoannotator.video_runs import runs_for, sha256_for
 
 T0 = datetime(2026, 10, 12, 9, 0)
 
@@ -23,13 +26,14 @@ class FakeStorage:
     def load_job_metadata(self, job_id):
         return self.jobs[job_id]
 
+    job_summaries = StorageBackend.job_summaries
+    jobs_signature = StorageBackend.jobs_signature
 
-class FakeDb:
-    def __init__(self, *datasets):
-        self.datasets = datasets
 
-    def query(self, _model):
-        return SimpleNamespace(all=lambda: list(self.datasets))
+def projects_for(storage, video, *datasets):
+    catalog = build_catalog(build_index(storage.job_summaries()), list(datasets))
+    key = catalog.index.key_of(video)
+    return catalog.projects_of(key) if key else []
 
 
 def _job(tmp_path: Path, video: Path, minutes: int, **results) -> BatchJob:
@@ -137,8 +141,9 @@ def test_projects_by_dataset_id_and_by_folder(tmp_path):
     video = _video(tmp_path)
     job = _job(tmp_path, video, 0)
     job.dataset_id = "by-run"
-    runs = runs_for(FakeStorage(job), video)
-    db = FakeDb(
+    found = projects_for(
+        FakeStorage(job),
+        video,
         _dataset("Peekaboo study", id="by-run"),
         _dataset("Folder", id="by-folder", folder=tmp_path),
         _dataset("Parent folder, not recursive", id="no", folder=tmp_path.parent),
@@ -148,14 +153,14 @@ def test_projects_by_dataset_id_and_by_folder(tmp_path):
         _dataset("Unrelated", id="x"),
     )
 
-    found = projects_for(db, video, runs)
-
     assert {p["id"] for p in found} == {"by-run", "by-folder", "rec"}
 
 
 def test_project_choosing_from_a_folder_needs_the_video_in_its_manifest(tmp_path):
     video = _video(tmp_path)
-    db = FakeDb(
+    found = projects_for(
+        FakeStorage(),
+        video,
         _dataset(
             "Chose it",
             id="yes",
@@ -172,7 +177,7 @@ def test_project_choosing_from_a_folder_needs_the_video_in_its_manifest(tmp_path
         ),
     )
 
-    assert [p["id"] for p in projects_for(db, video, [])] == ["yes"]
+    assert [p["id"] for p in found] == ["yes"]
 
 
 def test_sha256_from_a_provenance_file(tmp_path):

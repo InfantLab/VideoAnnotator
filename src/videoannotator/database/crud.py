@@ -391,6 +391,7 @@ class SavedDatasetCRUD:
         server_folder: str | None = None,
         server_folder_recursive: bool = False,
         server_selection: bool = False,
+        current_settings: dict[str, Any] | None = None,
     ) -> SavedDataset | None:
         """Create a saved dataset. Returns None on a name collision for this
         owner (FR-007) rather than raising, so the route can turn that into
@@ -403,6 +404,7 @@ class SavedDatasetCRUD:
             server_folder=server_folder,
             server_folder_recursive=server_folder_recursive,
             server_selection=server_selection,
+            current_settings=current_settings,
         )
         db.add(dataset)
         try:
@@ -421,6 +423,7 @@ class SavedDatasetCRUD:
         description: str | None = None,
         video_manifest: list[dict[str, Any]] | None = None,
         server_selection: bool | None = None,
+        current_settings: dict[str, Any] | None = None,
     ) -> SavedDataset | None:
         """Update a saved dataset's fields (only those provided). Returns
         None if not found, or if a rename collides with an existing name
@@ -436,6 +439,8 @@ class SavedDatasetCRUD:
             dataset.video_manifest = video_manifest
         if server_selection is not None:
             dataset.server_selection = server_selection
+        if current_settings is not None:
+            dataset.current_settings = current_settings
         try:
             db.commit()
         except IntegrityError:
@@ -499,6 +504,8 @@ class SavedPipelinePresetCRUD:
         config: dict[str, Any],
         description: str | None = None,
         tags: dict[str, Any] | None = None,
+        export_choices: dict[str, Any] | None = None,
+        source: dict[str, Any] | None = None,
     ) -> SavedPipelinePreset | None:
         """Create a saved preset. Returns None on a name collision for this
         owner (FR-007) rather than raising, so the route can turn that into
@@ -510,6 +517,8 @@ class SavedPipelinePresetCRUD:
             selected_pipelines=selected_pipelines,
             config=config,
             tags=tags or {},
+            export_choices=export_choices,
+            source=source,
         )
         db.add(preset)
         try:
@@ -529,6 +538,8 @@ class SavedPipelinePresetCRUD:
         selected_pipelines: list[str] | None = None,
         config: dict[str, Any] | None = None,
         tags: dict[str, Any] | None = None,
+        export_choices: dict[str, Any] | None = None,
+        source: dict[str, Any] | None = None,
     ) -> SavedPipelinePreset | None:
         """Update a saved preset's fields (only those provided). Returns
         None if not found, or if a rename collides with an existing name
@@ -546,6 +557,10 @@ class SavedPipelinePresetCRUD:
             preset.config = config
         if tags is not None:
             preset.tags = tags
+        if export_choices is not None:
+            preset.export_choices = export_choices
+        if source is not None:
+            preset.source = source
         try:
             db.commit()
         except IntegrityError:

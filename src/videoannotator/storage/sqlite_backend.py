@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import desc, func
 from sqlalchemy.exc import SQLAlchemyError
 
-from .base import StorageBackend
+from .base import JobSummary, PipelineSummary, StorageBackend
 from .models import (
     CURRENT_SCHEMA_VERSION,
     Annotation,
@@ -433,6 +433,86 @@ class SQLiteStorageBackend(StorageBackend):
         except SQLAlchemyError as e:
             self.logger.error(f"[ERROR] Failed to look up video {video_path}: {e}")
             return False
+
+    def job_summaries(self) -> list[JobSummary]:
+        """Every job, oldest first: one query for jobs, one for their pipelines."""
+        try:
+            with self.SessionLocal() as session:
+                sha = func.json_extract(PipelineResult.provenance, "$.input.sha256")
+                pipelines: dict[str, dict[str, PipelineSummary]] = {}
+                for job_id, name, status, error, sha256 in session.query(
+                    PipelineResult.job_id,
+                    PipelineResult.pipeline_name,
+                    PipelineResult.status,
+                    PipelineResult.error_message,
+                    sha,
+                ):
+                    pipelines.setdefault(job_id, {})[name] = PipelineSummary(
+                        status, error, sha256 if isinstance(sha256, str) else None
+                    )
+                rows = session.query(
+                    Job.id,
+                    Job.video_path,
+                    Job.status,
+                    Job.created_at,
+                    Job.completed_at,
+                    Job.batch_id,
+                    Job.batch_name,
+                    Job.dataset_id,
+                    Job.rerun_of,
+                    Job.storage_path,
+                    Job.output_dir,
+                    Job.selected_pipelines,
+                    Job.config,
+                    Job.started_at,
+                ).order_by(Job.created_at.asc())
+                return [
+                    JobSummary(
+                        job_id=row.id,
+                        video_path=row.video_path,
+                        status=row.status,
+                        created_at=row.created_at,
+                        completed_at=row.completed_at,
+                        batch_id=row.batch_id,
+                        batch_name=row.batch_name,
+                        dataset_id=row.dataset_id,
+                        rerun_of=row.rerun_of,
+                        storage_path=row.storage_path,
+                        output_dir=row.output_dir,
+                        selected_pipelines=row.selected_pipelines,
+                        config=row.config,
+                        started_at=row.started_at,
+                        pipelines=pipelines.get(row.id, {}),
+                    )
+                    for row in rows
+                ]
+        except SQLAlchemyError as e:
+            self.logger.error(f"[ERROR] Failed to summarise jobs: {e}")
+            return []
+
+    def jobs_signature(self) -> tuple[Any, ...]:
+        try:
+            with self.SessionLocal() as session:
+                times = session.query(
+                    func.count(Job.id),
+                    func.max(Job.created_at),
+                    func.max(Job.started_at),
+                    func.max(Job.completed_at),
+                ).one()
+                statuses = session.query(Job.status, func.count(Job.id)).group_by(
+                    Job.status
+                )
+                results = session.query(
+                    PipelineResult.status, func.count(PipelineResult.id)
+                ).group_by(PipelineResult.status)
+                return (
+                    tuple(times),
+                    tuple(sorted(statuses)),
+                    tuple(sorted(results)),
+                )
+        except SQLAlchemyError as e:
+            self.logger.error(f"[ERROR] Failed to read the jobs' signature: {e}")
+            return (object(),)
 
     def list_reruns(self, job_id: str) -> list[str]:
         """Jobs that run `job_id` again, oldest first (spec 019)."""
