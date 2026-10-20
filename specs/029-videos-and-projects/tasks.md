@@ -112,9 +112,9 @@ removing a project leaves videos and results.
 
 ### Viewer
 
-- [ ] T035 [US2] Create `viewer/src/hooks/useProjects.ts` (create, rename, add videos, remove videos, delete; invalidates `useVideos` queries) and `viewer/src/components/videos/AddToProject.tsx` (**Add to project ▾**: each project, **New project…** with a name field); add it, and **Remove from project** inside a project, to `SelectionBar`. `notify` on each ("2 videos added to QS"). Tests in `viewer/src/test/pages/videosProjects.test.tsx`
-- [ ] T036 [US2] Create `viewer/src/components/videos/ProjectHeader.tsx` (extends `ScopeHeader` for a project: name with **Rename**, owner, count, runs line `● running 31/48 · ✓ 12 Oct` linking to `?run=`, **Remove project** with a confirmation saying the videos and their results stay; folder-following projects say "All videos in <folder>, including new ones") and `viewer/src/components/videos/NewInFolder.tsx` ("**3 new videos in /data/pk** · **Add them**" from `new_in_folder`); **+ New project** on the left (an empty project, or from the current selection). Tests in `viewer/src/test/pages/videosProjects.test.tsx`
-- [ ] T037 [US2] Show project chips on rows and, in the Video page header (`components/video/Header.tsx`), the projects holding the video from `GET /videos/runs` (already there) linking to `/videos?project=`; projects with clashing names show their owner. Test in `viewer/src/test/pages/videosProjects.test.tsx`
+- [X] T035 [US2] Create `viewer/src/hooks/useProjects.ts` (create, rename, add videos, remove videos, delete; invalidates `useVideos` queries) and `viewer/src/components/videos/AddToProject.tsx` (**Add to project ▾**: each project, **New project…** with a name field); add it, and **Remove from project** inside a project, to `SelectionBar`. `notify` on each ("2 videos added to QS"). Tests in `viewer/src/test/pages/videosProjects.test.tsx`
+- [X] T036 [US2] Create `viewer/src/components/videos/ProjectHeader.tsx` (extends `ScopeHeader` for a project: name with **Rename**, owner, count, runs line `● running 31/48 · ✓ 12 Oct` linking to `?run=`, **Remove project** with a confirmation saying the videos and their results stay; folder-following projects say "All videos in <folder>, including new ones") and `viewer/src/components/videos/NewInFolder.tsx` ("**3 new videos in /data/pk** · **Add them**" from `new_in_folder`); **+ New project** on the left (an empty project, or from the current selection). Tests in `viewer/src/test/pages/videosProjects.test.tsx`
+- [X] T037 [US2] Show project chips on rows and, in the Video page header (`components/video/Header.tsx`), the projects holding the video from `GET /videos/runs` (already there) linking to `/videos?project=`; projects with clashing names show their owner. Test in `viewer/src/test/pages/videosProjects.test.tsx`
 
 **Checkpoint**: projects are made, filled and removed from Videos; old datasets show as projects.
 
@@ -132,9 +132,9 @@ where its settings came from; What changed? between runs.
 
 ### Viewer
 
-- [ ] T039 [US3] In `ProjectHeader.tsx`: the **Settings** line (pipelines by their 026 titles, and Ask AI's question when `vlm_annotation` is in them) with **Edit**, opening a sheet with `WhatToFind` that saves through `PUT /datasets/{id}` (`source: edit`) without starting a run; `notify` "Settings saved for QS. The next run starts from them." Tests in `viewer/src/test/pages/videosSettings.test.tsx`
-- [ ] T040 [US3] In `NewRun.tsx`: pass the target's project to `useRunSettings`; the top line reads "Settings from: this project's settings, last changed 12 Oct" / "your last run" / "the defaults" (FR-012); test in `viewer/src/test/pages/newRun.test.tsx`
-- [ ] T041 [US3] **What changed?** in `ProjectHeader` and `RunHeader`: pick two of the project's runs (or this run and another on the same videos) and list the settings that differ, from each run's provenance via `lib/settingsDiff.ts` ("Faces · smallest face: 30 → 40"); test in `viewer/src/test/pages/videosSettings.test.tsx`
+- [X] T039 [US3] In `ProjectHeader.tsx`: the **Settings** line (pipelines by their 026 titles, and Ask AI's question when `vlm_annotation` is in them) with **Edit**, opening a sheet with `WhatToFind` that saves through `PUT /datasets/{id}` (`source: edit`) without starting a run; `notify` "Settings saved for QS. The next run starts from them." Tests in `viewer/src/test/pages/videosSettings.test.tsx`
+- [X] T040 [US3] In `NewRun.tsx`: pass the target's project to `useRunSettings`; the top line reads "Settings from: this project's settings, last changed 12 Oct" / "your last run" / "the defaults" (FR-012); test in `viewer/src/test/pages/newRun.test.tsx`
+- [X] T041 [US3] **What changed?** in `ProjectHeader` and `RunHeader`: pick two of the project's runs (or this run and another on the same videos) and list the settings that differ, from each run's provenance via `lib/settingsDiff.ts` ("Faces · smallest face: 30 → 40"); test in `viewer/src/test/pages/videosSettings.test.tsx`
 
 **Checkpoint**: settings follow the project without anyone saving them.
 

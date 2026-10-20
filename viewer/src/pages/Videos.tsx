@@ -6,13 +6,19 @@ import type { ExportScope } from '@/api/client';
 import { APIError } from '@/api/handleError';
 import { NeedsServer } from '@/components/NeedsServer';
 import { PageHelp } from '@/components/PageHelp';
+import { Button } from '@/components/ui/button';
 import { Term } from '@/components/Term';
+import { AddToProject } from '@/components/videos/AddToProject';
+import { NewProjectDialog } from '@/components/videos/NewProjectDialog';
+import { ProjectHeader } from '@/components/videos/ProjectHeader';
 import { RunHeader } from '@/components/videos/RunHeader';
+import { RunWhatChanged } from '@/components/videos/RunWhatChanged';
 import { ScopeHeader } from '@/components/videos/ScopeHeader';
 import { SelectionBar } from '@/components/videos/SelectionBar';
 import { Sidebar } from '@/components/videos/Sidebar';
 import { VideosTable } from '@/components/videos/VideosTable';
 import { usePipelineTitles } from '@/hooks/usePipelineTitles';
+import { useProjects } from '@/hooks/useProjects';
 import { useVideos } from '@/hooks/useVideos';
 import type { RunTarget } from '@/lib/runTarget';
 import { videosWord } from '@/lib/runs';
@@ -48,6 +54,8 @@ export default function Videos() {
   const { data, error, isLoading } = useVideos(query);
   const { titleOf, order } = usePipelineTitles(!error);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [naming, setNaming] = useState(false);
+  const projects = useProjects();
 
   useEffect(() => setSelected(new Set()), [scopeKey]);
 
@@ -91,7 +99,14 @@ export default function Videos() {
   return (
     <div className="container mx-auto grid gap-6 px-6 py-6 md:grid-cols-[15rem_1fr]">
       <aside className="md:sticky md:top-20 md:self-start">
-        <Sidebar counts={data?.counts} current={query} />
+        <Sidebar counts={data?.counts} current={query} onNewProject={() => setNaming(true)} />
+        <NewProjectDialog
+          open={naming}
+          onOpenChange={setNaming}
+          count={0}
+          busy={projects.create.isPending}
+          onCreate={(name) => projects.create.mutate({ name }, { onSuccess: () => setNaming(false) })}
+        />
       </aside>
       <main className="min-w-0 space-y-4">
         <PageHelp page="videos">
@@ -106,7 +121,11 @@ export default function Videos() {
         )}
 
         {run ? (
-          <RunHeader run={run} firstVideoPath={data?.videos[0]?.path ?? null} />
+          <RunHeader run={run} firstVideoPath={data?.videos[0]?.path ?? null}>
+            <RunWhatChanged run={run} />
+          </RunHeader>
+        ) : query.project && data ? (
+          <ProjectHeader id={query.project} data={data} />
         ) : (
           data && (
             <ScopeHeader
@@ -121,7 +140,18 @@ export default function Videos() {
         )}
 
         {selectedPaths.length > 0 && (
-          <SelectionBar paths={selectedPaths} project={project} onClear={() => setSelected(new Set())} />
+          <SelectionBar paths={selectedPaths} project={project} onClear={() => setSelected(new Set())}>
+            <AddToProject paths={selectedPaths} projects={data?.counts.projects ?? []} onDone={() => setSelected(new Set())} />
+            {project && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => projects.remove.mutate({ project, paths: selectedPaths }, { onSuccess: () => setSelected(new Set()) })}
+              >
+                Remove from project
+              </Button>
+            )}
+          </SelectionBar>
         )}
 
         {isLoading && !data ? (
