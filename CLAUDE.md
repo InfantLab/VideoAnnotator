@@ -9,6 +9,9 @@ Auto-generated from feature plans by `.specify/scripts/bash/update-agent-context
 - New `extras_install_jobs` table (005-pipeline-extras-install) tracks admin-triggered, in-app
   installs of a named extras group (`pending`/`running`/`completed`/`failed`); no new dependency —
   reuses FastAPI/SQLAlchemy already listed above
+- 029-videos-and-projects adds, additively: `saved_datasets.current_settings`, manifest entries'
+  optional `path`, `saved_pipeline_presets.export_choices`/`.source`, and a `user_preferences`
+  table (last-used run settings per user); no new dependency
 
 ## Project Structure
 ```
@@ -61,7 +64,9 @@ overhaul (design `specs/023-viewer-overhaul`, built by `027-ask-ai`, `028-video-
 `029-videos-and-projects`), connectors, docs, pilot. 027 built 2026-10-19 (`specs/027-ask-ai/checks.md`:
 the walk-through with a vision model is still to do, T068). 028 built 2026-10-20
 (`specs/028-video-page/checks.md`: the browser walk-through, T062, is still to do; T056 finishes
-with 029, which retires the old player's last users). Next: spec 029.
+with 029, which retires the old player's last users). 029 planned 2026-10-20
+(`specs/029-videos-and-projects/plan.md`: a video is a group of paths, R1; projects are saved
+datasets, workflows are presets). Next: `/speckit-tasks` for 029.
 ## Recent Changes
 - 012-python-313-support: `requires-python` widens to `>=3.12,<3.14`; CI tests both;
   `.python-version` makes 3.13 the dev/Docker default; ruff/mypy targets stay at 3.12 (oldest
