@@ -2,7 +2,7 @@
 
 **Feature Branch**: `028-video-page` (work lands on `1.7-dev`)
 **Created**: 2026-10-16
-**Status**: Draft
+**Status**: Built 2026-10-20 (browser walk-through pending: [checks.md](checks.md))
 **Design**: [spec 023](../023-viewer-overhaul/spec.md) (The Video page; themes 3, 5, 6, 10, 13),
 journey 2 in [journeys.md](../023-viewer-overhaul/journeys.md),
 [inventory](../023-viewer-overhaul/inventory.md) (second pass: the results player)

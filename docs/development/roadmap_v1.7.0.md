@@ -47,7 +47,9 @@ tools, decisions, journeys). Built by, in order:
       to do.
 - [ ] [`specs/028-video-page`](../../specs/028-video-page/spec.md): lanes as controls, one row per
       person or speaker, zoom, the data table beside the video, the run per lane, notes;
-      streamed, with no folder question.
+      streamed, with no folder question. Built 2026-10-20
+      ([checks](../../specs/028-video-page/checks.md)); the browser walk-through (quickstart,
+      SC-001/003/004 measured) is still to do, and the old player stays for demo results until 029.
 - [ ] [`specs/029-videos-and-projects`](../../specs/029-videos-and-projects/spec.md): one Videos page
       with folders and projects (from saved datasets), settings projects remember, workflows
       (from presets), the new nav, help in context. Takes over v1.6.0's Phase 6 (corpus

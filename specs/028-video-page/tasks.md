@@ -186,10 +186,10 @@ identity (`git -c user.name=… -c user.email=…`).
 - [X] T058 [P] Empty and error states: a video with no runs shows the video, an empty timeline and "Run…"; a failed pipeline's lane shows its reason; `/videos/runs` errors show the API's message and hint
 - [X] T059 Docs: a Video page how-to in `docs/` replacing the results-player page(s) (find them with `grep -rln "View data\|results player\|UnifiedControls" docs/`), the table contract v2 (spec 025's doc page), the API reference for `/videos/runs` and `/videos/notes`, `CHANGELOG.md` (Unreleased: Video page; table format version 2 adds `author` and `note` rows)
   - *No page described the old results player*, so `docs/usage/video_page.md` is new (with the API for `/videos/runs` and `/videos/notes`); the table v2 is in `exporting_results.md`.
-- [ ] T060 Bundle and build: `bash scripts/build_viewer.sh`; confirm the initial bundle stays within 300 KB gzipped (Video page in its own chunk); commit `src/videoannotator/viewer_static/`
-- [ ] T061 Full gates: `pytest tests/`, `ruff check .`, `mypy src/videoannotator`, `pre-commit run --all-files`, viewer lint/tsc/tests
+- [X] T060 Bundle and build: `bash scripts/build_viewer.sh`; confirm the initial bundle stays within 300 KB gzipped (Video page in its own chunk); commit `src/videoannotator/viewer_static/`
+- [X] T061 Full gates: `pytest tests/`, `ruff check .`, `mypy src/videoannotator`, `pre-commit run --all-files`, viewer lint/tsc/tests
 - [ ] T062 Walk through `quickstart.md` (setup, US1–US7, performance) on the demo clip and a large video; record results, SC-001 time to first frame, SC-003 areas before and after at 1440×900, SC-004 panning frames, and anything that didn't match, in a new `specs/028-video-page/checks.md`
-- [ ] T063 Update `docs/development/roadmap_v1.7.0.md` Phase 1 (028 done; link checks.md) and `CLAUDE.md` Current Plan (next: spec 029); mark spec 028 Status "Built"
+- [X] T063 Update `docs/development/roadmap_v1.7.0.md` Phase 1 (028 done; link checks.md) and `CLAUDE.md` Current Plan (next: spec 029); mark spec 028 Status "Built"
 
 ---
 
