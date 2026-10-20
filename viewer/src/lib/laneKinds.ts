@@ -158,7 +158,7 @@ function otherKind(pipeline: string, measure: string, numeric: boolean): LaneKin
   return {
     kind: `other:${pipeline}/${measure}`,
     label: `${pipeline} · ${measure}`,
-    description: `"${measure}" from ${pipeline}; the viewer has no lane of its own for it`,
+    description: `"${measure}" from ${pipeline}; the viewer has no track of its own for it`,
     measures: [measure],
     form: numeric ? 'numeric' : 'moment',
     rowsBy: numeric ? 'label' : 'track',

@@ -107,7 +107,7 @@ it; **Mine** shows only yours, **This video only** only this video's.
 - Choosing an entry puts its question, model and sampling back. If you had
   written a question you hadn't tried, it is kept first, as "not tried".
 - Name and star entries to find them again.
-- **Show** up to four entries of this video side by side: one lane and one
+- **Show** up to four entries of this video side by side: one track and one
   table column each, aligned by time. A moment tried more than once with
   different answers is marked in the table.
 - **Earlier questions** are prompts from before Ask AI, or from the command
@@ -116,7 +116,7 @@ it; **Mine** shows only yours, **This video only** only this video's.
 ## Running on the whole video
 
 **Run on whole video** starts a run with the current question and sampling.
-Its answers fill in the lane and table as the model gives them, and you can
+Its answers fill in the track and table as the model gives them, and you can
 keep trying questions meanwhile: a try goes ahead of the run's next sample.
 
 **Stop** keeps the answers so far: the run reads "Stopped after 23 of 40", its

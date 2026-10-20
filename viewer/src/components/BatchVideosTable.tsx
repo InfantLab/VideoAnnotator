@@ -80,7 +80,7 @@ export function BatchVideosTable({ jobs, active, preparing = false }: BatchVideo
           <div className="flex flex-wrap items-center gap-1.5 text-sm">
             <span className="text-muted-foreground mr-1">Pipelines, every video:</span>
             {shared.map((pipeline) => (
-              <Badge key={pipeline} variant="outline" className="text-xs font-normal">
+              <Badge key={pipeline} variant="secondary" className="rounded-md text-xs font-normal">
                 {pipeline}
               </Badge>
             ))}

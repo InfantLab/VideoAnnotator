@@ -290,6 +290,10 @@ export function LaneTimeline({
                     <p className="px-2 text-xs leading-[18px] text-destructive" data-testid="lane-failed">
                       Failed: {lane.error}
                     </p>
+                  ) : lane.status === 'missing' ? (
+                    <p className="px-2 text-xs leading-[18px] text-amber-500" data-testid="lane-missing">
+                      {lane.error}
+                    </p>
                   ) : lane.status === 'empty' ? (
                     <p className="px-2 text-[10px] leading-[18px] text-muted-foreground" data-testid="lane-empty">
                       {lane.error}

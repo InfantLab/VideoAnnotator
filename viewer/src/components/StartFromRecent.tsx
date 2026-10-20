@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import type { Preset } from '@/types/presets';
 
 interface StartFromRecentProps {
+  /** The job's video, with its settings to change. */
   onUseJob: (job: JobResponse, label: string) => void;
   onApplyPreset: (preset: Preset) => void;
 }
@@ -14,7 +15,7 @@ const labelOf = (job: JobResponse) =>
 
 /**
  * The wizard's first step offers what was used before the blank form (spec
- * 019): the latest finished jobs' settings and the most recently used presets.
+ * 019): the latest finished jobs' videos and the most recently used presets.
  * Shows nothing on a new server.
  */
 export const StartFromRecent = ({ onUseJob, onApplyPreset }: StartFromRecentProps) => {
@@ -32,17 +33,17 @@ export const StartFromRecent = ({ onUseJob, onApplyPreset }: StartFromRecentProp
 
   return (
     <div className="rounded-md border p-3 space-y-2 text-sm">
-      <p className="font-medium">Start from what you used before</p>
       {jobs.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <History className="h-4 w-4 text-muted-foreground" aria-hidden />
+          <span className="text-muted-foreground">A video you ran before:</span>
           {jobs.map((job) => (
             <Button
               key={job.id}
               size="sm"
               variant="outline"
               className="h-7"
-              title={`Use the pipelines and settings of ${labelOf(job)}: ${(job.selected_pipelines ?? []).join(', ')}`}
+              title={`Run ${labelOf(job)} again, starting from the pipelines it had: ${(job.selected_pipelines ?? []).join(', ')}`}
               onClick={() => onUseJob(job, labelOf(job))}
             >
               {labelOf(job)}
@@ -53,6 +54,7 @@ export const StartFromRecent = ({ onUseJob, onApplyPreset }: StartFromRecentProp
       {presets.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <Bookmark className="h-4 w-4 text-muted-foreground" aria-hidden />
+          <span className="text-muted-foreground">Settings from a preset:</span>
           {presets.map((preset) => (
             <Button
               key={preset.id}

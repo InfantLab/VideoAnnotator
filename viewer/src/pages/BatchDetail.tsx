@@ -32,7 +32,7 @@ import {
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <Card>
+    <Card className="border-0 bg-muted/60 shadow-none">
       <CardContent className="pt-6">
         <p className="text-sm text-muted-foreground">{label}</p>
         <p className="text-2xl font-semibold mt-1">{value}</p>

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -135,15 +135,54 @@ const parameterState = (
   return isChanged(parameter, pipelineConfig) ? 'not-applicable' : 'hidden';
 };
 
+/** Required, and the allowed range; the unit is shown beside the field instead. */
 const renderFieldDescription = (parameter: PipelineParameterSchema) => {
   const meta: string[] = [];
   if (parameter.required) meta.push('required');
-  if (parameter.min !== undefined) meta.push(`min ${parameter.min}`);
-  if (parameter.max !== undefined) meta.push(`max ${parameter.max}`);
-  if (parameter.step !== undefined) meta.push(`step ${parameter.step}`);
-  if (parameter.unit) meta.push(parameter.unit);
+  const { min, max } = parameter;
+  if (min !== undefined && max !== undefined) meta.push(`${min} to ${max}`);
+  else if (min !== undefined) meta.push(`at least ${min}`);
+  else if (max !== undefined) meta.push(`at most ${max}`);
   return meta.join(' · ');
 };
+
+/**
+ * One setting: its name and explanation on the left, the control on the
+ * right at the width its value needs. Long text (prompts, JSON, option
+ * lists) goes full width underneath instead.
+ */
+const SettingRow = ({
+  label,
+  htmlFor,
+  description,
+  hint,
+  wide = false,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  description?: string;
+  hint?: string;
+  wide?: boolean;
+  children: ReactNode;
+}) => (
+  <div
+    className={
+      wide
+        ? 'space-y-2 py-3'
+        : 'grid items-center gap-x-6 gap-y-2 py-3 sm:grid-cols-[minmax(0,1fr)_auto]'
+    }
+  >
+    <div className="min-w-0 space-y-0.5">
+      <Label htmlFor={htmlFor} className="text-sm font-medium">
+        {label}
+      </Label>
+      {description && <p className="text-xs text-muted-foreground">{description}</p>}
+      {hint && <p className="text-[11px] text-muted-foreground/80">{hint}</p>}
+    </div>
+    <div className={wide ? '' : 'flex items-center gap-2 sm:justify-end'}>{children}</div>
+  </div>
+);
 
 export const DynamicPipelineParameters = ({
   pipelines,
@@ -208,71 +247,42 @@ export const DynamicPipelineParameters = ({
             );
           }
 
+          const id = `${pipeline.id}-${parameter.name}`;
+          const label = parameter.label || parameter.name;
+          const rowProps = { label, description: parameter.description, hint: fieldHint || undefined };
+
           switch (parameter.type) {
             case 'boolean':
               return (
-                <div
-                  key={parameter.name}
-                  className="flex items-center justify-between rounded border bg-muted/40 px-3 py-2"
-                >
-                  <div className="space-y-1">
-                    <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
-                      {parameter.label || parameter.name}
-                    </Label>
-                    {parameter.description && (
-                      <p className="text-xs text-muted-foreground">
-                        {parameter.description}
-                      </p>
-                    )}
-                    {fieldHint && (
-                      <p className="text-[11px] text-muted-foreground/80">{fieldHint}</p>
-                    )}
-                  </div>
+                <SettingRow key={parameter.name} htmlFor={id} {...rowProps}>
                   <Switch
-                    id={`${pipeline.id}-${parameter.name}`}
+                    id={id}
                     checked={Boolean(currentValue)}
-                    onCheckedChange={(checked) =>
-                      handleValueChange(pipeline.id, parameter, checked)
-                    }
+                    onCheckedChange={(checked) => handleValueChange(pipeline.id, parameter, checked)}
                   />
-                </div>
+                </SettingRow>
               );
 
             case 'text':
               return (
-                <div key={parameter.name} className="space-y-1">
-                  <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
-                    {parameter.label || parameter.name}
-                  </Label>
+                <SettingRow key={parameter.name} htmlFor={id} wide {...rowProps}>
                   <Textarea
-                    id={`${pipeline.id}-${parameter.name}`}
+                    id={id}
                     value={typeof currentValue === 'string' ? currentValue : ''}
                     rows={6}
-                    onChange={(event) =>
-                      handleValueChange(pipeline.id, parameter, event.target.value)
-                    }
+                    onChange={(event) => handleValueChange(pipeline.id, parameter, event.target.value)}
                   />
-                  {parameter.description && (
-                    <p className="text-xs text-muted-foreground">
-                      {parameter.description}
-                    </p>
-                  )}
-                  {fieldHint && (
-                    <p className="text-[11px] text-muted-foreground/80">{fieldHint}</p>
-                  )}
-                </div>
+                </SettingRow>
               );
 
             case 'integer':
             case 'number':
               return (
-                <div key={parameter.name} className="space-y-1">
-                  <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
-                    {parameter.label || parameter.name}
-                  </Label>
+                <SettingRow key={parameter.name} htmlFor={id} {...rowProps}>
                   <Input
-                    id={`${pipeline.id}-${parameter.name}`}
+                    id={id}
                     type="number"
+                    className="h-9 w-28 text-right tabular-nums"
                     value={typeof currentValue === 'number' || typeof currentValue === 'string' ? currentValue : ''}
                     onChange={(event) => {
                       const newValue = coerceNumber(
@@ -285,35 +295,21 @@ export const DynamicPipelineParameters = ({
                     max={parameter.max}
                     step={parameter.step}
                   />
-                  {parameter.description && (
-                    <p className="text-xs text-muted-foreground">
-                      {parameter.description}
-                    </p>
-                  )}
-                  {fieldHint && (
-                    <p className="text-[11px] text-muted-foreground/80">{fieldHint}</p>
-                  )}
-                </div>
+                  <span className="w-12 text-xs text-muted-foreground">{parameter.unit ?? ''}</span>
+                </SettingRow>
               );
 
             case 'enum':
               return (
-                <div key={parameter.name} className="space-y-1">
-                  <Label className="text-sm">{parameter.label || parameter.name}</Label>
+                <SettingRow key={parameter.name} {...rowProps} hint={undefined}>
                   <Select
                     value={currentValue != null ? String(currentValue) : undefined}
                     onValueChange={(value) => {
-                      const matched = (parameter.enum ?? []).find(
-                        (option) => String(option.value) === value
-                      );
-                      handleValueChange(
-                        pipeline.id,
-                        parameter,
-                        matched ? matched.value : value
-                      );
+                      const matched = (parameter.enum ?? []).find((option) => String(option.value) === value);
+                      handleValueChange(pipeline.id, parameter, matched ? matched.value : value);
                     }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9 w-56" aria-label={label}>
                       <SelectValue placeholder="Select option" />
                     </SelectTrigger>
                     <SelectContent>
@@ -324,23 +320,15 @@ export const DynamicPipelineParameters = ({
                       ))}
                     </SelectContent>
                   </Select>
-                  {parameter.description && (
-                    <p className="text-xs text-muted-foreground">
-                      {parameter.description}
-                    </p>
-                  )}
-                </div>
+                </SettingRow>
               );
 
             case 'multiselect':
               return (
-                <div key={parameter.name} className="space-y-1">
-                  <Label className="text-sm">{parameter.label || parameter.name}</Label>
-                  <div className="flex flex-wrap gap-3 rounded border bg-muted/40 p-3">
+                <SettingRow key={parameter.name} wide {...rowProps} hint={undefined}>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2">
                     {(parameter.enum ?? []).map((option) => {
-                      const valueArray = Array.isArray(currentValue)
-                        ? (currentValue as unknown[])
-                        : [];
+                      const valueArray = Array.isArray(currentValue) ? (currentValue as unknown[]) : [];
                       const checked = valueArray.includes(option.value);
                       return (
                         <label key={String(option.value)} className="flex items-center gap-2 text-sm">
@@ -361,19 +349,14 @@ export const DynamicPipelineParameters = ({
                       );
                     })}
                   </div>
-                  {parameter.description && (
-                    <p className="text-xs text-muted-foreground">
-                      {parameter.description}
-                    </p>
-                  )}
-                </div>
+                </SettingRow>
               );
 
             case 'object':
               return (
-                <div key={parameter.name} className="space-y-1">
-                  <Label className="text-sm">{parameter.label || parameter.name}</Label>
+                <SettingRow key={parameter.name} wide {...rowProps} hint={undefined}>
                   <Textarea
+                    aria-label={label}
                     value={JSON.stringify(currentValue ?? parameter.default ?? {}, null, 2)}
                     className="font-mono text-xs"
                     rows={6}
@@ -386,44 +369,28 @@ export const DynamicPipelineParameters = ({
                       }
                     }}
                   />
-                  {parameter.description && (
-                    <p className="text-xs text-muted-foreground">
-                      {parameter.description}
-                    </p>
-                  )}
-                </div>
+                </SettingRow>
               );
 
             default: {
-              const urlError = isUrlParameter(parameter)
-                ? urlValueError(currentValue)
-                : null;
+              const urlError = isUrlParameter(parameter) ? urlValueError(currentValue) : null;
               return (
-                <div key={parameter.name} className="space-y-1">
-                  <Label htmlFor={`${pipeline.id}-${parameter.name}`} className="text-sm">
-                    {parameter.label || parameter.name}
-                  </Label>
-                  <Input
-                    id={`${pipeline.id}-${parameter.name}`}
-                    value={String(currentValue ?? '')}
-                    onChange={(event) =>
-                      handleValueChange(pipeline.id, parameter, event.target.value)
-                    }
-                    {...(isUrlParameter(parameter) && {
-                      type: 'url',
-                      placeholder: 'Leave empty for the server default',
-                      'aria-invalid': urlError !== null
-                    })}
-                  />
-                  {urlError && (
-                    <p className="text-xs text-destructive">{urlError}</p>
-                  )}
-                  {parameter.description && (
-                    <p className="text-xs text-muted-foreground">
-                      {parameter.description}
-                    </p>
-                  )}
-                </div>
+                <SettingRow key={parameter.name} htmlFor={id} {...rowProps} hint={undefined}>
+                  <div className="w-72 max-w-full space-y-1">
+                    <Input
+                      id={id}
+                      className="h-9"
+                      value={String(currentValue ?? '')}
+                      onChange={(event) => handleValueChange(pipeline.id, parameter, event.target.value)}
+                      {...(isUrlParameter(parameter) && {
+                        type: 'url',
+                        placeholder: 'Leave empty for the server default',
+                        'aria-invalid': urlError !== null
+                      })}
+                    />
+                    {urlError && <p className="text-xs text-destructive">{urlError}</p>}
+                  </div>
+                </SettingRow>
               );
             }
           }
@@ -441,46 +408,46 @@ export const DynamicPipelineParameters = ({
         const changedCount = technical.filter((p) => isChanged(p, pipelineConfig)).length;
         const renderWithNote = (parameter: PipelineParameterSchema) =>
           states.get(parameter.name) === 'not-applicable' ? (
-            <div key={parameter.name} className="space-y-1 opacity-70">
+            <div key={parameter.name} className="opacity-70">
               {renderParameter(parameter)}
-              <p className="text-[11px] text-amber-700 dark:text-amber-400">Not used with these settings</p>
+              <p className="-mt-2 pb-3 text-[11px] text-amber-400">Not used with these settings</p>
             </div>
           ) : (
             renderParameter(parameter)
           );
 
         return (
-          <div key={pipeline.id} className="rounded-lg border bg-card p-4 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h4 className="text-sm font-semibold text-foreground">{pipeline.title ?? pipeline.name}</h4>
-                <p className="text-xs text-muted-foreground">{pipelineSummary(pipeline)}</p>
+          <section key={pipeline.id} className="rounded-lg border bg-card" aria-labelledby={`${pipeline.id}-title`}>
+            <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 border-b px-5 py-4">
+              <div className="min-w-0">
+                <h4 id={`${pipeline.id}-title`} className="text-base font-semibold text-foreground">
+                  {pipeline.title ?? pipeline.name}
+                </h4>
+                <p className="mt-0.5 text-sm text-muted-foreground">{pipelineSummary(pipeline)}</p>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                {pipeline.model && <span className="rounded bg-muted px-1.5 py-0.5 font-mono">{pipeline.model}</span>}
                 {pipeline.version && <span>v{pipeline.version}</span>}
-                {pipeline.model && <span>{pipeline.model}</span>}
               </div>
-            </div>
+            </header>
 
+            <div className="px-5 pb-3">
             {parameters.length > 0 ? (
-              <div className="space-y-3">
-                {grouped && behavioural.length > 0 && (
-                  <h5 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">What to measure</h5>
-                )}
-                {behavioural.map(renderWithNote)}
+              <>
+                <div className="divide-y">{behavioural.map(renderWithNote)}</div>
                 {technical.length > 0 && (
-                  <Collapsible className="space-y-3">
+                  <Collapsible className="border-t pt-3">
                     <CollapsibleTrigger className="flex w-full items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
                       <ChevronRight className="h-3 w-3 transition-transform [[data-state=open]_&]:rotate-90" />
                       Technical settings ({technical.length} ·{' '}
                       {changedCount === 0 ? 'all at defaults' : `${changedCount} changed`})
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-3">{technical.map(renderWithNote)}</CollapsibleContent>
+                    <CollapsibleContent className="divide-y">{technical.map(renderWithNote)}</CollapsibleContent>
                   </Collapsible>
                 )}
-              </div>
+              </>
             ) : (
-              <p className="text-xs text-muted-foreground">No configurable parameters for this pipeline.</p>
+              <p className="py-3 text-xs text-muted-foreground">No settings to change for this pipeline.</p>
             )}
 
             {pipeline.id === 'vlm_annotation' && (
@@ -493,7 +460,8 @@ export const DynamicPipelineParameters = ({
                 )}
               />
             )}
-          </div>
+            </div>
+          </section>
         );
       })}
     </div>

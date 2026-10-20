@@ -71,7 +71,7 @@ describe('RunAgainActions', () => {
   it('runs again only after saying the original is kept, then opens the new job', async () => {
     vi.mocked(apiClient.rerunJob).mockResolvedValue({ id: 'j2' } as never);
     renderActions();
-    await userEvent.click(screen.getByRole('button', { name: /^Run again$/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Run again unchanged/ }));
     expect(screen.getByText(/This one and its results are kept/)).toBeInTheDocument();
     expect(apiClient.rerunJob).not.toHaveBeenCalled();
     await userEvent.click(screen.getAllByRole('button', { name: 'Run again' }).at(-1)!);
@@ -81,7 +81,7 @@ describe('RunAgainActions', () => {
 
   it('opens the wizard to edit, or to reuse the settings on other videos', async () => {
     renderActions();
-    await userEvent.click(screen.getByRole('button', { name: /Edit and run again/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Run again…' }));
     expect(landed).toEqual({
       path: '/jobs/new',
       state: { wizardStart: { mode: 'rerun', jobId: 'j1', label: 'clip.mp4', ...target.settings } },
@@ -93,7 +93,7 @@ describe('RunAgainActions', () => {
       new APIError('x', 409, undefined, { error: { code: 'RERUN_VIDEO_MISSING' } }),
     );
     renderActions();
-    await userEvent.click(screen.getByRole('button', { name: /^Run again$/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Run again unchanged/ }));
     await userEvent.click(screen.getAllByRole('button', { name: 'Run again' }).at(-1)!);
     expect(await screen.findByText(/choose the video where it is now/)).toBeInTheDocument();
   });
@@ -138,7 +138,7 @@ describe('RunAgainActions', () => {
         .mockResolvedValueOnce(result({ skipped: [missing] }))
         .mockResolvedValueOnce(result({ created: ['n1', 'n3'], skipped: [missing] }));
       renderActions(batchTarget);
-      await userEvent.click(screen.getByRole('button', { name: /^Run again$/ }));
+      await userEvent.click(screen.getByRole('button', { name: /Run again unchanged/ }));
 
       expect(apiClient.rerunBatch).toHaveBeenCalledWith('b1', {}, { check: true });
       expect(await screen.findByTestId('missing-videos')).toHaveTextContent('/home/ada/Studies/site_a/child02.mp4');
@@ -155,7 +155,7 @@ describe('RunAgainActions', () => {
         )
         .mockResolvedValueOnce(result({ created: ['n1', 'n2', 'n3'] }));
       renderActions(batchTarget);
-      await userEvent.click(screen.getByRole('button', { name: /^Run again$/ }));
+      await userEvent.click(screen.getByRole('button', { name: /Run again unchanged/ }));
       await userEvent.click(await screen.findByRole('button', { name: 'Locate…' }));
       await userEvent.click(await screen.findByRole('button', { name: /Home/ }));
       await waitFor(() => expect(apiClient.browseServerFolders).toHaveBeenCalledWith('/home/ada'));

@@ -652,7 +652,7 @@ const AskAI = () => {
               ))}
             </div>
             {!shownEntries.length && (
-              <p className="text-xs text-muted-foreground">Answers appear here as lanes, one per try or run you show.</p>
+              <p className="text-xs text-muted-foreground">Answers appear here as tracks, one per try or run you show.</p>
             )}
           </Card>
 

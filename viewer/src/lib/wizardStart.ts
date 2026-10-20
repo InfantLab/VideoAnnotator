@@ -9,7 +9,7 @@ export interface StartSettings {
 }
 
 export type WizardStart =
-  /** "Edit and run again": the job's own video, its settings to change. */
+  /** "Run again…": the job's own video, its settings to change. */
   | ({ mode: 'rerun'; jobId: string; label: string } & StartSettings)
   /** The same for every finished job of a batch. */
   | ({ mode: 'rerunBatch'; batchId: string; label: string; videoCount: number } & StartSettings)

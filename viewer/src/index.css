@@ -12,7 +12,7 @@ All colors MUST be HSL.
     --background: 220 13% 8%;
     --foreground: 210 40% 98%;
 
-    --card: 220 13% 10%;
+    --card: 220 13% 11%;
     --card-foreground: 210 40% 98%;
 
     --popover: 220 13% 10%;
@@ -59,9 +59,11 @@ All colors MUST be HSL.
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Surfaces (cards, panels, dividers) get a quiet edge; controls (buttons,
+       inputs) a stronger one, so the two never look alike. */
+    --border: 220 13% 18%;
+    --input: 220 13% 32%;
+    --ring: 217 91% 60%;
 
     --radius: 0.5rem;
 

@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NoFolderAccess, ServerFolderPicker, type ServerFolderSelection } from "@/components/ServerFolderPicker";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw, FolderOpen, HardDrive, Database } from "lucide-react";
+import { ArrowLeft, ArrowRight, Upload, Play, X, AlertCircle, RefreshCw, RotateCcw, FolderOpen, HardDrive, Database, FileVideo } from "lucide-react";
 import { DatasetPicker, type PickedFile } from "@/components/DatasetPicker";
 import { SaveDatasetDialog } from "@/components/SaveDatasetDialog";
 import { settingsOf, wizardStartOf, type WizardStart } from "@/lib/wizardStart";
@@ -402,7 +402,7 @@ const CreateNewJob = () => {
     }
   };
 
-  /** "Edit and run again": the original's videos, these settings (spec 019). */
+  /** "Run again…": the original's videos, these settings (spec 019). */
   const submitRerun = async () => {
     if (!rerunning) return;
     if (selectedPipelines.length === 0) {
@@ -594,7 +594,8 @@ const CreateNewJob = () => {
             <div className="mb-4">
               <StartFromRecent
                 onUseJob={(job, label) => {
-                  setStart({ mode: 'settings', label, ...settingsOf(job) });
+                  // On the Choose videos step a recent job means its video; its settings come along to change.
+                  setStart({ mode: 'rerun', jobId: job.id, label, ...settingsOf(job) });
                   setStartApplied(false);
                 }}
                 onApplyPreset={(preset) => {
@@ -917,6 +918,7 @@ export const VideoUploadStep = ({
 }) => {
   const [saving, setSaving] = useState(false);
   const folderInput = useRef<HTMLInputElement>(null);
+  const filesInput = useRef<HTMLInputElement>(null);
 
   // The selection no longer equals the dataset it came from.
   const changedByHand = () => {
@@ -1065,11 +1067,24 @@ export const VideoUploadStep = ({
               Select video files to process. Formats: MP4, WebM, AVI, MOV
             </p>
 
-            <div className="mb-3">
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button size="sm" onClick={() => filesInput.current?.click()}>
+                <FileVideo className="h-4 w-4 mr-2" />
+                Choose files
+              </Button>
               <Button variant="outline" size="sm" onClick={chooseFolder}>
                 <FolderOpen className="h-4 w-4 mr-2" />
                 Choose a folder
               </Button>
+              <input
+                ref={filesInput}
+                type="file"
+                accept="video/*"
+                multiple
+                className="hidden"
+                aria-label="Choose video files"
+                onChange={handleFileChange}
+              />
               <input
                 ref={folderInput}
                 type="file"
@@ -1077,15 +1092,7 @@ export const VideoUploadStep = ({
                 onChange={handleFileChange}
                 {...{ webkitdirectory: '', directory: '' }}
               />
-              <span className="text-xs text-muted-foreground ml-2">or pick files:</span>
             </div>
-            <input
-              type="file"
-              accept="video/*"
-              multiple
-              onChange={handleFileChange}
-              className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
             {selectedFiles.length > 8 && sameMachine && (
               <p className="text-xs text-muted-foreground mt-4">
                 That&apos;s {selectedFiles.length} uploads, one per video, with this tab kept
@@ -1638,8 +1645,8 @@ const ConfigurationStep = ({
   return (
     <div className="space-y-6">
       <p className="text-muted-foreground">
-        Configure pipeline parameters discovered from the VideoAnnotator server. Adjust values below or
-        edit the JSON override for advanced scenarios.
+        Each pipeline's main settings, at their defaults; its technical ones are folded away underneath.
+        Change only what your study needs.
       </p>
 
       <DynamicPipelineParameters
@@ -1649,57 +1656,22 @@ const ConfigurationStep = ({
         onConfigChange={setConfig}
       />
 
-      <details className="p-4 bg-blue-50 rounded-lg">
-        <summary className="font-medium text-blue-800 mb-2 cursor-pointer hover:text-blue-900">
-          Advanced: Raw JSON Configuration (click to expand)
+      <details className="rounded-lg border bg-card px-5 py-3">
+        <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
+          All settings as JSON
         </summary>
-        <div className="mt-4 space-y-3">
-          {/* Explainer */}
-          <div className="p-3 bg-white border border-blue-200 rounded text-sm">
-            <p className="font-semibold text-blue-900 mb-2">💡 What is this?</p>
-            <p className="text-gray-700 mb-2">
-              The JSON below represents your complete pipeline configuration. Each pipeline (like "openface3" or "whisper")
-              can have custom parameters. Most users can ignore this and use the form controls above.
-            </p>
-            <p className="text-gray-700 mb-2">
-              <strong>When to use this:</strong>
-            </p>
-            <ul className="list-disc ml-5 space-y-1 text-gray-700">
-              <li>Testing specific parameter combinations not exposed in the UI</li>
-              <li>Copying/pasting configurations between jobs</li>
-              <li>Applying parameters that don't have form controls yet</li>
-            </ul>
-            <p className="text-gray-700 mt-2">
-              <strong>Example structure:</strong>
-            </p>
-            <pre className="mt-2 p-2 bg-gray-50 rounded text-xs overflow-x-auto text-gray-800">
-              {`{
-  "openface3": {
-    "model": "mobilenet",
-    "confidence_threshold": 0.5
-  },
-  "whisper": {
-    "model": "base",
-    "language": "en"
-  }
-}`}</pre>
-          </div>
+        <div className="mt-3 space-y-3">
+          <p className="text-xs text-muted-foreground">
+            The settings you&apos;ve changed from their defaults, by pipeline (empty means all at defaults).
+            Most people never need this: use it to paste settings from another run, or to set something
+            that has no field above. Changes here and above stay in step.
+          </p>
 
           {/* JSON Editor */}
-          <div className={`bg-white p-4 rounded border-2 ${validationResult?.errors && validationResult.errors.length > 0
-            ? 'border-red-300 shadow-sm shadow-red-100'
-            : validationResult?.warnings && validationResult.warnings.length > 0
-              ? 'border-yellow-300 shadow-sm shadow-yellow-100'
-              : 'border-blue-300'
-            }`}>
+          <div>
             <div className="flex justify-between items-center mb-3">
               <div>
-                <label className="text-sm font-semibold text-gray-900">
-                  ✏️ Edit Configuration JSON (Editable)
-                </label>
-                <p className="text-xs text-gray-600 mt-0.5">
-                  Click inside and type to edit the configuration directly
-                </p>
+                <label className="text-sm font-medium">Settings JSON</label>
               </div>
               <button
                 type="button"
@@ -1707,7 +1679,7 @@ const ConfigurationStep = ({
                   navigator.clipboard.writeText(JSON.stringify(config, null, 2));
                   // Could show a toast here
                 }}
-                className="text-xs text-blue-600 hover:text-blue-800 underline"
+                className="text-xs text-primary underline-offset-4 hover:underline"
               >
                 Copy to clipboard
               </button>
@@ -1727,20 +1699,20 @@ const ConfigurationStep = ({
                   setJsonError(err instanceof Error ? err.message : 'Invalid JSON');
                 }
               }}
-              className={`w-full h-64 text-sm font-mono resize-y border-2 rounded px-3 py-2 text-gray-900 bg-white focus:outline-none ${jsonError
+              className={`w-full h-64 text-sm font-mono resize-y border rounded-md px-3 py-2 bg-background text-foreground focus:outline-none ${jsonError
                 ? 'border-orange-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500'
                 : validationResult?.errors && validationResult.errors.length > 0
                   ? 'border-red-400 focus:ring-2 focus:ring-red-500 focus:border-red-500'
                   : validationResult?.warnings && validationResult.warnings.length > 0
                     ? 'border-yellow-400 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500'
-                    : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                    : 'border-input focus:ring-2 focus:ring-ring'
                 }`}
               placeholder='{"pipeline_name": {"parameter": "value"}}'
             />
             <div className="mt-2 space-y-1">
               {jsonError && (
-                <p className="text-xs text-orange-600 font-medium">
-                  ⚠️ JSON Parse Error: {jsonError} (config will update when valid)
+                <p className="text-xs text-orange-400 font-medium">
+                  Not valid JSON yet: {jsonError} (config will update when valid)
                 </p>
               )}
               <div className="flex justify-between items-start">
@@ -1748,8 +1720,8 @@ const ConfigurationStep = ({
                   Active pipelines: {activePipelines.map((pipeline) => pipeline.name).join(', ') || 'None'}
                 </p>
                 {!jsonError && (
-                  <p className="text-xs text-green-600">
-                    ✓ Valid JSON
+                  <p className="whitespace-nowrap text-xs text-muted-foreground">
+                    Valid JSON
                   </p>
                 )}
               </div>

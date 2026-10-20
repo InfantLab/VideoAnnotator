@@ -49,7 +49,7 @@ async function save(file: RunFileRef) {
 
 /** Each lane's provenance (spec 017) and raw files; what differs between compared runs (spec 028 FR-012, US5). */
 export function AboutPanel({ lanes, provenance, files, compared }: AboutPanelProps) {
-  const shown = lanes.filter((l) => l.pipeline && l.status !== 'failed');
+  const shown = lanes.filter((l) => l.pipeline && l.status !== 'failed' && l.status !== 'missing');
   const seen = new Set<string>();
   return (
     <div className="space-y-3 pb-3" data-testid="about-panel">

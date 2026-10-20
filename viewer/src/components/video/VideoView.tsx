@@ -14,6 +14,7 @@ import { DataTable } from '@/components/video/DataTable';
 import { KeysHelp } from '@/components/video/KeysHelp';
 import { HeaderActions, VideoContext } from '@/components/video/Header';
 import { DebugPanel } from '@/components/DebugPanel';
+import { Footer } from '@/components/Footer';
 import type { ListContext } from '@/lib/listNavigation';
 import { NoteEditor, type EditingNote } from '@/components/video/NoteEditor';
 import { NotesList } from '@/components/video/NotesList';
@@ -375,7 +376,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="min-w-0 max-w-[16rem] truncate text-sm font-semibold" title={source.path ?? source.name}>
+        <h1 className="min-w-0 max-w-[24rem] truncate text-sm font-semibold" title={source.path ?? source.name}>
           {source.name}
         </h1>
         {source.path && (
@@ -386,22 +387,6 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
             projects={source.projects ?? []}
           />
         )}
-        <div className="mx-2 h-6 w-px bg-border" />
-        <PlayerBar
-          isPlaying={isPlaying}
-          currentTime={currentTime}
-          duration={duration}
-          playbackRate={playbackRate}
-          frameRate={frameRate}
-          selectedLane={selectedLane?.label ?? null}
-          onPlayPause={playPause}
-          onPreviousEvent={() => stepEvent(-1)}
-          onNextEvent={() => stepEvent(1)}
-          onPlaybackRateChange={(rate) => {
-            setPlaybackRate(rate);
-            if (videoRef.current) videoRef.current.playbackRate = rate;
-          }}
-        />
         <div className="ml-auto flex items-center gap-1">
           {source.path && (
             <Button asChild variant="ghost" size="sm" className="h-8">
@@ -438,35 +423,55 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <div className="relative min-w-0 flex-1 bg-black">
-          <VideoPlayer
-            ref={videoRef}
-            videoFile={source.videoFile ?? null}
-            videoUrl={source.videoUrl}
-            missingVideoMessage={source.missingVideoMessage}
-            annotationData={annotationData}
-            currentTime={currentTime}
-            overlays={prefs.overlay}
-            onTimeUpdate={setCurrentTime}
-            onDurationChange={onDurationChange}
-            onPlayStateChange={setIsPlaying}
-          />
-          {editing && notes && (
-            <NoteEditor
-              key={editing.id ?? `new-${editing.start}`}
-              note={editing}
-              onSave={saveNote}
-              onCancel={() => setEditing(null)}
-              onDelete={
-                editing.id
-                  ? () => {
-                      void notes.remove(editing.id!).catch(() => {});
-                      setEditing(null);
-                    }
-                  : undefined
-              }
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="relative min-h-0 flex-1 bg-black">
+            <VideoPlayer
+              ref={videoRef}
+              videoFile={source.videoFile ?? null}
+              videoUrl={source.videoUrl}
+              missingVideoMessage={source.missingVideoMessage}
+              annotationData={annotationData}
+              currentTime={currentTime}
+              overlays={prefs.overlay}
+              onTimeUpdate={setCurrentTime}
+              onDurationChange={onDurationChange}
+              onPlayStateChange={setIsPlaying}
             />
-          )}
+            {editing && notes && (
+              <NoteEditor
+                key={editing.id ?? `new-${editing.start}`}
+                note={editing}
+                onSave={saveNote}
+                onCancel={() => setEditing(null)}
+                onDelete={
+                  editing.id
+                    ? () => {
+                        void notes.remove(editing.id!).catch(() => {});
+                        setEditing(null);
+                      }
+                    : undefined
+                }
+              />
+            )}
+          </div>
+          <div className="shrink-0 border-t bg-card px-2 py-1">
+            <PlayerBar
+              isPlaying={isPlaying}
+              currentTime={currentTime}
+              duration={duration}
+              playbackRate={playbackRate}
+              frameRate={frameRate}
+              selectedLane={selectedLane?.label ?? null}
+              onPlayPause={playPause}
+              onPreviousEvent={() => stepEvent(-1)}
+              onNextEvent={() => stepEvent(1)}
+              onSeek={seek}
+              onPlaybackRateChange={(rate) => {
+                setPlaybackRate(rate);
+                if (videoRef.current) videoRef.current.playbackRate = rate;
+              }}
+            />
+          </div>
         </div>
         {panelOpen && (
           <aside className="flex shrink-0 flex-col border-l" style={{ width: SIDE_PANEL_WIDTH }} data-testid="side-panel">
@@ -564,6 +569,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
           />
         )}
       </div>
+      <Footer />
     </div>
   );
 }

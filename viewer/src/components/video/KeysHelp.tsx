@@ -6,7 +6,7 @@ const KEYS: [string, string][] = [
   ['← →', 'One frame back or on'],
   ['Shift + ← →', 'One second back or on'],
   ['↓ ↑', 'A tenth of a second back or on'],
-  ['[ ]', 'Previous or next event in the selected lane'],
+  ['[ ]', 'Previous or next event in the selected track'],
   ['+ −', 'Zoom the timeline in or out'],
   ['0', 'Show the whole video'],
   ['Ctrl/⌘ + wheel', 'Zoom around the pointer'],

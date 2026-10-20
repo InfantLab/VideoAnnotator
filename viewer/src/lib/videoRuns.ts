@@ -24,15 +24,26 @@ export function defaultSelection(runs: VideoRun[], preferred?: string | null): R
   return selection;
 }
 
-/** Pipelines that never completed on this video, with the newest run's reason. */
+export const MISSING_RESULTS =
+  "Finished, but its result files are no longer in the run's results folder (moved or deleted). Run it again to get them back.";
+
+/**
+ * Pipelines with nothing to show on this video, with the newest run's reason:
+ * those that failed, and those that finished but whose files have since gone.
+ */
 export function failedPipelines(runs: VideoRun[], selection: RunSelection): FailedPipeline[] {
   const failed: FailedPipeline[] = [];
   const seen = new Set(Object.keys(selection));
   for (const run of runs) {
     for (const p of run.pipelines) {
-      if (seen.has(p.name) || p.status !== 'failed') continue;
-      seen.add(p.name);
-      failed.push({ run: run.job_id, pipeline: p.name, error: p.error ?? null });
+      if (seen.has(p.name)) continue;
+      if (p.status === 'failed') {
+        seen.add(p.name);
+        failed.push({ run: run.job_id, pipeline: p.name, error: p.error ?? null });
+      } else if (p.status === 'completed' && !p.files.some((f) => f.kind === 'result')) {
+        seen.add(p.name);
+        failed.push({ run: run.job_id, pipeline: p.name, error: MISSING_RESULTS, missing: true });
+      }
     }
   }
   return failed;

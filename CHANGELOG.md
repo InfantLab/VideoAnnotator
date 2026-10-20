@@ -7,10 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The version is `1.7.0.dev0` on `1.7-dev` (viewer `1.7.0-dev.0`), so a development build no
+  longer shows as v1.6.0.
+- **The Video page**: play, time, a seek bar, event stepping and speed are under the video again,
+  not in the header; the page has the footer (with the version) like every other page. A pipeline
+  that finished but whose result files are gone from its results folder now has a track saying
+  so, instead of disappearing.
+- **Run again…** (run and job pages) opens the settings to check or change before it starts;
+  running it again exactly as before is **Run again unchanged**.
+- **New job, Choose videos**: a video under "A video you ran before" picks that video (with its
+  pipelines and settings to change), not just its settings; presets are on their own row. On
+  Upload, **Choose files** and **Choose a folder** are side by side, files first.
+- Viewer theme: cards and panels have a quiet edge and buttons and inputs a stronger one, so
+  controls no longer look like the boxes around them; a run's figures are filled tiles and its
+  pipelines filled tags.
+- **New job, Configure**: each pipeline is a section headed by its name, and each setting a row:
+  its name and explanation on the left, a control sized to its value on the right (a number box
+  with its unit, a switch, a dropdown); only prompts and JSON take the full width. The JSON editor
+  ("All settings as JSON") matches the dark theme and no longer shows an example with pipeline
+  names that don't exist.
+- Dev container: the results folder (`/root/VideoAnnotator`) is on a volume, so a rebuild no
+  longer deletes runs' results while the job database still lists them.
+- Dev container: Chromium for Playwright is installed on create, so the viewer can be checked in a
+  real browser (`bun run e2e`, or screenshots) without a manual step.
+
 ### Added
 
 - **The Video page** (spec 028): one video, every run's results on labelled lanes that are also
-  their controls, the results table beside it, and your own notes. `/video?path=…`; `/view/<job>`
+  their controls (called **tracks** on screen, as in the old viewer), the results table beside it,
+  and your own notes. `/video?path=…`; `/view/<job>`
   opens it on that run. The video streams from the server (no zip download, no folder question)
   and only the shown runs' files are fetched. Lanes are made from the results (one per kind
   present, a row per speaker, person or face track, the same colours as on the video), with zoom,

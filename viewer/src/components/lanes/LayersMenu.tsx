@@ -39,14 +39,14 @@ export function LayersMenu({ lanes, toggles, showLanes, setOverlays }: LayersMen
       </PopoverTrigger>
       <PopoverContent className="w-80 p-2 text-xs" align="start" data-testid="layers-menu">
         <div className="mb-2 flex justify-between">
-          {allNone('Lanes', (on) => showLanes(kinds, on))}
+          {allNone('Tracks', (on) => showLanes(kinds, on))}
           {allNone('On the video', (on) => setOverlays(overlays, on))}
         </div>
         {lanes.length === 0 && <p className="text-muted-foreground">No lanes yet.</p>}
         <table className="w-full">
           <thead className="sr-only">
             <tr>
-              <th>Lane</th>
+              <th>Track</th>
               <th>Shown</th>
               <th>On the video</th>
             </tr>
@@ -62,7 +62,7 @@ export function LayersMenu({ lanes, toggles, showLanes, setOverlays }: LayersMen
                   <Checkbox
                     checked={!toggles.collapsed(lane.kind)}
                     onCheckedChange={() => toggles.toggleCollapsed(lane.kind)}
-                    aria-label={`Show the ${lane.label} lane`}
+                    aria-label={`Show the ${lane.label} track`}
                   />
                 </td>
                 <td className="w-8">

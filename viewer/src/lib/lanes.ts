@@ -122,7 +122,8 @@ export interface LaneRow {
   unit?: string;
 }
 
-export type LaneStatus = 'ok' | 'failed' | 'empty';
+/** `missing`: the pipeline finished, but its result files are gone from the results folder. */
+export type LaneStatus = 'ok' | 'failed' | 'missing' | 'empty';
 
 export interface Lane {
   id: string;
@@ -143,6 +144,8 @@ export interface FailedPipeline {
   run: string;
   pipeline: string;
   error: string | null;
+  /** Finished, but its result files are no longer there. */
+  missing?: boolean;
 }
 
 /** The lane kind a pipeline's results go to, for a failed pipeline with no rows. */
@@ -372,7 +375,7 @@ export function buildLanes(
       run: runById.get(f.run) ?? (f.run ? { id: f.run, label: f.run } : null),
       form: spec.form,
       rows: [],
-      status: 'failed',
+      status: f.missing ? 'missing' : 'failed',
       error: f.error ?? 'failed',
       overlay: null,
       source: [],

@@ -49,7 +49,6 @@ describe('DynamicPipelineParameters grouping (spec 026)', () => {
   it('shows the title, behavioural settings open and technical collapsed with a count', () => {
     render(<Harness />);
     expect(screen.getByText('Faces: expression, age, gender')).toBeInTheDocument();
-    expect(screen.getByText('What to measure')).toBeInTheDocument();
     expect(screen.getByLabelText('Most faces per frame')).toBeInTheDocument();
     expect(screen.getByText('Technical settings (2 · all at defaults)')).toBeInTheDocument();
     expect(screen.queryByLabelText('Detection confidence')).not.toBeInTheDocument();

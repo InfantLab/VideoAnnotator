@@ -27,8 +27,9 @@ export type RunAgainTarget =
 
 /**
  * The next step after a result (spec 019), shown on the job and batch pages
- * where the decision is made: run it again as is, change something and run
- * it again, use its settings on other videos, or save them as a preset.
+ * where the decision is made: run it again with its settings to change (the
+ * main choice: people expect to be asked), run it again unchanged, use its
+ * settings on other videos, or save them as a preset.
  */
 export const RunAgainActions = ({ target }: { target: RunAgainTarget }) => {
   const navigate = useNavigate();
@@ -146,11 +147,11 @@ export const RunAgainActions = ({ target }: { target: RunAgainTarget }) => {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={startRunAgain} disabled={busy}>
-          <RotateCcw className="h-4 w-4 mr-2" /> Run again
+        <Button size="sm" onClick={editAndRunAgain}>
+          <Pencil className="h-4 w-4 mr-2" /> Run again…
         </Button>
-        <Button size="sm" variant="outline" onClick={editAndRunAgain}>
-          <Pencil className="h-4 w-4 mr-2" /> Edit and run again
+        <Button size="sm" variant="outline" onClick={startRunAgain} disabled={busy}>
+          <RotateCcw className="h-4 w-4 mr-2" /> Run again unchanged
         </Button>
         <Button size="sm" variant="outline" onClick={useSettings}>
           <Copy className="h-4 w-4 mr-2" /> Use these settings on other videos
@@ -191,7 +192,7 @@ export const RunAgainActions = ({ target }: { target: RunAgainTarget }) => {
                 <p>
                   A new {what} runs the same {target.kind === 'job' ? 'video' : 'videos'} with the same pipelines and
                   settings. This one and its results are kept, so you can compare them. To change something first,
-                  use “Edit and run again”.
+                  use “Run again…”.
                 </p>
                 {checked && checked.skipped.length > 0 && (
                   <div className="space-y-1 text-foreground">

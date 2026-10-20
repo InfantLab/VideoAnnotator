@@ -91,11 +91,11 @@ export function DataTable({ rows, currentTime, selectedRow, onRowClick, filter, 
     <div className="flex h-full min-h-0 flex-col text-xs" data-testid="data-table">
       <div className="flex items-center gap-2 px-3 pb-2">
         <Select value={kind} onValueChange={onFilterChange}>
-          <SelectTrigger className="h-7 w-32 text-xs" aria-label="Lane">
+          <SelectTrigger className="h-7 w-32 text-xs" aria-label="Track">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All lanes</SelectItem>
+            <SelectItem value="all">All tracks</SelectItem>
             {kinds.map((k) => (
               <SelectItem key={k.kind} value={k.kind}>
                 {k.label}
