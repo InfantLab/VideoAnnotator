@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PageHelp } from '@/components/PageHelp';
+import { NeedsServer } from '@/components/NeedsServer';
+import { APIError } from '@/api/handleError';
 import { WorkflowsSection } from '@/components/workflows/WorkflowsSection';
 import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,6 +27,9 @@ export default function Pipelines() {
           </Link>
         </Button>
       </div>
+      {error instanceof APIError && error.status === 0 && (
+        <NeedsServer what="Pipelines are installed on a VideoAnnotator server, and run there." />
+      )}
       <PageHelp page="pipelines">What each pipeline finds, and installing the ones you need. You choose which to run when you start a run.</PageHelp>
       <PipelineSelectionStep
         manage

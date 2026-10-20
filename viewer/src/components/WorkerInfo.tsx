@@ -21,7 +21,7 @@ export function WorkerInfo() {
                                 <Users className="h-5 w-5" />
                                 Worker Information
                             </CardTitle>
-                            <CardDescription>Job processing worker status</CardDescription>
+                            <CardDescription>What the server is processing</CardDescription>
                         </div>
                         <Button
                             variant="ghost"
@@ -86,7 +86,7 @@ export function WorkerInfo() {
                             <Users className="h-5 w-5" />
                             Worker Information
                         </CardTitle>
-                        <CardDescription>Job processing worker status</CardDescription>
+                        <CardDescription>What the server is processing</CardDescription>
                     </div>
                     <Button
                         variant="ghost"
@@ -113,14 +113,14 @@ export function WorkerInfo() {
                         </div>
 
                         <div>
-                            <p className="font-medium text-sm">Active Jobs</p>
+                            <p className="font-medium text-sm">Videos being processed</p>
                             <p className="text-sm text-muted-foreground mt-1">
                                 {workers.active_jobs} / {workers.max_concurrent_workers} slots
                             </p>
                         </div>
 
                         <div>
-                            <p className="font-medium text-sm">Queued Jobs</p>
+                            <p className="font-medium text-sm">Videos waiting</p>
                             <p className="text-sm text-muted-foreground mt-1">{workers.queued_jobs}</p>
                         </div>
 
@@ -136,7 +136,7 @@ export function WorkerInfo() {
 
                         {workers.processing_jobs.length > 0 && (
                             <div className="md:col-span-2">
-                                <p className="font-medium text-sm">Processing Jobs</p>
+                                <p className="font-medium text-sm">Being processed now</p>
                                 <div className="mt-1 flex flex-wrap gap-1">
                                     {workers.processing_jobs.map((jobId) => (
                                         <Badge key={jobId} variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -172,7 +172,7 @@ export function WorkerInfo() {
                             <CheckCircle2 className="h-4 w-4" />
                             <AlertDescription>
                                 Workers are processing {workers.active_jobs} job{workers.active_jobs !== 1 ? 's' : ''}.
-                                {workers.queued_jobs > 0 && ` ${workers.queued_jobs} job${workers.queued_jobs !== 1 ? 's are' : ' is'} queued.`}
+                                {workers.queued_jobs > 0 && ` ${workers.queued_jobs} video${workers.queued_jobs !== 1 ? 's are' : ' is'} waiting.`}
                             </AlertDescription>
                         </Alert>
                     )}

@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Select,
   SelectContent,
@@ -135,6 +136,22 @@ const parameterState = (
   return isChanged(parameter, pipelineConfig) ? 'not-applicable' : 'hidden';
 };
 
+const shown = (value: unknown): string => {
+  if (value === null || value === '') return 'none';
+  if (typeof value === 'boolean') return value ? 'on' : 'off';
+  if (typeof value === 'string') return value.length > 60 ? `${value.slice(0, 57)}…` : value;
+  return JSON.stringify(value);
+};
+
+/** "What it does.\nDefault: 30 px" (spec 029 FR-024). */
+const settingTip = (parameter: PipelineParameterSchema): string => {
+  const lines = [parameter.description ?? parameter.label ?? parameter.name];
+  if (parameter.default !== undefined) {
+    lines.push(`Default: ${shown(parameter.default)}${parameter.unit ? ` ${parameter.unit}` : ''}`);
+  }
+  return lines.join('\n');
+};
+
 /** Required, and the allowed range; the unit is shown beside the field instead. */
 const renderFieldDescription = (parameter: PipelineParameterSchema) => {
   const meta: string[] = [];
@@ -156,6 +173,7 @@ const SettingRow = ({
   htmlFor,
   description,
   hint,
+  tip,
   wide = false,
   children,
 }: {
@@ -163,6 +181,8 @@ const SettingRow = ({
   htmlFor?: string;
   description?: string;
   hint?: string;
+  /** What it does and its default, on hover or focus (spec 029 FR-024). */
+  tip?: string;
   wide?: boolean;
   children: ReactNode;
 }) => (
@@ -174,9 +194,26 @@ const SettingRow = ({
     }
   >
     <div className="min-w-0 space-y-0.5">
-      <Label htmlFor={htmlFor} className="text-sm font-medium">
-        {label}
-      </Label>
+      {tip ? (
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Label
+                htmlFor={htmlFor}
+                tabIndex={0}
+                className="cursor-help text-sm font-medium underline decoration-dotted decoration-muted-foreground/60 underline-offset-4"
+              >
+                {label}
+              </Label>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs whitespace-pre-line">{tip}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : (
+        <Label htmlFor={htmlFor} className="text-sm font-medium">
+          {label}
+        </Label>
+      )}
       {description && <p className="text-xs text-muted-foreground">{description}</p>}
       {hint && <p className="text-[11px] text-muted-foreground/80">{hint}</p>}
     </div>
@@ -249,7 +286,7 @@ export const DynamicPipelineParameters = ({
 
           const id = `${pipeline.id}-${parameter.name}`;
           const label = parameter.label || parameter.name;
-          const rowProps = { label, description: parameter.description, hint: fieldHint || undefined };
+          const rowProps = { label, description: parameter.description, hint: fieldHint || undefined, tip: settingTip(parameter) };
 
           switch (parameter.type) {
             case 'boolean':

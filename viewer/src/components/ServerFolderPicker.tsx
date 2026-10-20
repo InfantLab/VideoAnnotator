@@ -8,6 +8,7 @@
 // in place, and a whole folder starts in one request.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { inViewerWords } from '@/lib/userMessage';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';
@@ -219,7 +220,7 @@ export function ServerFolderPicker({ selection, onSelect, folderOnly = false }: 
       <Alert>
         <AlertTitle>Can&apos;t open this folder</AlertTitle>
         <AlertDescription className="space-y-2">
-          <p>{parsed.message}</p>
+          <p>{inViewerWords(parsed.message, parsed.code)}</p>
           {parsed.hint && <p className="text-xs">{parsed.hint}</p>}
           {path !== null && (
             <Button variant="outline" size="sm" onClick={() => open(null)}>
@@ -408,7 +409,7 @@ export function ServerFolderPicker({ selection, onSelect, folderOnly = false }: 
             </span>
             <span className="text-muted-foreground">
               {' '}
-              &ndash; used where they are, never copied. Deleting a job never deletes the original video.
+              &ndash; used where they are, never copied. Deleting a run never deletes the original video.
             </span>
           </p>
 

@@ -47,8 +47,8 @@ export const RestartRequiredBanner = ({ restartRequired }: RestartRequiredBanner
           <div className="space-y-2">
             <p className="font-medium">
               {state.runningJobCount === 1
-                ? "1 annotation job is running and would be interrupted."
-                : `${state.runningJobCount} annotation jobs are running and would be interrupted.`}{" "}
+                ? "1 video is being processed and would be interrupted."
+                : `${state.runningJobCount} videos are being processed and would be interrupted.`}{" "}
               Interrupted jobs are marked failed and can be retried.
             </p>
             <div className="flex gap-2">

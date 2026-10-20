@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { userMessage } from '@/lib/userMessage';
+import { PageHelp } from '@/components/PageHelp';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Download, Film, Loader2 } from 'lucide-react';
@@ -40,7 +42,8 @@ import { estimate } from '@/lib/estimate';
 import { saveBlob, zipBlobs } from '@/lib/exports';
 import { formatClock } from '@/lib/lanes';
 import { chooseMoments, samplePoints, samplingToConfig } from '@/lib/sampling';
-import { askWizardStart, wizardState } from '@/lib/wizardStart';
+import { askWizardStart } from '@/lib/wizardStart';
+import { runState } from '@/lib/runTarget';
 import { DEFAULT_SAMPLING, type AskAnswer, type AskEntry, type AskLibraryPrompt, type AskSampling } from '@/types/ask';
 
 const TRY_COUNT = 10;
@@ -305,7 +308,7 @@ const AskAI = () => {
         void queryClient.invalidateQueries({ queryKey: ['videoannotator', 'vlm', 'models'] });
         setPendingSend(() => () => asked(make));
       } else {
-        setNotice(parseApiError(e).message);
+        setNotice(userMessage(e));
       }
     } finally {
       setBusy(false);
@@ -322,12 +325,15 @@ const AskAI = () => {
     try {
       await apiClient.cancelJob(latestRun.job_id);
     } catch (e) {
-      setNotice(`Couldn't stop the run: ${parseApiError(e).message}`);
+      setNotice(`Couldn't stop the run: ${userMessage(e)}`);
     }
   };
 
   const config = () => samplingToConfig(sampling);
-  const moreVideos = () => navigate('/jobs/new', { state: wizardState(askWizardStart(question, model, config())) });
+  const moreVideos = () => {
+    const start = askWizardStart(question, model, config());
+    navigate('/run', { state: runState({ target: null, settings: start.mode === 'settings' ? { ...start } : undefined }) });
+  };
   const saveWorkflow = async () => {
     try {
       const preset = await apiClient.createPreset({
@@ -337,7 +343,7 @@ const AskAI = () => {
       });
       setNotice(`Saved as workflow “${preset.name}”.`);
     } catch (e) {
-      setNotice(`Couldn't save the workflow: ${parseApiError(e).message}`);
+      setNotice(`Couldn't save the workflow: ${userMessage(e)}`);
     }
   };
 
@@ -415,7 +421,7 @@ const AskAI = () => {
       if (files.length === 1) saveBlob(files[0].blob, files[0].name);
       else if (files.length > 1) saveBlob(await zipBlobs(files), `${nameOf(videoPath)} answers.zip`);
     } catch (e) {
-      setNotice(`Couldn't export the answers: ${parseApiError(e).message}`);
+      setNotice(`Couldn't export the answers: ${userMessage(e)}`);
     }
   };
 
@@ -443,7 +449,7 @@ const AskAI = () => {
               >
                 how
               </a>
-              ).{serverError ? ` (${parseApiError(serverError).message})` : ''}
+              ).{serverError ? ` (${userMessage(serverError)})` : ''}
             </AlertDescription>
           </Alert>
         )}
@@ -459,6 +465,7 @@ const AskAI = () => {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Ask AI</h1>
+          <PageHelp page="ask">Ask a vision model about moments of a video; try it on a few, then run it on the whole video.</PageHelp>
           {videoPath && (
             <p className="flex items-center gap-1 text-sm text-muted-foreground" title={videoPath}>
               <Film className="h-4 w-4" /> {nameOf(videoPath)}
@@ -541,7 +548,7 @@ const AskAI = () => {
                     void apiClient
                       .deletePrompt(prompt.sha256)
                       .then(() => queryClient.invalidateQueries({ queryKey: ['ask', 'entries'] }))
-                      .catch((e) => setNotice(`Couldn't delete that question: ${parseApiError(e).message}`))
+                      .catch((e) => setNotice(`Couldn't delete that question: ${userMessage(e)}`))
                   }
                 />
               </div>
@@ -567,7 +574,7 @@ const AskAI = () => {
                 />
               ) : stream.isError ? (
                 <Alert variant="destructive">
-                  <AlertDescription>Can't open this video: {parseApiError(stream.error).message}</AlertDescription>
+                  <AlertDescription>Can't open this video: {userMessage(stream.error)}</AlertDescription>
                 </Alert>
               ) : (
                 <div className="flex aspect-video items-center justify-center rounded bg-muted">
@@ -692,7 +699,7 @@ const AskAI = () => {
                     await queryClient.invalidateQueries({ queryKey: ['videoannotator', 'vlm', 'models'] });
                     await action();
                   })
-                  .catch((e) => setNotice(`Couldn't record your agreement: ${parseApiError(e).message}`));
+                  .catch((e) => setNotice(`Couldn't record your agreement: ${userMessage(e)}`));
               }}
             >
               Send to {endpoint?.host}

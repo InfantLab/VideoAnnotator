@@ -201,8 +201,8 @@ describe('ServerDiagnostics', () => {
 
             await waitFor(() => {
                 expect(screen.getByText(/worker status/i)).toBeInTheDocument();
-                expect(screen.getByText(/active jobs/i)).toBeInTheDocument();
-                expect(screen.getByText(/queued jobs/i)).toBeInTheDocument();
+                expect(screen.getByText(/videos being processed/i)).toBeInTheDocument();
+                expect(screen.getByText(/videos waiting/i)).toBeInTheDocument();
                 expect(screen.getByText(/max concurrent/i)).toBeInTheDocument();
             });
         });

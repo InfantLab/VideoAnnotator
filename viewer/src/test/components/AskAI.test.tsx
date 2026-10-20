@@ -95,7 +95,7 @@ const renderAsk = (url = `/ask?video=${encodeURIComponent(VIDEO)}`) =>
           <Route path="/ask" element={<AskAI />} />
           <Route path="/workbench" element={<AskRedirect />} />
           <Route path="/prompts" element={<AskRedirect history />} />
-          <Route path="/jobs/new" element={<p>run setup</p>} />
+          <Route path="/run" element={<p>run setup</p>} />
         </Routes>
         <Spy />
       </MemoryRouter>
@@ -370,9 +370,9 @@ describe('Ask AI', () => {
       fireEvent.change(screen.getByLabelText('Every (s)'), { target: { value: '2' } });
       await userEvent.click(screen.getByRole('button', { name: /Run on more videos/ }));
       expect(await screen.findByText('run setup')).toBeInTheDocument();
-      const state = (window as unknown as { lastState: { wizardStart: { config: Record<string, Record<string, unknown>> } } })
+      const state = (window as unknown as { lastState: { runStart: { settings: { config: Record<string, Record<string, unknown>> } } } })
         .lastState;
-      expect(state.wizardStart.config.vlm_annotation).toMatchObject({ prompt: 'Touch?', model: 'qwen3.5:9b', frame_interval_sec: 2 });
+      expect(state.runStart.settings.config.vlm_annotation).toMatchObject({ prompt: 'Touch?', model: 'qwen3.5:9b', frame_interval_sec: 2 });
     });
   });
 });

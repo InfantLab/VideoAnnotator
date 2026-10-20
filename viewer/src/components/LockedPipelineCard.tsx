@@ -1,4 +1,5 @@
 import { AlertTriangle, CheckCircle2, Info, Lock, Loader2 } from "lucide-react";
+import { userMessage } from '@/lib/userMessage';
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -236,7 +237,7 @@ export const ExtrasInstallStatus = ({
     return (
       <div className="mt-1 flex items-center gap-2">
         <p className="text-xs font-medium text-destructive">
-          Couldn't start the install: {triggerError.message}
+          Couldn't start the install: {userMessage(triggerError)}
         </p>
         <Button type="button" size="sm" variant="outline" className="h-6 px-2 text-[11px]" onClick={onInstall}>
           Retry

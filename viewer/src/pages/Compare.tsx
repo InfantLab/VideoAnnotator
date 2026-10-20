@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { userMessage } from '@/lib/userMessage';
+import { PageHelp } from '@/components/PageHelp';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Download, Upload } from 'lucide-react';
@@ -9,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ProvenanceAttribution } from '@/components/ProvenanceAttribution';
 import { downloadJSON } from '@/lib/datasets';
-import { parseApiError } from '@/lib/errorHandling';
 import { parseElanFile } from '@/lib/parsers/elan';
 import { parseVlmAnnotations } from '@/lib/parsers/vlm';
 import { provenanceFromJSON } from '@/lib/provenance';
@@ -101,9 +102,9 @@ const Compare = () => {
     return (
       <div className="container mx-auto p-6 max-w-3xl">
         <p>
-          Choose two VLM jobs to compare from a job's page (“Compare with…”).{' '}
-          <Link className="underline" to="/jobs">
-            Jobs
+          Choose two runs to compare on a video's Runs tab (“Compare answers with…”).{' '}
+          <Link className="underline" to="/videos">
+            Videos
           </Link>
         </p>
       </div>
@@ -114,7 +115,7 @@ const Compare = () => {
     return (
       <div className="container mx-auto p-6 max-w-3xl">
         <Alert variant="destructive">
-          <AlertDescription>Couldn't load the VLM results: {parseApiError(error).message}</AlertDescription>
+          <AlertDescription>Couldn't load the answers: {userMessage(error)}</AlertDescription>
         </Alert>
       </div>
     );
@@ -186,7 +187,8 @@ const Compare = () => {
     <div className="container mx-auto p-6 max-w-7xl space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Compare two VLM runs</h1>
+          <h1 className="text-3xl font-bold">Compare two runs of Ask AI</h1>
+          <PageHelp page="compare">The answers of two runs of a question on one video, moment by moment.</PageHelp>
           <p className="text-muted-foreground mt-1">
             Same video, two runs. Labels are compared as recorded{ignoreCase ? ', ignoring case' : ''}.
           </p>

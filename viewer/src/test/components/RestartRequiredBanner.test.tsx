@@ -117,7 +117,7 @@ describe('RestartRequiredBanner', () => {
     renderBanner();
     await user.click(await screen.findByRole('button', { name: /restart videoannotator/i }));
 
-    expect(await screen.findByText(/2 annotation jobs are running/)).toBeInTheDocument();
+    expect(await screen.findByText(/2 videos are being processed/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /restart anyway/i }));
 
     expect(apiClient.restartServer).toHaveBeenLastCalledWith(true);

@@ -36,6 +36,13 @@ export function errorCode(error: unknown): string | undefined {
   return apiErrorEnvelope(error).code;
 }
 
+/** A message already parsed elsewhere, kept only if it uses none of the API's words. */
+export function inViewerWords(message: string, code?: string): string {
+  if (code && MESSAGES[code]) return MESSAGES[code];
+  if (message && !API_WORDS.test(message)) return message;
+  return code ? `The server couldn't do that (${code}).` : "The server couldn't do that.";
+}
+
 export function userMessage(error: unknown): string {
   const code = errorCode(error);
   if (code && MESSAGES[code]) return MESSAGES[code];

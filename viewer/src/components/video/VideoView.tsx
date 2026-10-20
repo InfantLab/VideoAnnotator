@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { userMessage } from '@/lib/userMessage';
+import { PageHelp } from '@/components/PageHelp';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, PanelRightClose, PanelRightOpen, Sparkles, StickyNote } from 'lucide-react';
 
@@ -515,7 +517,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
                     Notes need a server: they are kept with the video there, for everyone using it.
                   </p>
                 )}
-                {notes?.error && <p className="mt-2 text-destructive">{notes.error.message}</p>}
+                {notes?.error && <p className="mt-2 text-destructive">{userMessage(notes.error)}</p>}
               </TabsContent>
               <TabsContent value="runs" className="min-h-0 flex-1 overflow-auto px-3 text-xs">
                 {source.local ? (
@@ -525,6 +527,9 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
                 )}
               </TabsContent>
               <TabsContent value="about" className="min-h-0 flex-1 overflow-auto px-3 text-xs">
+                <div className="py-2">
+                  <PageHelp page="videoPage">Each track is one pipeline&apos;s results; hover a track for where it came from.</PageHelp>
+                </div>
                 <AboutPanel lanes={lanes} provenance={source.provenance ?? {}} files={source.files ?? []} compared={compared} />
               </TabsContent>
             </Tabs>
@@ -543,7 +548,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
       />
       <div className="shrink-0" style={{ height: timelineHeight }} data-testid="timeline-area">
         {files.error ? (
-          <p className="border-t p-3 text-xs text-destructive">Could not load the results: {files.error.message}</p>
+          <p className="border-t p-3 text-xs text-destructive">Could not load the results: {userMessage(files.error)}</p>
         ) : (
           <LaneTimeline
             lanes={lanes}

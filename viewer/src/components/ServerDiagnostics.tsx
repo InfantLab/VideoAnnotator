@@ -289,11 +289,11 @@ export function ServerDiagnostics({ className, defaultOpen = true }: ServerDiagn
                                                     </Badge>
                                                 </div>
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-sm text-muted-foreground">Active Jobs</span>
+                                                    <span className="text-sm text-muted-foreground">Videos being processed</span>
                                                     <span className="text-sm font-medium">{health.worker_info.active_jobs}</span>
                                                 </div>
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-sm text-muted-foreground">Queued Jobs</span>
+                                                    <span className="text-sm text-muted-foreground">Videos waiting</span>
                                                     <span className="text-sm font-medium">{health.worker_info.queued_jobs}</span>
                                                 </div>
                                                 <div className="flex items-center justify-between">

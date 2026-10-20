@@ -13,12 +13,12 @@ describe('ErrorDisplay', () => {
     describe('basic error display', () => {
         it('should render error message', () => {
             const error: ParsedError = {
-                message: 'Job not found',
+                message: 'Video not found',
             };
 
             render(<ErrorDisplay error={error} />);
 
-            expect(screen.getByText(/job not found/i)).toBeInTheDocument();
+            expect(screen.getByText(/video not found/i)).toBeInTheDocument();
         });
 
         it('should render error with code', async () => {

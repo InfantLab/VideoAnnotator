@@ -3,6 +3,7 @@
 // viewer says where it is: researchers start here, not in a file browser.
 
 import { useState, type ReactNode } from 'react';
+import { userMessage } from '@/lib/userMessage';
 import { Copy, Check, Download, FolderOpen } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import { APIError } from '@/api/handleError';
@@ -52,7 +53,7 @@ export function ResultsLocation({ folder, label, runZip, actions }: ResultsLocat
       if (error instanceof APIError && error.status === 409) {
         setMessage("This computer can't open folders for VideoAnnotator. Copy the location instead.");
       } else {
-        setMessage(error instanceof Error ? error.message : String(error));
+        setMessage(userMessage(error));
       }
     } finally {
       setBusy(null);
@@ -74,7 +75,7 @@ export function ResultsLocation({ folder, label, runZip, actions }: ResultsLocat
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch (error) {
-      setMessage(`Couldn't download the results: ${error instanceof Error ? error.message : String(error)}`);
+      setMessage(`Couldn't download the results: ${userMessage(error)}`);
     } finally {
       setBusy(null);
     }

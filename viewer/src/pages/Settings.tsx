@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { PageHelp } from '@/components/PageHelp';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Settings,
@@ -49,7 +50,7 @@ const featureLabels: Record<string, string> = {
   pipelineCatalog: 'Pipeline Catalog',
   pipelineSchemas: 'Parameter Schemas',
   pipelineHealth: 'Pipeline Health',
-  jobSSE: 'Job SSE',
+  jobSSE: 'Run progress (SSE)',
   artifactListing: 'Artifact Listing'
 };
 
@@ -162,6 +163,7 @@ const CreateSettings = () => {
           <h2 className="text-2xl font-semibold">Settings</h2>
         </div>
       </div>
+      <PageHelp page="settings">Which VideoAnnotator server this viewer talks to, your key for it, and tokens for gated models.</PageHelp>
 
       <Tabs defaultValue="api" className="space-y-4">
         <TabsList>

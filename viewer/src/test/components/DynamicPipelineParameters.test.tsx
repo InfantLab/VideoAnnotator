@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { useState } from 'react';
+import { act, useState } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import { DynamicPipelineParameters } from '@/components/DynamicPipelineParameters';
@@ -92,5 +92,20 @@ describe('DynamicPipelineParameters grouping (spec 026)', () => {
     expect(screen.queryByText('What to measure')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Detection confidence')).toBeInTheDocument();
     expect(screen.getByLabelText('Haar cascade scale factor')).toBeInTheDocument();
+  });
+});
+
+describe('setting tooltips (spec 029 FR-024)', () => {
+  it('gives each setting its description and default on focus', async () => {
+    render(
+      <Harness
+        params={[{ ...parameters[0], description: 'Faces looked for in each frame, at most' }, parameters[1]]}
+      />,
+    );
+    act(() => screen.getByText('Most faces per frame').focus());
+    const tips = await screen.findAllByText(/Default: 10 faces/);
+    expect(tips[0].textContent).toContain('Faces looked for in each frame, at most');
+    act(() => screen.getByText('Age').focus());
+    expect((await screen.findAllByText(/Default: on/)).length).toBeGreaterThan(0);
   });
 });

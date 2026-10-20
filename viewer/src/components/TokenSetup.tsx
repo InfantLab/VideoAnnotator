@@ -236,7 +236,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
           <AlertTitle className="text-blue-900 font-semibold">Welcome! Let's get you connected</AlertTitle>
           <AlertDescription className="text-blue-800 space-y-3 mt-2">
             <p>
-              To create annotation jobs, connect this viewer to your VideoAnnotator server with an API key.
+              To run pipelines, connect this viewer to your VideoAnnotator server with an API key.
               The quickest way is the one-click link the server prints the first time it starts; see{' '}
               <a href="#how-to-get-a-key" className="font-medium underline">How to get a key</a> below.
             </p>
@@ -252,7 +252,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
           </CardTitle>
           <CardDescription>
             Configure your VideoAnnotator server connection and authentication token.
-            This is required to create and manage annotation jobs.
+            This is needed to start runs and see their results.
           </CardDescription>
         </CardHeader>
 

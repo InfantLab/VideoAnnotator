@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import { inViewerWords } from '@/lib/userMessage';
 import { AlertCircle, ChevronDown, ChevronRight, Copy, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -49,7 +50,7 @@ export function ErrorDisplay({ error, className }: ErrorDisplayProps) {
                     <div>
                         <AlertTitle>Error</AlertTitle>
                         <AlertDescription>
-                            <p className="text-sm">{error.message}</p>
+                            <p className="text-sm">{inViewerWords(error.message, error.code)}</p>
                         </AlertDescription>
                     </div>
 

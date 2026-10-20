@@ -89,7 +89,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 ? parseApiError({
                       error: 'VideoAnnotator was updated since this page was opened.',
                       error_code: 'VIEWER_UPDATED',
-                      hint: 'Reload the page to get the new version. Your jobs and results are not affected.',
+                      hint: 'Reload the page to get the new version. Your runs and results are not affected.',
                   })
                 : parseApiError({
                       error: this.state.error.message,
