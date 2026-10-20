@@ -7,6 +7,7 @@ import { apiClient } from '@/api/client';
 import { ResultsLocation } from '@/components/ResultsLocation';
 import { RunAgainActions } from '@/components/RunAgainActions';
 import { RunDeleteButton } from '@/components/RunDeleteButton';
+import { SaveAsWorkflow } from '@/components/workflows/SaveAsWorkflow';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -175,6 +176,12 @@ function RunCard({ run, runs, videoName }: { run: VideoRun; runs: VideoRun[]; vi
         )}
       </div>
       {!going && <RunAgainActions target={{ kind: 'rerun', runId: run.job_id, label: videoName, single: true }} />}
+      {!going && (
+        <SaveAsWorkflow
+          source={{ kind: 'run', id: run.job_id, name: runLabel(run) }}
+          settings={async () => ({ selected: run.selected_pipelines ?? [], config: (run.config ?? {}) as Record<string, unknown> })}
+        />
+      )}
       <CompareWith run={run} runs={runs} />
     </li>
   );

@@ -18,7 +18,11 @@ import { SelectionBar } from '@/components/videos/SelectionBar';
 import { Sidebar } from '@/components/videos/Sidebar';
 import { VideosTable } from '@/components/videos/VideosTable';
 import { usePipelineTitles } from '@/hooks/usePipelineTitles';
-import { useProjects } from '@/hooks/useProjects';
+import { useProject, useProjects } from '@/hooks/useProjects';
+import { useWorkflows } from '@/hooks/useWorkflows';
+import { ApplyWorkflow } from '@/components/workflows/ApplyWorkflow';
+import { SaveAsWorkflow } from '@/components/workflows/SaveAsWorkflow';
+import { projectSettingsOf, runSettingsOf } from '@/lib/workflows';
 import { useVideos } from '@/hooks/useVideos';
 import type { RunTarget } from '@/lib/runTarget';
 import { videosWord } from '@/lib/runs';
@@ -70,6 +74,12 @@ export default function Videos() {
   const selectedPaths = (data?.videos ?? []).map((v) => v.path).filter((p) => selected.has(p));
   const project = query.project ? { id: query.project, name: title } : null;
   const run = query.run ? data?.runs.find((r) => r.id === query.run) : undefined;
+  // A run of a project whose settings came from a workflow offers its results as the workflow says (T050).
+  const runProject = useProject(run?.project?.id);
+  const workflows = useWorkflows(!!runProject.data?.current_settings?.source);
+  const fromWorkflow = runProject.data?.current_settings?.source;
+  const runExportChoices =
+    fromWorkflow?.kind === 'workflow' ? workflows.data?.find((w) => w.id === fromWorkflow.id)?.export_choices ?? null : null;
 
   const setFilter = (text: string) => {
     const next = new URLSearchParams(params);
@@ -121,11 +131,21 @@ export default function Videos() {
         )}
 
         {run ? (
-          <RunHeader run={run} firstVideoPath={data?.videos[0]?.path ?? null}>
+          <RunHeader run={run} firstVideoPath={data?.videos[0]?.path ?? null} exportChoices={runExportChoices}>
             <RunWhatChanged run={run} />
+            <SaveAsWorkflow source={{ kind: 'run', id: run.id, name: run.name }} settings={() => runSettingsOf(run.job_ids[0])} />
           </RunHeader>
         ) : query.project && data ? (
-          <ProjectHeader id={query.project} data={data} />
+          <ProjectHeader
+            id={query.project}
+            data={data}
+            workflows={
+              <>
+                <SaveAsWorkflow source={{ kind: 'project', id: query.project, name: title }} settings={() => projectSettingsOf(query.project!)} />
+                <ApplyWorkflow project={{ id: query.project, name: title }} />
+              </>
+            }
+          />
         ) : (
           data && (
             <ScopeHeader
