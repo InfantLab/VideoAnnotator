@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The viewer is organised around videos** (spec 029). The nav is **Home · Videos · Ask AI ·
+  Pipelines**, with the runs going on, **Help** and **Settings**. Jobs, Job detail, Batch detail,
+  Results, Datasets, New job and Getting started are gone; every old address redirects (`/jobs` and
+  `/batches` to Videos, `/jobs/<id>` and `/view/<id>` to the Video page on that run,
+  `/batches/<id>` to the run on Videos, `/jobs/new` to New run, `/getting-started` to Help). The
+  viewer opens on Videos once the server has results, else on Home.
+- **Words**: the viewer says video, folder, run, project, workflow and track; it no longer shows
+  job, batch, dataset or preset anywhere (a test renders every page to check). The API, its docs
+  and the CLI keep their words. Server errors are shown in the viewer's words.
+- **New run** replaces New job: opened on what it runs on (a folder, a project, a selection, a
+  video, a run to repeat), it has two parts, **What to find** and **Start**, and pressing **Start
+  run on N videos** is the only confirmation. It says where its settings came from: the chosen
+  workflow, the project's settings, your last run, or the defaults.
+- **Saved datasets are projects** and **presets are workflows**, with everything saved before
+  still there. Any signed-in user may now edit a saved dataset (name, videos, settings) through
+  the API; deleting one is still for its owner or an administrator.
+- **One video, many copies**: an upload and the copies its reruns make are one video, so the Video
+  page of an uploaded video now lists its reruns (and its notes follow it); `GET /videos/runs`
+  returns the runs of every path of the video, with a new `paths` field.
+- The standalone viewer (`/viewer`) opens files and demos on the Video page; the local results
+  library and the old player are gone.
+
 - The version is `1.7.0.dev0` on `1.7-dev` (viewer `1.7.0-dev.0`), so a development build no
   longer shows as v1.6.0.
 - **The Video page**: play, time, a seek bar, event stepping and speed are under the video again,
@@ -34,6 +56,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   real browser (`bun run e2e`, or screenshots) without a manual step.
 
 ### Added
+
+- **Videos** (spec 029): every video the server knows, by **All videos**, **Not in a project**,
+  **Projects** and **Folders**, with a column per pipeline (✓ ● ◌ ✕ –, the reason on hover);
+  **Run…** and **Export** for what's shown or selected; filter by name; keys `/`, `Enter`,
+  `Space`. A run is a filter of it, with progress, Cancel, Retry failed videos, Run again…,
+  Delete run and, once finished, **N videos → results table** with ELAN and Methods.
+- **Projects after the fact**: **Add to project** (or a new one) from any selection, across
+  folders; a video can be in several; **Remove from project**, **Rename**, **Remove project**
+  (videos and results stay); a project that is a selection of a folder offers the folder's new
+  videos. A project remembers its settings: set by each run, editable without running, compared
+  between runs with **What changed?**.
+- **Workflows**: **Save as workflow** from a project or run (with the table format, ELAN and
+  methods it offers), **Apply workflow** to a project (a copy), and **Pipelines → Workflows** to
+  use, export, import, rename and delete them.
+- The Video page's **Runs** tab: each run's status, place in the queue, pipelines and errors,
+  settings, results folder, Download all files, Cancel, Delete, Run again…, Compare answers.
+- The nav's **activity indicator** ("2 runs · 31/48") and a message when a run starts, finishes,
+  fails or stops, each with its next step; messages for project and workflow actions too.
+- **Help** (`/help`) and a line of help with a link into the docs on every page; tooltips for the
+  vocabulary and for every setting (with its default); pages that need a server say so and offer
+  files and demos. New how-to: [Videos and projects](docs/usage/videos_and_projects.md).
+- API: `GET /videos` (videos per scope, with results and counts), `POST /videos/run` (one run on
+  any readable videos), `GET /videos/run-settings`, `GET /videos/activity`,
+  `POST /videos/export/{table,elan,methods}` (any videos, latest results or every run),
+  `POST`/`DELETE /datasets/{id}/videos`; datasets gain `current_settings` and manifest entries
+  `path`; presets gain `export_choices` and `source`; a `user_preferences` table keeps each user's
+  last run settings. Every route that starts runs records the settings.
 
 - **The Video page** (spec 028): one video, every run's results on labelled lanes that are also
   their controls (called **tracks** on screen, as in the old viewer), the results table beside it,

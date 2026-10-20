@@ -157,3 +157,19 @@ newest finished result: what the Video page shows) or **Every run** (all of them
 Videos, New run and installing pipelines need a VideoAnnotator server. Without one, these pages say
 so and how to connect (**Settings**), and you can still **Open files from this computer** (results
 you have as files) or open a **Demo**.
+
+## API
+
+The API keeps its own words: a project is a saved *dataset*, a workflow a *preset*, a run a
+*batch* (or one *job*). Every signed-in user may use these (`Authorization: Bearer <API key>`):
+
+| Request | What it does |
+|---|---|
+| `GET /api/v1/videos` | The videos the server knows, for one scope: `project=<dataset id>`, `folder=<path>` (+`recursive=true`; `uploads` for uploaded videos), `not_in_project=true`, `run=<batch or job id>`, or none for all; `q` filters names; `offset`, `limit` (≤ 2,000). Each video has its `path` (newest existing), `paths`, `folder`, `available`, `projects` and, per pipeline that ran on it, `results` (`state`: `done`, `running`, `waiting`, `failed`, with `error`). Also `counts` for the left side, `runs` for a project or run, and `new_in_folder` for a project that is a selection of a folder. 403 `PATH_NOT_ALLOWED` for a folder outside the shared ones; 404 `DATASET_NOT_FOUND` / `RUN_NOT_FOUND`. |
+| `POST /api/v1/videos/run` | `{"paths", "selected_pipelines", "config", "name", "project_id"}`: one run (one batch) on any videos the server can read; uploads are hard-linked from their stored copy, folder videos read in place. Unusable paths are listed in `skipped`; 422 `NOTHING_TO_RUN` when none can run. With `project_id` the videos join the project and its settings become these. |
+| `GET /api/v1/videos/run-settings` | What a new run starts from (`project=`, `workflow=` optional): `selected_pipelines`, `config`, and `source.kind` (`workflow`, `project`, `last_used`, `defaults`). |
+| `GET /api/v1/videos/activity` | Runs with videos waiting or running, and up to five finished in the last day. |
+| `POST /api/v1/videos/export/{table,elan,methods}` | Any set of videos: see [Results out](exporting_results.md#over-the-api). |
+| `POST` / `DELETE /api/v1/datasets/{id}/videos` | `{"paths": [...]}`: add videos to a project from any folder, or take them out (files and results are never touched). |
+| `PUT /api/v1/datasets/{id}` | Also takes `current_settings` (`selected_pipelines`, `config`, `source`). Any signed-in user may change a project; only its owner or an administrator may delete it. |
+| `/api/v1/presets…` | Workflows: `export_choices` (`{"table": "csv" \| "parquet", "elan", "methods"}`) and `source` (the project or run saved from), in requests, responses and exported files. |

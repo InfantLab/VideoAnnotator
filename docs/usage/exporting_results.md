@@ -16,15 +16,17 @@ results folder: one on your computer, one a colleague sent you, or one from an o
 
 ## In the viewer
 
-On a finished job's page, a run's page, or a video's [Video page](video_page.md), click **Export**:
+On the **Videos** page, **Export ▾** exports what's shown (a folder, a project, a run) or, in the
+selection bar, the videos you selected; a video's [Video page](video_page.md) exports the runs its
+tracks show. A finished run's header leads with its table: **N videos → results table**.
 
-- **Table (CSV)** / **Table (Parquet)**: downloads the table.
-- **ELAN files (.eaf)**: one file for a job; a zip with one file per video for a run.
-- **Methods paragraph**: shows the paragraph and BibTeX, each with a Copy button, and a Markdown
-  download.
+- **Results table (CSV)** / **(Parquet)**: downloads the table.
+- **ELAN (.eaf)**: one file for one video; a zip with one file per video otherwise.
+- **Methods**: shows the paragraph and BibTeX, each with a Copy button, and a Markdown download.
 
-A saved dataset's card has a table button too: every run made from that dataset in one table, with
-a `run` column telling them apart.
+For a folder, a project or a selection, choose **Latest results** (for each video and pipeline, its
+newest finished result: what the Video page shows) or **Every run** (all of them, with a `run`
+column telling them apart). See [Videos and projects](videos_and_projects.md#exporting-results).
 
 If anything was left out (a file VideoAnnotator can't read, a video whose job failed), the viewer
 lists it under the buttons.
@@ -58,7 +60,15 @@ GET /api/v1/jobs/{job_id}/export/elan        (one .eaf)
 GET /api/v1/batches/{batch_id}/export/elan   (zip, one .eaf per video)
 GET /api/v1/jobs/{job_id}/methods            (JSON; ?format=markdown for a .md)
 GET /api/v1/batches/{batch_id}/methods
+POST /api/v1/videos/export/table             (any videos; see below)
+POST /api/v1/videos/export/elan
+POST /api/v1/videos/export/methods
 ```
+
+The `/videos/export/*` routes take a set of videos as JSON: exactly one of `"paths": [...]`,
+`"project_id"` (a saved dataset) or `"run_id"` (a batch id, or a job id), plus `"results":
+"latest"` (each video's newest completed result per pipeline, the default) or `"all"`, and
+`"format"` (`csv`/`parquet` for the table, `json`/`markdown` for methods).
 
 The `X-VideoAnnotator-Export-Summary` response header holds what the export covered and left out,
 as JSON.

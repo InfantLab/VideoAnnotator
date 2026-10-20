@@ -459,12 +459,12 @@ date, then one folder per video, named after the video.
 Result files keep their usual names (`<video>_<output>`). Folders are never overwritten: a second
 run with the same name and date gets `(2026-10-06 2)`. These folders hold results only, never a
 copy of a video. `videoannotator server` prints the folder when it starts, and the viewer shows it
-on each run's and job's page, with **Open folder**, **Copy location** and, for a run,
-**Download results** (one zip, without videos).
+on each run's header and on the Video page's Runs tab, with **Open folder**, **Copy location**
+and **Download all files** (one zip, without videos).
 
 To put results somewhere else (an encrypted or backed-up drive), set `VIDEOANNOTATOR_RESULTS_DIR`,
 in the environment or in `.env`, and restart. Runs from before the change stay where they were
-written. Deleting a job or run in the viewer deletes its results folder.
+written. Deleting a run in the viewer deletes its results folder.
 
 ## Verify Installation
 

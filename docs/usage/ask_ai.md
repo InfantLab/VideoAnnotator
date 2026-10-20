@@ -124,7 +124,7 @@ results folder has those answers, and its provenance says it stopped early. A
 stopped run is a normal run otherwise: you can export it and open it on the
 Video page.
 
-**Run on more videos** opens run setup with the question and sampling filled
+**Run on more videos** opens New run with the question and sampling filled
 in; **Save as workflow** keeps them for later runs.
 
 ## Answers out

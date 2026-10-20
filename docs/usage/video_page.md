@@ -68,7 +68,10 @@ then lists the settings that differ between the two, as their provenance records
   there; clicking an event on the timeline picks out its row.
 - **About** gives, for each pipeline and run, the model, VideoAnnotator's version and the settings
   ("not recorded" for results made before provenance), and the result files to download.
-- **Runs** lists the runs on this video.
+- **Runs** lists every run on this video, newest first, including runs of earlier uploads of the
+  same file: its status (and place in the queue while waiting), each pipeline's outcome and error,
+  its settings, where its results are, **Download all files**, **Cancel**, **Delete**, **Run
+  again…**, **Save as workflow**, and for Ask AI's runs **Compare answers with…**.
 
 ## Notes
 
@@ -84,20 +87,24 @@ Keys never fire while you are typing in a note or the search box. **?** lists th
 
 ## Where the video belongs
 
-Opened from a run, project or folder, the header names it with "3 of 48" and **‹ ›** to the
-previous and next video there, with your track settings kept. Opened directly, it lists the
-projects the video is in. **Ask AI** opens Ask AI on this video, **Run…** sets up a new run
-starting from this video's newest, **Export** gives the table, ELAN files or a methods paragraph
-for each run shown, and **⋯** has the debug panel.
+Opened from the [Videos page](videos_and_projects.md) (all videos, a project, a folder or a run),
+the header names the list with "3 of 48" and **‹ ›** to the previous and next video there, with
+your track settings kept; the back arrow returns to the list. Opened directly, it lists the
+projects the video is in, each linking to its list. **Ask AI** opens Ask AI on this video, **Run…**
+opens New run on it, **Export** gives the table, ELAN files or a methods paragraph for each run
+shown, and **⋯** has the debug panel.
 
 ## Files from your computer
 
 `/viewer` opens a video and result files from your computer on the same page, without a server:
-there are no runs to choose, and notes need a server.
+there are no runs to choose, and notes need a server. `/viewer?demo=peekaboo-rep3-v1.1.1` opens
+the demo the same way.
 
 ## Older addresses
 
-`/view/<job id>` still works: it opens the Video page for that job's video, starting on that run.
+`/view/<job id>` and `/jobs/<job id>` still work: they open the Video page for that run's video,
+starting on that run. A video is every path the server can tell holds one file (an upload and the
+copies its reruns made), so any of them opens the same page.
 
 ## API
 
@@ -105,7 +112,7 @@ Every signed-in user may use these (`Authorization: Bearer <API key>`):
 
 | Request | What it does |
 |---|---|
-| `GET /api/v1/videos/runs?path=` | The video (name, whether it is still there, duration, content hash when a run recorded one), every run on it newest first with each pipeline's status, error and files (`kind`: `result`, `provenance` or `other`, with download addresses), and the projects holding it. 403 `PATH_NOT_ALLOWED` for a video no run read outside the shared folders. |
+| `GET /api/v1/videos/runs?path=` | The video (name, whether it is still there, duration, content hash when a run recorded one, and `paths`: every path of it), every run on it newest first with each pipeline's status, error and files (`kind`: `result`, `provenance` or `other`, with download addresses), its progress, queue position, settings and results folder, and the projects holding it. 403 `PATH_NOT_ALLOWED` for a video no run read outside the shared folders. |
 | `GET /api/v1/videos/notes?path=` | The video's notes, by time. |
 | `POST /api/v1/videos/notes` | `{"path", "start_sec", "end_sec" (null for a moment), "text"}`. 422 `NOTE_TEXT_REQUIRED`, `NOTE_TEXT_TOO_LONG` (2,000 characters), `NOTE_TIME_INVALID`. |
 | `PATCH /api/v1/videos/notes/{id}` | Any of `text`, `start_sec`, `end_sec`; records who changed it. 404 `NOTE_NOT_FOUND`. |
