@@ -1,7 +1,8 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SSEProvider } from "@/contexts/SSEContext";
 import { PipelineProvider } from "@/contexts/PipelineProvider";
@@ -12,21 +13,16 @@ import { lazy, Suspense, type ReactNode } from "react";
 import Home from "./pages/Home";
 import { AskRedirect } from "./components/ask/AskRedirect";
 import { NotifyNavigator } from "./components/NotifyNavigator";
+import { RootRoute } from "./components/RootRoute";
+import { BatchRedirect, JobRedirect, RedirectWithState } from "./components/Redirects";
 
 // Every page but Home loads on first visit, keeping the initial bundle within
 // the constitution's 300 KB gzipped (it was one 300+ KB chunk).
 const Index = lazy(() => import("./pages/Index"));
-const GettingStarted = lazy(() => import("./pages/GettingStarted"));
+const Help = lazy(() => import("./pages/Help"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const Jobs = lazy(() => import("./pages/Jobs"));
-const BatchDetail = lazy(() => import("./pages/BatchDetail"));
-const JobDetail = lazy(() => import("./pages/JobDetail"));
-const NewJob = lazy(() => import("./pages/NewJob"));
 const Settings = lazy(() => import("./pages/Settings"));
-const JobResultsViewer = lazy(() => import("./pages/JobResultsViewer"));
 const VideoPage = lazy(() => import("./pages/VideoPage"));
-const Results = lazy(() => import("./pages/Results"));
-const Datasets = lazy(() => import("./pages/Datasets"));
 const Compare = lazy(() => import("./pages/Compare"));
 const AskAI = lazy(() => import("./pages/AskAI"));
 const Pipelines = lazy(() => import("./pages/Pipelines"));
@@ -38,7 +34,6 @@ const page = (element: ReactNode) => (
   <Suspense fallback={<div className="p-8 text-sm text-muted-foreground">Loading…</div>}>{element}</Suspense>
 );
 
-const queryClient = new QueryClient();
 
 const App = () => (
   <ErrorBoundary>
@@ -57,25 +52,26 @@ const App = () => (
                 <Routes>
                   {/* Full-screen routes (no shared nav) */}
                   <Route path="/viewer" element={page(<Index />)} />
-                  <Route path="/view/:jobId" element={page(<JobResultsViewer />)} />
+                  <Route path="/view/:jobId" element={<JobRedirect />} />
                   <Route path="/video" element={page(<VideoPage />)} />
 
                   {/* Routes with shared AppLayout navigation */}
                   <Route element={<AppLayout />}>
-                    <Route path="/" element={<Home />} />
+                    <Route path="/" element={<RootRoute />} />
+                    <Route path="/home" element={<Home />} />
                     <Route path="/videos" element={page(<Videos />)} />
                     <Route path="/run" element={page(<NewRun />)} />
-                    <Route path="/getting-started" element={page(<GettingStarted />)} />
-                    <Route path="/results" element={page(<Results />)} />
-                    {/* Was "Library" until v1.6.0; old links still land. */}
-                    <Route path="/library" element={<Navigate to="/results" replace />} />
-                    <Route path="/jobs" element={page(<Jobs />)} />
-                    <Route path="/jobs/:jobId" element={page(<JobDetail />)} />
-                    <Route path="/jobs/new" element={page(<NewJob />)} />
-                    {/* Runs (batches) are listed on the Jobs page. */}
-                    <Route path="/batches" element={<Navigate to="/jobs" replace />} />
-                    <Route path="/batches/:batchId" element={page(<BatchDetail />)} />
-                    <Route path="/datasets" element={page(<Datasets />)} />
+                    <Route path="/help" element={page(<Help />)} />
+                    {/* Spec 029 R13: every old address leads somewhere. */}
+                    <Route path="/getting-started" element={<Navigate to="/help" replace />} />
+                    <Route path="/results" element={<Navigate to="/videos" replace />} />
+                    <Route path="/library" element={<Navigate to="/videos" replace />} />
+                    <Route path="/jobs" element={<Navigate to="/videos" replace />} />
+                    <Route path="/jobs/new" element={<RedirectWithState to="/run" />} />
+                    <Route path="/jobs/:jobId" element={<JobRedirect />} />
+                    <Route path="/batches" element={<Navigate to="/videos" replace />} />
+                    <Route path="/batches/:batchId" element={<BatchRedirect />} />
+                    <Route path="/datasets" element={<Navigate to="/videos" replace />} />
                     {/* Ask AI replaced the Prompts page and the Workbench (spec 027); old links still land. */}
                     <Route path="/prompts" element={<AskRedirect history />} />
                     <Route path="/pipelines" element={page(<Pipelines />)} />

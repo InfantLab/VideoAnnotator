@@ -3,7 +3,13 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { RunAgainActions, type RunAgainTarget } from '@/components/RunAgainActions';
+import { RunAgainActions } from '@/components/RunAgainActions';
+import type { RunTarget } from '@/lib/runTarget';
+
+type RunAgainTarget = Extract<RunTarget, { kind: 'rerun' }>;
+
+const toast = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
+vi.mock('sonner', () => ({ toast }));
 import { apiClient } from '@/api/client';
 import { APIError } from '@/api/handleError';
 
@@ -19,13 +25,7 @@ vi.mock('@/api/client', () => ({
   },
 }));
 
-const batchTarget: RunAgainTarget = {
-  kind: 'batch',
-  id: 'b1',
-  label: 'Wave 2',
-  videoCount: 3,
-  settings: { selectedPipelines: ['scene_detection'] },
-};
+const batchTarget: RunAgainTarget = { kind: 'rerun', runId: 'b1', label: 'Wave 2', single: false, videoCount: 3 };
 
 const result = (overrides: Partial<Awaited<ReturnType<typeof apiClient.rerunBatch>>> = {}) => ({
   batch_id: 'b2',
@@ -36,12 +36,7 @@ const result = (overrides: Partial<Awaited<ReturnType<typeof apiClient.rerunBatc
   ...overrides,
 });
 
-const target: RunAgainTarget = {
-  kind: 'job',
-  id: 'j1',
-  label: 'clip.mp4',
-  settings: { selectedPipelines: ['scene_detection'], config: { scene_detection: { threshold: 20 } } },
-};
+const target: RunAgainTarget = { kind: 'rerun', runId: 'j1', label: 'clip.mp4', single: true };
 
 let landed: { path: string; state: unknown } | null = null;
 const Spy = () => {
@@ -53,9 +48,9 @@ const Spy = () => {
 const renderActions = (t: RunAgainTarget = target) =>
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter initialEntries={['/jobs/j1']}>
+      <MemoryRouter initialEntries={['/video']}>
         <Routes>
-          <Route path="/jobs/j1" element={<RunAgainActions target={t} />} />
+          <Route path="/video" element={<RunAgainActions target={t} />} />
           <Route path="*" element={<Spy />} />
         </Routes>
       </MemoryRouter>
@@ -68,24 +63,24 @@ describe('RunAgainActions', () => {
     landed = null;
   });
 
-  it('runs again only after saying the original is kept, then opens the new job', async () => {
+  it('runs again only after saying the original is kept, then says where the new run is', async () => {
     vi.mocked(apiClient.rerunJob).mockResolvedValue({ id: 'j2' } as never);
     renderActions();
     await userEvent.click(screen.getByRole('button', { name: /Run again unchanged/ }));
     expect(screen.getByText(/This one and its results are kept/)).toBeInTheDocument();
     expect(apiClient.rerunJob).not.toHaveBeenCalled();
     await userEvent.click(screen.getAllByRole('button', { name: 'Run again' }).at(-1)!);
-    await waitFor(() => expect(landed?.path).toBe('/jobs/j2'));
-    expect(apiClient.rerunJob).toHaveBeenCalledWith('j1');
+    await waitFor(() => expect(apiClient.rerunJob).toHaveBeenCalledWith('j1'));
+    expect(toast.success).toHaveBeenCalledWith(
+      'Running clip.mp4 again',
+      expect.objectContaining({ action: expect.objectContaining({ label: 'Show run' }) }),
+    );
   });
 
-  it('opens the wizard to edit, or to reuse the settings on other videos', async () => {
+  it('opens New run to change the settings first', async () => {
     renderActions();
     await userEvent.click(screen.getByRole('button', { name: 'Run again…' }));
-    expect(landed).toEqual({
-      path: '/jobs/new',
-      state: { wizardStart: { mode: 'rerun', jobId: 'j1', label: 'clip.mp4', ...target.settings } },
-    });
+    expect(landed).toEqual({ path: '/run', state: { runStart: { target } } });
   });
 
   it('says the video is gone and what to do instead', async () => {
@@ -95,20 +90,7 @@ describe('RunAgainActions', () => {
     renderActions();
     await userEvent.click(screen.getByRole('button', { name: /Run again unchanged/ }));
     await userEvent.click(screen.getAllByRole('button', { name: 'Run again' }).at(-1)!);
-    expect(await screen.findByText(/choose the video where it is now/)).toBeInTheDocument();
-  });
-
-  it('saves the settings as a preset', async () => {
-    vi.mocked(apiClient.createPreset).mockResolvedValue({ name: 'clip.mp4' } as never);
-    renderActions();
-    await userEvent.click(screen.getByRole('button', { name: /Save as preset/ }));
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(apiClient.createPreset).toHaveBeenCalledWith({
-      name: 'clip.mp4',
-      selected_pipelines: ['scene_detection'],
-      config: { scene_detection: { threshold: 20 } },
-    });
-    expect(await screen.findByText(/Saved preset/)).toBeInTheDocument();
+    expect(await screen.findByText(/pick the video where it is now/)).toBeInTheDocument();
   });
 
   describe('a batch whose videos moved (spec 022)', () => {
@@ -143,8 +125,7 @@ describe('RunAgainActions', () => {
       expect(apiClient.rerunBatch).toHaveBeenCalledWith('b1', {}, { check: true });
       expect(await screen.findByTestId('missing-videos')).toHaveTextContent('/home/ada/Studies/site_a/child02.mp4');
       await userEvent.click(screen.getByRole('button', { name: 'Run the rest' }));
-      await waitFor(() => expect(landed?.path).toBe('/batches/b2'));
-      expect(apiClient.rerunBatch).toHaveBeenLastCalledWith('b1', {}, {});
+      await waitFor(() => expect(apiClient.rerunBatch).toHaveBeenLastCalledWith('b1', {}, {}));
     });
 
     it('looks for them in a chosen folder and runs them from there', async () => {
@@ -164,8 +145,9 @@ describe('RunAgainActions', () => {
       expect(apiClient.rerunBatch).toHaveBeenLastCalledWith('b1', {}, { check: true, relocateFolder: '/home/ada', recursive: false });
       expect(await screen.findByText(/Found 1 moved video/)).toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: 'Run again' }));
-      await waitFor(() => expect(landed?.path).toBe('/batches/b2'));
-      expect(apiClient.rerunBatch).toHaveBeenLastCalledWith('b1', {}, { relocateFolder: '/home/ada', recursive: false });
+      await waitFor(() =>
+        expect(apiClient.rerunBatch).toHaveBeenLastCalledWith('b1', {}, { relocateFolder: '/home/ada', recursive: false }),
+      );
     });
   });
 });

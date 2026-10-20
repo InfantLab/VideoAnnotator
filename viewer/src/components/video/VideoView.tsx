@@ -20,7 +20,8 @@ import { NoteEditor, type EditingNote } from '@/components/video/NoteEditor';
 import { NotesList } from '@/components/video/NotesList';
 import type { NotesApi } from '@/hooks/useNotes';
 import { NOTES_KIND } from '@/lib/laneKinds';
-import type { ProjectRef, VideoNote } from '@/types/video';
+import type { ProjectRef, VideoNote, VideoRun } from '@/types/video';
+import { RunsPanel } from '@/components/video/RunsPanel';
 import { PlayerBar } from '@/components/video/PlayerBar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -146,6 +147,8 @@ export interface VideoSource {
   provenance?: ProvenanceByRun;
   /** Result files with their download addresses, for About. */
   files?: RunFileRef[];
+  /** Every run on the video in full, for the Runs tab (spec 029 R12). */
+  runDetails?: VideoRun[];
   /** The video's notes on the server; absent for local files (spec 028 US6). */
   notes?: NotesApi;
   /** The list it was opened from (`from=`), and the projects holding it (spec 028 US7). */
@@ -403,7 +406,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
             </Button>
           )}
           <HeaderActions
-            latestRun={source.local ? null : runRefs[0] ?? null}
+            video={source.local || !source.path ? null : { path: source.path, name: source.name }}
             shownRuns={source.local ? [] : shownRuns}
             onDebug={() => setDebugOpen(true)}
             onLoadOther={source.local ? onBack : undefined}
@@ -518,7 +521,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
                 {source.local ? (
                   <p className="text-muted-foreground">Files from this computer, not a run on a server.</p>
                 ) : (
-                  <RunsList runs={runRefs} />
+                  <RunsPanel runs={source.runDetails ?? []} videoName={source.name} />
                 )}
               </TabsContent>
               <TabsContent value="about" className="min-h-0 flex-1 overflow-auto px-3 text-xs">
@@ -571,16 +574,5 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
       </div>
       <Footer />
     </div>
-  );
-}
-
-function RunsList({ runs }: { runs: { id: string; label: string }[] }) {
-  if (!runs.length) return <p className="text-muted-foreground">No runs on this video yet.</p>;
-  return (
-    <ul className="space-y-1">
-      {runs.map((r) => (
-        <li key={r.id}>{r.label}</li>
-      ))}
-    </ul>
   );
 }

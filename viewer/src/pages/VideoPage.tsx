@@ -6,6 +6,7 @@ import { VideoView } from '@/components/video/VideoView';
 import { useNotes } from '@/hooks/useNotes';
 import { useRunFiles } from '@/hooks/useRunFiles';
 import { useVideoRuns } from '@/hooks/useVideoRuns';
+import { userMessage } from '@/lib/userMessage';
 import { useVideoStream } from '@/hooks/useVideoStream';
 import { parseFrom } from '@/lib/listNavigation';
 import type { RunControls } from '@/components/lanes/RunMenu';
@@ -96,7 +97,7 @@ function VideoPageFor() {
     return (
       <PageMessage
         title="Can't open this video"
-        body={runsQuery.error instanceof Error ? runsQuery.error.message : 'The server did not answer.'}
+        body={runsQuery.error ? userMessage(runsQuery.error) : 'The server did not answer.'}
         hint={envelope?.hint ?? undefined}
       />
     );
@@ -119,6 +120,7 @@ function VideoPageFor() {
         rows: files.rows,
         parsed: files.parsed,
         runs: runRefs,
+        runDetails: runs,
         failed,
         loading: files.loading,
         error: files.error,

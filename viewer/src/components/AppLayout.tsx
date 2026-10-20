@@ -7,17 +7,14 @@ import { ConnectionErrorBanner } from '@/components/ConnectionErrorBanner';
 import { useServerCapabilitiesContext } from '@/contexts/ServerCapabilitiesContext';
 import { isCorsOrNetworkError } from '@/lib/connectionUtils';
 import { APP_NAME } from '@/utils/version';
-import { BookOpen, Briefcase, Database, Layers, PlusCircle, Settings, Sparkles } from 'lucide-react';
+import { HelpCircle, Home, Layers, Settings, Sparkles, Video } from 'lucide-react';
 import vavIcon from '@/assets/v-a-v.icon.png';
 
-// In the order of the work: ask about a video, run videos, follow jobs, look at
-// results. Datasets (videos to run) feed new jobs. Opening local files is under Results.
+// Spec 029 FR-018: four places. New run opens from Run… on what it runs on.
 const navItems = [
+  { path: '/home', label: 'Home', icon: Home },
+  { path: '/videos', label: 'Videos', icon: Video },
   { path: '/ask', label: 'Ask AI', icon: Sparkles },
-  { path: '/jobs/new', label: 'New job', icon: PlusCircle },
-  { path: '/jobs', label: 'Jobs', icon: Briefcase },
-  { path: '/results', label: 'Results', icon: BookOpen },
-  { path: '/datasets', label: 'Datasets', icon: Database },
   { path: '/pipelines', label: 'Pipelines', icon: Layers },
 ];
 
@@ -34,8 +31,8 @@ export const AppLayout = () => {
     error && !isLoading && !capabilities && isCorsOrNetworkError(error);
 
   const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/';
-    if (path === '/jobs') return location.pathname.startsWith('/jobs') && location.pathname !== '/jobs/new';
+    if (path === '/home') return location.pathname === '/home' || location.pathname === '/';
+    if (path === '/videos') return location.pathname.startsWith('/videos') || location.pathname === '/run';
     return location.pathname.startsWith(path);
   };
 
@@ -46,7 +43,7 @@ export const AppLayout = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14">
             {/* Left: Logo + App Name */}
-            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <Link to="/home" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <img src={vavIcon} alt="" className="w-7 h-7" />
               <span className="font-semibold text-lg hidden sm:inline">{APP_NAME}</span>
             </Link>
@@ -72,11 +69,18 @@ export const AppLayout = () => {
             <div className="flex items-center gap-2">
               <ActivityIndicator />
               <TokenStatusIndicator compact />
+              <Link to="/help">
+                <Button variant={isActive('/help') ? 'default' : 'ghost'} size="sm" title="Help" aria-label="Help">
+                  <HelpCircle className="h-4 w-4" />
+                  <span className="hidden lg:inline ml-1">Help</span>
+                </Button>
+              </Link>
               <Link to="/settings">
                 <Button
                   variant={isActive('/settings') ? 'default' : 'ghost'}
                   size="sm"
                   title="Settings"
+                  aria-label="Settings"
                 >
                   <Settings className="h-4 w-4" />
                 </Button>

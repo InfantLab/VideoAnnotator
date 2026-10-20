@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { RunRef } from '@/lib/lanes';
 import { videosHref, type ListContext } from '@/lib/listNavigation';
-import { wizardState } from '@/lib/wizardStart';
+import { runState } from '@/lib/runTarget';
 import type { ProjectRef } from '@/types/video';
 
 /** The list the video came from, or, opened directly, the projects holding it (spec 028 FR-020). */
@@ -44,8 +44,8 @@ export function VideoContext({
 }
 
 interface HeaderActionsProps {
-  /** The newest run, to start a new one from (the wizard's "run again"); none for a video without runs. */
-  latestRun: RunRef | null;
+  /** The video on the server, to run pipelines on; none for files from this computer. */
+  video: { path: string; name: string } | null;
   /** The runs the lanes show: Export offers each. */
   shownRuns: RunRef[];
   onDebug: () => void;
@@ -53,25 +53,22 @@ interface HeaderActionsProps {
 }
 
 /** Run…, Export and ⋯ (spec 028 FR-010, FR-021). */
-export function HeaderActions({ latestRun, shownRuns, onDebug, onLoadOther }: HeaderActionsProps) {
+export function HeaderActions({ video, shownRuns, onDebug, onLoadOther }: HeaderActionsProps) {
   const navigate = useNavigate();
   return (
     <>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-8"
-        title={latestRun ? 'Run pipelines on this video again, starting from its newest run' : 'Run pipelines on a video'}
-        onClick={() =>
-          navigate(
-            '/jobs/new',
-            latestRun ? { state: wizardState({ mode: 'rerun', jobId: latestRun.id, label: latestRun.label }) } : undefined,
-          )
-        }
-      >
-        <Play className="mr-1 h-4 w-4" />
-        Run…
-      </Button>
+      {video && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8"
+          title="Run pipelines on this video"
+          onClick={() => navigate('/run', { state: runState({ target: { kind: 'videos', paths: [video.path], label: video.name } }) })}
+        >
+          <Play className="mr-1 h-4 w-4" />
+          Run…
+        </Button>
+      )}
       {shownRuns.length > 0 && (
         <Popover>
           <PopoverTrigger asChild>

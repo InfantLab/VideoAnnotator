@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getApiClient } from '@/api/client';
 import { APIError } from '@/api/handleError';
 import { LocalVideo } from '@/components/video/LocalVideo';
-import JobResultsViewer from '@/pages/JobResultsViewer';
+import { JobRedirect } from '@/components/Redirects';
 import {
   FIXTURES,
   VIDEO_PATH,
@@ -117,7 +117,7 @@ describe('old addresses', () => {
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter initialEntries={['/view/job-9']}>
           <Routes>
-            <Route path="/view/:jobId" element={<JobResultsViewer />} />
+            <Route path="/view/:jobId" element={<JobRedirect />} />
             <Route path="/video" element={<Where />} />
           </Routes>
         </MemoryRouter>
@@ -131,20 +131,20 @@ describe('old addresses', () => {
     expect(url.searchParams.get('from')).toBe('run:b1');
   });
 
-  it('says so when the run is not found', async () => {
+  it('goes to Videos when the run is not found', async () => {
     const client = Object.getPrototypeOf(getApiClient());
     vi.spyOn(client, 'getJob').mockRejectedValue(new Error('Job job-0 not found'));
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <MemoryRouter initialEntries={['/view/job-0']}>
           <Routes>
-            <Route path="/view/:jobId" element={<JobResultsViewer />} />
+            <Route path="/view/:jobId" element={<JobRedirect />} />
+            <Route path="/videos" element={<Where />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    expect(await screen.findByText('Failed to load results')).toBeInTheDocument();
-    expect(screen.getByText('Job job-0 not found')).toBeInTheDocument();
+    expect(await screen.findByTestId('where')).toHaveTextContent('/videos');
   });
 });
 
@@ -209,7 +209,7 @@ describe('empty and error states', () => {
       }),
     );
     renderVideoPage();
-    expect(await screen.findByRole('alert')).toHaveTextContent("isn't in a folder shared with VideoAnnotator");
+    expect(await screen.findByRole('alert')).toHaveTextContent("isn't shared with VideoAnnotator");
     expect(screen.getByText(/Upload the video, or choose one/)).toBeInTheDocument();
   });
 });

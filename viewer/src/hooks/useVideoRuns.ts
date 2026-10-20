@@ -9,6 +9,8 @@ export function useVideoRuns(path: string | null | undefined) {
     queryFn: () => apiClient.getVideoRuns(path!),
     enabled: !!path,
     staleTime: 30_000,
+    // A run still going: its status and the Runs tab follow it.
+    refetchInterval: (q) => (q.state.data?.runs.some((r) => r.status === 'pending' || r.status === 'running') ? 5_000 : false),
     retry: false,
   });
 }
