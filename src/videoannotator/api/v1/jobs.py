@@ -285,6 +285,22 @@ class JobResultsResponse(BaseModel):
     error_message: str | None = None  # Job-level error message for failed jobs
 
 
+def record_run_settings(db: Any, user: dict[str, Any] | None, job: BatchJob) -> None:
+    """Remember `job`'s settings as the caller's last run, and its project's
+    (spec 029 R5, R6)."""
+    from ... import run_settings
+
+    run_settings.record_run(
+        db,
+        user=user,
+        dataset_id=job.dataset_id,
+        selected_pipelines=job.selected_pipelines,
+        config=job.config,
+        run_id=job.batch_id or job.job_id,
+        run_name=job.batch_name,
+    )
+
+
 def validate_pipeline_selection(
     selected_pipelines: list[str] | None,
     config: dict[str, Any] | None,
@@ -573,6 +589,7 @@ async def submit_job(
                 logger.debug(
                     f"Could not touch last_used_at for dataset {dataset_id}: {e}"
                 )
+        record_run_settings(db, user, batch_job)
 
         queue_position: int | None = None
         if batch_job.status == JobStatus.PENDING:
@@ -1485,6 +1502,7 @@ async def rerun_job_endpoint(
     job_id: str,
     request: RerunRequest | None = None,
     storage: StorageBackend = Depends(get_storage),
+    db: Session = Depends(get_db),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> JobResponse:
     """Run a finished job again as a new, linked job."""
@@ -1495,6 +1513,7 @@ async def rerun_job_endpoint(
             hint="Check job ID or use GET /api/v1/jobs to list all jobs",
         )
     job = create_rerun(original, storage, request)
+    record_run_settings(db, user, job)
     video_filename, video_size_bytes, video_duration_seconds = extract_video_metadata(
         job.video_path
     )

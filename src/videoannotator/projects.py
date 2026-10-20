@@ -285,3 +285,48 @@ def manifest_entry(path: str | Path, index: VideoIndex | None = None) -> dict[st
 
 def is_video_name(path: str | Path) -> bool:
     return os.path.splitext(str(path))[1].lower() in VIDEO_EXTENSIONS
+
+
+def _entry_for(video: Video, dataset: Any) -> dict[str, Any]:
+    entry = manifest_entry(video.path)
+    entry["size_bytes"] = video.size_bytes or entry["size_bytes"]
+    folder = _folder(dataset)
+    if folder is not None and Path(video.path).is_relative_to(folder):
+        entry["relative_path"] = Path(video.path).relative_to(folder).as_posix()
+    return entry
+
+
+def with_videos(
+    dataset: Any, paths: list[str], catalog: Catalog
+) -> tuple[list[dict[str, Any]], bool] | None:
+    """The manifest and selection flag once `paths` are added, or None when
+    the project holds them all already. A project that followed its folder,
+    or held its uploads by run, becomes a selection of what it held (R4)."""
+    held = catalog.members.get(str(dataset.id), set())
+    index = catalog.index.extended(paths)
+    new = []
+    for path in paths:
+        video = index.video_for(path)
+        if video is not None and video.key not in held and video not in new:
+            new.append(video)
+    if not new:
+        return None
+    if dataset.server_selection:
+        entries = list(_entries(dataset))
+    else:
+        entries = [_entry_for(v, dataset) for v in index.videos() if v.key in held]
+    return entries + [_entry_for(v, dataset) for v in new], True
+
+
+def without_videos(
+    dataset: Any, paths: list[str], catalog: Catalog
+) -> list[dict[str, Any]]:
+    """The manifest once the videos at `paths` are removed: one entry per
+    video it still holds. Files and results are never touched."""
+    held = catalog.members.get(str(dataset.id), set())
+    removed = {catalog.index.key_of(p) for p in paths}
+    return [
+        _entry_for(v, dataset)
+        for v in catalog.index.videos()
+        if v.key in held and v.key not in removed
+    ]

@@ -62,6 +62,7 @@ class JobsDb:
         storage_path: Path | None = None,
         job_id: str | None = None,
         config: dict[str, Any] | None = None,
+        output_dir: Path | None = None,
         save: bool = True,
     ) -> BatchJob:
         pipelines = pipelines or {}
@@ -99,6 +100,7 @@ class JobsDb:
             dataset_id=dataset_id,
             rerun_of=rerun_of,
             storage_path=storage_path,
+            output_dir=output_dir,
         )
         if save:
             self.storage.save_job_metadata(job)

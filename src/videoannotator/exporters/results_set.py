@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -67,6 +67,7 @@ class VideoResults:
     media_path: str | None = None
     # Where the job read the video, even when it has moved since (notes, spec 028).
     video_path: str | None = None
+    job_id: str | None = None
 
 
 @dataclass
@@ -81,6 +82,19 @@ class ResultsSet:
 
     def is_empty(self) -> bool:
         return not any(v.files for v in self.videos)
+
+    def only(self, pairs: set[tuple[str, str]]) -> ResultsSet:
+        """Just the files of these (job id, pipeline) pairs (spec 029: each
+        video's latest results); videos left with none are dropped."""
+        kept = []
+        for video in self.videos:
+            wanted = {p for job_id, p in pairs if job_id == video.job_id}
+            files = [f for f in video.files if f.pipeline in wanted]
+            if files:
+                kept.append(replace(video, files=files, skipped=[]))
+        return ResultsSet(
+            videos=kept, missing=list(self.missing), notes=list(self.notes)
+        )
 
 
 def _kind_order(f: ResultFile) -> int:
@@ -265,6 +279,8 @@ def from_jobs(jobs: Iterable[Any]) -> ResultsSet:
 
         status = getattr(job.status, "value", job.status)
         found = _collect(folder, run, video) if folder.is_dir() else None
+        if found is not None:
+            found.job_id = job.job_id
         if found is None or not found.files:
             results.missing.append(
                 MissingVideo(run, video, _status_reason(status, job.error_message))

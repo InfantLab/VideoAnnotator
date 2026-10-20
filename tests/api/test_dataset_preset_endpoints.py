@@ -132,8 +132,9 @@ class TestSavedDatasets:
         assert r1.status_code == 201
         assert r2.status_code == 201
 
-    def test_second_user_sees_it_but_cannot_modify_or_delete(self, client):
-        """US3: shared-read visibility, owner-only mutation."""
+    def test_second_user_sees_and_edits_it_but_cannot_delete(self, client):
+        """US3: shared-read visibility; spec 029 R4 opens edits to any
+        signed-in user, while delete stays with the owner or an admin."""
         created = (
             _as(client, OWNER_USER)
             .post("/api/v1/datasets/", json={"name": "Team Set", "video_manifest": []})
@@ -146,15 +147,16 @@ class TestSavedDatasets:
         assert any(d["id"] == dataset_id for d in list_resp.json()["datasets"])
 
         update_resp = client.put(
-            f"/api/v1/datasets/{dataset_id}", json={"name": "Hijacked"}
+            f"/api/v1/datasets/{dataset_id}", json={"description": "Shared"}
         )
-        assert update_resp.status_code == 403
+        assert update_resp.status_code == 200
 
         delete_resp = client.delete(f"/api/v1/datasets/{dataset_id}")
         assert delete_resp.status_code == 403
 
         still_there = _as(client, OWNER_USER).get(f"/api/v1/datasets/{dataset_id}")
         assert still_there.json()["name"] == "Team Set"
+        assert still_there.json()["description"] == "Shared"
 
     def test_admin_can_modify_another_users_dataset(self, client):
         created = (

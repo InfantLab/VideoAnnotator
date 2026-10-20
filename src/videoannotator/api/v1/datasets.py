@@ -18,7 +18,7 @@ from pathlib import Path as FilePath
 from typing import Any
 
 from fastapi import APIRouter, Depends, Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from ...batch.types import BatchJob
@@ -44,6 +44,34 @@ class VideoManifestEntry(BaseModel):
     # Path within the dataset's folder, so same-named files in subfolders stay
     # distinct (spec 018). Absent in datasets saved before it.
     relative_path: str | None = None
+    path: str | None = Field(
+        default=None,
+        description="The video's server path, so a project can hold videos from "
+        "any folder (spec 029 R4); resolved when saved",
+    )
+
+    @field_validator("path")
+    @classmethod
+    def _resolve(cls, value: str | None) -> str | None:
+        if not value or not value.strip():
+            return None
+        try:
+            return str(FilePath(value.strip()).expanduser().resolve())
+        except (OSError, RuntimeError):
+            return value.strip()
+
+
+class RunSettings(BaseModel):
+    """What a new run on a project starts from (spec 029 R5)."""
+
+    selected_pipelines: list[str] = []
+    config: dict[str, Any] = {}
+    source: dict[str, Any] | None = Field(
+        default=None,
+        description="Where they came from: {kind: run | edit | workflow, id, name}",
+    )
+    updated_at: str | None = None
+    updated_by: str | None = None
 
 
 class DatasetCreateRequest(BaseModel):
@@ -72,6 +100,13 @@ class DatasetUpdateRequest(BaseModel):
     description: str | None = None
     video_manifest: list[VideoManifestEntry] | None = None
     server_selection: bool | None = None
+    current_settings: RunSettings | None = None
+
+
+class DatasetVideosRequest(BaseModel):
+    """Body for adding or removing videos by path (spec 029)."""
+
+    paths: list[str]
 
 
 class DatasetResponse(BaseModel):
@@ -87,6 +122,11 @@ class DatasetResponse(BaseModel):
     server_folder: str | None = None
     server_folder_recursive: bool = False
     server_selection: bool = False
+    current_settings: RunSettings | None = Field(
+        default=None,
+        description="The settings a new run on it starts from (spec 029); null "
+        "until a run starts on it or someone sets them",
+    )
     created_at: datetime
     updated_at: datetime | None = None
     last_used_at: datetime | None = None
@@ -113,6 +153,7 @@ def _to_response(dataset: Any) -> DatasetResponse:
         server_folder=dataset.server_folder,
         server_folder_recursive=bool(dataset.server_folder_recursive),
         server_selection=bool(getattr(dataset, "server_selection", False)),
+        current_settings=getattr(dataset, "current_settings", None),
         created_at=dataset.created_at,
         updated_at=dataset.updated_at,
         last_used_at=dataset.last_used_at,
@@ -240,7 +281,12 @@ async def get_dataset(
     "/{dataset_id}",
     response_model=DatasetResponse,
     summary="Update a saved dataset",
-    description="Owner or administrator only.",
+    description=(
+        "Any signed-in user may change a dataset's name, description, videos "
+        "and current settings (spec 029: projects are shared); deleting it "
+        "stays with its owner or an administrator. `current_settings` is "
+        "stamped with when and by whom; its `source` defaults to an edit."
+    ),
 )
 async def update_dataset(
     request: DatasetUpdateRequest,
@@ -248,12 +294,19 @@ async def update_dataset(
     db: Session = Depends(get_db),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> DatasetResponse:
-    """Update a saved dataset's name, description, and/or manifest."""
-    owner_id = _require_owner_identity(user)
-    dataset = _get_or_404(db, dataset_id)
-    _require_owner_or_admin(
-        dataset, owner_id, bool(user and user.get("is_admin", False))
-    )
+    """Update a saved dataset's name, description, manifest and/or settings."""
+    from ... import run_settings
+
+    _require_owner_identity(user)
+    _get_or_404(db, dataset_id)
+    current = None
+    if request.current_settings is not None:
+        current = run_settings.settings(
+            request.current_settings.selected_pipelines,
+            request.current_settings.config,
+            request.current_settings.source or {"kind": "edit"},
+            user,
+        )
     updated = SavedDatasetCRUD.update(
         db,
         dataset_id,
@@ -265,6 +318,7 @@ async def update_dataset(
             else None
         ),
         server_selection=request.server_selection,
+        current_settings=current,
     )
     if updated is None:
         raise APIError(
@@ -296,6 +350,65 @@ async def delete_dataset(
         dataset, owner_id, bool(user and user.get("is_admin", False))
     )
     SavedDatasetCRUD.delete(db, dataset_id)
+
+
+def _change_videos(
+    db: Session, dataset_id: str, paths: list[str], add: bool
+) -> DatasetResponse:
+    from ...projects import catalog_for, with_videos, without_videos
+
+    dataset = _get_or_404(db, dataset_id)
+    catalog = catalog_for(get_storage_backend(), db)
+    if add:
+        change = with_videos(dataset, paths, catalog)
+        if change is None:
+            return _to_response(dataset)
+        entries, selection = change
+    else:
+        entries, selection = without_videos(dataset, paths, catalog), True
+    updated = SavedDatasetCRUD.update(
+        db, dataset_id, video_manifest=entries, server_selection=selection
+    )
+    return _to_response(updated or dataset)
+
+
+@router.post(
+    "/{dataset_id}/videos",
+    response_model=DatasetResponse,
+    summary="Add videos to a dataset by path (spec 029)",
+    description=(
+        "Adds manifest entries naming the videos by path, from any folder. A "
+        "dataset that followed its folder, or held its uploads by run, becomes "
+        "a selection of what it held plus these. Any signed-in user."
+    ),
+)
+async def add_dataset_videos(
+    request: DatasetVideosRequest,
+    dataset_id: str = Path(..., description="The saved dataset's id"),
+    db: Session = Depends(get_db),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> DatasetResponse:
+    _require_owner_identity(user)
+    return _change_videos(db, dataset_id, request.paths, add=True)
+
+
+@router.delete(
+    "/{dataset_id}/videos",
+    response_model=DatasetResponse,
+    summary="Remove videos from a dataset by path (spec 029)",
+    description=(
+        "The dataset no longer holds those videos. Never touches the files, "
+        "their jobs or their results. Any signed-in user."
+    ),
+)
+async def remove_dataset_videos(
+    request: DatasetVideosRequest,
+    dataset_id: str = Path(..., description="The saved dataset's id"),
+    db: Session = Depends(get_db),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> DatasetResponse:
+    _require_owner_identity(user)
+    return _change_videos(db, dataset_id, request.paths, add=False)
 
 
 def get_storage() -> StorageBackend:
@@ -437,7 +550,7 @@ async def run_dataset(
     dataset_id: str = Path(..., description="The saved dataset's id"),
     db: Session = Depends(get_db),
     storage: StorageBackend = Depends(get_storage),
-    _user: dict[str, Any] | None = Depends(validate_api_key),
+    user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> DatasetRunResponse:
     """Create a batch of jobs on a dataset's stored videos."""
     from .jobs import job_from_stored_video, validate_pipeline_selection
@@ -482,6 +595,18 @@ async def run_dataset(
         SavedDatasetCRUD.touch_last_used(db, dataset_id)
     except Exception as e:
         logger.debug(f"Could not touch last_used_at for dataset {dataset_id}: {e}")
+    if created:
+        from ... import run_settings
+
+        run_settings.record_run(
+            db,
+            user=user,
+            dataset_id=dataset_id,
+            selected_pipelines=request.selected_pipelines,
+            config=request.config,
+            run_id=batch_id,
+            run_name=batch_name,
+        )
 
     return DatasetRunResponse(
         batch_id=batch_id, batch_name=batch_name, created=created, skipped=skipped

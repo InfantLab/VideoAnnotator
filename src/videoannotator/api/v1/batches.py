@@ -18,9 +18,11 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, Path, Query, Request, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from ...batch.batch_summary import compute_batch_summary
 from ...batch.types import JobStatus
+from ...database.database import get_db
 from ...results_folder import (
     find_moved_video,
     folder_ref,
@@ -48,6 +50,7 @@ from .jobs import (
     RerunRequest,
     cancel_job_by_id,
     create_rerun,
+    record_run_settings,
     retry_job,
     validate_pipeline_selection,
 )
@@ -376,6 +379,7 @@ async def rerun_batch(
         False, description="Also look in relocate_folder's subfolders"
     ),
     storage: StorageBackend = Depends(get_storage),
+    db: Session = Depends(get_db),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> BatchRerunResponse:
     """Run a batch's finished jobs again as a new batch."""
@@ -422,6 +426,7 @@ async def rerun_batch(
     new_name = f"{name} (rerun)" if name else "Rerun"
     created: list[str] = []
     skipped: list[BatchJobSkipped] = []
+    first = None
     for job in jobs:
         try:
             if check:
@@ -431,8 +436,11 @@ async def rerun_batch(
                 job, storage, request, new_batch_id, new_name, moved_to.get(job.job_id)
             )
             created.append(new.job_id)
+            first = first or new
         except RerunNotPossibleException as e:
             skipped.append(BatchJobSkipped(job_id=job.job_id, reason=e.message))
+    if first is not None:
+        record_run_settings(db, user, first)
     return BatchRerunResponse(
         batch_id=new_batch_id,
         rerun_of_batch=batch_id,

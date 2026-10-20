@@ -14,6 +14,7 @@ import os
 import tempfile
 import zipfile
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path as FilePath
 from typing import Any
 from urllib.parse import quote
@@ -21,6 +22,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse, Response
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from starlette.background import BackgroundTask
 
@@ -398,3 +400,194 @@ async def export_batch_elan(
         return summary
 
     return await _file_response(write, ".zip", f"{run} ELAN.zip", "application/zip")
+
+
+# ---------------------------------------------------------------------------
+# Any set of videos (spec 029 R10)
+# ---------------------------------------------------------------------------
+
+
+class VideosExportRequest(BaseModel):
+    """Exactly one of `paths`, `project_id`, `run_id`."""
+
+    paths: list[str] | None = None
+    project_id: str | None = None
+    run_id: str | None = None
+    results: str = Field(
+        default="latest",
+        description="latest: per video and pipeline, its newest completed "
+        "result; all: every run's (the `run` column tells them apart)",
+    )
+    format: str | None = Field(
+        default=None,
+        description="Table: csv or parquet; methods: json or markdown; ELAN: unused",
+    )
+
+
+def _set_or_error(
+    body: VideosExportRequest, storage: StorageBackend, db: Session
+) -> tuple[ResultsSet, str, Any]:
+    """The results of the asked videos, a file name for them, and the index
+    they were found in."""
+    from ... import video_index
+    from ...projects import catalog_for
+
+    given = [x for x in (body.paths, body.project_id, body.run_id) if x]
+    if len(given) != 1:
+        raise APIError(
+            status_code=422,
+            code="INVALID_EXPORT_SCOPE",
+            message="Say which videos: their paths, a project or a run.",
+        )
+    if body.results not in ("latest", "all"):
+        raise APIError(
+            status_code=422,
+            code="INVALID_EXPORT_RESULTS",
+            message=f"Unknown results '{body.results}'",
+            hint="Use results=latest or results=all",
+        )
+    catalog = catalog_for(storage, db)
+    index = catalog.index
+    if body.run_id:
+        run = video_index.run(index, body.run_id)
+        if run is None:
+            raise APIError(
+                status_code=404,
+                code="RUN_NOT_FOUND",
+                message=f"No run '{body.run_id}' on this server.",
+            )
+        jobs = _jobs(storage, [j.job_id for j in run.jobs])
+        results = _results_or_409(jobs, "This run")
+        return results, _run_name(jobs), index
+
+    if body.project_id:
+        dataset = catalog.dataset(body.project_id)
+        if dataset is None:
+            raise APIError(
+                status_code=404,
+                code="DATASET_NOT_FOUND",
+                message=f"Dataset '{body.project_id}' not found",
+            )
+        keys = catalog.members.get(body.project_id, set())
+        name = sanitize_component(dataset.name, "Project")
+    else:
+        index = index.extended(body.paths or [])
+        keys = {k for p in body.paths or [] if (k := index.key_of(p))}
+        name = "Videos"
+
+    videos = [v for v in (index.video(k) for k in keys) if v is not None]
+    if body.results == "latest":
+        pairs = video_index.latest_pairs(index, keys)
+        job_ids = sorted({job_id for job_id, _ in pairs})
+        results = from_jobs(_jobs(storage, job_ids)).only(pairs)
+    else:
+        job_ids = [j.job_id for v in videos for j in reversed(v.jobs)]
+        results = from_jobs(_jobs(storage, job_ids))
+    if results.is_empty():
+        raise APIError(
+            status_code=409,
+            code="NOTHING_TO_EXPORT",
+            message="These videos have no results to export yet.",
+        )
+    if len(videos) == 1 and not body.project_id:
+        name = sanitize_component(FilePath(videos[0].name).stem, "video")
+    return results, name, index
+
+
+def _one_per_video(results: ResultsSet, index: Any) -> ResultsSet:
+    """Each video's files as one entry, when its latest results come from
+    several runs, so ELAN writes one file per video."""
+    merged: dict[str, Any] = {}
+    for video in results.videos:
+        job = index.jobs_by_id.get(video.job_id or "")
+        key = index.key_of(job.video_path) if job and job.video_path else None
+        key = key or video.job_id or video.video
+        if key in merged:
+            merged[key].files += video.files
+        else:
+            merged[key] = replace(video, files=list(video.files))
+    return replace(results, videos=list(merged.values()))
+
+
+_SET_DESCRIPTION = """
+For any set of videos (spec 029): exactly one of `paths`, `project_id` or
+`run_id`. `results=latest` takes, per video and pipeline, its newest completed
+result; `all` takes every run's. Errors and the summary header as the job and
+batch routes.
+"""
+
+
+@router.post(
+    "/videos/export/table",
+    summary="Export any videos' results as one table",
+    description=_TABLE_DESCRIPTION + _SET_DESCRIPTION,
+    response_class=FileResponse,
+)
+async def export_videos_table(
+    body: VideosExportRequest,
+    storage: StorageBackend = Depends(get_storage),
+    db: Session = Depends(get_db),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> FileResponse:
+    format = body.format or "csv"
+    _check_format(format)
+    results, name, _ = _set_or_error(body, storage, db)
+    return await _table(results, format, name, db)
+
+
+@router.post(
+    "/videos/export/methods",
+    summary="A methods paragraph for any videos' results",
+    description=_METHODS_DESCRIPTION + _SET_DESCRIPTION,
+)
+async def videos_methods(
+    body: VideosExportRequest,
+    storage: StorageBackend = Depends(get_storage),
+    db: Session = Depends(get_db),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Any:
+    results, _, _ = _set_or_error(body, storage, db)
+    return await _methods(results, body.format or "json")
+
+
+@router.post(
+    "/videos/export/elan",
+    summary="Export any videos' results as ELAN files",
+    description=_ELAN_DESCRIPTION
+    + "\nOne `.eaf` for one video, else one per video as a zip."
+    + _SET_DESCRIPTION,
+    response_class=FileResponse,
+)
+async def export_videos_elan(
+    body: VideosExportRequest,
+    storage: StorageBackend = Depends(get_storage),
+    db: Session = Depends(get_db),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> FileResponse:
+    results, name, index = _set_or_error(body, storage, db)
+    if body.results == "latest" and not body.run_id:
+        results = _one_per_video(results, index)
+    with_files = [v for v in results.videos if v.files]
+    if len(with_files) == 1:
+
+        def write_one(path: FilePath) -> ExportSummary:
+            return write_videos(results, lambda _video: path, _notes_for(db))
+
+        return await _file_response(write_one, ".eaf", f"{name}.eaf", "application/xml")
+
+    def write(path: FilePath) -> ExportSummary:
+        with tempfile.TemporaryDirectory(prefix="va-elan-") as folder:
+            base = FilePath(folder)
+            summary = write_videos(
+                results,
+                lambda video: (
+                    base / sanitize_component(video.run or name) / file_name(video)
+                ),
+                _notes_for(db),
+            )
+            with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
+                for eaf in sorted(base.rglob("*.eaf")):
+                    archive.write(eaf, eaf.relative_to(base).as_posix())
+        return summary
+
+    return await _file_response(write, ".zip", f"{name} ELAN.zip", "application/zip")

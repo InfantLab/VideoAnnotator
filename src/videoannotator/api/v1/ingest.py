@@ -886,7 +886,7 @@ async def ingest_folder(
     body: IngestRequest,
     storage: StorageBackend = Depends(get_storage),
     db: Session = Depends(get_db),
-    _user: dict[str, Any] = Depends(require_admin),
+    user: dict[str, Any] = Depends(require_admin),
 ) -> IngestResponse:
     """Create one job per video in a server-side folder."""
     require_local_caller(request)
@@ -986,6 +986,18 @@ async def ingest_folder(
             logger.debug(
                 f"Could not touch last_used_at for dataset {body.dataset_id}: {e}"
             )
+    if created:
+        from ... import run_settings
+
+        run_settings.record_run(
+            db,
+            user=user,
+            dataset_id=body.dataset_id,
+            selected_pipelines=body.selected_pipelines,
+            config=body.config,
+            run_id=batch_id,
+            run_name=batch_name,
+        )
 
     logger.info(
         f"[INGEST] Created {len(created)} job(s) from {resolved} as batch {batch_id}"
