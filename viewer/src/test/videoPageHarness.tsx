@@ -40,6 +40,7 @@ export function demoRun(jobId = 'job-1', over: Partial<VideoRuns['runs'][number]
     batch_id: null,
     dataset_id: null,
     run_name: null,
+    progress: 100,
     pipelines: Object.entries(PIPELINE_FILES).map(([name, files]) => ({
       name,
       status: 'completed',
@@ -62,6 +63,7 @@ export function demoVideoRuns(over: Partial<VideoRuns> = {}): VideoRuns {
     unavailable_reason: null,
     duration_sec: 20,
     sha256: null,
+    paths: [VIDEO_PATH],
     runs: [demoRun()],
     projects: [],
     ...over,

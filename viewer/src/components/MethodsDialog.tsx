@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import { Check, Copy, Download, Loader2 } from 'lucide-react';
 import { apiClient, type ExportScope, type MethodsDescription } from '@/api/client';
+import { userMessage } from '@/lib/userMessage';
 import { methodsMarkdown } from '@/lib/exports';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,19 +46,20 @@ export default function MethodsDialog({ scope, open, onOpenChange }: MethodsDial
   const [methods, setMethods] = useState<MethodsDescription | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
-  const { kind, id } = scope;
+  // The scope's value, not its identity: callers build it inline.
+  const scopeKey = JSON.stringify(scope);
   useEffect(() => {
     let cancelled = false;
     setMethods(null);
     setProblem(null);
     apiClient
-      .getMethods({ kind, id })
+      .getMethods(JSON.parse(scopeKey) as ExportScope)
       .then((m) => !cancelled && setMethods(m))
-      .catch((e) => !cancelled && setProblem(e instanceof Error ? e.message : String(e)));
+      .catch((e) => !cancelled && setProblem(userMessage(e)));
     return () => {
       cancelled = true;
     };
-  }, [kind, id]);
+  }, [scopeKey]);
 
   const download = () => {
     if (!methods) return;

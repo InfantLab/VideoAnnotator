@@ -1,3 +1,5 @@
+import type { ExportChoices, SettingsSource } from './videos';
+
 /**
  * Saved pipeline presets (VideoAnnotator spec 007): a named pipeline selection
  * plus its config, shared with everyone on the server.
@@ -16,6 +18,10 @@ export interface Preset {
   last_used_at?: string | null;
   /** Pipelines it names that this server can't run right now. */
   unavailable_pipelines?: string[];
+  /** What a run with it offers first (spec 029); absent: the defaults. */
+  export_choices?: ExportChoices | null;
+  /** The project or run it was saved from (spec 029). */
+  source?: SettingsSource | null;
 }
 
 export interface PresetListResponse {
@@ -28,4 +34,8 @@ export interface PresetCreateRequest {
   description?: string;
   selected_pipelines: string[];
   config: Record<string, unknown>;
+  export_choices?: ExportChoices | null;
+  source?: SettingsSource | null;
 }
+
+export type PresetUpdateRequest = Partial<PresetCreateRequest>;

@@ -11,6 +11,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { lazy, Suspense, type ReactNode } from "react";
 import Home from "./pages/Home";
 import { AskRedirect } from "./components/ask/AskRedirect";
+import { NotifyNavigator } from "./components/NotifyNavigator";
 
 // Every page but Home loads on first visit, keeping the initial bundle within
 // the constitution's 300 KB gzipped (it was one 300+ KB chunk).
@@ -50,6 +51,7 @@ const App = () => (
                 basename={import.meta.env.BASE_URL}
                 future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
               >
+                <NotifyNavigator />
                 <Routes>
                   {/* Full-screen routes (no shared nav) */}
                   <Route path="/viewer" element={page(<Index />)} />

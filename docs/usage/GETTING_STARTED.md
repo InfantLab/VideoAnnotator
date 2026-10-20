@@ -25,8 +25,9 @@ powershell -ExecutionPolicy Bypass -c "irm https://github.com/InfantLab/VideoAnn
 and double-click **Start VideoAnnotator** on your desktop.
 
 It asks which folder your videos are in, confirms that VideoAnnotator can read it but never change
-it, and opens the viewer in your browser, connected. Choose **New job**: My folders shows the
-folder you shared. Results go to `VideoAnnotator` in your home folder. Next time it asks nothing.
+it, and opens the viewer in your browser, connected. **Videos → Folders** shows the folder you
+shared (see [Using the viewer](#using-the-viewer)). Results go to `VideoAnnotator` in your home
+folder. Next time it asks nothing.
 `videoannotator-start share` shares another folder; the
 [installation guide](../installation/INSTALLATION.md#start-videoannotator-researchers) has the rest,
 and [troubleshooting](../installation/troubleshooting.md#the-start-up-program) explains each message.
@@ -143,18 +144,62 @@ this server (same-origin, no setup needed). It also runs on its own — see
 **CORS Note**: The official standalone web client (video-annotation-viewer on port 19011) is
 automatically allowed. For custom clients, use `--dev` mode or set `CORS_ORIGINS` environment variable.
 
-### 🎬 Your first run in the viewer
+## Using the viewer
 
-Open http://127.0.0.1:18011/viewer/ and choose **New job**. On the computer the server runs on,
-step 1 opens on **My folders**: open the folder your videos are in, tick the ones to run (or
-**Select all**), choose pipelines and submit. Videos are read where they are; nothing is uploaded
-or copied, and you can close the tab while it runs.
+Open http://127.0.0.1:18011/viewer/. The top bar has **Home · Videos · Ask AI · Pipelines**, the
+runs going on, **Help** and **Settings**. Once the server has results, the viewer opens on Videos;
+on a new server it opens on Home.
 
-Results go to **`~/VideoAnnotator`**: one folder per run, named after the run and its date, with
-one folder per video and a `run.json` describing the run. The run's page shows the folder, opens
-it, and downloads the whole run as one zip. See
-[Choosing videos](../installation/INSTALLATION.md#choosing-videos-on-your-own-computer) and
-[Where results go](../installation/INSTALLATION.md#where-results-go) to change either folder.
+### Three ways to start
+
+Home offers three:
+
+- **Ask AI about a video**: ask a vision model a question about one video, try it on a few
+  moments, then run it on the whole video ([Ask AI](ask_ai.md)).
+- **Run pipelines on videos**: find speech, faces, people, scenes and more in a folder of videos,
+  and get one results table ([Videos and projects](videos_and_projects.md)).
+- **Open files from this computer**: look at results you already have as files, with their video,
+  without a server.
+
+### Your first run
+
+1. **Videos → Folders**: pick the folder your videos are in. Every video in it is listed.
+2. **Run…**: tick what to find (Faces, Speech, …) and keep the settings as they are.
+3. **Start run on N videos**. You can close the tab: the run carries on on the server, and the top
+   bar shows its progress.
+4. When it finishes, a message offers the **Results table**; the run's header says
+   **N videos → results table**, with ELAN and a methods paragraph beside it.
+
+Videos are read where they are; nothing is copied. Results go to **`~/VideoAnnotator`**: one folder
+per run, named after the run and its date, with one folder per video and a `run.json` describing
+the run. See [Choosing videos](../installation/INSTALLATION.md#choosing-videos-on-your-own-computer)
+and [Where results go](../installation/INSTALLATION.md#where-results-go) to change either folder.
+
+Click a video to open its [Video page](video_page.md): the video with every result as a track.
+Group videos into **projects** for a study whenever you like; see
+[Videos and projects](videos_and_projects.md#projects).
+
+### Demos
+
+Home and Help open demo results (a short clip with every pipeline's output) in the Video page,
+with no server needed.
+
+### Words
+
+The viewer uses a few words throughout:
+
+| Word | Means |
+|---|---|
+| video | one recording, wherever the server keeps it |
+| folder | where videos are: a shared folder, or Uploaded videos |
+| run | one go of pipelines over some videos |
+| project | a set of videos grouped for a study; a video can be in several |
+| workflow | a saved set of pipelines and settings, reused when you ask |
+| track | one row of results on the Video page |
+| results table | one table of every pipeline's results, for your statistics |
+
+The command line and the API keep their own words: a run of one video is a *job*, a run of several
+a *batch*, a project a *dataset*, and a workflow a *preset*.
 
 ### 📹 Process Videos via CLI
 

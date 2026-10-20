@@ -8,7 +8,18 @@ export interface ManifestEntry {
   size_bytes: number;
   /** Path within the dataset's folder; absent in datasets saved before spec 018. */
   relative_path?: string | null;
+  /** The video's server path, so a project can hold videos from any folder (spec 029). */
+  path?: string | null;
   last_seen_at?: string | null;
+}
+
+/** What a new run on a project starts from (spec 029). */
+export interface ProjectSettings {
+  selected_pipelines: string[];
+  config: Record<string, unknown>;
+  source?: { kind: 'run' | 'edit' | 'workflow'; id?: string | null; name?: string | null } | null;
+  updated_at?: string | null;
+  updated_by?: string | null;
 }
 
 export interface SavedDataset {
@@ -22,6 +33,7 @@ export interface SavedDataset {
   server_folder_recursive?: boolean;
   /** The manifest is a chosen subset of `server_folder`, not the folder (spec 022). */
   server_selection?: boolean;
+  current_settings?: ProjectSettings | null;
   created_at: string;
   updated_at?: string | null;
   last_used_at?: string | null;
@@ -42,7 +54,11 @@ export interface DatasetCreateRequest {
   server_selection?: boolean;
 }
 
-export type DatasetUpdateRequest = Partial<Pick<DatasetCreateRequest, 'name' | 'description' | 'video_manifest'>>;
+export type DatasetUpdateRequest = Partial<
+  Pick<DatasetCreateRequest, 'name' | 'description' | 'video_manifest' | 'server_selection'>
+> & {
+  current_settings?: Pick<ProjectSettings, 'selected_pipelines' | 'config' | 'source'>;
+};
 
 export interface ScannedVideo {
   relative_path: string;

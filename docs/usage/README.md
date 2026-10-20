@@ -6,6 +6,7 @@ Welcome to the VideoAnnotator usage documentation.
 
 - **[Getting Started](GETTING_STARTED.md)**: Quick start guide for installation and basic usage.
 - **[Ask AI](ask_ai.md)**: Ask a vision model about moments of a video, keep every try, run it on the whole video.
+- **[Videos and projects](videos_and_projects.md)**: The Videos page: folders, projects, the settings they remember, workflows, runs, and exporting any set of videos.
 - **[Configuration](configuration.md)**: Detailed configuration guide (YAML & Environment Variables).
 - **[Environment Variables](environment_variables.md)**: Reference for all environment variables.
 - **[The Video page](video_page.md)**: One video's results from every run on labelled tracks, the values beside it, your own notes.

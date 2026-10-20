@@ -1323,7 +1323,7 @@ export interface paths {
         get: operations["get_dataset_api_v1_datasets__dataset_id__get"];
         /**
          * Update a saved dataset
-         * @description Owner or administrator only.
+         * @description Any signed-in user may change a dataset's name, description, videos and current settings (spec 029: projects are shared); deleting it stays with its owner or an administrator. `current_settings` is stamped with when and by whom; its `source` defaults to an edit.
          */
         put: operations["update_dataset_api_v1_datasets__dataset_id__put"];
         post?: never;
@@ -1332,6 +1332,30 @@ export interface paths {
          * @description Owner or administrator only. Does not affect the historical record of any job previously submitted using this dataset (FR-008).
          */
         delete: operations["delete_dataset_api_v1_datasets__dataset_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasets/{dataset_id}/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add videos to a dataset by path (spec 029)
+         * @description Adds manifest entries naming the videos by path, from any folder. A dataset that followed its folder, or held its uploads by run, becomes a selection of what it held plus these. Any signed-in user.
+         */
+        post: operations["add_dataset_videos_api_v1_datasets__dataset_id__videos_post"];
+        /**
+         * Remove videos from a dataset by path (spec 029)
+         * @description The dataset no longer holds those videos. Never touches the files, their jobs or their results. Any signed-in user.
+         */
+        delete: operations["remove_dataset_videos_api_v1_datasets__dataset_id__videos_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1532,10 +1556,71 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * The videos the server knows, for one scope (spec 029)
+         * @description One of `project`, `folder` (+`recursive`; `uploads` for uploaded videos), `not_in_project`, `run`; none means every video. A video is every path the server can tell holds one file. `counts` are for the Videos page's left side. 403 `PATH_NOT_ALLOWED` for a folder outside the shared folders; 404 `DATASET_NOT_FOUND` / `RUN_NOT_FOUND`.
+         */
+        get: operations["list_videos_api_v1_videos_get"];
         put?: never;
         /** Upload a video once, to use in Ask AI and later runs */
         post: operations["upload_video_api_v1_videos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos/run-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The settings a new run starts from (spec 029 FR-012)
+         * @description The chosen workflow's, else the project's current settings, else the settings of its newest run, else the caller's last run's, else the defaults; `source` says which.
+         */
+        get: operations["get_run_settings_api_v1_videos_run_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * One run on any videos the server can read (spec 029 R8)
+         * @description Creates one job per usable path, sharing one batch id. A video in a shared folder is read in place; an upload is hard-linked (copied if linking fails) from its stored copy. Paths it can't use are listed in `skipped`; 422 `NOTHING_TO_RUN` when none are usable. With `project_id`, the jobs carry it as `dataset_id`, the videos join the project, and its current settings become these. Any signed-in user.
+         */
+        post: operations["run_videos_api_v1_videos_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Runs with videos waiting or running, and those just finished */
+        get: operations["activity_api_v1_videos_activity_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2503,6 +2588,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/videos/export/table": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export any videos' results as one table
+         * @description One table of every pipeline's results: one row per event and measure, the same
+         *     columns for every pipeline (spec 025, `contracts/table.md`). The export summary
+         *     (videos and pipelines covered, files skipped and why, videos without results) is
+         *     in the `X-VideoAnnotator-Export-Summary` header as JSON.
+         *
+         *     For any set of videos (spec 029): exactly one of `paths`, `project_id` or
+         *     `run_id`. `results=latest` takes, per video and pipeline, its newest completed
+         *     result; `all` takes every run's. Errors and the summary header as the job and
+         *     batch routes.
+         */
+        post: operations["export_videos_table_api_v1_videos_export_table_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos/export/methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A methods paragraph for any videos' results
+         * @description A methods paragraph for a paper (spec 025): each pipeline, the models with their
+         *     exact weight revisions, settings that differ from the defaults, VideoAnnotator's
+         *     version, and citations, as prose with `[@key]` citations plus BibTeX. Built only
+         *     from the provenance recorded in the output files; anything not recorded is said
+         *     to be. `format=markdown` returns the same as one Markdown file.
+         *
+         *     For any set of videos (spec 029): exactly one of `paths`, `project_id` or
+         *     `run_id`. `results=latest` takes, per video and pipeline, its newest completed
+         *     result; `all` takes every run's. Errors and the summary header as the job and
+         *     batch routes.
+         */
+        post: operations["videos_methods_api_v1_videos_export_methods_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/videos/export/elan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export any videos' results as ELAN files
+         * @description ELAN (`.eaf`, EAF 3.0) with one tier per pipeline track (spec 025): speech,
+         *     speaker turns, scenes, people and faces in view, VLM labels. Per-detection
+         *     measures stay in the table; the summary header's `left_out` says which.
+         *
+         *     One `.eaf` for one video, else one per video as a zip.
+         *     For any set of videos (spec 029): exactly one of `paths`, `project_id` or
+         *     `run_id`. `results=latest` takes, per video and pipeline, its newest completed
+         *     result; `all` takes every run's. Errors and the summary header as the job and
+         *     batch routes.
+         */
+        post: operations["export_videos_elan_api_v1_videos_export_elan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -2527,6 +2697,45 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActivityResponse */
+        ActivityResponse: {
+            /** Active */
+            active: components["schemas"]["ActivityRun"][];
+            /**
+             * Recent
+             * @description Up to 5 runs finished in the last 24 hours, newest first
+             */
+            recent: components["schemas"]["ActivityRun"][];
+        };
+        /** ActivityRun */
+        ActivityRun: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Total */
+            total: number;
+            /** Done */
+            done: number;
+            /** Failed */
+            failed: number;
+            /** Running */
+            running: number;
+            /** Waiting */
+            waiting: number;
+            /** Cancelled */
+            cancelled: number;
+            project?: components["schemas"]["ProjectRef"] | null;
+            /** Started At */
+            started_at?: string | null;
+            /** Finished At */
+            finished_at?: string | null;
+            /**
+             * Stopped
+             * @default false
+             */
+            stopped: boolean;
+        };
         /** Answer */
         Answer: {
             /** T */
@@ -2847,6 +3056,8 @@ export interface components {
              * @default false
              */
             server_selection: boolean;
+            /** @description The settings a new run on it starts from (spec 029); null until a run starts on it or someone sets them */
+            current_settings?: components["schemas"]["RunSettings"] | null;
             /**
              * Created At
              * Format: date-time
@@ -2899,6 +3110,15 @@ export interface components {
             video_manifest?: components["schemas"]["VideoManifestEntry"][] | null;
             /** Server Selection */
             server_selection?: boolean | null;
+            current_settings?: components["schemas"]["RunSettings"] | null;
+        };
+        /**
+         * DatasetVideosRequest
+         * @description Body for adding or removing videos by path (spec 029).
+         */
+        DatasetVideosRequest: {
+            /** Paths */
+            paths: string[];
         };
         /** DraftRequest */
         DraftRequest: {
@@ -3093,6 +3313,29 @@ export interface components {
             extra_name: string;
             /** Status */
             status: string;
+        };
+        /** FolderCount */
+        FolderCount: {
+            /**
+             * Path
+             * @description The folder, or 'uploads'
+             */
+            path: string;
+            /** Label */
+            label: string;
+            /** Count */
+            count: number;
+            /**
+             * Uploads
+             * @default false
+             */
+            uploads: boolean;
+            /**
+             * Recursive
+             * @description A place to look in, listed with its subfolders
+             * @default false
+             */
+            recursive: boolean;
         };
         /** FolderRef */
         FolderRef: {
@@ -3490,6 +3733,13 @@ export interface components {
             /** Last Used At */
             last_used_at?: string | null;
         };
+        /** NewVideo */
+        NewVideo: {
+            /** Path */
+            path: string;
+            /** Name */
+            name: string;
+        };
         /** Note */
         Note: {
             /** Id */
@@ -3839,6 +4089,14 @@ export interface components {
             tags: {
                 [key: string]: unknown;
             };
+            /** Export Choices */
+            export_choices?: {
+                [key: string]: unknown;
+            } | null;
+            /** Source */
+            source?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** PresetListResponse */
         PresetListResponse: {
@@ -3873,6 +4131,20 @@ export interface components {
                 [key: string]: unknown;
             };
             /**
+             * Export Choices
+             * @description Spec 029: what a run with this workflow offers first: {"table": "csv" | "parquet", "elan": bool, "methods": bool}; null for the defaults (a CSV table, ELAN and methods)
+             */
+            export_choices?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Source
+             * @description Spec 029: what it was saved from: {"kind": "project" | "run", "id", "name"}
+             */
+            source?: {
+                [key: string]: unknown;
+            } | null;
+            /**
              * Created At
              * Format: date-time
              */
@@ -3906,6 +4178,14 @@ export interface components {
             tags?: {
                 [key: string]: unknown;
             } | null;
+            /** Export Choices */
+            export_choices?: {
+                [key: string]: unknown;
+            } | null;
+            /** Source */
+            source?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * PreviewFrame
@@ -3918,6 +4198,24 @@ export interface components {
             timestamp_sec?: number | null;
             /** Jpeg Base64 */
             jpeg_base64: string;
+        };
+        /** ProjectCount */
+        ProjectCount: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Owner Name */
+            owner_name?: string | null;
+            /** Count */
+            count: number;
+            /**
+             * Follows Folder
+             * @default false
+             */
+            follows_folder: boolean;
+            /** Server Folder */
+            server_folder?: string | null;
         };
         /** ProjectRef */
         ProjectRef: {
@@ -4099,6 +4397,39 @@ export interface components {
             run_name?: string | null;
             /** Pipelines */
             pipelines?: components["schemas"]["PipelineRunInfo"][];
+            /** Batch Name */
+            batch_name?: string | null;
+            /** Rerun Of */
+            rerun_of?: string | null;
+            /**
+             * Progress
+             * @description Percent of its pipelines done
+             * @default 0
+             */
+            progress: number;
+            /**
+             * Queue Position
+             * @description While waiting: its place in the queue, from 1
+             */
+            queue_position?: number | null;
+            /** Error */
+            error?: string | null;
+            /** Selected Pipelines */
+            selected_pipelines?: string[];
+            /**
+             * Config
+             * @description The settings it ran with
+             */
+            config?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Results Folder
+             * @description Where its results are (spec 022), and `exists`
+             */
+            results_folder?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** RunRequest */
         RunRequest: {
@@ -4121,6 +4452,106 @@ export interface components {
              *       "frames": 1
              *     } */
             sampling: components["schemas"]["Sampling"];
+        };
+        /**
+         * RunSettings
+         * @description What a new run on a project starts from (spec 029 R5).
+         */
+        RunSettings: {
+            /**
+             * Selected Pipelines
+             * @default []
+             */
+            selected_pipelines: string[];
+            /**
+             * Config
+             * @default {}
+             */
+            config: {
+                [key: string]: unknown;
+            };
+            /**
+             * Source
+             * @description Where they came from: {kind: run | edit | workflow, id, name}
+             */
+            source?: {
+                [key: string]: unknown;
+            } | null;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Updated By */
+            updated_by?: string | null;
+        };
+        /** RunSettingsResponse */
+        RunSettingsResponse: {
+            /**
+             * Selected Pipelines
+             * @description Empty with `defaults`: the viewer selects its defaults
+             */
+            selected_pipelines: string[];
+            /** Config */
+            config: {
+                [key: string]: unknown;
+            };
+            source: components["schemas"]["RunSettingsSource"];
+        };
+        /** RunSettingsSource */
+        RunSettingsSource: {
+            /**
+             * Kind
+             * @description workflow, project, last_used or defaults
+             */
+            kind: string;
+            /** Id */
+            id?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Changed At */
+            changed_at?: string | null;
+            /**
+             * From
+             * @description For a project's settings: the run, edit or workflow they came from
+             */
+            from?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** RunSkipped */
+        RunSkipped: {
+            /** Path */
+            path: string;
+            /** Reason */
+            reason: string;
+        };
+        /** RunSummary */
+        RunSummary: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Total */
+            total: number;
+            /** Done */
+            done: number;
+            /** Failed */
+            failed: number;
+            /** Running */
+            running: number;
+            /** Waiting */
+            waiting: number;
+            /** Cancelled */
+            cancelled: number;
+            /** Started At */
+            started_at?: string | null;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Pipelines */
+            pipelines: string[];
+            project?: components["schemas"]["ProjectRef"] | null;
+            /** Active */
+            active: boolean;
+            /** Job Ids */
+            job_ids?: string[];
         };
         /** SampleFrameOut */
         SampleFrameOut: {
@@ -4295,6 +4726,52 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** VideoCounts */
+        VideoCounts: {
+            /** All */
+            all: number;
+            /** Not In Project */
+            not_in_project: number;
+            /** Projects */
+            projects: components["schemas"]["ProjectCount"][];
+            /** Folders */
+            folders: components["schemas"]["FolderCount"][];
+        };
+        /** VideoItem */
+        VideoItem: {
+            /**
+             * Path
+             * @description Its newest existing path: the one to open it by
+             */
+            path: string;
+            /**
+             * Paths
+             * @description Every path of this video, newest first
+             */
+            paths: string[];
+            /** Name */
+            name: string;
+            /**
+             * Folder
+             * @description Its folder, or 'uploads' for an uploaded video
+             */
+            folder: string;
+            /** Available */
+            available: boolean;
+            /** Size Bytes */
+            size_bytes?: number | null;
+            /** Projects */
+            projects: components["schemas"]["ProjectRef"][];
+            /**
+             * Results
+             * @description Per pipeline that ever ran on it, its newest finished result, else its newest state
+             */
+            results: {
+                [key: string]: components["schemas"]["VideoResult"];
+            };
+            /** Last Run At */
+            last_run_at?: string | null;
+        };
         /**
          * VideoManifestEntry
          * @description One remembered video's identity within a saved dataset (FR-002).
@@ -4308,11 +4785,41 @@ export interface components {
             last_seen_at?: string | null;
             /** Relative Path */
             relative_path?: string | null;
+            /**
+             * Path
+             * @description The video's server path, so a project can hold videos from any folder (spec 029 R4); resolved when saved
+             */
+            path?: string | null;
+        };
+        /** VideoResult */
+        VideoResult: {
+            /**
+             * State
+             * @description done, running, waiting or failed
+             */
+            state: string;
+            /**
+             * Run Id
+             * @description The run it is from: a batch id or a job id
+             */
+            run_id: string;
+            /** Finished At */
+            finished_at?: string | null;
+            /**
+             * Error
+             * @description Why it failed, if it did
+             */
+            error?: string | null;
         };
         /** VideoRunsResponse */
         VideoRunsResponse: {
             /** Path */
             path: string;
+            /**
+             * Paths
+             * @description Every path of this video, newest first (spec 029 R1): an upload and the copies its reruns made
+             */
+            paths?: string[];
             /** Name */
             name: string;
             /** Available */
@@ -4331,6 +4838,25 @@ export interface components {
             /** Projects */
             projects: components["schemas"]["ProjectRef"][];
         };
+        /** VideoScope */
+        VideoScope: {
+            /**
+             * Kind
+             * @description all, not_in_project, project, folder or run
+             */
+            kind: string;
+            /** Id */
+            id?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Path */
+            path?: string | null;
+            /**
+             * Recursive
+             * @default false
+             */
+            recursive: boolean;
+        };
         /** VideoUploadResponse */
         VideoUploadResponse: {
             /** Path */
@@ -4341,6 +4867,81 @@ export interface components {
             name: string;
             /** Duration Sec */
             duration_sec?: number | null;
+        };
+        /**
+         * VideosExportRequest
+         * @description Exactly one of `paths`, `project_id`, `run_id`.
+         */
+        VideosExportRequest: {
+            /** Paths */
+            paths?: string[] | null;
+            /** Project Id */
+            project_id?: string | null;
+            /** Run Id */
+            run_id?: string | null;
+            /**
+             * Results
+             * @description latest: per video and pipeline, its newest completed result; all: every run's (the `run` column tells them apart)
+             * @default latest
+             */
+            results: string;
+            /**
+             * Format
+             * @description Table: csv or parquet; methods: json or markdown; ELAN: unused
+             */
+            format?: string | null;
+        };
+        /** VideosResponse */
+        VideosResponse: {
+            scope: components["schemas"]["VideoScope"];
+            /** Videos */
+            videos: components["schemas"]["VideoItem"][];
+            /** Total */
+            total: number;
+            counts: components["schemas"]["VideoCounts"];
+            /** New In Folder */
+            new_in_folder?: components["schemas"]["NewVideo"][];
+            /** Runs */
+            runs?: components["schemas"]["RunSummary"][];
+        };
+        /** VideosRunRequest */
+        VideosRunRequest: {
+            /** Paths */
+            paths: string[];
+            /** Selected Pipelines */
+            selected_pipelines?: string[] | null;
+            /** Config */
+            config?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Name
+             * @description The run's name
+             */
+            name?: string | null;
+            /**
+             * Project Id
+             * @description The project (saved dataset) it runs for
+             */
+            project_id?: string | null;
+        };
+        /** VideosRunResponse */
+        VideosRunResponse: {
+            /**
+             * Run Id
+             * @description The batch id of the new jobs
+             */
+            run_id: string;
+            /** Name */
+            name: string;
+            /** Created */
+            created: string[];
+            /** Skipped */
+            skipped: components["schemas"]["RunSkipped"][];
+            /** Results Folder */
+            results_folder?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** VlmEndpoint */
         VlmEndpoint: {
@@ -5675,6 +6276,78 @@ export interface operations {
             };
         };
     };
+    add_dataset_videos_api_v1_datasets__dataset_id__videos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The saved dataset's id */
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasetVideosRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_dataset_videos_api_v1_datasets__dataset_id__videos_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The saved dataset's id */
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasetVideosRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     stored_videos_api_v1_datasets__dataset_id__stored_videos_get: {
         parameters: {
             query?: never;
@@ -6090,6 +6763,48 @@ export interface operations {
             };
         };
     };
+    list_videos_api_v1_videos_get: {
+        parameters: {
+            query?: {
+                /** @description A saved dataset's id */
+                project?: string | null;
+                /** @description A folder, or 'uploads' */
+                folder?: string | null;
+                recursive?: boolean;
+                not_in_project?: boolean;
+                /** @description A batch id, or a job id */
+                run?: string | null;
+                /** @description Names containing this, any case */
+                q?: string | null;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideosResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     upload_video_api_v1_videos_post: {
         parameters: {
             query?: never;
@@ -6119,6 +6834,93 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_settings_api_v1_videos_run_settings_get: {
+        parameters: {
+            query?: {
+                /** @description A saved dataset's id */
+                project?: string | null;
+                /** @description A saved preset's id */
+                workflow?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_videos_api_v1_videos_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VideosRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideosRunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activity_api_v1_videos_activity_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResponse"];
                 };
             };
         };
@@ -7370,6 +8172,101 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_videos_table_api_v1_videos_export_table_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VideosExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    videos_methods_api_v1_videos_export_methods_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VideosExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_videos_elan_api_v1_videos_export_elan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VideosExportRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

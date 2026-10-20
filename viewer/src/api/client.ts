@@ -46,7 +46,15 @@ import type {
 } from '@/types/ask';
 import type { JobResults } from '@/lib/jobOutcome';
 import type { VideoNote, VideoNoteCreate, VideoNoteUpdate, VideoRuns } from '@/types/video';
-import type { Preset, PresetCreateRequest, PresetListResponse } from '@/types/presets';
+import type { Preset, PresetCreateRequest, PresetListResponse, PresetUpdateRequest } from '@/types/presets';
+import type {
+  Activity,
+  RunSettings,
+  VideosQuery,
+  VideosResponse,
+  VideosRunRequest,
+  VideosRunResponse,
+} from '@/types/videos';
 import type { LibraryPrompt, PromptListResponse, PromptUpdateRequest } from '@/types/prompts';
 import type {
   DatasetCreateRequest,
@@ -705,6 +713,17 @@ class APIClient {
     return this.request('/api/v1/presets');
   }
 
+  async updatePreset(id: string, body: PresetUpdateRequest): Promise<Preset> {
+    return this.request(`/api/v1/presets/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async deletePreset(id: string): Promise<void> {
+    return this.request(`/api/v1/presets/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  }
+
   async createPreset(body: PresetCreateRequest): Promise<Preset> {
     return this.request('/api/v1/presets', {
       method: 'POST',
@@ -1115,6 +1134,55 @@ class APIClient {
     return this.request(`/api/v1/videos/runs?${new URLSearchParams({ path })}`);
   }
 
+  /** The videos the server knows, for one scope, with the Videos page's counts (spec 029). */
+  async listVideos(query: VideosQuery = {}): Promise<VideosResponse> {
+    const params = new URLSearchParams();
+    if (query.project) params.set('project', query.project);
+    if (query.folder) params.set('folder', query.folder);
+    if (query.recursive) params.set('recursive', 'true');
+    if (query.notInProject) params.set('not_in_project', 'true');
+    if (query.run) params.set('run', query.run);
+    if (query.q) params.set('q', query.q);
+    if (query.offset) params.set('offset', String(query.offset));
+    params.set('limit', String(query.limit ?? 2000));
+    return this.request(`/api/v1/videos?${params}`);
+  }
+
+  /** One run on any videos the server can read (spec 029 R8). */
+  async runVideos(body: VideosRunRequest): Promise<VideosRunResponse> {
+    return this.request('/api/v1/videos/run', { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  /** The settings New run starts from, and where they came from (spec 029 R6). */
+  async getRunSettings(params: { project?: string | null; workflow?: string | null } = {}): Promise<RunSettings> {
+    const query = new URLSearchParams();
+    if (params.project) query.set('project', params.project);
+    if (params.workflow) query.set('workflow', params.workflow);
+    const suffix = query.toString() ? `?${query}` : '';
+    return this.request(`/api/v1/videos/run-settings${suffix}`);
+  }
+
+  /** Runs with videos waiting or running, and those just finished (spec 029 R17). */
+  async getActivity(): Promise<Activity> {
+    return this.request('/api/v1/videos/activity');
+  }
+
+  /** Add videos to a project by path; a project that followed its folder becomes a selection. */
+  async addProjectVideos(id: string, paths: string[]): Promise<SavedDataset> {
+    return this.request(`/api/v1/datasets/${encodeURIComponent(id)}/videos`, {
+      method: 'POST',
+      body: JSON.stringify({ paths }),
+    });
+  }
+
+  /** Take videos out of a project; their files and results stay. */
+  async removeProjectVideos(id: string, paths: string[]): Promise<SavedDataset> {
+    return this.request(`/api/v1/datasets/${encodeURIComponent(id)}/videos`, {
+      method: 'DELETE',
+      body: JSON.stringify({ paths }),
+    });
+  }
+
   /** One result file, by the `download_url` the server listed for it (spec 028 R4). */
   async downloadResultFile(url: string, name: string): Promise<File> {
     const blob = await (await this.fetchRaw(url)).blob();
@@ -1370,12 +1438,16 @@ class APIClient {
    * @returns Response object that can be used to stream the ZIP file
    */
   /** Fetch with this client's server and key, keeping the raw Response (files, videos). */
-  private async fetchRaw(path: string): Promise<Response> {
+  private async fetchRaw(path: string, body?: unknown): Promise<Response> {
     this.baseURL = getApiBaseUrl().replace(/\/$/, '');
     this.token = getApiToken();
     const headers: Record<string, string> = {};
     if (this.token && isValidToken(this.token)) headers['Authorization'] = `Bearer ${this.token}`;
-    const response = await fetch(`${this.baseURL}${path}`, { headers });
+    const init: RequestInit =
+      body === undefined
+        ? { headers }
+        : { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+    const response = await fetch(`${this.baseURL}${path}`, init);
     if (!response.ok) {
       let body: unknown;
       try {
@@ -1399,8 +1471,9 @@ class APIClient {
     kind: 'table' | 'elan',
     format: 'csv' | 'parquet' = 'csv'
   ): Promise<ExportDownload> {
-    const query = kind === 'table' ? `?format=${format}` : '';
-    const response = await this.fetchRaw(`${exportBase(scope)}/export/${kind}${query}`);
+    const response = isSetScope(scope)
+      ? await this.fetchRaw(`/api/v1/videos/export/${kind}`, setBody(scope, kind === 'table' ? format : undefined))
+      : await this.fetchRaw(`${exportBase(scope)}/export/${kind}${kind === 'table' ? `?format=${format}` : ''}`);
     return {
       blob: await response.blob(),
       filename: filenameFromDisposition(response.headers.get('Content-Disposition')),
@@ -1410,6 +1483,7 @@ class APIClient {
 
   /** A methods paragraph with BibTeX for a job's or run's results (spec 025). */
   async getMethods(scope: ExportScope): Promise<MethodsDescription> {
+    if (isSetScope(scope)) return (await this.fetchRaw('/api/v1/videos/export/methods', setBody(scope, 'json'))).json();
     return (await this.fetchRaw(`${exportBase(scope)}/methods`)).json();
   }
 
@@ -1651,7 +1725,31 @@ export { APIClient };
 export type ExportScope =
   | { kind: 'job'; id: string }
   | { kind: 'batch'; id: string }
-  | { kind: 'dataset'; id: string };
+  | { kind: 'dataset'; id: string }
+  // Spec 029: any videos, a project, or a run (a batch or a lone job), by POST.
+  | { kind: 'videos'; paths: string[]; results?: ExportResults }
+  | { kind: 'project'; id: string; results?: ExportResults }
+  | { kind: 'run'; id: string };
+
+/** Per video and pipeline its newest result, or every run's. */
+export type ExportResults = 'latest' | 'all';
+
+type SetScope = Extract<ExportScope, { kind: 'videos' | 'project' | 'run' }>;
+
+function isSetScope(scope: ExportScope): scope is SetScope {
+  return scope.kind === 'videos' || scope.kind === 'project' || scope.kind === 'run';
+}
+
+function setBody(scope: SetScope, format?: string): Record<string, unknown> {
+  const results = scope.kind === 'run' ? 'all' : (scope.results ?? 'latest');
+  const which =
+    scope.kind === 'videos'
+      ? { paths: scope.paths }
+      : scope.kind === 'project'
+        ? { project_id: scope.id }
+        : { run_id: scope.id };
+  return { ...which, results, ...(format ? { format } : {}) };
+}
 
 export interface ExportSummary {
   table_format_version: number;
@@ -1679,13 +1777,13 @@ export interface MethodsDescription {
   summary: { videos: number; groups: number; not_recorded: string[] };
 }
 
-const EXPORT_PATHS: Record<ExportScope['kind'], string> = {
+const EXPORT_PATHS: Record<Exclude<ExportScope, SetScope>['kind'], string> = {
   job: 'jobs',
   batch: 'batches',
   dataset: 'datasets',
 };
 
-function exportBase(scope: ExportScope): string {
+function exportBase(scope: Exclude<ExportScope, SetScope>): string {
   return `/api/v1/${EXPORT_PATHS[scope.kind]}/${encodeURIComponent(scope.id)}`;
 }
 

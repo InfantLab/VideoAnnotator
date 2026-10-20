@@ -59,6 +59,7 @@ nav:
       - Ask AI: usage/ask_ai.md
       - Command-line examples: usage/demo_commands.md
       - Pipelines: usage/pipeline_specs.md
+      - Videos and projects: usage/videos_and_projects.md
       - The Video page: usage/video_page.md
       - Getting your results: usage/accessing_results.md
       - Results out (table, ELAN, methods): usage/exporting_results.md
