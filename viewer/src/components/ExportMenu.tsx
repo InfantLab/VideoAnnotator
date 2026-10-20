@@ -1,14 +1,19 @@
 // Results out (spec 025): one table of every pipeline's results, ELAN files,
-// and a methods paragraph, for a job, a run or a saved dataset. The server
-// builds them from the result files; this only asks and saves what comes back.
+// and a methods paragraph, for a job, a run, a project or (spec 029) any
+// videos. The server builds them from the result files; this only asks and
+// saves what comes back.
 
 import { lazy, Suspense, useState } from 'react';
 import { ChevronDown, ChevronUp, FileText, Table2, Video } from 'lucide-react';
-import { apiClient, type ExportScope } from '@/api/client';
+import { apiClient, type ExportResults, type ExportScope } from '@/api/client';
 import { apiErrorEnvelope } from '@/api/handleError';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { saveBlob, summaryLines } from '@/lib/exports';
+import { userMessage } from '@/lib/userMessage';
 
 const MethodsDialog = lazy(() => import('./MethodsDialog'));
 
@@ -22,7 +27,12 @@ const FALLBACK_NAMES: Record<Exclude<Busy, null>, string> = {
 
 interface ExportMenuProps {
   scope: ExportScope;
+  /** "Export ▾" opening a panel, for a header or a selection bar. */
+  popover?: boolean;
 }
+
+/** Videos from several runs can be exported from their newest results or from every run. */
+const hasRunChoice = (scope: ExportScope) => scope.kind === 'videos' || scope.kind === 'project';
 
 /** Why Parquet isn't available, and (for an admin) a way to fix it. Asks who
  * the user is only when shown. */
@@ -60,14 +70,16 @@ function ParquetHint({ hint }: { hint: string }) {
   );
 }
 
-export function ExportMenu({ scope }: ExportMenuProps) {
+export function ExportMenu({ scope, popover = false }: ExportMenuProps) {
   const [open, setOpen] = useState(false);
+  const [results, setResults] = useState<ExportResults>('latest');
   const [busy, setBusy] = useState<Busy>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [parquetHint, setParquetHint] = useState<string | null>(null);
   const [lines, setLines] = useState<string[]>([]);
   const [methodsOpen, setMethodsOpen] = useState(false);
   const datasetOnly = scope.kind === 'dataset';
+  const chosen: ExportScope = hasRunChoice(scope) ? ({ ...scope, results } as ExportScope) : scope;
 
   const run = async (which: Exclude<Busy, null>) => {
     setBusy(which);
@@ -75,7 +87,7 @@ export function ExportMenu({ scope }: ExportMenuProps) {
     setLines([]);
     try {
       const download = await apiClient.exportResults(
-        scope,
+        chosen,
         which === 'elan' ? 'elan' : 'table',
         which === 'parquet' ? 'parquet' : 'csv'
       );
@@ -86,55 +98,67 @@ export function ExportMenu({ scope }: ExportMenuProps) {
       if (envelope.code === 'PARQUET_NOT_INSTALLED') {
         setParquetHint(envelope.hint ?? 'pip install videoannotator[parquet]');
       } else {
-        setProblem(`Couldn't export: ${error instanceof Error ? error.message : String(error)}`);
+        setProblem(`Couldn't export: ${userMessage(error)}`);
       }
     } finally {
       setBusy(null);
     }
   };
 
-  return (
-    <div className="space-y-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        aria-controls="export-actions"
-      >
-        {open ? <ChevronUp className="h-4 w-4 mr-2" /> : <ChevronDown className="h-4 w-4 mr-2" />}
-        Export
-      </Button>
-      {open && (
-        <div id="export-actions" className="flex flex-wrap gap-2" role="group" aria-label="Export">
-          <Button variant="secondary" size="sm" onClick={() => run('csv')} disabled={busy !== null}>
-            <Table2 className="h-4 w-4 mr-2" />
-            {busy === 'csv' ? 'Preparing…' : 'Table (CSV)'}
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => run('parquet')} disabled={busy !== null}>
-            <Table2 className="h-4 w-4 mr-2" />
-            {busy === 'parquet' ? 'Preparing…' : 'Table (Parquet)'}
-          </Button>
-          {!datasetOnly && (
-            <>
-              <Button variant="secondary" size="sm" onClick={() => run('elan')} disabled={busy !== null}>
-                <Video className="h-4 w-4 mr-2" />
-                {busy === 'elan' ? 'Preparing…' : 'ELAN files (.eaf)'}
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => setMethodsOpen(true)}>
-                <FileText className="h-4 w-4 mr-2" />
-                Methods paragraph
-              </Button>
-            </>
-          )}
-        </div>
+  const actions = (
+    <>
+      {hasRunChoice(scope) && (
+        <RadioGroup
+          value={results}
+          onValueChange={(value) => setResults(value as ExportResults)}
+          className="flex flex-wrap gap-4 text-sm"
+          aria-label="Which results"
+        >
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="latest" id="export-latest" />
+            <Label htmlFor="export-latest" title="For each video and pipeline, its newest finished result">
+              Latest results
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="all" id="export-all" />
+            <Label htmlFor="export-all" title="Every run's results; the table's run column tells them apart">
+              Every run
+            </Label>
+          </div>
+        </RadioGroup>
       )}
-      {open && (
-        <p className="text-xs text-muted-foreground">
-          One table of every pipeline&apos;s results (one row per event), ready for R or Python
-          {datasetOnly ? ', covering every run of this dataset.' : '; ELAN files, one per video; or a methods paragraph with citations.'}
-        </p>
-      )}
+      <div id="export-actions" className="flex flex-wrap gap-2" role="group" aria-label="Export">
+        <Button variant="secondary" size="sm" onClick={() => run('csv')} disabled={busy !== null}>
+          <Table2 className="h-4 w-4 mr-2" />
+          {busy === 'csv' ? 'Preparing…' : 'Results table (CSV)'}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => run('parquet')} disabled={busy !== null}>
+          <Table2 className="h-4 w-4 mr-2" />
+          {busy === 'parquet' ? 'Preparing…' : 'Results table (Parquet)'}
+        </Button>
+        {!datasetOnly && (
+          <>
+            <Button variant="secondary" size="sm" onClick={() => run('elan')} disabled={busy !== null}>
+              <Video className="h-4 w-4 mr-2" />
+              {busy === 'elan' ? 'Preparing…' : 'ELAN (.eaf)'}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setMethodsOpen(true)}>
+              <FileText className="h-4 w-4 mr-2" />
+              Methods
+            </Button>
+          </>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        One table of every pipeline&apos;s results (one row per event), ready for R or Python
+        {datasetOnly ? ', covering every run of this project.' : '; ELAN files, one per video; or a methods paragraph with citations.'}
+      </p>
+    </>
+  );
+
+  const feedback = (
+    <>
       {parquetHint && <ParquetHint hint={parquetHint} />}
       {problem && (
         <p className="text-sm text-destructive" role="alert">
@@ -151,11 +175,45 @@ export function ExportMenu({ scope }: ExportMenuProps) {
           </ul>
         </div>
       )}
-      {methodsOpen && scope.kind !== 'dataset' && (
+      {methodsOpen && chosen.kind !== 'dataset' && (
         <Suspense fallback={null}>
-          <MethodsDialog scope={scope} open={methodsOpen} onOpenChange={setMethodsOpen} />
+          <MethodsDialog scope={chosen} open={methodsOpen} onOpenChange={setMethodsOpen} />
         </Suspense>
       )}
+    </>
+  );
+
+  if (popover) {
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm">
+            Export
+            <ChevronDown className="h-4 w-4 ml-1" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-96 space-y-3" align="end" data-testid="export-panel">
+          {actions}
+          {feedback}
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-controls="export-actions"
+      >
+        {open ? <ChevronUp className="h-4 w-4 mr-2" /> : <ChevronDown className="h-4 w-4 mr-2" />}
+        Export
+      </Button>
+      {open && actions}
+      {feedback}
     </div>
   );
 }

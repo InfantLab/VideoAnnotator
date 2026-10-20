@@ -6,7 +6,7 @@ import { ListNavigation } from '@/components/ListNavigation';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { RunRef } from '@/lib/lanes';
-import { fromParam, type ListContext } from '@/lib/listNavigation';
+import { videosHref, type ListContext } from '@/lib/listNavigation';
 import { wizardState } from '@/lib/wizardStart';
 import type { ProjectRef } from '@/types/video';
 
@@ -31,9 +31,9 @@ export function VideoContext({
         <span key={p.id}>
           {i > 0 && ', '}
           <Link
-            to={`/video?${new URLSearchParams({ path, from: fromParam({ kind: 'project', id: p.id }) })}`}
+            to={videosHref({ kind: 'project', id: p.id })}
             className="text-foreground hover:underline"
-            title={`Move through ${p.name}'s videos`}
+            title={`${p.name}: all its videos`}
           >
             {p.name}
           </Link>

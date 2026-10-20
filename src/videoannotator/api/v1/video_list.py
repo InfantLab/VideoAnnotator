@@ -76,6 +76,10 @@ class VideoItem(BaseModel):
         "result, else its newest state"
     )
     last_run_at: datetime | None = None
+    run_job_id: str | None = Field(
+        default=None,
+        description="In a run's list: this video's job in that run, to open it on",
+    )
 
 
 class ProjectCount(BaseModel):
@@ -148,8 +152,10 @@ class VideosResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _item(video: Video, catalog: Catalog) -> VideoItem:
+def _item(video: Video, catalog: Catalog, run_id: str | None = None) -> VideoItem:
+    in_run = [j for j in video.jobs if run_id and video_index.run_id_of(j) == run_id]
     return VideoItem(
+        run_job_id=in_run[0].job_id if in_run else None,
         path=video.path,
         paths=video.paths,
         name=video.name,
@@ -387,7 +393,7 @@ async def list_videos(
         videos = [v for v in videos if needle in v.name.lower()]
     return VideosResponse(
         scope=scope,
-        videos=[_item(v, catalog) for v in videos[offset : offset + limit]],
+        videos=[_item(v, catalog, run) for v in videos[offset : offset + limit]],
         total=len(videos),
         counts=_counts(catalog),
         new_in_folder=[NewVideo(path=v.path, name=v.name) for v in new],

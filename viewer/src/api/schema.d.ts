@@ -4771,6 +4771,11 @@ export interface components {
             };
             /** Last Run At */
             last_run_at?: string | null;
+            /**
+             * Run Job Id
+             * @description In a run's list: this video's job in that run, to open it on
+             */
+            run_job_id?: string | null;
         };
         /**
          * VideoManifestEntry

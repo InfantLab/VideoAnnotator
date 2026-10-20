@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/Footer';
 import { TokenStatusIndicator } from '@/components/TokenStatusIndicator';
+import { ActivityIndicator } from '@/components/ActivityIndicator';
 import { ConnectionErrorBanner } from '@/components/ConnectionErrorBanner';
 import { useServerCapabilitiesContext } from '@/contexts/ServerCapabilitiesContext';
 import { isCorsOrNetworkError } from '@/lib/connectionUtils';
@@ -69,6 +70,7 @@ export const AppLayout = () => {
 
             {/* Right: Settings + Token Status */}
             <div className="flex items-center gap-2">
+              <ActivityIndicator />
               <TokenStatusIndicator compact />
               <Link to="/settings">
                 <Button

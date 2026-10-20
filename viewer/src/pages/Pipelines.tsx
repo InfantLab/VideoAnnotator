@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePipelineCatalog, useRefreshPipelineCatalog } from '@/hooks/usePipelineCatalog';
-import { PipelineSelectionStep } from './NewJob';
+import { PipelineSelectionStep } from '@/components/run/PipelineChoice';
 
 /**
  * Installing a pipeline is a one-off setup task, so it gets its own page; the

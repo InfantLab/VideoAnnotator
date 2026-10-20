@@ -1,9 +1,12 @@
 /**
  * Where a video was opened from, and its neighbours there (spec 028 R12):
- * `from=run:<batch id>`, `from=project:<dataset id>` or `from=folder:<path>`.
+ * `from=run:<batch id>`, `from=project:<dataset id>`, `from=folder:<path>`, and
+ * (spec 029) `from=all` and `from=unassigned` for the Videos page's lists.
  */
 
-export type ListKind = 'run' | 'project' | 'folder';
+import type { VideosQuery } from '@/types/videos';
+
+export type ListKind = 'run' | 'project' | 'folder' | 'all' | 'unassigned';
 
 export interface ListContext {
   kind: ListKind;
@@ -11,11 +14,41 @@ export interface ListContext {
 }
 
 export function parseFrom(from: string | null | undefined): ListContext | null {
+  if (from === 'all' || from === 'unassigned') return { kind: from, id: '' };
   const match = /^(run|project|folder):(.+)$/.exec(from ?? '');
   return match ? { kind: match[1] as ListKind, id: match[2] } : null;
 }
 
-export const fromParam = (context: ListContext) => `${context.kind}:${context.id}`;
+export const fromParam = (context: ListContext) =>
+  context.kind === 'all' || context.kind === 'unassigned' ? context.kind : `${context.kind}:${context.id}`;
+
+/** The Videos page's query for a list. */
+export function videosQueryOf(context: ListContext): VideosQuery {
+  switch (context.kind) {
+    case 'project':
+      return { project: context.id };
+    case 'run':
+      return { run: context.id };
+    case 'folder':
+      return { folder: context.id };
+    case 'unassigned':
+      return { notInProject: true };
+    default:
+      return {};
+  }
+}
+
+/** The Videos page showing a list. */
+export function videosHref(context: ListContext): string {
+  const query = videosQueryOf(context);
+  const params = new URLSearchParams();
+  if (query.project) params.set('project', query.project);
+  if (query.run) params.set('run', query.run);
+  if (query.folder) params.set('folder', query.folder);
+  if (query.notInProject) params.set('not_in_project', '1');
+  const search = params.toString();
+  return search ? `/videos?${search}` : '/videos';
+}
 
 /** One video in the list, in the list's order. */
 export interface ListItem {

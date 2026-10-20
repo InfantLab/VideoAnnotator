@@ -8,7 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import React from 'react';
-import { PipelineSelectionStep } from '@/pages/NewJob';
+import { PipelineSelectionStep } from '@/components/run/PipelineChoice';
 import { apiClient } from '@/api/client';
 import type { PipelineDescriptor } from '@/types/pipelines';
 

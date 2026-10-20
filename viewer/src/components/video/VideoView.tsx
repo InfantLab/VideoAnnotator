@@ -15,7 +15,7 @@ import { KeysHelp } from '@/components/video/KeysHelp';
 import { HeaderActions, VideoContext } from '@/components/video/Header';
 import { DebugPanel } from '@/components/DebugPanel';
 import { Footer } from '@/components/Footer';
-import type { ListContext } from '@/lib/listNavigation';
+import { videosHref, type ListContext } from '@/lib/listNavigation';
 import { NoteEditor, type EditingNote } from '@/components/video/NoteEditor';
 import { NotesList } from '@/components/video/NotesList';
 import type { NotesApi } from '@/hooks/useNotes';
@@ -332,7 +332,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
     return [...seen.values()];
   }, [lanes]);
   const context = source.context ?? null;
-  const backTo = context?.kind === 'run' ? `/batches/${encodeURIComponent(context.id)}` : context?.kind === 'project' ? '/datasets' : null;
+  const backTo = context ? videosHref(context) : null;
 
   useVideoKeys({
     toggleDebug: () => setDebugOpen((open) => !open),

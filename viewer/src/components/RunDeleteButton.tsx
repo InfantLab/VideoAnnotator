@@ -1,5 +1,5 @@
-// Delete a whole run (spec 022): its jobs and its results folder, never the
-// videos. Without this, a 100-video run could only be removed job by job.
+// Delete a whole run (spec 022): its results and results folder, never the
+// videos. Without this, a 100-video run could only be removed video by video.
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -17,26 +17,37 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { BatchQueryKeys } from '@/hooks/useBatches';
+import { notify } from '@/lib/notify';
+import { userMessage } from '@/lib/userMessage';
 
 interface RunDeleteButtonProps {
-  batchId: string;
+  runId: string;
+  /** A run of one video without a batch: deleted as that video's run. */
+  single?: boolean;
   videoCount: number;
+  name?: string;
   /** The run's results folder as the researcher sees it. */
   resultsFolder?: string | null;
+  /** Where to go once it's gone; default the Videos page. */
+  after?: string | null;
 }
 
-export function RunDeleteButton({ batchId, videoCount, resultsFolder }: RunDeleteButtonProps) {
+export function RunDeleteButton({ runId, single = false, videoCount, name, resultsFolder, after = '/videos' }: RunDeleteButtonProps) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const remove = useMutation({
-    mutationFn: () => apiClient.deleteBatch(batchId),
+    mutationFn: () => (single ? apiClient.deleteJob(runId) : apiClient.deleteBatch(runId)),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: BatchQueryKeys.all });
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['videos'] });
+      queryClient.invalidateQueries({ queryKey: ['videoRuns'] });
       setOpen(false);
-      navigate('/jobs');
+      notify({
+        title: name ? `Deleted ${name}` : 'Run deleted',
+        body: 'Its results are gone; the videos are where they were.',
+        action: { label: 'Videos', to: '/videos' },
+      });
+      if (after) navigate(after);
     },
   });
 
@@ -53,8 +64,8 @@ export function RunDeleteButton({ batchId, videoCount, resultsFolder }: RunDelet
             <AlertDialogDescription asChild>
               <div className="space-y-2">
                 <p>
-                  All {videoCount} video{videoCount === 1 ? '' : 's'}&apos; jobs and results are
-                  permanently removed. Jobs still running are cancelled first.
+                  The results of its {videoCount === 1 ? 'video' : `${videoCount} videos`} are permanently removed.
+                  If it is still going, it is stopped first.
                 </p>
                 {resultsFolder && (
                   <p>
@@ -62,17 +73,13 @@ export function RunDeleteButton({ batchId, videoCount, resultsFolder }: RunDelet
                     <span className="font-mono text-xs break-all">{resultsFolder}</span>
                   </p>
                 )}
-                <p>The original videos are not touched.</p>
-                {remove.error && (
-                  <p className="text-destructive">
-                    {remove.error instanceof Error ? remove.error.message : String(remove.error)}
-                  </p>
-                )}
+                <p>The videos themselves are not touched.</p>
+                {remove.error && <p className="text-destructive">{userMessage(remove.error)}</p>}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={remove.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={remove.isPending}>Keep it</AlertDialogCancel>
             <AlertDialogAction
               onClick={(event) => {
                 event.preventDefault();

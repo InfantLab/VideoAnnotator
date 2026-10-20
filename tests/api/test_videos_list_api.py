@@ -163,6 +163,7 @@ def test_a_run(api):
     # shows on its row.
     assert (run["total"], run["done"], run["failed"], run["active"]) == (2, 2, 0, False)
     assert len(run["job_ids"]) == 2
+    assert {v["run_job_id"] for v in body["videos"]} == set(run["job_ids"])
 
 
 def test_unknown_project_and_run(api):

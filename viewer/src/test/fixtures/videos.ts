@@ -8,6 +8,7 @@ import { vi } from 'vitest';
 
 import { getApiClient } from '@/api/client';
 import type { SavedDataset } from '@/types/datasets';
+import type { PipelineCatalogResponse, PipelineDescriptor } from '@/types/pipelines';
 import type { Preset } from '@/types/presets';
 import type {
   Activity,
@@ -220,6 +221,19 @@ export function workflow(over: Partial<Preset> = {}): Preset {
   };
 }
 
+export const PIPELINES: PipelineDescriptor[] = [
+  { id: 'face_analysis', name: 'Face Analysis', title: 'Faces', available: true },
+  { id: 'speech_recognition', name: 'Speech Recognition', title: 'Speech', available: true },
+  { id: 'scene_detection', name: 'Scene Detection', title: 'Scenes', available: true },
+  { id: 'vlm_annotation', name: 'VLM Annotation', title: 'Ask AI', available: true },
+];
+
+export const CATALOG: PipelineCatalogResponse = {
+  catalog: { pipelines: PIPELINES },
+  server: { version: '1.7.0.dev0' },
+  restartRequired: false,
+};
+
 /** Stubs the client's spec 029 methods; returns the spies. */
 export function mockVideosApi(
   options: {
@@ -264,6 +278,7 @@ export function mockVideosApi(
     createPreset: vi.spyOn(client, 'createPreset').mockImplementation(async (body: Partial<Preset>) => workflow({ ...body, id: 'w-new' })),
     updatePreset: vi.spyOn(client, 'updatePreset').mockImplementation(async (id: string, body: Partial<Preset>) => workflow({ id, ...body })),
     deletePreset: vi.spyOn(client, 'deletePreset').mockResolvedValue(undefined),
+    getPipelineCatalog: vi.spyOn(client, 'getPipelineCatalog').mockResolvedValue(CATALOG),
     exportResults: vi.spyOn(client, 'exportResults').mockResolvedValue({ blob: new Blob(['run,video\n']), filename: 'Videos.csv', summary: null }),
   };
 }

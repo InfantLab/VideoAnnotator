@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getApiClient } from '@/api/client';
 import { VIDEO_PATH, demoRun, demoVideoRuns, lanesLoaded, mockVideoApi, renderVideoPage, wideLayout } from '@/test/videoPageHarness';
+import { EMPTY, video } from '@/test/fixtures/videos';
+import type { VideoItem } from '@/types/videos';
 
 const client = () => Object.getPrototypeOf(getApiClient());
 const open = (from: string, run?: string) =>
@@ -19,38 +21,36 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('the list a video was opened from', () => {
-  it('a run: "3 of 5", and › opens the next video with results, keeping the list', async () => {
-    const job = (id: string, name: string, status = 'completed') => ({
-      id,
-      status,
-      video_filename: name,
-      video_path: `/data/pk/${name}`,
+  const item = (name: string, over: Partial<VideoItem> = {}): VideoItem =>
+    video(name, { path: `/data/pk/${name}`, paths: [`/data/pk/${name}`], ...over });
+  const listing = (name: string, videos: VideoItem[], kind = 'run') =>
+    vi.spyOn(client(), 'listVideos').mockResolvedValue({
+      ...EMPTY,
+      scope: { kind, id: 'x', name, path: null, recursive: false },
+      videos,
+      total: videos.length,
     });
-    vi.spyOn(client(), 'getBatch').mockResolvedValue({ batch_id: 'b1', batch_name: 'Pilot run' });
-    vi.spyOn(client(), 'getJobs').mockResolvedValue({
-      jobs: [job('j1', 'a.mp4'), job('j2', 'b.mp4'), job('job-1', 'demo_clip.mp4'), job('j4', 'd.mp4', 'failed'), job('j5', 'e.mp4')],
-      total: 5,
-    });
+
+  it('a run: "3 of 5", and › opens the next video that has something to show, keeping the list', async () => {
+    const asked = listing('Pilot run', [
+      item('a.mp4', { run_job_id: 'j1' }),
+      item('b.mp4', { run_job_id: 'j2' }),
+      item('demo_clip.mp4', { run_job_id: 'job-1' }),
+      item('d.mp4', { run_job_id: 'j4', available: false, results: {} }),
+      item('e.mp4', { run_job_id: 'j5' }),
+    ]);
     open('run:b1', 'job-1');
     await lanesLoaded();
     expect(await screen.findByTestId('list-position')).toHaveTextContent('Pilot run · 3 of 5');
+    expect(asked).toHaveBeenCalledWith({ run: 'b1' });
     fireEvent.click(screen.getByRole('button', { name: 'Next video' }));
-    // d.mp4 failed: the next with results is e.mp4.
+    // d.mp4 is gone and has no results: the next is e.mp4, on its job in this run.
     await waitFor(() => expect(lastPathAsked(api)).toBe('/data/pk/e.mp4'));
     expect(screen.getByRole('button', { name: 'Back to the list' })).toBeInTheDocument();
   });
 
-  it('a project in a server folder: its manifest order', async () => {
-    vi.spyOn(client(), 'getDataset').mockResolvedValue({
-      id: 'd1',
-      name: 'Peekaboo study',
-      server_folder: '/data/pk',
-      video_manifest: [
-        { filename: 'a.mp4', size_bytes: 1 },
-        { filename: 'demo_clip.mp4', size_bytes: 1 },
-        { filename: 'c.mp4', size_bytes: 1, relative_path: 'more/c.mp4' },
-      ],
-    });
+  it('a project: the Videos page\'s order', async () => {
+    listing('Peekaboo study', [item('a.mp4'), item('demo_clip.mp4'), item('c.mp4', { path: '/data/pk/more/c.mp4' })], 'project');
     open('project:d1');
     await lanesLoaded();
     expect(await screen.findByTestId('list-position')).toHaveTextContent('Peekaboo study · 2 of 3');
@@ -58,47 +58,24 @@ describe('the list a video was opened from', () => {
     await waitFor(() => expect(lastPathAsked(api)).toBe('/data/pk/more/c.mp4'));
   });
 
-  it('an uploaded project: the stored copy is looked up only when opened', async () => {
-    vi.spyOn(client(), 'getDataset').mockResolvedValue({ id: 'd2', name: 'Uploads', server_folder: null, video_manifest: [] });
-    vi.spyOn(client(), 'getStoredVideos').mockResolvedValue({
-      dataset_id: 'd2',
-      videos: [
-        { filename: 'demo_clip.mp4', size_bytes: 1, job_id: 'job-1' },
-        { filename: 'gone.mp4', size_bytes: 1, job_id: null },
-        { filename: 'z.mp4', size_bytes: 1, job_id: 'jz' },
-      ],
-      stored: 2,
-      missing: 1,
-    });
-    const getJob = vi.spyOn(client(), 'getJob').mockResolvedValue({ id: 'jz', video_path: '/storage/videos/ab/z.mp4' });
-    open('project:d2');
-    await lanesLoaded();
-    expect(await screen.findByTestId('list-position')).toHaveTextContent('Uploads · 1 of 3');
-    expect(getJob).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Next video' }));
-    await waitFor(() => expect(lastPathAsked(api)).toBe('/storage/videos/ab/z.mp4'));
-  });
-
-  it('a folder: its videos in name order', async () => {
-    vi.spyOn(client(), 'browseServerFolders').mockResolvedValue({
-      path: '/data/pk',
-      parent: '/data',
-      roots: ['/data'],
-      directories: [],
-      videos: [
-        { name: 'p10.mp4', path: '/data/pk/p10.mp4', size_bytes: 1 },
-        { name: 'demo_clip.mp4', path: VIDEO_PATH, size_bytes: 1 },
-        { name: 'p2.mp4', path: '/data/pk/p2.mp4', size_bytes: 1 },
-      ],
-      video_count: 3,
-      truncated: false,
-    });
+  it('a folder, all videos, and not in a project', async () => {
+    const asked = listing('/data/pk', [item('demo_clip.mp4'), item('p2.mp4')], 'folder');
     open('folder:/data/pk');
     await lanesLoaded();
-    expect(await screen.findByTestId('list-position')).toHaveTextContent('pk · 1 of 3');
+    expect(await screen.findByTestId('list-position')).toHaveTextContent('pk · 1 of 2');
     expect(screen.getByRole('button', { name: 'Previous video' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Next video' }));
-    await waitFor(() => expect(lastPathAsked(api)).toBe('/data/pk/p2.mp4'));
+    expect(asked).toHaveBeenCalledWith({ folder: '/data/pk' });
+  });
+
+  it.each([
+    ['all', 'All videos', {}],
+    ['unassigned', 'Not in a project', { notInProject: true }],
+  ])('from=%s', async (from, name, query) => {
+    const asked = listing('', [item('demo_clip.mp4'), item('p2.mp4')], 'all');
+    open(from);
+    await lanesLoaded();
+    expect(await screen.findByTestId('list-position')).toHaveTextContent(`${name} · 1 of 2`);
+    expect(asked).toHaveBeenCalledWith(query);
   });
 });
 
@@ -108,7 +85,7 @@ describe('the header', () => {
     renderVideoPage();
     await lanesLoaded();
     const link = within(screen.getByTestId('video-projects')).getByRole('link', { name: 'Peekaboo study' });
-    expect(new URL(link.getAttribute('href')!, 'http://x').searchParams.get('from')).toBe('project:d1');
+    expect(link).toHaveAttribute('href', '/videos?project=d1');
     expect(screen.queryByTestId('list-navigation')).toBeNull();
   });
 

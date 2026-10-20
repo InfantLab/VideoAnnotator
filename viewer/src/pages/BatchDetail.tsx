@@ -209,7 +209,7 @@ const BatchDetail = () => {
           )}
           {batchId && (
             <RunDeleteButton
-              batchId={batchId}
+              runId={batchId}
               videoCount={batch.total}
               resultsFolder={batch.results_folder?.display_path}
             />

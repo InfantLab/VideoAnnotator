@@ -30,6 +30,8 @@ const Datasets = lazy(() => import("./pages/Datasets"));
 const Compare = lazy(() => import("./pages/Compare"));
 const AskAI = lazy(() => import("./pages/AskAI"));
 const Pipelines = lazy(() => import("./pages/Pipelines"));
+const Videos = lazy(() => import("./pages/Videos"));
+const NewRun = lazy(() => import("./pages/NewRun"));
 
 /** Per page, so the navigation stays on screen while a page loads. */
 const page = (element: ReactNode) => (
@@ -61,6 +63,8 @@ const App = () => (
                   {/* Routes with shared AppLayout navigation */}
                   <Route element={<AppLayout />}>
                     <Route path="/" element={<Home />} />
+                    <Route path="/videos" element={page(<Videos />)} />
+                    <Route path="/run" element={page(<NewRun />)} />
                     <Route path="/getting-started" element={page(<GettingStarted />)} />
                     <Route path="/results" element={page(<Results />)} />
                     {/* Was "Library" until v1.6.0; old links still land. */}

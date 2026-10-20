@@ -7,7 +7,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import React from 'react';
-import { PipelineSelectionStep } from '@/pages/NewJob';
+import { PipelineSelectionStep } from '@/components/run/PipelineChoice';
 import { apiClient } from '@/api/client';
 import { pipelineCardMode } from '@/lib/pipelineExtras';
 import type { PipelineDescriptor, PipelineReadiness } from '@/types/pipelines';

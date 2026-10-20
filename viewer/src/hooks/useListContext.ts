@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { apiClient } from '@/api/client';
-import { joinPath, type ListContext, type ListItem } from '@/lib/listNavigation';
+import { videosHref, videosQueryOf, type ListContext, type ListItem } from '@/lib/listNavigation';
 
 export interface ListInfo {
   /** "Peekaboo study", the folder's name, the run's name. */
@@ -13,59 +13,26 @@ export interface ListInfo {
 
 const folderName = (path: string) => path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path;
 
+function listName(context: ListContext, scopeName: string | null | undefined): string {
+  if (context.kind === 'all') return 'All videos';
+  if (context.kind === 'unassigned') return 'Not in a project';
+  if (context.kind === 'folder') return context.id === 'uploads' ? 'Uploaded videos' : folderName(context.id);
+  return scopeName || (context.kind === 'run' ? 'Run' : 'Project');
+}
+
+/** Every list is a scope of the Videos page (spec 029), in its order. */
 async function load(context: ListContext): Promise<ListInfo> {
-  if (context.kind === 'run') {
-    const [batch, jobs] = await Promise.all([
-      apiClient.getBatch(context.id).catch(() => null),
-      // The whole run, not a page of it, so "n of N" and the neighbours are right.
-      apiClient.getJobs(1, 1000, { batchId: context.id }),
-    ]);
-    const name = batch?.batch_name || 'Run';
-    return {
-      name,
-      href: `/batches/${encodeURIComponent(context.id)}`,
-      items: jobs.jobs.map((job) => ({
-        name: job.video_filename || (job.video_path ?? job.id).split(/[\\/]/).pop() || job.id,
-        path: job.video_path ?? null,
-        run: job.id,
-        usable: job.status === 'completed' && !!job.video_path,
-      })),
-    };
-  }
-  if (context.kind === 'project') {
-    const dataset = await apiClient.getDataset(context.id);
-    const folder = dataset.server_folder;
-    if (folder) {
-      return {
-        name: dataset.name,
-        href: '/datasets',
-        items: dataset.video_manifest.map((e) => ({
-          name: e.filename,
-          path: joinPath(folder, e.relative_path || e.filename),
-          usable: true,
-        })),
-      };
-    }
-    const stored = await apiClient.getStoredVideos(context.id);
-    return {
-      name: dataset.name,
-      href: '/datasets',
-      items: stored.videos.map((v) => ({
-        name: v.filename,
-        path: null,
-        // An uploaded video is wherever the job that stored it put it: asked for only when opened.
-        resolve: v.job_id ? async () => (await apiClient.getJob(v.job_id!)).video_path ?? null : undefined,
-        usable: !!v.job_id,
-      })),
-    };
-  }
-  const listing = await apiClient.browseServerFolders(context.id);
+  const listing = await apiClient.listVideos(videosQueryOf(context));
   return {
-    name: folderName(context.id),
-    href: null,
-    items: [...listing.videos]
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
-      .map((v) => ({ name: v.name, path: v.path, usable: true })),
+    name: listName(context, listing.scope.name),
+    href: videosHref(context),
+    items: listing.videos.map((video) => ({
+      name: video.name,
+      path: video.path,
+      run: video.run_job_id ?? undefined,
+      // A missing file with results still opens (spec 028); one with neither has nothing to show.
+      usable: video.available || Object.keys(video.results).length > 0,
+    })),
   };
 }
 

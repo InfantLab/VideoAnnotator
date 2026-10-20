@@ -922,6 +922,11 @@ class APIClient {
     });
   }
 
+  /** Run a failed run of one video again, in place. */
+  async retryJob(jobId: string): Promise<JobResponse> {
+    return this.request(`/api/v1/jobs/${encodeURIComponent(jobId)}/retry`, { method: 'POST' });
+  }
+
   async retryBatch(batchId: string): Promise<BatchRetryResponse> {
     return this.request(`/api/v1/batches/${batchId}/retry`, { method: 'POST' });
   }
