@@ -19,7 +19,7 @@ from urllib.parse import quote
 from .batch.result_files import pipeline_result_files
 from .exporters.readers import classify
 from .provenance import COMPANION_SUFFIX
-from .results_folder import run_folder_of
+from .results_folder import folder_ref, run_folder_of
 from .video_index import Video, cached_index
 
 logger = logging.getLogger(__name__)
@@ -63,9 +63,25 @@ class RunInfo:
     dataset_id: str | None
     run_name: str | None
     pipelines: list[PipelineRunInfo] = field(default_factory=list)
+    batch_name: str | None = None
+    rerun_of: str | None = None
+    progress: float = 0.0
+    queue_position: int | None = None
+    error: str | None = None
+    selected_pipelines: list[str] = field(default_factory=list)
+    config: dict[str, Any] = field(default_factory=dict)
+    results_folder: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "batch_name": self.batch_name,
+            "rerun_of": self.rerun_of,
+            "progress": self.progress,
+            "queue_position": self.queue_position,
+            "error": self.error,
+            "selected_pipelines": self.selected_pipelines,
+            "config": self.config,
+            "results_folder": self.results_folder,
             "job_id": self.job_id,
             "status": self.status,
             "created_at": self.created_at,
@@ -115,6 +131,9 @@ def _run_info(job: Any) -> RunInfo:
                 provenance=result.provenance,
             )
         )
+    results = folder_ref(job.output_dir)
+    if results is not None:
+        results["exists"] = Path(results["path"]).is_dir()
     return RunInfo(
         job_id=job.job_id,
         status=getattr(job.status, "value", str(job.status)),
@@ -124,6 +143,13 @@ def _run_info(job: Any) -> RunInfo:
         dataset_id=job.dataset_id,
         run_name=folder.name if folder is not None else None,
         pipelines=pipelines,
+        batch_name=job.batch_name,
+        rerun_of=job.rerun_of,
+        progress=float(job.progress_percentage or 0),
+        error=job.error_message,
+        selected_pipelines=list(job.selected_pipelines or []),
+        config=dict(job.config or {}),
+        results_folder=results,
     )
 
 
@@ -148,6 +174,11 @@ def runs_for(storage: Any, path: Path | str) -> list[RunInfo]:
             continue
         if job is not None:
             runs.append(_run_info(job))
+    if any(r.status == "pending" for r in runs):
+        waiting = storage.list_jobs(status_filter="pending")
+        for run in runs:
+            if run.status == "pending" and run.job_id in waiting:
+                run.queue_position = waiting.index(run.job_id) + 1
     return sorted(runs, key=_created, reverse=True)
 
 

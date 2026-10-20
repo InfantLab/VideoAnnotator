@@ -147,3 +147,25 @@ def test_the_page_of_an_upload_lists_its_reruns_run(tmp_path):
         assert [r["job_id"] for r in body["runs"]] == [rerun_body["id"], first_id]
         assert body["paths"][0] == str(Path(rerun_body["video_path"]).resolve())
         assert len(body["paths"]) == 2
+
+
+def test_a_waiting_run_has_its_place_in_the_queue_and_settings(tmp_path):
+    video = tmp_path / "queued" / "p01_t1.mp4"
+    video.parent.mkdir()
+    video.write_bytes(b"video")
+    job = BatchJob(
+        video_path=video,
+        output_dir=tmp_path / "out_q",
+        status=JobStatus.PENDING,
+        selected_pipelines=["scene_detection"],
+        config={"scene_detection": {"threshold": 0.4}},
+    )
+    get_storage_backend().save_job_metadata(job)
+
+    [run] = _runs(str(video)).json()["runs"]
+
+    assert run["queue_position"] >= 1
+    assert run["selected_pipelines"] == ["scene_detection"]
+    assert run["config"] == {"scene_detection": {"threshold": 0.4}}
+    assert run["results_folder"]["path"] == str(tmp_path / "out_q")
+    assert run["results_folder"]["exists"] is False

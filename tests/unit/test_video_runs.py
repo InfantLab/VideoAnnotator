@@ -20,8 +20,12 @@ class FakeStorage:
     def __init__(self, *jobs: BatchJob):
         self.jobs = {j.job_id: j for j in jobs}
 
-    def list_jobs(self):
-        return list(self.jobs)
+    def list_jobs(self, status_filter=None):
+        return [
+            job_id
+            for job_id, job in self.jobs.items()
+            if status_filter is None or job.status.value == status_filter
+        ]
 
     def load_job_metadata(self, job_id):
         return self.jobs[job_id]

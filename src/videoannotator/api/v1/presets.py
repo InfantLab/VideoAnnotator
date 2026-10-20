@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ...database.crud import SavedPipelinePresetCRUD
@@ -37,6 +37,16 @@ class PresetCreateRequest(BaseModel):
     selected_pipelines: list[str] = []
     config: dict[str, Any] = {}
     tags: dict[str, Any] = {}
+    export_choices: dict[str, Any] | None = None
+    source: dict[str, Any] | None = None
+
+
+_EXPORT_CHOICES = (
+    "Spec 029: what a run with this workflow offers first: "
+    '{"table": "csv" | "parquet", "elan": bool, "methods": bool}; null for the '
+    "defaults (a CSV table, ELAN and methods)"
+)
+_SOURCE = 'Spec 029: what it was saved from: {"kind": "project" | "run", "id", "name"}'
 
 
 class PresetUpdateRequest(BaseModel):
@@ -47,6 +57,8 @@ class PresetUpdateRequest(BaseModel):
     selected_pipelines: list[str] | None = None
     config: dict[str, Any] | None = None
     tags: dict[str, Any] | None = None
+    export_choices: dict[str, Any] | None = None
+    source: dict[str, Any] | None = None
 
 
 class PresetResponse(BaseModel):
@@ -61,6 +73,10 @@ class PresetResponse(BaseModel):
     selected_pipelines: list[str]
     config: dict[str, Any]
     tags: dict[str, Any]
+    export_choices: dict[str, Any] | None = Field(
+        default=None, description=_EXPORT_CHOICES
+    )
+    source: dict[str, Any] | None = Field(default=None, description=_SOURCE)
     created_at: datetime
     updated_at: datetime | None = None
     last_used_at: datetime | None = None
@@ -95,6 +111,8 @@ def _to_response(preset: Any) -> PresetResponse:
         selected_pipelines=preset.selected_pipelines or [],
         config=preset.config or {},
         tags=preset.tags or {},
+        export_choices=getattr(preset, "export_choices", None),
+        source=getattr(preset, "source", None),
         created_at=preset.created_at,
         updated_at=preset.updated_at,
         last_used_at=preset.last_used_at,
@@ -192,6 +210,8 @@ async def create_preset(
         selected_pipelines=request.selected_pipelines,
         config=request.config,
         tags=request.tags,
+        export_choices=request.export_choices,
+        source=request.source,
     )
     if preset is None:
         raise APIError(
@@ -249,6 +269,8 @@ async def update_preset(
         selected_pipelines=request.selected_pipelines,
         config=request.config,
         tags=request.tags,
+        export_choices=request.export_choices,
+        source=request.source,
     )
     if updated is None:
         raise APIError(

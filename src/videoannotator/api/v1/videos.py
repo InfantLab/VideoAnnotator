@@ -214,6 +214,20 @@ class RunInfo(BaseModel):
         default=None, description="The run folder's name (spec 022), when it has one"
     )
     pipelines: list[PipelineRunInfo] = Field(default_factory=list)
+    batch_name: str | None = None
+    rerun_of: str | None = None
+    progress: float = Field(default=0.0, description="Percent of its pipelines done")
+    queue_position: int | None = Field(
+        default=None, description="While waiting: its place in the queue, from 1"
+    )
+    error: str | None = None
+    selected_pipelines: list[str] = Field(default_factory=list)
+    config: dict[str, Any] = Field(
+        default_factory=dict, description="The settings it ran with"
+    )
+    results_folder: dict[str, Any] | None = Field(
+        default=None, description="Where its results are (spec 022), and `exists`"
+    )
 
 
 class ProjectRef(BaseModel):
