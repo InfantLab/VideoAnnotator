@@ -138,6 +138,11 @@ class VideoScope(BaseModel):
     recursive: bool = False
 
 
+class Subfolder(BaseModel):
+    path: str
+    name: str
+
+
 class VideosResponse(BaseModel):
     scope: VideoScope
     videos: list[VideoItem]
@@ -145,6 +150,10 @@ class VideosResponse(BaseModel):
     counts: VideoCounts
     new_in_folder: list[NewVideo] = Field(default_factory=list)
     runs: list[RunSummary] = Field(default_factory=list)
+    subfolders: list[Subfolder] = Field(
+        default_factory=list,
+        description="For a folder: the folders inside it that have videos, to open next",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -262,6 +271,30 @@ def _counts(catalog: Catalog) -> VideoCounts:
         ),
         folders=listed,
     )
+
+
+def subfolders_with_videos(folder: str) -> list[Subfolder]:
+    """The folders directly inside `folder` with videos in or below them."""
+    from ...results_folder import results_root
+    from .ingest import has_videos_below, is_noise
+
+    results = results_root()
+    found = []
+    try:
+        entries = sorted(Path(folder).iterdir(), key=lambda p: p.name.lower())
+    except OSError:
+        return []
+    for entry in entries:
+        try:
+            if (
+                entry.is_dir()
+                and not is_noise(entry, results)
+                and has_videos_below(entry)
+            ):
+                found.append(Subfolder(path=str(entry), name=entry.name))
+        except OSError:
+            continue
+    return found
 
 
 def _resolved_folder(raw: str) -> str:
@@ -398,6 +431,11 @@ async def list_videos(
         counts=_counts(catalog),
         new_in_folder=[NewVideo(path=v.path, name=v.name) for v in new],
         runs=[run_summary(r, catalog) for r in runs],
+        subfolders=(
+            subfolders_with_videos(scope.path)
+            if scope.kind == "folder" and scope.path and scope.path != UPLOADS
+            else []
+        ),
     )
 
 

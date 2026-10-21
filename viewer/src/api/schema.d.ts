@@ -4681,6 +4681,13 @@ export interface components {
             /** Duration Sec */
             duration_sec?: number | null;
         };
+        /** Subfolder */
+        Subfolder: {
+            /** Path */
+            path: string;
+            /** Name */
+            name: string;
+        };
         /** TryRequest */
         TryRequest: {
             /** Video Path */
@@ -4908,6 +4915,11 @@ export interface components {
             new_in_folder?: components["schemas"]["NewVideo"][];
             /** Runs */
             runs?: components["schemas"]["RunSummary"][];
+            /**
+             * Subfolders
+             * @description For a folder: the folders inside it that have videos, to open next
+             */
+            subfolders?: components["schemas"]["Subfolder"][];
         };
         /** VideosRunRequest */
         VideosRunRequest: {

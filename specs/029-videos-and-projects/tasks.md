@@ -202,8 +202,8 @@ viewer opens on Videos.
 - [X] T061 Empty the vocabulary test's `KNOWN` list (fix what's left on Home, Pipelines, Settings, Compare, Ask AI, the Video page) so SC-002 holds for every route
 - [X] T062 [P] Update `docs/usage/video_page.md`, `docs/usage/exporting_results.md`, `docs/usage/ask_ai.md` and `docs/usage/README.md` for the new pages and words (links to Videos instead of Jobs/Results/Datasets); API reference for the new routes in the docs where 028's are; `CHANGELOG.md` Unreleased: Videos and projects, workflows, New run, the nav, help, the new endpoints and fields, and that any signed-in user may now edit a saved dataset (R4)
 - [X] T063 [P] Check the bundle stays within 300 KB gzipped (`bash scripts/build_viewer.sh` reports it); Videos and New run lazy
-- [ ] T064 Walk through `quickstart.md` in a browser (screenshots from the dev container), measure SC-001, record results in `specs/029-videos-and-projects/checks.md`
-- [ ] T065 Update `docs/development/roadmap_v1.7.0.md` Phase 1 (029 built, link checks.md; 028's T056 done), `specs/028-video-page/tasks.md` T056 ticked, `CLAUDE.md` Current Plan, and the spec's Status to "Built"
+- [X] T064 Walk through `quickstart.md` in a browser (screenshots from the dev container), measure SC-001, record results in `specs/029-videos-and-projects/checks.md`
+- [X] T065 Update `docs/development/roadmap_v1.7.0.md` Phase 1 (029 built, link checks.md; 028's T056 done), `specs/028-video-page/tasks.md` T056 ticked, `CLAUDE.md` Current Plan, and the spec's Status to "Built"
 
 ---
 

@@ -3,8 +3,9 @@
 A video is every path the server can tell holds one file: the same resolved
 path, hard links of one file (same device and inode, which every rerun of an
 upload is), a rerun of a stored upload (so the link survives deleting one
-copy), or the same input sha256 recorded in provenance. Never the name or the
-size: two recordings of the same length stay two videos.
+copy), or the same input sha256 recorded in provenance where one of the paths is an
+upload (two copies in shared folders stay two videos, as the researcher sees
+them). Never the name or the size: two recordings of the same length stay two.
 
 Built from `job_summaries()` (one query) plus one stat per distinct path, and
 cached until the jobs change or a few seconds pass.
@@ -242,23 +243,33 @@ class VideoIndex:
                 self._groups.union(path, other)
 
     def _join_jobs(self) -> None:
-        by_sha: dict[str, str] = {}
+        by_sha: dict[str, list[tuple[str, bool]]] = {}
         for job in self.summaries:
             if not job.video_path:
                 continue
             path = self.resolved(job.video_path)
             self._add_path(path)
+            uploaded = self._is_upload(job, path)
             for result in job.pipelines.values():
                 if result.sha256:
-                    other = by_sha.setdefault(result.sha256, path)
-                    if other != path:
-                        self._groups.union(path, other)
+                    by_sha.setdefault(result.sha256, []).append((path, uploaded))
             original = self.jobs_by_id.get(job.rerun_of or "")
             if original is not None and original.video_path:
                 original_path = self.resolved(original.video_path)
                 if self._stored_in(original, original_path):
                     self._add_path(original_path)
                     self._groups.union(path, original_path)
+        # One content in several places: an upload joins every copy, but two
+        # files in shared folders stay two videos, as the researcher sees them.
+        for found in by_sha.values():
+            uploads = [p for p, uploaded in found if uploaded]
+            if not uploads:
+                continue
+            for path, _ in found:
+                self._groups.union(path, uploads[0])
+
+    def _is_upload(self, job: JobSummary, path: str) -> bool:
+        return _within(path, self.uploads_root) or self._stored_in(job, path)
 
     def _stored_in(self, job: JobSummary, path: str) -> bool:
         return bool(job.storage_path) and _within(

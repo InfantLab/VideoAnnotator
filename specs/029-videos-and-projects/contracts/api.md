@@ -55,6 +55,10 @@ Query: one of `project=<dataset id>`, `folder=<path>` (+ `recursive=true`), `not
   names clash.
 - `new_in_folder` only for a project that is a selection of a folder (R4); else `[]`.
 - `runs`: for `project=` its runs newest first; for `run=` that one run; else `[]`.
+- `subfolders` (added in the walk-through): for a folder, the folders directly inside it with
+  videos, `[{path, name}]`, so a shared folder's subfolders can be opened from Videos.
+- `videos[].run_job_id`: in a run's list, the video's job in that run (the Video page opens on it).
+- `results[*].error`: why a pipeline failed or stopped.
 - A folder outside the shared folders and the uploads folder: 403 `PATH_NOT_ALLOWED` (as
   `readable_video`). Unknown project or run: 404 `DATASET_NOT_FOUND` / `RUN_NOT_FOUND`.
 - Performance: under 1 s with 5,000 jobs and 2,000 videos (R11).
@@ -135,6 +139,13 @@ one per video). Responses, summary header and errors as spec 025's routes
 | `DELETE /datasets/{id}/videos` (new, convenience) | `{"paths": [...]}` removes those entries; never touches files or results |
 | `GET/POST/PUT /presets…` | `export_choices` and `source` in requests and responses; export/import JSON includes them |
 | `POST /ingest`, `POST /datasets/{id}/run`, `POST /batches/{id}/rerun` | Also set `current_settings` and `last_run_settings` (no response change) |
+
+## Saving without sign-in
+
+On a server without sign-in (`AUTH_REQUIRED=false`) and no key, saved datasets and presets are
+owned by a local `anonymous` user (created on first use, not counted as a user by
+`generate-token`). With sign-in required, saving without an identity is still 400
+`OWNER_IDENTITY_REQUIRED`.
 
 ## Unchanged
 

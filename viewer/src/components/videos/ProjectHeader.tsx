@@ -42,7 +42,8 @@ function settingsOrigin(settings: RunSettings): string {
   if (from?.kind === 'workflow') return `from the workflow ${from.name ?? ''}${tail}`;
   if (from?.kind === 'edit') return `edited${tail}`;
   if (from?.kind === 'run') return `from the run ${from.name ?? ''}${tail}`;
-  return 'the defaults until it runs';
+  if (settings.source.kind === 'last_used') return `none of its own yet: your last run${settings.source.name ? `, ${settings.source.name}` : ''}`;
+  return 'none of its own yet: the defaults';
 }
 
 function question(config: Record<string, unknown>): string | null {

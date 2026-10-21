@@ -24,7 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   workflow, the project's settings, your last run, or the defaults.
 - **Saved datasets are projects** and **presets are workflows**, with everything saved before
   still there. Any signed-in user may now edit a saved dataset (name, videos, settings) through
-  the API; deleting one is still for its owner or an administrator.
+  the API; deleting one is still for its owner or an administrator. On a server without sign-in,
+  projects and workflows can now be saved (they belong to a local anonymous user).
 - **One video, many copies**: an upload and the copies its reruns make are one video, so the Video
   page of an uploaded video now lists its reruns (and its notes follow it); `GET /videos/runs`
   returns the runs of every path of the video, with a new `paths` field.

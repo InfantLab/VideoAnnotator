@@ -29,6 +29,7 @@ from ...storage.base import StorageBackend
 from ..database import get_storage_backend
 from ..errors import APIError
 from ..middleware.auth import validate_api_key
+from ..owner import owner_id
 
 logger = logging.getLogger("videoannotator.api")
 
@@ -160,18 +161,10 @@ def _to_response(dataset: Any) -> DatasetResponse:
     )
 
 
-def _require_owner_identity(user: dict[str, Any] | None) -> str:
-    """Datasets always have a non-null owner (FR-001), unlike jobs which
-    allow anonymous submission -- so a save/modify call needs a resolved
-    identity even when the server's AUTH_REQUIRED toggle is off."""
-    if user is None or not user.get("id"):
-        raise APIError(
-            status_code=400,
-            code="OWNER_IDENTITY_REQUIRED",
-            message="Saving or modifying a dataset requires an authenticated identity.",
-            hint="Provide a valid API key (Authorization: Bearer ...).",
-        )
-    return str(user["id"])
+def _require_owner_identity(user: dict[str, Any] | None, db: Session) -> str:
+    """Datasets always have a non-null owner (FR-001): the caller, or
+    without sign-in the local anonymous user (spec 029)."""
+    return owner_id(db, user, "dataset")
 
 
 def _get_or_404(db: Session, dataset_id: str):
@@ -241,7 +234,7 @@ async def create_dataset(
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> DatasetResponse:
     """Save a new dataset."""
-    owner_id = _require_owner_identity(user)
+    owner_id = _require_owner_identity(user, db)
     dataset = SavedDatasetCRUD.create(
         db,
         owner_user_id=owner_id,
@@ -297,7 +290,7 @@ async def update_dataset(
     """Update a saved dataset's name, description, manifest and/or settings."""
     from ... import run_settings
 
-    _require_owner_identity(user)
+    _require_owner_identity(user, db)
     _get_or_404(db, dataset_id)
     current = None
     if request.current_settings is not None:
@@ -344,7 +337,7 @@ async def delete_dataset(
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> None:
     """Delete a saved dataset."""
-    owner_id = _require_owner_identity(user)
+    owner_id = _require_owner_identity(user, db)
     dataset = _get_or_404(db, dataset_id)
     _require_owner_or_admin(
         dataset, owner_id, bool(user and user.get("is_admin", False))
@@ -388,7 +381,7 @@ async def add_dataset_videos(
     db: Session = Depends(get_db),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> DatasetResponse:
-    _require_owner_identity(user)
+    _require_owner_identity(user, db)
     return _change_videos(db, dataset_id, request.paths, add=True)
 
 
@@ -407,7 +400,7 @@ async def remove_dataset_videos(
     db: Session = Depends(get_db),
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> DatasetResponse:
-    _require_owner_identity(user)
+    _require_owner_identity(user, db)
     return _change_videos(db, dataset_id, request.paths, add=False)
 
 

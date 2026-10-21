@@ -49,12 +49,14 @@ tools, decisions, journeys). Built by, in order:
       person or speaker, zoom, the data table beside the video, the run per lane, notes;
       streamed, with no folder question. Built 2026-10-20
       ([checks](../../specs/028-video-page/checks.md)); the browser walk-through (quickstart,
-      SC-001/003/004 measured) is still to do, and the old player stays for demo results until 029.
+      SC-001/003/004 measured) is still to do. The old player is gone (029 finished its T056).
 - [ ] [`specs/029-videos-and-projects`](../../specs/029-videos-and-projects/spec.md): one Videos page
       with folders and projects (from saved datasets), settings projects remember, workflows
       (from presets), the new nav, help in context. Takes over v1.6.0's Phase 6 (corpus
       overview); [`specs/010-corpus-analysis-foundations`](../../specs/010-corpus-analysis-foundations/spec.md)
-      to be reconciled with it.
+      to be reconciled with it. Built 2026-10-21
+      ([checks](../../specs/029-videos-and-projects/checks.md): walk-through done in a browser;
+      SC-001 with a first-time user and the pilot journeys still to do).
 - [ ] Movement metrics (spec to write, after 029; pulled forward from v1.8.0 Phase 3): simple
       per-person measures computed on the server, such as average frame-to-frame deltas of pose
       keypoints, added to the output additively and shown as numeric lanes on the Video page.
@@ -210,7 +212,8 @@ seam, API fuzzing, mutation reports, and the coverage gate.
 ## ✅ Success Criteria
 
 - [ ] Every default model has a model card citing its upstream evaluation.
-- [ ] The viewer shows none of the words job, batch, dataset or preset (spec 029 SC-002).
+- [x] The viewer shows none of the words job, batch, dataset or preset (spec 029 SC-002; a test
+      renders every route).
 - [ ] A first-time user gets a first Ask AI answer on their own video in under a minute (spec 027
       SC-001).
 - [ ] Nothing leaves the user's machine unless they switched on a hosted backend, and the viewer

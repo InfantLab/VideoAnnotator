@@ -63,11 +63,19 @@ on `1.7-dev` toward v1.7.0, the public release (`docs/development/roadmap_v1.7.0
 overhaul (design `specs/023-viewer-overhaul`, built by `027-ask-ai`, `028-video-page`,
 `029-videos-and-projects`), connectors, docs, pilot. 027 built 2026-10-19 (`specs/027-ask-ai/checks.md`:
 the walk-through with a vision model is still to do, T068). 028 built 2026-10-20
-(`specs/028-video-page/checks.md`: the browser walk-through, T062, is still to do; T056 finishes
-with 029, which retires the old player's last users). 029 planned 2026-10-20
-(`specs/029-videos-and-projects/plan.md`: a video is a group of paths, R1; projects are saved
-datasets, workflows are presets). Next: `/speckit-tasks` for 029.
+(`specs/028-video-page/checks.md`: the browser walk-through, T062, is still to do). 029 built
+2026-10-21 (`specs/029-videos-and-projects/checks.md`: browser walk-through done; SC-001 with a
+first-time user and the pilot journeys still to do). The viewer is organised around videos
+(Videos, New run at `/run`, the Video page's Runs tab); old pages redirect; the viewer never says
+job, batch, dataset or preset (`viewer/src/test/vocabulary.test.tsx`). Next: connectors, docs and
+the pilot in the v1.7.0 roadmap; reconcile spec 010 with the Videos page.
 ## Recent Changes
+- 029-videos-and-projects: a video is a group of paths (`video_index.py`: same path, inode, rerun
+  of a stored upload, or a content hash through an upload); project membership from saved
+  datasets (`projects.py`, manifest entries may carry `path`); remembered settings
+  (`run_settings.py`, `user_preferences`); new routes in `api/v1/video_list.py` and
+  `/videos/export/*`; without sign-in, projects and workflows belong to a local anonymous user
+  (`api/owner.py`).
 - 012-python-313-support: `requires-python` widens to `>=3.12,<3.14`; CI tests both;
   `.python-version` makes 3.13 the dev/Docker default; ruff/mypy targets stay at 3.12 (oldest
   supported).

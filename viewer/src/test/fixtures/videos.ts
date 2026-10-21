@@ -136,6 +136,7 @@ export function videosResponse(query: VideosQuery = {}, over: Partial<VideosResp
     counts: COUNTS,
     new_in_folder: query.project === PROJECT_ID ? [{ path: `${PK}/p49_t1.mp4`, name: 'p49_t1.mp4' }] : [],
     runs: query.project ? [run(), FINISHED_RUN] : query.run ? [query.run === 'b1' ? FINISHED_RUN : run({ id: query.run })] : [],
+    subfolders: query.folder && query.folder !== 'uploads' ? [{ path: `${query.folder}/site_a`, name: 'site_a' }] : [],
     ...over,
   };
 }
@@ -147,6 +148,7 @@ export const EMPTY: VideosResponse = {
   counts: { all: 0, not_in_project: 0, projects: [], folders: [] },
   new_in_folder: [],
   runs: [],
+  subfolders: [],
 };
 
 export function activityRun(over: Partial<ActivityRun> = {}): ActivityRun {

@@ -80,6 +80,11 @@ Video page of the first doesn't show the rerun: the case the maintainer hit on 2
 Inode and `rerun_of` need no hashing; `sha256` is already recorded. The spec's edge case
 ("one video when the server can tell, otherwise two, never silently merged") is exactly this.
 
+**Amended 2026-10-21 (walk-through, `checks.md`)**: the same `sha256` joins paths only when one
+of them is an upload (under the storage root, or in a job's own folder). The quickstart's three
+byte-identical clips in one shared folder were shown as one video; files a researcher sees as
+separate in a folder stay separate videos.
+
 **Alternatives**: a `videos` table with an id (a second identity to keep in step with jobs and
 manifests, and a migration for every existing job; worth it only if grouping turns out too slow,
 R11); hashing every file (tens of seconds for a large video, on first open); joining by name and

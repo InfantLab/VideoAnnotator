@@ -44,6 +44,9 @@ Past a few hundred videos the table only draws the rows on screen, so it stays q
 A folder shows every video in it, run or not, so it is where you start with new recordings: pick
 the folder, **Run…**, and its rows fill in as the videos finish.
 
+A folder that holds other folders lists them under its name (**Folders inside**): open one to see
+just its videos.
+
 You can only see folders the server has been given (see [Installation](../installation/INSTALLATION.md)
 for sharing folders with a Docker or remote server). Videos from another computer are uploaded in
 New run: choose **This computer**.

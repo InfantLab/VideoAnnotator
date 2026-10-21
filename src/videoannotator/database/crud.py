@@ -44,8 +44,13 @@ class UserCRUD:
 
     @staticmethod
     def count(db: Session) -> int:
-        """Return the total number of users."""
-        return db.query(User).count()
+        """Return the number of real users: not the local owner of what is
+        saved without sign-in (spec 029, `api/owner.py`)."""
+        return (
+            db.query(User)
+            .filter(User.email != "anonymous@videoannotator.local")
+            .count()
+        )
 
     @staticmethod
     def update(db: Session, user_id: str, **kwargs) -> User | None:

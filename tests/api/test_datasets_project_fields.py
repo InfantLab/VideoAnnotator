@@ -148,3 +148,42 @@ def test_a_project_from_a_selection_and_a_clashing_name(api):
 
     assert again.status_code == 409
     assert again.json()["error"]["code"] == "DATASET_NAME_CONFLICT"
+
+
+def test_without_sign_in_projects_and_workflows_still_save(api, monkeypatch):
+    """A single-user install runs without sign-in: Add to project must work."""
+    from videoannotator.api.main import app
+    from videoannotator.api.middleware.auth import validate_api_key
+    from videoannotator.database.crud import UserCRUD
+    from videoannotator.database.database import SessionLocal
+
+    monkeypatch.setenv("AUTH_REQUIRED", "false")
+    app.dependency_overrides[validate_api_key] = lambda: None
+    with SessionLocal() as db:
+        users_before = UserCRUD.count(db)
+
+    made = api.client.post("/api/v1/datasets/", json={"name": "No sign-in"})
+    saved = api.client.post(
+        "/api/v1/presets/", json={"name": "No sign-in", "selected_pipelines": []}
+    )
+
+    assert made.status_code == 201, made.text
+    assert saved.status_code == 201, saved.text
+    assert api.client.delete(f"/api/v1/datasets/{made.json()['id']}").status_code == 204
+    with SessionLocal() as db:
+        assert UserCRUD.count(db) == users_before
+
+
+def test_with_sign_in_required_an_identity_is_still_needed(api, monkeypatch):
+    from videoannotator.api.main import app
+    from videoannotator.api.middleware.auth import validate_api_key
+
+    monkeypatch.setenv("AUTH_REQUIRED", "true")
+    app.dependency_overrides[validate_api_key] = lambda: None
+
+    r = api.client.post("/api/v1/datasets/", json={"name": "Nobody"})
+
+    assert (r.status_code, r.json()["error"]["code"]) == (
+        400,
+        "OWNER_IDENTITY_REQUIRED",
+    )

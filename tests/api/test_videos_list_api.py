@@ -193,3 +193,14 @@ def test_two_projects_with_one_name_carry_their_owners(api):
 
     assert [p["name"] for p in projects] == ["QS", "QS"]
     assert all("owner_name" in p for p in projects)
+
+
+def test_a_folder_names_its_subfolders_with_videos(api):
+    write_video(api.shared / "pk" / "p01.mp4")
+    write_video(api.shared / "qs" / "deeper" / "c.mp4")
+    (api.shared / "empty").mkdir()
+
+    body = api.videos(folder=str(api.shared))
+
+    assert [f["name"] for f in body["subfolders"]] == ["pk", "qs"]
+    assert body["total"] == 0

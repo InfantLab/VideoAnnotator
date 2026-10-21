@@ -46,6 +46,13 @@ describe('the left side', () => {
     expect(screen.getByRole('link', { name: /QS \(ana\)/ })).toBeInTheDocument();
   });
 
+  it("a folder offers the folders inside it", async () => {
+    mockVideosApi();
+    show(`/videos?folder=${encodeURIComponent(PK)}`);
+    const inside = await screen.findByTestId('subfolders');
+    expect(within(inside).getByRole('link', { name: 'site_a' })).toHaveAttribute('href', `/videos?folder=${encodeURIComponent(`${PK}/site_a`)}`);
+  });
+
   it('asks for the scope in the address', async () => {
     const api = mockVideosApi();
     show(`/videos?folder=${encodeURIComponent(PK)}&recursive=1`);

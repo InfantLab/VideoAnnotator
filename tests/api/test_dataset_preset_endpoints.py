@@ -337,9 +337,10 @@ class TestSavedPresets:
 
 
 class TestOwnerIdentityRequired:
-    def test_anonymous_create_is_rejected_with_clear_error(self, client):
-        """No auth dependency override => validate_api_key returns None in
-        dev/no-auth mode; saving still requires a resolvable owner."""
+    def test_anonymous_create_is_rejected_with_clear_error(self, client, monkeypatch):
+        """With sign-in required, saving needs a resolvable owner. (Without
+        sign-in, spec 029 saves under a local anonymous owner instead.)"""
+        monkeypatch.setenv("AUTH_REQUIRED", "true")
         client.app.dependency_overrides[validate_api_key] = lambda: None
         resp = client.post(
             "/api/v1/datasets/", json={"name": "Anon", "video_manifest": []}

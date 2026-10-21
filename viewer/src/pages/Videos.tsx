@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
 import type { ExportScope } from '@/api/client';
@@ -27,7 +27,7 @@ import { useVideos } from '@/hooks/useVideos';
 import type { RunTarget } from '@/lib/runTarget';
 import { videosWord } from '@/lib/runs';
 import { userMessage } from '@/lib/userMessage';
-import { listContextOf, paramsOf, pipelinesOf, queryOf, scopeTitle } from '@/lib/videosScope';
+import { hrefOf, listContextOf, paramsOf, pipelinesOf, queryOf, scopeTitle } from '@/lib/videosScope';
 import type { VideoItem, VideosQuery } from '@/types/videos';
 
 function runTargetOf(query: VideosQuery, title: string, videos: VideoItem[]): RunTarget | null {
@@ -155,6 +155,18 @@ export default function Videos() {
               exportScope={exportScopeOf(query, data.videos)}
               runs={data.runs}
               videos={data.videos}
+              below={
+                data.subfolders.length > 0 && (
+                  <p className="flex flex-wrap items-center gap-2 text-sm" data-testid="subfolders">
+                    <span className="text-muted-foreground">Folders inside:</span>
+                    {data.subfolders.map((f) => (
+                      <Link key={f.path} to={hrefOf({ folder: f.path })} className="rounded-md border px-2 py-0.5 hover:bg-muted">
+                        {f.name}
+                      </Link>
+                    ))}
+                  </p>
+                )
+              }
             />
           )
         )}

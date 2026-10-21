@@ -20,6 +20,7 @@ from ...registry.pipeline_loader import extras_available
 from ...registry.pipeline_registry import get_registry
 from ..errors import APIError
 from ..middleware.auth import validate_api_key
+from ..owner import owner_id
 
 logger = logging.getLogger("videoannotator.api")
 
@@ -120,18 +121,10 @@ def _to_response(preset: Any) -> PresetResponse:
     )
 
 
-def _require_owner_identity(user: dict[str, Any] | None) -> str:
-    """Presets always have a non-null owner (FR-003), unlike jobs which
-    allow anonymous submission -- so a save/modify call needs a resolved
-    identity even when the server's AUTH_REQUIRED toggle is off."""
-    if user is None or not user.get("id"):
-        raise APIError(
-            status_code=400,
-            code="OWNER_IDENTITY_REQUIRED",
-            message="Saving or modifying a preset requires an authenticated identity.",
-            hint="Provide a valid API key (Authorization: Bearer ...).",
-        )
-    return str(user["id"])
+def _require_owner_identity(user: dict[str, Any] | None, db: Session) -> str:
+    """Presets always have a non-null owner (FR-001): the caller, or
+    without sign-in the local anonymous user (spec 029)."""
+    return owner_id(db, user, "preset")
 
 
 def _get_or_404(db: Session, preset_id: str):
@@ -201,7 +194,7 @@ async def create_preset(
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> PresetResponse:
     """Save a new pipeline preset."""
-    owner_id = _require_owner_identity(user)
+    owner_id = _require_owner_identity(user, db)
     preset = SavedPipelinePresetCRUD.create(
         db,
         owner_user_id=owner_id,
@@ -256,7 +249,7 @@ async def update_preset(
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> PresetResponse:
     """Update a saved preset's name, description, pipelines, config, and/or tags."""
-    owner_id = _require_owner_identity(user)
+    owner_id = _require_owner_identity(user, db)
     preset = _get_or_404(db, preset_id)
     _require_owner_or_admin(
         preset, owner_id, bool(user and user.get("is_admin", False))
@@ -296,7 +289,7 @@ async def delete_preset(
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> None:
     """Delete a saved pipeline preset."""
-    owner_id = _require_owner_identity(user)
+    owner_id = _require_owner_identity(user, db)
     preset = _get_or_404(db, preset_id)
     _require_owner_or_admin(
         preset, owner_id, bool(user and user.get("is_admin", False))

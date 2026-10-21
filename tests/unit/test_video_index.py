@@ -69,6 +69,28 @@ def test_two_uploads_with_the_same_recorded_sha256_are_one(tmp_path):
     assert set(video.results) == {"face_analysis", "scene_detection"}
 
 
+def test_an_upload_and_a_folder_copy_with_one_sha256_are_one(tmp_path):
+    jobs = JobsDb(tmp_path)
+    jobs.upload("a.mp4", pipelines={"face_analysis": ("completed", None, "f00d")})
+    jobs.make_job(
+        write_video(tmp_path / "data" / "a.mp4"),
+        pipelines={"scene_detection": ("completed", None, "f00d")},
+    )
+
+    assert len(_index(jobs).videos()) == 1
+
+
+def test_identical_copies_in_a_shared_folder_stay_separate_videos(tmp_path):
+    jobs = JobsDb(tmp_path)
+    for name in ("clip_a.mp4", "clip_b.mp4", "clip_c.mp4"):
+        jobs.make_job(
+            write_video(tmp_path / "qs" / name),
+            pipelines={"scene_detection": ("completed", None, "same")},
+        )
+
+    assert len(_index(jobs).videos()) == 3
+
+
 def test_different_files_with_the_same_name_and_size_stay_two(tmp_path):
     jobs = JobsDb(tmp_path)
     one = tmp_path / "site_a" / "p01.mp4"
