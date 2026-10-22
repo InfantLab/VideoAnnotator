@@ -375,7 +375,11 @@ def write_parquet(
 
 
 def vlm_coco_from_answers(
-    answers: list[dict[str, Any]], *, video_stem: str, model: str
+    answers: list[dict[str, Any]],
+    *,
+    video_stem: str,
+    model: str,
+    backend: str = "ollama",
 ) -> dict[str, Any]:
     """Ask AI try answers as the COCO file a vlm_annotation run writes (spec 027
     R16), so a try's table has a run's columns and measures. Skipped samples
@@ -409,7 +413,12 @@ def vlm_coco_from_answers(
                 "reasoning": answer.get("reasoning"),
                 "raw_response": answer.get("raw_response"),
                 "model": model,
-                "backend": "ollama",
+                "backend": backend,
+                **{
+                    k: answer[k]
+                    for k in ("fields", "fit", "fit_problem")
+                    if answer.get(k) is not None
+                },
             }
         )
         images.append(
@@ -423,7 +432,12 @@ def vlm_coco_from_answers(
 
 
 def write_vlm_answers_csv(
-    answers: list[dict[str, Any]], *, video_stem: str, model: str, out: TextIO
+    answers: list[dict[str, Any]],
+    *,
+    video_stem: str,
+    model: str,
+    out: TextIO,
+    backend: str = "ollama",
 ) -> ExportSummary:
     """A try's table, through the same reader and row builder as a run's."""
     import tempfile
@@ -434,8 +448,50 @@ def write_vlm_answers_csv(
         path = Path(folder) / f"{video_stem}_vlm_annotation.json"
         path.write_text(
             json.dumps(
-                vlm_coco_from_answers(answers, video_stem=video_stem, model=model)
+                vlm_coco_from_answers(
+                    answers, video_stem=video_stem, model=model, backend=backend
+                )
             ),
             encoding="utf-8",
         )
         return write_csv(from_folder(folder), out)
+
+
+WIDE_FIXED_BEFORE = ("video", "t", "frame")
+WIDE_FIXED_AFTER = ("fit", "fit_problem", "model", "backend", "raw_response")
+
+
+def write_vlm_wide_csv(
+    annotations: list[dict[str, Any]],
+    shape: list[dict[str, Any]],
+    *,
+    video: str,
+    out: TextIO,
+) -> int:
+    """A shaped question's answers with one column per field (spec 033 R10):
+    the file that opens in R or pandas with no text parsing (SC-004). One row
+    per sample; an error is a row with empty fields and `fit`."""
+    names = [f["name"] for f in shape]
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow([*WIDE_FIXED_BEFORE, *names, *WIDE_FIXED_AFTER])
+    count = 0
+    for a in annotations:
+        if a.get("status") == "skipped":
+            continue
+        fields = a.get("fields") or {}
+        fit = a.get("fit")
+        writer.writerow(
+            [
+                video,
+                _cell(a.get("timestamp_sec", a.get("t"))),
+                _cell(a.get("frame_number")),
+                *(_cell(fields.get(n)) for n in names),
+                "" if fit is None else ("yes" if fit else "no"),
+                _cell(a.get("fit_problem")),
+                _cell(a.get("model")),
+                _cell(a.get("backend")),
+                _cell(a.get("raw_response")),
+            ]
+        )
+        count += 1
+    return count

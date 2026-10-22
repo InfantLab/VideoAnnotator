@@ -338,6 +338,23 @@ def read_scene(path: Path) -> FileContents:
     return FileContents(events)
 
 
+def _vlm_field_measures(a: dict[str, Any]) -> list[Measure]:
+    """A shaped answer's fields, one measure each (spec 033 R10): numbers in
+    `value`, everything else in `label`; then whether it fit the shape."""
+    if a.get("fit") is None:
+        return []
+    out = []
+    for name, value in (a.get("fields") or {}).items():
+        if isinstance(value, int | float) and not isinstance(value, bool):
+            out.append(Measure(f"vlm.{name}", value=value))
+        else:
+            out.append(Measure(f"vlm.{name}", label=_text(value)))
+    out.append(Measure("vlm_fit", label="yes" if a["fit"] else "no"))
+    if not a["fit"] and a.get("fit_problem"):
+        out.append(Measure("vlm_fit_problem", label=_text(a["fit_problem"])))
+    return out
+
+
 def read_vlm(path: Path) -> FileContents:
     annotations, images = _load_coco(path)
     events = []
@@ -349,6 +366,7 @@ def read_vlm(path: Path) -> FileContents:
         reasoning = _text(a.get("reasoning"))
         if reasoning is not None and reasoning != label:
             measures.append(Measure("vlm_reasoning", label=reasoning))
+        measures += _vlm_field_measures(a)
         events.append(
             Event(
                 start=_time(a, image, "timestamp_sec", "timestamp"),

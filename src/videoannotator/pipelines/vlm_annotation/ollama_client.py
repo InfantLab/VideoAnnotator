@@ -43,11 +43,15 @@ class VLMCallResult:
     raw_text: str
     thinking: str
     total_time: float
-    load_time: float
+    # None where the server doesn't report it (OpenAI-compatible servers, FR-007).
+    load_time: float | None
     prompt_tokens: int
     resp_tokens: int
-    tokens_per_sec: float
+    tokens_per_sec: float | None
     error: str | None = None
+    system_fingerprint: str | None = None
+    # Shaped calls: "enforced" when the server took the schema, else "prompt_only".
+    structured_output: str | None = None
 
 
 class OllamaVLMClient:
@@ -121,10 +125,17 @@ class OllamaVLMClient:
         options: dict[str, Any],
         max_retries: int,
         retry_backoff_sec: int,
+        schema: dict[str, Any] | None = None,
+        video: list[bytes] | None = None,
+        video_fps: float | None = None,
     ) -> VLMCallResult:
         """One stateless chat call. Retries transient failures with
         exponential backoff; a read-timeout is not retried since it almost
-        always repeats (matches inference.py's behaviour)."""
+        always repeats (matches inference.py's behaviour). `schema` is sent as
+        Ollama's `format`, which Ollama enforces."""
+        if video:
+            raise ValueError("Ollama can't take video.")
+        extra: dict[str, Any] = {"format": schema} if schema else {}
         last_exc: Exception | None = None
         for attempt in range(1, max_retries + 1):
             t0 = time.time()
@@ -135,6 +146,7 @@ class OllamaVLMClient:
                     keep_alive=keep_alive,
                     think=think,
                     messages=[{"role": "user", "content": prompt, "images": images}],
+                    **extra,
                 )
             except httpx.ReadTimeout:
                 dt = time.time() - t0
@@ -191,6 +203,7 @@ class OllamaVLMClient:
                     resp_tokens=resp_tokens,
                     tokens_per_sec=tokens_per_sec,
                     error=None,
+                    structured_output="enforced" if schema else None,
                 )
         return VLMCallResult(
             raw_text="",

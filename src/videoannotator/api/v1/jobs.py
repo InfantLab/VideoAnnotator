@@ -301,6 +301,36 @@ def record_run_settings(db: Any, user: dict[str, Any] | None, job: BatchJob) -> 
     )
 
 
+def check_vlm_config(vlm: Any) -> None:
+    """Spec 033's submission checks for a vlm_annotation config: no keys, a
+    server for a non-Ollama kind, a valid answer shape, and an address frames
+    may go to. The pipeline repeats them for routes that skip this one."""
+    if not isinstance(vlm, dict):
+        return
+    from ...endpoints import classify_endpoint
+    from ...model_servers import ModelServerError
+    from ...pipelines.vlm_annotation.vlm_pipeline import ConfigProblem, check_config
+
+    try:
+        check_config(vlm)
+    except ConfigProblem as e:
+        raise APIError(status_code=422, code=e.code, message=str(e)) from e
+    base_url = vlm.get("base_url")
+    if base_url and classify_endpoint(base_url).cls == "remote":
+        from ... import endpoint_policy
+
+        try:
+            endpoint_policy.require_sendable_for_url(base_url)
+        except ModelServerError as e:
+            raise APIError(
+                status_code=e.status,
+                code=e.code,
+                message=str(e),
+                hint=e.hint,
+                details=e.details,
+            ) from e
+
+
 def validate_pipeline_selection(
     selected_pipelines: list[str] | None,
     config: dict[str, Any] | None,
@@ -336,6 +366,9 @@ def validate_pipeline_selection(
     # Validate configuration if pipelines are specified (v1.3.0)
     if not config:
         return
+
+    if "vlm_annotation" in selected_pipelines:
+        check_vlm_config(config.get("vlm_annotation"))
 
     validator = ConfigValidator()
     validation_results = validator.validate_batch(

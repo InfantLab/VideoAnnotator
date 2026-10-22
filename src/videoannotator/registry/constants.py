@@ -70,6 +70,7 @@ BACKENDS = {
     "cpu",
     "cuda",
     "ollama",
+    "openai_compatible",
     "ctranslate2",
 }
 

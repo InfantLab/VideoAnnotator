@@ -65,12 +65,17 @@ def create_entry(
     job_id: str | None = None,
     user_id: str | None = None,
     video_sha256: str | None = None,
+    backend: str = "ollama",
+    answer_shape: list[dict[str, Any]] | None = None,
 ) -> AskEntry:
-    """Saved before any model call, so a try is never lost (SC-002)."""
+    """Saved before any model call, so a try is never lost (SC-002). A shape
+    is also kept on the library's question, so reopening it brings the shape."""
     if kind == "try":
-        prompt_library.record_use(db, prompt, model, "try", user_id=user_id)
+        library = prompt_library.record_use(db, prompt, model, "try", user_id=user_id)
     else:
-        prompt_library.ensure_prompt(db, prompt, user_id=user_id)
+        library = prompt_library.ensure_prompt(db, prompt, user_id=user_id)
+    if answer_shape is not None:
+        library.answer_shape = answer_shape
     entry = AskEntry(
         id=uuid.uuid4(),
         kind=kind,
@@ -88,6 +93,8 @@ def create_entry(
         answers=[] if kind == "try" else None,
         job_id=job_id,
         user_id=user_id,
+        backend=backend,
+        answer_shape=answer_shape,
         starred=False,
         created_at=datetime.now(UTC),
         finished_at=datetime.now(UTC) if kind == "draft" else None,
@@ -154,6 +161,8 @@ def to_dict(entry: AskEntry) -> dict[str, Any]:
         "prompt_sha256": entry.prompt_sha256,
         "model": entry.model,
         "base_url": entry.base_url,
+        "backend": entry.backend or "ollama",
+        "answer_shape": entry.answer_shape,
         "endpoint_class": entry.endpoint_class,
         "sampling": entry.sampling or {},
         "think": bool(entry.think),

@@ -266,6 +266,31 @@ def migrate_to_v1_3_0() -> bool:
                         )
                         migrations_applied.append(f"saved_pipeline_presets.{column}")
 
+            # spec 033: model connectors
+            for table, column, ddl in (
+                ("ask_entries", "backend", "VARCHAR(20) NOT NULL DEFAULT 'ollama'"),
+                ("ask_entries", "answer_shape", "JSON"),
+                ("prompts", "answer_shape", "JSON"),
+                (
+                    "endpoint_confirmations",
+                    "before_switch",
+                    "BOOLEAN NOT NULL DEFAULT 0",
+                ),
+            ):
+                if table not in tables:
+                    continue
+                result = conn.execute(text(f"PRAGMA table_info('{table}')"))
+                if column in {row[1] for row in result}:
+                    continue
+                logger.info(f"[MIGRATION] Adding {table}.{column}")
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}"))
+                migrations_applied.append(f"{table}.{column}")
+                if column == "before_switch":
+                    # Addresses confirmed before the switch existed keep working.
+                    conn.execute(
+                        text("UPDATE endpoint_confirmations SET before_switch = 1")
+                    )
+
             conn.commit()
 
             if migrations_applied:

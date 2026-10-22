@@ -413,8 +413,10 @@ def remote_resolves(monkeypatch):
 
 class TestEndpoint:
     def test_remote_unconfirmed_is_refused_until_confirmed(
-        self, video, remote_resolves, as_users
+        self, video, remote_resolves, as_users, monkeypatch
     ):
+        # Since spec 033 remote servers also need switching on.
+        monkeypatch.setenv("VIDEOANNOTATOR_REMOTE_MODEL_SERVERS", "on")
         r = _try(video, base_url=REMOTE)
         assert r.status_code == 409
         assert r.json()["error"]["code"] == "REMOTE_NOT_CONFIRMED"
@@ -426,6 +428,8 @@ class TestEndpoint:
             "host": "api.example.com",
             "class": "remote",
             "confirmed": False,
+            "sendable": False,
+            "before_switch": False,
         }
 
         r = client.post(

@@ -12,19 +12,23 @@ import json
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
+from ... import model_servers
 from ...config_env import default_ollama_base_url
 from ...database.database import get_db
 from ...diagnostics.ollama import unreachable_hint
+from ...pipelines.vlm_annotation import answer_shape as shapes
 from ...pipelines.vlm_annotation import frames as vlm_frames
+from ...pipelines.vlm_annotation.clients import KeyRefusedError, make_client
 from ...pipelines.vlm_annotation.ollama_client import (
     OllamaUnavailableError,
     OllamaVLMClient,
 )
+from ...pipelines.vlm_annotation.openai_client import KEY_REFUSED_MESSAGE
 from ...pipelines.vlm_annotation.vlm_pipeline import (
     DEFAULT_PROMPT,
     VLMAnnotationPipeline,
@@ -60,6 +64,8 @@ class VlmModelsResponse(BaseModel):
     base_url: str
     models: list[str]
     endpoint: VlmEndpoint | None = None
+    server: str = Field("default", description="The listed server's id")
+    kind: str = Field("ollama", description="ollama or openai_compatible")
 
 
 @router.get(
@@ -79,25 +85,43 @@ researcher needs to tell apart, not one generic failure (FR-005).
 )
 def list_vlm_models(
     base_url: str | None = None,
+    server: str | None = Query(
+        None, description="A listed model server's id (spec 033); `default` if none"
+    ),
     db: Session = Depends(get_db),
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> VlmModelsResponse:
-    """List models pulled on the configured Ollama server."""
+    """List models pulled on the configured Ollama server, or on a listed one."""
     if not extras_available(VLM_REQUIRES_EXTRAS):
         raise PipelineUnavailableException("vlm_annotation", VLM_REQUIRES_EXTRAS)
+    from .ask import endpoint_state, require_model_list
+
+    kind = "ollama"
+    server_id = "default"
+    if server and server != model_servers.DEFAULT_ID:
+        listed = model_servers.get(db, server)
+        if listed is None:
+            raise APIError(
+                status_code=404,
+                code="SERVER_NOT_FOUND",
+                message="No such model server.",
+            )
+        base_url, kind, server_id = listed["base_url"], listed["kind"], listed["id"]
     base_url = base_url or default_ollama_base_url()
 
-    try:
-        client = OllamaVLMClient(base_url=base_url, timeout=10)
-        models = client.list_models()
-    except OllamaUnavailableError as e:
-        raise APIError(
-            status_code=503,
-            code="OLLAMA_UNREACHABLE",
-            message=f"Cannot reach Ollama server at {base_url}",
-            hint=f"{e} {unreachable_hint(base_url)}",
-        ) from e
-    from .ask import endpoint_state
+    if kind == "ollama":
+        try:
+            client = OllamaVLMClient(base_url=base_url, timeout=10)
+            models = client.list_models()
+        except OllamaUnavailableError as e:
+            raise APIError(
+                status_code=503,
+                code="OLLAMA_UNREACHABLE",
+                message=f"Cannot reach Ollama server at {base_url}",
+                hint=f"{e} {unreachable_hint(base_url)}",
+            ) from e
+    else:
+        models = require_model_list(db, kind, base_url)
 
     state = endpoint_state(db, base_url)
     return VlmModelsResponse(
@@ -106,6 +130,8 @@ def list_vlm_models(
         endpoint=VlmEndpoint(
             host=state["host"], class_=state["class"], confirmed=state["confirmed"]
         ),
+        server=server_id,
+        kind=kind,
     )
 
 
@@ -122,10 +148,10 @@ class VlmPreviewResponse(BaseModel):
     reasoning: str
     raw_response: str
     total_time: float
-    load_time: float
+    load_time: float | None
     prompt_tokens: int
     resp_tokens: int
-    tokens_per_sec: float
+    tokens_per_sec: float | None
     frames: list[PreviewFrame] = []
 
 
@@ -177,13 +203,37 @@ async def preview_vlm_prompt(
     ),
     think: bool = Form(False),
     base_url: str | None = Form(None),
+    backend: str = Form("ollama", description="ollama or openai_compatible"),
+    answer_shape: str | None = Form(
+        None, description="JSON-encoded answer shape (spec 033), or none"
+    ),
+    db: Session = Depends(get_db),
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> VlmPreviewResponse:
     """Test a prompt against a single frame or burst, synchronously."""
     if not extras_available(VLM_REQUIRES_EXTRAS):
         raise PipelineUnavailableException("vlm_annotation", VLM_REQUIRES_EXTRAS)
+    from .ask import _key, require_sendable, resolve_base_url, valid_shape
 
-    base_url = base_url or default_ollama_base_url()
+    if backend not in ("ollama", "openai_compatible"):
+        raise APIError(
+            status_code=422,
+            code="INVALID_BACKEND",
+            message=f"Unknown model server kind '{backend}'",
+            hint="Use 'ollama' or 'openai_compatible'",
+        )
+    try:
+        shape_raw = json.loads(answer_shape) if answer_shape else None
+    except ValueError as e:
+        raise APIError(
+            status_code=422,
+            code="INVALID_ANSWER_SHAPE",
+            message="The answer shape isn't JSON.",
+        ) from e
+    shape = valid_shape(shape_raw)
+    base_url = resolve_base_url(backend, base_url)
+    require_sendable(db, base_url)
+    api_key = _key(db, backend, base_url)
     # Browsers send every newline of a multipart form field as CRLF, so the
     # same prompt typed in the viewer would otherwise reach the model (and
     # the prompt library) as different text from the one a job runs.
@@ -234,6 +284,9 @@ async def preview_vlm_prompt(
         think=think,
         base_url=base_url,
         user_id=str(_user["id"]) if _user and _user.get("id") else None,
+        backend=backend,
+        shape=shape,
+        api_key=api_key,
     )
 
 
@@ -251,6 +304,9 @@ def _answer_preview(
     think: bool,
     base_url: str,
     user_id: str | None,
+    backend: str = "ollama",
+    shape: list[shapes.Field] | None = None,
+    api_key: str | None = None,
 ) -> VlmPreviewResponse:
     images: list[bytes]
     frame_numbers: list[int | None]
@@ -268,30 +324,51 @@ def _answer_preview(
             base_url=base_url,
         )
 
-    client = OllamaVLMClient(base_url=base_url, timeout=240)
+    if backend == "ollama":
+        client: Any = OllamaVLMClient(base_url=base_url, timeout=240)
+    else:
+        client = make_client(backend, base_url, 240, api_key)
     default_config = VLMAnnotationPipeline({}).config
-    result = client.chat(
-        model=model,
-        prompt=prompt,
-        images=images,
-        think=think,
-        keep_alive=default_config["keep_alive"],
-        options=default_config["options"],
-        max_retries=default_config["max_retries"],
-        retry_backoff_sec=default_config["retry_backoff_sec"],
-    )
+    extra = {"schema": shapes.to_json_schema(shape)} if shape else {}
+    try:
+        result = client.chat(
+            model=model,
+            prompt=prompt,
+            images=images,
+            think=think,
+            keep_alive=default_config["keep_alive"],
+            options=default_config["options"],
+            max_retries=default_config["max_retries"],
+            retry_backoff_sec=default_config["retry_backoff_sec"],
+            **extra,
+        )
+    except KeyRefusedError as e:
+        raise APIError(
+            status_code=401, code="KEY_REFUSED", message=KEY_REFUSED_MESSAGE
+        ) from e
 
     if result.error:
+        if backend == "ollama":
+            raise APIError(
+                status_code=502,
+                code="VLM_CALL_FAILED",
+                message=f"Ollama call failed: {result.error}",
+                hint=f"Check the model '{model}' is pulled and Ollama at "
+                f"{base_url} is reachable.",
+            )
         raise APIError(
             status_code=502,
             code="VLM_CALL_FAILED",
-            message=f"Ollama call failed: {result.error}",
-            hint=f"Check the model '{model}' is pulled and Ollama at "
-            f"{base_url} is reachable.",
+            message=f"The model server call failed: {result.error}",
+            hint=f"Check the model '{model}' is on the server at {base_url}.",
         )
 
     record_use_quietly(prompt, model, "preview", user_id=user_id)
-    label = _parse_label(result.raw_text)
+    label = (
+        shapes.check_reply(shape, result.raw_text).label
+        if shape
+        else _parse_label(result.raw_text)
+    )
     return VlmPreviewResponse(
         frames=[
             PreviewFrame(
@@ -305,10 +382,12 @@ def _answer_preview(
         reasoning=result.thinking or result.raw_text,
         raw_response=result.raw_text,
         total_time=round(result.total_time, 4),
-        load_time=round(result.load_time, 4),
+        load_time=None if result.load_time is None else round(result.load_time, 4),
         prompt_tokens=result.prompt_tokens,
         resp_tokens=result.resp_tokens,
-        tokens_per_sec=round(result.tokens_per_sec, 2),
+        tokens_per_sec=None
+        if result.tokens_per_sec is None
+        else round(result.tokens_per_sec, 2),
     )
 
 

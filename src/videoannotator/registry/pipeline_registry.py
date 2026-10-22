@@ -62,6 +62,8 @@ class PipelineConfigField:
     # input, same as before either field existed.
     widget: str | None = None  # e.g. "textarea" for a long free-text field
     enum: list[str] | None = None  # fixed set of valid string values
+    # spec 033: what the form shows for each enum value, where not the value.
+    enum_labels: dict[str, str] | None = None
     # spec 026: an unclassified setting is technical, so it never crowds the
     # few a researcher is shown first.
     group: str = "technical"
@@ -277,6 +279,9 @@ class PipelineRegistry:
                 description=str(val.get("description", "")),
                 widget=str(val.get("widget")) if val.get("widget") else None,
                 enum=enum_values,
+                enum_labels={str(k): str(v) for k, v in val["enum_labels"].items()}
+                if isinstance(val.get("enum_labels"), dict)
+                else None,
                 group=_parse_group(val.get("group"), source.name, key),
                 label=_optional_str(val.get("label")),
                 unit=_optional_str(val.get("unit")),

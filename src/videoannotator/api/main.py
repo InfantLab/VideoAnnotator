@@ -65,6 +65,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("VideoAnnotator API server starting up...", extra={"event": "startup"})
 
+    # Uvicorn's handlers exist by now; redact model server keys there too.
+    from ..secrets_store import install_key_redaction
+
+    install_key_redaction()
+
     from ..version import warn_if_unsupported_python
 
     warn_if_unsupported_python()

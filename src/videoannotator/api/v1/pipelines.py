@@ -609,6 +609,8 @@ class PipelineParameterSchema(BaseModel):
     description: str | None = None
     default: Any = None
     enum: list[PipelineParameterOption] | None = None
+    # spec 033: a dedicated editor, e.g. "answer_shape"
+    widget: str | None = None
     # spec 026
     group: str = "technical"
     unit: str | None = None
@@ -665,10 +667,16 @@ def _to_parameter_schema(name: str, field: Any) -> "PipelineParameterSchema":
         description=field.description or None,
         default=field.default,
         enum=(
-            [PipelineParameterOption(value=v, label=v) for v in field.enum]
+            [
+                PipelineParameterOption(
+                    value=v, label=(field.enum_labels or {}).get(v, v)
+                )
+                for v in field.enum
+            ]
             if field.enum
             else None
         ),
+        widget=field.widget if field.widget not in (None, "textarea") else None,
         group=field.group,
         unit=field.unit,
         min=field.min,

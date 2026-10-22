@@ -423,9 +423,14 @@ def setup_videoannotator_logging(
     """
     global _logging_config
     _logging_config = VideoAnnotatorLoggingConfig(logs_dir, log_level)
-    return _logging_config.setup_logging(
+    result = _logging_config.setup_logging(
         capture_warnings=capture_warnings, capture_stdstreams=capture_stdstreams
     )
+    # Spec 033 FR-016: no model server key in any log, whatever logs it.
+    from ..secrets_store import install_key_redaction
+
+    install_key_redaction()
+    return result
 
 
 def get_logger(name: str) -> logging.Logger:

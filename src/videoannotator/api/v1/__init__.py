@@ -14,6 +14,7 @@ from .exports import router as exports_router
 from .health import router as health_router
 from .ingest import router as ingest_router
 from .jobs import router as jobs_router
+from .model_servers import router as model_servers_router
 from .pipelines import router as pipelines_router
 from .presets import router as presets_router
 from .prompts import router as prompts_router
@@ -44,6 +45,9 @@ api_router.include_router(vlm_router, prefix="/vlm", tags=["vlm"])
 api_router.include_router(video_list_router, prefix="/videos", tags=["videos"])
 api_router.include_router(videos_router, prefix="/videos", tags=["videos"])
 api_router.include_router(ask_router, prefix="/ask", tags=["ask"])
+api_router.include_router(
+    model_servers_router, prefix="/model-servers", tags=["model-servers"]
+)
 api_router.include_router(config_router, prefix="/config", tags=["config"])
 api_router.include_router(system_router, prefix="/system", tags=["system"])
 api_router.include_router(debug_router, prefix="/debug", tags=["debug"])

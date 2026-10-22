@@ -80,3 +80,26 @@ def choose_moments(points: list[float], count: int) -> list[float]:
     if count == 1:
         return [points[_half_up((s - 1) / 2)]]
     return [points[_half_up(i * (s - 1) / (count - 1))] for i in range(count)]
+
+
+def clip_span(anchor: float, length: float, duration: float) -> tuple[float, float]:
+    """[start, end] of a clip centred on `anchor`, shortened (not shifted) at
+    the video's ends (spec 033 R12)."""
+    half = length / 2
+    return _round3(max(0.0, anchor - half)), _round3(min(duration, anchor + half))
+
+
+def clip_times(
+    anchor: float, length: float, fps: float, duration: float
+) -> list[float]:
+    """The times of a clip's frames: from its start, `fps` a second, up to
+    but not including its end; at least the start."""
+    if fps <= 0:
+        raise ValueError("fps must be greater than 0")
+    start, end = clip_span(anchor, length, duration)
+    times: list[float] = []
+    k = 0
+    while start + k / fps <= end - _EPS:
+        times.append(_round3(start + k / fps))
+        k += 1
+    return times or [start]

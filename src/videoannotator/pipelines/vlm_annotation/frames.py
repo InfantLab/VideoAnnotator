@@ -88,6 +88,30 @@ def read_sample(
     return out
 
 
+def read_clip(
+    cap: Any,
+    fps: float,
+    duration: float,
+    anchor: float,
+    length: float,
+    clip_fps: float,
+) -> list[SampleFrame]:
+    """The readable frames of a clip around `anchor` (spec 033 R12), each
+    with its index in the clip as `offset`. Frames that round to the same
+    video frame are read once."""
+    out: list[SampleFrame] = []
+    seen: set[int] = set()
+    for i, t in enumerate(sampling.clip_times(anchor, length, clip_fps, duration)):
+        result = seek_frame_jpeg(cap, fps, t)
+        if result is None or result[0] in seen:
+            continue
+        frame_number, jpeg = result
+        seen.add(frame_number)
+        frame_time = round(frame_number / fps, 3) if fps else t
+        out.append(SampleFrame(i, frame_number, frame_time, jpeg))
+    return out
+
+
 def read_sample_from(
     video_path: str,
     anchor: float,

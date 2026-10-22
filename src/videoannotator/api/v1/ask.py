@@ -28,7 +28,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ... import ask_history
+from ... import ask_history, endpoint_policy, model_servers
 from ...batch.result_files import job_folder
 from ...batch.types import BatchJob, JobStatus
 from ...config_env import default_ollama_base_url
@@ -36,14 +36,27 @@ from ...database.database import get_db
 from ...database.models import AskEntry, EndpointConfirmation, Prompt
 from ...diagnostics.ollama import unreachable_hint
 from ...endpoints import classify_endpoint, normalise_base_url
-from ...exporters.table import write_vlm_answers_csv
+from ...exporters.table import (
+    vlm_coco_from_answers,
+    write_vlm_answers_csv,
+    write_vlm_wide_csv,
+)
+from ...model_servers import ModelServerError
+from ...pipelines.vlm_annotation import answer_shape as shapes
 from ...pipelines.vlm_annotation import frames as vlm_frames
 from ...pipelines.vlm_annotation import sampling as vlm_sampling
+from ...pipelines.vlm_annotation.clients import (
+    KeyRefusedError,
+    VLMClient,
+    WrongKindError,
+    make_client,
+)
 from ...pipelines.vlm_annotation.gate import gate_for
 from ...pipelines.vlm_annotation.ollama_client import (
     OllamaUnavailableError,
     OllamaVLMClient,
 )
+from ...pipelines.vlm_annotation.openai_client import KEY_REFUSED_MESSAGE
 from ...pipelines.vlm_annotation.vlm_pipeline import (
     VLMAnnotationPipeline,
     _parse_label,
@@ -64,6 +77,9 @@ router = APIRouter()
 VLM_REQUIRES_EXTRAS = ["llm"]
 DEFAULT_TRY_COUNT = 10
 _SLACK = 1e-3
+
+BackendName = Literal["ollama", "openai_compatible"]
+ShapeIn = list[dict[str, Any]]
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +106,9 @@ class Answer(BaseModel):
     raw_response: str | None = None
     error: str | None = None
     total_time: float | None = None
+    fields: dict[str, Any] | None = None
+    fit: bool | None = None
+    fit_problem: str | None = None
 
 
 class Entry(BaseModel):
@@ -100,6 +119,8 @@ class Entry(BaseModel):
     prompt_sha256: str
     model: str
     base_url: str
+    backend: BackendName = "ollama"
+    answer_shape: ShapeIn | None = None
     endpoint_class: Literal["local", "remote"]
     sampling: Sampling
     think: bool
@@ -123,6 +144,8 @@ class TryRequest(BaseModel):
     prompt: str
     model: str
     base_url: str | None = None
+    backend: BackendName = "ollama"
+    answer_shape: ShapeIn | None = None
     think: bool = False
     sampling: Sampling = Sampling()
     at: float | None = Field(None, description='One moment: "Try on this frame"')
@@ -206,51 +229,153 @@ def video_info(path: str) -> dict[str, Any]:
 
 
 def endpoint_state(db: Session, base_url: str) -> dict[str, Any]:
-    info = classify_endpoint(base_url)
-    confirmed = info.cls == "local" or (
-        db.get(EndpointConfirmation, normalise_base_url(base_url)) is not None
+    return endpoint_policy.endpoint_state(db, base_url)
+
+
+def api_error(e: ModelServerError) -> APIError:
+    return APIError(
+        status_code=e.status,
+        code=e.code,
+        message=str(e),
+        hint=e.hint,
+        details=e.details,
     )
+
+
+def require_sendable(db: Session, base_url: str) -> dict[str, Any]:
+    """Frames may go to this address (spec 033 R5), or 403/409 saying why not."""
+    try:
+        return endpoint_policy.require_sendable(db, base_url)
+    except ModelServerError as e:
+        raise api_error(e) from e
+
+
+def resolve_base_url(backend: str, base_url: str | None) -> str:
+    if base_url:
+        return base_url
+    if backend == "ollama":
+        return default_ollama_base_url()
+    raise APIError(
+        status_code=422,
+        code="MISSING_BASE_URL",
+        message="Say which model server to use.",
+    )
+
+
+def valid_shape(raw: ShapeIn | None) -> list[shapes.Field] | None:
+    if raw is None:
+        return None
+    try:
+        return shapes.validate_shape(raw)
+    except ValueError as e:
+        raise APIError(
+            status_code=422, code="INVALID_ANSWER_SHAPE", message=str(e)
+        ) from e
+
+
+def client_for(
+    backend: str, base_url: str, timeout: int, api_key: str | None = None
+) -> VLMClient:
+    """The backend's client; Ollama's is this module's name, so tests that
+    replace it replace it here."""
+    client = make_client(
+        backend, base_url, timeout, api_key, ollama_class=OllamaVLMClient
+    )
+    if backend != "ollama":
+        known = model_servers.capabilities_for_url(base_url)
+        if known is not None and known.get("structured_output") is False:
+            client.structured_output = False  # type: ignore[attr-defined]
+    return client
+
+
+def _key(db: Session, backend: str, base_url: str) -> str | None:
+    return model_servers.key_for(db, base_url) if backend != "ollama" else None
+
+
+def require_model_list(db: Session | None, backend: str, base_url: str) -> list[str]:
+    """An OpenAI-compatible server's models, or the API error saying why not."""
+    api_key = _key(db, backend, base_url) if db is not None else None
+    try:
+        return client_for(backend, base_url, 10, api_key).list_models()
+    except KeyRefusedError as e:
+        raise APIError(
+            status_code=401,
+            code="KEY_REFUSED",
+            message=KEY_REFUSED_MESSAGE,
+            hint="Change the key in Settings → Model servers.",
+        ) from e
+    except OllamaUnavailableError as e:
+        hint = (
+            "Check the address: an OpenAI-compatible server's usually ends in /v1."
+            if isinstance(e, WrongKindError)
+            else "Check the model server is running and reachable from this server."
+        )
+        raise APIError(
+            status_code=503,
+            code="MODEL_SERVER_UNREACHABLE",
+            message=str(e),
+            hint=hint,
+        ) from e
+
+
+def require_model(
+    base_url: str, model: str, backend: str = "ollama", db: Session | None = None
+) -> None:
+    """One call to the model server: is it there, and is the model on it?"""
+    if backend == "ollama":
+        try:
+            models = OllamaVLMClient(base_url=base_url, timeout=10).list_models()
+        except OllamaUnavailableError as e:
+            raise APIError(
+                status_code=503,
+                code="OLLAMA_UNREACHABLE",
+                message=f"Cannot reach the model server at {base_url}",
+                hint=unreachable_hint(base_url),
+            ) from e
+        if model not in models:
+            raise APIError(
+                status_code=422,
+                code="MODEL_NOT_PULLED",
+                message=f"The model '{model}' isn't on the model server.",
+                hint=f"Get it with: ollama pull {model}",
+                details={"models": models},
+            )
+        return
+    models = require_model_list(db, backend, base_url)
+    if model not in models:
+        listed = ", ".join(models) if models else "no models"
+        raise APIError(
+            status_code=422,
+            code="MODEL_NOT_FOUND",
+            message=f"The model '{model}' isn't on the model server. "
+            f"The server lists: {listed}.",
+            details={"models": models},
+        )
+
+
+def shaped_answer(shape: list[shapes.Field] | None, raw_text: str) -> dict[str, Any]:
+    """`label`, and for a shaped question its fields and fit (FR-020)."""
+    if shape is None:
+        return {"label": _parse_label(raw_text)}
+    checked = shapes.check_reply(shape, raw_text)
     return {
-        "base_url": base_url,
-        "host": info.host,
-        "class": info.cls,
-        "confirmed": confirmed,
+        "label": checked.label,
+        "fields": checked.fields,
+        "fit": checked.fit,
+        "fit_problem": checked.fit_problem,
     }
 
 
-def require_confirmed(db: Session, base_url: str) -> dict[str, Any]:
-    state = endpoint_state(db, base_url)
-    if not state["confirmed"]:
-        raise APIError(
-            status_code=409,
-            code="REMOTE_NOT_CONFIRMED",
-            message=f"Frames from your video would be sent to {state['host']}, "
-            "a remote server. Confirm that first.",
-            hint="POST /api/v1/ask/endpoints/confirm with this base_url.",
-            details={"host": state["host"], "base_url": base_url},
-        )
-    return state
-
-
-def require_model(base_url: str, model: str) -> None:
-    """One call to the model server: is it there, and is the model pulled?"""
+def note_structured_output(backend: str, base_url: str, outcome: str | None) -> None:
+    """What a shaped call learnt about a listed server (R8)."""
+    if backend == "ollama" or outcome is None:
+        return
     try:
-        models = OllamaVLMClient(base_url=base_url, timeout=10).list_models()
-    except OllamaUnavailableError as e:
-        raise APIError(
-            status_code=503,
-            code="OLLAMA_UNREACHABLE",
-            message=f"Cannot reach the model server at {base_url}",
-            hint=unreachable_hint(base_url),
-        ) from e
-    if model not in models:
-        raise APIError(
-            status_code=422,
-            code="MODEL_NOT_PULLED",
-            message=f"The model '{model}' isn't on the model server.",
-            hint=f"Get it with: ollama pull {model}",
-            details={"models": models},
+        model_servers.record_capabilities_for_url(
+            base_url, structured_output=outcome == "enforced"
         )
+    except Exception as e:
+        logger.warning(f"Couldn't record what {base_url} supports: {e}")
 
 
 def _user_id(user: dict[str, Any] | None) -> str | None:
@@ -286,6 +411,8 @@ def _answer_try(
     base_url: str,
     think: bool,
     s: Sampling,
+    backend: str = "ollama",
+    shape: list[shapes.Field] | None = None,
 ) -> None:
     """Answer each moment in turn, saving each answer as it lands."""
     import cv2
@@ -294,11 +421,15 @@ def _answer_try(
     spacing = s.spacing or s.interval
     defaults = VLMAnnotationPipeline({}).config
     gate = gate_for(base_url, model)
+    schema: dict[str, Any] = {"schema": shapes.to_json_schema(shape)} if shape else {}
     status = "done"
     with ask_history.own_session() as db:
         try:
-            client = OllamaVLMClient(
-                base_url=base_url, timeout=int(defaults["request_timeout_sec"])
+            client = client_for(
+                backend,
+                base_url,
+                int(defaults["request_timeout_sec"]),
+                _key(db, backend, base_url),
             )
             meta = vlm_frames.video_metadata(video_path)
             cap = cv2.VideoCapture(video_path)
@@ -318,27 +449,38 @@ def _answer_try(
                             error=f"No readable frame at {t:.2f} s",
                         )
                     else:
-                        with gate.acquire("try"):
-                            result = client.chat(
-                                model=model,
-                                prompt=prompt,
-                                images=[f.jpeg for f in sent],
-                                think=think,
-                                keep_alive=defaults["keep_alive"],
-                                options=defaults["options"],
-                                max_retries=defaults["max_retries"],
-                                retry_backoff_sec=defaults["retry_backoff_sec"],
-                            )
+                        try:
+                            with gate.acquire("try"):
+                                result = client.chat(
+                                    model=model,
+                                    prompt=prompt,
+                                    images=[f.jpeg for f in sent],
+                                    think=think,
+                                    keep_alive=defaults["keep_alive"],
+                                    options=defaults["options"],
+                                    max_retries=defaults["max_retries"],
+                                    retry_backoff_sec=defaults["retry_backoff_sec"],
+                                    **schema,
+                                )
+                        except KeyRefusedError:
+                            answer.update(status="error", error=KEY_REFUSED_MESSAGE)
+                            ask_history.add_answer(db, entry_id, answer)
+                            status = "failed"
+                            break
                         answer.update(
                             status="error" if result.error else "answered",
-                            label=None
-                            if result.error
-                            else _parse_label(result.raw_text),
+                            label=None,
                             reasoning=result.thinking or result.raw_text or None,
                             raw_response=result.raw_text or None,
                             error=result.error,
                             total_time=round(result.total_time, 4),
                         )
+                        if not result.error:
+                            answer.update(shaped_answer(shape, result.raw_text))
+                            if shape:
+                                note_structured_output(
+                                    backend, base_url, result.structured_output
+                                )
                     ask_history.add_answer(db, entry_id, answer)
             finally:
                 cap.release()
@@ -392,9 +534,10 @@ def create_try(
         if not moments:
             raise _invalid("start", "These settings give no moments to try.")
 
-    base_url = body.base_url or default_ollama_base_url()
-    state = require_confirmed(db, base_url)
-    require_model(base_url, body.model)
+    shape = valid_shape(body.answer_shape)
+    base_url = resolve_base_url(body.backend, body.base_url)
+    state = require_sendable(db, base_url)
+    require_model(base_url, body.model, body.backend, db)
 
     prompt = body.prompt.replace("\r\n", "\n")
     entry = ask_history.create_entry(
@@ -409,6 +552,8 @@ def create_try(
         video_path=str(path),
         moments=moments,
         user_id=_user_id(user),
+        backend=body.backend,
+        answer_shape=shapes.shape_dicts(shape) if shape else None,
     )
     response = _entry(entry)
     threading.Thread(
@@ -422,6 +567,8 @@ def create_try(
             base_url,
             body.think,
             body.sampling,
+            body.backend,
+            shape,
         ),
         name=f"ask-try-{entry.id}",
         daemon=True,
@@ -450,6 +597,7 @@ def get_entry(
 class LibraryPrompt(BaseModel):
     sha256: str
     text: str
+    answer_shape: ShapeIn | None = None
     name: str | None = None
     models: list[str] = []
     starred: bool = False
@@ -533,6 +681,7 @@ def list_entries(
                 LibraryPrompt(
                     sha256=p.sha256,
                     text=p.text,
+                    answer_shape=p.answer_shape,
                     name=p.name,
                     models=sorted({u.model for u in p.uses}),
                     starred=bool(p.starred),
@@ -601,6 +750,8 @@ class DraftRequest(BaseModel):
     prompt: str
     model: str
     base_url: str | None = None
+    backend: BackendName = "ollama"
+    answer_shape: ShapeIn | None = None
     think: bool = False
     sampling: Sampling = Sampling()
 
@@ -618,7 +769,8 @@ def create_draft(
     user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> Entry:
     path = readable_video(body.video_path)
-    base_url = body.base_url or default_ollama_base_url()
+    shape = valid_shape(body.answer_shape)
+    base_url = resolve_base_url(body.backend, body.base_url)
     entry = ask_history.create_entry(
         db,
         kind="draft",
@@ -630,6 +782,8 @@ def create_draft(
         think=body.think,
         video_path=str(path),
         user_id=_user_id(user),
+        backend=body.backend,
+        answer_shape=shapes.shape_dicts(shape) if shape else None,
     )
     return _entry(entry)
 
@@ -686,6 +840,12 @@ class EndpointState(BaseModel):
     host: str
     class_: Literal["local", "remote"] = Field(alias="class")
     confirmed: bool
+    sendable: bool = Field(
+        True, description="Frames may go there now: local, or confirmed and allowed"
+    )
+    before_switch: bool = Field(
+        False, description="Confirmed before remote servers needed switching on"
+    )
 
     model_config = {"populate_by_name": True}
 
@@ -781,6 +941,8 @@ class RunRequest(BaseModel):
     prompt: str
     model: str
     base_url: str | None = None
+    backend: BackendName = "ollama"
+    answer_shape: ShapeIn | None = None
     think: bool = False
     sampling: Sampling = Sampling()
 
@@ -804,20 +966,25 @@ def create_run(
     check_sampling(body.sampling, float(meta["duration"]))
     if not sample_points_for(body.sampling, float(meta["duration"])):
         raise _invalid("start", "These settings give no moments to sample.")
-    base_url = body.base_url or default_ollama_base_url()
-    state = require_confirmed(db, base_url)
-    require_model(base_url, body.model)
+    shape = valid_shape(body.answer_shape)
+    base_url = resolve_base_url(body.backend, body.base_url)
+    state = require_sendable(db, base_url)
+    require_model(base_url, body.model, body.backend, db)
 
     prompt = body.prompt.replace("\r\n", "\n")
-    config = {
-        "vlm_annotation": {
-            **sampling_to_config(body.sampling),
-            "prompt": prompt,
-            "model": body.model,
-            "base_url": base_url,
-            "think": body.think,
-        }
+    vlm_config: dict[str, Any] = {
+        **sampling_to_config(body.sampling),
+        "prompt": prompt,
+        "model": body.model,
+        "base_url": base_url,
+        "think": body.think,
     }
+    # Only when not the default, so a run's config reads as it did before.
+    if body.backend != "ollama":
+        vlm_config["backend"] = body.backend
+    if shape:
+        vlm_config["answer_shape"] = shapes.shape_dicts(shape)
+    config = {"vlm_annotation": vlm_config}
     job = BatchJob(
         # Read in place, never copied (spec 022).
         video_path=path,
@@ -849,6 +1016,8 @@ def create_run(
         video_path=str(path),
         job_id=job.job_id,
         user_id=_user_id(user),
+        backend=body.backend,
+        answer_shape=shapes.shape_dicts(shape) if shape else None,
     )
     return _entry_with_run(db, entry)
 
@@ -892,6 +1061,9 @@ def _answer_from_annotation(a: dict[str, Any]) -> Answer:
         if status == "error" and isinstance(label, str)
         else None,
         total_time=a.get("total_time"),
+        fields=a.get("fields"),
+        fit=a.get("fit"),
+        fit_problem=a.get("fit_problem"),
     )
 
 
@@ -985,11 +1157,244 @@ def export_entry_table(
     out = io.StringIO()
     stem = Path(entry.video_path).stem
     write_vlm_answers_csv(
-        entry.answers or [], video_stem=stem, model=entry.model, out=out
+        entry.answers or [],
+        video_stem=stem,
+        model=entry.model,
+        out=out,
+        backend=entry.backend or "ollama",
     )
     name = sanitize_component(entry.name or stem, "answers")
     return Response(
         content=out.getvalue(),
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{name}_answers.csv"'},
+    )
+
+
+def _wide_response(content: str, name: str) -> Response:
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{name}_answers_wide.csv"'
+        },
+    )
+
+
+def _not_shaped() -> APIError:
+    return APIError(
+        status_code=422,
+        code="NOT_SHAPED",
+        message="This question has no answer shape, so its answers have no fields.",
+        hint="Download the table instead.",
+    )
+
+
+@router.get(
+    "/entries/{entry_id}/export/wide",
+    summary="A shaped question's answers, one column per field (CSV)",
+    description="A run's entry redirects to its job's wide file.",
+    response_class=Response,
+)
+def export_entry_wide(
+    entry_id: str,
+    db: Session = Depends(get_db),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Response:
+    entry = _get_or_404(db, entry_id)
+    if not entry.answer_shape:
+        raise _not_shaped()
+    if entry.kind == "run" and entry.job_id:
+        return RedirectResponse(
+            f"/api/v1/jobs/{entry.job_id}/export/wide", status_code=307
+        )
+    stem = Path(entry.video_path).stem
+    coco = vlm_coco_from_answers(
+        entry.answers or [],
+        video_stem=stem,
+        model=entry.model,
+        backend=entry.backend or "ollama",
+    )
+    out = io.StringIO()
+    write_vlm_wide_csv(
+        coco["annotations"], entry.answer_shape, video=entry.video_name, out=out
+    )
+    return _wide_response(
+        out.getvalue(), sanitize_component(entry.name or stem, "answers")
+    )
+
+
+def export_job_wide(job: Any) -> Response:
+    """The wide file for a vlm_annotation run (GET /jobs/{id}/export/wide)."""
+    path = job_folder(job) / f"{Path(str(job.video_path)).stem}_vlm_annotation.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise APIError(
+            status_code=404,
+            code="NO_VLM_RESULTS",
+            message="This run has no answers to export yet.",
+        ) from e
+    shape = data.get("vlm_answer_shape")
+    if not shape:
+        raise _not_shaped()
+    out = io.StringIO()
+    write_vlm_wide_csv(
+        [a for a in data.get("annotations") or [] if isinstance(a, dict)],
+        shape,
+        video=Path(str(job.video_path)).name,
+        out=out,
+    )
+    return _wide_response(
+        out.getvalue(), sanitize_component(Path(str(job.video_path)).stem, "answers")
+    )
+
+
+# ---------------------------------------------------------------------------
+# Suggest an answer shape (research R11)
+# ---------------------------------------------------------------------------
+
+SUGGEST_PROMPT = """\
+A researcher asks a vision model this question about moments in a video:
+
+---
+{question}
+---
+
+Propose the answer's fields: what a researcher would want as separate columns.
+Each field has a name (lower-case letters, digits and _), a kind (choice,
+yes_no, number or text), values for a choice, and min and max for a number
+when the question gives a range. Use as few fields as the question needs."""
+
+# The proposal's own shape, sent as the schema so the reply parses.
+SUGGEST_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "fields": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": shapes.MAX_FIELDS,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "kind": {"type": "string", "enum": list(shapes.KINDS)},
+                    "values": {"type": "array", "items": {"type": "string"}},
+                    "min": {"type": "number"},
+                    "max": {"type": "number"},
+                },
+                "required": ["name", "kind"],
+            },
+        }
+    },
+    "required": ["fields"],
+}
+
+
+class SuggestShapeRequest(BaseModel):
+    prompt: str
+    model: str | None = None
+    base_url: str | None = None
+    backend: BackendName = "ollama"
+
+
+class SuggestShapeResponse(BaseModel):
+    shape: ShapeIn | None = None
+    made_by: Literal["rule", "model"] | None = None
+    message: str
+
+
+def _model_proposal(reply: str) -> list[dict[str, Any]] | None:
+    parsed = shapes.first_object(reply)
+    raw = parsed.get("fields") if parsed else None
+    if not isinstance(raw, list):
+        return None
+    cleaned = []
+    for item in raw:
+        if not isinstance(item, dict):
+            return None
+        kind = item.get("kind")
+        field = {"name": item.get("name"), "kind": kind}
+        if kind == "choice":
+            field["values"] = item.get("values")
+        if kind == "number":
+            for k in ("min", "max"):
+                if item.get(k) is not None:
+                    field[k] = item[k]
+        cleaned.append(field)
+    try:
+        return shapes.shape_dicts(shapes.validate_shape(cleaned))
+    except ValueError:
+        return None
+
+
+@router.post(
+    "/suggest-shape",
+    response_model=SuggestShapeResponse,
+    summary="Suggest an answer shape for a question, for the user to edit",
+    description="""
+First by rule, from the options the question lists ("Return ONLY: A or B",
+"(yes/no)", "on a scale of 1 to 5"). Only when the rule finds nothing and a
+model is given, one text-only call asks the model: never any frames. The
+suggestion is never applied on its own (FR-024).
+""",
+)
+def suggest_shape(
+    body: SuggestShapeRequest,
+    db: Session = Depends(get_db),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> SuggestShapeResponse:
+    by_rule = shapes.suggest_by_rule(body.prompt)
+    if by_rule:
+        return SuggestShapeResponse(
+            shape=shapes.shape_dicts(by_rule),
+            made_by="rule",
+            message="Suggested from your question.",
+        )
+    if not body.model:
+        return SuggestShapeResponse(
+            message="Your question doesn't list its answers. Add fields yourself, "
+            "or choose a model to suggest some."
+        )
+    require_llm()
+    base_url = resolve_base_url(body.backend, body.base_url)
+    require_sendable(db, base_url)
+    defaults = VLMAnnotationPipeline({}).config
+    client = client_for(
+        body.backend,
+        base_url,
+        int(defaults["request_timeout_sec"]),
+        _key(db, body.backend, base_url),
+    )
+    try:
+        with gate_for(base_url, body.model).acquire("try"):
+            result = client.chat(
+                model=body.model,
+                prompt=SUGGEST_PROMPT.format(question=body.prompt.strip()),
+                images=[],
+                think=False,
+                keep_alive=defaults["keep_alive"],
+                options=defaults["options"],
+                max_retries=1,
+                retry_backoff_sec=0,
+                schema=SUGGEST_SCHEMA,
+            )
+    except KeyRefusedError as e:
+        raise APIError(
+            status_code=401, code="KEY_REFUSED", message=KEY_REFUSED_MESSAGE
+        ) from e
+    if result.error:
+        raise APIError(
+            status_code=502,
+            code="VLM_CALL_FAILED",
+            message=f"The model couldn't suggest fields: {result.error}",
+        )
+    proposal = _model_proposal(result.raw_text)
+    if proposal is None:
+        return SuggestShapeResponse(
+            message="The model's suggestion wasn't a usable answer shape. "
+            "Add fields yourself."
+        )
+    return SuggestShapeResponse(
+        shape=proposal, made_by="model", message="Suggested by the model."
     )

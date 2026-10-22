@@ -405,6 +405,8 @@ class Prompt(Base):
     first_user_id = Column(String(64), nullable=True)
     updated_at = Column(DateTime(timezone=True), nullable=True)
     updated_by = Column(String(64), nullable=True)
+    # The last answer shape used with this text (spec 033 R9).
+    answer_shape = Column(JSON, nullable=True)
 
     uses = relationship(
         "PromptUse", back_populates="prompt", cascade="all, delete-orphan"
@@ -470,6 +472,8 @@ class AskEntry(Base):
     starred = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, index=True)
     finished_at = Column(DateTime(timezone=True), nullable=True)
+    backend = Column(String(20), nullable=False, default="ollama")  # spec 033
+    answer_shape = Column(JSON, nullable=True)
 
     prompt = relationship("Prompt")
 
@@ -482,6 +486,42 @@ class EndpointConfirmation(Base):
     base_url = Column(String(500), primary_key=True)
     confirmed_by = Column(String(64), nullable=True)
     confirmed_at = Column(DateTime(timezone=True), nullable=False)
+    # Confirmed before remote servers needed switching on (spec 033 R5): such
+    # an address stays usable with the switch off.
+    before_switch = Column(Boolean, nullable=False, default=False)
+
+
+class ModelServer(Base):
+    """A model server someone added in Settings (spec 033 R4).
+
+    The default Ollama server isn't a row. A stored key is kept apart, in
+    `model_server_keys.json`, never here; `api_key_env` names an environment
+    variable instead.
+    """
+
+    __tablename__ = "model_servers"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), nullable=False)
+    kind = Column(String(20), nullable=False)  # ollama | openai_compatible
+    base_url = Column(String(500), nullable=False, unique=True)
+    api_key_env = Column(String(100), nullable=True)
+    # Learnt from the first shaped call; None until then.
+    structured_output = Column(Boolean, nullable=True)
+    video_models = Column(JSON, nullable=False, default=dict)
+    created_by = Column(String(64), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class ServerSetting(Base):
+    """A server-wide setting changed in Settings by an admin (spec 033 R5)."""
+
+    __tablename__ = "server_settings"
+
+    name = Column(String(64), primary_key=True)
+    value = Column(JSON, nullable=False)
+    updated_by = Column(String(64), nullable=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
 
 
 class VideoNote(Base):

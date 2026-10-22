@@ -3,15 +3,17 @@ display_name: VLM Frame Annotation
 title: "Ask AI: your question about each moment"
 summary: >-
   Asks a vision-language model your question about frames sampled every few seconds, and records its answer and reasoning for each one.
-homepage: https://ollama.com/
+homepage: https://github.com/InfantLab/VideoAnnotator/blob/master/docs/development/vlm_annotation_pipeline.md
 benchmarks: []
 quality_note: >-
   Depends on the model you choose and on your question, so no figure applies to this pipeline as such. See your model's page, for example https://ollama.com/library/qwen3.5.
 description: >
-  Classify or describe sampled video frames using a locally-hosted
-  vision-language model served by Ollama, driven by a user-supplied prompt.
-  Each sample point is one independent, stateless model call — no
-  conversation history is carried between frames or bursts.
+  Classify or describe sampled video frames using a vision-language model on
+  a model server: Ollama, or an OpenAI-compatible server such as llama.cpp,
+  vLLM or LM Studio. Driven by a user-supplied prompt, optionally with an
+  answer shape that turns each answer into named fields. Each sample point is
+  one independent, stateless model call — no conversation history is carried
+  between frames, bursts or clips.
 pipeline_family: vlm
 variant: ollama
 module_path: videoannotator.pipelines.vlm_annotation:VLMAnnotationPipeline
@@ -45,21 +47,47 @@ config_schema:
       The text prompt sent with every sampled frame/burst. Applied
       identically and independently to every sample point in the video.
     widget: textarea
+  answer_shape:
+    group: behavioural
+    label: "Answer shape"
+    type: list
+    default: null
+    widget: answer_shape
+    description: >
+      Optional named fields for the answer, each a choice, yes/no, number or
+      text, e.g. [{name: touch, kind: yes_no}]. The server is asked for
+      answers in this shape and every answer is checked against it; one that
+      doesn't fit is recorded as such. Leave empty for a free-text answer.
+  backend:
+    group: technical
+    label: "Model server kind"
+    type: string
+    default: "ollama"
+    description: >
+      Ollama, or an OpenAI-compatible server (llama.cpp's llama-server, vLLM,
+      LM Studio, SGLang, or a hosted API if this server allows remote ones).
+    enum: [ollama, openai_compatible]
+    enum_labels:
+      ollama: "Ollama"
+      openai_compatible: "OpenAI-compatible (llama.cpp, vLLM, LM Studio…)"
   base_url:
     group: technical
     label: "Model server address"
     type: string
     default: ""
     description: >
-      Base URL of the Ollama server. Leave empty to use the server's
-      OLLAMA_BASE_URL (default http://127.0.0.1:11434; from a container with
-      Ollama on the host, http://host.docker.internal:11434).
+      Base URL of the model server, as the server documents it (an
+      OpenAI-compatible one usually ends in /v1). With Ollama, leave empty to
+      use the server's OLLAMA_BASE_URL (default http://127.0.0.1:11434; from a
+      container with Ollama on the host, http://host.docker.internal:11434).
+      Keys go in Settings → Model servers, never here.
   model:
     group: technical
     label: "Model"
     type: string
     default: "qwen3.5:9b"
-    description: Ollama model name/tag to use (must already be pulled).
+    description: >
+      The model's name on the model server (with Ollama, already pulled).
   sampling_mode:
     group: behavioural
     label: "Frames per sample"
@@ -69,7 +97,34 @@ config_schema:
       "single_frame" sends one image per sample point. "frame_burst" sends a
       window of several frames (see burst_offsets) together in one call, for
       comparing single-static-frame vs short-burst-context predictions.
-    enum: [single_frame, frame_burst]
+      "clip" sends a short clip around each sample point as video, to servers
+      and models that take video (vLLM with a Qwen-VL model).
+    enum: [single_frame, frame_burst, clip]
+    enum_labels:
+      single_frame: "One frame"
+      frame_burst: "Several frames"
+      clip: "A short clip"
+  clip_length_sec:
+    group: technical
+    label: "Clip length"
+    unit: s
+    min: 0.1
+    applies_when:
+      sampling_mode: [clip]
+    type: float
+    default: 2.0
+    description: >
+      Seconds of video around each sample point, half before and half after;
+      shortened at the start and end of the video.
+  clip_fps:
+    group: technical
+    label: "Clip frames per second"
+    min: 0.1
+    applies_when:
+      sampling_mode: [clip]
+    type: float
+    default: 4.0
+    description: Frames per second read from the video for each clip.
   frame_interval_sec:
     group: behavioural
     label: "Sample every"
@@ -146,7 +201,9 @@ config_schema:
     label: "Keep the model loaded for"
     type: string
     default: "2h"
-    description: Ollama keep_alive duration for the loaded model.
+    description: >
+      Ollama keep_alive duration for the loaded model. Not used by
+      OpenAI-compatible servers, which keep their own models loaded.
 examples:
   - cli: videoannotator job submit video.mp4 --pipelines vlm_annotation
     description: Run the default touch-detection prompt at the default 5s cadence, single-frame mode
@@ -154,12 +211,16 @@ version: 1
 stability: experimental
 backends:
   - ollama
+  - openai_compatible
 
-# spec 011: needs a reachable Ollama with a model pulled.
+# spec 011: needs a reachable model server with a model; readiness checks the
+# default Ollama one.
 requires_setup:
   - kind: service
     name: ollama
-    description: A running Ollama server with a vision model pulled
+    description: >-
+      A running Ollama server with a vision model pulled, or another model
+      server added in Settings → Model servers
     help_url: https://ollama.com/download
 
 # spec 025: cited by the methods paragraph (videoannotator export methods).
