@@ -1907,6 +1907,152 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ask/entries/{entry_id}/export/wide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A shaped question's answers, one column per field (CSV)
+         * @description A run's entry redirects to its job's wide file.
+         */
+        get: operations["export_entry_wide_api_v1_ask_entries__entry_id__export_wide_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ask/suggest-shape": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suggest an answer shape for a question, for the user to edit
+         * @description First by rule, from the options the question lists ("Return ONLY: A or B",
+         *     "(yes/no)", "on a scale of 1 to 5"). Only when the rule finds nothing and a
+         *     model is given, one text-only call asks the model: never any frames. The
+         *     suggestion is never applied on its own (FR-024).
+         */
+        post: operations["suggest_shape_api_v1_ask_suggest_shape_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ask/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's remembered Ask AI settings */
+        get: operations["get_ask_settings_api_v1_ask_settings_get"];
+        /** Remember the caller's Ask AI settings */
+        put: operations["put_ask_settings_api_v1_ask_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-servers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The model servers this server knows, the default Ollama one first */
+        get: operations["list_servers_api_v1_model_servers_get"];
+        put?: never;
+        /**
+         * Add a model server
+         * @description A remote address is refused while remote model servers are off.
+         */
+        post: operations["add_server_api_v1_model_servers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-servers/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether remote model servers are switched on */
+        get: operations["get_settings_api_v1_model_servers_settings_get"];
+        /**
+         * Switch remote model servers on or off (administrators)
+         * @description 409 FIXED_BY_ENVIRONMENT when VIDEOANNOTATOR_REMOTE_MODEL_SERVERS is set.
+         */
+        put: operations["put_settings_api_v1_model_servers_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-servers/{server_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a server and its stored key; results that used it stay */
+        delete: operations["delete_server_api_v1_model_servers__server_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename a server, or change its key or key variable
+         * @description The address and kind are fixed: remove the server and add it again.
+         */
+        patch: operations["update_server_api_v1_model_servers__server_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/model-servers/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a model server, listed or not yet
+         * @description Reachable? The right kind? Any models? Does it take the key? With `model`, also
+         *     whether that model takes video, from one tiny synthetic clip (never a
+         *     participant's frames, and not to a remote address frames can't go to yet).
+         */
+        post: operations["check_api_v1_model_servers_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/config/validate": {
         parameters: {
             query?: never;
@@ -2765,6 +2911,23 @@ export interface components {
             error?: string | null;
             /** Total Time */
             total_time?: number | null;
+            /** Fields */
+            fields?: {
+                [key: string]: unknown;
+            } | null;
+            /** Fit */
+            fit?: boolean | null;
+            /** Fit Problem */
+            fit_problem?: string | null;
+        };
+        /** AskSettings */
+        AskSettings: {
+            /**
+             * Server
+             * @description A listed server's id
+             * @default default
+             */
+            server: string;
         };
         /** BatchCancelResponse */
         BatchCancelResponse: {
@@ -2912,6 +3075,17 @@ export interface components {
             think: boolean;
             /** Base Url */
             base_url?: string | null;
+            /**
+             * Backend
+             * @description ollama or openai_compatible
+             * @default ollama
+             */
+            backend: string;
+            /**
+             * Answer Shape
+             * @description JSON-encoded answer shape (spec 033), or none
+             */
+            answer_shape?: string | null;
         };
         /** Body_submit_job_api_v1_jobs__post */
         Body_submit_job_api_v1_jobs__post: {
@@ -3131,6 +3305,16 @@ export interface components {
             /** Base Url */
             base_url?: string | null;
             /**
+             * Backend
+             * @default ollama
+             * @enum {string}
+             */
+            backend: "ollama" | "openai_compatible";
+            /** Answer Shape */
+            answer_shape?: {
+                [key: string]: unknown;
+            }[] | null;
+            /**
              * Think
              * @default false
              */
@@ -3155,6 +3339,18 @@ export interface components {
             class: "local" | "remote";
             /** Confirmed */
             confirmed: boolean;
+            /**
+             * Sendable
+             * @description Frames may go there now: local, or confirmed and allowed
+             * @default true
+             */
+            sendable: boolean;
+            /**
+             * Before Switch
+             * @description Confirmed before remote servers needed switching on
+             * @default false
+             */
+            before_switch: boolean;
         };
         /** EntriesResponse */
         EntriesResponse: {
@@ -3187,6 +3383,16 @@ export interface components {
             model: string;
             /** Base Url */
             base_url: string;
+            /**
+             * Backend
+             * @default ollama
+             * @enum {string}
+             */
+            backend: "ollama" | "openai_compatible";
+            /** Answer Shape */
+            answer_shape?: {
+                [key: string]: unknown;
+            }[] | null;
             /**
              * Endpoint Class
              * @enum {string}
@@ -3718,6 +3924,10 @@ export interface components {
             sha256: string;
             /** Text */
             text: string;
+            /** Answer Shape */
+            answer_shape?: {
+                [key: string]: unknown;
+            }[] | null;
             /** Name */
             name?: string | null;
             /**
@@ -3732,6 +3942,186 @@ export interface components {
             starred: boolean;
             /** Last Used At */
             last_used_at?: string | null;
+        };
+        /** ModelServerAdd */
+        ModelServerAdd: {
+            /** Name */
+            name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "ollama" | "openai_compatible";
+            /** Base Url */
+            base_url: string;
+            /**
+             * Api Key
+             * @description Stored in the keys file, never shown
+             */
+            api_key?: string | null;
+            /**
+             * Api Key Env
+             * @description The name of an environment variable holding the key
+             */
+            api_key_env?: string | null;
+        };
+        /** ModelServerCheck */
+        ModelServerCheck: {
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "unreachable" | "wrong_kind" | "no_models" | "models" | "key_refused";
+            /** Message */
+            message: string;
+            /** Hint */
+            hint?: string | null;
+            /** Kind Matches */
+            kind_matches?: boolean | null;
+            /** Suggest Kind */
+            suggest_kind?: ("ollama" | "openai_compatible") | null;
+            /** Suggest Base Url */
+            suggest_base_url?: string | null;
+            /**
+             * Models
+             * @default []
+             */
+            models: string[];
+            endpoint: components["schemas"]["ModelServerCheckEndpoint"];
+            /** Video */
+            video?: boolean | null;
+        };
+        /** ModelServerCheckEndpoint */
+        ModelServerCheckEndpoint: {
+            /** Host */
+            host: string;
+            /**
+             * Class
+             * @enum {string}
+             */
+            class: "local" | "remote";
+            /** Confirmed */
+            confirmed: boolean;
+            /** Sendable */
+            sendable: boolean;
+        };
+        /** ModelServerCheckRequest */
+        ModelServerCheckRequest: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "ollama" | "openai_compatible";
+            /** Base Url */
+            base_url: string;
+            /** Api Key */
+            api_key?: string | null;
+            /**
+             * Id
+             * @description Use this listed server's key
+             */
+            id?: string | null;
+            /**
+             * Model
+             * @description Also ask whether this model takes video (a synthetic clip)
+             */
+            model?: string | null;
+        };
+        /** ModelServerEndpoint */
+        ModelServerEndpoint: {
+            /** Host */
+            host: string;
+            /**
+             * Class
+             * @enum {string}
+             */
+            class: "local" | "remote";
+            /** Confirmed */
+            confirmed: boolean;
+            /** Sendable */
+            sendable: boolean;
+            /**
+             * Before Switch
+             * @default false
+             */
+            before_switch: boolean;
+        };
+        /** ModelServerOut */
+        ModelServerOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "ollama" | "openai_compatible";
+            /** Base Url */
+            base_url: string;
+            /** Has Key */
+            has_key: boolean;
+            /**
+             * Key Source
+             * @description env: from the named environment variable; never the key
+             */
+            key_source?: ("env" | "stored") | null;
+            /** Api Key Env */
+            api_key_env?: string | null;
+            endpoint: components["schemas"]["ModelServerEndpoint"];
+            /** Structured Output */
+            structured_output?: boolean | null;
+            /**
+             * Video Models
+             * @default {}
+             */
+            video_models: {
+                [key: string]: boolean;
+            };
+            /** Removable */
+            removable: boolean;
+        };
+        /** ModelServerPatch */
+        ModelServerPatch: {
+            /** Name */
+            name?: string | null;
+            /** Api Key */
+            api_key?: string | null;
+            /** Api Key Env */
+            api_key_env?: string | null;
+            /**
+             * Clear Key
+             * @default false
+             */
+            clear_key: boolean;
+        };
+        /** ModelServerSettings */
+        ModelServerSettings: {
+            /** Remote Model Servers */
+            remote_model_servers: boolean;
+            /**
+             * Fixed By Environment
+             * @default false
+             */
+            fixed_by_environment: boolean;
+            /**
+             * Warning
+             * @default With remote model servers switched on, frames from the videos people ask about can be sent to servers outside this computer and your local network, run by someone else. For video of research participants this is usually a question for your ethics approval and consent forms. Each remote server still has to be confirmed before its first frames are sent.
+             */
+            warning: string;
+        };
+        /** ModelServerSettingsChange */
+        ModelServerSettingsChange: {
+            /** Remote Model Servers */
+            remote_model_servers: boolean;
+        };
+        /** ModelServersResponse */
+        ModelServersResponse: {
+            /** Servers */
+            servers: components["schemas"]["ModelServerOut"][];
+            remote: components["schemas"]["RemoteModelServers"];
+            /** Keys File */
+            keys_file: string;
         };
         /** NewVideo */
         NewVideo: {
@@ -3927,6 +4317,8 @@ export interface components {
             default?: unknown;
             /** Enum */
             enum?: components["schemas"]["PipelineParameterOption"][] | null;
+            /** Widget */
+            widget?: string | null;
             /**
              * Group
              * @default technical
@@ -4326,6 +4718,18 @@ export interface components {
             /** To */
             to: string;
         };
+        /** RemoteModelServers */
+        RemoteModelServers: {
+            /** Allowed */
+            allowed: boolean;
+            /** Fixed By Environment */
+            fixed_by_environment: boolean;
+            /**
+             * Warning
+             * @default With remote model servers switched on, frames from the videos people ask about can be sent to servers outside this computer and your local network, run by someone else. For video of research participants this is usually a question for your ethics approval and consent forms. Each remote server still has to be confirmed before its first frames are sent.
+             */
+            warning: string;
+        };
         /**
          * RerunRequest
          * @description Body for running a job (or batch) again. Omitted fields keep the
@@ -4441,6 +4845,16 @@ export interface components {
             model: string;
             /** Base Url */
             base_url?: string | null;
+            /**
+             * Backend
+             * @default ollama
+             * @enum {string}
+             */
+            backend: "ollama" | "openai_compatible";
+            /** Answer Shape */
+            answer_shape?: {
+                [key: string]: unknown;
+            }[] | null;
             /**
              * Think
              * @default false
@@ -4688,6 +5102,32 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** SuggestShapeRequest */
+        SuggestShapeRequest: {
+            /** Prompt */
+            prompt: string;
+            /** Model */
+            model?: string | null;
+            /** Base Url */
+            base_url?: string | null;
+            /**
+             * Backend
+             * @default ollama
+             * @enum {string}
+             */
+            backend: "ollama" | "openai_compatible";
+        };
+        /** SuggestShapeResponse */
+        SuggestShapeResponse: {
+            /** Shape */
+            shape?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Made By */
+            made_by?: ("rule" | "model") | null;
+            /** Message */
+            message: string;
+        };
         /** TryRequest */
         TryRequest: {
             /** Video Path */
@@ -4698,6 +5138,16 @@ export interface components {
             model: string;
             /** Base Url */
             base_url?: string | null;
+            /**
+             * Backend
+             * @default ollama
+             * @enum {string}
+             */
+            backend: "ollama" | "openai_compatible";
+            /** Answer Shape */
+            answer_shape?: {
+                [key: string]: unknown;
+            }[] | null;
             /**
              * Think
              * @default false
@@ -4979,6 +5429,18 @@ export interface components {
             /** Models */
             models: string[];
             endpoint?: components["schemas"]["VlmEndpoint"] | null;
+            /**
+             * Server
+             * @description The listed server's id
+             * @default default
+             */
+            server: string;
+            /**
+             * Kind
+             * @description ollama or openai_compatible
+             * @default ollama
+             */
+            kind: string;
         };
         /** VlmPreviewResponse */
         VlmPreviewResponse: {
@@ -4991,13 +5453,13 @@ export interface components {
             /** Total Time */
             total_time: number;
             /** Load Time */
-            load_time: number;
+            load_time: number | null;
             /** Prompt Tokens */
             prompt_tokens: number;
             /** Resp Tokens */
             resp_tokens: number;
             /** Tokens Per Sec */
-            tokens_per_sec: number;
+            tokens_per_sec: number | null;
             /**
              * Frames
              * @default []
@@ -6720,6 +7182,8 @@ export interface operations {
         parameters: {
             query?: {
                 base_url?: string | null;
+                /** @description A listed model server's id (spec 033); `default` if none */
+                server?: string | null;
             };
             header?: never;
             path?: never;
@@ -7542,6 +8006,324 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_entry_wide_api_v1_ask_entries__entry_id__export_wide_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggest_shape_api_v1_ask_suggest_shape_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuggestShapeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestShapeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ask_settings_api_v1_ask_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskSettings"];
+                };
+            };
+        };
+    };
+    put_ask_settings_api_v1_ask_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskSettings"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskSettings"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_servers_api_v1_model_servers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelServersResponse"];
+                };
+            };
+        };
+    };
+    add_server_api_v1_model_servers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelServerAdd"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelServerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings_api_v1_model_servers_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelServerSettings"];
+                };
+            };
+        };
+    };
+    put_settings_api_v1_model_servers_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelServerSettingsChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelServerSettings"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_server_api_v1_model_servers__server_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                server_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_server_api_v1_model_servers__server_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                server_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelServerPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelServerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_api_v1_model_servers_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelServerCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelServerCheck"];
+                };
             };
             /** @description Validation Error */
             422: {

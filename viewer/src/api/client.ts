@@ -41,7 +41,15 @@ import type {
   AskRunRequest,
   AskTryRequest,
   ModelEndpoint,
+  ModelServer,
+  ModelServerAdd,
+  ModelServerCheck,
+  ModelServerCheckRequest,
+  ModelServerPatch,
+  ModelServerSettings,
+  ModelServersResponse,
   StreamToken,
+  SuggestShapeResponse,
   UploadedVideo,
 } from '@/types/ask';
 import type { JobResults } from '@/lib/jobOutcome';
@@ -1075,17 +1083,76 @@ class APIClient {
    * pulled returns normally with an empty `models` array (these are
    * deliberately distinct states — VideoAnnotator spec 009 FR-005).
    */
-  async getVlmModels(): Promise<VlmModelsResponse> {
+  async getVlmModels(server?: string): Promise<VlmModelsResponse> {
+    const query = server && server !== 'default' ? `?server=${encodeURIComponent(server)}` : '';
     const response = await this.request<{
       base_url: string;
       models: string[];
       endpoint?: { host: string; class: 'local' | 'remote'; confirmed: boolean } | null;
-    }>('/api/v1/vlm/models');
+      server?: string;
+      kind?: 'ollama' | 'openai_compatible';
+    }>(`/api/v1/vlm/models${query}`);
     return {
       baseUrl: response.base_url,
       models: response.models,
       endpoint: response.endpoint ? { baseUrl: response.base_url, ...response.endpoint } : undefined,
+      server: response.server ?? 'default',
+      kind: response.kind ?? 'ollama',
     };
+  }
+
+  // ------------------------------------------------------------------
+  // Model servers (spec 033). No response carries a key.
+
+  async listModelServers(): Promise<ModelServersResponse> {
+    return this.request('/api/v1/model-servers');
+  }
+
+  async addModelServer(body: ModelServerAdd): Promise<ModelServer> {
+    return this.request('/api/v1/model-servers', { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  async updateModelServer(id: string, body: ModelServerPatch): Promise<ModelServer> {
+    return this.request(`/api/v1/model-servers/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async removeModelServer(id: string): Promise<void> {
+    return this.request(`/api/v1/model-servers/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  }
+
+  async checkModelServer(body: ModelServerCheckRequest): Promise<ModelServerCheck> {
+    return this.request('/api/v1/model-servers/check', { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  async getModelServerSettings(): Promise<ModelServerSettings> {
+    return this.request('/api/v1/model-servers/settings');
+  }
+
+  async setRemoteModelServers(on: boolean): Promise<ModelServerSettings> {
+    return this.request('/api/v1/model-servers/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ remote_model_servers: on }),
+    });
+  }
+
+  async getAskSettings(): Promise<{ server: string }> {
+    return this.request('/api/v1/ask/settings');
+  }
+
+  async setAskSettings(body: { server: string }): Promise<{ server: string }> {
+    return this.request('/api/v1/ask/settings', { method: 'PUT', body: JSON.stringify(body) });
+  }
+
+  async suggestShape(body: {
+    prompt: string;
+    model?: string | null;
+    base_url?: string | null;
+    backend?: 'ollama' | 'openai_compatible';
+  }): Promise<SuggestShapeResponse> {
+    return this.request('/api/v1/ask/suggest-shape', { method: 'POST', body: JSON.stringify(body) });
   }
 
   // ------------------------------------------------------------------
@@ -1273,11 +1340,24 @@ class APIClient {
   }
 
   /** Where the model runs; works when the model server is unreachable too. */
-  async getEndpoint(): Promise<ModelEndpoint> {
-    const response = await this.request<{ base_url: string; host: string; class: 'local' | 'remote'; confirmed: boolean }>(
-      '/api/v1/ask/endpoint'
-    );
-    return { baseUrl: response.base_url, host: response.host, class: response.class, confirmed: response.confirmed };
+  async getEndpoint(baseUrl?: string | null): Promise<ModelEndpoint> {
+    const query = baseUrl ? `?base_url=${encodeURIComponent(baseUrl)}` : '';
+    const response = await this.request<{
+      base_url: string;
+      host: string;
+      class: 'local' | 'remote';
+      confirmed: boolean;
+      sendable?: boolean;
+      before_switch?: boolean;
+    }>(`/api/v1/ask/endpoint${query}`);
+    return {
+      baseUrl: response.base_url,
+      host: response.host,
+      class: response.class,
+      confirmed: response.confirmed,
+      sendable: response.sendable,
+      beforeSwitch: response.before_switch,
+    };
   }
 
   async confirmEndpoint(baseUrl: string): Promise<void> {
@@ -1285,6 +1365,16 @@ class APIClient {
       method: 'POST',
       body: JSON.stringify({ base_url: baseUrl }),
     });
+  }
+
+  /** A shaped question's answers, one column per field (spec 033 R10). */
+  async exportEntryWide(id: string): Promise<ExportDownload> {
+    const response = await this.fetchRaw(`/api/v1/ask/entries/${encodeURIComponent(id)}/export/wide`);
+    return {
+      blob: await response.blob(),
+      filename: filenameFromDisposition(response.headers.get('Content-Disposition')),
+      summary: null,
+    };
   }
 
   /** A try's answers (or a run's) as the spec 025 table. */

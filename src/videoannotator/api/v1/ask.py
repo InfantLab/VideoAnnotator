@@ -1398,3 +1398,51 @@ def suggest_shape(
     return SuggestShapeResponse(
         shape=proposal, made_by="model", message="Suggested by the model."
     )
+
+
+# ---------------------------------------------------------------------------
+# Remembered settings (spec 033: the chosen model server, per user)
+# ---------------------------------------------------------------------------
+
+ASK_SETTINGS = "ask_settings"
+
+
+class AskSettings(BaseModel):
+    server: str = Field(model_servers.DEFAULT_ID, description="A listed server's id")
+
+
+@router.get(
+    "/settings",
+    response_model=AskSettings,
+    summary="The caller's remembered Ask AI settings",
+)
+def get_ask_settings(
+    db: Session = Depends(get_db),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> AskSettings:
+    from ...database.models import UserPreference
+    from ...run_settings import user_key
+
+    row = db.get(UserPreference, (user_key(user), ASK_SETTINGS))
+    value = row.value if row is not None and isinstance(row.value, dict) else {}
+    server = str(value.get("server") or model_servers.DEFAULT_ID)
+    if model_servers.get(db, server) is None:
+        server = model_servers.DEFAULT_ID
+    return AskSettings(server=server)
+
+
+@router.put(
+    "/settings",
+    response_model=AskSettings,
+    summary="Remember the caller's Ask AI settings",
+)
+def put_ask_settings(
+    body: AskSettings,
+    db: Session = Depends(get_db),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> AskSettings:
+    from ...run_settings import _set_preference, user_key
+
+    _set_preference(db, user_key(user), ASK_SETTINGS, body.model_dump())
+    db.commit()
+    return body

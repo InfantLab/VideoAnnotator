@@ -36,7 +36,7 @@ def _api_error(e: ModelServerError) -> APIError:
     )
 
 
-class Endpoint(BaseModel):
+class ModelServerEndpoint(BaseModel):
     host: str
     class_: Literal["local", "remote"] = Field(alias="class")
     confirmed: bool
@@ -46,7 +46,7 @@ class Endpoint(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class Server(BaseModel):
+class ModelServerOut(BaseModel):
     id: str
     name: str
     kind: Kind
@@ -56,28 +56,28 @@ class Server(BaseModel):
         None, description="env: from the named environment variable; never the key"
     )
     api_key_env: str | None = None
-    endpoint: Endpoint
+    endpoint: ModelServerEndpoint
     structured_output: bool | None = None
     video_models: dict[str, bool] = {}
     removable: bool
 
 
-class Remote(BaseModel):
+class RemoteModelServers(BaseModel):
     allowed: bool
     fixed_by_environment: bool
     warning: str = endpoint_policy.REMOTE_WARNING
 
 
-class ServersResponse(BaseModel):
-    servers: list[Server]
-    remote: Remote
+class ModelServersResponse(BaseModel):
+    servers: list[ModelServerOut]
+    remote: RemoteModelServers
     keys_file: str
 
 
-def _server(db: Session, server: dict[str, Any]) -> Server:
+def _server(db: Session, server: dict[str, Any]) -> ModelServerOut:
     source = model_servers.key_source(server)
     state = endpoint_policy.endpoint_state(db, server["base_url"])
-    return Server(
+    return ModelServerOut(
         id=server["id"],
         name=server["name"],
         kind=server["kind"],
@@ -85,36 +85,36 @@ def _server(db: Session, server: dict[str, Any]) -> Server:
         has_key=source is not None,
         key_source=source,
         api_key_env=server["api_key_env"],
-        endpoint=Endpoint(**state),
+        endpoint=ModelServerEndpoint(**state),
         structured_output=server["structured_output"],
         video_models=server["video_models"],
         removable=server["removable"],
     )
 
 
-def _remote(db: Session) -> Remote:
+def _remote(db: Session) -> RemoteModelServers:
     allowed, fixed = endpoint_policy.remote_allowed(db)
-    return Remote(allowed=allowed, fixed_by_environment=fixed)
+    return RemoteModelServers(allowed=allowed, fixed_by_environment=fixed)
 
 
 @router.get(
     "",
-    response_model=ServersResponse,
+    response_model=ModelServersResponse,
     response_model_by_alias=True,
     summary="The model servers this server knows, the default Ollama one first",
 )
 def list_servers(
     db: Session = Depends(get_db),
     _user: dict[str, Any] | None = Depends(validate_api_key),
-) -> ServersResponse:
-    return ServersResponse(
+) -> ModelServersResponse:
+    return ModelServersResponse(
         servers=[_server(db, s) for s in model_servers.list_servers(db)],
         remote=_remote(db),
         keys_file=str(secrets_store.model_server_keys_path()),
     )
 
 
-class AddRequest(BaseModel):
+class ModelServerAdd(BaseModel):
     name: str
     kind: Kind
     base_url: str
@@ -132,17 +132,17 @@ def _user_id(user: dict[str, Any] | None) -> str | None:
 
 @router.post(
     "",
-    response_model=Server,
+    response_model=ModelServerOut,
     response_model_by_alias=True,
     status_code=201,
     summary="Add a model server",
     description="A remote address is refused while remote model servers are off.",
 )
 def add_server(
-    body: AddRequest,
+    body: ModelServerAdd,
     db: Session = Depends(get_db),
     user: dict[str, Any] | None = Depends(validate_api_key),
-) -> Server:
+) -> ModelServerOut:
     try:
         server = model_servers.add(
             db,
@@ -158,14 +158,14 @@ def add_server(
     return _server(db, server)
 
 
-class PatchRequest(BaseModel):
+class ModelServerPatch(BaseModel):
     name: str | None = None
     api_key: str | None = None
     api_key_env: str | None = None
     clear_key: bool = False
 
 
-class Settings(BaseModel):
+class ModelServerSettings(BaseModel):
     remote_model_servers: bool
     fixed_by_environment: bool = False
     warning: str = endpoint_policy.REMOTE_WARNING
@@ -173,33 +173,33 @@ class Settings(BaseModel):
 
 @router.get(
     "/settings",
-    response_model=Settings,
+    response_model=ModelServerSettings,
     summary="Whether remote model servers are switched on",
 )
 def get_settings(
     db: Session = Depends(get_db),
     _user: dict[str, Any] | None = Depends(validate_api_key),
-) -> Settings:
+) -> ModelServerSettings:
     allowed, fixed = endpoint_policy.remote_allowed(db)
-    return Settings(remote_model_servers=allowed, fixed_by_environment=fixed)
+    return ModelServerSettings(remote_model_servers=allowed, fixed_by_environment=fixed)
 
 
-class SettingsChange(BaseModel):
+class ModelServerSettingsChange(BaseModel):
     remote_model_servers: bool
 
 
 @router.put(
     "/settings",
-    response_model=Settings,
+    response_model=ModelServerSettings,
     summary="Switch remote model servers on or off (administrators)",
     description="409 FIXED_BY_ENVIRONMENT when VIDEOANNOTATOR_REMOTE_MODEL_SERVERS "
     "is set.",
 )
 def put_settings(
-    body: SettingsChange,
+    body: ModelServerSettingsChange,
     db: Session = Depends(get_db),
     user: dict[str, Any] = Depends(require_admin),
-) -> Settings:
+) -> ModelServerSettings:
     try:
         endpoint_policy.set_remote_allowed(
             db, body.remote_model_servers, _user_id(user)
@@ -211,17 +211,17 @@ def put_settings(
 
 @router.patch(
     "/{server_id}",
-    response_model=Server,
+    response_model=ModelServerOut,
     response_model_by_alias=True,
     summary="Rename a server, or change its key or key variable",
     description="The address and kind are fixed: remove the server and add it again.",
 )
 def update_server(
     server_id: str,
-    body: PatchRequest,
+    body: ModelServerPatch,
     db: Session = Depends(get_db),
     _user: dict[str, Any] | None = Depends(validate_api_key),
-) -> Server:
+) -> ModelServerOut:
     changes: dict[str, Any] = {
         "name": body.name,
         "api_key": body.api_key,
@@ -253,7 +253,7 @@ def delete_server(
     return Response(status_code=204)
 
 
-class CheckRequest(BaseModel):
+class ModelServerCheckRequest(BaseModel):
     kind: Kind
     base_url: str
     api_key: str | None = None
@@ -263,7 +263,7 @@ class CheckRequest(BaseModel):
     )
 
 
-class CheckEndpoint(BaseModel):
+class ModelServerCheckEndpoint(BaseModel):
     host: str
     class_: Literal["local", "remote"] = Field(alias="class")
     confirmed: bool
@@ -272,7 +272,7 @@ class CheckEndpoint(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class CheckResponse(BaseModel):
+class ModelServerCheck(BaseModel):
     outcome: Literal["unreachable", "wrong_kind", "no_models", "models", "key_refused"]
     message: str
     hint: str | None = None
@@ -280,13 +280,13 @@ class CheckResponse(BaseModel):
     suggest_kind: Kind | None = None
     suggest_base_url: str | None = None
     models: list[str] = []
-    endpoint: CheckEndpoint
+    endpoint: ModelServerCheckEndpoint
     video: bool | None = None
 
 
 @router.post(
     "/check",
-    response_model=CheckResponse,
+    response_model=ModelServerCheck,
     response_model_by_alias=True,
     summary="Check a model server, listed or not yet",
     description="""
@@ -296,10 +296,10 @@ participant's frames, and not to a remote address frames can't go to yet).
 """,
 )
 async def check(
-    body: CheckRequest,
+    body: ModelServerCheckRequest,
     db: Session = Depends(get_db),
     _user: dict[str, Any] | None = Depends(validate_api_key),
-) -> CheckResponse:
+) -> ModelServerCheck:
     try:
         base_url = model_servers.check_base_url(body.base_url)
     except ModelServerError as e:
@@ -316,9 +316,9 @@ async def check(
     result = await run_in_threadpool(check_server, body.kind, base_url, api_key, model)
     if result["video"] is not None and model:
         model_servers.record_capabilities(db, base_url, video=(model, result["video"]))
-    return CheckResponse(
+    return ModelServerCheck(
         **result,
-        endpoint=CheckEndpoint(
+        endpoint=ModelServerCheckEndpoint(
             host=state["host"],
             class_=state["class"],
             confirmed=state["confirmed"],

@@ -6,6 +6,8 @@ import type { ModelEndpoint } from '@/types/ask';
 interface EndpointBadgeProps {
   endpoint: ModelEndpoint | undefined;
   model: string;
+  /** The one-time note under a local badge; off where many badges are listed. */
+  showNote?: boolean;
 }
 
 const noteSeen = () => {
@@ -17,7 +19,7 @@ const noteSeen = () => {
 };
 
 /** Where the model runs, always in view (FR-014); a remote one as a warning (FR-015). */
-export function EndpointBadge({ endpoint, model }: EndpointBadgeProps) {
+export function EndpointBadge({ endpoint, model, showNote: noteAllowed = true }: EndpointBadgeProps) {
   const [showNote, setShowNote] = useState(() => !noteSeen());
   if (!endpoint) return null;
   const remote = endpoint.class === 'remote';
@@ -45,7 +47,7 @@ export function EndpointBadge({ endpoint, model }: EndpointBadgeProps) {
         {remote ? <Globe className="h-4 w-4" /> : <HardDrive className="h-4 w-4" />}
         {badgeText(endpoint, model)}
       </span>
-      {!remote && showNote && (
+      {!remote && noteAllowed && showNote && (
         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground" data-testid="endpoint-note">
           {localNote(endpoint)}
           <button type="button" aria-label="Got it" onClick={dismiss} className="rounded p-0.5 hover:bg-muted">

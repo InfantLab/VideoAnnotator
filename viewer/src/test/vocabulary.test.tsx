@@ -12,6 +12,7 @@ import App from '@/App';
 import { queryClient } from '@/lib/queryClient';
 import { EMPTY, PROJECT_ID, mockVideosApi } from '@/test/fixtures/videos';
 import { mockVideoApi, VIDEO_PATH } from '@/test/videoPageHarness';
+import { DEFAULT_SERVER, LAB_SERVER, OLD_REMOTE_SERVER, serversResponse } from '@/test/fixtures/modelServers';
 
 const server = vi.hoisted(() => ({ capabilities: { version: '1.7.0' } as { version: string } | null }));
 vi.mock('@/contexts/ServerCapabilitiesContext', () => ({
@@ -59,6 +60,11 @@ function mockFor(state: State) {
   vi.spyOn(client, 'getExtrasGroups').mockResolvedValue([]);
   vi.spyOn(client, 'getIngestAccess').mockResolvedValue({ can_read_in_place: false, same_machine: false, reason: 'Not shared.' });
   vi.spyOn(client, 'getJob').mockResolvedValue({ id: 'j1', status: 'completed', selected_pipelines: ['vlm_annotation'], config: {}, video_path: VIDEO_PATH });
+  // Spec 033: Settings and Ask AI with model servers listed.
+  vi.spyOn(client, 'listModelServers').mockResolvedValue(
+    serversResponse(state === 'empty' ? [DEFAULT_SERVER] : [DEFAULT_SERVER, LAB_SERVER, OLD_REMOTE_SERVER]),
+  );
+  vi.spyOn(client, 'getAskSettings').mockResolvedValue({ server: 'default' });
   return api;
 }
 

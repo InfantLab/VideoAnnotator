@@ -44,7 +44,16 @@ import { formatClock } from '@/lib/lanes';
 import { chooseMoments, samplePoints, samplingToConfig } from '@/lib/sampling';
 import { askWizardStart } from '@/lib/wizardStart';
 import { runState } from '@/lib/runTarget';
-import { DEFAULT_SAMPLING, type AskAnswer, type AskEntry, type AskLibraryPrompt, type AskSampling } from '@/types/ask';
+import { KIND_SHORT, MODEL_SERVERS_QUERY_KEY } from '@/lib/modelServers';
+import {
+  DEFAULT_SAMPLING,
+  DEFAULT_SERVER_ID,
+  type AskAnswer,
+  type AskEntry,
+  type AskLibraryPrompt,
+  type AskSampling,
+  type ModelServer,
+} from '@/types/ask';
 
 const TRY_COUNT = 10;
 const TRY_POLL_MS = 1000;
@@ -106,7 +115,33 @@ function FrameStrip({ path, t, sampling }: { path: string; t: number | null; sam
 }
 
 /** What's missing when there's no model to ask, in words (US1 scenario 4). */
-function NoModel({ unreachable, detail }: { unreachable: boolean; detail?: string }) {
+function NoModel({ unreachable, detail, server }: { unreachable: boolean; detail?: string; server?: ModelServer }) {
+  if (server && server.id !== DEFAULT_SERVER_ID) {
+    return (
+      <Alert data-testid="no-model">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>{unreachable ? `Ask AI can't reach ${server.name}` : `No models on ${server.name}`}</AlertTitle>
+        <AlertDescription className="space-y-1 text-sm">
+          {unreachable ? (
+            <p>
+              Check the {KIND_SHORT[server.kind]} server at <code>{server.base_url}</code> is running and that this
+              VideoAnnotator server can reach it, or choose another model server.{detail ? ` ${detail}` : ''}
+            </p>
+          ) : (
+            <p>
+              {server.name} is running but lists no models. Load a vision model in it, then reload this page.
+            </p>
+          )}
+          <p>
+            <Link className="underline" to="/settings">
+              Settings → Model servers
+            </Link>{' '}
+            checks a server and says what's wrong.
+          </p>
+        </AlertDescription>
+      </Alert>
+    );
+  }
   return (
     <Alert data-testid="no-model">
       <AlertTriangle className="h-4 w-4" />
@@ -165,14 +200,43 @@ const AskAI = () => {
   const [selected, setSelected] = useState<{ answer: AskAnswer; sampling: AskSampling } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const models = useVlmModels({ enabled: Boolean(capabilities) });
+  const [serverId, setServerId] = useState<string | null>(() => params.get('server'));
+  const serversQuery = useQuery({
+    queryKey: MODEL_SERVERS_QUERY_KEY,
+    queryFn: () => apiClient.listModelServers(),
+    enabled: Boolean(capabilities),
+    retry: false,
+  });
+  const askSettings = useQuery({
+    queryKey: ['ask', 'settings'],
+    queryFn: () => apiClient.getAskSettings(),
+    enabled: Boolean(capabilities) && serverId === null,
+    retry: false,
+  });
+  useEffect(() => {
+    if (serverId === null && (askSettings.data || askSettings.isError)) {
+      setServerId(askSettings.data?.server ?? DEFAULT_SERVER_ID);
+    }
+  }, [serverId, askSettings.data, askSettings.isError]);
+  const servers = useMemo(() => serversQuery.data?.servers ?? [], [serversQuery.data]);
+  const server = servers.find((s) => s.id === serverId) ?? servers.find((s) => s.id === DEFAULT_SERVER_ID);
+  const backend = server?.kind ?? 'ollama';
+
+  const models = useVlmModels({ enabled: Boolean(capabilities), server: server?.id });
   const endpointQuery = useQuery({
-    queryKey: ['ask', 'endpoint'],
-    queryFn: () => apiClient.getEndpoint(),
+    queryKey: ['ask', 'endpoint', server?.base_url ?? ''],
+    queryFn: () => apiClient.getEndpoint(server?.base_url),
     enabled: Boolean(capabilities),
     retry: false,
   });
   const endpoint = models.data?.endpoint ?? endpointQuery.data;
+
+  const chooseServer = (id: string) => {
+    if (id === server?.id) return;
+    setServerId(id);
+    setModel('');
+    void apiClient.setAskSettings({ server: id }).catch(() => undefined);
+  };
 
   useEffect(() => {
     if (!model && models.data?.models.length) setModel(models.data.models[0]);
@@ -315,7 +379,15 @@ const AskAI = () => {
     }
   };
 
-  const request = { video_path: videoPath, prompt: question, model, base_url: endpoint?.baseUrl ?? null, think: false, sampling };
+  const request = {
+    video_path: videoPath,
+    prompt: question,
+    model,
+    base_url: server?.base_url ?? endpoint?.baseUrl ?? null,
+    backend,
+    think: false,
+    sampling,
+  };
   const tryHere = () => send(() => asked(() => apiClient.createTry({ ...request, at: Math.round(time * 1000) / 1000 })));
   const tryMany = () => send(() => asked(() => apiClient.createTry({ ...request, count: TRY_COUNT })));
   const runWhole = () => send(() => asked(() => apiClient.createRun(request)));
@@ -329,7 +401,10 @@ const AskAI = () => {
     }
   };
 
-  const config = () => samplingToConfig(sampling);
+  // A run elsewhere says where it goes; the default keeps reading as before.
+  const serverConfig = (): Record<string, unknown> =>
+    backend === 'ollama' && server?.id === DEFAULT_SERVER_ID ? {} : { backend, base_url: server?.base_url };
+  const config = () => ({ ...samplingToConfig(sampling), ...serverConfig() });
   const moreVideos = () => {
     const start = askWizardStart(question, model, config());
     navigate('/run', { state: runState({ target: null, settings: start.mode === 'settings' ? { ...start } : undefined }) });
@@ -357,18 +432,31 @@ const AskAI = () => {
     [history.data, allHistory],
   );
 
-  const restoreFields = useCallback((entry: Pick<AskEntry, 'prompt' | 'model' | 'sampling'>) => {
-    setQuestion(entry.prompt);
-    setModel(entry.model);
-    setSampling(fullSampling(entry.sampling));
-    setSamplingKey((k) => k + 1);
-  }, []);
+  const restoreFields = useCallback(
+    (entry: Pick<AskEntry, 'prompt' | 'model' | 'sampling'> & Partial<Pick<AskEntry, 'base_url' | 'backend'>>) => {
+      setQuestion(entry.prompt);
+      setModel(entry.model);
+      setSampling(fullSampling(entry.sampling));
+      setSamplingKey((k) => k + 1);
+      const same = entry.base_url ? servers.find((s) => s.base_url === entry.base_url.replace(/\/+$/, '')) : undefined;
+      if (same) setServerId(same.id);
+    },
+    [servers],
+  );
 
   /** A question typed but never tried is kept before another is put back (US2 scenario 2). */
   const keepDraft = async () => {
     if (!question.trim() || knownQuestions.has(question) || !videoPath || !model) return;
     try {
-      await apiClient.createDraft({ video_path: videoPath, prompt: question, model, think: false, sampling });
+      await apiClient.createDraft({
+        video_path: videoPath,
+        prompt: question,
+        model,
+        base_url: request.base_url,
+        backend,
+        think: false,
+        sampling,
+      });
     } catch {
       // The restore still happens; the draft was a courtesy.
     }
@@ -478,7 +566,7 @@ const AskAI = () => {
         <EndpointBadge endpoint={endpoint} model={model} />
       </div>
 
-      {noModels && <NoModel unreachable={models.isError} detail={unreachableDetail} />}
+      {noModels && <NoModel unreachable={models.isError} detail={unreachableDetail} server={server} />}
       {notice && (
         <Alert>
           <AlertDescription>{notice}</AlertDescription>
@@ -502,6 +590,9 @@ const AskAI = () => {
                 onQuestion={setQuestion}
                 model={model}
                 onModel={setModel}
+                servers={servers}
+                server={server}
+                onServer={chooseServer}
                 onTryHere={tryHere}
                 onTryMoments={tryMany}
                 tryCount={tryMoments.length}
@@ -682,7 +773,8 @@ const AskAI = () => {
             <AlertDialogTitle>Send frames to {endpoint?.host}?</AlertDialogTitle>
             <AlertDialogDescription>
               The model server at {endpoint?.host} is not on this computer or your local network. Frames from your video
-              will leave this computer and be sent there. Agreeing counts for everyone using this VideoAnnotator server.
+              will leave this computer and be sent there. For video of research participants this is usually a question
+              for your ethics approval. Agreeing counts for everyone using this VideoAnnotator server.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

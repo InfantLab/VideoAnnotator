@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { VlmModelPicker } from '@/components/VlmModelPicker';
+import { VlmModelField, VlmServerField } from '@/components/VlmServerField';
 import { OpenInAskAI } from '@/components/ask/OpenInAskAI';
 import { isUrlParameter, urlValueError } from '@/lib/pipelineUrlFields';
 import { pipelineSummary } from '@/lib/pipelineGuide';
@@ -232,6 +232,13 @@ export const DynamicPipelineParameters = ({
     [pipelines, selectedPipelineIds]
   );
 
+  const handleValuesChange = (pipelineId: string, values: Record<string, unknown>) => {
+    onConfigChange((prevConfig) => ({
+      ...prevConfig,
+      [pipelineId]: { ...getPipelineConfig(prevConfig, pipelineId), ...values }
+    }));
+  };
+
   const handleValueChange = (
     pipelineId: string,
     parameter: PipelineParameterSchema,
@@ -261,7 +268,7 @@ export const DynamicPipelineParameters = ({
     <div className="space-y-6">
       {selectedPipelines.map((pipeline) => {
         const pipelineConfig = getPipelineConfig(config, pipeline.id);
-        const renderParameter = (parameter: PipelineParameterSchema) => {
+        const renderParameter = (parameter: PipelineParameterSchema, plain = false): ReactNode => {
           const currentValue = normalizeValue(
             parameter,
             pipelineConfig[parameter.name]
@@ -275,8 +282,9 @@ export const DynamicPipelineParameters = ({
           // pipeline/field still goes through the switch below.
           if (pipeline.id === 'vlm_annotation' && parameter.name === 'model') {
             return (
-              <VlmModelPicker
+              <VlmModelField
                 key={parameter.name}
+                baseUrl={pipelineConfig.base_url}
                 value={typeof currentValue === 'string' ? currentValue : ''}
                 onChange={(value) => handleValueChange(pipeline.id, parameter, value)}
                 fieldId={`${pipeline.id}-${parameter.name}`}
@@ -287,6 +295,24 @@ export const DynamicPipelineParameters = ({
           const id = `${pipeline.id}-${parameter.name}`;
           const label = parameter.label || parameter.name;
           const rowProps = { label, description: parameter.description, hint: fieldHint || undefined, tip: settingTip(parameter) };
+
+          // Spec 033: the address of a listed model server, chosen with its kind.
+          if (!plain && pipeline.id === 'vlm_annotation' && parameter.name === 'base_url') {
+            return (
+              <VlmServerField
+                key={parameter.name}
+                fieldId={id}
+                fallback={renderParameter(parameter, true)}
+                baseUrl={currentValue}
+                onChoose={(server) =>
+                  handleValuesChange(pipeline.id, {
+                    base_url: server.id === 'default' ? '' : server.base_url,
+                    backend: server.kind
+                  })
+                }
+              />
+            );
+          }
 
           switch (parameter.type) {
             case 'boolean':

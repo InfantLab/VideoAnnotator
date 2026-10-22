@@ -1,15 +1,23 @@
+import type React from 'react';
 import { Crosshair, Loader2, Shuffle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { VlmModelPicker } from '@/components/VlmModelPicker';
+import type { ModelServer } from '@/types/ask';
 import { Examples } from './Examples';
+import { ServerPicker } from './ServerPicker';
 
 interface QuestionPanelProps {
   question: string;
   onQuestion: (text: string) => void;
   model: string;
   onModel: (model: string) => void;
+  servers: ModelServer[];
+  server: ModelServer | undefined;
+  onServer: (id: string) => void;
+  /** Under the question: the answer shape editor (spec 033). */
+  shapeEditor?: React.ReactNode;
   onTryHere: () => void;
   onTryMoments: () => void;
   tryCount: number;
@@ -35,7 +43,15 @@ export function QuestionPanel(props: QuestionPanelProps) {
           onChange={(e) => props.onQuestion(e.target.value)}
         />
       </div>
-      <VlmModelPicker value={model} onChange={props.onModel} fieldId="ask-model" />
+      {props.shapeEditor}
+      <ServerPicker servers={props.servers} value={props.server?.id ?? 'default'} onChange={props.onServer} fieldId="ask-server" />
+      <VlmModelPicker
+        value={model}
+        onChange={props.onModel}
+        fieldId="ask-model"
+        server={props.server?.id}
+        serverName={props.server?.name}
+      />
       <div className="flex flex-wrap gap-2">
         <Button onClick={props.onTryHere} disabled={blocked} className="gap-1">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crosshair className="h-4 w-4" />}

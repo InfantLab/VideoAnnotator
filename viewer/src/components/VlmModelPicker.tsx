@@ -16,6 +16,10 @@ interface VlmModelPickerProps {
   value: string;
   onChange: (model: string) => void;
   fieldId: string;
+  /** A listed model server's id (spec 033); the server's own Ollama when omitted. */
+  server?: string;
+  /** What the user calls that server, for the messages. */
+  serverName?: string;
 }
 
 /**
@@ -26,23 +30,26 @@ interface VlmModelPickerProps {
  * server is unreachable, or reachable but has zero models pulled — don't
  * hard-block configuration just because Ollama isn't running yet.
  */
-export const VlmModelPicker = ({ value, onChange, fieldId }: VlmModelPickerProps) => {
-  const { data, isLoading, isError, error } = useVlmModels();
+export const VlmModelPicker = ({ value, onChange, fieldId, server, serverName }: VlmModelPickerProps) => {
+  const { data, isLoading, isError, error } = useVlmModels({ server });
+  // The server's own Ollama keeps its words; another server is named as the user named it.
+  const ollama = !server || server === 'default';
+  const name = serverName ?? 'the model server';
 
   const reachabilityBadge = isLoading ? (
     <Badge variant="secondary" className="gap-1">
       <Loader2 className="h-3 w-3 animate-spin" />
-      Checking Ollama…
+      {ollama ? 'Checking Ollama…' : 'Checking the model server…'}
     </Badge>
   ) : isError ? (
     <Badge variant="destructive" className="gap-1">
       <AlertTriangle className="h-3 w-3" />
-      Ollama unreachable
+      {ollama ? 'Ollama unreachable' : `Can't reach ${name}`}
     </Badge>
   ) : data && data.models.length === 0 ? (
     <Badge variant="secondary" className="gap-1">
       <AlertTriangle className="h-3 w-3" />
-      No models pulled
+      {ollama ? 'No models pulled' : `No models on ${name}`}
     </Badge>
   ) : (
     <Badge variant="default" className="gap-1">
@@ -84,11 +91,17 @@ export const VlmModelPicker = ({ value, onChange, fieldId }: VlmModelPickerProps
             onChange={(event) => onChange(event.target.value)}
           />
           <p className="text-xs text-muted-foreground">
-            {isError
-              ? `Can't reach the configured Ollama server (${handleAPIError(error)}). Type a model name, or start Ollama and reload.`
-              : data && data.models.length === 0
-                ? `Ollama is reachable at ${data.baseUrl} but nothing is pulled yet — run "ollama pull <model>", or type a model name to pull later.`
-                : 'Type the exact model name as it appears in "ollama list".'}
+            {ollama
+              ? isError
+                ? `Can't reach the configured Ollama server (${handleAPIError(error)}). Type a model name, or start Ollama and reload.`
+                : data && data.models.length === 0
+                  ? `Ollama is reachable at ${data.baseUrl} but nothing is pulled yet — run "ollama pull <model>", or type a model name to pull later.`
+                  : 'Type the exact model name as it appears in "ollama list".'
+              : isError
+                ? `Can't reach ${name} (${handleAPIError(error)}). Type a model name, or start the server and reload.`
+                : data && data.models.length === 0
+                  ? `${name} is reachable at ${data.baseUrl} but lists no models: load one in the server first.`
+                  : 'Type the model name as the server lists it.'}
           </p>
         </>
       )}

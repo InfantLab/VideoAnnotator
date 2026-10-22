@@ -210,6 +210,9 @@ export interface VlmModelsResponse {
   models: string[];
   /** Where the model server is, decided by the server (spec 027 R9). */
   endpoint?: ModelEndpoint;
+  /** The listed server's id and kind (spec 033); "default" is the server's Ollama. */
+  server?: string;
+  kind?: 'ollama' | 'openai_compatible';
 }
 
 /** The server's Hugging Face token status (VideoAnnotator spec 031). Never carries the token. */

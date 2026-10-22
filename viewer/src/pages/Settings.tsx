@@ -14,6 +14,7 @@ import {
 
 import { TokenSetup } from '@/components/TokenSetup';
 import { HuggingFaceTokenCard } from '@/components/HuggingFaceTokenSetup';
+import { ModelServers } from '@/components/settings/ModelServers';
 import { ServerDiagnostics } from '@/components/ServerDiagnostics';
 import { VideosAndResultsCard } from '@/components/VideosAndResultsCard';
 import { GPUInfo } from '@/components/GPUInfo';
@@ -184,6 +185,7 @@ const CreateSettings = () => {
         <TabsContent value="api" className="space-y-4">
           <TokenSetup />
           <HuggingFaceTokenCard isAdmin={isAdmin} />
+          <ModelServers isAdmin={isAdmin} />
         </TabsContent>
 
         <TabsContent value="server" className="space-y-4">
