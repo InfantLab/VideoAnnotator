@@ -2,7 +2,7 @@
 
 **Feature Branch**: `022-videos-read-in-place` (work lands on `1.6-dev`)
 **Created**: 2026-10-06
-**Status**: Draft
+**Status**: Shipped in v1.6.0 (2026-10-18); implemented 2026-10-06
 **Scope note**: covers inputs (videos read in place) and, since 2026-10-06, outputs (results in
 one visible folder). The directory keeps its original name.
 **Input**: User description: "Videos are read where they are, by default, for a single researcher

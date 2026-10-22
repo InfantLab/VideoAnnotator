@@ -2,7 +2,7 @@
 
 **Feature Branch**: `029-videos-and-projects` (work lands on `1.7-dev`)
 **Created**: 2026-10-16
-**Status**: Built 2026-10-21 ([checks](checks.md))
+**Status**: Built 2026-10-21 (browser walk-through done; SC-001 with a first-time user and spec 023's journeys with pilot users pending: [checks](checks.md))
 **Design**: [spec 023](../023-viewer-overhaul/spec.md) (Decisions 1–8; Draft proposal: settings,
 pages), both journeys in [journeys.md](../023-viewer-overhaul/journeys.md),
 [inventory](../023-viewer-overhaul/inventory.md)

@@ -2,7 +2,9 @@
 
 **Feature Branch**: `010-corpus-analysis-foundations`
 **Created**: 2026-08-26
-**Status**: Draft, not started. Scheduled for v1.6.0 Phase 6
+**Status**: Draft, not started. Was scheduled for v1.6.0 Phase 6, which moved to v1.7.0 and became
+spec 029. Part of it is superseded by 029; the rest is open (see
+[Status after spec 029](#status-after-spec-029-2026-10-22))
 **Input**: User description: "Give a researcher an at-a-glance view of an entire dataset's results — completion coverage, label distribution, and ground-truth agreement where available — without opening every video individually. Deliberately scoped as foundations: basic counts and rates, not a full statistics suite. Deeper analysis (kappa, significance testing, plots) stays in the existing Python research repo."
 
 ## Relationship to Existing Specs
@@ -21,6 +23,31 @@ already does it well.
 Backend-only. The consumer — a Dataset Overview page (thumbnail grid of the dataset's videos with
 per-video status, doubling as the entry point for both batch review and corpus analysis) — is
 `video-annotation-viewer`'s own spec. See [`viewer-handoff.md`](viewer-handoff.md).
+
+## Status after spec 029 (2026-10-22)
+
+[Spec 029](../029-videos-and-projects/spec.md) (Videos and projects, built 2026-10-21) took over
+the corpus overview. It leaves 010's charts out of scope (029 Out of Scope; research R19).
+
+Superseded by 029:
+
+- **The Dataset Overview page** ([viewer-handoff.md](viewer-handoff.md) items 1, 2 and 4). The
+  Videos page lists a project's videos (every saved dataset is a project) with each video's
+  results per pipeline: done, running, failed or none. A video opens its Video page with
+  previous/next through the list (spec 028). A project with no runs is a normal state.
+- **Per-video coverage** (User Story 1 scenario 1, FR-002). `GET /api/v1/videos?project=<id>`
+  reports it, per pipeline, for any project, folder or run.
+- **How videos belong to a dataset.** Projects hold videos by path (manifest entries may carry
+  `path`), not only through spec 008's `dataset_id` job tag that this spec's Assumptions rely on.
+
+Still open:
+
+- The corpus-wide label distribution (User Story 1 scenarios 2 and 3, FR-003).
+- The ELAN agreement rollup (User Story 2, FR-004).
+- `GET /api/v1/datasets/{id}/summary` (not built) and the viewer's summary card (handoff item 3).
+- SC-001 to SC-004 as written.
+
+The text below is unchanged from 2026-08-26 and still uses the old words (dataset, job, batch).
 
 ## User Scenarios & Testing *(mandatory)*
 

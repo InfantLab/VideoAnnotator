@@ -1,7 +1,7 @@
 # The Video page
 
 One video, everything found in it by any run, on one time axis, with the values beside it and
-your own notes. Open it from a run's videos, a project, the Jobs list or Home (**View**); its
+your own notes. Open it from a run's videos, a project, a folder on the Videos page or Home (**View**); its
 address is `/video?path=<the video's path on the server>`.
 
 ```

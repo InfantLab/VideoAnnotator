@@ -2,7 +2,7 @@
 
 **Feature Branch**: `025-results-out` (work lands on `1.6-dev`)
 **Created**: 2026-10-16
-**Status**: Draft
+**Status**: Shipped in v1.6.0 (2026-10-18); built 2026-10-16. Opening the ELAN files in ELAN itself by a person is still to do ([quickstart](quickstart.md))
 **Input**: User description: "Results Out (roadmap v1.6.0 Phase 3). An outside lab must get
 VideoAnnotator's results into R or Python without writing a parser per pipeline. Four parts: (1)
 Tidy export: one row per event (video, pipeline, track or person, start, end, label, value,

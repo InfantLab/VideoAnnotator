@@ -2,7 +2,7 @@
 
 **Feature Branch**: `030-model-defaults` (work lands on `1.6-dev`)
 **Created**: 2026-10-17
-**Status**: Draft
+**Status**: Shipped in v1.6.0 (2026-10-18); done 2026-10-18 ([checks](checks.md)). The Sortformer spike moved to v1.7.0 Phase 6
 **Input**: User description: "Refresh Model Defaults (roadmap v1.6.0 Phase 5c). Each change on the
 upstream model's published evaluation plus a demo-clip check against the baseline: no model change
 without a reason on record. Face: replace DeepFace's default detector if still needed, age and

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `031-huggingface-token-setup` (work lands on `1.6-dev`)
 **Created**: 2026-10-17
-**Status**: Draft
+**Status**: Shipped in v1.6.0 (2026-10-18)
 **Input**: User description: "The note about setting the Hugging Face token is not very
 user-friendly: 'A Hugging Face access token (to download the pyannote models) isn't set. Set
 HUGGINGFACE_TOKEN in the server's environment (e.g. the container env or .env) and restart the

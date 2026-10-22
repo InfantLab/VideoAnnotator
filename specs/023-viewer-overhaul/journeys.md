@@ -1,7 +1,7 @@
 # Journeys (Process step 5)
 
 **Recorded**: 2026-10-16, dictated by the project lead and written up here. Each journey is
-checked against the [draft proposal](spec.md#draft-proposal-2026-10-16-for-review); "Needs" lists
+checked against the [draft proposal](spec.md#proposal-2026-10-16-agreed-2026-10-19); "Needs" lists
 what the proposal must add or make sure of.
 
 Out of scope for both: human review or correction of pipeline output (shelved for now). These

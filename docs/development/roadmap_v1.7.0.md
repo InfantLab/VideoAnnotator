@@ -15,8 +15,11 @@ redesigned viewer.
 without help, and a researcher new to AI video analysis can ask questions of a video and get
 systematic answers without help.
 **Target Release**: when the pilot's fixes are in. No deadline.
-**Current Status**: In development on `1.7-dev` (from 2026-10-18). Viewer design done (spec 023);
-specs 027–029 specified 2026-10-16, not yet planned.
+**Current Status**: In development on `1.7-dev` (from 2026-10-18). Phase 1: viewer design done
+(spec 023); specs 027–029 built 2026-10-19 to 2026-10-21, each with a walk-through or check by a
+person still to do (see Phase 1); movement metrics not yet specified. Phase 2 (connectors) is
+being specified (spec 033, 2026-10-22). Phase 7: the audit's chores done bar the coverage gate;
+the rest is spec 032 (specified 2026-10-19, not yet planned).
 **Prerequisites**: v1.6.0 tagged. Done 2026-10-18.
 
 ---
@@ -68,6 +71,8 @@ tools, decisions, journeys). Built by, in order:
 
 ### Phase 2: Connectors (was v1.6.0 Phase 5a)
 
+Being specified as spec 033 (2026-10-22).
+
 - [ ] **OpenAI-compatible connector** alongside the Ollama one (`backends: [ollama,
       openai_compatible]`), moved here from the plugin plan (now v1.8.0). One client covers Ollama, llama.cpp, vLLM,
       LM Studio, SGLang and hosted APIs.
@@ -95,7 +100,7 @@ tools, decisions, journeys). Built by, in order:
 - [ ] **Data protection**: what runs where, what never leaves the machine, what changes with a
       hosted backend or a cloud agent.
 - [ ] **Contributing a pipeline**: a guide and template, with `vlm_annotation` as the worked
-      example. Contributions go into core by pull request; entry-point plugins wait for v1.7.0.
+      example. Contributions go into core by pull request; entry-point plugins wait for v1.8.0.
 - [ ] **A 10-minute screencast**, reused for the webinar and conference tutorial.
 
 ---
@@ -230,6 +235,6 @@ seam, API fuzzing, mutation reports, and the coverage gate.
 
 ---
 
-**Last Updated**: 2026-10-18
+**Last Updated**: 2026-10-22
 **Target Release**: when the pilot's fixes are in
 **Status**: In development — Public Release

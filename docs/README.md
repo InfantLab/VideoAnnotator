@@ -18,7 +18,13 @@ New here? Start with **[Getting started](usage/GETTING_STARTED.md)**.
 
 ## Use
 
-- [Getting started](usage/GETTING_STARTED.md): start the server, open the viewer, run a first job.
+- [Getting started](usage/GETTING_STARTED.md): start the server, open the viewer, make a first run.
+- [Videos and projects](usage/videos_and_projects.md): the Videos page, folders, projects,
+  workflows, runs, and exporting any set of videos.
+- [The Video page](usage/video_page.md): one video's results on tracks, the values beside it, notes.
+- [Ask AI](usage/ask_ai.md): ask a vision model about moments of a video, then the whole video.
+- [Results out](usage/exporting_results.md): one table for R or Python, ELAN files, a methods
+  paragraph.
 - [Command-line examples](usage/demo_commands.md)
 - [Pipelines](usage/pipeline_specs.md): what each pipeline does and the files it writes.
 - [Getting your results](usage/accessing_results.md): downloading and reading the output files.

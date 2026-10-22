@@ -2,7 +2,7 @@
 
 **Feature Branch**: `032-test-strategy` (work lands on `1.7-dev`)
 **Created**: 2026-10-19
-**Status**: Draft
+**Status**: Draft, not yet planned
 **Input**: User description: "v1.7.0 test strategy: journeys and release criteria. Replaces the
 remaining boxes of roadmap v1.7.0 Phase 7 (test audit)." Wanted: journey tests in a real browser
 against the real server with fakes in place of models, the v1.7.0 success criteria as tests, the

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `020-prompt-library-workbench` (work lands on `1.6-dev`)
 **Created**: 2026-10-04
-**Status**: Draft
+**Status**: Shipped in v1.6.0 (2026-10-18). In v1.7.0 Ask AI (spec 027) replaces the Workbench and Prompts pages; their addresses lead to it
 **Input**: v1.6.0 roadmap, Phase 2 "Run it again": **Prompt library**: every VLM prompt used, in
 a job or a preview, saved once (deduplicated by SHA-256) with its model, first/last used and the
 jobs that used it; a browser to search, view, diff, name, star and reuse them. **Prompt

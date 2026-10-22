@@ -2,7 +2,7 @@
 
 **Feature Branch**: `026-pipeline-guide` (work lands on `1.6-dev`)
 **Created**: 2026-10-16
-**Status**: Draft
+**Status**: Shipped in v1.6.0 (2026-10-18); built 2026-10-17
 **Design**: [spec 023](../023-viewer-overhaul/spec.md) (viewer overhaul), journey 2 in
 [journeys.md](../023-viewer-overhaul/journeys.md)
 **Input**: User description: "Explain each pipeline to a researcher: what it does in behavioural

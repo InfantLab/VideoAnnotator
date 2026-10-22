@@ -2,7 +2,7 @@
 
 **Feature Branch**: `021-compare-vlm-jobs` (work lands on `1.6-dev`)
 **Created**: 2026-10-04
-**Status**: Draft
+**Status**: Shipped in v1.6.0 (2026-10-18)
 **Input**: v1.6.0 roadmap, Phase 2: "Compare two VLM jobs on the same video: their labels on one
 timeline, with the frames where they disagree listed, and ELAN ground truth as a third row when
 there is one. The workbench compares prompts on single frames; this compares whole runs. Asked for

@@ -56,6 +56,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dev container: Chromium for Playwright is installed on create, so the viewer can be checked in a
   real browser (`bun run e2e`, or screenshots) without a manual step.
 
+- Ask AI replaces the Workbench and Prompts pages and the wizard's prompt test panel, which
+  becomes a link to Ask AI. `/workbench` and `/prompts` still open, in Ask AI.
+- `POST /api/v1/vlm/preview` no longer holds up the server while the model answers, and accepts
+  `burst_spacing_sec`.
+- `GET /api/v1/vlm/models` says whether the model server is local or remote (`endpoint`).
+
 ### Added
 
 - **Videos** (spec 029): every video the server knows, by **All videos**, **Not in a project**,
@@ -98,7 +104,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   lists the settings that differ. The **Data** tab follows playback and links both ways with the
   timeline. **Notes**: `N` at a moment, `Shift+N` twice for a span, kept on the server with the
   video. Opened from a run, project or folder, ‹ › move through it. Standalone `/viewer` uses the
-  same page. How-to: `docs/usage/video_page.md`.
+  same page. How-to: [The Video page](docs/usage/video_page.md).
 - **`GET /api/v1/videos/runs`**: every run on a video with its files, and the projects holding it.
 - **`/api/v1/videos/notes`**: researchers' notes on a video (list, add, change, delete).
 - **Results table format version 2**: a last column, `author`, and a `note` measure (pipeline
@@ -118,7 +124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   model runs (on this computer, on the local network, or remote); frames go to a remote model
   server only after someone has agreed to it. **Run on whole video** shows answers as they come,
   **Stop** keeps them, **Run on more videos** opens run setup filled in, and **Export table**
-  gives the answers as the spec 025 table. How-to: `docs/usage/ask_ai.md`.
+  gives the answers as the spec 025 table. How-to: [Ask AI](docs/usage/ask_ai.md).
 - **`vlm_annotation` sampling settings**: `start_sec`, `end_sec`, `moments_sec` and
   `burst_spacing_sec` (seconds between a burst's frames). All default to what a config meant
   before (burst frames one interval apart).
@@ -131,14 +137,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   short-lived token with range requests (no whole-file download first).
 - **`/api/v1/ask`**: tries, history entries, runs and their answers, sample frames, and where the
   model server is.
-
-### Changed
-
-- Ask AI replaces the Workbench and Prompts pages and the wizard's prompt test panel, which
-  becomes a link to Ask AI. `/workbench` and `/prompts` still open, in Ask AI.
-- `POST /api/v1/vlm/preview` no longer holds up the server while the model answers, and accepts
-  `burst_spacing_sec`.
-- `GET /api/v1/vlm/models` says whether the model server is local or remote (`endpoint`).
 
 ## [1.6.0] - 2026-10-18
 
@@ -1865,7 +1863,7 @@ python main.py --input video.mp4 --output output/ --config configs/default.yaml
 4. **Test Integration**: Run comprehensive tests
 5. **Update Documentation**: Review API changes
 
-For technical specifications, see the [Pipeline Specs](docs/Pipeline%20Specs.md).
+For technical specifications, see the [Pipeline Specs](docs/usage/pipeline_specs.md).
 
 ---
 

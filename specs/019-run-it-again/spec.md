@@ -2,7 +2,7 @@
 
 **Feature Branch**: `019-run-it-again` (work lands on `1.6-dev`)
 **Created**: 2026-10-04
-**Status**: Draft
+**Status**: Shipped in v1.6.0 (2026-10-18); implemented 2026-10-04
 **Input**: v1.6.0 roadmap, Phase 2 "Run it again": rerun a job; reuse settings on new videos; UX
 cues that lead there. "A researcher who likes a result wants the same settings on more videos;
 one who doesn't wants to tweak and rerun. Today both mean rebuilding the job in the wizard from

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `018-saved-datasets-viewer` (work lands on `1.6-dev`)
 **Created**: 2026-10-04
-**Status**: Draft
+**Status**: Shipped in v1.6.0 (2026-10-18). In v1.7.0 the Datasets page is gone: saved datasets show as projects on the Videos page (spec 029)
 **Input**: Spec 007's viewer handoff (`specs/007-datasets-and-presets/viewer-handoff.md`): the
 server has stored saved datasets since v1.5.0, but the viewer has no way to create, list, use,
 share or delete them. The v1.6.0 roadmap (Phase 2) puts this before release candidate 1.

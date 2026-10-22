@@ -2,7 +2,7 @@
 
 **Feature Branch**: `024-container-feels-local` (work lands on `1.6-dev`)
 **Created**: 2026-10-06
-**Status**: Draft
+**Status**: Shipped in v1.6.0 (2026-10-18); walk-throughs done 2026-10-17. T083 (a pilot researcher on macOS) moved to the v1.7.0 pilot
 **Sequence**: after [022](../022-videos-read-in-place/spec.md) (videos and results where you expect
 them). Replaces 022's untried Docker walkthrough (its task T072). Independent of
 [023](../023-viewer-overhaul/spec.md) (viewer overhaul).

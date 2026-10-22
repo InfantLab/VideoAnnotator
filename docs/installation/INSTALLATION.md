@@ -81,7 +81,7 @@ Settings in the viewer lists the shared folders too, with **Stop sharing** (it t
 time VideoAnnotator starts). If videos are being processed when a change needs a restart, it asks
 whether to wait for them.
 
-Shared folders are read-only, at their own paths: job pages, saved datasets and each run's
+Shared folders are read-only, at their own paths: the Videos page, projects and each run's
 `run.json` name your videos as your computer does. A folder that is missing when VideoAnnotator
 starts (an unplugged drive) is skipped with a note and comes back when it is there again. Sharing
 your whole home folder, a whole drive or a system folder asks first, and defaults to No.
@@ -410,15 +410,15 @@ left in the pre-v1.6.0 locations (`~/.cache/huggingface`, `~/.cache/whisper`, `~
 
 ## Choosing videos on your own computer
 
-When the viewer and VideoAnnotator run on the same computer, the new-job wizard opens on
+When the viewer and VideoAnnotator run on the same computer, New run opens on
 **My folders**: open a folder, tick the videos (or **Select all**, optionally with subfolders), and
 the run starts at once. Videos are read where they are. Nothing is uploaded or copied, and deleting
-a job never touches the original video.
+a run never touches the original video.
 
 It starts at **Places**: your home folder and its Videos, Movies, Desktop, Documents and Downloads
 folders, each marked when it holds videos. Inside a folder, the ones that lead to videos come first;
 hidden, system and tool folders aren't shown. Next time it reopens the folder you last used. If
-none of these folders holds any videos (a fresh container, say), the wizard starts on upload
+none of these folders holds any videos (a fresh container, say), New run starts on upload
 instead.
 
 My folders shows only the folders VideoAnnotator may read:

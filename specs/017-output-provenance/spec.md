@@ -2,7 +2,7 @@
 
 **Feature Branch**: `017-output-provenance` (work lands on `1.6-dev`)
 **Created**: 2026-10-04
-**Status**: Draft
+**Status**: Shipped in v1.6.0 (2026-10-18); implemented 2026-10-04
 **Input**: User description: "Output provenance and overlay attribution. Every pipeline output file records who made it: pipeline name, VideoAnnotator version, model name and weight revision, the settings that change results (pipeline config, deterministic mode and torch settings), and a real creation time (COCO files currently hard-code date_created 2025-01-01, and WebVTT/RTTM files record nothing). The job also keeps this per pipeline. The viewer labels every overlay with the pipeline and version that drew it (constitution Principle VI), and shows the full provenance on demand. This is the foundation for Phase 3's methods paragraph (GET /api/v1/jobs/{id}/methods), which is out of scope here except that the provenance must hold everything it needs (model revision SHA, prompt SHA-256 for VLM, quantisation). Must stay backward compatible: existing readers of COCO/WebVTT/RTTM keep working, and the viewer still opens older files that have no provenance (showing "version not recorded")."
 
 ## Context

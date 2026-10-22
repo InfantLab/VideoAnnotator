@@ -67,11 +67,11 @@ You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) or
    in and shares it read-only. Then it opens VideoAnnotator in your browser. Next time it just
    starts.
 
-3. **Run a job.** Choose **New job**, tick some videos and the pipelines to run. The first time
-   you choose a pipeline, VideoAnnotator offers to install it. **Jobs** shows progress; open a
-   finished job to see the results on the video. Results also go to a `VideoAnnotator` folder in
-   your home folder; **Export** on a run's page gives you all of them as one table for R or
-   Python.
+3. **Run pipelines.** In **Videos**, pick the folder your videos are in, choose **Run…** and
+   tick the pipelines to run. The first time you choose a pipeline, VideoAnnotator offers to
+   install it. The top bar shows progress; click a video to see its results on the video.
+   Results also go to a `VideoAnnotator` folder in your home folder; a finished run offers all
+   of them as one results table for R or Python.
 
 Allow about 1 GB of disk, plus up to 12 GB if you install every pipeline, and 16 GB of RAM. A
 GPU is optional. The VLM pipeline needs [Ollama](https://ollama.com) running on the same
@@ -86,7 +86,7 @@ and installing from source in your own Python environment
 
 - **[Documentation](docs/README.md)**: install options, every pipeline, output formats,
   configuration and troubleshooting.
-- **[Getting started](docs/usage/GETTING_STARTED.md)**: a first job, step by step.
+- **[Getting started](docs/usage/GETTING_STARTED.md)**: a first run, step by step.
 - **[Results out](docs/usage/exporting_results.md)**: the results table, ELAN files and the
   methods paragraph, from the viewer, the command line (`videoannotator export`) or the API.
 - **[Command line and API](docs/usage/demo_commands.md)**: everything the viewer does can also be

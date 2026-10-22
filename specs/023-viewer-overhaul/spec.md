@@ -5,8 +5,11 @@
 **Updated**: 2026-10-06, scope widened from the results player to the whole viewer experience;
 2026-10-16, themes 7–13, research, decisions, draft proposal, journeys, and the split into
 specs 026–029
-**Status**: Design. Research, decisions, the agreed proposal and journeys are here; it is built by
-specs 026–029 (see [Split into specs](#split-into-specs)).
+**Status**: Design, now built. Research, decisions, the agreed proposal and journeys are here; it
+is built by specs 026–029 (see [Split into specs](#split-into-specs)): 026 shipped in v1.6.0, 027
+built 2026-10-19, 028 2026-10-20, 029 2026-10-21, each with a walk-through or check by a person
+still to do. The journeys are tried with pilot users after release. Movement metrics: spec not
+yet written.
 **Sequence**: the spec after [022](../022-videos-read-in-place/spec.md) (videos and results where
 you expect them).
 
