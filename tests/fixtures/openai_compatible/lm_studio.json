@@ -1,0 +1,69 @@
+{
+  "_source": "from docs, unverified: LM Studio 0.3.x OpenAI-compatibility endpoints docs (/v1/models, /v1/chat/completions, structured output), 2026-10-22; LM Studio has no key by default, so the unauthorized body follows its 'require API key' option's docs",
+  "models": {
+    "data": [
+      {"id": "google/gemma-3-12b", "object": "model", "owned_by": "organization_owner"},
+      {"id": "text-embedding-nomic-embed-text-v1.5", "object": "model", "owned_by": "organization_owner"}
+    ],
+    "object": "list"
+  },
+  "chat": {
+    "id": "chatcmpl-4ni7b0x2v6q9k3m5",
+    "object": "chat.completion",
+    "created": 1761100100,
+    "model": "google/gemma-3-12b",
+    "choices": [
+      {"index": 0, "logprobs": null, "finish_reason": "stop", "message": {"role": "assistant", "content": "TOUCH"}}
+    ],
+    "usage": {"prompt_tokens": 280, "completion_tokens": 3, "total_tokens": 283},
+    "stats": {},
+    "system_fingerprint": "google/gemma-3-12b"
+  },
+  "chat_reasoning": {
+    "id": "chatcmpl-8kq2m4n6p8r0t2v4",
+    "object": "chat.completion",
+    "created": 1761100200,
+    "model": "google/gemma-3-12b",
+    "choices": [
+      {
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop",
+        "message": {"role": "assistant", "content": "NO_TOUCH", "reasoning_content": "No contact is visible."}
+      }
+    ],
+    "usage": {"prompt_tokens": 280, "completion_tokens": 9, "total_tokens": 289},
+    "stats": {},
+    "system_fingerprint": "google/gemma-3-12b"
+  },
+  "chat_schema": {
+    "id": "chatcmpl-1a3c5e7g9i1k3m5o",
+    "object": "chat.completion",
+    "created": 1761100300,
+    "model": "google/gemma-3-12b",
+    "choices": [
+      {"index": 0, "logprobs": null, "finish_reason": "stop", "message": {"role": "assistant", "content": "{ \"touch\": \"yes\", \"initiator\": \"mother\" }"}}
+    ],
+    "usage": {"prompt_tokens": 305, "completion_tokens": 14, "total_tokens": 319},
+    "stats": {},
+    "system_fingerprint": "google/gemma-3-12b"
+  },
+  "errors": {
+    "schema_rejected": {
+      "status": 400,
+      "body": {"error": "Invalid 'response_format': json_schema must be an object with a 'schema' field"}
+    },
+    "images_rejected": {
+      "status": 400,
+      "body": {"error": "Model does not support images. Please use a model that does."}
+    },
+    "video_rejected": {
+      "status": 400,
+      "body": {"error": "Invalid 'content': 'type' field must be one of 'text', 'image_url'"}
+    },
+    "unauthorized": {
+      "status": 401,
+      "body": {"error": "Unauthorized: invalid or missing API key"}
+    }
+  }
+}

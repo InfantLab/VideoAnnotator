@@ -1,0 +1,90 @@
+{
+  "_source": "from docs, unverified: vLLM 0.11/0.12 OpenAI-compatible server docs (multimodal inputs, structured outputs, reasoning outputs), 2026-10-22; no GPU in the dev container to capture from a real server",
+  "models": {
+    "object": "list",
+    "data": [
+      {
+        "id": "Qwen/Qwen3-VL-8B-Instruct",
+        "object": "model",
+        "created": 1761100000,
+        "owned_by": "vllm",
+        "root": "Qwen/Qwen3-VL-8B-Instruct",
+        "parent": null,
+        "max_model_len": 32768,
+        "permission": []
+      }
+    ]
+  },
+  "chat": {
+    "id": "chatcmpl-0b1e6e1f2c3d4e5f",
+    "object": "chat.completion",
+    "created": 1761100100,
+    "model": "Qwen/Qwen3-VL-8B-Instruct",
+    "choices": [
+      {
+        "index": 0,
+        "message": {"role": "assistant", "content": "TOUCH", "reasoning": null, "tool_calls": []},
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null
+      }
+    ],
+    "usage": {"prompt_tokens": 312, "total_tokens": 314, "completion_tokens": 2},
+    "prompt_logprobs": null
+  },
+  "chat_reasoning": {
+    "id": "chatcmpl-1c2d3e4f5a6b7c8d",
+    "object": "chat.completion",
+    "created": 1761100200,
+    "model": "Qwen/Qwen3-VL-8B-Instruct",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "NO_TOUCH",
+          "reasoning": "The mother's hand is near the infant's arm but there is a gap between them.",
+          "tool_calls": []
+        },
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null
+      }
+    ],
+    "usage": {"prompt_tokens": 312, "total_tokens": 342, "completion_tokens": 30}
+  },
+  "chat_schema": {
+    "id": "chatcmpl-2d3e4f5a6b7c8d9e",
+    "object": "chat.completion",
+    "created": 1761100300,
+    "model": "Qwen/Qwen3-VL-8B-Instruct",
+    "choices": [
+      {
+        "index": 0,
+        "message": {"role": "assistant", "content": "{\"touch\": \"yes\", \"initiator\": \"mother\"}", "reasoning": null, "tool_calls": []},
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null
+      }
+    ],
+    "usage": {"prompt_tokens": 340, "total_tokens": 352, "completion_tokens": 12}
+  },
+  "errors": {
+    "schema_rejected": {
+      "status": 400,
+      "body": {"object": "error", "message": "response_format json_schema is not supported by the guided decoding backend", "type": "BadRequestError", "param": null, "code": 400}
+    },
+    "images_rejected": {
+      "status": 400,
+      "body": {"object": "error", "message": "Qwen/Qwen3-8B is not a multimodal model", "type": "BadRequestError", "param": null, "code": 400}
+    },
+    "video_rejected": {
+      "status": 400,
+      "body": {"object": "error", "message": "At most 0 video(s) may be provided in one prompt.", "type": "BadRequestError", "param": null, "code": 400}
+    },
+    "unauthorized": {
+      "status": 401,
+      "body": {"error": "Unauthorized"}
+    }
+  }
+}

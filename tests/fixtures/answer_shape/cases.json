@@ -1,0 +1,637 @@
+{
+  "_about": "Shared by tests/unit/test_answer_shape.py and viewer/src/lib/answerShape.test.ts (spec 033). The viewer reads `shapes` and `suggest`; reply checking is server-only.",
+  "shapes": {
+    "valid": [
+      {
+        "name": "one choice",
+        "shape": [
+          {
+            "name": "answer",
+            "kind": "choice",
+            "values": [
+              "TOUCH",
+              "NO_TOUCH"
+            ]
+          }
+        ],
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "answer": {
+              "type": "string",
+              "enum": [
+                "TOUCH",
+                "NO_TOUCH"
+              ]
+            }
+          },
+          "required": [
+            "answer"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "yes/no, choice, number 1-5",
+        "shape": [
+          {
+            "name": "touch",
+            "kind": "yes_no"
+          },
+          {
+            "name": "initiator",
+            "kind": "choice",
+            "values": [
+              "mother",
+              "infant",
+              "both",
+              "none"
+            ]
+          },
+          {
+            "name": "confidence",
+            "kind": "number",
+            "min": 1,
+            "max": 5
+          }
+        ],
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "touch": {
+              "type": "string",
+              "enum": [
+                "yes",
+                "no"
+              ]
+            },
+            "initiator": {
+              "type": "string",
+              "enum": [
+                "mother",
+                "infant",
+                "both",
+                "none"
+              ]
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 5
+            }
+          },
+          "required": [
+            "touch",
+            "initiator",
+            "confidence"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "text",
+        "shape": [
+          {
+            "name": "description",
+            "kind": "text"
+          }
+        ],
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "description"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ],
+    "invalid": [
+      {
+        "name": "bad name",
+        "shape": [
+          {
+            "name": "Touch",
+            "kind": "yes_no"
+          }
+        ],
+        "problem": "Field 1: 'Touch' isn't a usable name: start with a lower-case letter, then lower-case letters, digits or _ (at most 40)."
+      },
+      {
+        "name": "duplicate",
+        "shape": [
+          {
+            "name": "touch",
+            "kind": "yes_no"
+          },
+          {
+            "name": "touch",
+            "kind": "text"
+          }
+        ],
+        "problem": "Field 2: 'touch' is used twice."
+      },
+      {
+        "name": "reserved label",
+        "shape": [
+          {
+            "name": "label",
+            "kind": "text"
+          }
+        ],
+        "problem": "Field 1: 'label' is reserved; choose another name."
+      },
+      {
+        "name": "no fields",
+        "shape": [],
+        "problem": "Add at least one field."
+      },
+      {
+        "name": "13 fields",
+        "shape": [
+          {
+            "name": "f1",
+            "kind": "yes_no"
+          },
+          {
+            "name": "f2",
+            "kind": "yes_no"
+          },
+          {
+            "name": "f3",
+            "kind": "yes_no"
+          },
+          {
+            "name": "f4",
+            "kind": "yes_no"
+          },
+          {
+            "name": "f5",
+            "kind": "yes_no"
+          },
+          {
+            "name": "f6",
+            "kind": "yes_no"
+          },
+          {
+            "name": "f7",
+            "kind": "yes_no"
+          },
+          {
+            "name": "f8",
+            "kind": "yes_no"
+          },
+          {
+            "name": "f9",
+            "kind": "yes_no"
+          },
+          {
+            "name": "f10",
+            "kind": "yes_no"
+          },
+          {
+            "name": "f11",
+            "kind": "yes_no"
+          },
+          {
+            "name": "f12",
+            "kind": "yes_no"
+          },
+          {
+            "name": "f13",
+            "kind": "yes_no"
+          }
+        ],
+        "problem": "An answer shape has at most 12 fields."
+      },
+      {
+        "name": "choice with one value",
+        "shape": [
+          {
+            "name": "answer",
+            "kind": "choice",
+            "values": [
+              "TOUCH"
+            ]
+          }
+        ],
+        "problem": "Field 1 (answer): a choice needs 2 to 30 different values."
+      },
+      {
+        "name": "min more than max",
+        "shape": [
+          {
+            "name": "score",
+            "kind": "number",
+            "min": 5,
+            "max": 1
+          }
+        ],
+        "problem": "Field 1 (score): the lowest number is more than the highest."
+      },
+      {
+        "name": "unknown kind",
+        "shape": [
+          {
+            "name": "when",
+            "kind": "date"
+          }
+        ],
+        "problem": "Field 1 (when): the kind must be choice, yes_no, number or text."
+      }
+    ]
+  },
+  "replies": [
+    {
+      "name": "fits",
+      "shape": "yes/no, choice, number 1-5",
+      "text": "{\"touch\":\"yes\",\"initiator\":\"mother\",\"confidence\":4}",
+      "expect": {
+        "fields": {
+          "touch": "yes",
+          "initiator": "mother",
+          "confidence": 4
+        },
+        "fit": true,
+        "fit_problem": null,
+        "label": "yes"
+      }
+    },
+    {
+      "name": "in a json fence",
+      "shape": "yes/no, choice, number 1-5",
+      "text": "```json\n{\"touch\": \"no\", \"initiator\": \"none\", \"confidence\": 5}\n```",
+      "expect": {
+        "fields": {
+          "touch": "no",
+          "initiator": "none",
+          "confidence": 5
+        },
+        "fit": true,
+        "fit_problem": null,
+        "label": "no"
+      }
+    },
+    {
+      "name": "prose around the object",
+      "shape": "yes/no, choice, number 1-5",
+      "text": "Here is my answer: {\"touch\": \"yes\", \"initiator\": \"both\", \"confidence\": 3} Hope this helps.",
+      "expect": {
+        "fields": {
+          "touch": "yes",
+          "initiator": "both",
+          "confidence": 3
+        },
+        "fit": true,
+        "fit_problem": null,
+        "label": "yes"
+      }
+    },
+    {
+      "name": "value outside the list",
+      "shape": "yes/no, choice, number 1-5",
+      "text": "{\"touch\":\"yes\",\"initiator\":\"mom\",\"confidence\":4}",
+      "expect": {
+        "fields": {
+          "touch": "yes",
+          "confidence": 4
+        },
+        "fit": false,
+        "fit_problem": "initiator: 'mom' is not one of mother, infant, both, none",
+        "label": "DIDN'T FIT"
+      }
+    },
+    {
+      "name": "a missing field",
+      "shape": "yes/no, choice, number 1-5",
+      "text": "{\"touch\":\"yes\",\"initiator\":\"mother\"}",
+      "expect": {
+        "fields": {
+          "touch": "yes",
+          "initiator": "mother"
+        },
+        "fit": false,
+        "fit_problem": "confidence: missing",
+        "label": "DIDN'T FIT"
+      }
+    },
+    {
+      "name": "an extra field",
+      "shape": "yes/no, choice, number 1-5",
+      "text": "{\"touch\":\"yes\",\"initiator\":\"mother\",\"confidence\":4,\"mood\":\"happy\"}",
+      "expect": {
+        "fields": {
+          "touch": "yes",
+          "initiator": "mother",
+          "confidence": 4
+        },
+        "fit": false,
+        "fit_problem": "unexpected field 'mood'",
+        "label": "DIDN'T FIT"
+      }
+    },
+    {
+      "name": "a number out of range",
+      "shape": "yes/no, choice, number 1-5",
+      "text": "{\"touch\":\"yes\",\"initiator\":\"mother\",\"confidence\":7}",
+      "expect": {
+        "fields": {
+          "touch": "yes",
+          "initiator": "mother"
+        },
+        "fit": false,
+        "fit_problem": "confidence: 7 is outside 1 to 5",
+        "label": "DIDN'T FIT"
+      }
+    },
+    {
+      "name": "a number as text",
+      "shape": "yes/no, choice, number 1-5",
+      "text": "{\"touch\":\"yes\",\"initiator\":\"mother\",\"confidence\":\"4\"}",
+      "expect": {
+        "fields": {
+          "touch": "yes",
+          "initiator": "mother"
+        },
+        "fit": false,
+        "fit_problem": "confidence: '4' is not a number",
+        "label": "DIDN'T FIT"
+      }
+    },
+    {
+      "name": "two problems",
+      "shape": "yes/no, choice, number 1-5",
+      "text": "{\"touch\":\"maybe\",\"confidence\":2}",
+      "expect": {
+        "fields": {
+          "confidence": 2
+        },
+        "fit": false,
+        "fit_problem": "touch: 'maybe' is not one of yes, no; initiator: missing",
+        "label": "DIDN'T FIT"
+      }
+    },
+    {
+      "name": "yes/no as true",
+      "shape": "yes/no, choice, number 1-5",
+      "text": "{\"touch\": true, \"initiator\": \"infant\", \"confidence\": 2.0}",
+      "expect": {
+        "fields": {
+          "touch": "yes",
+          "initiator": "infant",
+          "confidence": 2
+        },
+        "fit": true,
+        "fit_problem": null,
+        "label": "yes"
+      }
+    },
+    {
+      "name": "not JSON",
+      "shape": "yes/no, choice, number 1-5",
+      "text": "TOUCH",
+      "expect": {
+        "fields": {},
+        "fit": false,
+        "fit_problem": "The reply isn't JSON.",
+        "label": "DIDN'T FIT"
+      }
+    },
+    {
+      "name": "a JSON list, not an object",
+      "shape": "yes/no, choice, number 1-5",
+      "text": "[\"yes\", \"mother\", 4]",
+      "expect": {
+        "fields": {},
+        "fit": false,
+        "fit_problem": "The reply isn't JSON.",
+        "label": "DIDN'T FIT"
+      }
+    },
+    {
+      "name": "empty",
+      "shape": "yes/no, choice, number 1-5",
+      "text": "",
+      "expect": {
+        "fields": {},
+        "fit": false,
+        "fit_problem": "The reply is empty.",
+        "label": "DIDN'T FIT"
+      }
+    },
+    {
+      "name": "choice in another case",
+      "shape": "one choice",
+      "text": "{\"answer\": \"touch\"}",
+      "expect": {
+        "fields": {
+          "answer": "TOUCH"
+        },
+        "fit": true,
+        "fit_problem": null,
+        "label": "TOUCH"
+      }
+    },
+    {
+      "name": "text",
+      "shape": "text",
+      "text": "{\"description\": \"The mother lifts the baby.\"}",
+      "expect": {
+        "fields": {
+          "description": "The mother lifts the baby."
+        },
+        "fit": true,
+        "fit_problem": null,
+        "label": "The mother lifts the baby."
+      }
+    }
+  ],
+  "suggest": [
+    {
+      "name": "Return ONLY",
+      "prompt": "Return ONLY: TOUCH or NO_TOUCH",
+      "expect": [
+        {
+          "name": "answer",
+          "kind": "choice",
+          "values": [
+            "TOUCH",
+            "NO_TOUCH"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Answer with one of",
+      "prompt": "Answer with one of: smile, frown, neutral",
+      "expect": [
+        {
+          "name": "answer",
+          "kind": "choice",
+          "values": [
+            "smile",
+            "frown",
+            "neutral"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "(yes/no)",
+      "prompt": "Is the baby smiling? (yes/no)",
+      "expect": [
+        {
+          "name": "answer",
+          "kind": "yes_no"
+        }
+      ]
+    },
+    {
+      "name": "scale of 1 to 5",
+      "prompt": "How happy does the infant look, on a scale of 1 to 5?",
+      "expect": [
+        {
+          "name": "answer",
+          "kind": "number",
+          "min": 1,
+          "max": 5
+        }
+      ]
+    },
+    {
+      "name": "the pipeline's default prompt",
+      "prompt": "Classify as TOUCH only if:\nThe mother's hand or arm is actually in physical contact with the infant's body.\n\nClassify as NO_TOUCH if:\nThe mother's hand or arm visually overlaps the infant in the image, but one is clearly in front of or behind the other (the apparent contact is camera perspective, not real contact).\nThe mother's hand or arm is near but not actually touching the infant.\n\nReturn ONLY: TOUCH or NO_TOUCH.",
+      "expect": [
+        {
+          "name": "answer",
+          "kind": "choice",
+          "values": [
+            "TOUCH",
+            "NO_TOUCH"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "questions before the list",
+      "prompt": "Is the adult touching the child? Who started it? Return ONLY: TOUCH or NO_TOUCH",
+      "expect": [
+        {
+          "name": "answer",
+          "kind": "choice",
+          "values": [
+            "TOUCH",
+            "NO_TOUCH"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "two answers",
+      "prompt": "Is the infant crying? yes or no.\nWho comforts them? Answer with one of: mother, father, nobody.",
+      "expect": [
+        {
+          "name": "answer",
+          "kind": "yes_no"
+        },
+        {
+          "name": "answer_2",
+          "kind": "choice",
+          "values": [
+            "mother",
+            "father",
+            "nobody"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a free question",
+      "prompt": "What is the mother doing with her hands?",
+      "expect": null
+    },
+    {
+      "name": "example: Touch",
+      "prompt": "Is the adult's hand or arm touching the infant's body? Overlap caused only by the camera angle is not touch.\nAnswer with one word: touching or not_touching.",
+      "expect": [
+        {
+          "name": "answer",
+          "kind": "choice",
+          "values": [
+            "touching",
+            "not_touching"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "example: Gaze",
+      "prompt": "Where is the infant looking?\nAnswer with one word: at_caregiver, at_object or elsewhere.",
+      "expect": [
+        {
+          "name": "answer",
+          "kind": "choice",
+          "values": [
+            "at_caregiver",
+            "at_object",
+            "elsewhere"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "example: Number of people",
+      "prompt": "How many people can you see?\nAnswer with a number only.",
+      "expect": [
+        {
+          "name": "answer",
+          "kind": "number"
+        }
+      ]
+    },
+    {
+      "name": "example: Infant posture",
+      "prompt": "What is the infant's posture?\nAnswer with one word: lying, sitting, standing or held.",
+      "expect": [
+        {
+          "name": "answer",
+          "kind": "choice",
+          "values": [
+            "lying",
+            "sitting",
+            "standing",
+            "held"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "example: Activity",
+      "prompt": "What is happening?\nAnswer with one of: feeding, playing, reading, changing, sleeping, other.",
+      "expect": [
+        {
+          "name": "answer",
+          "kind": "choice",
+          "values": [
+            "feeding",
+            "playing",
+            "reading",
+            "changing",
+            "sleeping",
+            "other"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "example: Describe",
+      "prompt": "Describe what is happening in one sentence.",
+      "expect": null
+    }
+  ]
+}

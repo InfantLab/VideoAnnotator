@@ -1,0 +1,64 @@
+{
+  "_source": "from docs, unverified: Ollama OpenAI compatibility docs (/v1/models, /v1/chat/completions, response_format, reasoning), 0.12, 2026-10-22; the Ollama in the container config (host.docker.internal:11434) wasn't running when these were written",
+  "models": {
+    "object": "list",
+    "data": [
+      {"id": "qwen3.5:9b", "object": "model", "created": 1760900000, "owned_by": "library"}
+    ]
+  },
+  "chat": {
+    "id": "chatcmpl-123",
+    "object": "chat.completion",
+    "created": 1761100100,
+    "model": "qwen3.5:9b",
+    "system_fingerprint": "fp_ollama",
+    "choices": [
+      {"index": 0, "message": {"role": "assistant", "content": "TOUCH"}, "finish_reason": "stop"}
+    ],
+    "usage": {"prompt_tokens": 301, "completion_tokens": 3, "total_tokens": 304}
+  },
+  "chat_reasoning": {
+    "id": "chatcmpl-456",
+    "object": "chat.completion",
+    "created": 1761100200,
+    "model": "qwen3.5:9b",
+    "system_fingerprint": "fp_ollama",
+    "choices": [
+      {
+        "index": 0,
+        "message": {"role": "assistant", "content": "NO_TOUCH", "reasoning": "The hands are apart."},
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {"prompt_tokens": 301, "completion_tokens": 20, "total_tokens": 321}
+  },
+  "chat_schema": {
+    "id": "chatcmpl-789",
+    "object": "chat.completion",
+    "created": 1761100300,
+    "model": "qwen3.5:9b",
+    "system_fingerprint": "fp_ollama",
+    "choices": [
+      {"index": 0, "message": {"role": "assistant", "content": "{\"touch\":\"yes\",\"initiator\":\"mother\"}"}, "finish_reason": "stop"}
+    ],
+    "usage": {"prompt_tokens": 330, "completion_tokens": 12, "total_tokens": 342}
+  },
+  "errors": {
+    "schema_rejected": {
+      "status": 400,
+      "body": {"error": {"message": "invalid response_format: json_schema not supported", "type": "invalid_request_error", "param": null, "code": null}}
+    },
+    "images_rejected": {
+      "status": 400,
+      "body": {"error": {"message": "this model is missing data required for image input", "type": "invalid_request_error", "param": null, "code": null}}
+    },
+    "video_rejected": {
+      "status": 400,
+      "body": {"error": {"message": "invalid message content type: video_url", "type": "invalid_request_error", "param": null, "code": null}}
+    },
+    "unauthorized": {
+      "status": 401,
+      "body": {"error": {"message": "unauthorized", "type": "invalid_request_error", "param": null, "code": null}}
+    }
+  }
+}

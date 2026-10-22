@@ -1,0 +1,75 @@
+{
+  "_source": "from docs, unverified: llama.cpp tools/server README (OpenAI-compatible API, --mmproj, --reasoning-format, --api-key), build b6xxx, 2026-10-22; no llama-server in the dev container",
+  "models": {
+    "object": "list",
+    "data": [
+      {
+        "id": "gemma-3-4b-it-Q4_K_M.gguf",
+        "object": "model",
+        "created": 1761100000,
+        "owned_by": "llamacpp",
+        "meta": {"vocab_type": 1, "n_vocab": 262144, "n_ctx_train": 131072, "n_params": 3880263168}
+      }
+    ]
+  },
+  "chat": {
+    "id": "chatcmpl-Xb3x9Q2LwYk3Pp1m",
+    "object": "chat.completion",
+    "created": 1761100100,
+    "model": "gemma-3-4b-it-Q4_K_M.gguf",
+    "system_fingerprint": "b6500-1a2b3c4d",
+    "choices": [
+      {"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": "TOUCH"}}
+    ],
+    "usage": {"completion_tokens": 3, "prompt_tokens": 290, "total_tokens": 293},
+    "timings": {"prompt_n": 290, "prompt_ms": 410.2, "predicted_n": 3, "predicted_ms": 61.5, "predicted_per_second": 48.8}
+  },
+  "chat_reasoning": {
+    "id": "chatcmpl-Rk2m8N1Zq0Vt7Hs4",
+    "object": "chat.completion",
+    "created": 1761100200,
+    "model": "gemma-3-4b-it-Q4_K_M.gguf",
+    "system_fingerprint": "b6500-1a2b3c4d",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "NO_TOUCH",
+          "reasoning_content": "The hand overlaps the infant only because of the camera angle."
+        }
+      }
+    ],
+    "usage": {"completion_tokens": 25, "prompt_tokens": 290, "total_tokens": 315}
+  },
+  "chat_schema": {
+    "id": "chatcmpl-Pq7r1S5Tu9Vw3Xy2",
+    "object": "chat.completion",
+    "created": 1761100300,
+    "model": "gemma-3-4b-it-Q4_K_M.gguf",
+    "system_fingerprint": "b6500-1a2b3c4d",
+    "choices": [
+      {"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": "{\"touch\":\"yes\",\"initiator\":\"mother\"}"}}
+    ],
+    "usage": {"completion_tokens": 11, "prompt_tokens": 318, "total_tokens": 329}
+  },
+  "errors": {
+    "schema_rejected": {
+      "status": 400,
+      "body": {"error": {"code": 400, "message": "response_format: unsupported json_schema: JSON schema conversion failed", "type": "invalid_request_error"}}
+    },
+    "images_rejected": {
+      "status": 500,
+      "body": {"error": {"code": 500, "message": "image input is not supported - hint: if this is unexpected, you may need to provide the mmproj", "type": "server_error"}}
+    },
+    "video_rejected": {
+      "status": 400,
+      "body": {"error": {"code": 400, "message": "unsupported content[].type: video_url", "type": "invalid_request_error"}}
+    },
+    "unauthorized": {
+      "status": 401,
+      "body": {"error": {"code": 401, "message": "Invalid API Key", "type": "authentication_error"}}
+    }
+  }
+}

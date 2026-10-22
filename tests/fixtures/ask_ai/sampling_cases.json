@@ -563,5 +563,183 @@
         1.0
       ]
     }
+  },
+  {
+    "name": "clip: 2 s at 4 fps mid-video",
+    "duration": 32.0,
+    "interval": 5.0,
+    "start": 10.0,
+    "end": null,
+    "moments": null,
+    "frames": 1,
+    "spacing": null,
+    "count": 1,
+    "clip": {
+      "length": 2.0,
+      "fps": 4.0
+    },
+    "expect": {
+      "points": [
+        10.0,
+        15.0,
+        20.0,
+        25.0,
+        30.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          10.0
+        ]
+      ],
+      "chosen": [
+        20.0
+      ],
+      "clip_times_at_first_point": [
+        9.0,
+        9.25,
+        9.5,
+        9.75,
+        10.0,
+        10.25,
+        10.5,
+        10.75
+      ],
+      "clip_span": [
+        9.0,
+        11.0
+      ]
+    }
+  },
+  {
+    "name": "clip: at t=0, shortened",
+    "duration": 32.0,
+    "interval": 5.0,
+    "start": 0.0,
+    "end": null,
+    "moments": null,
+    "frames": 1,
+    "spacing": null,
+    "count": 1,
+    "clip": {
+      "length": 2.0,
+      "fps": 4.0
+    },
+    "expect": {
+      "points": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0,
+        25.0,
+        30.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          0.0
+        ]
+      ],
+      "chosen": [
+        15.0
+      ],
+      "clip_times_at_first_point": [
+        0.0,
+        0.25,
+        0.5,
+        0.75
+      ],
+      "clip_span": [
+        0.0,
+        1.0
+      ]
+    }
+  },
+  {
+    "name": "clip: at the end, shortened",
+    "duration": 32.0,
+    "interval": 5.0,
+    "start": 30.0,
+    "end": null,
+    "moments": null,
+    "frames": 1,
+    "spacing": null,
+    "count": 1,
+    "clip": {
+      "length": 6.0,
+      "fps": 2.0
+    },
+    "expect": {
+      "points": [
+        30.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          30.0
+        ]
+      ],
+      "chosen": [
+        30.0
+      ],
+      "clip_times_at_first_point": [
+        27.0,
+        27.5,
+        28.0,
+        28.5,
+        29.0,
+        29.5,
+        30.0,
+        30.5,
+        31.0,
+        31.5
+      ],
+      "clip_span": [
+        27.0,
+        32.0
+      ]
+    }
+  },
+  {
+    "name": "clip: longer than the video",
+    "duration": 3.0,
+    "interval": 5.0,
+    "start": 0.0,
+    "end": null,
+    "moments": null,
+    "frames": 1,
+    "spacing": null,
+    "count": 1,
+    "clip": {
+      "length": 10.0,
+      "fps": 2.0
+    },
+    "expect": {
+      "points": [
+        0.0
+      ],
+      "burst_times_at_first_point": [
+        [
+          0,
+          0.0
+        ]
+      ],
+      "chosen": [
+        0.0
+      ],
+      "clip_times_at_first_point": [
+        0.0,
+        0.5,
+        1.0,
+        1.5,
+        2.0,
+        2.5
+      ],
+      "clip_span": [
+        0.0,
+        3.0
+      ]
+    }
   }
 ]
