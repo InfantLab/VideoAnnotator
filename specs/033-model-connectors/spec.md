@@ -2,7 +2,7 @@
 
 **Feature Branch**: `033-model-connectors` (work lands on `1.7-dev`)
 **Created**: 2026-10-22
-**Status**: Draft
+**Status**: Planned 2026-10-22 ([plan](plan.md))
 **Roadmap**: [v1.7.0 Phase 2](../../docs/development/roadmap_v1.7.0.md) (connectors)
 **Builds on**: [spec 027](../027-ask-ai/spec.md) (Ask AI, the local/remote badge, confirming
 before a remote send), [spec 009](../009-vlm-prompt-workflow/spec.md) (the `vlm_annotation` pipeline),
@@ -110,7 +110,7 @@ outputs read like an Ollama run's, and the provenance names the backend.
 A researcher asks "Is the mother touching the infant? Who initiates?" and, under Answer shape,
 chooses Fields: `touch` (one of yes, no) and `initiator` (one of mother, infant, both, none). Or
 they press Suggest, and the viewer proposes those fields from the question for them to edit. Every
-answer now comes back as those fields. The results table has a `touch` column and an `initiator`
+answer now comes back as those fields. The answers file has a `touch` column and an `initiator`
 column. An answer that doesn't fit the shape is marked as not fitting, with the model's raw reply
 kept, and is never silently dropped or guessed at.
 
@@ -132,9 +132,9 @@ row is either filled or marked as not fitting.
 3. **Given** an answer that doesn't fit (not JSON, a value outside the list, a field missing),
    **When** it is recorded, **Then** it is marked "didn't fit the answer shape", with what was
    wrong, and the raw reply is kept. It counts as answered, not as an error, and isn't retried.
-4. **Given** a run with fields, **When** the tidy export is downloaded, **Then** it has one column
-   per field, in the order defined, with empty cells and a `fit` column for answers that didn't
-   fit.
+4. **Given** a run with fields, **When** the answers file is downloaded, **Then** it has one
+   column per field, in the order defined, with empty cells and a `fit` column for answers that
+   didn't fit; the tidy table has one measure per field.
 5. **Given** a question without fields, **When** it runs, **Then** behaviour and output are exactly
    as today (the label pattern, the raw reply).
 6. **Given** a saved question with fields, **When** it is reopened from the history or library, in
@@ -176,7 +176,7 @@ output, provenance record, log line, export or API response.
    export, log, error message or API response is produced, **Then** the key appears in none of
    them; the server is identified by its address and host.
 4. **Given** a remote server in a run, **When** the methods paragraph is generated, **Then** it
-   says the model ran on a remote server and names the host.
+   says the model ran on a remote server; the provenance record names the host.
 5. **Given** a key that is wrong or expired, **When** a try or run uses it, **Then** the user sees
    "the server refused the key" and the run stops at once rather than failing every sample.
 6. **Given** a remote Ollama address confirmed before the upgrade, **When** the server is upgraded
@@ -309,8 +309,9 @@ one video, and read the fields from the output.
   usually a question for the ethics approval.
 - **FR-013**: A remote server MUST NOT receive any frame until remote servers are switched on and
   that server has been confirmed (spec 027).
-- **FR-014**: The methods paragraph MUST say whether the model ran locally or on a remote server,
-  and name the host.
+- **FR-014**: The methods paragraph MUST say whether the model ran on this computer, on the local
+  network or on a remote server, without naming the server (spec 017 FR-029); the host is in the
+  provenance record.
 
 **Keys**
 
@@ -337,8 +338,10 @@ one video, and read the fields from the output.
 - **FR-021**: A question without a shape MUST behave and be recorded exactly as today.
 - **FR-022**: The shape MUST travel with the question everywhere a question goes: tries, the
   history, the prompt library, workflows, project settings, runs, and their outputs.
-- **FR-023**: The tidy export MUST give a shaped run one column per field, in the shape's order,
-  plus a column saying whether the answer fit. Exports of unshaped runs are unchanged.
+- **FR-023**: The tidy export MUST give a shaped answer one measure per field (the fixed-column
+  table of spec 025, so one pivot gives a column per field) plus whether it fit; and a shaped run
+  or Ask AI entry MUST also offer a wide file with one row per moment and one column per field,
+  in the shape's order, plus `fit`. Exports of unshaped runs are unchanged.
 - **FR-024**: Ask AI MUST offer to suggest a shape from the question's text: first by rule (the
   options a question already lists, as in "Return ONLY: TOUCH or NO_TOUCH" or "one of …"), and
   when the rule finds nothing, by asking the chosen model with the question's text only, never
@@ -389,8 +392,8 @@ one video, and read the fields from the output.
   unchanged after the upgrade (the existing test suite and the demo-clip baseline pass untouched).
 - **SC-003**: On the demo clip with a shaped yes/no question and the default local model, at least
   95% of answers fit the shape, and every answer is either filled in or marked as not fitting.
-- **SC-004**: A shaped run's tidy export opens in R or Python with one column per field and no
-  parsing of the model's text.
+- **SC-004**: A shaped run's answers file opens in R or Python with one column per field, and the
+  tidy table pivots to the same, with no parsing of the model's text.
 - **SC-005**: On a fresh install, no frame can reach a remote address: 100% of attempts are refused
   until remote servers are switched on and the server is confirmed.
 - **SC-006**: A key set on a server appears in none of the run's files, the logs, the exports or
@@ -435,3 +438,9 @@ one video, and read the fields from the output.
   otherwise a key entered in Settings and stored on the server (FR-015).
 - Q: How does Suggest work? → A: by rule first, and by asking the chosen model (text only) when
   the rule finds nothing (FR-024).
+
+### Amended at planning, 2026-10-22
+
+- FR-014: the methods paragraph keeps spec 017's rule of not naming the server (research R7).
+- FR-023, SC-004: the tidy table stays fixed-column, one measure per field; a wide answers file
+  gives one column per field (research R10).

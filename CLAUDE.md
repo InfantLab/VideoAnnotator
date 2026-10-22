@@ -12,6 +12,10 @@ Auto-generated from feature plans by `.specify/scripts/bash/update-agent-context
 - 029-videos-and-projects adds, additively: `saved_datasets.current_settings`, manifest entries'
   optional `path`, `saved_pipeline_presets.export_choices`/`.source`, and a `user_preferences`
   table (last-used run settings per user); no new dependency
+- 033-model-connectors adds, additively: an `openai_compatible` VLM backend on httpx (no new
+  dependency), `model_servers` and `server_settings` tables, keys in `model_server_keys.json`
+  beside the database (or a named env var), `endpoint_confirmations.before_switch`, and
+  `answer_shape`/`backend` columns on `ask_entries` (and `answer_shape` on `prompts`)
 
 ## Project Structure
 ```
@@ -67,8 +71,8 @@ the walk-through with a vision model is still to do, T068). 028 built 2026-10-20
 2026-10-21 (`specs/029-videos-and-projects/checks.md`: browser walk-through done; SC-001 with a
 first-time user and the pilot journeys still to do). The viewer is organised around videos
 (Videos, New run at `/run`, the Video page's Runs tab); old pages redirect; the viewer never says
-job, batch, dataset or preset (`viewer/src/test/vocabulary.test.tsx`). Next: connectors, docs and
-the pilot in the v1.7.0 roadmap; reconcile spec 010 with the Videos page.
+job, batch, dataset or preset (`viewer/src/test/vocabulary.test.tsx`). Next: connectors (spec
+`specs/033-model-connectors`, planned 2026-10-22), docs and the pilot in the v1.7.0 roadmap; reconcile spec 010 with the Videos page.
 ## Recent Changes
 - 029-videos-and-projects: a video is a group of paths (`video_index.py`: same path, inode, rerun
   of a stored upload, or a content hash through an upload); project membership from saved
