@@ -2,7 +2,7 @@
 
 **Feature Branch**: `033-model-connectors` (work lands on `1.7-dev`)
 **Created**: 2026-10-22
-**Status**: Planned 2026-10-22 ([plan](plan.md))
+**Status**: Planned 2026-10-22 ([plan](plan.md), [tasks](tasks.md))
 **Roadmap**: [v1.7.0 Phase 2](../../docs/development/roadmap_v1.7.0.md) (connectors)
 **Builds on**: [spec 027](../027-ask-ai/spec.md) (Ask AI, the local/remote badge, confirming
 before a remote send), [spec 009](../009-vlm-prompt-workflow/spec.md) (the `vlm_annotation` pipeline),
