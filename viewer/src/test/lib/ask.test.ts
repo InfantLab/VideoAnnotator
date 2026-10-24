@@ -40,7 +40,7 @@ describe('Ask AI helpers', () => {
 
   it('counts errors and skipped apart from answers', () => {
     const t = tally([a(0, 'X'), a(1, 'X'), a(2, 'Y'), a(3, null, 'error'), a(4, null, 'skipped')]);
-    expect(t).toEqual({ answers: [['X', 2], ['Y', 1]], errors: 1, skipped: 1 });
+    expect(t).toEqual({ answers: [['X', 2], ['Y', 1]], errors: 1, skipped: 1, misfits: 0 });
   });
 
   it('finds the nearest sample', () => {

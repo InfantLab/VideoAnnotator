@@ -75,20 +75,24 @@ export interface Tally {
   answers: Array<[string, number]>;
   errors: number;
   skipped: number;
+  /** Shaped answers that didn't fit (spec 033), never counted as a value. */
+  misfits: number;
 }
 
-/** Distinct answers with counts, most common first; errors and skipped apart. */
+/** Distinct answers with counts, most common first; errors, skipped and misfits apart. */
 export function tally(answers: AskAnswer[]): Tally {
   const counts = new Map<string, number>();
   let errors = 0;
   let skipped = 0;
+  let misfits = 0;
   for (const a of answers) {
     if (a.status === 'error') errors++;
     else if (a.status === 'skipped') skipped++;
+    else if (a.fit === false) misfits++;
     else counts.set(a.label ?? '', (counts.get(a.label ?? '') ?? 0) + 1);
   }
   const sorted = [...counts.entries()].sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]));
-  return { answers: sorted, errors, skipped };
+  return { answers: sorted, errors, skipped, misfits };
 }
 
 export const ALLOWED_ANSWERS_HINT =

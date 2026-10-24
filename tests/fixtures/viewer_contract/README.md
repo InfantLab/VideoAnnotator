@@ -57,3 +57,10 @@ replacement above), then run `pytest tests/integration/test_output_baseline.py` 
 `demo_clip_vlm_annotation.json` as a run stopped after 4 of 7 samples writes them, with the
 additive fields: per annotation `frame_times` and `status` (one `error`), top-level `vlm_progress`
 and `vlm_skipped`. Readers must see the same annotations as without those fields.
+
+Added 2026-10-24 (spec 033): `ask_ai/demo_clip_vlm_annotation_shaped.json` (a question with an
+answer shape: `fields`, `fit`, `fit_problem`, `vlm_answer_shape`) and
+`ask_ai/demo_clip_vlm_annotation_clip.json` (`sampling_mode: clip` with `clip_start_sec`,
+`clip_end_sec`, `clip_fps`), made by the real pipeline on the demo clip with fake model servers
+(Ollama replies scripted; the OpenAI-compatible one from `tests/fixtures/openai_compatible/vllm.json`):
+the structure is the pipeline's, the answers are not a model's.

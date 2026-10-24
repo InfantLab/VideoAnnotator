@@ -11,11 +11,18 @@ interface AnswerLaneProps<M extends LaneMarker> {
 }
 
 const statusWord = (m: LaneMarker) =>
-  m.status === 'error' ? 'no answer: the model failed' : m.status === 'skipped' ? 'skipped: no readable frame' : m.label ?? '';
+  m.status === 'error'
+    ? 'no answer: the model failed'
+    : m.status === 'skipped'
+      ? 'skipped: no readable frame'
+      : m.fit === false
+        ? "didn't fit the answer shape"
+        : m.label ?? '';
 
 /**
- * One entry's answers along the video. An error and a skipped sample are
- * drawn as their own shapes, never as an answer (Principle VI).
+ * One entry's answers along the video. An error, a skipped sample and an
+ * answer that didn't fit its shape are drawn as their own shapes, never as an
+ * answer (Principle VI).
  */
 export function AnswerLane<M extends LaneMarker>({ markers, duration, hues, highlight, onSeek, onHover }: AnswerLaneProps<M>) {
   return (
@@ -38,7 +45,7 @@ export function AnswerLane<M extends LaneMarker>({ markers, duration, hues, high
             overflow="visible"
             className="cursor-pointer"
             data-testid="answer-marker"
-            data-status={m.status}
+            data-status={m.status === 'answered' && m.fit === false ? 'misfit' : m.status}
             data-label={m.label ?? ''}
             data-selected={selected ? 'true' : 'false'}
             role="button"
@@ -51,7 +58,16 @@ export function AnswerLane<M extends LaneMarker>({ markers, duration, hues, high
             onMouseLeave={() => onHover?.(null)}
           >
             <title>{`${m.t.toFixed(1)} s: ${statusWord(m)}`}</title>
-            {m.status === 'answered' && (
+            {m.status === 'answered' && m.fit === false && (
+              <circle
+                r={selected ? 7 : 5}
+                fill="none"
+                stroke="hsl(38 92% 50%)"
+                strokeWidth={2}
+                strokeDasharray="2 2"
+              />
+            )}
+            {m.status === 'answered' && m.fit !== false && (
               <circle r={selected ? 7 : 5} fill={`hsl(${hue} 70% 50%)`} stroke={selected ? 'hsl(var(--foreground))' : 'none'} strokeWidth={2} />
             )}
             {m.status === 'error' && (

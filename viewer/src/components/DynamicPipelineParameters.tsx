@@ -13,6 +13,8 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { VlmModelField, VlmServerField } from '@/components/VlmServerField';
+import { AnswerShapeEditor } from '@/components/ask/AnswerShapeEditor';
+import type { AnswerShape } from '@/types/ask';
 import { OpenInAskAI } from '@/components/ask/OpenInAskAI';
 import { isUrlParameter, urlValueError } from '@/lib/pipelineUrlFields';
 import { pipelineSummary } from '@/lib/pipelineGuide';
@@ -295,6 +297,20 @@ export const DynamicPipelineParameters = ({
           const id = `${pipeline.id}-${parameter.name}`;
           const label = parameter.label || parameter.name;
           const rowProps = { label, description: parameter.description, hint: fieldHint || undefined, tip: settingTip(parameter) };
+
+          if (parameter.widget === 'answer_shape') {
+            return (
+              <SettingRow key={parameter.name} wide {...rowProps} label="" hint={undefined}>
+                <div className="w-full">
+                  <AnswerShapeEditor
+                    fieldId={id}
+                    value={Array.isArray(currentValue) ? (currentValue as unknown as AnswerShape) : null}
+                    onChange={(shape) => handleValueChange(pipeline.id, parameter, shape)}
+                  />
+                </div>
+              </SettingRow>
+            );
+          }
 
           // Spec 033: the address of a listed model server, chosen with its kind.
           if (!plain && pipeline.id === 'vlm_annotation' && parameter.name === 'base_url') {

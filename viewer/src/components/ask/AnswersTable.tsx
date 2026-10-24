@@ -34,6 +34,24 @@ function AnswerCell({ answers, frames }: { answers: AskAnswer[]; frames: number 
         <span className="text-muted-foreground italic" title={last.error ?? undefined}>
           skipped
         </span>
+      ) : last.fit === false ? (
+        <span className="text-amber-700 dark:text-amber-400" data-testid="misfit">
+          Didn't fit: {last.fit_problem}
+          {last.raw_response && (
+            <details className="text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+              <summary className="cursor-pointer">the reply</summary>
+              <span className="whitespace-pre-wrap">{last.raw_response}</span>
+            </details>
+          )}
+        </span>
+      ) : last.fields ? (
+        <span className="flex flex-col" data-testid="answer-fields">
+          {Object.entries(last.fields).map(([name, value]) => (
+            <span key={name} className="text-xs">
+              <span className="text-muted-foreground">{name}</span> <span className="font-medium">{String(value)}</span>
+            </span>
+          ))}
+        </span>
       ) : (
         <span className="font-medium">{last.label}</span>
       )}

@@ -232,6 +232,22 @@ describe('a stopped Ask AI run → viewer', () => {
   });
 });
 
+// Spec 033: a shaped question's answers and a clip run add fields the viewer reads past.
+describe('shaped and clip Ask AI runs → viewer', () => {
+  const ASK_AI = path.join(CURRENT, 'ask_ai');
+  beforeEach(fakeVideoMetadata);
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each(['demo_clip_vlm_annotation_shaped.json', 'demo_clip_vlm_annotation_clip.json'])('reads %s', async (name) => {
+    const detected = await detectFileType(fixtureIn(ASK_AI, name));
+    expect(detected.type).toBe('vlm_annotation');
+    const video = { file: new File(['video'], 'demo_clip.mp4', { type: 'video/mp4' }), type: 'video' as const, confidence: 1 };
+    const { data, metadata } = await mergeAnnotationData([detected, video]);
+    expect(metadata.warnings).toEqual([]);
+    expect(data.vlm_annotations).toHaveLength(3);
+  });
+});
+
 // Spec 028: every measure VideoAnnotator writes has a lane of its own on the
 // Video page; a generic `other:` lane is only for outputs the viewer doesn't know.
 describe('VideoAnnotator outputs → Video page lanes', () => {

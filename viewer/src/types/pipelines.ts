@@ -39,6 +39,8 @@ export interface PipelineParameterSchema {
   dependencies?: string[];
   /** Shown only when every named setting has one of the listed values (VideoAnnotator spec 026). */
   appliesWhen?: Record<string, string[]>;
+  /** A dedicated editor, e.g. "answer_shape" (VideoAnnotator spec 033). */
+  widget?: string;
 }
 
 /** A published evaluation of a pipeline's method; `figure` is quoted from `source` (spec 026). */

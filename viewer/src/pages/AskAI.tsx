@@ -24,6 +24,7 @@ import { LaneLabel } from '@/components/lanes/LaneLabel';
 import { Playhead } from '@/components/lanes/Playhead';
 import { SampleTicks } from '@/components/lanes/SampleTicks';
 import { TimeAxis } from '@/components/lanes/TimeAxis';
+import { AnswerShapeEditor } from '@/components/ask/AnswerShapeEditor';
 import { AnswersTable, type AnswerColumn } from '@/components/ask/AnswersTable';
 import { EndpointBadge } from '@/components/ask/EndpointBadge';
 import { HistoryList, type HistoryFilters } from '@/components/ask/HistoryList';
@@ -44,6 +45,7 @@ import { formatClock } from '@/lib/lanes';
 import { chooseMoments, samplePoints, samplingToConfig } from '@/lib/sampling';
 import { askWizardStart } from '@/lib/wizardStart';
 import { runState } from '@/lib/runTarget';
+import { cleanShape, DIDNT_FIT, shapeProblem } from '@/lib/answerShape';
 import { KIND_SHORT, MODEL_SERVERS_QUERY_KEY } from '@/lib/modelServers';
 import {
   DEFAULT_SAMPLING,
@@ -52,6 +54,7 @@ import {
   type AskEntry,
   type AskLibraryPrompt,
   type AskSampling,
+  type AnswerShape,
   type ModelServer,
 } from '@/types/ask';
 
@@ -186,6 +189,7 @@ const AskAI = () => {
   const [question, setQuestion] = useState(() => params.get('prompt') ?? '');
   const [model, setModel] = useState(() => params.get('model') ?? '');
   const [sampling, setSampling] = useState<AskSampling>(() => samplingFromParams(params));
+  const [answerShape, setAnswerShape] = useState<AnswerShape | null>(null);
   const [samplingKey, setSamplingKey] = useState(0);
   const [restoredId, setRestoredId] = useState<string | null>(null);
   const [shown, setShown] = useState<string[]>([]);
@@ -311,7 +315,9 @@ const AskAI = () => {
     frames: entry.sampling.frames ?? 1,
   }));
   const shownAnswers = columns.flatMap((c) => c.answers);
-  const hues = categoryHues(shownAnswers.filter((a) => a.status === 'answered').map((a) => a.label ?? ''));
+  const hues = categoryHues(
+    shownAnswers.filter((a) => a.status === 'answered' && a.fit !== false && a.label !== DIDNT_FIT).map((a) => a.label ?? ''),
+  );
   const nearestSample = nearest(points, time);
   const nearestAnswer = nearest(
     shownAnswers.map((a) => a.t),
@@ -385,9 +391,11 @@ const AskAI = () => {
     model,
     base_url: server?.base_url ?? endpoint?.baseUrl ?? null,
     backend,
+    answer_shape: answerShape ? (cleanShape(answerShape) as unknown as Record<string, unknown>[]) : null,
     think: false,
     sampling,
   };
+  const shapeInvalid = answerShape !== null && shapeProblem(answerShape) !== null;
   const tryHere = () => send(() => asked(() => apiClient.createTry({ ...request, at: Math.round(time * 1000) / 1000 })));
   const tryMany = () => send(() => asked(() => apiClient.createTry({ ...request, count: TRY_COUNT })));
   const runWhole = () => send(() => asked(() => apiClient.createRun(request)));
@@ -404,7 +412,11 @@ const AskAI = () => {
   // A run elsewhere says where it goes; the default keeps reading as before.
   const serverConfig = (): Record<string, unknown> =>
     backend === 'ollama' && server?.id === DEFAULT_SERVER_ID ? {} : { backend, base_url: server?.base_url };
-  const config = () => ({ ...samplingToConfig(sampling), ...serverConfig() });
+  const config = () => ({
+    ...samplingToConfig(sampling),
+    ...serverConfig(),
+    ...(answerShape ? { answer_shape: cleanShape(answerShape) } : {}),
+  });
   const moreVideos = () => {
     const start = askWizardStart(question, model, config());
     navigate('/run', { state: runState({ target: null, settings: start.mode === 'settings' ? { ...start } : undefined }) });
@@ -438,6 +450,7 @@ const AskAI = () => {
       setModel(entry.model);
       setSampling(fullSampling(entry.sampling));
       setSamplingKey((k) => k + 1);
+      setAnswerShape(((entry as Partial<AskEntry>).answer_shape as unknown as AnswerShape | null) ?? null);
       const same = entry.base_url ? servers.find((s) => s.base_url === entry.base_url.replace(/\/+$/, '')) : undefined;
       if (same) setServerId(same.id);
     },
@@ -454,6 +467,7 @@ const AskAI = () => {
         model,
         base_url: request.base_url,
         backend,
+        answer_shape: request.answer_shape,
         think: false,
         sampling,
       });
@@ -477,6 +491,7 @@ const AskAI = () => {
   const restoreLibrary = async (prompt: AskLibraryPrompt) => {
     await keepDraft();
     setQuestion(prompt.text);
+    setAnswerShape((prompt.answer_shape as unknown as AnswerShape | null) ?? null);
     if (prompt.models?.length) setModel(prompt.models[0]);
   };
 
@@ -508,6 +523,22 @@ const AskAI = () => {
       );
       if (files.length === 1) saveBlob(files[0].blob, files[0].name);
       else if (files.length > 1) saveBlob(await zipBlobs(files), `${nameOf(videoPath)} answers.zip`);
+    } catch (e) {
+      setNotice(`Couldn't export the answers: ${userMessage(e)}`);
+    }
+  };
+
+  const shapedShown = shownEntries.filter((entry) => entry.answer_shape);
+  const exportWide = async () => {
+    try {
+      const files = await Promise.all(
+        shapedShown.map(async (entry) => {
+          const download = await apiClient.exportEntryWide(entry.id);
+          return { name: download.filename ?? `${entryTitle(entry)} answers wide.csv`, blob: download.blob };
+        }),
+      );
+      if (files.length === 1) saveBlob(files[0].blob, files[0].name);
+      else if (files.length > 1) saveBlob(await zipBlobs(files), `${nameOf(videoPath)} answers by field.zip`);
     } catch (e) {
       setNotice(`Couldn't export the answers: ${userMessage(e)}`);
     }
@@ -593,17 +624,27 @@ const AskAI = () => {
                 servers={servers}
                 server={server}
                 onServer={chooseServer}
+                shapeEditor={
+                  <AnswerShapeEditor
+                    value={answerShape}
+                    onChange={setAnswerShape}
+                    cantEnforce={server && server.structured_output === false ? server.name : null}
+                    onSuggest={() =>
+                      apiClient.suggestShape({ prompt: question, model: model || null, base_url: request.base_url, backend })
+                    }
+                  />
+                }
                 onTryHere={tryHere}
                 onTryMoments={tryMany}
                 tryCount={tryMoments.length}
                 busy={busy || anyTryRunning}
-                disabled={Boolean(noModels)}
+                disabled={Boolean(noModels) || shapeInvalid}
               />
               <SamplingControls key={samplingKey} sampling={sampling} onChange={setSampling} count={points.length} estimate={runEstimate} />
               <RunControls
                 run={run}
                 samples={points.length}
-                disabled={Boolean(noModels) || !question.trim() || !model}
+                disabled={Boolean(noModels) || !question.trim() || !model || shapeInvalid}
                 onRun={runWhole}
                 onStop={() => void stop()}
                 onMoreVideos={moreVideos}
@@ -695,7 +736,15 @@ const AskAI = () => {
                 <Card className="space-y-2 p-3" data-testid="featured-answer">
                   <p className="text-sm">
                     <span className="text-muted-foreground tabular-nums">{formatClock(featured.answer.t)} </span>
-                    {featured.answer.status === 'answered' ? (
+                    {featured.answer.status === 'answered' && featured.answer.fit === false ? (
+                      <span className="text-amber-700 dark:text-amber-400">Didn't fit: {featured.answer.fit_problem}</span>
+                    ) : featured.answer.status === 'answered' && featured.answer.fields ? (
+                      <span className="font-semibold">
+                        {Object.entries(featured.answer.fields)
+                          .map(([name, value]) => `${name}: ${String(value)}`)
+                          .join(' · ')}
+                      </span>
+                    ) : featured.answer.status === 'answered' ? (
                       <span className="font-semibold">{featured.answer.label}</span>
                     ) : featured.answer.status === 'error' ? (
                       <span className="text-destructive">No answer: {featured.answer.error}</span>
@@ -762,6 +811,11 @@ const AskAI = () => {
               <Button variant="outline" size="sm" className="gap-1" disabled={!shownEntries.length} onClick={() => void exportShown()}>
                 <Download className="h-4 w-4" /> Export table
               </Button>
+              {shapedShown.length > 0 && (
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => void exportWide()}>
+                  <Download className="h-4 w-4" /> Answers, one column per field (CSV)
+                </Button>
+              )}
             </Card>
           </div>
         </>

@@ -23,6 +23,11 @@ export function Tally({ answers }: TallyProps) {
             no answer {t.errors}
           </li>
         )}
+        {t.misfits > 0 && (
+          <li className="rounded border border-amber-500/60 px-2 py-0.5 text-amber-700 dark:text-amber-400" data-testid="tally-misfits">
+            didn't fit {t.misfits}
+          </li>
+        )}
         {t.skipped > 0 && (
           <li className="rounded border border-dashed px-2 py-0.5 text-muted-foreground" data-testid="tally-skipped">
             skipped {t.skipped}

@@ -289,10 +289,17 @@ export interface VLMFrameAnnotation {
   base_url: string;
   prompt: string; // the exact prompt used for this annotation's job
   total_time?: number;
-  load_time?: number;
+  load_time?: number | null;
   prompt_tokens?: number;
   resp_tokens?: number;
-  tokens_per_sec?: number;
+  tokens_per_sec?: number | null;
+  /** Spec 033: a shaped question's fields; `fit` false when the reply didn't fit. */
+  fields?: Record<string, unknown> | null;
+  fit?: boolean | null;
+  fit_problem?: string | null;
+  clip_start_sec?: number;
+  clip_end_sec?: number;
+  clip_fps?: number;
 }
 
 // ELAN ground-truth annotation (parsed from a .eaf file — Crucianelli et al.

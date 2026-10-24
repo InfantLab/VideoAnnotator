@@ -117,10 +117,18 @@ export const VLMFrameAnnotationSchema = z.object({
     base_url: z.string().optional(),
     prompt: z.string().optional(),
     total_time: z.number().optional(),
-    load_time: z.number().optional(),
+    // null where an OpenAI-compatible server doesn't report it (spec 033 FR-007).
+    load_time: z.number().nullable().optional(),
     prompt_tokens: z.number().optional(),
     resp_tokens: z.number().optional(),
-    tokens_per_sec: z.number().optional()
+    tokens_per_sec: z.number().nullable().optional(),
+    // Spec 033: a shaped question's fields, and a clip's span.
+    fields: z.record(z.unknown()).nullable().optional(),
+    fit: z.boolean().nullable().optional(),
+    fit_problem: z.string().nullable().optional(),
+    clip_start_sec: z.number().optional(),
+    clip_end_sec: z.number().optional(),
+    clip_fps: z.number().optional()
 });
 
 export function validateVlmAnnotationData(data: unknown[]): VLMFrameAnnotation[] {

@@ -40,6 +40,8 @@ export interface LaneMarker {
   t: number;
   status: MarkerStatus;
   label?: string | null;
+  /** A shaped answer that didn't fit its shape (spec 033): never drawn as a value. */
+  fit?: boolean | null;
 }
 
 // ---------------------------------------------------------------------------

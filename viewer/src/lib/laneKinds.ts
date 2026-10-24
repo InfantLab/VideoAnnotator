@@ -146,9 +146,14 @@ export const UNDRAWN_MEASURES = new Set([
   'age',
   'gender',
   'vlm_reasoning',
+  'vlm_fit',
+  'vlm_fit_problem',
   'action_unit_presence',
   'scene_score',
 ]);
+
+/** A shaped Ask AI answer's fields (spec 033): `vlm.<name>`, in the Data tab with the answer. */
+const isAnswerField = (measure: string) => measure.startsWith('vlm.');
 
 const BY_MEASURE = new Map<string, LaneKind>();
 for (const k of [...LANE_KINDS, NOTES_KIND]) for (const m of k.measures) BY_MEASURE.set(m, k);
@@ -169,7 +174,7 @@ function otherKind(pipeline: string, measure: string, numeric: boolean): LaneKin
 
 /** The lane a row belongs to; null for measures shown only in the Data tab. */
 export function kindOf(row: Pick<Row, 'pipeline' | 'measure' | 'value'>): LaneKind | null {
-  if (UNDRAWN_MEASURES.has(row.measure)) return null;
+  if (UNDRAWN_MEASURES.has(row.measure) || isAnswerField(row.measure)) return null;
   return BY_MEASURE.get(row.measure) ?? otherKind(row.pipeline, row.measure, row.value !== null);
 }
 
@@ -219,6 +224,8 @@ const UNDRAWN_KIND: Record<string, string> = {
   age: 'faces',
   gender: 'faces',
   vlm_reasoning: 'ask_ai',
+  vlm_fit: 'ask_ai',
+  vlm_fit_problem: 'ask_ai',
   action_unit_presence: 'action_units',
   scene_score: 'scenes',
 };
@@ -227,5 +234,5 @@ const UNDRAWN_KIND: Record<string, string> = {
 export function tableKindOf(row: Pick<Row, 'pipeline' | 'measure' | 'value'>): LaneKind {
   const drawn = kindOf(row);
   if (drawn) return drawn;
-  return laneKind(UNDRAWN_KIND[row.measure])!;
+  return laneKind(isAnswerField(row.measure) ? 'ask_ai' : UNDRAWN_KIND[row.measure])!;
 }

@@ -129,6 +129,7 @@ function mapParameter(raw: Record<string, unknown>): PipelineParameterSchema {
     group: optionalString(raw.group),
     min: optionalNumber(raw.min),
     max: optionalNumber(raw.max),
+    widget: optionalString(raw.widget),
     appliesWhen:
       appliesWhen && typeof appliesWhen === 'object' ? (appliesWhen as Record<string, string[]>) : undefined,
   };
