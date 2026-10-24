@@ -57,6 +57,8 @@ _NOT_RESULT_KEYS = {
 }
 _NOT_RESULT_PATTERN = re.compile(r"(_dir|_path|_url|timeout|_token)$")
 
+OLLAMA_KEY = "ollama"
+
 _REVISION_WORDS = {"sha256": "sha256", "git": "revision", "ollama-digest": "digest"}
 
 
@@ -120,6 +122,8 @@ class _Use:
     prompt_sha256: str | None
     quantization: str | None
     where: str | None = None
+    # A VLM run's model server kind (spec 033): Ollama is cited only when it ran.
+    backend: str | None = None
 
 
 # Where a model ran, without naming the server (FR-029).
@@ -207,6 +211,7 @@ def _use(
         prompt_sha256=vlm.get("prompt_sha256"),
         quantization=vlm.get("quantization"),
         where=_where(vlm),
+        backend=vlm.get("backend"),
     )
 
 
@@ -239,10 +244,12 @@ class _Writer:
     def meta(self, pipeline: str) -> PipelineMetadata | None:
         return self.registry.get(pipeline)
 
-    def cite(self, pipeline: str) -> str:
+    def cite(self, pipeline: str, backend: str | None = None) -> str:
         meta = self.meta(pipeline)
         keys = []
         for c in meta.citations if meta else []:
+            if c.key == OLLAMA_KEY and backend not in (None, "ollama"):
+                continue
             keys.append(c.key)
             if c.key not in self.entries:
                 self.entries[c.key] = c.bibtex
@@ -258,7 +265,7 @@ class _Writer:
     def sentence(self, use: _Use) -> str:
         text = self.phrase(use.pipeline)
         if not use.recorded:
-            return f"{text} (model version not recorded){self.cite(use.pipeline)}."
+            return f"{text} (model version not recorded){self.cite(use.pipeline, use.backend)}."
         if use.models:
             text += " with " + ", ".join(_model_text(m) for m in use.models)
         if use.quantization:
@@ -269,7 +276,7 @@ class _Writer:
             text += f", using prompt {use.prompt_sha256[:12]} (full text below)"
         if use.settings:
             text += "; settings: " + ", ".join(f"{k} = {v}" for k, v in use.settings)
-        return f"{text}{self.cite(use.pipeline)}."
+        return f"{text}{self.cite(use.pipeline, use.backend)}."
 
 
 def _version_text(versions: set[str | None]) -> str:

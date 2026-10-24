@@ -71,9 +71,17 @@ the walk-through with a vision model is still to do, T068). 028 built 2026-10-20
 2026-10-21 (`specs/029-videos-and-projects/checks.md`: browser walk-through done; SC-001 with a
 first-time user and the pilot journeys still to do). The viewer is organised around videos
 (Videos, New run at `/run`, the Video page's Runs tab); old pages redirect; the viewer never says
-job, batch, dataset or preset (`viewer/src/test/vocabulary.test.tsx`). Next: connectors (spec
-`specs/033-model-connectors`, planned 2026-10-22), docs and the pilot in the v1.7.0 roadmap; reconcile spec 010 with the Videos page.
+job, batch, dataset or preset (`viewer/src/test/vocabulary.test.tsx`). 033 (model connectors)
+built 2026-10-24 (`specs/033-model-connectors/checks.md`: checked against fakes from the servers'
+docs; T055, the walk-through with real servers and SC-001/SC-003, still to do). Next: docs and the
+pilot in the v1.7.0 roadmap; reconcile spec 010 with the Videos page.
 ## Recent Changes
+- 033-model-connectors: `backend: openai_compatible` (`pipelines/vlm_annotation/clients.py`,
+  `openai_client.py`); answer shapes (`answer_shape.py`; `fields`/`fit`/`fit_problem`, wide CSV);
+  `sampling_mode: clip`; model servers (`model_servers.py`, `/api/v1/model-servers`, keys in
+  `model_server_keys.json`); remote switch (`endpoint_policy.py`, off by default); CLI
+  `videoannotator model-servers`. Tests fake servers through `tests/fixtures/fake_openai_server.py`
+  (patch `openai_client.DEFAULT_TRANSPORT`).
 - 029-videos-and-projects: a video is a group of paths (`video_index.py`: same path, inode, rerun
   of a stored upload, or a content hash through an upload); project membership from saved
   datasets (`projects.py`, manifest entries may carry `path`); remembered settings

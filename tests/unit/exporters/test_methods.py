@@ -242,3 +242,36 @@ def test_vlm_says_where_the_model_ran_without_naming_it(
         assert "running on" not in prose
     if host and host not in ("localhost", "127.0.0.1"):
         assert host not in prose
+
+
+@pytest.mark.parametrize(
+    ("backend", "cited"), [(None, True), ("ollama", True), ("openai_compatible", False)]
+)
+def test_ollama_is_cited_only_when_it_ran(tmp_path, backend, cited):
+    """Spec 033: a run on llama.cpp or vLLM doesn't cite Ollama."""
+    run = make_run(tmp_path, {"a": FIXTURES})
+    path = run / "a" / "demo_clip_vlm_annotation.json"
+    data = json.loads(path.read_text())
+    vlm = {"prompt_sha256": "a" * 64, "base_url": "http://127.0.0.1:8080/v1"}
+    if backend:
+        vlm["backend"] = backend
+    data["provenance"] = {
+        "schema_version": 1,
+        "pipeline": {"name": "vlm_annotation", "sub_pipeline": None},
+        "videoannotator_version": "1.7.0",
+        "models": [
+            {
+                "name": "gemma",
+                "source": backend or "ollama",
+                "revision": None,
+                "revision_kind": "unknown",
+            }
+        ],
+        "settings": {"model": "gemma"},
+        "determinism": {},
+        "vlm": vlm,
+    }
+    path.write_text(json.dumps(data))
+    described = describe(from_folder(run))
+    assert ("@ollama" in described.prose) is cited
+    assert ("@software{ollama" in described.bibtex) is cited
