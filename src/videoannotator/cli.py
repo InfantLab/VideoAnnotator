@@ -410,8 +410,22 @@ def submit_job(
 
             if config and config.exists():
                 with open(config) as f:
-                    config_data = json.load(f)
-                    data["config"] = json.dumps(config_data)
+                    if config.suffix.lower() in (".yaml", ".yml"):
+                        import yaml
+
+                        config_data = yaml.safe_load(f) or {}
+                    else:
+                        config_data = json.load(f)
+                from .pipelines.vlm_annotation.vlm_pipeline import (
+                    KEY_IN_CONFIG_MESSAGE,
+                    _secret_keys,
+                )
+
+                # Spec 033 FR-017: a key never leaves this machine in a config.
+                if _secret_keys(config_data):
+                    typer.echo(KEY_IN_CONFIG_MESSAGE, err=True)
+                    raise typer.Exit(code=1)
+                data["config"] = json.dumps(config_data)
 
             # Submit job
             response = requests.post(
@@ -455,6 +469,8 @@ def submit_job(
             typer.echo(f"Response: {response.text}")
             raise typer.Exit(code=1)
 
+    except typer.Exit:
+        raise
     except requests.RequestException as e:
         typer.echo(f"[ERROR] Failed to connect to API server: {e}", err=True)
         typer.echo("[INFO] Make sure server is running: videoannotator server")
@@ -1754,6 +1770,201 @@ def backup(
 
 settings_app = typer.Typer(help="Server settings kept on this machine.")
 app.add_typer(settings_app, name="settings")
+
+model_servers_app = typer.Typer(
+    help="Model servers Ask AI and VLM runs can use (Ollama, OpenAI-compatible)."
+)
+app.add_typer(model_servers_app, name="model-servers")
+
+# `model-servers check` exit codes, one per outcome (spec 033 contracts/api.md).
+CHECK_EXIT_CODES = {
+    "models": 0,
+    "unreachable": 2,
+    "wrong_kind": 3,
+    "no_models": 4,
+    "key_refused": 5,
+}
+
+
+def _model_servers_session():
+    from .database.database import SessionLocal, create_tables
+
+    create_tables()
+    return SessionLocal()
+
+
+def _model_server_failed(error: Exception) -> None:
+    typer.echo(str(error), err=True)
+    hint = getattr(error, "hint", None)
+    if hint:
+        typer.echo(hint, err=True)
+    raise typer.Exit(code=1)
+
+
+@model_servers_app.command("list")
+def model_servers_list(
+    as_json: bool = typer.Option(False, "--json", help="Print JSON."),
+):
+    """The servers this server knows, the default Ollama one first. Never a key."""
+    import json as json_module
+
+    from . import endpoint_policy, model_servers
+
+    with _model_servers_session() as db:
+        servers = []
+        for server in model_servers.list_servers(db):
+            state = endpoint_policy.endpoint_state(db, server["base_url"])
+            source = model_servers.key_source(server)
+            servers.append(
+                {
+                    **{k: server[k] for k in ("id", "name", "kind", "base_url")},
+                    "has_key": source is not None,
+                    "key_source": source,
+                    "api_key_env": server["api_key_env"],
+                    "endpoint_class": state["class"],
+                    "sendable": state["sendable"],
+                }
+            )
+        allowed, fixed = endpoint_policy.remote_allowed(db)
+    if as_json:
+        typer.echo(
+            json_module.dumps(
+                {
+                    "servers": servers,
+                    "remote": {"allowed": allowed, "fixed_by_environment": fixed},
+                },
+                indent=2,
+            )
+        )
+        return
+    for server in servers:
+        key = (
+            f"key from ${server['api_key_env']}"
+            if server["key_source"] == "env"
+            else "key set"
+            if server["has_key"]
+            else "no key"
+        )
+        typer.echo(
+            f"{server['name']}  {server['kind']}  {server['base_url']}  "
+            f"{server['endpoint_class']}  {key}"
+        )
+    typer.echo(f"Remote model servers: {'on' if allowed else 'off'}.")
+
+
+@model_servers_app.command("add")
+def model_servers_add(
+    name: str = typer.Argument(..., help="What to call it, e.g. lab-gpu"),
+    url: str = typer.Argument(..., help="Its address, e.g. http://10.0.4.12:8000/v1"),
+    kind: str = typer.Option(
+        "openai_compatible", "--kind", help="ollama or openai_compatible"
+    ),
+    key_env: str | None = typer.Option(
+        None, "--key-env", help="An environment variable holding its key"
+    ),
+    no_key: bool = typer.Option(False, "--no-key", help="It needs no key."),
+):
+    """Add a model server. A key is never a flag: name an environment variable
+    with --key-env, or type it at the hidden prompt when run in a terminal."""
+    import sys
+
+    from . import model_servers
+
+    key = None
+    if not key_env and not no_key and sys.stdin.isatty():
+        key = (
+            typer.prompt(
+                "Key (press Enter for none; it isn't shown)",
+                default="",
+                hide_input=True,
+                show_default=False,
+            ).strip()
+            or None
+        )
+    with _model_servers_session() as db:
+        try:
+            server = model_servers.add(
+                db, name, kind, url, api_key=key, api_key_env=key_env
+            )
+        except model_servers.ModelServerError as e:
+            _model_server_failed(e)
+    typer.echo(f"Added {server['name']} ({server['kind']}) at {server['base_url']}.")
+
+
+@model_servers_app.command("check")
+def model_servers_check(
+    url: str = typer.Argument(..., help="The server's address"),
+    kind: str = typer.Option(
+        "openai_compatible", "--kind", help="ollama or openai_compatible"
+    ),
+    model: str | None = typer.Option(
+        None, "--model", help="Also ask whether this model takes video"
+    ),
+    as_json: bool = typer.Option(False, "--json", help="Print JSON."),
+):
+    """Reachable? The right kind? Any models? Does it take the key?
+
+    Exit codes: 0 reachable with models, 2 unreachable, 3 wrong kind, 4 no
+    models, 5 key refused.
+    """
+    import json as json_module
+
+    from . import endpoint_policy, model_servers
+    from .pipelines.vlm_annotation.clients import check_server
+
+    with _model_servers_session() as db:
+        try:
+            base_url = model_servers.check_base_url(url)
+        except model_servers.ModelServerError as e:
+            _model_server_failed(e)
+        key = model_servers.key_for(db, base_url)
+        state = endpoint_policy.endpoint_state(db, base_url)
+        result = check_server(kind, base_url, key, model if state["sendable"] else None)
+        if result["video"] is not None and model:
+            model_servers.record_capabilities(
+                db, base_url, video=(model, result["video"])
+            )
+    result["endpoint"] = {
+        k: state[k] for k in ("host", "class", "confirmed", "sendable")
+    }
+    if as_json:
+        typer.echo(json_module.dumps(result, indent=2))
+    else:
+        typer.echo(result["message"])
+        if result["hint"]:
+            typer.echo(result["hint"])
+        for listed in result["models"]:
+            typer.echo(f"  {listed}")
+        if result["video"] is not None:
+            typer.echo(
+                f"{model} {'takes' if result['video'] else 'does not take'} video."
+            )
+    raise typer.Exit(code=CHECK_EXIT_CODES[result["outcome"]])
+
+
+@model_servers_app.command("remove")
+def model_servers_remove(
+    name: str = typer.Argument(..., help="The server's name (or id)"),
+):
+    """Remove a model server and its stored key. Results that used it stay."""
+    from . import model_servers
+
+    with _model_servers_session() as db:
+        matches = [
+            s
+            for s in model_servers.list_servers(db)
+            if name in (s["name"], s["id"]) and s["removable"]
+        ]
+        if len(matches) != 1:
+            typer.echo(
+                f"No model server called {name!r}."
+                if not matches
+                else f"More than one server is called {name!r}: remove it by id.",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+        model_servers.remove(db, matches[0]["id"])
+    typer.echo(f"Removed {matches[0]['name']}.")
 
 
 @settings_app.command("huggingface-token")

@@ -127,8 +127,8 @@ logged, returned, or written outside `model_server_keys.json`. Commit per task o
 **Goal**: servers checked and added from the CLI with `--json`; runs configured by YAML.
 **Independent test**: quickstart Story 5 from a shell only.
 
-- [ ] T049 [US5] `videoannotator model-servers list|add|check|remove` in `src/videoannotator/cli.py` per contracts/api.md: `--json` on list and check, exit codes 0/2/3/4/5, `--key-env VAR`, hidden prompt only when interactive and neither `--key-env` nor `--no-key` is given; never a key flag
-- [ ] T050 [P] [US5] `tests/unit/test_cli_model_servers.py` (Typer runner; the fake server): JSON output shape, exit codes per outcome, `add --key-env` stores the env name only, no prompt with `--no-key`, `job submit --config` with `backend`/`answer_shape` produces the job config, a config with `api_key` is refused
+- [X] T049 [US5] `videoannotator model-servers list|add|check|remove` in `src/videoannotator/cli.py` per contracts/api.md: `--json` on list and check, exit codes 0/2/3/4/5, `--key-env VAR`, hidden prompt only when interactive and neither `--key-env` nor `--no-key` is given; never a key flag
+- [X] T050 [P] [US5] `tests/unit/test_cli_model_servers.py` (Typer runner; the fake server): JSON output shape, exit codes per outcome, `add --key-env` stores the env name only, no prompt with `--no-key`, `job submit --config` with `backend`/`answer_shape` produces the job config, a config with `api_key` is refused
 
 ---
 
