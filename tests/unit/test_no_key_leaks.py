@@ -4,6 +4,7 @@ row or log line (spec 033 FR-016, FR-017)."""
 import json
 import logging
 import time
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,7 +18,6 @@ from videoannotator.batch.job_execution import run_job_pipelines
 from videoannotator.batch.result_files import job_folder
 from videoannotator.database import database as db_module
 from videoannotator.database.models import AskEntry, ModelServer
-from videoannotator.database_location import database_path
 from videoannotator.pipelines.vlm_annotation import openai_client, vlm_pipeline
 
 client = TestClient(app)
@@ -26,6 +26,11 @@ LAB = "http://127.0.0.1:8000/v1"
 STORED = "sk-stored-key-0123456789abcdef"
 FROM_ENV = "sk-environment-key-fedcba9876543210"
 SHAPE = [{"name": "touch", "kind": "yes_no"}]
+
+
+def _database_bytes() -> bytes:
+    """The file the engine writes, whatever an earlier test left in the environment."""
+    return Path(db_module.engine.url.database).read_bytes()
 
 
 @pytest.fixture(autouse=True)
@@ -127,7 +132,7 @@ def test_the_key_goes_nowhere_but_the_header(source, video, monkeypatch, caplog)
     assert any(p.name.endswith("_vlm_annotation.json") for p in files)
     for path in files:
         assert key.encode() not in path.read_bytes(), path
-    assert key.encode() not in database_path().read_bytes()
+    assert key.encode() not in _database_bytes()
     for record in caplog.records:
         assert key not in record.getMessage()
     keys_file = secrets_store.model_server_keys_path()
@@ -148,4 +153,4 @@ def test_a_key_in_a_config_is_refused_and_stored_nowhere(video, monkeypatch):
     assert (r.status_code, r.json()["error"]["code"]) == (422, "KEY_IN_CONFIG")
     assert "Settings → Model servers" in r.json()["error"]["message"]
     assert STORED not in r.text
-    assert STORED.encode() not in database_path().read_bytes()
+    assert STORED.encode() not in _database_bytes()
