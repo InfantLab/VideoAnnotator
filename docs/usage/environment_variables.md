@@ -60,6 +60,7 @@ Control authentication and token management:
 | `AUTH_REQUIRED` | `true` | Require API key authentication |
 | `TOKEN_DIR` | `./tokens` | Directory for API token storage |
 | `AUTO_GENERATE_KEY` | `true` | Auto-generate key on first startup |
+| `VIDEOANNOTATOR_REMOTE_MODEL_SERVERS` | _(unset)_ | `on` or `off` fixes whether model servers outside this computer and the local network can be used (spec 033); unset, an administrator switches it in Settings → Model servers, off on a fresh install |
 
 ### API Server Configuration
 

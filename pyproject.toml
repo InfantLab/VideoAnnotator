@@ -299,6 +299,7 @@ markers = [
     "slow: Tests that take >10 seconds",
     "gpu: Tests requiring GPU acceleration",
     "real_models: Tests using real ML models",
+    "real_vlm_server: Tests against a real OpenAI-compatible model server (VA_TEST_OPENAI_BASE_URL)",
     "meta: marks tests as meta-tests for testing test infrastructure",
     "asyncio: marks tests as requiring asyncio support",
 ]

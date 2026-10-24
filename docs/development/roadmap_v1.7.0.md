@@ -17,8 +17,9 @@ systematic answers without help.
 **Target Release**: when the pilot's fixes are in. No deadline.
 **Current Status**: In development on `1.7-dev` (from 2026-10-18). Phase 1: viewer design done
 (spec 023); specs 027–029 built 2026-10-19 to 2026-10-21, each with a walk-through or check by a
-person still to do (see Phase 1); movement metrics not yet specified. Phase 2 (connectors) is
-being specified (spec 033, 2026-10-22). Phase 7: the audit's chores done bar the coverage gate;
+person still to do (see Phase 1); movement metrics not yet specified. Phase 2 (connectors) built
+2026-10-24 (spec 033), checked against fake servers built from the servers' docs; walk-through with
+real servers still to do (`specs/033-model-connectors/checks.md`). Phase 7: the audit's chores done bar the coverage gate;
 the rest is spec 032 (specified 2026-10-19, not yet planned).
 **Prerequisites**: v1.6.0 tagged. Done 2026-10-18.
 
@@ -71,20 +72,20 @@ tools, decisions, journeys). Built by, in order:
 
 ### Phase 2: Connectors (was v1.6.0 Phase 5a)
 
-Being specified as spec 033 (2026-10-22).
+Built as spec 033 (2026-10-24); the walk-through with real servers is still to do.
 
-- [ ] **OpenAI-compatible connector** alongside the Ollama one (`backends: [ollama,
+- [x] **OpenAI-compatible connector** alongside the Ollama one (`backends: [ollama,
       openai_compatible]`), moved here from the plugin plan (now v1.8.0). One client covers Ollama, llama.cpp, vLLM,
       LM Studio, SGLang and hosted APIs.
-- [ ] **Structured outputs**: the prompt carries a JSON schema, so VLM labels come back parseable
+- [x] **Structured outputs**: the prompt carries a JSON schema, so VLM labels come back parseable
       rather than as free text.
-- [ ] **Video input** through vLLM (Qwen-VL models) as a third sampling mode beside single frame and
+- [x] **Video input** through vLLM (Qwen-VL models) as a third sampling mode beside single frame and
       burst. Ollama's Qwen3-VL has no video input as of September 2026.
-- [ ] Hosted endpoints are off by default. Enabling one shows a plain warning that frames leave the
+- [x] Hosted endpoints are off by default. Enabling one shows a plain warning that frames leave the
       machine; for infant video that is an ethics-approval question.
-- [ ] The connector ships together with spec 027's local/remote badge and its confirmation before
+- [x] The connector ships together with spec 027's local/remote badge and its confirmation before
       a remote send, never before them.
-- [ ] Structured outputs fit Ask AI's lesson that the question defines the answer (journey 1): the
+- [x] Structured outputs fit Ask AI's lesson that the question defines the answer (journey 1): the
       window helps build the schema.
 
 ---

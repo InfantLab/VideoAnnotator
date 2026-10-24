@@ -7,7 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Model servers** (spec 033): Ask AI and `vlm_annotation` can use an OpenAI-compatible server
+  — llama.cpp's `llama-server`, vLLM, LM Studio, SGLang, Ollama's own `/v1` or a hosted API — as
+  well as Ollama (`backend: openai_compatible`; no `backend` is Ollama, as before). Settings →
+  Model servers lists, checks, adds and removes servers; Ask AI and New run choose one. Keys are
+  typed in Settings (kept in `model_server_keys.json` beside the database, never shown again) or
+  named as an environment variable; never in a run's settings, results, provenance, exports or
+  logs. `/api/v1/model-servers`, `videoannotator model-servers list|add|check|remove`.
+- **Answer shapes**: a question can name its answer's fields (one of a list, yes/no, a number,
+  short text). The server is asked for that shape and every answer is checked against it; answers
+  carry `fields`, `fit` and `fit_problem`, and one that doesn't fit is shown as such, never as a
+  value. Ask AI suggests fields from the question, or by asking the model. The table gains
+  `vlm.<field>`, `vlm_fit` and `vlm_fit_problem` measures (format unchanged); a new answers file
+  has one column per field (`/ask/entries/{id}/export/wide`, `/jobs/{id}/export/wide`).
+- **A short clip per sample** (`sampling_mode: clip`) for servers and models that take video
+  (vLLM with Qwen-VL), offered only where a check with a synthetic clip says the model takes it.
+- **A remote-servers switch**, off on a fresh install: an administrator switches it on in Settings
+  (with a warning), `VIDEOANNOTATOR_REMOTE_MODEL_SERVERS=on|off` fixes it. Enforced for Ask AI,
+  previews, job submission and the pipeline itself.
+- `job submit --config` reads YAML as well as JSON.
+
 ### Changed
+
+- **A remote model server needs the switch** (spec 033): a remote address confirmed since this
+  version needs remote servers switched on as well; addresses confirmed before it keep working
+  without the switch. `GET /ask/endpoint` adds `sendable` and `before_switch`.
+- `vlm_annotation` annotations from an OpenAI-compatible server have `load_time` and
+  `tokens_per_sec` `null` where the server doesn't report them; the viewer reads either.
 
 - **The viewer is organised around videos** (spec 029). The nav is **Home · Videos · Ask AI ·
   Pipelines**, with the runs going on, **Help** and **Settings**. Jobs, Job detail, Batch detail,

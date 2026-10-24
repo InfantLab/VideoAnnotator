@@ -3,9 +3,10 @@
 ## What this is
 
 `vlm_annotation` is a VideoAnnotator pipeline that samples frames from a video
-on a fixed cadence and classifies/describes each one using a locally-hosted
-vision-language model (VLM), served by [Ollama](https://ollama.com), driven
-by a user-supplied text prompt. Every sample point is one independent,
+on a fixed cadence and classifies/describes each one using a vision-language
+model (VLM) on a model server, [Ollama](https://ollama.com) by default or any
+OpenAI-compatible server (llama.cpp, vLLM, LM Studio, SGLang; spec 033),
+driven by a user-supplied text prompt, optionally with an answer shape. Every sample point is one independent,
 stateless model call — no conversation history carries over between frames,
 so one prediction can never be biased by a previous one.
 
@@ -61,21 +62,45 @@ repo, not here.
 src/videoannotator/pipelines/vlm_annotation/
 ├── __init__.py
 ├── vlm_pipeline.py      VLMAnnotationPipeline(BasePipeline) — sampling + orchestration
-└── ollama_client.py     OllamaVLMClient — stateless client.chat() wrapper, retry/backoff
+├── clients.py           VLMClient protocol, make_client(backend), check_server() (spec 033)
+├── ollama_client.py     OllamaVLMClient — stateless client.chat() wrapper, retry/backoff
+├── openai_client.py     OpenAICompatibleVLMClient — /models, /chat/completions on httpx (spec 033)
+├── answer_shape.py      answer shapes: validate, JSON Schema, check replies, suggest (spec 033)
+├── sampling.py, frames.py   where samples fall; the frames (or clip) each one sends
+└── gate.py              tries go ahead of runs on the same model
 
 src/videoannotator/registry/metadata/vlm_annotation.yaml   config_schema, requires_extras: [llm]
 ```
 
-- **Model client** (`ollama_client.py`): wraps the `ollama` Python package's
-  `Client.chat()` directly — the same library the research repo already uses
-  in production — rather than a hand-rolled OpenAI-compatible HTTP client.
-  `roadmap_v1.6.0.md` originally proposed "one connector against the
-  OpenAI-compatible `/v1/chat/completions` contract" so the same code could
-  also drive a `llama.cpp` server; that's a deliberate deviation for now,
-  not an oversight — reusing the proven `ollama` client de-risked getting a
-  working pipeline landed quickly. `backends: [ollama]` in the pipeline
-  metadata leaves room for an `openai_compatible` backend alongside it later
-  without redesigning the pipeline.
+- **Model clients** (`clients.py`): `backend: ollama` (the default) wraps the
+  `ollama` Python package's `Client.chat()` — the library the research repo
+  uses, and the one that reports model digests for provenance.
+  `backend: openai_compatible` (spec 033) is `openai_client.py`, plain httpx
+  against `GET {base}/models` and `POST {base}/chat/completions`, one
+  `image_url` data URL per frame: llama.cpp's `llama-server`, vLLM, LM Studio,
+  SGLang, Ollama's own `/v1` and hosted APIs. This resolves the deviation from
+  `roadmap_v1.6.0.md`'s "one connector against the OpenAI-compatible contract"
+  that v1.5.0 took to land the pipeline quickly. Retries, backoff, the gate,
+  stopping and progressive writes are the same for both; a 401/403 raises
+  `KeyRefusedError` and stops the run at once. Load time and tokens/s are
+  `null` where the server doesn't report them. The model ref records the
+  server's `system_fingerprint` (`revision_kind: server-fingerprint`) or
+  `unknown` with a reason.
+- **Answer shapes** (`answer_shape.py`, spec 033 R8): `answer_shape` is a list
+  of fields (`choice`, `yes_no`, `number`, `text`). It is sent as Ollama's
+  `format` or as `response_format: json_schema`; a server that rejects that
+  gets the shape described at the end of the prompt instead (remembered per
+  listed server; provenance `structured_output: prompt_only`). Every reply is
+  checked here: `fields`, `fit`, `fit_problem` on each annotation, `label` the
+  first field or `DIDN'T FIT`, and the COCO top level gains
+  `vlm_answer_shape`; provenance gains `answer_shape_sha256`. A misfit counts
+  as answered. No shape: nothing changes.
+- **Keys and remote servers** (spec 033 R4, R5): a config never carries a key
+  (`KEY_IN_CONFIG`); `initialize()` takes it from Settings → Model servers
+  (`model_servers.key_for_url`). `initialize()` also refuses a remote address
+  unless remote servers are switched on and it is confirmed
+  (`endpoint_policy.require_sendable`), so a run from the CLI or the API can't
+  skip the check.
 - **Sampling modes** (`vlm_pipeline.py::process`), both supported from day
   one because the research repo's own roadmap treats the choice between them
   as a still-open research question (see `docs/research_roadmap.md` §Phase 4
@@ -88,9 +113,14 @@ src/videoannotator/registry/metadata/vlm_annotation.yaml   config_schema, requir
     call as multiple `images` list entries. Ported from
     `core/context_inference.py`. **This is not true video/temporal input** —
     it's several still JPEGs in one message, exactly like the research repo's
-    own "3-image grid" mode. Genuine video-native input is out of scope here,
-    same as it is (still unimplemented, explicitly conditional) in the
-    research repo.
+    own "3-image grid" mode.
+  - `clip` (spec 033 R12) — genuine video input, for servers and models that
+    take it (vLLM with Qwen-VL): the frames from `t − clip_length_sec/2` to
+    `t + clip_length_sec/2` (shortened at the video's ends) at `clip_fps`, sent
+    as one `video_url` frame-sequence part, with the fps in `media_io_kwargs`
+    where the server accepts it. `initialize()` first probes the model with a
+    synthetic two-frame clip. Annotations record `clip_start_sec`,
+    `clip_end_sec`, `clip_fps`. Ollama with `clip` is refused.
 - **Output**: COCO-shaped annotation dicts (`create_coco_annotation`), one
   per sample point, with `label` (parsed from the model's response),
   `reasoning` (thinking text if `think: true`, else the raw response),
@@ -131,9 +161,13 @@ by pipeline name: `{"vlm_annotation": {"prompt": "...", ...}}`.
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `prompt` | string | Irene's `maternal_perspective` touch-detection prompt | Applied identically and independently to every sample point |
-| `base_url` | string | `""` (server's `OLLAMA_BASE_URL`, else `http://127.0.0.1:11434`) | Ollama server. The devcontainer and `docker-compose.yml` set `OLLAMA_BASE_URL=http://host.docker.internal:11434` so a server in a container reaches Ollama on the host |
-| `model` | string | `qwen3.5:9b` | Must already be pulled (`ollama pull <name>`) — nothing is auto-downloaded |
-| `sampling_mode` | string | `single_frame` | `single_frame` or `frame_burst` |
+| `backend` | string | `ollama` | `ollama` or `openai_compatible` (spec 033) |
+| `base_url` | string | `""` (server's `OLLAMA_BASE_URL`, else `http://127.0.0.1:11434`) | The model server. Empty only with Ollama. The devcontainer and `docker-compose.yml` set `OLLAMA_BASE_URL=http://host.docker.internal:11434` so a server in a container reaches Ollama on the host |
+| `model` | string | `qwen3.5:9b` | As the server names it; with Ollama, already pulled (`ollama pull <name>`) — nothing is auto-downloaded |
+| `answer_shape` | list \| null | `null` | Named fields, e.g. `[{name: touch, kind: yes_no}]` (spec 033) |
+| `sampling_mode` | string | `single_frame` | `single_frame`, `frame_burst` or `clip` |
+| `clip_length_sec` | float | `2.0` | `clip` only: seconds of video around each sample point |
+| `clip_fps` | float | `4.0` | `clip` only: frames per second read for each clip |
 | `frame_interval_sec` | float | `5.0` | Seconds between sample points |
 | `start_sec` | float | `0.0` | First sample point |
 | `end_sec` | float \| null | `null` | Last possible sample point; `null` is the end of the video |
@@ -142,7 +176,7 @@ by pipeline name: `{"vlm_annotation": {"prompt": "...", ...}}`.
 | `burst_spacing_sec` | float \| null | `null` | `frame_burst` only: seconds between a sample's frames; `null` is `frame_interval_sec`, as before this setting existed. A frame outside the video is dropped, and the annotation lists only the frames sent |
 | `think` | boolean | `false` | Ollama "thinking" mode — ~50x slower, diagnostic use only |
 | `request_timeout_sec` | integer | `240` | Per-request timeout |
-| `keep_alive` | string | `"2h"` | How long Ollama keeps the model loaded between calls |
+| `keep_alive` | string | `"2h"` | How long Ollama keeps the model loaded between calls; not sent to OpenAI-compatible servers |
 
 ## Known gaps / sharp edges
 

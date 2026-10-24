@@ -86,6 +86,7 @@ curl -H "Authorization: Bearer $API_KEY" \
 
 ### Data Protection
 - ✅ **Encrypted tokens**: Fernet encryption for API keys
+- ✅ **Model servers** (spec 033): remote servers are off until an administrator switches them on, lockable with `VIDEOANNOTATOR_REMOTE_MODEL_SERVERS`; keys are kept in `model_server_keys.json` beside the database and redacted from logs. See [Ask AI: remote model servers and data protection](../usage/ask_ai.md#remote-model-servers-and-data-protection).
 - ✅ **Secure permissions**: 600 on sensitive files (Unix)
 - ✅ **Path validation**: Prevents directory traversal
 - ✅ **Input sanitization**: SQL injection protection

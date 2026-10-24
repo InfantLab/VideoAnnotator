@@ -123,8 +123,11 @@ CSV files are UTF-8 with a header row; missing values are empty fields.
 | | `scene_score` | each scene type | its score | |
 | speaker_diarization | `speaker_turn` | speaker (`SPEAKER_00`, …) | | |
 | speech_recognition | `speech` | the words | | |
-| vlm_annotation | `vlm_label` | the model's label | | |
+| vlm_annotation | `vlm_label` | the model's label (with an answer shape: the first field, or `DIDN'T FIT`) | | |
 | | `vlm_reasoning` | its reasoning, when different from the label | | |
+| | `vlm.<field>` | a field's value (one of a list, yes/no, text) | the number (number fields) | |
+| | `vlm_fit` | `yes` or `no`: whether the answer fit its shape | | |
+| | `vlm_fit_problem` | why it didn't fit | | |
 | notes (researchers' notes, not a pipeline) | `note` | the note's text | | |
 
 When speech and speaker turns came from `audio_processing`, their rows say `audio_processing`; the
@@ -153,6 +156,24 @@ import pandas as pd
 results = pd.read_csv("BabyJokes wave 2 (2026-10-06).csv")
 turns = results[results.measure == "speaker_turn"]
 (turns.end - turns.start).groupby(turns.track).sum()  # seconds each speaker talks
+```
+
+A question with an answer shape gives one `vlm.<field>` row per field. One column per field is a
+pivot away (or download Ask AI's "Answers, one column per field", or
+`GET /api/v1/jobs/{id}/export/wide`):
+
+```r
+library(tidyr)
+vlm <- subset(results, startsWith(measure, "vlm.") | measure == "vlm_fit")
+wide <- pivot_wider(vlm, id_cols = c(video, start), names_from = measure,
+                    values_from = c(label, value))
+```
+
+```python
+vlm = results[results.measure.str.startswith("vlm.") | (results.measure == "vlm_fit")]
+wide = vlm.pivot_table(
+    index=["video", "start"], columns="measure", values="label", aggfunc="first"
+)
 ```
 
 Two worked notebooks, one in R and one in Python, are in
