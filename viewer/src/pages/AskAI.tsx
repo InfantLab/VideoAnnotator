@@ -86,10 +86,11 @@ function useDebounced<T>(value: T, ms: number): T {
 /** Frames shown beside the video: the ones a sample sends, from the server's own decoder. */
 function FrameStrip({ path, t, sampling }: { path: string; t: number | null; sampling: AskSampling }) {
   const frames = sampling.frames ?? 1;
+  const clip = sampling.clip ?? null;
   const { data, isFetching } = useQuery({
-    queryKey: ['ask', 'frames', path, t, sampling.interval, frames, sampling.spacing],
+    queryKey: ['ask', 'frames', path, t, sampling.interval, frames, sampling.spacing, clip?.length, clip?.fps],
     queryFn: () =>
-      apiClient.getFrames({ path, t: t ?? 0, interval: sampling.interval ?? 5, frames, spacing: sampling.spacing }),
+      apiClient.getFrames({ path, t: t ?? 0, interval: sampling.interval ?? 5, frames, spacing: sampling.spacing, clip }),
     enabled: t !== null && Boolean(path),
     staleTime: Infinity,
     retry: false,
@@ -235,6 +236,46 @@ const AskAI = () => {
   });
   const endpoint = models.data?.endpoint ?? endpointQuery.data;
 
+  // Spec 033 FR-027: a short clip only where the model takes video, asked once
+  // with a synthetic clip when nobody has checked yet.
+  const knownVideo = server?.video_models?.[model];
+  const videoProbe = useQuery({
+    queryKey: ['ask', 'video-probe', server?.id, model],
+    queryFn: async () => {
+      const result = await apiClient.checkModelServer({
+        kind: 'openai_compatible',
+        base_url: server!.base_url,
+        id: server!.id,
+        model,
+      });
+      void queryClient.invalidateQueries({ queryKey: MODEL_SERVERS_QUERY_KEY });
+      return result.video ?? null;
+    },
+    enabled: Boolean(
+      server &&
+        backend !== 'ollama' &&
+        knownVideo === undefined &&
+        endpoint?.class === 'local' &&
+        models.data?.server === server.id &&
+        models.data.models.includes(model),
+    ),
+    staleTime: Infinity,
+    retry: false,
+  });
+  const takesVideo = knownVideo ?? videoProbe.data ?? undefined;
+  const video =
+    backend === 'ollama'
+      ? { offered: false, reason: "Ollama can't take video" }
+      : takesVideo
+        ? { offered: true }
+        : {
+            offered: false,
+            reason: videoProbe.isFetching ? 'checking whether this model takes video…' : "this model or server doesn't take video",
+          };
+  useEffect(() => {
+    if (sampling.clip && !video.offered && !videoProbe.isFetching) setSampling((prev) => ({ ...prev, clip: null }));
+  }, [sampling.clip, video.offered, videoProbe.isFetching]);
+
   const chooseServer = (id: string) => {
     if (id === server?.id) return;
     setServerId(id);
@@ -242,8 +283,15 @@ const AskAI = () => {
     void apiClient.setAskSettings({ server: id }).catch(() => undefined);
   };
 
+  // A model from another server can't be asked here: a server's first list
+  // replaces it (spec 033); otherwise only an empty choice is filled.
+  const listedFor = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (!model && models.data?.models.length) setModel(models.data.models[0]);
+    const data = models.data;
+    if (!data?.models.length) return;
+    const fresh = listedFor.current !== data.server;
+    listedFor.current = data.server;
+    if (!model || (fresh && listedFor.current !== undefined && !data.models.includes(model))) setModel(data.models[0]);
   }, [model, models.data]);
 
   const stream = useQuery({
@@ -640,7 +688,14 @@ const AskAI = () => {
                 busy={busy || anyTryRunning}
                 disabled={Boolean(noModels) || shapeInvalid}
               />
-              <SamplingControls key={samplingKey} sampling={sampling} onChange={setSampling} count={points.length} estimate={runEstimate} />
+              <SamplingControls
+                key={samplingKey}
+                sampling={sampling}
+                onChange={setSampling}
+                count={points.length}
+                estimate={runEstimate}
+                video={servers.length > 1 || backend !== 'ollama' ? video : undefined}
+              />
               <RunControls
                 run={run}
                 samples={points.length}
@@ -723,7 +778,7 @@ const AskAI = () => {
                 </Alert>
               )}
 
-              {(sampling.frames ?? 1) > 1 && (
+              {((sampling.frames ?? 1) > 1 || sampling.clip) && (
                 <div>
                   <p className="text-xs text-muted-foreground">
                     The frames the sample at {debouncedSample !== null ? formatClock(debouncedSample) : '…'} sends:

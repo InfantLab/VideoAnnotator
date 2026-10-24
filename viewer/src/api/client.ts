@@ -1329,6 +1329,7 @@ class APIClient {
     interval: number;
     frames: number;
     spacing?: number | null;
+    clip?: { length: number; fps: number } | null;
   }): Promise<AskFrames> {
     const query = new URLSearchParams({
       path: params.path,
@@ -1337,6 +1338,10 @@ class APIClient {
       frames: String(params.frames),
     });
     if (params.spacing) query.set('spacing', String(params.spacing));
+    if (params.clip) {
+      query.set('clip_length', String(params.clip.length));
+      query.set('clip_fps', String(params.clip.fps));
+    }
     return this.request(`/api/v1/ask/frames?${query}`);
   }
 

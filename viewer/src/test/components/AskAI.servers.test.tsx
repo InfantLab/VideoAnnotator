@@ -29,6 +29,7 @@ vi.mock('@/api/client', () => ({
     getAskSettings: vi.fn(),
     setAskSettings: vi.fn(),
     suggestShape: vi.fn(),
+    checkModelServer: vi.fn(),
   },
 }));
 
@@ -144,6 +145,50 @@ describe('Ask AI model servers', () => {
     renderAsk();
     expect(await screen.findByTestId('no-model')).toHaveTextContent("Ask AI can't reach lab-gpu");
     expect(screen.getByTestId('no-model')).not.toHaveTextContent('ollama.com');
+  });
+
+  describe('a short clip per sample', () => {
+    const clipOption = () => screen.getByRole('option', { name: /A short clip/ }) as HTMLOptionElement;
+
+    it("isn't offered on Ollama", async () => {
+      renderAsk();
+      await screen.findByTestId('server-picker');
+      expect(clipOption().disabled).toBe(true);
+      expect(clipOption()).toHaveTextContent("Ollama can't take video");
+    });
+
+    it('is offered when the check says the model takes video, and sent as a clip', async () => {
+      vi.mocked(apiClient.listModelServers).mockResolvedValue(
+        serversResponse([DEFAULT_SERVER, { ...LAB_SERVER, video_models: { 'gemma-3-12b': true } }]),
+      );
+      vi.mocked(apiClient.getAskSettings).mockResolvedValue({ server: 'lab' });
+      renderAsk();
+      await waitFor(() => expect(screen.getByRole('combobox', { name: 'Model' })).toHaveTextContent('gemma-3-12b'));
+      await waitFor(() => expect(clipOption().disabled).toBe(false));
+      await userEvent.selectOptions(screen.getByLabelText('Frames per sample'), 'clip');
+      expect(screen.getByLabelText('Clip length (s)')).toHaveValue(2);
+      await userEvent.type(screen.getByLabelText('Question'), 'What happens?');
+      await userEvent.click(screen.getByRole('button', { name: /Try on this frame/ }));
+      await waitFor(() =>
+        expect(apiClient.createTry).toHaveBeenCalledWith(
+          expect.objectContaining({ sampling: expect.objectContaining({ clip: { length: 2, fps: 4 } }) }),
+        ),
+      );
+      expect(apiClient.checkModelServer).not.toHaveBeenCalled();
+    });
+
+    it("asks the server once when nobody has checked, and says no when it can't", async () => {
+      vi.mocked(apiClient.getAskSettings).mockResolvedValue({ server: 'lab' });
+      vi.mocked(apiClient.checkModelServer).mockResolvedValue({ video: false } as never);
+      renderAsk();
+      await waitFor(() =>
+        expect(apiClient.checkModelServer).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'lab', model: 'gemma-3-12b', kind: 'openai_compatible' }),
+        ),
+      );
+      await waitFor(() => expect(clipOption()).toHaveTextContent("this model or server doesn't take video"));
+      expect(clipOption().disabled).toBe(true);
+    });
   });
 
   it('shows no picker while only the default server is listed', async () => {

@@ -14,7 +14,11 @@ interface SamplingControlsProps {
   onChange: (sampling: AskSampling) => void;
   count: number;
   estimate: Estimate;
+  /** Whether "A short clip" can be chosen, and why not (spec 033 FR-027). */
+  video?: { offered: boolean; reason?: string };
 }
+
+const DEFAULT_CLIP = { length: 2, fps: 4 };
 
 const clockText = (t: number | null | undefined) => (t == null ? '' : formatClock(t));
 
@@ -23,9 +27,10 @@ const clockText = (t: number | null | undefined) => (t == null ? '' : formatCloc
  * FR-011). Text fields start from `sampling`: give a new `key` to show another
  * entry's.
  */
-export function SamplingControls({ sampling, onChange, count, estimate }: SamplingControlsProps) {
+export function SamplingControls({ sampling, onChange, count, estimate, video }: SamplingControlsProps) {
   const listed = sampling.moments != null;
   const frames = sampling.frames ?? 1;
+  const clip = sampling.clip ?? null;
   const [momentsText, setMomentsText] = useState(() => (sampling.moments ?? []).map(formatClock).join(', '));
   const [fromText, setFromText] = useState(() => clockText(sampling.start));
   const [toText, setToText] = useState(() => clockText(sampling.end));
@@ -112,17 +117,45 @@ export function SamplingControls({ sampling, onChange, count, estimate }: Sampli
           <select
             id="ask-frames"
             className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-            value={frames}
-            onChange={(e) => set({ frames: Number(e.target.value) })}
+            value={clip ? 'clip' : frames}
+            onChange={(e) =>
+              e.target.value === 'clip'
+                ? set({ clip: DEFAULT_CLIP, frames: 1 })
+                : set({ frames: Number(e.target.value), clip: null })
+            }
           >
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
               <option key={n} value={n}>
                 {n}
               </option>
             ))}
+            {video && (
+              <option value="clip" disabled={!video.offered}>
+                {video.offered ? 'A short clip' : `A short clip (${video.reason ?? 'not available'})`}
+              </option>
+            )}
           </select>
         </div>
-        {frames > 1 && (
+        {clip && (
+          <div className="space-y-1">
+            <Label htmlFor="ask-clip-length" className="text-xs">
+              Clip length (s)
+            </Label>
+            <Input
+              id="ask-clip-length"
+              type="number"
+              min={0.5}
+              max={30}
+              step={0.5}
+              value={clip.length}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v > 0) set({ clip: { ...clip, length: v } });
+              }}
+            />
+          </div>
+        )}
+        {!clip && frames > 1 && (
           <div className="space-y-1">
             <Label htmlFor="ask-spacing" className="text-xs">
               Seconds apart
@@ -142,9 +175,15 @@ export function SamplingControls({ sampling, onChange, count, estimate }: Sampli
         )}
       </div>
 
+      {video && !video.offered && video.reason && (
+        <p className="text-xs text-muted-foreground" data-testid="clip-unavailable">
+          A short clip: {video.reason}
+        </p>
+      )}
       <p className="text-xs text-muted-foreground">
-        Each sample sends {frames === 1 ? 'one frame' : `${frames} frames together`} to the model, which answers your
-        question about {frames === 1 ? 'it' : 'them'} on its own, without seeing the others.{' '}
+        {clip
+          ? `Each sample sends ${clip.length} s of video around it (${clip.fps} frames a second) to the model, which answers your question about that clip on its own, without seeing the others.`
+          : `Each sample sends ${frames === 1 ? 'one frame' : `${frames} frames together`} to the model, which answers your question about ${frames === 1 ? 'it' : 'them'} on its own, without seeing the others.`}{' '}
         <a className="underline" href={SAMPLING_DOCS_URL} target="_blank" rel="noreferrer">
           More
         </a>

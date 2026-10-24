@@ -248,3 +248,7 @@ tests/fixtures/video_page/long_run/*
 
 # The server signs video-stream links with this; it sits beside the dev database.
 /stream_secret
+
+# Model server keys beside the database (spec 033)
+model_server_keys.json
+model_server_keys.json.tmp

@@ -59,3 +59,20 @@ def test_burst_offsets_for(frames, offsets):
 def test_interval_must_be_positive():
     with pytest.raises(ValueError):
         sampling.sample_points(10.0, 0.0)
+
+
+CLIP_CASES = [c for c in CASES if "clip" in c]
+
+
+def test_there_are_clip_cases():
+    assert len(CLIP_CASES) >= 4
+
+
+@pytest.mark.parametrize("case", CLIP_CASES, ids=lambda c: c["name"])
+def test_clip_span_and_times(case):
+    t = _points(case)[0]
+    clip = case["clip"]
+    span = sampling.clip_span(t, clip["length"], case["duration"])
+    assert list(span) == case["expect"]["clip_span"]
+    times = sampling.clip_times(t, clip["length"], clip["fps"], case["duration"])
+    assert times == case["expect"]["clip_times_at_first_point"]

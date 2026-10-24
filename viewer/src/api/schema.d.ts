@@ -2939,6 +2939,12 @@ export interface components {
             fit?: boolean | null;
             /** Fit Problem */
             fit_problem?: string | null;
+            /** Clip Start */
+            clip_start?: number | null;
+            /** Clip End */
+            clip_end?: number | null;
+            /** Clip Fps */
+            clip_fps?: number | null;
         };
         /** AskSettings */
         AskSettings: {
@@ -3147,6 +3153,19 @@ export interface components {
              * @description The video file
              */
             video: string;
+        };
+        /** Clip */
+        Clip: {
+            /**
+             * Length
+             * @default 2
+             */
+            length: number;
+            /**
+             * Fps
+             * @default 4
+             */
+            fps: number;
         };
         /** ConfirmRequest */
         ConfirmRequest: {
@@ -5019,6 +5038,8 @@ export interface components {
             frames: number;
             /** Spacing */
             spacing?: number | null;
+            /** @description A short clip per sample instead of frames (spec 033) */
+            clip?: components["schemas"]["Clip"] | null;
         };
         /** ScannedVideo */
         ScannedVideo: {
@@ -7854,6 +7875,9 @@ export interface operations {
                 interval?: number;
                 frames?: number;
                 spacing?: number | null;
+                /** @description A clip's frames instead */
+                clip_length?: number | null;
+                clip_fps?: number;
             };
             header?: never;
             path?: never;

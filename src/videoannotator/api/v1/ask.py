@@ -87,6 +87,11 @@ ShapeIn = list[dict[str, Any]]
 # ---------------------------------------------------------------------------
 
 
+class Clip(BaseModel):
+    length: float = 2.0
+    fps: float = 4.0
+
+
 class Sampling(BaseModel):
     interval: float = 5.0
     start: float = 0.0
@@ -94,6 +99,9 @@ class Sampling(BaseModel):
     moments: list[float] | None = None
     frames: int = 1
     spacing: float | None = None
+    clip: Clip | None = Field(
+        None, description="A short clip per sample instead of frames (spec 033)"
+    )
 
 
 class Answer(BaseModel):
@@ -109,6 +117,9 @@ class Answer(BaseModel):
     fields: dict[str, Any] | None = None
     fit: bool | None = None
     fit_problem: str | None = None
+    clip_start: float | None = None
+    clip_end: float | None = None
+    clip_fps: float | None = None
 
 
 class Entry(BaseModel):
@@ -193,6 +204,23 @@ def check_sampling(s: Sampling, duration: float) -> None:
         raise _invalid("frames", "Frames per sample must be 1 to 9.")
     if s.spacing is not None and not s.spacing > 0:
         raise _invalid("spacing", "Frames apart must be more than 0 seconds.")
+    if s.clip is not None:
+        if not 0 < s.clip.length <= 30:
+            raise _invalid("clip", "A clip must be more than 0 and at most 30 seconds.")
+        if not 0 < s.clip.fps <= 30:
+            raise _invalid(
+                "clip", "Clip frames per second must be more than 0, at most 30."
+            )
+
+
+def check_clip_backend(s: Sampling, backend: str) -> None:
+    if s.clip is not None and backend == "ollama":
+        raise APIError(
+            status_code=422,
+            code="CLIP_NOT_SUPPORTED",
+            message="Ollama can't take video. Choose one frame or several, or a "
+            "server that takes video.",
+        )
 
 
 def sampling_to_config(s: Sampling) -> dict[str, Any]:
@@ -203,7 +231,11 @@ def sampling_to_config(s: Sampling) -> dict[str, Any]:
         "end_sec": s.end,
         "moments_sec": sorted(set(s.moments)) if s.moments is not None else None,
     }
-    if s.frames == 1:
+    if s.clip is not None:
+        config["sampling_mode"] = "clip"
+        config["clip_length_sec"] = s.clip.length
+        config["clip_fps"] = s.clip.fps
+    elif s.frames == 1:
         config["sampling_mode"] = "single_frame"
     else:
         config["sampling_mode"] = "frame_burst"
@@ -435,14 +467,33 @@ def _answer_try(
             cap = cv2.VideoCapture(video_path)
             try:
                 for t in moments:
-                    sent = vlm_frames.read_sample(
-                        cap, meta["fps"], meta["duration"], t, offsets, spacing
-                    )
+                    call: dict[str, Any] = dict(schema)
+                    if s.clip is not None:
+                        sent = vlm_frames.read_clip(
+                            cap,
+                            meta["fps"],
+                            meta["duration"],
+                            t,
+                            s.clip.length,
+                            s.clip.fps,
+                        )
+                        call.update(video=[f.jpeg for f in sent], video_fps=s.clip.fps)
+                    else:
+                        sent = vlm_frames.read_sample(
+                            cap, meta["fps"], meta["duration"], t, offsets, spacing
+                        )
                     answer: dict[str, Any] = {
                         "t": t,
                         "frame_numbers": [f.frame_number for f in sent],
                         "frame_times": [f.time for f in sent],
                     }
+                    if s.clip is not None:
+                        start, end = vlm_sampling.clip_span(
+                            t, s.clip.length, meta["duration"]
+                        )
+                        answer.update(
+                            clip_start=start, clip_end=end, clip_fps=s.clip.fps
+                        )
                     if not sent:
                         answer.update(
                             status="skipped",
@@ -454,13 +505,13 @@ def _answer_try(
                                 result = client.chat(
                                     model=model,
                                     prompt=prompt,
-                                    images=[f.jpeg for f in sent],
+                                    images=[] if s.clip else [f.jpeg for f in sent],
                                     think=think,
                                     keep_alive=defaults["keep_alive"],
                                     options=defaults["options"],
                                     max_retries=defaults["max_retries"],
                                     retry_backoff_sec=defaults["retry_backoff_sec"],
-                                    **schema,
+                                    **call,
                                 )
                         except KeyRefusedError:
                             answer.update(status="error", error=KEY_REFUSED_MESSAGE)
@@ -534,6 +585,7 @@ def create_try(
         if not moments:
             raise _invalid("start", "These settings give no moments to try.")
 
+    check_clip_backend(body.sampling, body.backend)
     shape = valid_shape(body.answer_shape)
     base_url = resolve_base_url(body.backend, body.base_url)
     state = require_sendable(db, base_url)
@@ -811,16 +863,27 @@ def sample_frames(
     interval: float = 5.0,
     frames: int = 1,
     spacing: float | None = None,
+    clip_length: float | None = Query(None, description="A clip's frames instead"),
+    clip_fps: float = 4.0,
     _user: dict[str, Any] | None = Depends(validate_api_key),
 ) -> FramesResponse:
     video = readable_video(path)
     meta = video_info(str(video))
+    clip = Clip(length=clip_length, fps=clip_fps) if clip_length else None
     check_sampling(
-        Sampling(interval=interval, frames=frames, spacing=spacing),
+        Sampling(interval=interval, frames=frames, spacing=spacing, clip=clip),
         float(meta["duration"]),
     )
-    offsets = None if frames == 1 else vlm_sampling.burst_offsets_for(frames)
-    sent, _ = vlm_frames.read_sample_from(str(video), t, offsets, spacing or interval)
+    if clip is not None:
+        sent = vlm_frames.read_clip_from(str(video), t, clip.length, clip.fps)
+        frames = len(
+            vlm_sampling.clip_times(t, clip.length, clip.fps, meta["duration"])
+        )
+    else:
+        offsets = None if frames == 1 else vlm_sampling.burst_offsets_for(frames)
+        sent, _ = vlm_frames.read_sample_from(
+            str(video), t, offsets, spacing or interval
+        )
     return FramesResponse(
         t=t,
         frames=[
@@ -966,6 +1029,7 @@ def create_run(
     check_sampling(body.sampling, float(meta["duration"]))
     if not sample_points_for(body.sampling, float(meta["duration"])):
         raise _invalid("start", "These settings give no moments to sample.")
+    check_clip_backend(body.sampling, body.backend)
     shape = valid_shape(body.answer_shape)
     base_url = resolve_base_url(body.backend, body.base_url)
     state = require_sendable(db, base_url)
@@ -1064,6 +1128,9 @@ def _answer_from_annotation(a: dict[str, Any]) -> Answer:
         fields=a.get("fields"),
         fit=a.get("fit"),
         fit_problem=a.get("fit_problem"),
+        clip_start=a.get("clip_start_sec"),
+        clip_end=a.get("clip_end_sec"),
+        clip_fps=a.get("clip_fps"),
     )
 
 

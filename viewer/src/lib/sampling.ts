@@ -57,6 +57,21 @@ export function burstTimes(
   return out;
 }
 
+/** [start, end] of a clip centred on `anchor`, shortened (not shifted) at the video's ends (spec 033 R12). */
+export function clipSpan(anchor: number, length: number, duration: number): [number, number] {
+  const half = length / 2;
+  return [round3(Math.max(0, anchor - half)), round3(Math.min(duration, anchor + half))];
+}
+
+/** A clip's frame times: from its start, `fps` a second, up to but not including its end. */
+export function clipTimes(anchor: number, length: number, fps: number, duration: number): number[] {
+  if (!(fps > 0)) throw new Error('fps must be greater than 0');
+  const [start, end] = clipSpan(anchor, length, duration);
+  const times: number[] = [];
+  for (let k = 0; start + k / fps <= end - EPS; k++) times.push(round3(start + k / fps));
+  return times.length ? times : [start];
+}
+
 /** `count` points spread evenly over `points` (research R3). */
 export function chooseMoments(points: number[], count: number): number[] {
   const s = points.length;
@@ -86,6 +101,7 @@ export interface WindowSampling {
   moments?: number[] | null;
   frames?: number | null;
   spacing?: number | null;
+  clip?: { length: number; fps: number } | null;
 }
 
 /** The window's sampling as vlm_annotation settings: the twin of ask.py's sampling_to_config. */
@@ -96,9 +112,12 @@ export function samplingToConfig(s: WindowSampling): Record<string, unknown> {
     start_sec: s.start ?? 0,
     end_sec: s.end ?? null,
     moments_sec: s.moments ? [...new Set(s.moments)].sort((a, b) => a - b) : null,
-    sampling_mode: frames === 1 ? 'single_frame' : 'frame_burst',
+    sampling_mode: s.clip ? 'clip' : frames === 1 ? 'single_frame' : 'frame_burst',
   };
-  if (frames > 1) {
+  if (s.clip) {
+    config.clip_length_sec = s.clip.length;
+    config.clip_fps = s.clip.fps;
+  } else if (frames > 1) {
     config.burst_offsets = burstOffsetsFor(frames);
     config.burst_spacing_sec = s.spacing ?? null;
   }
@@ -118,5 +137,8 @@ export function samplingFromConfig(config: Record<string, unknown>): WindowSampl
     moments: Array.isArray(config.moments_sec) ? config.moments_sec.filter((m): m is number => typeof m === 'number') : null,
     frames: burst ? offsets.length : 1,
     spacing: burst ? num(config.burst_spacing_sec) ?? interval : null,
+    ...(config.sampling_mode === 'clip'
+      ? { clip: { length: num(config.clip_length_sec) ?? 2, fps: num(config.clip_fps) ?? 4 } }
+      : {}),
   };
 }

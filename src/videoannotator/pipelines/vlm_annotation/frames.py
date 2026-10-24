@@ -134,6 +134,22 @@ def read_sample_from(
         cap.release()
 
 
+def read_clip_from(
+    video_path: str, anchor: float, length: float, clip_fps: float
+) -> list[SampleFrame]:
+    """`read_clip` on a file, opening and closing it."""
+    import cv2
+
+    meta = video_metadata(video_path)
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise ValueError(f"Could not open video file: {video_path}")
+    try:
+        return read_clip(cap, meta["fps"], meta["duration"], anchor, length, clip_fps)
+    finally:
+        cap.release()
+
+
 def thumbnail(jpeg: bytes, width: int = 320) -> str:
     """`jpeg` scaled down to `width` px wide, base64-encoded."""
     import cv2

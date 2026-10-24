@@ -212,3 +212,47 @@ def test_default_transport_is_used(monkeypatch):
     server = FakeOpenAIServer("vllm")
     monkeypatch.setattr(openai_client, "DEFAULT_TRANSPORT", server.transport)
     assert OpenAICompatibleVLMClient(BASE, 30).list_models() == [server.model]
+
+
+class TestVideo:
+    def test_one_video_part_of_the_frames(self):
+        server = FakeOpenAIServer("vllm")
+        client = _client(server)
+        client.media_io_kwargs = True
+        _chat(client, images=[], video=[JPEG, b"second"], video_fps=4.0)
+        body = server.chat_requests[0].body
+        (part,) = [
+            p for p in body["messages"][0]["content"] if p["type"] == "video_url"
+        ]
+        head, frames = part["video_url"]["url"].split(",", 1)
+        assert head == "data:video/jpeg;base64"
+        assert [base64.b64decode(f) for f in frames.split(",")] == [JPEG, b"second"]
+        assert body["media_io_kwargs"] == {"video": {"fps": 4.0}}
+        assert not [
+            p for p in body["messages"][0]["content"] if p["type"] == "image_url"
+        ]
+
+    def test_no_fps_unless_the_server_takes_it(self):
+        server = FakeOpenAIServer("vllm")
+        _chat(_client(server), images=[], video=[JPEG], video_fps=4.0)
+        assert "media_io_kwargs" not in server.chat_requests[0].body
+
+    def test_video_refused_is_a_plain_error(self, server):
+        server.reject_video = True
+        result = _chat(_client(server), images=[], video=[JPEG], video_fps=2.0)
+        assert result.error == "This model or server doesn't take video."
+
+    def test_the_probe_sends_only_synthetic_frames(self):
+        server = FakeOpenAIServer("vllm")
+        client = _client(server)
+        assert client.probe_video(server.model) == (True, True)
+        (call,) = server.chat_requests
+        (part,) = call.body["messages"][0]["content"][1:]
+        frames = part["video_url"]["url"].split(",", 1)[1].split(",")
+        assert len(frames) == 2 and frames[0] == frames[1]
+        assert call.body["max_tokens"] == 1
+
+    @pytest.mark.parametrize("flavour", ["llama_cpp", "lm_studio", "ollama_v1"])
+    def test_the_probe_says_no_for_servers_without_video(self, flavour):
+        server = FakeOpenAIServer(flavour, reject_video=True)
+        assert _client(server).probe_video(server.model) == (False, False)

@@ -25,7 +25,10 @@ from .ollama_client import VLMCallResult
 DEFAULT_TRANSPORT: httpx.BaseTransport | None = None
 
 _IMAGES_REFUSED = re.compile(r"image|multimodal|mmproj|vision", re.IGNORECASE)
-_VIDEO_REFUSED = re.compile(r"video", re.IGNORECASE)
+# A server that doesn't know video parts may only say the content type is wrong.
+_VIDEO_REFUSED = re.compile(
+    r"video|content.{0,40}type|type.{0,40}content", re.IGNORECASE
+)
 _SCHEMA_REFUSED = re.compile(
     r"response_format|json_schema|structured|guided", re.IGNORECASE
 )
