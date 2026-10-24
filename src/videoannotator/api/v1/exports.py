@@ -224,6 +224,24 @@ async def export_job_table(
 
 
 @router.get(
+    "/jobs/{job_id}/export/wide",
+    summary="A shaped VLM question's answers, one column per field (CSV)",
+    description="For a vlm_annotation run with an answer shape (spec 033 R10): one "
+    "row per sample, a column per field, then fit and fit_problem. 422 NOT_SHAPED "
+    "for a run without a shape.",
+    response_class=Response,
+)
+async def export_job_wide(
+    job_id: str = Path(..., description="The job's id"),
+    storage: StorageBackend = Depends(get_storage),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> Response:
+    from .ask import export_job_wide as wide
+
+    return wide(_job_or_404(storage, job_id))
+
+
+@router.get(
     "/batches/{batch_id}/export/table",
     summary="Export a run's results as one table",
     description=_TABLE_DESCRIPTION,

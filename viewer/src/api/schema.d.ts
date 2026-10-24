@@ -2590,6 +2590,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/export/wide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A shaped VLM question's answers, one column per field (CSV)
+         * @description For a vlm_annotation run with an answer shape (spec 033 R10): one row per sample, a column per field, then fit and fit_problem. 422 NOT_SHAPED for a run without a shape.
+         */
+        get: operations["export_job_wide_api_v1_jobs__job_id__export_wide_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/batches/{batch_id}/export/table": {
         parameters: {
             query?: never;
@@ -8767,6 +8787,36 @@ export interface operations {
                 /** @description csv (always available) or parquet (optional extra) */
                 format?: string;
             };
+            header?: never;
+            path: {
+                /** @description The job's id */
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_job_wide_api_v1_jobs__job_id__export_wide_get: {
+        parameters: {
+            query?: never;
             header?: never;
             path: {
                 /** @description The job's id */

@@ -150,6 +150,26 @@ def _require_sendable(base_url: str) -> None:
         raise ConfigProblem(e.code, str(e)) from e
 
 
+def _server_capabilities(base_url: str) -> dict[str, Any] | None:
+    from videoannotator import model_servers
+
+    try:
+        return model_servers.capabilities_for_url(base_url)
+    except Exception:  # an older database: nothing known yet
+        return None
+
+
+def _record_structured_output(base_url: str, enforced: bool) -> None:
+    """What a shaped run learnt about a listed server (R8): later calls go
+    straight to describing the shape if it can't enforce it."""
+    from videoannotator import model_servers
+
+    try:
+        model_servers.record_capabilities_for_url(base_url, structured_output=enforced)
+    except Exception as e:
+        logger.warning(f"Couldn't record what {base_url} supports: {e}")
+
+
 def _rounded(value: float | None, digits: int) -> float | None:
     return None if value is None else round(value, digits)
 
@@ -220,6 +240,10 @@ class VLMAnnotationPipeline(BasePipeline):
             ollama_class=OllamaVLMClient,
         )
         self._client.preflight(self.config["model"])
+        if self._shape is not None and self.backend != "ollama":
+            known = _server_capabilities(base_url)
+            if known is not None and known.get("structured_output") is False:
+                self._client.structured_output = False  # type: ignore[attr-defined]
         if self.config.get("sampling_mode") == "clip":
             self._check_takes_video()
         self.set_model_info(self.config["model"])
@@ -520,6 +544,10 @@ class VLMAnnotationPipeline(BasePipeline):
         }
         if structured_output:
             self._summary["structured_output"] = structured_output
+            if self.backend != "ollama":
+                _record_structured_output(
+                    self.config["base_url"], structured_output == "enforced"
+                )
         if output_dir and (annotations or skipped or stopped_early or key_refused):
             self._save_coco_annotations(
                 annotations, output_dir, video_metadata, extra=progress(True)

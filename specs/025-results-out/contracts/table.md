@@ -57,6 +57,9 @@ below). Stable for unchanged input (FR-015).
 | speech_recognition (`_speech_recognition.vtt`) | `speech` | cue text | | | `start`/`end` |
 | vlm_annotation (`_vlm_annotation.json`) | `vlm_label` | `label` | | | `frame`; at the sample time |
 | | `vlm_reasoning` | `reasoning` | | | only when present and different from the label |
+| | `vlm.<field>` | the field's value (choice, yes/no, text) | the number (number fields) | | spec 033: one row per field of a shaped answer that parsed |
+| | `vlm_fit` | `yes` / `no` | | | spec 033: shaped answers only |
+| | `vlm_fit_problem` | why it didn't fit | | | spec 033: only when `vlm_fit` is `no` |
 
 Times: COCO `timestamp` (OpenFace: `openface3.timestamp`, VLM: `timestamp_sec`); scenes'
 `start_time`/`end_time`; RTTM start and start + duration; WebVTT cue times.

@@ -33,7 +33,7 @@ def db(monkeypatch):
 def test_the_default_comes_first_and_cant_be_removed(db):
     model_servers.add(db, "lab-gpu", "openai_compatible", LAB)
     servers = model_servers.list_servers(db)
-    assert [s["id"] for s in servers][0] == "default"
+    assert servers[0]["id"] == "default"
     assert servers[0]["name"] == "This computer (Ollama)"
     assert servers[0]["removable"] is False
     assert servers[1]["name"] == "lab-gpu"

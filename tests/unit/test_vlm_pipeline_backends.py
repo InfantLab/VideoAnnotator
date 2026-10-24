@@ -1,6 +1,7 @@
 """The VLM pipeline on either backend (spec 033 R3, R7)."""
 
 import json
+from typing import ClassVar
 
 import pytest
 
@@ -16,7 +17,7 @@ OPENAI = "http://127.0.0.1:8000/v1"
 
 
 class FakeOllama:
-    built: list["FakeOllama"] = []
+    built: ClassVar[list["FakeOllama"]] = []
 
     def __init__(self, base_url, timeout):
         FakeOllama.built.append(self)
@@ -178,7 +179,7 @@ def test_configs_that_cant_run_are_refused(config, code):
 
 
 def test_openai_compatible_without_an_address_says_so():
-    with pytest.raises(ValueError, match="Say which model server to use."):
+    with pytest.raises(ValueError, match=r"Say which model server to use\."):
         vlm_pipeline.VLMAnnotationPipeline(
             {"backend": "openai_compatible"}
         ).initialize()
