@@ -385,6 +385,10 @@ video, and drives the API (job submission, SSE progress, results). It was a sepa
 changelog (the root `CHANGELOG.md`; `viewer/CHANGELOG.md` is frozen history). Standalone mode
 (drop in files, no server) is still supported.
 
+**Design rules**: [`docs/development/viewer_design.md`](docs/development/viewer_design.md) (principles P1–P9,
+names, icons, colour, patterns, decision log). Every viewer change follows it; cite its principles in
+reviews.
+
 ### Commands (Bun only; there is no npm lockfile)
 
 ```bash
