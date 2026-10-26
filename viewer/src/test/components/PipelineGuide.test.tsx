@@ -12,10 +12,11 @@ const base: PipelineDescriptor = {
 };
 
 describe('PipelineTitle', () => {
-  it('shows the behavioural title with the method name beside it', () => {
+  it('names what runs first, then what it finds (D1)', () => {
     render(<PipelineTitle pipeline={{ ...base, title: 'Faces: expression, age, gender' }} />);
-    expect(screen.getByText('Faces: expression, age, gender')).toBeInTheDocument();
     expect(screen.getByText('Face Analysis (DeepFace)')).toBeInTheDocument();
+    expect(screen.getByText('expression, age, gender')).toBeInTheDocument();
+    expect(screen.queryByText(/^Faces:/)).toBeNull();
   });
 
   it('falls back to the display name alone on older servers', () => {
@@ -50,7 +51,9 @@ describe('PipelineAbout', () => {
     render(<PipelineAbout pipeline={full} defaultOpen />);
     expect(screen.getByRole('link', { name: 'Homepage' })).toHaveAttribute('href', full.homepage);
     expect(screen.getByRole('link', { name: 'WIDER FACE (hard)' })).toHaveAttribute('href', 'https://arxiv.org/abs/1905.00641');
-    expect(screen.getByText(/AP 91.4%/)).toBeInTheDocument();
+    expect(screen.getByRole('listitem')).toHaveTextContent('AP 91.4%');
+    // The measure says what it means (UAT #19).
+    expect(screen.getByText('AP')).toHaveAttribute('title', expect.stringContaining('Average precision'));
     expect(screen.getByText('None of these figures is for infants.')).toBeInTheDocument();
     expect(screen.getByText('Cite: a2026, b2020')).toBeInTheDocument();
   });

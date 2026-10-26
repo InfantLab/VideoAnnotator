@@ -1,7 +1,7 @@
 {
   "pipeline": {
     "id": "face_analysis",
-    "name": "Face Analysis (DeepFace)",
+    "name": "DeepFace",
     "description": "Face detection (RetinaFace) and expression recognition using DeepFace, with optional age and gender estimation, producing COCO format output.",
     "group": "face",
     "title": "Faces: where they are and their expression",

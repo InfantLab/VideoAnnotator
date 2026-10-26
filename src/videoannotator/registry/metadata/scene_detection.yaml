@@ -1,5 +1,5 @@
 name: scene_detection
-display_name: Scene Detection
+display_name: PySceneDetect + CLIP
 title: "Scenes: cuts and settings"
 summary: >-
   Finds where the video cuts from one shot to another and labels the kind of setting each scene shows.

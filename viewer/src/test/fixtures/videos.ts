@@ -224,10 +224,10 @@ export function workflow(over: Partial<Preset> = {}): Preset {
 }
 
 export const PIPELINES: PipelineDescriptor[] = [
-  { id: 'face_analysis', name: 'Face Analysis', title: 'Faces', available: true },
-  { id: 'speech_recognition', name: 'Speech Recognition', title: 'Speech', available: true },
-  { id: 'scene_detection', name: 'Scene Detection', title: 'Scenes', available: true },
-  { id: 'vlm_annotation', name: 'VLM Annotation', title: 'Ask AI', available: true },
+  { id: 'face_analysis', name: 'DeepFace', title: 'Faces: where they are and their expression', available: true },
+  { id: 'speech_recognition', name: 'Whisper large-v3-turbo', title: 'Speech: what was said', available: true },
+  { id: 'scene_detection', name: 'PySceneDetect + CLIP', title: 'Scenes: cuts and settings', available: true },
+  { id: 'vlm_annotation', name: 'Ask AI', title: 'Ask AI: your question about each moment', available: true },
 ];
 
 export const CATALOG: PipelineCatalogResponse = {

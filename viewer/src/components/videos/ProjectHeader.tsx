@@ -22,7 +22,7 @@ import { ScopeHeader } from '@/components/videos/ScopeHeader';
 import { NewInFolder } from '@/components/videos/NewInFolder';
 import { WhatChanged } from '@/components/videos/WhatChanged';
 import { usePipelineCatalog } from '@/hooks/usePipelineCatalog';
-import { usePipelineTitles } from '@/hooks/usePipelineTitles';
+import { usePipelineNames } from '@/hooks/usePipelineNames';
 import { useProject, useProjects } from '@/hooks/useProjects';
 import { useRunSettings } from '@/hooks/useRunSettings';
 import { notify } from '@/lib/notify';
@@ -145,7 +145,7 @@ export function ProjectHeader({ id, data, workflows, selecting }: ProjectHeaderP
   const navigate = useNavigate();
   const project = useProject(id);
   const settings = useRunSettings({ project: id });
-  const { titleOf } = usePipelineTitles();
+  const { nameOf } = usePipelineNames();
   const { update, destroy } = useProjects();
   const [editing, setEditing] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -193,7 +193,7 @@ export function ProjectHeader({ id, data, workflows, selecting }: ProjectHeaderP
                 <span className="text-muted-foreground">Settings:</span>{' '}
                 <span>
                   {settings.data.selected_pipelines.length
-                    ? settings.data.selected_pipelines.map(titleOf).join(', ')
+                    ? settings.data.selected_pipelines.map(nameOf).join(', ')
                     : 'none yet'}
                 </span>{' '}
                 {question(settings.data.config) && <span className="italic">“{question(settings.data.config)}”</span>}

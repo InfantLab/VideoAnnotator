@@ -1,5 +1,5 @@
 name: audio_processing
-display_name: Audio Processing (Speech + Diarization)
+display_name: Whisper + pyannote (deprecated)
 title: "Speech and speakers (deprecated)"
 summary: >-
   Transcribes speech and says who spoke when, in one step. Use Speech and Speaker turns instead.

@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useRef, useCallback, useMemo, useState } from 'r
 import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCue, RTTMSegment, SceneAnnotation, LAIONFaceAnnotation, COCO_SKELETON_CONNECTIONS, YOLO_POSE_PALETTE, YOLO_LIMB_COLORS, YOLO_KEYPOINT_COLORS, OpenFace3ActionUnit, OpenFace3ActionUnits } from '@/types/annotations';
 import { getDominantEmotion } from '@/lib/parsers/face';
 import { sampledAtTime } from '@/lib/sampledAtTime';
-import { categoryHues } from '@/lib/categoryColors';
+import { kindColour, RESULT_KINDS, trackColours } from '@/lib/resultKinds';
 import { formatClockTenths } from '@/lib/lanes';
 import type { OpenFace3Settings } from './openface3Settings';
 import { openface3SettingsFromLanes, overlaySettingsFromLanes } from '@/lib/laneOverlays';
@@ -107,8 +107,8 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     );
     const vlmNow = overlays && overlays.ask_ai !== false ? sampledAtTime(vlmSamples, currentTime)[0] : undefined;
 
-    const personHues = useMemo(
-      () => categoryHues((annotationData?.person_tracking ?? []).map(personKey)),
+    const personColours = useMemo(
+      () => trackColours(RESULT_KINDS.people, (annotationData?.person_tracking ?? []).map(personKey)),
       [annotationData?.person_tracking],
     );
 
@@ -128,8 +128,8 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       ) || null;
     }, [currentTime, annotationData]);
 
-    const speakerHues = useMemo(
-      () => categoryHues((annotationData?.speaker_diarization ?? []).map((s) => s.speaker_id)),
+    const speakerColours = useMemo(
+      () => trackColours(RESULT_KINDS.speakers, (annotationData?.speaker_diarization ?? []).map((s) => s.speaker_id)),
       [annotationData?.speaker_diarization],
     );
 
@@ -220,8 +220,8 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           const scaledHeight = person.bbox[3] * scaleY;
 
           // The same colour as the person's row on the timeline (spec 028 FR-003).
-          const hue = personHues.get(personKey(person)) ?? (index * 137.508) % 360;
-          ctx.strokeStyle = `hsl(${hue}, 70%, 40%)`;
+          const colour = personColours.get(personKey(person)) ?? kindColour(RESULT_KINDS.people, index);
+          ctx.strokeStyle = colour;
           ctx.lineWidth = 1;
           ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
 
@@ -229,13 +229,13 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           if (person.track_id !== undefined) {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             ctx.fillRect(scaledX, scaledY - 20, 40, 18);
-            ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+            ctx.fillStyle = colour;
             ctx.font = '12px monospace';
             ctx.fillText(`ID:${person.track_id}`, scaledX + 2, scaledY - 6);
           }
         }
       });
-    }, [overlaySettings.pose, dimensions, personHues]);
+    }, [overlaySettings.pose, dimensions, personColours]);
 
     // Draw subtitle overlay (from WebVTT)
     const drawSubtitles = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -895,7 +895,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
             // One stack, so the corner labels never lie over each other (UAT #47).
             <div className="pointer-events-none absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-col items-start gap-1 text-xs" data-testid="corner-labels">
               {sceneNow && (
-                <span className="max-w-full truncate rounded bg-black/70 px-2 py-1" style={{ color: 'hsl(200, 70%, 60%)' }}>
+                <span className="max-w-full truncate rounded bg-black/70 px-2 py-1" style={{ color: kindColour(RESULT_KINDS.scenes) }}>
                   Scene: {sceneNow.scene_type}
                 </span>
               )}
@@ -903,7 +903,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                 <span
                   key={speaker.speaker_id}
                   className="max-w-full truncate rounded bg-black/70 px-2 py-1"
-                  style={{ color: `hsl(${speakerHues.get(speaker.speaker_id) ?? 0}, 70%, 60%)` }}
+                  style={{ color: speakerColours.get(speaker.speaker_id) ?? kindColour(RESULT_KINDS.speakers) }}
                 >
                   Speaker: {speaker.speaker_id}
                 </span>

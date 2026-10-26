@@ -1,5 +1,5 @@
 name: speech_recognition
-display_name: Speech Recognition
+display_name: Whisper large-v3-turbo
 title: "Speech: what was said"
 summary: >-
   Transcribes speech into timed text, with the time of each word.

@@ -5,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { LaneToggles } from '@/components/lanes/LaneHeader';
 import type { Lane } from '@/lib/lanes';
+import { kindColour, kindOfLane } from '@/lib/resultKinds';
 
 interface LayersMenuProps {
   lanes: Lane[];
@@ -12,6 +13,13 @@ interface LayersMenuProps {
   /** Expand (true) or collapse every one of `kinds`. */
   showLanes: (kinds: string[], shown: boolean) => void;
   setOverlays: (keys: string[], on: boolean) => void;
+}
+
+function KindIcon({ lane }: { lane: Lane }) {
+  const kind = kindOfLane(lane.kind, lane.pipeline);
+  if (!kind) return <span className="w-3.5 shrink-0" />;
+  const Icon = kind.icon;
+  return <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: kindColour(kind) }} aria-hidden="true" />;
 }
 
 /** Every lane with its two switches, and all / none for each (spec 028 US2.3). */
@@ -66,9 +74,12 @@ export function LayersMenu({ lanes, toggles, showLanes, setOverlays }: LayersMen
               const full = otherRun ? `${lane.label} · ${otherRun}` : lane.label;
               return (
                 <div role="row" key={lane.id} className={`${grid} py-0.5`}>
-                  <span role="cell" className="truncate" title={full}>
+                  <span role="cell" className="flex min-w-0 items-center gap-1.5" title={full}>
+                    <KindIcon lane={lane} />
+                    <span className="truncate">
                     {lane.label}
                     {otherRun && <span className="text-muted-foreground"> · {otherRun}</span>}
+                    </span>
                   </span>
                   <span role="cell" className="flex justify-center">
                     <Checkbox

@@ -1,5 +1,5 @@
 /** Shared by the lane timeline (spec 027 R15; spec 028 extends it). */
-import { categoryHues } from '@/lib/categoryColors';
+import { kindColour, kindOfLane } from '@/lib/resultKinds';
 import { kindOf, laneKind, overlayKey, pipelineShortName, type LaneForm, type LaneKind } from '@/lib/laneKinds';
 import type { Row } from '@/lib/table/rows';
 
@@ -161,8 +161,6 @@ const PIPELINE_KINDS: Record<string, string> = {
   vlm_annotation: 'ask_ai',
 };
 
-export const colourFor = (hue: number) => `hsl(${Math.round(hue * 10) / 10}, 70%, 60%)`;
-
 /** The typical gap between samples: the median gap between distinct times. */
 export function samplingInterval(times: number[]): number | null {
   const distinct = [...new Set(times)].sort((a, b) => a - b);
@@ -238,6 +236,8 @@ interface Group {
 
 function buildRows(group: Group): LaneRow[] {
   const { spec } = group;
+  // One hue per kind of result; tracks are its shades (UAT #48: every lane's first row was red).
+  const kind = kindOfLane(group.kind, group.pipeline);
   const times = group.rows.map(({ row }) => row.start);
   const interval = samplingInterval(times);
 
@@ -252,7 +252,7 @@ function buildRows(group: Group): LaneRow[] {
     const events = [...byTime].map(([start, { area, index }]) => ({
       start, end: null, value: area, label: null, confidence: null, frame: null, row: index,
     }));
-    return [finishRow({ key: 'area', label: 'box area', colour: colourFor(30), form: 'numeric', events, interval, unit: spec.unit })];
+    return [finishRow({ key: 'area', label: 'box area', colour: kindColour(kind, 1), form: 'numeric', events, interval, unit: spec.unit })];
   }
 
   const keyOf = (row: Row): string => {
@@ -272,15 +272,14 @@ function buildRows(group: Group): LaneRow[] {
     if (group.kind === 'people' && row.label) entry.labels.add(row.label);
     byKey.set(key, entry);
   }
-  const hues = categoryHues([...byKey.keys()]);
   const rows = [...byKey]
     .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-    .map(([key, { events, labels }]) => {
+    .map(([key, { events, labels }], shade) => {
       const form = formOf(key);
       return finishRow({
         key,
         label: rowLabel(group.kind, key, labels) || spec.label,
-        colour: colourFor(hues.get(key) ?? 0),
+        colour: kindColour(kind, shade),
         form,
         events: form === 'presence' ? presence(events.sort((a, b) => a.start - b.start), interval) : events,
         interval,
@@ -300,7 +299,7 @@ function buildRows(group: Group): LaneRow[] {
         key: 'count',
         label: 'count',
         description: 'Faces found per sampled frame (frames with none found are not in the results)',
-        colour: colourFor(200),
+        colour: kindColour(kind, 3),
         form: 'numeric',
         events: [...counts].map(([start, { count, index }]) => ({
           start, end: null, value: count, label: null, confidence: null, frame: null, row: index,
@@ -530,7 +529,7 @@ export function followView(view: ViewRange, t: number, duration: number): ViewRa
 export const centreView = (view: ViewRange, t: number, duration: number): ViewRange =>
   clampView(t - (view.end - view.start) / 2, view.end - view.start, duration);
 
-export const LANE_HEADER_WIDTH = 200;
+export const LANE_HEADER_WIDTH = 224;
 
 /** What a lane shows and what made it, for its label's tooltip (SC-002). */
 export function laneTooltip(lane: Lane): string {

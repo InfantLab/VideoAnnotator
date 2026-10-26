@@ -17,7 +17,7 @@ import { ScopeHeader } from '@/components/videos/ScopeHeader';
 import { SelectionBar } from '@/components/videos/SelectionBar';
 import { Sidebar } from '@/components/videos/Sidebar';
 import { VideosTable } from '@/components/videos/VideosTable';
-import { usePipelineTitles } from '@/hooks/usePipelineTitles';
+import { usePipelineNames } from '@/hooks/usePipelineNames';
 import { useProject, useProjects } from '@/hooks/useProjects';
 import { useWorkflows } from '@/hooks/useWorkflows';
 import { ApplyWorkflow } from '@/components/workflows/ApplyWorkflow';
@@ -56,7 +56,7 @@ export default function Videos() {
   const scopeKey = paramsOf(query).toString();
   const filter = params.get('q') ?? '';
   const { data, error, isLoading } = useVideos(query);
-  const { titleOf, order } = usePipelineTitles(!error);
+  const { nameOf, taskOf, order } = usePipelineNames(!error);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [naming, setNaming] = useState(false);
   const projects = useProjects();
@@ -204,7 +204,8 @@ export default function Videos() {
             <VideosTable
               videos={videos}
               pipelines={pipelines}
-              titleOf={titleOf}
+              nameOf={nameOf}
+              taskOf={taskOf}
               selected={selected}
               onSelect={select}
               context={context}

@@ -67,12 +67,14 @@ describe('the table', () => {
     show();
     await screen.findAllByTestId('video-row');
     const header = screen.getAllByRole('columnheader').map((h) => h.textContent);
-    expect(header).toEqual(['', 'Video', 'Folder', 'Projects', 'Faces', 'Speech']);
+    // Named by what runs (D1, UAT #9); the task is on hover.
+    expect(header).toEqual(['', 'Video', 'Folder', 'Projects', 'DeepFace', 'Whisper large-v3-turbo']);
+    expect(screen.getByRole('columnheader', { name: 'DeepFace' })).toHaveAttribute('title', 'DeepFace · where they are and their expression');
     const first = rows()[0];
-    expect(within(first).getByLabelText('Faces: done')).toHaveTextContent('✓');
-    expect(within(first).getByLabelText('Speech: failed: No audio track')).toHaveTextContent('✕');
-    expect(within(rows()[1]).getByLabelText('Faces: running')).toHaveTextContent('●');
-    expect(within(rows()[3]).getByLabelText('Faces: not run')).toHaveTextContent('–');
+    expect(within(first).getByLabelText('DeepFace: done')).toHaveTextContent('✓');
+    expect(within(first).getByLabelText('Whisper large-v3-turbo: failed: No audio track')).toHaveTextContent('✕');
+    expect(within(rows()[1]).getByLabelText('DeepFace: running')).toHaveTextContent('●');
+    expect(within(rows()[3]).getByLabelText('DeepFace: not run')).toHaveTextContent('–');
   });
 
   it('marks a video whose file is gone, keeping its results', async () => {
@@ -80,7 +82,7 @@ describe('the table', () => {
     show();
     await screen.findAllByTestId('video-row');
     expect(within(rows()[2]).getByText('not on the server')).toBeInTheDocument();
-    expect(within(rows()[2]).getByLabelText('Faces: done')).toBeInTheDocument();
+    expect(within(rows()[2]).getByLabelText('DeepFace: done')).toBeInTheDocument();
   });
 
   it('shows a video in two projects with both chips', async () => {

@@ -5,17 +5,30 @@ import { ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { taskOfTitle } from '@/hooks/usePipelineNames';
+import { kindColour, kindOfPipeline } from '@/lib/resultKinds';
 import type { PipelineDescriptor } from '@/types/pipelines';
 
-/** The behavioural title, with the method's own name beside it when they differ. */
+/** What a benchmark measure means, on hover (UAT #19). */
+const MEASURES: Record<string, string> = {
+  'DER %': 'Diarization error rate: the share of time with the wrong speaker, a missed or a false turn. Lower is better.',
+  AP: 'Average precision: how well detections match the true boxes, from 0 to 1. Higher is better.',
+  'mAP pose 50-95 (e2e)': 'Mean average precision for body keypoints, over strict to loose match thresholds. Higher is better.',
+  MAE: 'Mean absolute error: the average size of the error. Lower is better.',
+  'landmark NME (inter-ocular)': 'Landmark error, as a share of the distance between the eyes. Lower is better.',
+  'action unit F1': 'F1 score for detecting facial action units, from 0 to 1. Higher is better.',
+};
+
+/** What runs, then what it finds: "pyannote community-1 · who spoke when", with its kind's icon (D1, UAT #19). */
 export const PipelineTitle = ({ pipeline }: { pipeline: PipelineDescriptor }) => {
-  const title = pipeline.title ?? pipeline.name;
+  const kind = kindOfPipeline(pipeline.id);
+  const Icon = kind?.icon;
+  const task = taskOfTitle(pipeline.title);
   return (
-    <span className="flex flex-wrap items-baseline gap-x-2">
-      <span className="text-sm font-medium text-foreground">{title}</span>
-      {pipeline.title && pipeline.title !== pipeline.name && (
-        <span className="text-xs text-muted-foreground">{pipeline.name}</span>
-      )}
+    <span className="flex flex-wrap items-center gap-x-2">
+      {Icon && <Icon className="h-4 w-4 shrink-0" style={{ color: kindColour(kind) }} aria-hidden="true" />}
+      <span className="text-sm font-medium text-foreground">{pipeline.name}</span>
+      {task && <span className="text-xs text-muted-foreground">{task}</span>}
     </span>
   );
 };
@@ -70,7 +83,7 @@ export const PipelineAbout = ({
                 <a className="underline" href={b.source} target="_blank" rel="noopener noreferrer">
                   {b.name}
                 </a>
-                : {b.measure} {b.figure}
+                : {MEASURES[b.measure] ? <abbr title={MEASURES[b.measure]} className="cursor-help">{b.measure}</abbr> : b.measure} {b.figure}
                 {b.note && <span className="text-muted-foreground/80"> ({b.note})</span>}
               </li>
             ))}

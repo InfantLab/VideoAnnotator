@@ -1,5 +1,5 @@
 name: vlm_annotation
-display_name: VLM Frame Annotation
+display_name: Ask AI
 title: "Ask AI: your question about each moment"
 summary: >-
   Asks a vision-language model your question about frames sampled every few seconds, and records its answer and reasoning for each one.

@@ -186,13 +186,13 @@ export function laneKind(kind: string): LaneKind | undefined {
   return BY_KIND.get(kind);
 }
 
-/** Short names for a pipeline in a lane label, when two pipelines make one kind. */
+/** Short names for a pipeline in a lane label: the tool, as the registry's display name says it (D1). */
 export const PIPELINE_SHORT_NAMES: Record<string, string> = {
   face_analysis: 'DeepFace',
   face_openface3_embedding: 'OpenFace 3',
-  person_tracking: 'person tracking',
-  scene_detection: 'scene detection',
-  speaker_diarization: 'diarization',
+  person_tracking: 'YOLO26 pose',
+  scene_detection: 'PySceneDetect + CLIP',
+  speaker_diarization: 'pyannote',
   speech_recognition: 'Whisper',
   vlm_annotation: 'Ask AI',
 };

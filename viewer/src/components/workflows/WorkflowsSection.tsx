@@ -21,7 +21,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { usePipelineTitles } from '@/hooks/usePipelineTitles';
+import { usePipelineNames } from '@/hooks/usePipelineNames';
 import { useProjects } from '@/hooks/useProjects';
 import { useWorkflowActions, useWorkflows } from '@/hooks/useWorkflows';
 import { saveBlob } from '@/lib/exports';
@@ -43,7 +43,7 @@ const fileName = (name: string) => `${name.replace(/[^\w\- ]+/g, '').trim() || '
 
 function WorkflowCard({ workflow, projects }: { workflow: Preset; projects: { id: string; name: string }[] }) {
   const navigate = useNavigate();
-  const { titleOf } = usePipelineTitles();
+  const { nameOf } = usePipelineNames();
   const { update: rename, remove } = useWorkflowActions();
   const { update } = useProjects();
   const [naming, setNaming] = useState(false);
@@ -66,9 +66,9 @@ function WorkflowCard({ workflow, projects }: { workflow: Preset; projects: { id
           <h3 className="font-semibold">{workflow.name}</h3>
           <span className="text-xs text-muted-foreground">{origin(workflow)}</span>
         </div>
-        <p className="text-sm">{workflow.selected_pipelines.map(titleOf).join(', ') || 'No pipelines'}</p>
+        <p className="text-sm">{workflow.selected_pipelines.map(nameOf).join(', ') || 'No pipelines'}</p>
         {workflow.unavailable_pipelines?.length ? (
-          <p className="text-xs text-amber-700">Not on this server now: {workflow.unavailable_pipelines.map(titleOf).join(', ')}</p>
+          <p className="text-xs text-amber-700">Not on this server now: {workflow.unavailable_pipelines.map(nameOf).join(', ')}</p>
         ) : null}
         <div className="flex flex-wrap gap-2">
           <DropdownMenu>

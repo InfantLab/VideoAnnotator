@@ -11,7 +11,7 @@ import { SaveAsWorkflow } from '@/components/workflows/SaveAsWorkflow';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { usePipelineTitles } from '@/hooks/usePipelineTitles';
+import { usePipelineNames } from '@/hooks/usePipelineNames';
 import { saveBlob } from '@/lib/exports';
 import { notify } from '@/lib/notify';
 import { userMessage } from '@/lib/userMessage';
@@ -43,14 +43,14 @@ const ordinal = (n: number) => `${n}${n % 10 === 1 && n % 100 !== 11 ? 'st' : n 
 const runLabel = (run: VideoRun) =>
   run.run_name || run.batch_name || (run.created_at ? `run ${formatWhen(run.created_at)}` : run.job_id);
 
-function settingsLines(config: Record<string, unknown> | undefined, titleOf: (id: string) => string): string[] {
+function settingsLines(config: Record<string, unknown> | undefined, nameOf: (id: string) => string): string[] {
   const lines: string[] = [];
   for (const [pipeline, values] of Object.entries(config ?? {})) {
     if (!values || typeof values !== 'object') continue;
     const set = Object.entries(values as Record<string, unknown>).map(
       ([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`,
     );
-    if (set.length) lines.push(`${titleOf(pipeline)} · ${set.join(', ')}`);
+    if (set.length) lines.push(`${nameOf(pipeline)} · ${set.join(', ')}`);
   }
   return lines;
 }
@@ -82,7 +82,7 @@ function CompareWith({ run, runs }: { run: VideoRun; runs: VideoRun[] }) {
 
 function RunCard({ run, runs, videoName }: { run: VideoRun; runs: VideoRun[]; videoName: string }) {
   const queryClient = useQueryClient();
-  const { titleOf } = usePipelineTitles();
+  const { nameOf } = usePipelineNames();
   const [downloading, setDownloading] = useState(false);
   const going = run.status === 'pending' || run.status === 'running' || run.status === 'retrying';
   const cancel = useMutation({
@@ -105,7 +105,7 @@ function RunCard({ run, runs, videoName }: { run: VideoRun; runs: VideoRun[]; vi
       setDownloading(false);
     }
   };
-  const settings = settingsLines(run.config, titleOf);
+  const settings = settingsLines(run.config, nameOf);
   const folder = run.results_folder as unknown as (FolderRef & { exists?: boolean }) | null | undefined;
 
   return (
@@ -136,7 +136,7 @@ function RunCard({ run, runs, videoName }: { run: VideoRun; runs: VideoRun[]; vi
       <ul className="space-y-0.5">
         {(run.pipelines ?? []).map((p) => (
           <li key={p.name} className="flex flex-wrap items-baseline gap-2">
-            <span>{titleOf(p.name)}</span>
+            <span>{nameOf(p.name)}</span>
             <RunStatus status={p.status} />
             {p.error && <span className="text-destructive">{p.error}</span>}
           </li>
@@ -144,7 +144,7 @@ function RunCard({ run, runs, videoName }: { run: VideoRun; runs: VideoRun[]; vi
         {!(run.pipelines ?? []).length &&
           (run.selected_pipelines ?? []).map((name) => (
             <li key={name} className="flex gap-2">
-              <span>{titleOf(name)}</span>
+              <span>{nameOf(name)}</span>
               <RunStatus status={run.status} />
             </li>
           ))}

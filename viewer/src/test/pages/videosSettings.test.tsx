@@ -31,7 +31,7 @@ describe("a project's settings", () => {
     settingsApi();
     show(`/videos?project=${PROJECT_ID}`);
     const line = await screen.findByTestId('project-settings');
-    expect(line).toHaveTextContent('Settings: Faces');
+    expect(line).toHaveTextContent('Settings: DeepFace');
     expect(line).toHaveTextContent('from the run First faces');
   });
 
@@ -76,7 +76,7 @@ describe('What changed?', () => {
     show(`/videos?project=${PROJECT_ID}`);
     await userEvent.click(await screen.findByRole('button', { name: /What changed/ }));
     const changes = await screen.findByTestId('settings-changes');
-    await waitFor(() => expect(changes).toHaveTextContent('Faces · min_face_size: 30 → 40'));
-    expect(changes).toHaveTextContent('Speech: added');
+    await waitFor(() => expect(changes).toHaveTextContent('DeepFace · min_face_size: 30 → 40'));
+    expect(changes).toHaveTextContent('Whisper large-v3-turbo: added');
   });
 });

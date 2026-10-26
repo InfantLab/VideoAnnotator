@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { kindColour, kindOfPipeline } from '@/lib/resultKinds';
 import type { ListContext } from '@/lib/listNavigation';
 import { folderLabel, hrefOf, shortFolder, videoLink } from '@/lib/videosScope';
 import type { VideoItem, VideoResult } from '@/types/videos';
@@ -43,7 +44,8 @@ function ResultMark({ title, result }: { title: string; result: VideoResult | un
 interface VideosTableProps {
   videos: VideoItem[];
   pipelines: string[];
-  titleOf: (pipeline: string) => string;
+  nameOf: (pipeline: string) => string;
+  taskOf?: (pipeline: string) => string;
   selected: Set<string>;
   onSelect: (paths: string[], on: boolean) => void;
   /** The list rows open in, so ‹ › on the Video page move through it. */
@@ -57,7 +59,9 @@ interface VideosTableProps {
  * result stands (spec 029 FR-002). `/` focuses the filter; `Enter` opens the
  * focused row and `Space` selects it.
  */
-export function VideosTable({ videos, pipelines, titleOf, selected, onSelect, context, filter, onFilter }: VideosTableProps) {
+export function VideosTable({ videos, pipelines, nameOf, taskOf = () => '', selected, onSelect, context, filter, onFilter }: VideosTableProps) {
+  // An empty Projects column only takes room (UAT #5).
+  const anyProjects = videos.some((v) => v.projects.length > 0);
   const navigate = useNavigate();
   const filterRef = useRef<HTMLInputElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -143,7 +147,7 @@ export function VideosTable({ videos, pipelines, titleOf, selected, onSelect, co
       <td className="max-w-[14rem] truncate px-2 text-muted-foreground" title={folderLabel(video.folder)}>
         {shortFolder(video.folder)}
       </td>
-      <td className="px-2" onClick={(event) => event.stopPropagation()}>
+      {anyProjects && <td className="px-2" onClick={(event) => event.stopPropagation()}>
         <div className="flex flex-wrap gap-1">
           {video.projects.map((project) => (
             <Link key={project.id} to={hrefOf({ project: project.id })}>
@@ -153,10 +157,10 @@ export function VideosTable({ videos, pipelines, titleOf, selected, onSelect, co
             </Link>
           ))}
         </div>
-      </td>
+      </td>}
       {pipelines.map((pipeline) => (
         <td key={pipeline} className="px-2 text-center">
-          <ResultMark title={titleOf(pipeline)} result={video.results[pipeline]} />
+          <ResultMark title={nameOf(pipeline)} result={video.results[pipeline]} />
         </td>
       ))}
     </tr>
@@ -193,12 +197,24 @@ export function VideosTable({ videos, pipelines, titleOf, selected, onSelect, co
               </th>
               <th className="px-2 py-2 font-medium">Video</th>
               <th className="px-2 py-2 font-medium">Folder</th>
-              <th className="px-2 py-2 font-medium">Projects</th>
-              {pipelines.map((pipeline) => (
-                <th key={pipeline} className="px-2 py-2 text-center font-medium" title={pipeline}>
-                  {titleOf(pipeline)}
-                </th>
-              ))}
+              {anyProjects && <th className="px-2 py-2 font-medium">Projects</th>}
+              {pipelines.map((pipeline) => {
+                const kind = kindOfPipeline(pipeline);
+                const Icon = kind?.icon;
+                const task = taskOf(pipeline);
+                return (
+                  <th
+                    key={pipeline}
+                    className="max-w-[7.5rem] px-2 py-2 text-center align-bottom font-medium leading-tight"
+                    title={task ? `${nameOf(pipeline)} · ${task}` : nameOf(pipeline)}
+                  >
+                    <span className="flex flex-col items-center gap-1">
+                      {Icon && <Icon className="h-4 w-4" style={{ color: kindColour(kind) }} aria-hidden="true" />}
+                      <span className="line-clamp-2">{nameOf(pipeline)}</span>
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>

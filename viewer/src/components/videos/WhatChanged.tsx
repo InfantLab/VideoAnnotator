@@ -5,7 +5,7 @@ import { GitCompare } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { usePipelineTitles } from '@/hooks/usePipelineTitles';
+import { usePipelineNames } from '@/hooks/usePipelineNames';
 import { settingsDiff } from '@/lib/settingsDiff';
 import type { RunSummary } from '@/types/videos';
 import { formatDay } from '@/lib/when';
@@ -34,7 +34,7 @@ export function WhatChanged({ runs, initial }: { runs: RunSummary[]; initial?: [
   const [open, setOpen] = useState(false);
   const [a, setA] = useState(initial?.[1] ?? runs[1]?.id ?? '');
   const [b, setB] = useState(initial?.[0] ?? runs[0]?.id ?? '');
-  const { titleOf } = usePipelineTitles(open);
+  const { nameOf } = usePipelineNames(open);
   const left = useRunConfig(open ? runs.find((r) => r.id === a) : undefined);
   const right = useRunConfig(open ? runs.find((r) => r.id === b) : undefined);
   if (runs.length < 2) return null;
@@ -72,13 +72,13 @@ export function WhatChanged({ runs, initial }: { runs: RunSummary[]; initial?: [
           </div>
           <ul className="space-y-1 text-sm" data-testid="settings-changes">
             {!ready && <li className="text-muted-foreground">Reading their settings…</li>}
-            {added.map((p) => <li key={`+${p}`}>{titleOf(p)}: added</li>)}
-            {dropped.map((p) => <li key={`-${p}`}>{titleOf(p)}: left out</li>)}
+            {added.map((p) => <li key={`+${p}`}>{nameOf(p)}: added</li>)}
+            {dropped.map((p) => <li key={`-${p}`}>{nameOf(p)}: left out</li>)}
             {differences.map((d) => {
               const [pipeline, ...rest] = d.key.split('.');
               return (
                 <li key={d.key}>
-                  {titleOf(pipeline)} · {rest.join('.') || pipeline}: {d.a} → {d.b}
+                  {nameOf(pipeline)} · {rest.join('.') || pipeline}: {d.a} → {d.b}
                 </li>
               );
             })}

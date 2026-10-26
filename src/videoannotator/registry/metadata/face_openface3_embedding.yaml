@@ -1,5 +1,5 @@
 name: face_openface3_embedding
-display_name: OpenFace3 Face Embedding
+display_name: OpenFace 3
 title: "Faces: action units, gaze, head pose"
 summary: >-
   Finds faces in each sampled frame and measures facial action units, gaze direction, head pose and expression. Also describes each face in a way that tells people apart.

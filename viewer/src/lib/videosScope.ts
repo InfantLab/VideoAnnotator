@@ -60,9 +60,9 @@ export function scopeTitle(scope: VideoScope | undefined, query: VideosQuery): s
 export function pipelinesOf(videos: VideoItem[], order: string[] = []): string[] {
   const seen = new Set<string>();
   for (const video of videos) for (const name of Object.keys(video.results)) seen.add(name);
-  const known = order.filter((name) => seen.has(name));
-  const rest = [...seen].filter((name) => !order.includes(name)).sort();
-  return [...known, ...rest];
+  // Once the catalog is known, only its pipelines get a column: a deprecated one's old results don't (UAT #9).
+  if (order.length) return order.filter((name) => seen.has(name));
+  return [...seen].sort();
 }
 
 export const folderLabel = (folder: string) => (folder === 'uploads' ? 'Uploaded videos' : folder);

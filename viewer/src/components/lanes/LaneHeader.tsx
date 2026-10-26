@@ -5,6 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { OPENFACE3_OVERLAYS } from '@/lib/laneOverlays';
 import { LANE_HEADER_WIDTH, laneHeight, laneTooltip, rowHeight, rowTooltip, type Lane } from '@/lib/lanes';
+import { kindColour, kindOfLane } from '@/lib/resultKinds';
 
 export interface LaneToggles {
   collapsed: (kind: string) => boolean;
@@ -54,6 +55,14 @@ function OpenFace3Menu({ toggles }: { toggles: LaneToggles }) {
 }
 
 /** A lane's label and its rows' labels, left of its canvas (spec 028 US1, US2). */
+/** The lane's kind, as an icon in its colour (viewer design "Icons"). */
+function KindIcon({ lane }: { lane: Lane }) {
+  const kind = kindOfLane(lane.kind, lane.pipeline);
+  if (!kind) return null;
+  const Icon = kind.icon;
+  return <Icon className="mx-0.5 h-3.5 w-3.5 shrink-0" style={{ color: kindColour(kind) }} aria-hidden="true" />;
+}
+
 export function LaneHeader({ lane, selected, densityRows, onSelect, toggles }: LaneHeaderProps) {
   const collapsed = toggles.collapsed(lane.kind);
   const overlay = lane.overlay;
@@ -63,7 +72,7 @@ export function LaneHeader({ lane, selected, densityRows, onSelect, toggles }: L
       className={cn('flex shrink-0 border-l-2 text-xs', selected ? 'border-l-primary bg-primary/5' : 'border-l-transparent')}
       style={{ width: LANE_HEADER_WIDTH, height: laneHeight(lane, collapsed) }}
     >
-      <div className="flex w-24 shrink-0 items-start gap-0.5 pl-0.5">
+      <div className="flex w-28 shrink-0 items-start gap-0.5 pl-0.5">
         {overlay ? (
           <button
             type="button"
@@ -88,6 +97,7 @@ export function LaneHeader({ lane, selected, densityRows, onSelect, toggles }: L
           data-testid="lane-label"
         >
           {collapsed ? <ChevronRight className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />}
+          <KindIcon lane={lane} />
           <span className={cn('truncate', lane.kind === 'notes' && 'italic text-amber-700 dark:text-amber-400')}>{lane.label}</span>
         </button>
         {overlay === 'faces.openface3' && <OpenFace3Menu toggles={toggles} />}

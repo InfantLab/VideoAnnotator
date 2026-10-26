@@ -1,5 +1,5 @@
 name: speaker_diarization
-display_name: Speaker Diarization
+display_name: pyannote community-1
 title: "Speaker turns: who spoke when"
 summary: >-
   Splits the audio into turns and says which speaker each turn belongs to, without naming them.

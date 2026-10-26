@@ -1,5 +1,5 @@
 name: person_tracking
-display_name: Person Tracking & Pose
+display_name: YOLO26 pose
 title: "People: where they are and how they move"
 summary: >-
   Finds each person in each sampled frame, follows them through the video, and marks 17 body points (nose, shoulders, wrists, knees and so on).

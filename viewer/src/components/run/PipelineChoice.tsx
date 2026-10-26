@@ -24,6 +24,19 @@ import { pipelineSummary } from '@/lib/pipelineGuide';
  * Which pipelines to run, with the guide to each (spec 026), and installing
  * the ones not installed yet: New run's "What to find" and the Pipelines page.
  */
+/** The server's pipeline families, in the researcher's words (UAT #19, P7). */
+const GROUP_NAMES: Record<string, string> = {
+  audio: 'Sound',
+  face: 'Faces',
+  person: 'People',
+  scene: 'Scenes',
+  vlm: 'Ask AI',
+};
+const groupRank = (group: string) => {
+  const at = Object.keys(GROUP_NAMES).indexOf(group);
+  return at < 0 ? Object.keys(GROUP_NAMES).length : at;
+};
+
 export const PipelineSelectionStep = ({
   pipelines,
   selectedPipelines,
@@ -65,7 +78,7 @@ export const PipelineSelectionStep = ({
         groupName,
         list: list.slice().sort((a, b) => a.name.localeCompare(b.name))
       }))
-      .sort((a, b) => a.groupName.localeCompare(b.groupName));
+      .sort((a, b) => groupRank(a.groupName) - groupRank(b.groupName) || a.groupName.localeCompare(b.groupName));
   }, [pipelines]);
 
   const blockedSelection = pipelines.filter(
@@ -189,12 +202,6 @@ export const PipelineSelectionStep = ({
         </Alert>
       )}
 
-      <p className="text-foreground">
-        {manage
-          ? "The annotation pipelines your VideoAnnotator server offers. Install the ones you need here; you choose which to run when you start a run."
-          : "Select the annotation pipelines reported by your VideoAnnotator server. Feature availability reflects the live API catalog."}
-      </p>
-
       {pipelines.some((pipeline) => pipelineCardMode(pipeline) === 'install') && (
         <p className="text-xs text-muted-foreground">
           {isAdmin === true && (
@@ -228,8 +235,7 @@ export const PipelineSelectionStep = ({
         {groupedPipelines.map(({ groupName, list }) => (
           <div key={groupName} className="space-y-2">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-foreground">{groupName}</h3>
-              <span className="text-xs text-muted-foreground">{list.length} pipelines</span>
+              <h3 className="text-sm font-semibold text-foreground">{GROUP_NAMES[groupName] ?? groupName}</h3>
             </div>
             <div className="space-y-3">
               {list.map((pipeline) => {
@@ -358,16 +364,7 @@ export const PipelineSelectionStep = ({
                             v{pipeline.version}
                           </Badge>
                         )}
-                        {pipeline.model && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            {pipeline.model}
-                          </Badge>
-                        )}
-                        {pipeline.capabilities?.length ? (
-                          <span className="text-[11px] text-muted-foreground">
-                            {pipeline.capabilities.length} capabilities
-                          </span>
-                        ) : null}
+
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground">{description}</p>

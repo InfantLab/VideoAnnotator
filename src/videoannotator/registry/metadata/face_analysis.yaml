@@ -1,5 +1,5 @@
 name: face_analysis
-display_name: Face Analysis (DeepFace)
+display_name: DeepFace
 title: "Faces: where they are and their expression"
 summary: >-
   Finds faces in each sampled frame and estimates each face's expression. Can also estimate age and gender, which are off by default.
