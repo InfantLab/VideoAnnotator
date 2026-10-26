@@ -65,10 +65,12 @@ interface ScopeHeaderProps {
   /** More actions (a project's), before Export. */
   children?: ReactNode;
   below?: ReactNode;
+  /** Rows are selected: the selection bar's actions replace Run and Export (viewer design P5). */
+  selecting?: boolean;
 }
 
 /** The scope's name and count, Run… and Export ▾ for what's shown (spec 029 FR-003). */
-export function ScopeHeader({ title, count, subtitle, runTarget, exportScope, runs = [], videos, children, below }: ScopeHeaderProps) {
+export function ScopeHeader({ title, count, subtitle, runTarget, exportScope, runs = [], videos, children, below, selecting = false }: ScopeHeaderProps) {
   const navigate = useNavigate();
   return (
     <section className="space-y-2" data-testid="scope-header">
@@ -81,14 +83,14 @@ export function ScopeHeader({ title, count, subtitle, runTarget, exportScope, ru
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {runTarget && (
+          {runTarget && !selecting && (
             <Button size="sm" onClick={() => navigate('/run', { state: runState({ target: runTarget }) })} disabled={count === 0}>
               <Play className="mr-1 h-4 w-4" />
-              Run…
+              Run on {videosWord(count)}…
             </Button>
           )}
           {children}
-          {exportScope && count > 0 && <ExportMenu scope={exportScope} popover />}
+          {exportScope && count > 0 && !selecting && <ExportMenu scope={exportScope} popover />}
         </div>
       </div>
       <ActiveRuns runs={runs} videos={videos} />

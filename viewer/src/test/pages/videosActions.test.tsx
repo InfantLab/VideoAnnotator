@@ -21,7 +21,7 @@ describe('Run… opens New run on what is shown', () => {
     mockVideosApi();
     const view = show(address);
     await screen.findAllByTestId('video-row');
-    fireEvent.click(within(screen.getByTestId('scope-header')).getByRole('button', { name: /Run…/ }));
+    fireEvent.click(within(screen.getByTestId('scope-header')).getByRole('button', { name: /Run on/ }));
     const where = landed(view.container)!;
     expect(where.address).toBe('/run');
     expect(where.state).toEqual({ runStart: { target } });
@@ -31,7 +31,7 @@ describe('Run… opens New run on what is shown', () => {
     mockVideosApi();
     const view = show();
     await screen.findAllByTestId('video-row');
-    fireEvent.click(within(screen.getByTestId('scope-header')).getByRole('button', { name: /Run…/ }));
+    fireEvent.click(within(screen.getByTestId('scope-header')).getByRole('button', { name: /Run on/ }));
     const target = (landed(view.container)!.state as { runStart: { target: { kind: string; paths: string[] } } }).runStart.target;
     expect(target.kind).toBe('videos');
     expect(target.paths).toEqual([`${PK}/p01_t1.mp4`, `${PK}/p02_t1.mp4`, `${PK}/p04_t1.mp4`]);
@@ -58,6 +58,9 @@ describe('the selection bar', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select p04_t1.mp4' }));
     const bar = screen.getByTestId('selection-bar');
     expect(bar).toHaveTextContent('2 selected');
+    // One Run while rows are selected, and it says its scope (UAT #42, P5).
+    expect(within(screen.getByTestId('scope-header')).queryByRole('button', { name: /Run on/ })).toBeNull();
+    expect(within(bar).getByRole('button', { name: /Run on/ })).toHaveTextContent('Run on 2 videos…');
 
     await userEvent.click(within(bar).getByRole('button', { name: /Export/ }));
     await userEvent.click(within(await screen.findByTestId('export-panel')).getByRole('button', { name: 'Results table (CSV)' }));
@@ -67,7 +70,7 @@ describe('the selection bar', () => {
       'csv',
     );
 
-    fireEvent.click(within(bar).getByRole('button', { name: /Run…/ }));
+    fireEvent.click(within(bar).getByRole('button', { name: /Run on/ }));
     expect(landed(view.container)!.state).toEqual({
       runStart: {
         target: {

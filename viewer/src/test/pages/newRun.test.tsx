@@ -94,11 +94,30 @@ describe('with a target, Start is the only confirmation', () => {
     expect(screen.getByTestId('settings-source')).toHaveTextContent('Settings from: the defaults');
   });
 
-  it('defaults select what the server offers', async () => {
+  it('the defaults tick nothing (UAT #42)', async () => {
     mockRunApi();
     open({ target: { kind: 'videos', paths: ['/a.mp4'], label: 'a.mp4' } });
 
-    await waitFor(() => expect(screen.getByTestId('start-run')).toHaveTextContent('Faces, Speech, Scenes, Ask AI'));
+    expect(await startButton()).toBeDisabled();
+    expect(screen.getByTestId('start-run')).toHaveTextContent('Nothing chosen yet');
+    expect(screen.getByTestId('settings-source')).toHaveTextContent('nothing ticked until you choose');
+  });
+
+  it('asks before a big run, saying its size (UAT #42)', async () => {
+    const api = mockRunApi({ ...RUN_SETTINGS.project, selected_pipelines: ['face_analysis', 'scene_detection'] });
+    const paths = Array.from({ length: 21 }, (_, i) => `/v${i}.mp4`);
+    open({ target: { kind: 'videos', paths, label: '21 videos' } });
+
+    const button = await startButton();
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveTextContent('Run 2 pipelines on 21 videos?');
+    expect(dialog).toHaveTextContent("That's 42 runs");
+    expect(api.runVideos).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Start run on 21 videos' }));
+    await waitFor(() => expect(api.runVideos).toHaveBeenCalledTimes(1));
   });
 
   it('a run again: its own settings, and the rerun route', async () => {
@@ -156,7 +175,7 @@ describe('without a target', () => {
   });
 
   it('uploads videos from this computer as one run', async () => {
-    const api = mockRunApi();
+    const api = mockRunApi(RUN_SETTINGS.last_used);
     const view = open();
     await userEvent.click(await screen.findByRole('tab', { name: /This computer/ }));
     const input = screen.getByTestId('upload-input') as HTMLInputElement;
@@ -186,7 +205,7 @@ describe('without a target', () => {
 });
 
 it('a server error is said in the viewer\'s words', async () => {
-  const api = mockRunApi();
+  const api = mockRunApi(RUN_SETTINGS.last_used);
   const { APIError } = await import('@/api/handleError');
   api.runVideos.mockRejectedValue(new APIError('x', 422, undefined, { error: { code: 'NOTHING_TO_RUN' } }));
   open({ target: { kind: 'videos', paths: ['/a.mp4'], label: 'a.mp4' } });

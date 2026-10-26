@@ -137,10 +137,11 @@ interface ProjectHeaderProps {
   data: VideosResponse;
   /** Save as workflow, Apply workflow (spec 029 US4). */
   workflows?: ReactNode;
+  selecting?: boolean;
 }
 
 /** A project's header (spec 029 US2, US3): its settings, runs, and what can be done to it. */
-export function ProjectHeader({ id, data, workflows }: ProjectHeaderProps) {
+export function ProjectHeader({ id, data, workflows, selecting }: ProjectHeaderProps) {
   const navigate = useNavigate();
   const project = useProject(id);
   const settings = useRunSettings({ project: id });
@@ -182,6 +183,7 @@ export function ProjectHeader({ id, data, workflows }: ProjectHeaderProps) {
         }
         runTarget={{ kind: 'project', id, name: title }}
         exportScope={{ kind: 'project', id }}
+        selecting={selecting}
         runs={data.runs}
         videos={videos}
         below={

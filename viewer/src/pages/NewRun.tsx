@@ -48,7 +48,7 @@ function fromServer(found: RunSettings): Settings {
         ? `this project's settings${when ? `, last changed ${when}` : ''}`
         : source.kind === 'last_used'
           ? `your last run${source.name ? ` (${source.name})` : ''}${when ? `, ${when}` : ''}`
-          : 'the defaults';
+          : 'the defaults (nothing ticked until you choose)';
   return {
     key: `server:${source.kind}:${source.id ?? ''}:${source.changed_at ?? ''}`,
     selected: found.selected_pipelines,
@@ -134,9 +134,8 @@ export default function NewRun() {
 
   useEffect(() => {
     if (!settings || !pipelines.length || applied === settings.key) return;
-    const wanted = settings.selected.length
-      ? settings.selected
-      : pipelines.filter((p) => p.defaultEnabled !== false && isPipelineSelectable(p)).map((p) => p.id);
+    // Nothing ticked that the user, a project, a workflow or a last run didn't choose (UAT #42, P6).
+    const wanted = settings.selected;
     const known = wanted.filter((id) => pipelines.some((p) => p.id === id));
     const { kept, leftOut } = partitionSelection(known, pipelines);
     const unknown = wanted.filter((id) => !known.includes(id)).map((id) => `${id}: not on this server`);

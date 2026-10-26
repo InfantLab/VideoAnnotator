@@ -41,7 +41,7 @@ export function SelectionBar({ paths, project, onClear, children }: SelectionBar
       <span className="px-2 text-sm font-medium">{paths.length} selected</span>
       <Button size="sm" onClick={run}>
         <Play className="mr-1 h-4 w-4" />
-        Run…
+        Run on {videosWord(paths.length)}…
       </Button>
       <ExportMenu scope={{ kind: 'videos', paths }} popover />
       {children}

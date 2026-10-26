@@ -121,7 +121,7 @@ export default function Videos() {
       <main className="min-w-0 space-y-4">
         <PageHelp page="videos">
           Every <Term word="video" /> the server knows, by <Term word="folder" /> and <Term word="project" />, with
-          the results each has. Pick some, then <strong>Run…</strong> or <strong>Export</strong>.
+          the results each has. Pick some, then <strong>Run</strong> or <strong>Export</strong>.
         </PageHelp>
 
         {error && !data && !isNeedsKey(error) && (
@@ -139,6 +139,7 @@ export default function Videos() {
           <ProjectHeader
             id={query.project}
             data={data}
+            selecting={selectedPaths.length > 0}
             workflows={
               <>
                 <SaveAsWorkflow source={{ kind: 'project', id: query.project, name: title }} settings={() => projectSettingsOf(query.project!)} />
@@ -153,6 +154,7 @@ export default function Videos() {
               count={data.total}
               runTarget={runTargetOf(query, title, data.videos)}
               exportScope={exportScopeOf(query, data.videos)}
+              selecting={selectedPaths.length > 0}
               runs={data.runs}
               videos={data.videos}
               below={

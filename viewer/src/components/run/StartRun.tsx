@@ -1,6 +1,17 @@
+import { useState } from 'react';
 import { AlertCircle, Loader2, Play } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Term } from '@/components/Term';
@@ -25,6 +36,9 @@ interface StartRunProps {
   onStart: () => void;
 }
 
+/** Above this many video × pipeline pairs, Start asks first (viewer design P6, UAT #42). */
+const ASK_ABOVE = 10;
+
 /** What will run, on what, and the one button that starts it (spec 029 FR-017). */
 export function StartRun({
   count,
@@ -41,6 +55,9 @@ export function StartRun({
   onStart,
 }: StartRunProps) {
   const download = totalDownloadLabel(setupNotes);
+  const [asking, setAsking] = useState(false);
+  const pairs = (count ?? 0) * pipelineTitles.length;
+  const things = pipelineTitles.length === 1 ? '1 pipeline' : `${pipelineTitles.length} pipelines`;
   return (
     <div className="space-y-4" data-testid="start-run">
       <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[8rem_1fr]">
@@ -88,11 +105,28 @@ export function StartRun({
           <AlertDescription>{blocked}</AlertDescription>
         </Alert>
       )}
-      <Button size="lg" onClick={onStart} disabled={starting || !!blocked || !count}>
+      <Button size="lg" onClick={() => (pairs > ASK_ABOVE ? setAsking(true) : onStart())} disabled={starting || !!blocked || !count}>
         {starting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
         {starting ? 'Starting…' : count ? `Start run on ${videosWord(count)}` : 'Start run'}
       </Button>
       <p className="text-xs text-muted-foreground">You can close this tab once it has started; results will be on the Videos page.</p>
+      <AlertDialog open={asking} onOpenChange={setAsking}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Run {things} on {videosWord(count ?? 0)}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              That's {pairs} runs of a pipeline on a video ({pipelineTitles.join(', ')}). Each can take minutes, so all of
+              them could take hours. You can stop the run once it has started.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Go back</AlertDialogCancel>
+            <AlertDialogAction onClick={onStart}>Start run on {videosWord(count ?? 0)}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
