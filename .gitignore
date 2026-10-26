@@ -252,3 +252,9 @@ tests/fixtures/video_page/long_run/*
 # Model server keys beside the database (spec 033)
 model_server_keys.json
 model_server_keys.json.tmp
+
+# temp files
+temp/
+
+# Local Claude Code settings
+.claude/settings.json
