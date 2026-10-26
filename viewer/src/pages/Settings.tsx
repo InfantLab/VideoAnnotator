@@ -15,6 +15,7 @@ import {
 import { TokenSetup } from '@/components/TokenSetup';
 import { HuggingFaceTokenCard } from '@/components/HuggingFaceTokenSetup';
 import { ModelServers } from '@/components/settings/ModelServers';
+import { ThemeChoice } from '@/components/settings/ThemeChoice';
 import { ServerDiagnostics } from '@/components/ServerDiagnostics';
 import { VideosAndResultsCard } from '@/components/VideosAndResultsCard';
 import { GPUInfo } from '@/components/GPUInfo';
@@ -162,6 +163,7 @@ const CreateSettings = () => {
         </div>
       </div>
       <PageHelp page="settings">Which VideoAnnotator server this viewer talks to, your key for it, and tokens for gated models.</PageHelp>
+      <ThemeChoice />
 
       <Tabs defaultValue="api" className="space-y-4">
         <TabsList>

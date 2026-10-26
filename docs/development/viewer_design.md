@@ -203,4 +203,3 @@ settings hashes, raw files) sits behind one consistent "Technical details" discl
 - **Icon set**: the table above is a first pass; check it reads at 16 px in both themes.
 - **Data table default**: summarised view as proposed, or the raw rows with better filters.
 - **H.265**: make an H.264 copy for viewing on the server, or keep telling users to re-encode.
-- **Light theme**: follow the system setting (P9) or stay dark-first.
