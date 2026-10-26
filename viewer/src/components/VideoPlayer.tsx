@@ -151,6 +151,9 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       ) || null;
     }, [currentTime, annotationData]);
 
+    const sceneNow = overlaySettings.scenes ? getCurrentSceneData() : null;
+    const speakersNow = overlaySettings.speakers ? getCurrentSpeakerData() : [];
+
     // Get current face data
     const getCurrentFaceData = useCallback((): LAIONFaceAnnotation[] => {
       if (!annotationData?.face_analysis) return [];
@@ -246,53 +249,28 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         ctx.font = '18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         ctx.textAlign = 'center';
 
-        const textWidth = ctx.measureText(text).width;
+        // Wrapped to the video's width, so a long cue never runs off its edges (UAT #47).
+        const maxWidth = ctx.canvas.width - 40;
+        const lines: string[] = [];
+        for (const word of text.split(/\s+/)) {
+          const last = lines[lines.length - 1];
+          if (last !== undefined && ctx.measureText(`${last} ${word}`).width <= maxWidth) lines[lines.length - 1] = `${last} ${word}`;
+          else lines.push(word);
+        }
+        const lineHeight = 24;
         const x = ctx.canvas.width / 2;
-        const y = canvasHeight - 50;
+        const bottom = canvasHeight - 40;
+        const top = bottom - lines.length * lineHeight;
+        const textWidth = Math.min(maxWidth, Math.max(...lines.map((line) => ctx.measureText(line).width)));
 
-        // Background
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillRect(x - textWidth / 2 - 10, y - 25, textWidth + 20, 35);
+        ctx.fillRect(x - textWidth / 2 - 10, top - 8, textWidth + 20, lines.length * lineHeight + 12);
 
-        // Text
         ctx.fillStyle = 'white';
-        ctx.fillText(text, x, y - 5);
+        lines.forEach((line, i) => ctx.fillText(line, x, top + (i + 1) * lineHeight - 6, maxWidth));
         ctx.textAlign = 'left';
       }
     }, [overlaySettings.subtitles, getCurrentSpeechData]);
-
-    // Draw speaker diarization overlay (from RTTM)
-    const drawSpeakers = useCallback((ctx: CanvasRenderingContext2D) => {
-      if (!overlaySettings.speakers) return;
-
-      const currentSpeakers = getCurrentSpeakerData();
-      if (currentSpeakers.length > 0) {
-        currentSpeakers.forEach((speaker, index) => {
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-          ctx.fillRect(10, 60 + index * 35, 200, 30);
-
-          const hue = speakerHues.get(speaker.speaker_id) ?? 0;
-          ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
-          ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-          ctx.fillText(`Speaker: ${speaker.speaker_id}`, 15, 80 + index * 35);
-        });
-      }
-    }, [overlaySettings.speakers, getCurrentSpeakerData, speakerHues]);
-
-    // Draw scene overlay
-    const drawScenes = useCallback((ctx: CanvasRenderingContext2D) => {
-      if (!overlaySettings.scenes) return;
-
-      const currentScene = getCurrentSceneData();
-      if (currentScene) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(10, 10, 250, 30);
-
-        ctx.fillStyle = 'hsl(200, 70%, 60%)';
-        ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-        ctx.fillText(`Scene: ${currentScene.scene_type}`, 15, 30);
-      }
-    }, [overlaySettings.scenes, getCurrentSceneData]);
 
     // Draw face detection overlay
     const drawFaces = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -742,8 +720,6 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
       // Draw all enabled overlays
       drawPose(ctx, poseData);
       drawSubtitles(ctx);
-      drawSpeakers(ctx);
-      drawScenes(ctx);
       drawFaces(ctx);
       drawEmotions(ctx);
       
@@ -756,7 +732,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         drawOpenFace3Gaze(ctx);
         drawOpenFace3Emotions(ctx);
       }
-    }, [getCurrentPoseData, drawPose, drawSubtitles, drawSpeakers, drawScenes, drawFaces, drawEmotions, 
+    }, [getCurrentPoseData, drawPose, drawSubtitles, drawFaces, drawEmotions, 
       drawOpenFace3FaceBoxes, drawOpenFace3Landmarks, drawOpenFace3ActionUnits,
         drawOpenFace3HeadPose, drawOpenFace3Gaze, drawOpenFace3Emotions, 
         currentTime, overlaySettings.pose, annotationData, openface3Settings]);
@@ -915,13 +891,29 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
             ref={canvasRef}
             className="absolute inset-0 pointer-events-none"
           />
-          {vlmNow && (
-            <div
-              className="pointer-events-none absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-white"
-              data-testid="vlm-overlay"
-            >
-              <span className="font-medium">Ask AI: {vlmNow.label}</span>
-              <span className="ml-2 text-white/70">sampled at {formatClockTenths(vlmNow.timestamp)}</span>
+          {(sceneNow || speakersNow.length > 0 || vlmNow) && (
+            // One stack, so the corner labels never lie over each other (UAT #47).
+            <div className="pointer-events-none absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-col items-start gap-1 text-xs" data-testid="corner-labels">
+              {sceneNow && (
+                <span className="max-w-full truncate rounded bg-black/70 px-2 py-1" style={{ color: 'hsl(200, 70%, 60%)' }}>
+                  Scene: {sceneNow.scene_type}
+                </span>
+              )}
+              {speakersNow.map((speaker) => (
+                <span
+                  key={speaker.speaker_id}
+                  className="max-w-full truncate rounded bg-black/70 px-2 py-1"
+                  style={{ color: `hsl(${speakerHues.get(speaker.speaker_id) ?? 0}, 70%, 60%)` }}
+                >
+                  Speaker: {speaker.speaker_id}
+                </span>
+              ))}
+              {vlmNow && (
+                <span className="max-w-full truncate rounded bg-black/70 px-2 py-1 text-white" title={vlmNow.label} data-testid="vlm-overlay">
+                  <span className="font-medium">Ask AI: {vlmNow.label}</span>
+                  <span className="ml-2 text-white/70">sampled at {formatClockTenths(vlmNow.timestamp)}</span>
+                </span>
+              )}
             </div>
           )}
           {playbackProblem && (

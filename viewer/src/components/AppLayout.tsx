@@ -47,15 +47,15 @@ export const AppLayout = () => {
       {/* Top Navigation Bar */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-14">
+          <div className="flex h-14 items-center justify-between gap-2">
             {/* Left: Logo + App Name */}
-            <Link to="/home" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <Link to="/home" aria-label={APP_NAME} className="flex shrink-0 items-center gap-2 hover:opacity-80 transition-opacity">
               <img src={vavIcon} alt="" className="w-7 h-7" />
-              <span className="font-semibold text-lg hidden sm:inline">{APP_NAME}</span>
+              <span className="hidden whitespace-nowrap text-lg font-semibold xl:inline">{APP_NAME}</span>
             </Link>
 
             {/* Center: Navigation Links */}
-            <nav className="flex items-center gap-1">
+            <nav className="flex min-w-0 items-center gap-1">
               {navItems.map(({ path, label, icon: Icon }) => (
                 <Link key={path} to={path}>
                   <Button
@@ -72,7 +72,7 @@ export const AppLayout = () => {
             </nav>
 
             {/* Right: Settings + Token Status */}
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1">
               <ActivityIndicator />
               <ConnectionStatus />
               <Link to="/help">

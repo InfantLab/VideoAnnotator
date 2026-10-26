@@ -70,12 +70,11 @@ describe('lanes as the controls', () => {
     await lanesLoaded();
     fireEvent.click(screen.getByRole('button', { name: 'Layers' }));
     const menu = await screen.findByTestId('layers-menu');
-    const [lanesNone, overlaysNone] = within(menu).getAllByRole('button', { name: 'none' });
-    fireEvent.click(lanesNone);
+    fireEvent.click(within(menu).getByRole('button', { name: 'No tracks' }));
     expect(screen.queryAllByTestId('row-label')).toHaveLength(0);
-    fireEvent.click(overlaysNone);
+    fireEvent.click(within(menu).getByRole('button', { name: 'No on the video' }));
     expect(screen.getAllByTestId('lane-eye').every((e) => e.getAttribute('aria-pressed') === 'false')).toBe(true);
-    fireEvent.click(within(menu).getAllByRole('button', { name: 'all' })[0]);
+    fireEvent.click(within(menu).getByRole('button', { name: 'All tracks' }));
     expect(screen.queryAllByTestId('row-label').length).toBeGreaterThan(0);
   });
 
@@ -105,6 +104,9 @@ describe('lanes as the controls', () => {
     fireEvent.click(within(lane('speakers')[0]).getByTestId(/^lane-body-/), { clientX: 300, clientY: 5 });
     expect(screen.getByTestId('vlm-overlay')).toHaveTextContent('Ask AI: NO_TOUCH');
     expect(screen.getByTestId('vlm-overlay')).toHaveTextContent('sampled at 0:05.0');
+    // Scene and Ask AI labels share one stack in the corner, not one spot (UAT #47).
+    expect(screen.getByTestId('corner-labels')).toContainElement(screen.getByTestId('vlm-overlay'));
+    expect(screen.getByTestId('corner-labels')).toHaveTextContent('Scene:');
     fireEvent.click(within(lane('ask_ai')[0]).getByTestId('lane-eye'));
     expect(screen.queryByTestId('vlm-overlay')).toBeNull();
   });

@@ -31,9 +31,9 @@ export function ConnectionStatus() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2" data-testid="connection-status">
+        <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2" title={LABEL[state]} aria-label={LABEL[state]} data-testid="connection-status">
           <StateIcon state={state} />
-          <span className="hidden md:inline">{LABEL[state]}</span>
+          <span className="hidden lg:inline">{LABEL[state]}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 space-y-3 text-sm">
