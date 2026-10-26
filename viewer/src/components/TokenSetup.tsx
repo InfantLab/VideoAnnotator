@@ -231,10 +231,10 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
     <div className="max-w-2xl mx-auto space-y-6">
       {/* First-Time User Guide (T040) */}
       {isFirstTimeUser && (
-        <Alert className="border-blue-200 bg-blue-50">
+        <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40">
           <Rocket className="h-5 w-5 text-blue-600" />
-          <AlertTitle className="text-blue-900 font-semibold">Welcome! Let's get you connected</AlertTitle>
-          <AlertDescription className="text-blue-800 space-y-3 mt-2">
+          <AlertTitle className="text-blue-900 dark:text-blue-200 font-semibold">Welcome! Let's get you connected</AlertTitle>
+          <AlertDescription className="text-blue-800 dark:text-blue-200 space-y-3 mt-2">
             <p>
               To run pipelines, connect this viewer to your VideoAnnotator server with an API key.
               The quickest way is the one-click link the server prints the first time it starts; see{' '}
@@ -267,15 +267,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                   value={apiUrl}
                   onChange={(e) => setApiUrl(e.target.value)}
                   placeholder={describeApiUrl('')}
-                  className={!apiUrl ? "pl-24" : ""}
                 />
-                {!apiUrl && (
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <Badge variant="secondary" className="h-6 bg-green-100 text-green-800 hover:bg-green-100">
-                      {import.meta.env.DEV ? 'PROXY MODE' : 'THIS SERVER'}
-                    </Badge>
-                  </div>
-                )}
               </div>
               {import.meta.env.DEV && (
                 <Button
@@ -335,38 +327,38 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
               <p className="text-sm text-destructive" role="alert">{tokenProblem}</p>
             )}
             {!token && serverAuthRequired === false && (
-              <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                <p className="text-sm text-green-800">
+              <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-md p-3">
+                <p className="text-sm text-green-800 dark:text-green-200">
                   ✅ <strong>No token set</strong> - You'll connect anonymously (your server doesn't require authentication)
                 </p>
               </div>
             )}
             {!token && serverAuthRequired === true && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+              <div className="bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
                 <div className="space-y-3">
-                  <p className="text-sm text-yellow-800 font-medium">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
                     ⚠️ <strong>No token set</strong> - Your server requires authentication.
                   </p>
-                  <p className="text-xs text-yellow-800">
+                  <p className="text-xs text-yellow-800 dark:text-yellow-200">
                     See <a href="#how-to-get-a-key" className="font-medium underline">How to get a key</a> below.
                   </p>
                 </div>
               </div>
             )}
             {!token && serverAuthRequired === null && (
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                <p className="text-sm text-blue-800">
+              <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
                   💡 <strong>No token set</strong> - Click "Test Connection" to check if your server requires authentication.
                 </p>
               </div>
             )}
             {token.trim() && tokenStatus && !tokenStatus.isValid && serverAuthRequired === true && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-2">
+              <div className="bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800 rounded-md p-3 mt-2">
                 <div className="space-y-3">
-                  <p className="text-sm text-yellow-800 font-medium">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
                     💡 <strong>Token invalid or authentication failed</strong>
                   </p>
-                  <p className="text-xs text-yellow-800">
+                  <p className="text-xs text-yellow-800 dark:text-yellow-200">
                     See <a href="#how-to-get-a-key" className="font-medium underline">How to get a key</a> below.
                   </p>
                 </div>
@@ -392,7 +384,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                   <AlertDescription>
                     {tokenStatus.isValid ? (
                       <div className="space-y-2">
-                        <p className="font-medium text-green-700">✅ Token is valid and working!</p>
+                        <p className="font-medium text-green-700 dark:text-green-300">✅ Token is valid and working!</p>
                         {tokenStatus.user && (
                           <div>Authenticated as: <Badge variant="secondary">{tokenStatus.user}</Badge></div>
                         )}
@@ -418,8 +410,8 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                           </p>
                         )}
                         {hasUnsavedChanges && (
-                          <div className="bg-green-50 border border-green-200 rounded p-2 mt-2">
-                            <p className="text-sm text-green-800 font-medium">
+                          <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded p-2 mt-2">
+                            <p className="text-sm text-green-800 dark:text-green-200 font-medium">
                               ⚠️ <strong>Remember to click "Save Configuration"</strong> below to apply this token!
                             </p>
                           </div>
@@ -427,7 +419,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <p className="font-medium text-red-700">❌ {tokenStatus.error}</p>
+                        <p className="font-medium text-red-700 dark:text-red-300">❌ {tokenStatus.error}</p>
                       </div>
                     )}
                   </AlertDescription>
@@ -463,9 +455,9 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
                   </div>
 
                   {diagnosticReport.recommendations.length > 0 && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mt-2">
-                      <p className="text-sm font-semibold text-yellow-900 mb-2">Recommendations:</p>
-                      <ul className="text-xs text-yellow-800 space-y-1">
+                    <div className="bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800 rounded p-3 mt-2">
+                      <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-200 mb-2">Recommendations:</p>
+                      <ul className="text-xs text-yellow-800 dark:text-yellow-200 space-y-1">
                         {diagnosticReport.recommendations.map((rec, i) => (
                           <li key={i}>• {rec}</li>
                         ))}
@@ -495,7 +487,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
               onClick={handleRunDiagnostics}
               disabled={isRunningDiagnostics}
               variant="outline"
-              className="text-blue-600 hover:text-blue-700"
+              className="text-blue-600 hover:text-blue-700 dark:text-blue-300"
             >
               <Stethoscope className="h-4 w-4 mr-2" />
               {isRunningDiagnostics ? 'Running...' : 'Run Diagnostics'}
@@ -504,7 +496,7 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
             <Button
               onClick={resetToDefaults}
               variant="outline"
-              className="text-orange-600 hover:text-orange-700"
+              className="text-orange-600 hover:text-orange-700 dark:text-orange-300"
               title={`Reset to: URL=${describeApiUrl(defaultApiUrl())}, Token=${import.meta.env.VITE_API_TOKEN ? '(from build settings)' : '(empty)'}`}
             >
               Reset to Defaults

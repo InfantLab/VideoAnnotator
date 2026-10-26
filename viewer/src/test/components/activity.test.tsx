@@ -26,7 +26,7 @@ describe('ActivityIndicator', () => {
   });
 
   it('says when a run finished, with the results table next', async () => {
-    mockVideosApi({ activity: { active: [], recent: [activityRun({ id: 'b7', name: 'QS faces', done: 3, total: 3, running: 0, waiting: 0, finished_at: '2026-10-20T10:00:00Z' })] } });
+    mockVideosApi({ activity: { active: [], recent: [activityRun({ id: 'b7', name: 'QS faces', done: 3, total: 3, running: 0, waiting: 0, finished_at: new Date(Date.now() - 60_000).toISOString() })] } });
     show();
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith(

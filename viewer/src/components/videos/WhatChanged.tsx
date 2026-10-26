@@ -8,9 +8,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { usePipelineTitles } from '@/hooks/usePipelineTitles';
 import { settingsDiff } from '@/lib/settingsDiff';
 import type { RunSummary } from '@/types/videos';
+import { formatDay } from '@/lib/when';
 
 const label = (run: RunSummary) =>
-  `${run.name}${run.started_at ? ` · ${new Date(run.started_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}`;
+  `${run.name}${run.started_at ? ` · ${formatDay(run.started_at)}` : ''}`;
 
 /** The settings a run ran with: its first video's. */
 function useRunConfig(run: RunSummary | undefined) {

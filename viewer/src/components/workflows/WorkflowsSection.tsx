@@ -30,12 +30,13 @@ import { runState } from '@/lib/runTarget';
 import { userMessage } from '@/lib/userMessage';
 import { applyBody, workflowFile } from '@/lib/workflows';
 import type { Preset, PresetCreateRequest } from '@/types/presets';
+import { formatDay } from '@/lib/when';
 
 function origin(workflow: Preset): string {
   const source = workflow.source;
   if (source?.kind === 'project') return `from the project ${source.name ?? ''}`;
   if (source?.kind === 'run') return `from the run ${source.name ?? ''}`;
-  return `saved ${new Date(workflow.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  return `saved ${formatDay(workflow.created_at)}`;
 }
 
 const fileName = (name: string) => `${name.replace(/[^\w\- ]+/g, '').trim() || 'workflow'}.workflow.json`;

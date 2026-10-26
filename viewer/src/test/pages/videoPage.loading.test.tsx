@@ -22,6 +22,11 @@ import {
 } from '@/test/videoPageHarness';
 import type { StandardAnnotationData } from '@/types/annotations';
 
+// The page's error message keeps the app's nav, which reads the connection.
+vi.mock('@/contexts/ServerCapabilitiesContext', () => ({
+  useServerCapabilitiesContext: () => ({ capabilities: { version: '1.7.0' }, isLoading: false, error: null, refresh: vi.fn() }),
+}));
+
 afterEach(() => vi.restoreAllMocks());
 
 const fixture = (name: string) => new File([readFileSync(path.join(FIXTURES, name), 'utf8')], name);
@@ -211,5 +216,7 @@ describe('empty and error states', () => {
     renderVideoPage();
     expect(await screen.findByRole('alert')).toHaveTextContent("isn't shared with VideoAnnotator");
     expect(screen.getByText(/Upload the video, or choose one/)).toBeInTheDocument();
+    // Not a dead end (UAT #61).
+    expect(screen.getByRole('link', { name: /Videos/ })).toHaveAttribute('href', '/videos');
   });
 });

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { apiClient } from '@/api/client';
-import { activityTransitions, loadAnnounced, saveAnnounced, type Transition } from '@/lib/activity';
+import { activityTransitions, finishedBeforeLooking, loadAnnounced, saveAnnounced, type Transition } from '@/lib/activity';
 import type { Activity } from '@/types/videos';
 
 export const ACTIVE_POLL_MS = 5_000;
@@ -27,12 +27,13 @@ export function useActivity(enabled = true) {
   const data = query.data;
   useEffect(() => {
     if (!data) return;
+    if (!previous.current) for (const id of finishedBeforeLooking(data)) announced.current.add(id);
     const changes = activityTransitions(previous.current, data, announced.current);
     previous.current = data;
     for (const change of changes) {
       if (change.kind !== 'started') announced.current.add(change.run.id);
     }
-    if (changes.some((c) => c.kind !== 'started')) saveAnnounced(announced.current);
+    saveAnnounced(announced.current);
     if (changes.length) setTransitions(changes);
   }, [data]);
 

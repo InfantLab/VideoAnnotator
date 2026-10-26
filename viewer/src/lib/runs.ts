@@ -1,5 +1,6 @@
 /** Runs as the viewer shows them (spec 029): a batch, or one video's job. */
 import type { ActivityRun, RunSummary } from '@/types/videos';
+import { formatWhen } from '@/lib/when';
 
 export const videosWord = (n: number) => `${n} ${n === 1 ? 'video' : 'videos'}`;
 
@@ -12,7 +13,7 @@ export const finishedCount = (run: Pick<ActivityRun, 'done' | 'failed' | 'cancel
 export function runStatus(run: RunSummary): string {
   if (run.active) return `${run.running > 0 ? 'running' : 'waiting'} ${finishedCount(run)}/${run.total}`;
   if (run.cancelled > 0 && run.done === 0) return 'stopped';
-  const when = run.finished_at ? new Date(run.finished_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '';
+  const when = formatWhen(run.finished_at);
   return run.failed > 0 ? `finished ${when}, ${run.failed} failed` : `finished ${when}`;
 }
 

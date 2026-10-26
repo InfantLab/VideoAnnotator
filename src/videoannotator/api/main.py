@@ -422,7 +422,10 @@ def create_app() -> FastAPI:
 <script>
   var token = {json.dumps(token)};
   var url = {json.dumps(url)};
-  if (token) {{ localStorage.setItem('videoannotator_api_token', token); }}
+  if (token) {{
+    localStorage.setItem('videoannotator_api_token', token);
+    sessionStorage.setItem('videoannotator_just_connected', '1');
+  }}
   if (url) {{ localStorage.setItem('videoannotator_api_url', url); }}
   window.location.replace('/viewer/');
 </script>

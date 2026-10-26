@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/Footer';
@@ -20,7 +21,8 @@ const navItems = [
   { path: '/pipelines', label: 'Pipelines', icon: Layers },
 ];
 
-export const AppLayout = () => {
+/** The nav around a page: the routes' Outlet, or `children` for a page shown outside them. */
+export const AppLayout = ({ children }: { children?: ReactNode }) => {
   const location = useLocation();
   const { error, refresh, capabilities, isLoading } = useServerCapabilitiesContext();
   const { state } = useConnection();
@@ -122,7 +124,7 @@ export const AppLayout = () => {
 
       {/* Page Content */}
       <main className="flex-1">
-        <Outlet />
+        {children ?? <Outlet />}
       </main>
 
       <Footer />

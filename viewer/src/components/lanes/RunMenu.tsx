@@ -3,6 +3,7 @@ import { Check, ChevronDown } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { Lane } from '@/lib/lanes';
 import type { RunOption } from '@/lib/videoRuns';
+import { formatWhen } from '@/lib/when';
 
 /** What a lane's run menu can do (spec 028 US5); absent for local files. */
 export interface RunControls {
@@ -13,7 +14,7 @@ export interface RunControls {
   removeCompare: (pipeline: string, jobId: string) => void;
 }
 
-const when = (o: RunOption) => (o.date ? new Date(o.date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
+const when = (o: RunOption) => formatWhen(o.date);
 
 /** The run a lane shows, another run, or a comparison below it (spec 028 FR-016). */
 export function RunMenu({ lane, controls }: { lane: Lane; controls: RunControls }) {

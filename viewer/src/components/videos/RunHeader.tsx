@@ -14,6 +14,7 @@ import { runState } from '@/lib/runTarget';
 import { userMessage } from '@/lib/userMessage';
 import { hrefOf } from '@/lib/videosScope';
 import type { ExportChoices, RunSummary } from '@/types/videos';
+import { formatWhen } from '@/lib/when';
 
 const MethodsDialog = lazy(() => import('@/components/MethodsDialog'));
 
@@ -111,7 +112,7 @@ export function RunHeader({ run, firstVideoPath, exportChoices, children }: RunH
                 {' '}in <Link to={hrefOf({ project: run.project.id })} className="text-foreground hover:underline">{run.project.name}</Link>
               </>
             )}
-            {run.started_at && <> · started {new Date(run.started_at).toLocaleString()}</>}
+            {run.started_at && <> · started {formatWhen(run.started_at)}</>}
             {' · '}
             <span data-testid="run-state">{runStatus(run)}</span>
           </p>

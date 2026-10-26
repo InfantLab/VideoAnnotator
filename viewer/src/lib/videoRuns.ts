@@ -5,6 +5,7 @@
  */
 import type { FailedPipeline, RunRef } from '@/lib/lanes';
 import type { VideoRun } from '@/types/video';
+import { formatDay } from '@/lib/when';
 
 /** pipeline name → job id */
 export type RunSelection = Record<string, string>;
@@ -49,13 +50,12 @@ export function failedPipelines(runs: VideoRun[], selection: RunSelection): Fail
   return failed;
 }
 
-const DAY = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
 
 /** "Peekaboo study (2026-10-12)", else "run 12 Oct". */
 export function runRef(run: VideoRun): RunRef {
   const when = run.completed_at ?? run.created_at;
   const date = when ? new Date(when) : null;
-  const label = run.run_name ?? (date && !Number.isNaN(date.getTime()) ? `run ${DAY.format(date)}` : `run ${run.job_id.slice(0, 8)}`);
+  const label = run.run_name ?? (date && !Number.isNaN(date.getTime()) ? `run ${formatDay(date)}` : `run ${run.job_id.slice(0, 8)}`);
   return { id: run.job_id, label, date: when ?? null };
 }
 

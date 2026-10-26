@@ -18,6 +18,7 @@ import { userMessage } from '@/lib/userMessage';
 import { hrefOf } from '@/lib/videosScope';
 import type { FolderRef } from '@/types/ingest';
 import type { VideoRun } from '@/types/video';
+import { formatWhen } from '@/lib/when';
 
 const WORDS: Record<string, { word: string; className: string }> = {
   completed: { word: 'done', className: 'border-emerald-300 text-emerald-700 dark:text-emerald-400' },
@@ -40,7 +41,7 @@ export function RunStatus({ status }: { status: string }) {
 const ordinal = (n: number) => `${n}${n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th'}`;
 
 const runLabel = (run: VideoRun) =>
-  run.run_name || run.batch_name || (run.created_at ? new Date(run.created_at).toLocaleString() : run.job_id);
+  run.run_name || run.batch_name || (run.created_at ? `run ${formatWhen(run.created_at)}` : run.job_id);
 
 function settingsLines(config: Record<string, unknown> | undefined, titleOf: (id: string) => string): string[] {
   const lines: string[] = [];
@@ -114,8 +115,8 @@ function RunCard({ run, runs, videoName }: { run: VideoRun; runs: VideoRun[]; vi
         <RunStatus status={run.status} />
       </div>
       <p className="text-muted-foreground">
-        {run.created_at && <>Started {new Date(run.created_at).toLocaleString()}</>}
-        {run.completed_at && <> · finished {new Date(run.completed_at).toLocaleString()}</>}
+        {run.created_at && <>Started {formatWhen(run.created_at)}</>}
+        {run.completed_at && <> · finished {formatWhen(run.completed_at)}</>}
         {run.batch_id && (
           <>
             {' '}· part of{' '}

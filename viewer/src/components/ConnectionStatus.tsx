@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { CheckCircle2, KeyRound, Loader2, Settings, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -7,6 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useConnection, type ConnectionState } from '@/hooks/useConnection';
 import { describeApiUrl } from '@/lib/apiConnection';
+import { notify } from '@/lib/notify';
+
+/** Set by the server's one-click connect link (/viewer-connect). */
+const JUST_CONNECTED_KEY = 'videoannotator_just_connected';
 
 const LABEL: Record<ConnectionState, string> = {
   checking: 'Checking…',
@@ -27,6 +32,19 @@ function StateIcon({ state }: { state: ConnectionState }) {
 export function ConnectionStatus() {
   const { state, user, version } = useConnection();
   const server = describeApiUrl(getApiBaseUrl());
+
+  // The connect link says whether it worked, once the server has accepted the key (UAT #40).
+  useEffect(() => {
+    if (state !== 'connected' && state !== 'key-refused') return;
+    try {
+      if (sessionStorage.getItem(JUST_CONNECTED_KEY) !== '1') return;
+      sessionStorage.removeItem(JUST_CONNECTED_KEY);
+    } catch {
+      return;
+    }
+    if (state === 'connected') notify({ title: user ? `Connected as ${user.name}` : 'Connected' });
+    else notify({ title: "The server didn't accept the key in that link", body: 'Ask whoever runs the server for a new one.', tone: 'error' });
+  }, [state, user]);
 
   return (
     <Popover>

@@ -30,9 +30,9 @@ import { withDefaults } from '@/lib/pipelineDefaults';
 import { runStatus } from '@/lib/runs';
 import { hrefOf } from '@/lib/videosScope';
 import type { RunSettings, RunSummary, VideoItem, VideosResponse } from '@/types/videos';
+import { formatDay } from '@/lib/when';
 
-const day = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : null;
+const day = (iso: string | null | undefined) => formatDay(iso) || null;
 
 /** "from the run First faces, 12 Oct" / "edited 14 Oct" / "from the workflow Faces 40". */
 function settingsOrigin(settings: RunSettings): string {

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { apiErrorEnvelope } from '@/api/handleError';
+import { AppLayout } from '@/components/AppLayout';
 import { VideoView } from '@/components/video/VideoView';
 import { useNotes } from '@/hooks/useNotes';
 import { useRunFiles } from '@/hooks/useRunFiles';
@@ -136,15 +137,19 @@ function VideoPageFor() {
   );
 }
 
+/** A message, not a dead end: one that says something keeps the nav (UAT #61). */
 function PageMessage({ title, body, hint }: { title: string; body?: string; hint?: string }) {
-  return (
+  const message = (
     <div className="mx-auto max-w-lg p-8" role={body ? 'alert' : undefined}>
       <h1 className="text-lg font-semibold">{title}</h1>
       {body && <p className="mt-2 text-sm">{body}</p>}
       {hint && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
-      <Link to="/" className="mt-4 inline-block text-sm underline">
-        Home
-      </Link>
+      {body && (
+        <Link to="/videos" className="mt-4 inline-block text-sm underline">
+          All videos
+        </Link>
+      )}
     </div>
   );
+  return body ? <AppLayout>{message}</AppLayout> : message;
 }

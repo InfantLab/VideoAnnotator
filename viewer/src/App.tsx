@@ -79,10 +79,9 @@ const App = () => (
                     <Route path="/compare" element={page(<Compare />)} />
                     <Route path="/ask" element={page(<AskAI />)} />
                     <Route path="/settings" element={page(<Settings />)} />
+                    {/* Last: an unknown address keeps the nav (UAT #61). */}
+                    <Route path="*" element={page(<NotFound />)} />
                   </Route>
-
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={page(<NotFound />)} />
                 </Routes>
               </BrowserRouter>
             </TooltipProvider>

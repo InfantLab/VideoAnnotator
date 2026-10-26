@@ -126,7 +126,12 @@ export default function Videos() {
 
         {error && !data && !isNeedsKey(error) && (
           <p className="text-sm text-destructive" role="alert">
-            {userMessage(error)}
+            {userMessage(error)}{' '}
+            {query.run && (
+              <Link to="/videos" className="text-foreground underline">
+                All videos
+              </Link>
+            )}
           </p>
         )}
 

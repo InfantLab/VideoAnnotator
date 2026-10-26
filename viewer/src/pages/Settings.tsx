@@ -32,6 +32,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 import { useTokenStatus } from '@/hooks/useTokenStatus';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useConnection } from '@/hooks/useConnection';
+import { getApiBaseUrl } from '@/api/client';
+import { describeApiUrl } from '@/lib/apiConnection';
 import {
   usePipelineCatalog,
   useRefreshPipelineCatalog,
@@ -56,15 +59,17 @@ const featureLabels: Record<string, string> = {
 };
 
 const CreateSettings = () => {
-  const [serverUrl, setServerUrl] = useState(() => localStorage.getItem(URL_KEY) || '');
+  // The address the viewer actually calls, also when it's kept relative (UAT #16).
+  const [serverUrl, setServerUrl] = useState(() => describeApiUrl(getApiBaseUrl()));
   const [isRefreshingCatalog, setIsRefreshingCatalog] = useState(false);
   const [isClearingCache, setIsClearingCache] = useState(false);
 
   const tokenStatus = useTokenStatus();
-  const { currentUser, isAdmin, isLoading: currentUserLoading } = useCurrentUser();
+  const connection = useConnection();
+  const { isAdmin } = useCurrentUser();
   const { data: serverInfoData, isLoading: serverInfoLoading, error: serverInfoError } = useVideoAnnotatorServerInfo();
-  // Don't fetch catalog on settings page - not needed, only manual refresh button
-  const { data: catalogData, isLoading: catalogLoading, error: catalogError } = usePipelineCatalog({ enabled: false });
+  // Fetched on load: without it the page said "0 pipelines" and "unknown" (UAT #16).
+  const { data: catalogData, isLoading: catalogLoading, error: catalogError } = usePipelineCatalog();
   const refreshCatalog = useRefreshPipelineCatalog();
   const clearPipelineCache = useClearPipelineCatalogCache();
 
@@ -73,7 +78,7 @@ const CreateSettings = () => {
       if (!event.key || (event.key !== URL_KEY && event.key !== TOKEN_KEY)) {
         return;
       }
-      setServerUrl(localStorage.getItem(URL_KEY) || '');
+      setServerUrl(describeApiUrl(getApiBaseUrl()));
     };
 
     window.addEventListener('storage', handleStorage);
@@ -130,7 +135,7 @@ const CreateSettings = () => {
     try {
       await refreshCatalog({ forceServerRefresh: true });
       tokenStatus.refresh();
-      setServerUrl(localStorage.getItem(URL_KEY) || '');
+      setServerUrl(describeApiUrl(getApiBaseUrl()));
     } finally {
       setIsRefreshingCatalog(false);
     }
@@ -146,14 +151,6 @@ const CreateSettings = () => {
     }
   };
 
-  const tokenBadgeVariant = tokenStatus.isValid ? 'secondary' : tokenStatus.error ? 'destructive' : 'outline';
-  const tokenStatusLabel = tokenStatus.isLoading
-    ? 'Checking…'
-    : tokenStatus.isValid
-      ? 'Token Valid'
-      : tokenStatus.error
-        ? 'Token Error'
-        : 'Not Validated';
 
   return (
     <div className="container mx-auto px-6 py-8 max-w-5xl space-y-6">
@@ -243,28 +240,20 @@ const CreateSettings = () => {
                   )}
                 </div>
                 <div>
-                  <p className="font-medium text-sm">Token Status</p>
-                  <div className="mt-1 flex items-center gap-2">
-                    <Badge variant={tokenBadgeVariant}>{tokenStatusLabel}</Badge>
-                    {tokenStatus.user && !tokenStatus.isLoading && (
-                      <span className="text-xs text-muted-foreground">{tokenStatus.user}</span>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Admin Access</p>
-                  {currentUserLoading ? (
-                    <Skeleton className="mt-1 h-4 w-20" />
-                  ) : (
-                    <div className="mt-1 flex items-center gap-2">
-                      <Badge variant={isAdmin === true ? 'secondary' : 'outline'}>
-                        {isAdmin === true ? 'Admin' : isAdmin === false ? 'Not admin' : 'Unknown'}
-                      </Badge>
-                      {currentUser?.username && (
-                        <span className="text-xs text-muted-foreground">{currentUser.username}</span>
-                      )}
-                    </div>
-                  )}
+                  <p className="font-medium text-sm">Your key</p>
+                  <p className="mt-1 text-sm text-muted-foreground" data-testid="key-state">
+                    {
+                      {
+                        checking: 'Checking…',
+                        'no-server': "Can't reach the server",
+                        'needs-key': 'None yet: the server needs one',
+                        'key-refused': 'Not accepted by the server',
+                        connected: connection.user
+                          ? `Accepted: ${connection.user.name}${connection.user.isAdmin ? ', an administrator' : ', not an administrator'}`
+                          : 'Not needed on this server',
+                      }[connection.state]
+                    }
+                  </p>
                 </div>
                 <div>
                   <p className="font-medium text-sm">Server Version</p>
@@ -272,7 +261,7 @@ const CreateSettings = () => {
                     <Skeleton className="mt-1 h-4 w-24" />
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      {serverDetails?.version || 'Unknown'}
+                      {serverDetails?.version || connection.version || 'Unknown'}
                     </p>
                   )}
                 </div>

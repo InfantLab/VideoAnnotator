@@ -25,10 +25,10 @@ import { rememberRunSetup, weightsNotesFor } from '@/lib/runSetup';
 import { userMessage } from '@/lib/userMessage';
 import { hrefOf } from '@/lib/videosScope';
 import type { RunSettings } from '@/types/videos';
+import { formatDay } from '@/lib/when';
 
 const fileName = (path: string) => path.split(/[\\/]/).pop() ?? path;
-const day = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : null;
+const day = (iso: string | null | undefined) => formatDay(iso) || null;
 
 interface Settings {
   key: string;

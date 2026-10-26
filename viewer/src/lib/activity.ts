@@ -39,6 +39,17 @@ function ended(run: ActivityRun): TransitionKind {
 }
 
 /**
+ * Runs that finished over an hour before the viewer first looked: not news, so
+ * not a message (UAT #40; a fresh browser otherwise announced every recent run).
+ * Their runs still list them.
+ */
+export function finishedBeforeLooking(first: Activity, now: number = Date.now()): string[] {
+  return first.recent
+    .filter((run) => run.finished_at && now - new Date(run.finished_at).getTime() > 60 * 60 * 1000)
+    .map((run) => run.id);
+}
+
+/**
  * `previous` is null on the first poll: then only finished runs not yet
  * announced are reported (so a reload doesn't repeat them, and a run that
  * finished while the tab was closed still is).

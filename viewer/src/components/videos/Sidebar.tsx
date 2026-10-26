@@ -19,7 +19,8 @@ function Entry({
   current: VideosQuery;
   icon: ReactNode;
   label: string;
-  count: number;
+  /** Unknown until the list has loaded: then nothing, never a 0 that isn't true. */
+  count?: number;
   title?: string;
 }) {
   const active = sameScope(to, current);
@@ -69,13 +70,13 @@ export function Sidebar({
   );
   return (
     <nav aria-label="Videos by place" className="space-y-0.5">
-      <Entry to={{}} current={current} icon={<Layers className="h-4 w-4" />} label="All videos" count={counts?.all ?? 0} />
+      <Entry to={{}} current={current} icon={<Layers className="h-4 w-4" />} label="All videos" count={counts?.all} />
       <Entry
         to={{ notInProject: true }}
         current={current}
         icon={<VideoOff className="h-4 w-4" />}
         label="Not in a project"
-        count={counts?.not_in_project ?? 0}
+        count={counts?.not_in_project}
       />
 
       <Heading
@@ -90,7 +91,7 @@ export function Sidebar({
       >
         Projects
       </Heading>
-      {projects.length === 0 && <p className="px-2 py-1 text-xs text-muted-foreground">None yet.</p>}
+      {counts && projects.length === 0 && <p className="px-2 py-1 text-xs text-muted-foreground">None yet.</p>}
       {projects.map((project) => (
         <Entry
           key={project.id}
@@ -103,7 +104,7 @@ export function Sidebar({
       ))}
 
       <Heading>Folders</Heading>
-      {(counts?.folders ?? []).length === 0 && (
+      {counts && counts.folders.length === 0 && (
         <p className="px-2 py-1 text-xs text-muted-foreground">No shared folders with videos yet.</p>
       )}
       {(counts?.folders ?? []).map((folder) => (

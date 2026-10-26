@@ -76,10 +76,10 @@ export function ConfigValidationPanel({
     // Show success message for valid config with no warnings
     if (valid && errors.length === 0 && warnings.length === 0) {
         return (
-            <Alert className={`border-green-200 bg-green-50 ${className}`}>
+            <Alert className={`border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/40 ${className}`}>
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <AlertTitle className="text-green-900">Configuration Valid</AlertTitle>
-                <AlertDescription className="text-green-700">
+                <AlertTitle className="text-green-900 dark:text-green-200">Configuration Valid</AlertTitle>
+                <AlertDescription className="text-green-700 dark:text-green-300">
                     Your configuration is valid and ready to use.
                 </AlertDescription>
             </Alert>
@@ -123,10 +123,10 @@ export function ConfigValidationPanel({
             )}
 
             {warnings.length > 0 && errors.length === 0 && (
-                <Alert className="border-yellow-200 bg-yellow-50">
+                <Alert className="border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/40">
                     <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                    <AlertTitle className="text-yellow-900">Configuration Warnings</AlertTitle>
-                    <AlertDescription className="text-yellow-700">
+                    <AlertTitle className="text-yellow-900 dark:text-yellow-200">Configuration Warnings</AlertTitle>
+                    <AlertDescription className="text-yellow-700 dark:text-yellow-300">
                         {warnings.length} warning{warnings.length !== 1 ? 's' : ''} found. You can proceed, but review these suggestions.
                     </AlertDescription>
                 </Alert>
@@ -161,7 +161,7 @@ export function ConfigValidationPanel({
                                             </Badge>
                                         )}
                                         {hasWarnings && (
-                                            <Badge variant="outline" className="text-xs border-yellow-400 text-yellow-700">
+                                            <Badge variant="outline" className="text-xs border-yellow-400 text-yellow-700 dark:text-yellow-300">
                                                 {issues.filter(i => i.severity === 'warning').length} warning{issues.filter(i => i.severity === 'warning').length !== 1 ? 's' : ''}
                                             </Badge>
                                         )}
@@ -174,8 +174,8 @@ export function ConfigValidationPanel({
                                     <div
                                         key={`${field}-${index}`}
                                         className={`p-3 rounded-md ${issue.severity === 'error'
-                                            ? 'bg-red-50 border border-red-200'
-                                            : 'bg-yellow-50 border border-yellow-200'
+                                            ? 'bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800'
+                                            : 'bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800'
                                             }`}
                                     >
                                         <div className="flex items-start gap-2">
@@ -193,20 +193,20 @@ export function ConfigValidationPanel({
                                                     </p>
                                                 )}
 
-                                                <p className={`text-sm font-medium ${issue.severity === 'error' ? 'text-red-900' : 'text-yellow-900'
+                                                <p className={`text-sm font-medium ${issue.severity === 'error' ? 'text-red-900 dark:text-red-200' : 'text-yellow-900 dark:text-yellow-200'
                                                     }`}>
                                                     {issue.message}
                                                 </p>
 
                                                 {issue.hint && (
-                                                    <p className={`text-sm ${issue.severity === 'error' ? 'text-red-700' : 'text-yellow-700'
+                                                    <p className={`text-sm ${issue.severity === 'error' ? 'text-red-700 dark:text-red-300' : 'text-yellow-700 dark:text-yellow-300'
                                                         }`}>
                                                         <span className="font-medium">Hint:</span> {issue.hint}
                                                     </p>
                                                 )}
 
                                                 {issue.suggested_value !== undefined && (
-                                                    <p className={`text-sm ${issue.severity === 'error' ? 'text-red-700' : 'text-yellow-700'
+                                                    <p className={`text-sm ${issue.severity === 'error' ? 'text-red-700 dark:text-red-300' : 'text-yellow-700 dark:text-yellow-300'
                                                         }`}>
                                                         <span className="font-medium">Suggested:</span>{' '}
                                                         <code className="px-1 py-0.5 rounded bg-black/10">

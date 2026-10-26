@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useActivity } from '@/hooks/useActivity';
-import { activityTransitions, progressLine } from '@/lib/activity';
+import { activityTransitions, finishedBeforeLooking, progressLine } from '@/lib/activity';
 import { activityRun, mockVideosApi } from '@/test/fixtures/videos';
 
 const running = activityRun({ id: 'b2' });
@@ -30,6 +30,12 @@ describe('activityTransitions', () => {
     expect(activityTransitions(null, next, new Set(['b2']))).toHaveLength(0);
   });
 
+  it('treats runs that finished over an hour before the first look as seen (UAT #40)', () => {
+    const now = new Date('2026-10-20T12:00:00Z').getTime();
+    const first = { active: [], recent: [finished(), finished({ id: 'b3', finished_at: '2026-10-20T11:30:00Z' })] };
+    expect(finishedBeforeLooking(first, now)).toEqual(['b2']);
+  });
+
   it('sums progress', () => {
     expect(progressLine([running, activityRun({ id: 'b3', total: 2, done: 1, running: 1, waiting: 0 })])).toBe('2 runs · 32/50');
   });
@@ -39,7 +45,7 @@ describe('useActivity', () => {
   beforeEach(() => vi.mocked(localStorage.setItem).mockClear());
 
   it('polls and exposes the transitions', async () => {
-    const api = mockVideosApi({ activity: { active: [], recent: [finished()] } });
+    const api = mockVideosApi({ activity: { active: [], recent: [finished({ finished_at: new Date(Date.now() - 60_000).toISOString() })] } });
     const client = new QueryClient();
     const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 
@@ -49,5 +55,17 @@ describe('useActivity', () => {
     expect(result.current.transitions[0].kind).toBe('finished');
     expect(api.getActivity).toHaveBeenCalled();
     expect(localStorage.setItem).toHaveBeenCalledWith('videoannotator_announced_runs', '["b2"]');
+  });
+
+  it('keeps quiet about runs that finished long before it first looked, and remembers them (UAT #40)', async () => {
+    const api = mockVideosApi({ activity: { active: [], recent: [finished()] } });
+    const client = new QueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+
+    const { result } = renderHook(() => useActivity(), { wrapper });
+
+    await waitFor(() => expect(localStorage.setItem).toHaveBeenCalledWith('videoannotator_announced_runs', '["b2"]'));
+    expect(api.getActivity).toHaveBeenCalled();
+    expect(result.current.transitions).toHaveLength(0);
   });
 });
