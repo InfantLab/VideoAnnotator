@@ -644,6 +644,19 @@ post-create step reinstalls everything, which takes the same 5–10 minutes as t
 See [troubleshooting](troubleshooting.md#the-dev-container-is-slow-freezes-or-runs-out-of-memory) to
 back up or wipe the volumes.
 
+**Switching branches, and the viewer**
+
+The server serves the viewer from a built copy committed with the code
+(`src/videoannotator/viewer_static/`), so each branch brings its own viewer: after switching,
+restart the server and reload the page (Ctrl+Shift+R). The viewer's version is in the page footer. If
+it hasn't changed, check `git branch --show-current`: `git checkout` refuses to switch when a file
+it would change has local edits. `uv sync` rewrites `uv.lock` when the version changes, so run
+`git restore uv.lock` and switch again.
+
+To change the viewer itself, edit `viewer/` and either run `bash scripts/dev.sh` (server and
+viewer with hot reload at `http://127.0.0.1:19011`) or rebuild the served copy with
+`bash scripts/build_viewer.sh` and commit it. CI fails if the committed copy is out of date.
+
 ## Troubleshooting
 
 ### uv Installation Issues
