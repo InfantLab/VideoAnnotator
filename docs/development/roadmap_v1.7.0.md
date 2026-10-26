@@ -19,7 +19,8 @@ systematic answers without help.
 (spec 023); specs 027–029 built 2026-10-19 to 2026-10-21, each with a walk-through or check by a
 person still to do (see Phase 1); movement metrics not yet specified. Phase 2 (connectors) built
 2026-10-24 (spec 033), checked against fake servers built from the servers' docs; walk-through with
-real servers still to do (`specs/033-model-connectors/checks.md`). Phase 7: the audit's chores done bar the coverage gate;
+real servers still to do (`specs/033-model-connectors/checks.md`). UAT and refinement of the
+built viewer started 2026-10-26 ([`uat_v1.7.0.md`](uat_v1.7.0.md)). Phase 7: the audit's chores done bar the coverage gate;
 the rest is spec 032 (specified 2026-10-19, not yet planned).
 **Prerequisites**: v1.6.0 tagged. Done 2026-10-18.
 
@@ -65,6 +66,9 @@ tools, decisions, journeys). Built by, in order:
       per-person measures computed on the server, such as average frame-to-frame deltas of pose
       keypoints, added to the output additively and shown as numeric lanes on the Video page.
       Replaces the person-box-area lane as the movement view.
+- [ ] **UAT and refinement** (from 2026-10-26): Caspar uses the built viewer end to end; what
+      he finds is fixed as refinement on `1.7-dev`, not as new specs. Includes the walk-throughs
+      still open (027 T068, 028 T062, 033 T055). Log: [`uat_v1.7.0.md`](uat_v1.7.0.md).
 - Researchers try the design through pilot feedback after release, not before (spec 023,
   clarified 2026-10-19).
 
@@ -236,6 +240,6 @@ seam, API fuzzing, mutation reports, and the coverage gate.
 
 ---
 
-**Last Updated**: 2026-10-22
+**Last Updated**: 2026-10-26
 **Target Release**: when the pilot's fixes are in
 **Status**: In development — Public Release
