@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
 import type { ExportScope } from '@/api/client';
-import { APIError } from '@/api/handleError';
+import { APIError, isNeedsKey } from '@/api/handleError';
 import { NeedsServer } from '@/components/NeedsServer';
 import { PageHelp } from '@/components/PageHelp';
 import { Button } from '@/components/ui/button';
@@ -124,7 +124,7 @@ export default function Videos() {
           the results each has. Pick some, then <strong>Run…</strong> or <strong>Export</strong>.
         </PageHelp>
 
-        {error && !data && (
+        {error && !data && !isNeedsKey(error) && (
           <p className="text-sm text-destructive" role="alert">
             {userMessage(error)}
           </p>

@@ -1,19 +1,22 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Check, Circle, FolderOpen, Layers, Play, Server, Sparkles } from 'lucide-react';
+import { Check, Circle, FolderOpen, KeyRound, Layers, Play, Server, Sparkles } from 'lucide-react';
 
 import { apiClient } from '@/api/client';
 import { PageHelp } from '@/components/PageHelp';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useServerCapabilitiesContext } from '@/contexts/ServerCapabilitiesContext';
+import { useConnection } from '@/hooks/useConnection';
 import { pipelineCatalogQueryOptions } from '@/hooks/usePipelineCatalog';
 import { DEMOS } from '@/lib/demos';
 import type { PipelineDescriptor } from '@/types/pipelines';
 import { APP_NAME, GITHUB_URL, VERSION } from '@/utils/version';
 
 const SETUP_HIDDEN_KEY = 'vav.home.setupHidden';
+
+// "1.7.0-dev.0" (viewer) and "1.7.0.dev0" (server) are the same version (UAT #13).
+const sameVersion = (a: string, b: string) => a.replace(/[^a-z0-9]/gi, '') === b.replace(/[^a-z0-9]/gi, '');
 
 // Older servers send no readiness; then `available` is all there is.
 const isReady = (p: PipelineDescriptor) => (p.readiness ? p.readiness.state === 'ready' : p.available !== false);
@@ -27,9 +30,9 @@ const Step = ({ done, children }: { done: boolean; children: ReactNode }) => (
 
 function StartPoint({ icon, title, about, onClick, disabled }: { icon: ReactNode; title: string; about: string; onClick: () => void; disabled?: boolean }) {
   return (
-    <Button size="lg" variant="outline" className="h-auto justify-start gap-3 py-5" onClick={onClick} disabled={disabled}>
+    <Button size="lg" variant="outline" className="h-auto min-w-0 justify-start gap-3 whitespace-normal py-5" onClick={onClick} disabled={disabled}>
       {icon}
-      <span className="text-left">
+      <span className="min-w-0 text-left">
         <span className="block font-semibold">{title}</span>
         <span className="block text-xs font-normal text-muted-foreground">{about}</span>
       </span>
@@ -40,8 +43,9 @@ function StartPoint({ icon, title, about, onClick, disabled }: { icon: ReactNode
 /** Where to start (spec 029 US7): three start points, the demos, and what's left to set up. */
 export default function Home() {
   const navigate = useNavigate();
-  const { capabilities, isLoading: connecting } = useServerCapabilitiesContext();
-  const connected = !!capabilities;
+  const connection = useConnection();
+  const connected = connection.state === 'connected';
+  const serverVersion = connection.version;
   const catalog = useQuery({ ...pipelineCatalogQueryOptions(), enabled: connected });
   const known = useQuery({
     queryKey: ['videos', 'home'],
@@ -86,9 +90,23 @@ export default function Home() {
 
       <Card className="flex flex-wrap items-center gap-x-6 gap-y-2 p-3 text-sm">
         <Link to="/settings" className="flex items-center gap-2 hover:underline">
-          <Server className={`h-4 w-4 ${connected ? 'text-green-600' : 'text-muted-foreground'}`} />
-          {connecting ? 'Connecting to the server…' : connected ? 'Server connected' : 'No server connected'}
-          {capabilities?.version && <span className="font-mono text-muted-foreground">v{capabilities.version}</span>}
+          {connection.state === 'needs-key' || connection.state === 'key-refused' ? (
+            <KeyRound className="h-4 w-4 text-amber-500" />
+          ) : (
+            <Server className={`h-4 w-4 ${connected ? 'text-green-600' : 'text-muted-foreground'}`} />
+          )}
+          {
+            {
+              checking: 'Connecting to the server…',
+              connected: connection.user ? `Connected as ${connection.user.name}` : 'Server connected',
+              'needs-key': 'The server needs your key',
+              'key-refused': "The server didn't accept your key",
+              'no-server': 'No server connected',
+            }[connection.state]
+          }
+          {serverVersion && !sameVersion(serverVersion, VERSION) && (
+            <span className="font-mono text-muted-foreground">server v{serverVersion}</span>
+          )}
         </Link>
         {connected && catalog.data && (
           <span className="flex items-center gap-2">
@@ -106,9 +124,9 @@ export default function Home() {
             {videos} {videos === 1 ? 'video' : 'videos'} on the server
           </Link>
         )}
-        {!connected && !connecting && (
+        {!connected && connection.state !== 'checking' && (
           <Button size="sm" variant="outline" asChild className="ml-auto">
-            <Link to="/settings">Connect to a server</Link>
+            <Link to="/settings">{connection.state === 'no-server' ? 'Connect to a server' : 'Connect with your key'}</Link>
           </Button>
         )}
       </Card>
@@ -129,7 +147,7 @@ export default function Home() {
           </div>
           <ol className="space-y-1.5">
             <Step done={steps.connected}>
-              Connect to a VideoAnnotator server (<Link className="underline" to="/settings">Settings</Link>)
+              Connect to a VideoAnnotator server with your key (<Link className="underline" to="/settings">Settings</Link>)
             </Step>
             <Step done={steps.pipelines}>
               Install at least one pipeline (on the <Link className="underline" to="/pipelines">Pipelines</Link> page)

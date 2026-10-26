@@ -50,6 +50,8 @@ export interface ServerCapabilities {
   supportsConfigValidation: boolean;
   supportsEnhancedHealth: boolean;
   supportsEnhancedErrors: boolean;
+  /** Whether the server needs a key; undefined from servers that don't say. */
+  authRequired?: boolean;
   detectedAt: Date;
 }
 
@@ -188,6 +190,7 @@ export interface EnhancedHealthResponse {
   worker_info?: WorkerInfo;
   diagnostics?: SystemDiagnostics;
   message?: string;
+  security?: { auth_required?: boolean };
 }
 
 /**
@@ -198,6 +201,7 @@ export interface LegacyHealthResponse {
   api_version?: string;
   videoannotator_version?: string;
   message?: string;
+  security?: { auth_required?: boolean };
 }
 
 /**

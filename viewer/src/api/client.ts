@@ -163,7 +163,7 @@ const mapReadiness = (value: unknown): PipelineReadiness | undefined => {
   };
 };
 
-const getApiBaseUrl = () => {
+export const getApiBaseUrl = (): string => {
   const saved = localStorage.getItem(API_URL_STORAGE_KEY);
   return saved === null ? defaultApiUrl() : normalizeApiUrl(saved);
 };

@@ -6,7 +6,14 @@
  * Custom error class for API-specific errors.
  * This allows distinguishing between network errors, HTTP errors, and other exceptions.
  */
+/** Shown for every 401, whatever the server said (UAT #39: never "set AUTH_REQUIRED=false"). */
+export const NEEDS_KEY_MESSAGE =
+    'This server needs your key. Open the link you were given, or paste the key in Settings.';
+
 export class APIError extends Error {
+    /** What the server said, kept for technical details when `message` is replaced. */
+    public serverMessage: string;
+
     /**
      * @param message - The error message.
      * @param status - The HTTP status code of the response (0 for network errors).
@@ -21,8 +28,9 @@ export class APIError extends Error {
         public response?: Response,
         public body?: unknown
     ) {
-        super(message);
+        super(status === 401 ? NEEDS_KEY_MESSAGE : message);
         this.name = 'APIError';
+        this.serverMessage = message;
     }
 }
 
@@ -32,6 +40,8 @@ export interface APIErrorEnvelope {
     hint?: string;
     details?: Record<string, unknown>;
 }
+
+export const isNeedsKey = (error: unknown): boolean => error instanceof APIError && error.status === 401;
 
 export const apiErrorEnvelope = (error: unknown): APIErrorEnvelope => {
     if (!(error instanceof APIError) || !error.body || typeof error.body !== 'object') return {};

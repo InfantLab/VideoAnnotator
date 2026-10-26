@@ -8,7 +8,7 @@ import { CheckCircle2, Circle, Loader2, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { apiClient, hasConfiguredApiToken } from '@/api/client';
-import { APIError, apiErrorEnvelope } from '@/api/handleError';
+import { APIError, apiErrorEnvelope, isNeedsKey, NEEDS_KEY_MESSAGE } from '@/api/handleError';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -247,7 +247,10 @@ export const HuggingFaceTokenCard = ({ isAdmin }: { isAdmin: boolean | 'unknown'
 
   const s = status.data;
   const describe = (): string => {
-    if (!s) return status.isError ? "Couldn't ask the server." : 'Checking…';
+    if (!s) {
+      if (isNeedsKey(status.error)) return NEEDS_KEY_MESSAGE;
+      return status.isError ? "Couldn't ask the server." : 'Checking…';
+    }
     if (!s.set) return 'Not set. Speaker turns needs one to download its models.';
     const where = s.source === 'environment' ? `from ${s.envVar} in the server's environment` : 'saved on this server';
     const account = s.account ? `account ${s.account}, ` : '';

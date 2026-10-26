@@ -5,7 +5,7 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Download, Film, Loader2 } from 'lucide-react';
 import { apiClient } from '@/api/client';
-import { APIError } from '@/api/handleError';
+import { APIError, isNeedsKey } from '@/api/handleError';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -624,7 +624,8 @@ const AskAI = () => {
     );
   }
 
-  const noModels = models.isError || (models.data && models.data.models.length === 0);
+  // Without a key the app's banner says so; the model server is fine (UAT #39).
+  const noModels = (models.isError && !isNeedsKey(models.error)) || (models.data && models.data.models.length === 0);
   const unreachableDetail = models.error ? parseApiError(models.error).hint : undefined;
 
   return (

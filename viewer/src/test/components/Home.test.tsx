@@ -7,7 +7,7 @@ import Home from '@/pages/Home';
 import { CATALOG, EMPTY, mockVideosApi, videosResponse } from '@/test/fixtures/videos';
 import { landed, renderAt } from '@/test/fixtures/renderPage';
 
-const server = vi.hoisted(() => ({ capabilities: { version: '1.7.0' } as { version: string } | null }));
+const server = vi.hoisted(() => ({ capabilities: { version: '1.7.0' } as { version: string; authRequired?: boolean } | null }));
 vi.mock('@/contexts/ServerCapabilitiesContext', () => ({
   useServerCapabilitiesContext: () => ({ capabilities: server.capabilities, isLoading: false }),
 }));
@@ -46,6 +46,16 @@ describe('Home', () => {
     mockVideosApi({ videos: (q) => videosResponse(q) });
     show();
     expect(await screen.findByRole('link', { name: /212 videos on the server/ })).toHaveAttribute('href', '/videos');
+  });
+
+  it("doesn't claim a connection the key hasn't made (UAT #38)", async () => {
+    server.capabilities = { version: '1.7.0', authRequired: true };
+    mockVideosApi();
+    show();
+    expect(screen.getByText('The server needs your key')).toBeInTheDocument();
+    expect(screen.queryByText('Server connected')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Connect with your key' })).toHaveAttribute('href', '/settings');
+    expect(screen.getByRole('button', { name: /Ask AI about a video/ })).toBeDisabled();
   });
 
   it('works without a server: open files and demos', async () => {

@@ -5,6 +5,8 @@ import App from '../App';
 
 // Mock the API client to avoid network requests
 vi.mock('@/api/client', () => ({
+  hasConfiguredApiToken: () => false,
+  getApiBaseUrl: () => '',
   apiClient: {
     getEnhancedHealth: vi.fn().mockResolvedValue({
       status: 'ok',

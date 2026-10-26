@@ -46,6 +46,7 @@ export function detectServerCapabilities(
     supportsConfigValidation: isV13,
     supportsEnhancedHealth: isV13,
     supportsEnhancedErrors: isV13,
+    authRequired: healthResponse.security?.auth_required,
     detectedAt: new Date(),
   };
 }
