@@ -160,9 +160,7 @@ def test_storage_env(tmp_path_factory):
     # Patch the database engine to use the new path
     # We can't easily reload modules because of circular dependencies and Base class issues
     try:
-        from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
-        from sqlalchemy.pool import StaticPool
 
         import videoannotator.database.database as db_module
 
@@ -171,12 +169,7 @@ def test_storage_env(tmp_path_factory):
             db_module.engine.dispose()
 
         # Create new engine
-        new_engine = create_engine(
-            f"sqlite:///{db_path}",
-            connect_args={"check_same_thread": False},
-            poolclass=StaticPool,
-            echo=False,
-        )
+        new_engine = db_module.make_engine(f"sqlite:///{db_path}")
 
         # Update module globals
         db_module.engine = new_engine

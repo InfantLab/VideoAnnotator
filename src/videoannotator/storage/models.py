@@ -190,7 +190,8 @@ def create_database_engine(database_url: str, echo: bool = False):
             database_url,
             echo=echo,
             # Enable JSON support for SQLite 3.38+
-            connect_args={"check_same_thread": False},  # Allow multiple threads
+            # Waits out another connection's write rather than "database is locked".
+            connect_args={"check_same_thread": False, "timeout": 30},
             json_serializer=json_lib.dumps,  # Proper JSON serialization
             json_deserializer=json_lib.loads,  # Proper JSON deserialization
         )
