@@ -6,19 +6,18 @@ land on `1.7-dev` as refinements, not new specs.
 
 ## Where it stands
 
-Batches 0–5 are done (2026-10-26/27, commits from `6773414` to `0b7c474`). Every fixed finding
-in [`uat_v1.7.0.md`](uat_v1.7.0.md) says what was done and in which commit. **Left: batches 6,
-7 and 8**, plus two small leftovers:
+Batches 0–6 and 8 are done (2026-10-26/27, commits from `6773414` to `82b7494`; batch 6 in
+`1fe6a5f`, batch 8 in `82b7494`, spec 010's status updated with it). Every fixed finding in
+[`uat_v1.7.0.md`](uat_v1.7.0.md) says what was done and in which commit. **Left: batch 7**:
 
 | Batch | Open findings | Notes |
 |---|---|---|
-| 6. Settings, Help, open files | 14, 15, 16 (rest), 18, 51 (rest), 60, 62, 63 | Straight to code |
-| 7. New run | 35, 59 (42 and 44 are done) | **ASCII mock-up for Caspar first** |
-| 8. Videos table | 7, 8, 10, 45 | Straight to code; #10 is "a value per cell, not a tick" (P4) |
-| Leftovers | 36 (local/remote icons: `HardDrive`/`Cloud`), Open items in `viewer_design.md` | |
+| 7. New run | 35, 59 (42 and 44 are done) | Mock-up written ([`uat_v1.7.0_mockups.md`](uat_v1.7.0_mockups.md), "Batch 7"), **waiting for Caspar's answers** to its two open questions before building |
+| Leftovers | Open items in `viewer_design.md` | |
 
-Suggested order: 6 and 8, then the batch 7 mock-up, then 7. Spec 010 reconciliation with the
-Videos page goes with batch 8 (roadmap).
+Not done in batch 8, on purpose: filtering the Videos table by column (sorting covers "none
+found" and "failed"); result values are cached in memory only, so the first Videos page after a
+server start reads the files again (about 1.5 s for this dev database).
 
 ## Read first
 

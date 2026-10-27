@@ -243,3 +243,80 @@ layout: question on the left, video on the right, then the timeline, the answers
    reads most like (similar answers, similar colours). Similarity is by shared letter sequences, no
    model needed; embeddings could replace it later.
 2. Where the server can't enforce the format, the tick box shows, disabled, saying so.
+
+## Batch 7: New run
+
+Answers #35 and #59 (#42 and #44 are done) (P2, P4, P6, P8). One page, three short parts; today's
+long Settings section moves behind "All settings".
+
+### Which videos (#59)
+
+Chosen already (from Videos, a project, a run): one line, not a section.
+
+```
+ New run
+ Videos   6 videos in peekaboo: 2UWdXP.joke1.rep2…mp4, 4JDccE.joke3…mp4 +4      [ Change ]
+```
+
+Nothing chosen yet: the tabs a user can use first, in words that say whose computer it is.
+
+```
+ Which videos
+ [ ⤒ Upload from your computer ]  [ 🗀 A project ]  [ ◷ A video you ran before ]  [ 🖴 A folder on the server ]
+```
+
+- "Your computer" is always the researcher's own machine; "the server" is where VideoAnnotator
+  runs (also Home's "Open files from your computer", Help and Videos' empty state) (P8).
+- Opens on the first tab the user can use: a folder on the server for an administrator, upload
+  for everyone else. For a non-administrator the server tab stays, last, saying why it's locked
+  and what to do (P1, P6).
+
+### What to find (#35)
+
+One line per pipeline, grouped by kind's icon instead of headings; model first, task second (D1);
+no group names, ids, counts of "capabilities", or descriptions (they're on hover and on Pipelines).
+
+```
+ What to find                                         Settings from this project's, 26 Oct ▾
+  [✓] 🔊 pyannote community-1      who spoke when
+  [✓] 🗨 Whisper large-v3-turbo    what was said
+  [✓] 😊 DeepFace                  where faces are and their expression
+  [ ] 🙂 OpenFace 3                action units, gaze, head pose
+  [✓] 🧍 YOLO26 pose               where people are and how they move
+  [ ] 🎬 PySceneDetect + CLIP      cuts and settings
+  [✓] ✨ Ask AI                    "what is the expression on the child's face?"  every 5 s
+```
+
+- The source menu (▾): this project's settings · your last run, <name> · a workflow · the defaults.
+  Says where the ticks came from, as now (#44), in one place.
+- Ask AI's line shows its question; it has no defaults to fall back on, so it's always summarised.
+
+### Settings: only what differs (#35)
+
+```
+ Changed from the defaults                                          [ All settings ▸ ]
+   DeepFace     Age on · Gender on                                       (from the project)
+   Whisper      Language: English
+```
+
+- Only settings that differ from a pipeline's defaults, each named once, with where it came from
+  (P6). "No changes: every pipeline runs with its defaults." when there are none.
+- "All settings ▸" opens the full list per ticked pipeline, each setting as one line: name, field,
+  unit and range ("Smallest face [30] px, at least 1"); the description on hover, not repeated
+  under the name; technical settings stay folded inside.
+- Age shown on with nothing saying why (#35) can't happen: it's in this list with its source.
+
+### Start
+
+```
+ Start   6 videos × 5 pipelines · about 25 min      Name [ peekaboo · pyannote, Whisper, +3 ]
+         [ ▶ Start run on 6 videos ]      You can close this tab; results appear on Videos and Runs.
+```
+
+- Size and time on the button's line; above 10 video × pipeline pairs it still asks first (#42).
+
+### Open for Caspar
+
+1. Non-administrators: keep the server-folder tab, locked and last (above), or hide it?
+2. Is "about 25 min" worth showing before the first video finishes (an estimate from benchmarks),
+   or keep today's "estimated once the first video finishes"?
