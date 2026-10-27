@@ -271,40 +271,45 @@ Nothing chosen yet: the tabs a user can use first, in words that say whose compu
   for everyone else. For a non-administrator the server tab stays, last, saying why it's locked
   and what to do (P1, P6).
 
-### What to find (#35)
+### What to find, each with its settings (#35)
 
-One line per pipeline, grouped by kind's icon instead of headings; model first, task second (D1);
-no group names, ids, counts of "capabilities", or descriptions (they're on hover and on Pipelines).
+One row per pipeline, model first, task second (D1), grouped by kind's icon instead of headings;
+no group names, ids or counts of "capabilities". Each pipeline's settings sit under it as an
+accordion, collapsed by default (Caspar, 2026-10-27): little on the page, settings one click from
+the pipeline they belong to.
 
 ```
  What to find                                         Settings from this project's, 26 Oct ▾
-  [✓] 🔊 pyannote community-1      who spoke when
-  [✓] 🗨 Whisper large-v3-turbo    what was said
+  [✓] 🔊 pyannote community-1      who spoke when                         defaults  ▸
+  [✓] 🗨 Whisper large-v3-turbo    what was said                 Language: English  ▸
   [✓] 😊 DeepFace                  where faces are and their expression
+                                                              Age on · Gender on   ▾
+      ┌──────────────────────────────────────────────────────────────────────────┐
+      │ Smallest face        [ 30 ] px      at least 1                           │
+      │ Most faces per frame [ 10 ] faces                                        │
+      │ Expression           [on]                                                │
+      │ Age                  [on]   ● changed, from the project   Reset          │
+      │ Gender               [on]   ● changed, from the project   Reset          │
+      │ ▸ Technical settings (5, all at defaults)                                │
+      └──────────────────────────────────────────────────────────────────────────┘
   [ ] 🙂 OpenFace 3                action units, gaze, head pose
-  [✓] 🧍 YOLO26 pose               where people are and how they move
+  [✓] 🧍 YOLO26 pose               where people are and how they move    defaults  ▸
   [ ] 🎬 PySceneDetect + CLIP      cuts and settings
-  [✓] ✨ Ask AI                    "what is the expression on the child's face?"  every 5 s
+  [✓] ✨ Ask AI                    "what is the expression on the child's face?" · every 5 s  ▸
 ```
 
-- The source menu (▾): this project's settings · your last run, <name> · a workflow · the defaults.
-  Says where the ticks came from, as now (#44), in one place.
-- Ask AI's line shows its question; it has no defaults to fall back on, so it's always summarised.
-
-### Settings: only what differs (#35)
-
-```
- Changed from the defaults                                          [ All settings ▸ ]
-   DeepFace     Age on · Gender on                                       (from the project)
-   Whisper      Language: English
-```
-
-- Only settings that differ from a pipeline's defaults, each named once, with where it came from
-  (P6). "No changes: every pipeline runs with its defaults." when there are none.
-- "All settings ▸" opens the full list per ticked pipeline, each setting as one line: name, field,
-  unit and range ("Smallest face [30] px, at least 1"); the description on hover, not repeated
-  under the name; technical settings stay folded inside.
-- Age shown on with nothing saying why (#35) can't happen: it's in this list with its source.
+- The cue on a collapsed row is the summary: "defaults", or what differs ("Age on · Gender on"),
+  so changed settings are visible without opening anything (P6). Unticked pipelines show no
+  settings cue; ticking one doesn't open it.
+- Open, each setting is one line: name, field, unit and range; the description on hover, not
+  repeated under the name. A changed setting is marked, says where it came from, and has Reset.
+  Technical settings stay folded inside.
+- Age shown on with nothing saying why (#35) can't happen: the collapsed row says "Age on" and
+  the open one says it came from the project.
+- The source menu (▾, top right): this project's settings · your last run, <name> · a workflow ·
+  the defaults. Says where the ticks and settings came from, as now (#44), in one place.
+- Ask AI has no defaults to fall back on, so its row always shows its question and spacing.
+- No separate Settings section and no "All settings" page: today's long section goes.
 
 ### Start
 
