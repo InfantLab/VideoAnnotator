@@ -56,13 +56,17 @@ describe('the Runs tab', () => {
     expect(cards[0]).toHaveTextContent('Face analysis · min_face_size: 40');
     expect(within(cards[0]).getByRole('link', { name: 'Second' })).toHaveAttribute('href', '/runs/b2');
     expect(cards[0]).toHaveTextContent('~/VideoAnnotator/Second');
-    expect(within(cards[0]).getByRole('button', { name: /Download all files/ })).toBeInTheDocument();
-    expect(within(cards[0]).getByRole('button', { name: /Delete run/ })).toBeInTheDocument();
     expect(within(cards[0]).getByRole('button', { name: 'Run again…' })).toBeInTheDocument();
+    // The rest in one menu, not five stacked buttons (UAT #49).
+    await userEvent.click(within(cards[0]).getByRole('button', { name: 'More for this run' }));
+    const menu = await screen.findByRole('menu');
+    for (const item of [/Download all files/, /Run again unchanged/, /Save as workflow/, /Delete/]) {
+      expect(within(menu).getByRole('menuitem', { name: item })).toBeInTheDocument();
+    }
     expect(cards[1]).toHaveTextContent('First');
   });
 
-  it('a run waiting its turn: its place in the queue, and Cancel', async () => {
+  it('a run waiting its turn: its place in the queue, and Stop', async () => {
     const cancel = vi.spyOn(client(), 'cancelJob').mockResolvedValue({ job_id: 'job-3', status: 'cancelled', message: '' });
     api.getVideoRuns.mockResolvedValue(
       demoVideoRuns({ runs: [demoRun('job-3', { status: 'pending', progress: 0, queue_position: 2, pipelines: [], selected_pipelines: ['face_analysis'] }), demoRun()] }),
@@ -71,14 +75,29 @@ describe('the Runs tab', () => {
     const [card] = within(panel).getAllByTestId('run-card');
     expect(card).toHaveTextContent('2nd in line');
     expect(card).toHaveTextContent('waiting');
-    await userEvent.click(within(card).getByRole('button', { name: /Cancel/ }));
+    await userEvent.click(within(card).getByRole('button', { name: /Stop/ }));
     await waitFor(() => expect(cancel).toHaveBeenCalledWith('job-3'));
   });
 
   it('downloads all of a run\'s files', async () => {
     const artifacts = vi.spyOn(client(), 'getJobArtifacts').mockResolvedValue(new Response('zip'));
     const panel = await openRuns();
-    await userEvent.click(within(panel).getByRole('button', { name: /Download all files/ }));
+    await userEvent.click(within(panel).getAllByRole('button', { name: 'More for this run' })[0]);
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Download all files/ }));
     await waitFor(() => expect(artifacts).toHaveBeenCalledWith('job-1'));
+  });
+});
+
+describe('the About tab (UAT #34)', () => {
+  it('heads each entry with the pipeline’s name, not its id, and says once what was not recorded', async () => {
+    renderVideoPage();
+    await lanesLoaded();
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /About/ }));
+    await userEvent.click(screen.getByRole('tab', { name: /About/ }));
+    const panel = await screen.findByTestId('about-panel');
+    const headings = within(panel).getAllByRole('heading', { level: 3 }).map((h) => h.textContent ?? '');
+    expect(headings.some((h) => /speaker_diarization|face_analysis|person_tracking/.test(h))).toBe(false);
+    // Only the speakers entry has a provenance record in the demo; the others say so in a sentence, not "not recorded".
+    expect(panel).not.toHaveTextContent('not recorded');
   });
 });

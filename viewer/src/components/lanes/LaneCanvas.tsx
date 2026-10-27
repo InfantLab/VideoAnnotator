@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 
 import {
   densityBins,
-  formatValue,
   rowHeight,
   showsDensity,
   visibleSlice,
@@ -58,11 +57,6 @@ function drawNumeric(ctx: CanvasRenderingContext2D, row: LaneRow, events: LaneEv
     previous = e;
   }
   ctx.stroke();
-  ctx.fillStyle = 'rgba(128, 128, 128, 0.9)';
-  ctx.font = '9px sans-serif';
-  const unit = row.unit ? ` ${row.unit}` : '';
-  ctx.fillText(`${formatValue(max)}${unit}`, width - 44, top + 9);
-  ctx.fillText(`${formatValue(min)}${unit}`, width - 44, top + height - 2);
 }
 
 const NOTE_COLOUR = 'hsl(38, 92%, 50%)';

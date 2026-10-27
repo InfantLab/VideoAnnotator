@@ -101,10 +101,12 @@ const Compare = () => {
   if (!a || !b) {
     return (
       <div className="container mx-auto p-6 max-w-3xl">
-        <p>
-          Choose two runs to compare on a video's Runs tab (“Compare answers with…”).{' '}
-          <Link className="underline" to="/videos">
-            Videos
+        <p data-testid="compare-empty">
+          Compare puts the answers of two Ask AI runs on the same video side by side. Start it from an Ask AI run:{' '}
+          <strong>Compare answers</strong> on the run&apos;s page, or <strong>Compare answers with…</strong> on the
+          video&apos;s Runs tab.{' '}
+          <Link className="underline" to="/runs">
+            Runs
           </Link>
         </p>
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -121,6 +121,18 @@ export function LaneTimeline({
   const drag = useRef<{ x: number; view: ViewRange; moved: boolean } | null>(null);
   const viewRef = useRef(view);
   viewRef.current = view;
+  // The run most lanes show, named once in the toolbar rather than on every lane (UAT #37).
+  const mainRun = useMemo(() => {
+    const counts = new Map<string, { run: NonNullable<Lane['run']>; n: number }>();
+    for (const lane of lanes) {
+      if (!lane.run || lane.kind === 'notes') continue;
+      const at = counts.get(lane.run.id);
+      if (at) at.n += 1;
+      else counts.set(lane.run.id, { run: lane.run, n: 1 });
+    }
+    return [...counts.values()].sort((a, b) => b.n - a.n)[0]?.run ?? null;
+  }, [lanes]);
+  const zoomed = duration > 0 && view.end - view.start < duration - 0.05;
 
   useLayoutEffect(() => {
     const el = axis.current;
@@ -174,6 +186,18 @@ export function LaneTimeline({
     <div ref={container} className="relative flex h-full min-h-0 flex-col border-t bg-card" id="lane-timeline">
       <div className="flex shrink-0 items-center gap-2 border-b px-2 py-1">
         {toolbar}
+        {mainRun && (
+          <span className="min-w-0 truncate text-xs text-muted-foreground" title={mainRun.label} data-testid="timeline-run">
+            Results of <span className="text-foreground">{mainRun.label}</span>
+          </span>
+        )}
+        <span className="flex-1" />
+        {/* Only when zoomed in, and drawn as a scrollbar: not a second progress bar (UAT #37). */}
+        {zoomed && <RangeBar view={view} duration={duration} onChange={onViewChange} />}
+        <span className="shrink-0 font-mono text-[10px] text-muted-foreground" data-testid="view-range">
+          {formatClockTenths(view.start)}–{formatClockTenths(view.end)}
+        </span>
+        {/* At the timeline's right-hand end, beside its readout (UAT #33). */}
         <Button
           variant="ghost"
           size="icon"
@@ -201,13 +225,10 @@ export function LaneTimeline({
           title="Whole video (0)"
           aria-label="Whole video"
           onClick={() => onViewChange(fullView(duration))}
+          disabled={!zoomed}
         >
           <Maximize2 className="h-3.5 w-3.5" />
         </Button>
-        <RangeBar view={view} duration={duration} onChange={onViewChange} />
-        <span className="shrink-0 font-mono text-[10px] text-muted-foreground" data-testid="view-range">
-          {formatClockTenths(view.start)}–{formatClockTenths(view.end)}
-        </span>
       </div>
 
       <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
@@ -248,6 +269,18 @@ export function LaneTimeline({
                   densityRows={densityRows}
                   onSelect={() => onSelectLane(lane.id)}
                   toggles={toggles}
+                  run={
+                    lane.run &&
+                    (runControls ? (
+                      <RunMenu lane={lane} controls={runControls} differs={lane.run.id !== mainRun?.id} />
+                    ) : (
+                      lane.run.id !== mainRun?.id && (
+                        <span className="sr-only" data-testid="lane-run">
+                          {lane.run.label}
+                        </span>
+                      )
+                    ))
+                  }
                 />
                 <div
                   className="relative min-w-0 flex-1 cursor-crosshair"
@@ -287,11 +320,11 @@ export function LaneTimeline({
                   }}
                 >
                   {lane.status === 'failed' ? (
-                    <p className="px-2 text-xs leading-[18px] text-destructive" data-testid="lane-failed">
+                    <p className="truncate px-2 text-xs leading-[18px] text-destructive" title={lane.error ?? undefined} data-testid="lane-failed">
                       Failed: {lane.error}
                     </p>
                   ) : lane.status === 'missing' ? (
-                    <p className="px-2 text-xs leading-[18px] text-amber-500" data-testid="lane-missing">
+                    <p className="truncate px-2 text-xs leading-[18px] text-amber-600 dark:text-amber-400" title={lane.error ?? undefined} data-testid="lane-missing">
                       {lane.error}
                     </p>
                   ) : lane.status === 'empty' ? (
@@ -303,14 +336,6 @@ export function LaneTimeline({
                   ) : (
                     <LaneCanvas lane={lane} view={view} width={width} selectedRow={selectedRow} />
                   )}
-                  {lane.run &&
-                    (runControls ? (
-                      <RunMenu lane={lane} controls={runControls} />
-                    ) : (
-                      <span className="pointer-events-none absolute right-1 top-0 text-[10px] text-muted-foreground" data-testid="lane-run">
-                        {lane.run.label}
-                      </span>
-                    ))}
                 </div>
               </div>
             );

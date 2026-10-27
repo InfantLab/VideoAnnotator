@@ -5214,6 +5214,11 @@ export interface components {
             name: string;
             /** Duration Sec */
             duration_sec?: number | null;
+            /**
+             * Fps
+             * @description Frames per second, for frame numbers and stepping
+             */
+            fps?: number | null;
         };
         /** Subfolder */
         Subfolder: {

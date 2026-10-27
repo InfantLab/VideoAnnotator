@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import { ChevronDown, ChevronRight, Eye, EyeOff, SlidersHorizontal } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { OPENFACE3_OVERLAYS } from '@/lib/laneOverlays';
-import { LANE_HEADER_WIDTH, laneHeight, laneTooltip, rowHeight, rowTooltip, type Lane } from '@/lib/lanes';
+import { formatValue, LANE_HEADER_WIDTH, laneHeight, laneTooltip, rowHeight, rowTooltip, type Lane } from '@/lib/lanes';
 import { kindColour, kindOfLane } from '@/lib/resultKinds';
 
 export interface LaneToggles {
@@ -21,6 +22,8 @@ interface LaneHeaderProps {
   densityRows: Set<string>;
   onSelect: () => void;
   toggles: LaneToggles;
+  /** The lane's run menu, at the end of its name (UAT #37). */
+  run?: ReactNode;
 }
 
 /** OpenFace 3's extra drawings, switched from its Faces lane (spec 028 T023). */
@@ -63,7 +66,7 @@ function KindIcon({ lane }: { lane: Lane }) {
   return <Icon className="mx-0.5 h-3.5 w-3.5 shrink-0" style={{ color: kindColour(kind) }} aria-hidden="true" />;
 }
 
-export function LaneHeader({ lane, selected, densityRows, onSelect, toggles }: LaneHeaderProps) {
+export function LaneHeader({ lane, selected, densityRows, onSelect, toggles, run }: LaneHeaderProps) {
   const collapsed = toggles.collapsed(lane.kind);
   const overlay = lane.overlay;
   const overlayShown = overlay ? toggles.overlayOn(overlay) : false;
@@ -72,7 +75,7 @@ export function LaneHeader({ lane, selected, densityRows, onSelect, toggles }: L
       className={cn('flex shrink-0 border-l-2 text-xs', selected ? 'border-l-primary bg-primary/5' : 'border-l-transparent')}
       style={{ width: LANE_HEADER_WIDTH, height: laneHeight(lane, collapsed) }}
     >
-      <div className="flex w-28 shrink-0 items-start gap-0.5 pl-0.5">
+      <div className="flex w-[8.5rem] shrink-0 items-start gap-0.5 pl-0.5">
         {overlay ? (
           <button
             type="button"
@@ -101,6 +104,7 @@ export function LaneHeader({ lane, selected, densityRows, onSelect, toggles }: L
           <span className={cn('truncate', lane.kind === 'notes' && 'italic text-amber-700 dark:text-amber-400')}>{lane.label}</span>
         </button>
         {overlay === 'faces.openface3' && <OpenFace3Menu toggles={toggles} />}
+        {run}
       </div>
       <div className="min-w-0 flex-1">
         {!collapsed &&
@@ -117,7 +121,19 @@ export function LaneHeader({ lane, selected, densityRows, onSelect, toggles }: L
             >
               <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: row.colour }} aria-hidden="true" />
               <span className="truncate">{row.label}</span>
-              {densityRows.has(row.key) && <span className="ml-auto shrink-0 text-[9px] uppercase">density</span>}
+              {densityRows.has(row.key) ? (
+                <span className="ml-auto shrink-0 text-[9px] uppercase">density</span>
+              ) : (
+                // The scale beside the row's name, not over its line (UAT #37).
+                row.form === 'numeric' &&
+                row.min !== undefined &&
+                row.max !== undefined && (
+                  <span className="ml-auto shrink-0 text-[9px] tabular-nums" data-testid="row-scale">
+                    {formatValue(row.min)}–{formatValue(row.max)}
+                    {row.unit ?? ''}
+                  </span>
+                )
+              )}
             </button>
           ))}
       </div>

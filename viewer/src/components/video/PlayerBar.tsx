@@ -1,4 +1,4 @@
-import { Pause, Play, SkipBack, SkipForward } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -17,6 +17,9 @@ interface PlayerBarProps {
   /** Name of the lane ⏮ ⏭ step through; they're off without one. */
   selectedLane: string | null;
   onPlayPause: () => void;
+  /** By seconds (±1 s) and by one frame (UAT #32): the buttons for ← → and Shift+← →. */
+  onStep: (seconds: number) => void;
+  onFrameStep: (direction: -1 | 1) => void;
   onPreviousEvent: () => void;
   onNextEvent: () => void;
   onPlaybackRateChange: (rate: number) => void;
@@ -32,6 +35,8 @@ export function PlayerBar({
   frameRate,
   selectedLane,
   onPlayPause,
+  onStep,
+  onFrameStep,
   onPreviousEvent,
   onNextEvent,
   onPlaybackRateChange,
@@ -41,8 +46,20 @@ export function PlayerBar({
     selectedLane ? `${which} event in ${selectedLane} (${key})` : 'Select a track to step through its events';
   return (
     <div className="flex w-full items-center gap-1" data-testid="player-bar">
+      <Button variant="ghost" size="sm" className="h-7 px-1.5 font-mono text-[11px]" onClick={() => onStep(-1)} aria-label="Back 1 second" title="Back 1 second (Shift+←)">
+        −1 s
+      </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onFrameStep(-1)} aria-label="Back one frame" title="Back one frame (←)">
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
       <Button size="sm" className="h-7 w-8 px-0" onClick={onPlayPause} aria-label={isPlaying ? 'Pause' : 'Play'} title="Play or pause (Space)">
         {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+      </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onFrameStep(1)} aria-label="On one frame" title="On one frame (→)">
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+      <Button variant="ghost" size="sm" className="h-7 px-1.5 font-mono text-[11px]" onClick={() => onStep(1)} aria-label="On 1 second" title="On 1 second (Shift+→)">
+        +1 s
       </Button>
       <span className="whitespace-nowrap px-1 font-mono text-xs" data-testid="readout">
         {formatClockTenths(currentTime)} / {formatClock(duration)}

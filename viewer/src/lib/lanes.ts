@@ -182,6 +182,11 @@ function rowLabel(kind: string, key: string, labels: Set<string>): string {
     const label = [...labels].filter(Boolean).join(', ');
     return label ? `${name} (${label})` : name;
   }
+  // "AU01_Inner_Brow_Raiser" → "AU01 inner brow raiser" (UAT #37).
+  if (kind === 'action_units') {
+    const [code, ...words] = key.split('_');
+    return [code, ...words.map((w) => w.toLowerCase())].join(' ');
+  }
   return key;
 }
 
@@ -529,11 +534,11 @@ export function followView(view: ViewRange, t: number, duration: number): ViewRa
 export const centreView = (view: ViewRange, t: number, duration: number): ViewRange =>
   clampView(t - (view.end - view.start) / 2, view.end - view.start, duration);
 
-export const LANE_HEADER_WIDTH = 224;
+export const LANE_HEADER_WIDTH = 248;
 
 /** What a lane shows and what made it, for its label's tooltip (SC-002). */
 export function laneTooltip(lane: Lane): string {
-  const made = lane.pipeline ? ` Made by ${lane.pipeline}` : '';
+  const made = lane.pipeline ? ` Made by ${pipelineShortName(lane.pipeline)}` : '';
   const run = lane.run ? `, ${lane.run.label}` : '';
   return `${lane.label}: ${lane.description}.${made}${run}.`;
 }
@@ -544,7 +549,7 @@ export function rowTooltip(lane: Lane, row: LaneRow): string {
       ? ` Scale ${formatValue(row.min)} to ${formatValue(row.max)}${row.unit ? ` ${row.unit}` : ''}.`
       : '';
   const what = row.description ?? lane.description;
-  return `${row.label} (${lane.label}): ${what}.${scale}${lane.pipeline ? ` From ${lane.pipeline}.` : ''}`;
+  return `${row.label} (${lane.label}): ${what}.${scale}${lane.pipeline ? ` From ${pipelineShortName(lane.pipeline)}.` : ''}`;
 }
 
 /** One zoom step halves (or doubles) the view. */

@@ -4,6 +4,8 @@ import { PageHelp } from '@/components/PageHelp';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Download, Film, Loader2 } from 'lucide-react';
+
+import { PlayerBar } from '@/components/video/PlayerBar';
 import { apiClient } from '@/api/client';
 import { APIError, isNeedsKey } from '@/api/handleError';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -196,6 +198,8 @@ const AskAI = () => {
   const [shown, setShown] = useState<string[]>([]);
   const [time, setTime] = useState(0);
   const [mediaDuration, setMediaDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const [cantPlay, setCantPlay] = useState(false);
   const [filters, setFilters] = useState<HistoryFilters>({ thisVideo: true, mine: false });
   const [pendingSend, setPendingSend] = useState<null | (() => Promise<void>)>(null);
@@ -394,8 +398,21 @@ const AskAI = () => {
   const featured = hovered ?? selected ?? latest;
 
   const seek = (t: number) => {
-    setTime(t);
-    if (videoRef.current) videoRef.current.currentTime = t;
+    const clamped = Math.max(0, duration > 0 ? Math.min(t, duration) : t);
+    setTime(clamped);
+    if (videoRef.current) videoRef.current.currentTime = clamped;
+  };
+  const playPause = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) void v.play().catch(() => {});
+    else v.pause();
+  };
+  /** ⏮ ⏭ step through the sampled moments: what the model is asked about (UAT #20). */
+  const stepSample = (direction: -1 | 1) => {
+    const EPS = 0.05;
+    const next = direction > 0 ? points.find((p) => p > time + EPS) : [...points].reverse().find((p) => p < time - EPS);
+    if (next !== undefined) seek(next);
   };
 
   const select = (entry: AskEntry, answer: AskAnswer) => {
@@ -747,10 +764,12 @@ const AskAI = () => {
                 <video
                   ref={videoRef}
                   data-testid="ask-video"
-                  className="max-h-[60vh] w-full rounded bg-black"
+                  className="max-h-[60vh] w-full cursor-pointer rounded bg-black"
                   src={apiClient.streamUrl(videoPath, stream.data.token)}
-                  controls
                   preload="metadata"
+                  onClick={playPause}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
                   onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
                   onSeeked={(e) => setTime(e.currentTarget.currentTime)}
                   onLoadedMetadata={(e) => {
@@ -761,12 +780,34 @@ const AskAI = () => {
                   onError={() => setCantPlay(true)}
                 />
               ) : stream.isError ? (
-                <Alert variant="destructive">
+                <Alert variant="destructive" data-testid="stream-error">
                   <AlertDescription>Can't open this video: {userMessage(stream.error)}</AlertDescription>
                 </Alert>
               ) : (
                 <div className="flex aspect-video items-center justify-center rounded bg-muted">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {stream.data && (
+                <div className="rounded border bg-card px-2 py-1">
+                  <PlayerBar
+                    isPlaying={isPlaying}
+                    currentTime={time}
+                    duration={duration}
+                    playbackRate={playbackRate}
+                    frameRate={stream.data.fps ?? null}
+                    selectedLane={points.length ? 'the sampled moments' : null}
+                    onPlayPause={playPause}
+                    onStep={(seconds) => seek(time + seconds)}
+                    onFrameStep={(direction) => seek(time + direction / (stream.data?.fps || 25))}
+                    onPreviousEvent={() => stepSample(-1)}
+                    onNextEvent={() => stepSample(1)}
+                    onSeek={seek}
+                    onPlaybackRateChange={(rate) => {
+                      setPlaybackRate(rate);
+                      if (videoRef.current) videoRef.current.playbackRate = rate;
+                    }}
+                  />
                 </div>
               )}
               {cantPlay && (

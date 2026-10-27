@@ -138,3 +138,37 @@ describe('the Video page timeline', () => {
     expect(api.streamToken).toHaveBeenCalledWith('/data/pk/demo_clip.mp4');
   });
 });
+
+describe('the player bar and timeline toolbar (UAT #32, #33, #37)', () => {
+  it('steps one frame and one second with visible buttons', async () => {
+    renderVideoPage();
+    await lanesLoaded();
+    fireEvent.click(screen.getByRole('button', { name: 'On 1 second' }));
+    expect(readout()).toMatch(/^0:01\.0/);
+    expect(screen.getByTestId('frame-number')).toHaveTextContent('frame 14');
+    fireEvent.click(screen.getByRole('button', { name: 'On one frame' }));
+    expect(screen.getByTestId('frame-number')).toHaveTextContent('frame 15');
+    fireEvent.click(screen.getByRole('button', { name: 'Back 1 second' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back one frame' }));
+    expect(readout()).toMatch(/^0:00\.0/);
+  });
+
+  it('names the run once in the toolbar, and shows the range bar only when zoomed in', async () => {
+    renderVideoPage();
+    await lanesLoaded();
+    expect(screen.getByTestId('timeline-run')).toHaveTextContent(/Results of run (12 Oct|Oct 12)/);
+    expect(screen.queryByTestId('range-bar')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Whole video' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    expect(screen.getByTestId('range-bar')).toBeInTheDocument();
+  });
+
+  it('names action units in words, with each row’s scale beside its name, not over its line', async () => {
+    renderVideoPage();
+    await lanesLoaded();
+    const [units] = lane('action_units');
+    const labels = within(units).getAllByTestId('row-label').map((r) => r.textContent ?? '');
+    expect(labels.every((l) => !l.includes('_'))).toBe(true);
+    expect(within(units).getAllByTestId('row-scale').length).toBeGreaterThan(0);
+  });
+});

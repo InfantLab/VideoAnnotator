@@ -114,7 +114,8 @@ def readable_video(raw_path: str) -> Path:
     return resolved
 
 
-def video_duration(path: Path) -> float | None:
+def video_timing(path: Path) -> tuple[float | None, float | None]:
+    """(duration in seconds, frames per second), each None when unreadable."""
     try:
         import cv2
 
@@ -124,10 +125,16 @@ def video_duration(path: Path) -> float | None:
             frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
         finally:
             cap.release()
-        return round(frames / fps, 3) if fps > 0 else None
+        if fps > 0:
+            return round(frames / fps, 3), round(fps, 3)
+        return None, None
     except Exception as e:
         logger.debug(f"Could not read the duration of {path}: {e}")
-        return None
+        return None, None
+
+
+def video_duration(path: Path) -> float | None:
+    return video_timing(path)[0]
 
 
 # ---------------------------------------------------------------------------
@@ -493,6 +500,9 @@ class StreamTokenResponse(BaseModel):
     path: str
     name: str
     duration_sec: float | None = None
+    fps: float | None = Field(
+        default=None, description="Frames per second, for frame numbers and stepping"
+    )
 
 
 @router.post(
@@ -506,6 +516,7 @@ async def stream_token(
 ) -> StreamTokenResponse:
     path = readable_video(body.path)
     token, expires = make_stream_token(path)
+    duration, fps = video_timing(path)
     return StreamTokenResponse(
         token=token,
         expires_at=datetime.fromtimestamp(expires, UTC),
@@ -513,7 +524,8 @@ async def stream_token(
         name=path.name,
         # From the server's decoder: the window can draw the timeline even
         # when this browser can't play the video's codec.
-        duration_sec=video_duration(path),
+        duration_sec=duration,
+        fps=fps,
     )
 
 

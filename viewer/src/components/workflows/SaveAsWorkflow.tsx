@@ -24,15 +24,23 @@ export function SaveAsWorkflow({
   source,
   settings,
   size = 'sm',
+  open: openFromMenu,
+  onOpenChange,
 }: {
   source: SettingsSource & { name: string };
   /** The settings to save, read when the dialog opens. */
   settings: () => Promise<SavedSettings>;
   size?: 'sm' | 'default';
+  /** Opened from a menu item instead of its own button (a run's ⋯ menu). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const { create } = useWorkflowActions();
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
+  const [ownOpen, setOwnOpen] = useState(false);
+  const controlled = openFromMenu !== undefined;
+  const open = controlled ? openFromMenu : ownOpen;
+  const setOpen = (next: boolean) => (controlled ? onOpenChange?.(next) : setOwnOpen(next));
+  const [name, setName] = useState(source.name);
   const [table, setTable] = useState<'csv' | 'parquet'>('csv');
   const [elan, setElan] = useState(true);
   const [methods, setMethods] = useState(true);
@@ -64,17 +72,19 @@ export function SaveAsWorkflow({
 
   return (
     <>
-      <Button
-        variant="outline"
-        size={size}
-        onClick={() => {
-          setName(source.name);
-          setOpen(true);
-        }}
-      >
-        <Bookmark className="mr-1 h-4 w-4" />
-        Save as workflow
-      </Button>
+      {!controlled && (
+        <Button
+          variant="outline"
+          size={size}
+          onClick={() => {
+            setName(source.name);
+            setOpen(true);
+          }}
+        >
+          <Bookmark className="mr-1 h-4 w-4" />
+          Save as workflow
+        </Button>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>

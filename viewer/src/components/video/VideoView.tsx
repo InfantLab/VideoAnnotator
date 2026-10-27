@@ -468,6 +468,8 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
               frameRate={frameRate}
               selectedLane={selectedLane?.label ?? null}
               onPlayPause={playPause}
+              onStep={(seconds) => seek(currentTime + seconds)}
+              onFrameStep={(direction) => seek(currentTime + direction / (frameRate ?? FALLBACK_FPS))}
               onPreviousEvent={() => stepEvent(-1)}
               onNextEvent={() => stepEvent(1)}
               onSeek={seek}

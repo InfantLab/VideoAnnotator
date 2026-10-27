@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildLanes } from '@/lib/lanes';
-import { MISSING_RESULTS, defaultSelection, failedPipelines } from '@/lib/videoRuns';
+import { MISSING_RESULTS, defaultSelection, failedPipelines, pipelinesOfRun } from '@/lib/videoRuns';
 import type { VideoRun } from '@/types/video';
 
 const result = (name: string) => ({ name, kind: 'result', download_url: `/files/${name}` });
@@ -51,5 +51,27 @@ describe('pipelines with nothing to show', () => {
         ['vlm_annotation', 'failed'],
       ]),
     );
+  });
+});
+
+describe('pipelinesOfRun (UAT #49)', () => {
+  it('lists each pipeline once, without ones the server no longer offers', () => {
+    const run = {
+      status: 'completed',
+      selected_pipelines: [],
+      pipelines: [
+        { name: 'face_analysis', status: 'completed', error: null, files: [] },
+        { name: 'face_analysis', status: 'completed', error: null, files: [] },
+        { name: 'audio_processing', status: 'completed', error: null, files: [] },
+      ],
+    };
+    expect(pipelinesOfRun(run, ['face_analysis', 'scene_detection']).map((p) => p.name)).toEqual(['face_analysis']);
+    expect(pipelinesOfRun(run, []).map((p) => p.name)).toEqual(['face_analysis', 'audio_processing']);
+  });
+
+  it('falls back to the pipelines asked for, with the run’s state', () => {
+    expect(pipelinesOfRun({ status: 'pending', pipelines: [], selected_pipelines: ['face_analysis'] }, [])).toEqual([
+      { name: 'face_analysis', status: 'pending', error: null },
+    ]);
   });
 });

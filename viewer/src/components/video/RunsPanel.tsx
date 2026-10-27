@@ -1,12 +1,21 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Download, GitCompare, Square } from 'lucide-react';
+import { Bookmark, Download, GitCompare, MoreHorizontal, RotateCcw, Square, Trash2 } from 'lucide-react';
 
 import { apiClient } from '@/api/client';
 import { ResultsLocation } from '@/components/ResultsLocation';
-import { RunAgainActions } from '@/components/RunAgainActions';
-import { RunDeleteButton } from '@/components/RunDeleteButton';
+import { useRunAgain } from '@/hooks/useRunAgain';
+import { RunDeleteDialog } from '@/components/RunDeleteButton';
+import { KindIcons } from '@/components/runs/KindIcons';
+import { RunStateIcon } from '@/components/runs/RunStateIcon';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { SaveAsWorkflow } from '@/components/workflows/SaveAsWorkflow';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +23,8 @@ import { Progress } from '@/components/ui/progress';
 import { usePipelineNames } from '@/hooks/usePipelineNames';
 import { saveBlob } from '@/lib/exports';
 import { notify } from '@/lib/notify';
+import { runDuration, type RunState } from '@/lib/runs';
+import { pipelinesOfRun } from '@/lib/videoRuns';
 import { userMessage } from '@/lib/userMessage';
 import { hrefOf } from '@/lib/videosScope';
 import type { FolderRef } from '@/types/ingest';
@@ -80,11 +91,23 @@ function CompareWith({ run, runs }: { run: VideoRun; runs: VideoRun[] }) {
   );
 }
 
+const STATE_OF: Record<string, RunState> = {
+  completed: 'done',
+  running: 'running',
+  pending: 'waiting',
+  retrying: 'waiting',
+  failed: 'failed',
+  cancelled: 'stopped',
+};
+
 function RunCard({ run, runs, videoName }: { run: VideoRun; runs: VideoRun[]; videoName: string }) {
   const queryClient = useQueryClient();
-  const { nameOf } = usePipelineNames();
+  const { nameOf, order } = usePipelineNames();
   const [downloading, setDownloading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const going = run.status === 'pending' || run.status === 'running' || run.status === 'retrying';
+  const again = useRunAgain({ kind: 'rerun', runId: run.job_id, label: videoName, single: true });
   const cancel = useMutation({
     mutationFn: () => apiClient.cancelJob(run.job_id),
     onSuccess: () => {
@@ -107,16 +130,54 @@ function RunCard({ run, runs, videoName }: { run: VideoRun; runs: VideoRun[]; vi
   };
   const settings = settingsLines(run.config, nameOf);
   const folder = run.results_folder as unknown as (FolderRef & { exists?: boolean }) | null | undefined;
+  const pipelines = pipelinesOfRun(run, order);
+  const took = run.created_at && run.completed_at ? runDuration({ active: false, started_at: run.created_at, finished_at: run.completed_at }) : '';
 
   return (
     <li className="space-y-2 rounded-md border p-3" data-testid="run-card">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-medium">{runLabel(run)}</span>
-        <RunStatus status={run.status} />
+      <div className="flex min-w-0 items-center gap-2">
+        <RunStateIcon state={STATE_OF[run.status] ?? 'waiting'} />
+        <span className="min-w-0 flex-1 truncate font-medium" title={runLabel(run)}>
+          {runLabel(run)}
+        </span>
+        {going ? (
+          <Button size="sm" variant="outline" className="h-7" onClick={() => cancel.mutate()} disabled={cancel.isPending}>
+            <Square className="mr-1 h-3.5 w-3.5" />
+            Stop
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" className="h-7" onClick={again.edit}>
+            Run again…
+          </Button>
+        )}
+        {!going && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="More for this run">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => void downloadAll()} disabled={downloading}>
+                <Download className="mr-2 h-4 w-4" /> Download all files
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={again.startUnchanged} disabled={again.busy}>
+                <RotateCcw className="mr-2 h-4 w-4" /> Run again unchanged
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setSaving(true)}>
+                <Bookmark className="mr-2 h-4 w-4" /> Save as workflow…
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setDeleting(true)} className="text-destructive focus:text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" /> Delete…
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
       <p className="text-muted-foreground">
-        {run.created_at && <>Started {formatWhen(run.created_at)}</>}
-        {run.completed_at && <> · finished {formatWhen(run.completed_at)}</>}
+        {formatWhen(run.created_at)}
+        {took && <> · {took}</>}
         {run.batch_id && (
           <>
             {' '}· part of{' '}
@@ -134,20 +195,14 @@ function RunCard({ run, runs, videoName }: { run: VideoRun; runs: VideoRun[]; vi
       )}
       {run.error && <p className="text-destructive">{run.error}</p>}
       <ul className="space-y-0.5">
-        {(run.pipelines ?? []).map((p) => (
-          <li key={p.name} className="flex flex-wrap items-baseline gap-2">
+        {pipelines.map((p) => (
+          <li key={p.name} className="flex flex-wrap items-center gap-1.5">
+            <KindIcons pipelines={[p.name]} />
             <span>{nameOf(p.name)}</span>
-            <RunStatus status={p.status} />
+            {p.status !== 'completed' && <RunStatus status={p.status} />}
             {p.error && <span className="text-destructive">{p.error}</span>}
           </li>
         ))}
-        {!(run.pipelines ?? []).length &&
-          (run.selected_pipelines ?? []).map((name) => (
-            <li key={name} className="flex gap-2">
-              <span>{nameOf(name)}</span>
-              <RunStatus status={run.status} />
-            </li>
-          ))}
       </ul>
       {settings.length > 0 && (
         <details>
@@ -160,30 +215,15 @@ function RunCard({ run, runs, videoName }: { run: VideoRun; runs: VideoRun[]; vi
         </details>
       )}
       {folder?.path && <ResultsLocation folder={folder} label="This video's results" />}
-      <div className="flex flex-wrap gap-2">
-        {going ? (
-          <Button size="sm" variant="outline" onClick={() => cancel.mutate()} disabled={cancel.isPending}>
-            <Square className="mr-1 h-4 w-4" />
-            Cancel
-          </Button>
-        ) : (
-          <>
-            <Button size="sm" variant="outline" onClick={downloadAll} disabled={downloading}>
-              <Download className="mr-1 h-4 w-4" />
-              Download all files
-            </Button>
-            <RunDeleteButton runId={run.job_id} single videoCount={1} name={`the run on ${videoName}`} after={null} />
-          </>
-        )}
-      </div>
-      {!going && <RunAgainActions target={{ kind: 'rerun', runId: run.job_id, label: videoName, single: true }} />}
-      {!going && (
-        <SaveAsWorkflow
-          source={{ kind: 'run', id: run.job_id, name: runLabel(run) }}
-          settings={async () => ({ selected: run.selected_pipelines ?? [], config: (run.config ?? {}) as Record<string, unknown> })}
-        />
-      )}
       <CompareWith run={run} runs={runs} />
+      {again.ui}
+      <SaveAsWorkflow
+        source={{ kind: 'run', id: run.job_id, name: runLabel(run) }}
+        settings={async () => ({ selected: run.selected_pipelines ?? [], config: (run.config ?? {}) as Record<string, unknown> })}
+        open={saving}
+        onOpenChange={setSaving}
+      />
+      <RunDeleteDialog runId={run.job_id} single videoCount={1} name={`the run on ${videoName}`} after={null} open={deleting} onOpenChange={setDeleting} />
     </li>
   );
 }

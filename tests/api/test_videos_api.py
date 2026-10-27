@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.fixtures.synthetic_video import synthetic_video_bytes_avi
+from tests.fixtures.synthetic_video import SyntheticVideoSpec, synthetic_video_bytes_avi
 from videoannotator.api.database import reset_storage_backend
 from videoannotator.api.main import app
 from videoannotator.api.v1 import videos
@@ -98,6 +98,7 @@ def test_a_shared_folder_video_is_readable(ingest_root):
     assert r.status_code == 200
     assert r.json()["name"] == "clip.avi"
     assert r.json()["duration_sec"] == pytest.approx(2.0, abs=0.2)
+    assert r.json()["fps"] == pytest.approx(SyntheticVideoSpec().fps)
 
 
 def test_missing_video_in_a_shared_folder_is_not_found(ingest_root):

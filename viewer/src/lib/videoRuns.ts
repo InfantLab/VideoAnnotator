@@ -96,3 +96,14 @@ export function sharedRun(selection: RunSelection): string | null {
   const jobs = new Set(Object.values(selection));
   return jobs.size === 1 ? [...jobs][0] : null;
 }
+
+/** A run's pipelines and how each went: each once, and only those the server still offers (UAT #49). */
+export function pipelinesOfRun(
+  run: Pick<VideoRun, 'pipelines' | 'selected_pipelines' | 'status'>,
+  order: string[],
+): { name: string; status: string; error?: string | null }[] {
+  const listed = run.pipelines?.length
+    ? run.pipelines.map((p) => ({ name: p.name, status: p.status, error: p.error }))
+    : (run.selected_pipelines ?? []).map((name) => ({ name, status: run.status, error: null }));
+  return listed.filter((p, i) => listed.findIndex((q) => q.name === p.name) === i && (!order.length || order.includes(p.name)));
+}

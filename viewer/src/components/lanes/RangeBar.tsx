@@ -23,7 +23,7 @@ export function RangeBar({ view, duration, onChange }: RangeBarProps) {
   return (
     <div
       ref={track}
-      className="relative h-3 min-w-24 flex-1 cursor-pointer rounded bg-muted"
+      className="relative h-2 w-40 shrink cursor-pointer rounded-full bg-muted"
       role="scrollbar"
       aria-orientation="horizontal"
       aria-controls="lane-timeline"
@@ -38,7 +38,7 @@ export function RangeBar({ view, duration, onChange }: RangeBarProps) {
       }}
     >
       <div
-        className="absolute inset-y-0 cursor-grab rounded bg-primary/60"
+        className="absolute inset-y-0 cursor-grab rounded-full bg-muted-foreground/50 hover:bg-muted-foreground/70"
         style={{ left: `${left}%`, width: `${Math.max(width, 0.5)}%` }}
         data-testid="range-window"
         onPointerDown={(e) => {

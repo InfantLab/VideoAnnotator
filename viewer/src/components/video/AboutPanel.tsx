@@ -2,6 +2,8 @@ import { Download } from 'lucide-react';
 
 import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';
+import { usePipelineNames } from '@/hooks/usePipelineNames';
+import { kindColour, kindOfPipeline } from '@/lib/resultKinds';
 import { runPipelineKey, type ProvenanceByRun, type RunFileRef } from '@/hooks/useRunFiles';
 import type { Lane } from '@/lib/lanes';
 import { settingsDiff } from '@/lib/settingsDiff';
@@ -37,6 +39,13 @@ function settingsLines(record: Record_): [string, string][] {
   return out;
 }
 
+function PipelineIcon({ pipeline }: { pipeline: string }) {
+  const kind = kindOfPipeline(pipeline);
+  if (!kind) return null;
+  const Icon = kind.icon;
+  return <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: kindColour(kind) }} aria-hidden="true" />;
+}
+
 async function save(file: RunFileRef) {
   const blob = await apiClient.downloadResultFile(file.url, file.name);
   const url = URL.createObjectURL(blob);
@@ -47,12 +56,25 @@ async function save(file: RunFileRef) {
   URL.revokeObjectURL(url);
 }
 
+const BEFORE_PROVENANCE =
+  'From before VideoAnnotator recorded the model, its version and the settings with each result (v1.6.0). Run the pipeline again to record them.';
+
 /** Each lane's provenance (spec 017) and raw files; what differs between compared runs (spec 028 FR-012, US5). */
 export function AboutPanel({ lanes, provenance, files, compared }: AboutPanelProps) {
+  const { nameOf } = usePipelineNames();
   const shown = lanes.filter((l) => l.pipeline && l.status !== 'failed' && l.status !== 'missing');
+  const keyOf = (l: Lane) => runPipelineKey(l.run?.id ?? '', l.pipeline!);
+  // Said once, not as "not recorded" on every line (UAT #34).
+  const noneRecorded = shown.length > 0 && shown.every((l) => !provenance[keyOf(l)]);
+  const oneRun = new Set(shown.map((l) => l.run?.id ?? '')).size <= 1;
   const seen = new Set<string>();
   return (
     <div className="space-y-3 pb-3" data-testid="about-panel">
+      {noneRecorded && (
+        <p className="rounded bg-muted/50 p-2 text-muted-foreground" data-testid="about-before-provenance">
+          {BEFORE_PROVENANCE}
+        </p>
+      )}
       {shown.map((lane) => {
         const key = runPipelineKey(lane.run?.id ?? '', lane.pipeline!);
         const isCompare = compared.has(key);
@@ -68,35 +90,40 @@ export function AboutPanel({ lanes, provenance, files, compared }: AboutPanelPro
         const settings = settingsLines(record);
         return (
           <section key={key} className="rounded border p-2" data-testid="about-entry">
-            <h3 className="font-medium">
-              {lane.pipeline}
-              {lane.run && <span className="font-normal text-muted-foreground"> · {lane.run.label}</span>}
+            <h3 className="flex flex-wrap items-center gap-x-1.5 font-medium">
+              <PipelineIcon pipeline={lane.pipeline!} />
+              {nameOf(lane.pipeline!)}
+              {lane.run && (!oneRun || isCompare) && <span className="font-normal text-muted-foreground">· {lane.run.label}</span>}
             </h3>
-            <dl className="mt-1 grid grid-cols-[6rem_1fr] gap-x-2 gap-y-0.5">
-              <dt className="text-muted-foreground">Model</dt>
-              <dd className="break-words">{record ? models(record) : NOT_RECORDED}</dd>
-              <dt className="text-muted-foreground">VideoAnnotator</dt>
-              <dd>{record?.videoannotator_version ? String(record.videoannotator_version) : NOT_RECORDED}</dd>
-              <dt className="text-muted-foreground">Settings</dt>
-              <dd>
-                {!record ? (
-                  NOT_RECORDED
-                ) : settings.length ? (
-                  <details>
-                    <summary className="cursor-pointer">{settings.length} recorded</summary>
-                    <ul className="mt-1 font-mono text-[10px]">
-                      {settings.map(([k, v]) => (
-                        <li key={k} className="break-all">
-                          {k}: {v}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                ) : (
-                  'none'
-                )}
-              </dd>
-            </dl>
+            {!record ? (
+              !noneRecorded && <p className="mt-1 text-muted-foreground">{BEFORE_PROVENANCE}</p>
+            ) : (
+              <dl className="mt-1 grid grid-cols-[6rem_1fr] gap-x-2 gap-y-0.5">
+                <dt className="text-muted-foreground">Model</dt>
+                <dd className="break-words">{record ? models(record) : NOT_RECORDED}</dd>
+                <dt className="text-muted-foreground">VideoAnnotator</dt>
+                <dd>{record?.videoannotator_version ? String(record.videoannotator_version) : NOT_RECORDED}</dd>
+                <dt className="text-muted-foreground">Settings</dt>
+                <dd>
+                  {!record ? (
+                    NOT_RECORDED
+                  ) : settings.length ? (
+                    <details>
+                      <summary className="cursor-pointer">{settings.length} recorded</summary>
+                      <ul className="mt-1 font-mono text-[10px]">
+                        {settings.map(([k, v]) => (
+                          <li key={k} className="break-all">
+                            {k}: {v}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : (
+                    'none'
+                  )}
+                </dd>
+              </dl>
+            )}
             {diff && main && (
               <div className="mt-2" data-testid="settings-diff">
                 <p className="font-medium">Differs from {main.run?.label}</p>
@@ -138,13 +165,13 @@ export function AboutPanel({ lanes, provenance, files, compared }: AboutPanelPro
                     >
                       <Download className="h-3 w-3" />
                     </Button>
-                    <span className="truncate font-mono text-[10px]">{f.name}</span>
+                    <span className="break-all font-mono text-[10px]">{f.name}</span>
                   </li>
                 ))}
               </ul>
             )}
             {!own.length && lane.source.length > 0 && (
-              <p className="mt-2 truncate font-mono text-[10px] text-muted-foreground">{lane.source.join(', ')}</p>
+              <p className="mt-2 break-all font-mono text-[10px] text-muted-foreground">{lane.source.join(', ')}</p>
             )}
           </section>
         );
