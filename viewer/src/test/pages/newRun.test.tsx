@@ -46,6 +46,21 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.restoreAllMocks());
 
 describe('with a target, Start is the only confirmation', () => {
+  it("a project with no settings of its own starts from nothing, offering the last run's (UAT #44)", async () => {
+    const api = mockRunApi({
+      ...RUN_SETTINGS.defaults,
+      last_run: { selected_pipelines: ['scene_detection'], config: {}, name: 'expCP2 · Scenes', changed_at: '2026-10-26T10:00:00Z' },
+    });
+    open({ target: { kind: 'project', id: PROJECT_ID, name: 'Peekaboo study' } });
+
+    const source = await screen.findByTestId('settings-source');
+    await waitFor(() => expect(source).toHaveTextContent('this project has no settings of its own'));
+    expect(api.runVideos).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /start from your last run, expCP2 · Scenes/ }));
+    await waitFor(() => expect(source).toHaveTextContent('your last run, expCP2 · Scenes'));
+    expect(screen.getByRole('button', { name: 'start from nothing instead' })).toBeInTheDocument();
+  });
+
   it('a project: its videos, its settings, one press', async () => {
     const api = mockRunApi(RUN_SETTINGS.project);
     const view = open({ target: { kind: 'project', id: PROJECT_ID, name: 'Peekaboo study' } });
@@ -67,7 +82,7 @@ describe('with a target, Start is the only confirmation', () => {
       name: 'Peekaboo study · DeepFace',
       project_id: PROJECT_ID,
     });
-    await waitFor(() => expect(landed(view.container)?.address).toBe('/videos?run=b9'));
+    await waitFor(() => expect(landed(view.container)?.address).toBe('/runs/b9'));
     expect(toast.success).toHaveBeenCalledWith(
       'Run started on 3 videos',
       expect.objectContaining({ description: expect.stringContaining('You can close this tab'), action: expect.objectContaining({ label: 'Show run' }) }),
@@ -192,7 +207,7 @@ describe('without a target', () => {
     await waitFor(() => expect(api.submitJob).toHaveBeenCalledTimes(2));
     const runIds = api.submitJob.mock.calls.map((call) => (call[3] as { id: string }).id);
     expect(new Set(runIds).size).toBe(1);
-    await waitFor(() => expect(landed(view.container)?.address).toBe(`/videos?run=${runIds[0]}`));
+    await waitFor(() => expect(landed(view.container)?.address).toBe(`/runs/${runIds[0]}`));
   });
 
   it('a video ran before', async () => {

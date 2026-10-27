@@ -27,7 +27,9 @@ export function paramsOf(query: VideosQuery): URLSearchParams {
   return params;
 }
 
+/** A run has its own page (UAT D2); every other scope is a view of Videos. */
 export function hrefOf(query: VideosQuery): string {
+  if (query.run) return `/runs/${encodeURIComponent(query.run)}`;
   const search = paramsOf(query).toString();
   return search ? `/videos?${search}` : '/videos';
 }

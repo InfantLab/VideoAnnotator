@@ -16,6 +16,8 @@ export type FolderCount = Schemas['FolderCount'];
 export type VideoScope = Schemas['VideoScope'];
 export type RunSummary = Schemas['RunSummary'];
 export type ActivityRun = Schemas['ActivityRun'];
+export type RunListItem = Schemas['RunListItem'];
+export type RunListResponse = Schemas['RunListResponse'];
 export type Activity = Schemas['ActivityResponse'];
 export type RunSettings = Schemas['RunSettingsResponse'];
 export type RunSettingsSource = Schemas['RunSettingsSource'];
@@ -33,6 +35,8 @@ export interface VideosQuery {
   q?: string;
   offset?: number;
   limit?: number;
+  /** recent: last run first, only videos that have been run. */
+  sort?: 'name' | 'recent';
 }
 
 /** A workflow's export choices (spec 029 R7); absent means the defaults. */

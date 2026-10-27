@@ -13,6 +13,7 @@ import type { Preset } from '@/types/presets';
 import type {
   Activity,
   ActivityRun,
+  RunListItem,
   RunSettings,
   RunSummary,
   VideoCounts,
@@ -104,6 +105,11 @@ export function run(over: Partial<RunSummary> = {}): RunSummary {
     job_ids: ['j1', 'j2'],
     ...over,
   };
+}
+
+/** A run as the Runs page lists it. */
+export function listedRun(over: Partial<RunListItem> = {}): RunListItem {
+  return { ...run(), videos: ['p01_t1.mp4', 'p02_t1.mp4'], failure: null, ...over };
 }
 
 export const FINISHED_RUN = run({
@@ -241,6 +247,7 @@ export function mockVideosApi(
   options: {
     videos?: (query: VideosQuery) => VideosResponse;
     activity?: Activity;
+    runs?: RunListItem[];
     settings?: RunSettings;
     datasets?: SavedDataset[];
     presets?: Preset[];
@@ -255,6 +262,9 @@ export function mockVideosApi(
       (options.videos ?? videosResponse)(query),
     ),
     getActivity: vi.spyOn(client, 'getActivity').mockResolvedValue(options.activity ?? { active: [], recent: [] }),
+    listRuns: vi
+      .spyOn(client, 'listRuns')
+      .mockResolvedValue({ runs: options.runs ?? [], total: options.runs?.length ?? 0 }),
     getRunSettings: vi.spyOn(client, 'getRunSettings').mockResolvedValue(options.settings ?? RUN_SETTINGS.defaults),
     runVideos: vi.spyOn(client, 'runVideos').mockResolvedValue({
       run_id: 'b9',

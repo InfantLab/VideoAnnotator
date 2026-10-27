@@ -26,3 +26,14 @@ export function formatDay(value: string | Date | null | undefined, now: Date = n
   if (!d) return '';
   return d.getFullYear() === now.getFullYear() ? dayMonth(d) : `${dayMonth(d)} ${d.getFullYear()}`;
 }
+
+/** "24 s", "4 min", "1 h 12 min" (viewer design "Words, numbers and time"). */
+export function formatDuration(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  if (s < 60) return `${s} s`;
+  const minutes = Math.round(s / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m ? `${h} h ${m} min` : `${h} h`;
+}

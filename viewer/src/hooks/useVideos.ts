@@ -13,7 +13,7 @@ export function videosKey(query: VideosQuery) {
 export function isMoving(data: VideosResponse | undefined): boolean {
   if (!data) return false;
   if (data.runs.some((r) => r.active)) return true;
-  return data.videos.some((v) => Object.values(v.results).some((r) => r.state === 'running' || r.state === 'waiting'));
+  return data.videos.some((v) => Object.values(v.results).some((r) => r.state === 'running' || r.state === 'waiting' || !!r.now));
 }
 
 /** The videos of one scope (spec 029 R2), refreshed every 5 s while any is running or waiting. */

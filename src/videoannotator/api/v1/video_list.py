@@ -4,7 +4,8 @@
 folder, a run) with the results each has and the counts for the Videos page's
 left side (R2). `POST /videos/run` starts one run on any videos the server can
 read (R8), `GET /videos/run-settings` says what New run starts from (R6), and
-`GET /videos/activity` lists the runs going on (R17).
+`GET /videos/activity` lists the runs going on (R17), `GET /videos/all-runs` every
+run (UAT D2).
 
 A video is a group of paths (R1, `video_index`); a project is a saved dataset
 (R4, `projects`). The API keeps its words: jobs, batches, datasets.
@@ -62,6 +63,11 @@ class VideoResult(BaseModel):
     run_id: str = Field(description="The run it is from: a batch id or a job id")
     finished_at: datetime | None = None
     error: str | None = Field(default=None, description="Why it failed, if it did")
+    now: str | None = Field(
+        default=None,
+        description="running or waiting: a newer run on this pipeline, over this result",
+    )
+    now_run_id: str | None = Field(default=None, description="That newer run")
 
 
 class VideoItem(BaseModel):
@@ -408,6 +414,9 @@ async def list_videos(
     not_in_project: bool = Query(False),
     run: str | None = Query(None, description="A batch id, or a job id"),
     q: str | None = Query(None, description="Names containing this, any case"),
+    sort: str = Query(
+        "name", pattern="^(name|recent)$", description="recent: last run first"
+    ),
     offset: int = Query(0, ge=0),
     limit: int = Query(500, ge=1, le=MAX_LIMIT),
     db: Session = Depends(get_db),
@@ -425,6 +434,12 @@ async def list_videos(
     if q and q.strip():
         needle = q.strip().lower()
         videos = [v for v in videos if needle in v.name.lower()]
+    if sort == "recent":
+        videos = sorted(
+            (v for v in videos if v.last_run_at),
+            key=lambda v: _naive_local(v.last_run_at or datetime.min),
+            reverse=True,
+        )
     return VideosResponse(
         scope=scope,
         videos=[_item(v, catalog, run) for v in videos[offset : offset + limit]],
@@ -459,12 +474,24 @@ class RunSettingsSource(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class LastRunOffer(BaseModel):
+    selected_pipelines: list[str]
+    config: dict[str, Any]
+    name: str | None = None
+    changed_at: str | None = None
+
+
 class RunSettingsResponse(BaseModel):
     selected_pipelines: list[str] = Field(
         description="Empty with `defaults`: the viewer selects its defaults"
     )
     config: dict[str, Any]
     source: RunSettingsSource
+    last_run: LastRunOffer | None = Field(
+        default=None,
+        description="For a project with no settings of its own: your last run's, "
+        "to offer, not applied",
+    )
 
 
 @router.get(
@@ -775,6 +802,70 @@ async def run_videos(
 # ---------------------------------------------------------------------------
 # What is going on (R17)
 # ---------------------------------------------------------------------------
+
+
+class RunListItem(RunSummary):
+    videos: list[str] = Field(description="The first few videos' file names")
+    failure: str | None = Field(
+        default=None, description="Why the first failed video failed, if one did"
+    )
+
+
+class RunListResponse(BaseModel):
+    runs: list[RunListItem]
+    total: int
+
+
+SHOWN_VIDEOS = 3
+
+
+def _first_failure(run: Run) -> str | None:
+    for job in run.jobs:
+        if job.status != "failed":
+            continue
+        for result in job.pipelines.values():
+            if result.error:
+                return result.error
+        return "The run failed before it finished"
+    return None
+
+
+def _run_item(run: Run, catalog: Catalog) -> RunListItem:
+    names: list[str] = []
+    for job in run.jobs:
+        name = Path(job.video_path).name if job.video_path else None
+        if name and name not in names:
+            names.append(name)
+        if len(names) == SHOWN_VIDEOS:
+            break
+    return RunListItem(
+        **run_summary(run, catalog).model_dump(),
+        videos=names,
+        failure=_first_failure(run),
+    )
+
+
+@router.get(
+    "/all-runs",
+    response_model=RunListResponse,
+    summary="Every run, those going on first, then newest first",
+)
+async def list_runs(
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> RunListResponse:
+    storage = get_storage_backend()
+    index = video_index.cached_index(storage, uploads_root=get_storage_root())
+    all_runs = video_index.runs(index)
+    ordered = [r for r in all_runs if r.active] + [r for r in all_runs if not r.active]
+    page = ordered[offset : offset + limit]
+    catalog = catalog_for(storage, db) if page else None
+    return RunListResponse(
+        runs=[_run_item(r, catalog) for r in page] if catalog else [],
+        total=len(ordered),
+    )
 
 
 class ActivityRun(BaseModel):

@@ -27,7 +27,7 @@ const ROUTES = [
   '/home',
   '/videos',
   `/videos?project=${PROJECT_ID}`,
-  '/videos?run=b1',
+  '/runs/b1',
   '/videos?folder=uploads',
   '/videos?not_in_project=1',
   '/run',

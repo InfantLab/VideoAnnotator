@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { ArrowRight, Search } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -24,12 +24,30 @@ const MARKS: Record<string, { mark: string; word: string; className: string }> =
   failed: { mark: '✕', word: 'failed', className: 'text-destructive' },
 };
 
-function ResultMark({ title, result }: { title: string; result: VideoResult | undefined }) {
+function ResultMark({ title, result, inRun }: { title: string; result: VideoResult | undefined; inRun?: string }) {
   if (!result) {
     return (
       <span className="text-muted-foreground" title={`${title}: not run`} aria-label={`${title}: not run`}>
         –
       </span>
+    );
+  }
+  if (result.now && result.now_run_id === inRun) result = { ...result, state: result.now, error: null };
+  else if (result.now && result.now_run_id) {
+    // A newer run is going on over an older result (UAT #43): show that, linked to the run.
+    const now = MARKS[result.now] ?? MARKS.waiting;
+    const label = `${title}: ${now.word} again in a newer run (open it)`;
+    return (
+      <Link
+        to={hrefOf({ run: result.now_run_id })}
+        className={cn('inline-flex items-center gap-1 text-xs', now.className)}
+        title={label}
+        aria-label={label}
+        onClick={(event) => event.stopPropagation()}
+        data-testid="result-now"
+      >
+        {now.mark} {now.word}
+      </Link>
     );
   }
   const look = MARKS[result.state] ?? MARKS.waiting;
@@ -52,6 +70,10 @@ interface VideosTableProps {
   context: ListContext;
   filter: string;
   onFilter: (text: string) => void;
+  /** What the table is, above it: "Videos in this run (3)" (UAT #4). */
+  caption?: string;
+  /** An explicit Open → per row, where opening a video is the next step (a run's page, UAT #3). */
+  openColumn?: boolean;
 }
 
 /**
@@ -59,7 +81,19 @@ interface VideosTableProps {
  * result stands (spec 029 FR-002). `/` focuses the filter; `Enter` opens the
  * focused row and `Space` selects it.
  */
-export function VideosTable({ videos, pipelines, nameOf, taskOf = () => '', selected, onSelect, context, filter, onFilter }: VideosTableProps) {
+export function VideosTable({
+  videos,
+  pipelines,
+  nameOf,
+  taskOf = () => '',
+  selected,
+  onSelect,
+  context,
+  filter,
+  onFilter,
+  caption,
+  openColumn = false,
+}: VideosTableProps) {
   // An empty Projects column only takes room (UAT #5).
   const anyProjects = videos.some((v) => v.projects.length > 0);
   const navigate = useNavigate();
@@ -144,6 +178,18 @@ export function VideosTable({ videos, pipelines, nameOf, taskOf = () => '', sele
           )}
         </div>
       </td>
+      {openColumn && (
+        <td className="w-20 px-2">
+          <Link
+            to={videoLink(video, context)}
+            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            onClick={(event) => event.stopPropagation()}
+            data-testid="open-video"
+          >
+            Open <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        </td>
+      )}
       <td className="max-w-[14rem] truncate px-2 text-muted-foreground" title={folderLabel(video.folder)}>
         {shortFolder(video.folder)}
       </td>
@@ -160,7 +206,7 @@ export function VideosTable({ videos, pipelines, nameOf, taskOf = () => '', sele
       </td>}
       {pipelines.map((pipeline) => (
         <td key={pipeline} className="px-2 text-center">
-          <ResultMark title={nameOf(pipeline)} result={video.results[pipeline]} />
+          <ResultMark title={nameOf(pipeline)} result={video.results[pipeline]} inRun={context.kind === 'run' ? context.id : undefined} />
         </td>
       ))}
     </tr>
@@ -168,6 +214,7 @@ export function VideosTable({ videos, pipelines, nameOf, taskOf = () => '', sele
 
   return (
     <div className="space-y-2">
+      {caption && <h2 className="text-base font-semibold">{caption}</h2>}
       <div className="relative max-w-xs">
         <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
         <Input
@@ -196,6 +243,7 @@ export function VideosTable({ videos, pipelines, nameOf, taskOf = () => '', sele
                 />
               </th>
               <th className="px-2 py-2 font-medium">Video</th>
+              {openColumn && <th className="w-20 px-2 py-2" aria-label="Open" />}
               <th className="px-2 py-2 font-medium">Folder</th>
               {anyProjects && <th className="px-2 py-2 font-medium">Projects</th>}
               {pipelines.map((pipeline) => {

@@ -106,6 +106,7 @@ export default function NewRun() {
   const [name, setName] = useState('');
   const [starting, setStarting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [fromLastRun, setFromLastRun] = useState(false);
 
   const catalog = usePipelineCatalog();
   const pipelines = useMemo(() => catalog.data?.catalog.pipelines ?? [], [catalog.data]);
@@ -130,8 +131,36 @@ export default function NewRun() {
         ? { key: `rerun:${target.runId}`, ...rerunSettings.data, source: `the run “${target.label}”` }
         : null;
     }
-    return server.data ? fromServer(server.data) : null;
-  }, [own, target, workflowId, rerunSettings.data, server.data]);
+    if (!server.data) return null;
+    // A project with none of its own: the last run is offered, not applied (UAT #44, P6).
+    const offer = server.data.last_run;
+    if (!offer) return fromServer(server.data);
+    const lastName = `your last run${offer.name ? `, ${offer.name}` : ''}`;
+    const switchTo = (on: boolean, label: string) => (
+      <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setFromLastRun(on)} data-testid="settings-switch">
+        {label}
+      </Button>
+    );
+    return fromLastRun
+      ? {
+          key: `last-run:${offer.changed_at ?? ''}`,
+          selected: offer.selected_pipelines,
+          config: offer.config,
+          source: (
+            <>
+              {lastName} · {switchTo(false, 'start from nothing instead')}
+            </>
+          ),
+        }
+      : {
+          ...fromServer(server.data),
+          source: (
+            <>
+              nothing yet: this project has no settings of its own · {switchTo(true, `start from ${lastName}`)}
+            </>
+          ),
+        };
+  }, [own, target, workflowId, rerunSettings.data, server.data, fromLastRun]);
 
   useEffect(() => {
     if (!settings || !pipelines.length || applied === settings.key) return;

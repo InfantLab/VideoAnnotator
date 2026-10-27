@@ -10,13 +10,14 @@ import { NEEDS_KEY_MESSAGE } from '@/api/handleError';
 import { useConnection } from '@/hooks/useConnection';
 import { isCorsOrNetworkError } from '@/lib/connectionUtils';
 import { APP_NAME } from '@/utils/version';
-import { HelpCircle, Home, KeyRound, Layers, Settings, Sparkles, Video } from 'lucide-react';
+import { HelpCircle, Home, KeyRound, Layers, ListVideo, Settings, Sparkles, Video } from 'lucide-react';
 import vavIcon from '@/assets/v-a-v.icon.png';
 
-// Spec 029 FR-018: four places. New run opens from Run… on what it runs on.
+// Viewer design "Information architecture" (D2). New run opens from Run… on what it runs on.
 const navItems = [
   { path: '/home', label: 'Home', icon: Home },
   { path: '/videos', label: 'Videos', icon: Video },
+  { path: '/runs', label: 'Runs', icon: ListVideo },
   { path: '/ask', label: 'Ask AI', icon: Sparkles },
   { path: '/pipelines', label: 'Pipelines', icon: Layers },
 ];

@@ -1,7 +1,7 @@
 /** One way to say when (viewer design P8, UAT #2). */
 import { describe, expect, it } from 'vitest';
 
-import { formatDay, formatWhen } from '@/lib/when';
+import { formatDay, formatDuration, formatWhen } from '@/lib/when';
 
 const now = new Date(2026, 9, 26, 21, 0);
 
@@ -17,4 +17,13 @@ describe('formatWhen', () => {
     expect(formatWhen('not a date', now)).toBe('');
     expect(formatDay(undefined, now)).toBe('');
   });
+});
+
+describe('formatDuration', () => {
+  it.each([
+    [24, '24 s'],
+    [240, '4 min'],
+    [4320, '1 h 12 min'],
+    [7200, '2 h'],
+  ])('%s s → %s', (seconds, words) => expect(formatDuration(seconds)).toBe(words));
 });

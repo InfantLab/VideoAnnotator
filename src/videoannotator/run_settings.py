@@ -142,26 +142,34 @@ def prefill(
                 },
             }
 
-    if project_id:
-        dataset = SavedDatasetCRUD.get_by_id(db, project_id)
-        if dataset is not None:
-            current = dataset.current_settings
-            if not isinstance(current, dict) and storage is not None:
-                current = _newest_run_settings(storage, str(dataset.id))
-            if isinstance(current, dict):
-                return {
-                    "selected_pipelines": list(current.get("selected_pipelines") or []),
-                    "config": dict(current.get("config") or {}),
-                    "source": {
-                        "kind": "project",
-                        "id": str(dataset.id),
-                        "name": dataset.name,
-                        "changed_at": current.get("updated_at"),
-                        "from": current.get("source"),
-                    },
-                }
+    dataset = SavedDatasetCRUD.get_by_id(db, project_id) if project_id else None
+    if dataset is not None:
+        current = dataset.current_settings
+        if not isinstance(current, dict) and storage is not None:
+            current = _newest_run_settings(storage, str(dataset.id))
+        if isinstance(current, dict):
+            return {
+                "selected_pipelines": list(current.get("selected_pipelines") or []),
+                "config": dict(current.get("config") or {}),
+                "source": {
+                    "kind": "project",
+                    "id": str(dataset.id),
+                    "name": dataset.name,
+                    "changed_at": current.get("updated_at"),
+                    "from": current.get("source"),
+                },
+            }
 
     last = last_used(db, user)
+    if last is not None and dataset is not None:
+        # A project with none of its own starts from the defaults, never
+        # silently from the last run elsewhere; that is offered (UAT #44, P6).
+        return {
+            "selected_pipelines": [],
+            "config": {},
+            "source": {"kind": "defaults"},
+            "last_run": _offer(last),
+        }
     if last is not None:
         return {
             "selected_pipelines": list(last.get("selected_pipelines") or []),
@@ -174,6 +182,15 @@ def prefill(
         }
 
     return {"selected_pipelines": [], "config": {}, "source": {"kind": "defaults"}}
+
+
+def _offer(last: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "selected_pipelines": list(last.get("selected_pipelines") or []),
+        "config": dict(last.get("config") or {}),
+        "name": (last.get("source") or {}).get("name"),
+        "changed_at": last.get("updated_at"),
+    }
 
 
 def _iso(value: datetime | None) -> str | None:

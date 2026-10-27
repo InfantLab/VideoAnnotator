@@ -32,8 +32,30 @@ interface RunDeleteButtonProps {
   after?: string | null;
 }
 
-export function RunDeleteButton({ runId, single = false, videoCount, name, resultsFolder, after = '/videos' }: RunDeleteButtonProps) {
+export function RunDeleteButton(props: RunDeleteButtonProps) {
   const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Trash2 className="h-4 w-4 mr-1" />
+        Delete run
+      </Button>
+      <RunDeleteDialog {...props} open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
+/** The confirmation alone, for a menu's Delete (a run row's ⋯). */
+export function RunDeleteDialog({
+  runId,
+  single = false,
+  videoCount,
+  name,
+  resultsFolder,
+  after = '/videos',
+  open,
+  onOpenChange: setOpen,
+}: RunDeleteButtonProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const remove = useMutation({
@@ -53,10 +75,6 @@ export function RunDeleteButton({ runId, single = false, videoCount, name, resul
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)} disabled={remove.isPending}>
-        <Trash2 className="h-4 w-4 mr-1" />
-        Delete run
-      </Button>
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

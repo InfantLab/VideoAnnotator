@@ -41,9 +41,9 @@ export function videosQueryOf(context: ListContext): VideosQuery {
 /** The Videos page showing a list. */
 export function videosHref(context: ListContext): string {
   const query = videosQueryOf(context);
+  if (query.run) return `/runs/${encodeURIComponent(query.run)}`;
   const params = new URLSearchParams();
   if (query.project) params.set('project', query.project);
-  if (query.run) params.set('run', query.run);
   if (query.folder) params.set('folder', query.folder);
   if (query.notInProject) params.set('not_in_project', '1');
   const search = params.toString();

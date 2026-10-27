@@ -29,6 +29,7 @@ const AskAI = lazy(() => import("./pages/AskAI"));
 const Pipelines = lazy(() => import("./pages/Pipelines"));
 const Videos = lazy(() => import("./pages/Videos"));
 const NewRun = lazy(() => import("./pages/NewRun"));
+const Runs = lazy(() => import("./pages/Runs"));
 
 /** Per page, so the navigation stays on screen while a page loads. */
 const page = (element: ReactNode) => (
@@ -64,6 +65,8 @@ const App = () => (
                     <Route path="/home" element={<Home />} />
                     <Route path="/videos" element={page(<Videos />)} />
                     <Route path="/run" element={page(<NewRun />)} />
+                    <Route path="/runs" element={page(<Runs />)} />
+                    <Route path="/runs/:runId" element={page(<Videos />)} />
                     <Route path="/help" element={page(<Help />)} />
                     {/* Spec 029 R13: every old address leads somewhere. */}
                     <Route path="/getting-started" element={<Navigate to="/help" replace />} />

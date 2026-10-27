@@ -1,4 +1,4 @@
-/** A run as a filter of Videos (spec 029 R12, T030). */
+/** A run's own page (UAT D2; spec 029 R12, T030). */
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -13,7 +13,7 @@ import type { RunSummary } from '@/types/videos';
 const client = () => Object.getPrototypeOf(getApiClient());
 const show = (id: string, summary: RunSummary) => {
   const api = mockVideosApi({ videos: (q) => videosResponse(q, { runs: [summary] }) });
-  const view = renderAt(`/videos?run=${id}`, [{ path: '/videos', element: <Videos /> }]);
+  const view = renderAt(`/runs/${id}`, [{ path: '/runs/:runId', element: <Videos /> }]);
   return { api, view };
 };
 
@@ -26,18 +26,18 @@ describe('a run going on', () => {
     const cancel = vi.spyOn(client(), 'cancelBatch').mockResolvedValue({ batch_id: 'b2', cancelled: [], skipped: [] });
     show('b2', run());
     const header = await screen.findByTestId('run-header');
-    expect(within(header).getByRole('heading')).toHaveTextContent('Peekaboo faces');
-    expect(within(header).getByTestId('run-state')).toHaveTextContent('running 31/48');
+    expect(within(header).getByRole('heading', { level: 1 })).toHaveTextContent('Peekaboo faces');
+    expect(within(header).getByTestId('run-state')).toHaveTextContent(/of 48 done/);
     expect(within(header).getByRole('progressbar', { name: 'Run progress' })).toBeInTheDocument();
-    expect(within(header).queryByTestId('run-headline')).toBeNull();
-    await userEvent.click(within(header).getByRole('button', { name: /Cancel/ }));
+    expect(within(header).getByTestId('run-headline')).toHaveTextContent('those finished so far');
+    await userEvent.click(within(header).getByRole('button', { name: /Stop/ }));
     expect(cancel).toHaveBeenCalledWith('b2');
   });
 
   it("a run of one video is cancelled as that video's", async () => {
     const cancel = vi.spyOn(client(), 'cancelJob').mockResolvedValue({ job_id: 'j1', status: 'cancelled', message: '' });
     show('j1', run({ id: 'j1', job_ids: ['j1'], total: 1, done: 0, running: 1, waiting: 0 }));
-    await userEvent.click(within(await screen.findByTestId('run-header')).getByRole('button', { name: /Cancel/ }));
+    await userEvent.click(within(await screen.findByTestId('run-header')).getByRole('button', { name: /Stop/ }));
     expect(cancel).toHaveBeenCalledWith('j1');
   });
 });
@@ -46,7 +46,7 @@ describe('a finished run', () => {
   it('leads with its results table, ELAN and methods', async () => {
     const { api } = show('b1', FINISHED_RUN);
     const headline = await screen.findByTestId('run-headline');
-    expect(headline).toHaveTextContent('48 videos → results table');
+    expect(headline).toHaveTextContent('open a video below to see them on its timeline');
     await userEvent.click(within(headline).getByRole('button', { name: /Download/ }));
     expect(api.exportResults).toHaveBeenCalledWith({ kind: 'run', id: 'b1' }, 'table', 'csv');
     await userEvent.click(within(headline).getByRole('button', { name: /ELAN/ }));
@@ -76,5 +76,23 @@ describe('a finished run', () => {
     const { view } = show('b1', vlm);
     await userEvent.click(within(await screen.findByTestId('run-headline')).getByRole('button', { name: /Compare answers/ }));
     await waitFor(() => expect(landed(view.container)?.address).toBe('/compare?a=job-0&b=job-1'));
+  });
+});
+
+describe('the old address', () => {
+  it('/videos?run=b1 opens the run’s page', async () => {
+    mockVideosApi({ videos: (q) => videosResponse(q, { runs: [FINISHED_RUN] }) });
+    const view = renderAt('/videos?run=b1', [{ path: '/videos', element: <Videos /> }]);
+    await waitFor(() => expect(landed(view.container)?.address).toBe('/runs/b1'));
+  });
+});
+
+describe('its videos (UAT #3, #4)', () => {
+  it('are labelled as the run’s, each with an Open link, without the all-videos intro', async () => {
+    show('b1', FINISHED_RUN);
+    expect(await screen.findByRole('heading', { name: /Videos in this run/ })).toBeInTheDocument();
+    expect((await screen.findAllByTestId('open-video')).length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('page-help')).toBeNull();
+    expect(screen.getByRole('link', { name: 'Runs' })).toHaveAttribute('href', '/runs');
   });
 });

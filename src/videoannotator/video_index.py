@@ -17,7 +17,7 @@ import os
 import threading
 import time
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -38,6 +38,9 @@ class PipelineState:
     job_id: str
     finished_at: datetime | None
     error: str | None = None
+    # A newer run still going on this pipeline, over an older result (UAT #43).
+    now: str | None = None
+    now_run_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -45,6 +48,8 @@ class PipelineState:
             "run_id": self.run_id,
             "finished_at": self.finished_at,
             "error": self.error,
+            "now": self.now,
+            "now_run_id": self.now_run_id,
         }
 
 
@@ -176,7 +181,11 @@ def _results(jobs: list[JobSummary]) -> dict[str, PipelineState]:
         if not states:
             continue
         done = [s for s in states if s.state == DONE]
-        results[name] = done[0] if done else states[0]
+        chosen = done[0] if done else states[0]
+        newest = states[0]
+        if chosen is not newest and newest.state in (RUNNING, WAITING):
+            chosen = replace(chosen, now=newest.state, now_run_id=newest.run_id)
+        results[name] = chosen
     return results
 
 

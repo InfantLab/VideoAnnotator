@@ -4,7 +4,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import Home from '@/pages/Home';
-import { CATALOG, EMPTY, mockVideosApi, videosResponse } from '@/test/fixtures/videos';
+import { CATALOG, EMPTY, listedRun, mockVideosApi, videosResponse } from '@/test/fixtures/videos';
 import { landed, renderAt } from '@/test/fixtures/renderPage';
 
 const server = vi.hoisted(() => ({ capabilities: { version: '1.7.0' } as { version: string; authRequired?: boolean } | null }));
@@ -45,7 +45,27 @@ describe('Home', () => {
   it('points to Videos once there are videos', async () => {
     mockVideosApi({ videos: (q) => videosResponse(q) });
     show();
-    expect(await screen.findByRole('link', { name: /212 videos on the server/ })).toHaveAttribute('href', '/videos');
+    expect(await screen.findByRole('link', { name: /All 212 videos/ })).toHaveAttribute('href', '/videos');
+    expect(screen.getAllByTestId('recent-video').length).toBeGreaterThan(0);
+  });
+
+  it('shows the runs going on and just finished, then all runs (D3)', async () => {
+    const going = listedRun();
+    const old = listedRun({ id: 'b0', name: 'Long ago', active: false, running: 0, waiting: 0, done: 48, finished_at: '2026-01-01T10:00:00Z' });
+    mockVideosApi({ videos: (q) => videosResponse(q), runs: [going, old] });
+    show();
+    const rows = await screen.findAllByTestId('run-row');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent('Peekaboo faces');
+    expect(screen.getByRole('link', { name: /All runs/ })).toHaveAttribute('href', '/runs');
+  });
+
+  it('with nothing going on, shows the last run', async () => {
+    const old = listedRun({ id: 'b0', name: 'Long ago', active: false, running: 0, waiting: 0, done: 48, finished_at: '2026-01-01T10:00:00Z' });
+    mockVideosApi({ videos: (q) => videosResponse(q), runs: [old] });
+    show();
+    expect(await screen.findByText('Nothing running. Your last run:')).toBeInTheDocument();
+    expect(screen.getByTestId('run-row')).toHaveTextContent('Long ago');
   });
 
   it("doesn't claim a connection the key hasn't made (UAT #38)", async () => {
@@ -64,6 +84,6 @@ describe('Home', () => {
     show();
     expect(screen.getByRole('button', { name: /Open files from this computer/ })).toBeEnabled();
     expect(screen.getByRole('button', { name: /Ask AI about a video/ })).toBeDisabled();
-    expect(screen.getByRole('link', { name: 'Peekaboo' })).toHaveAttribute('href', '/viewer?demo=peekaboo-rep3-v1.1.1');
+    expect(screen.getByRole('link', { name: /^Peekaboo/ })).toHaveAttribute('href', '/viewer?demo=peekaboo-rep3-v1.1.1');
   });
 });

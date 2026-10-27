@@ -1610,6 +1610,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/videos/all-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every run, those going on first, then newest first */
+        get: operations["list_runs_api_v1_videos_all_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/videos/activity": {
         parameters: {
             query?: never;
@@ -3957,6 +3974,19 @@ export interface components {
             /** Error Message */
             error_message?: string | null;
         };
+        /** LastRunOffer */
+        LastRunOffer: {
+            /** Selected Pipelines */
+            selected_pipelines: string[];
+            /** Config */
+            config: {
+                [key: string]: unknown;
+            };
+            /** Name */
+            name?: string | null;
+            /** Changed At */
+            changed_at?: string | null;
+        };
         /** LibraryPrompt */
         LibraryPrompt: {
             /** Sha256 */
@@ -4874,6 +4904,53 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** RunListItem */
+        RunListItem: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Total */
+            total: number;
+            /** Done */
+            done: number;
+            /** Failed */
+            failed: number;
+            /** Running */
+            running: number;
+            /** Waiting */
+            waiting: number;
+            /** Cancelled */
+            cancelled: number;
+            /** Started At */
+            started_at?: string | null;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Pipelines */
+            pipelines: string[];
+            project?: components["schemas"]["ProjectRef"] | null;
+            /** Active */
+            active: boolean;
+            /** Job Ids */
+            job_ids?: string[];
+            /**
+             * Videos
+             * @description The first few videos' file names
+             */
+            videos: string[];
+            /**
+             * Failure
+             * @description Why the first failed video failed, if one did
+             */
+            failure?: string | null;
+        };
+        /** RunListResponse */
+        RunListResponse: {
+            /** Runs */
+            runs: components["schemas"]["RunListItem"][];
+            /** Total */
+            total: number;
+        };
         /** RunRequest */
         RunRequest: {
             /** Video Path */
@@ -4947,6 +5024,8 @@ export interface components {
                 [key: string]: unknown;
             };
             source: components["schemas"]["RunSettingsSource"];
+            /** @description For a project with no settings of its own: your last run's, to offer, not applied */
+            last_run?: components["schemas"]["LastRunOffer"] | null;
         };
         /** RunSettingsSource */
         RunSettingsSource: {
@@ -5313,6 +5392,16 @@ export interface components {
              * @description Why it failed, if it did
              */
             error?: string | null;
+            /**
+             * Now
+             * @description running or waiting: a newer run on this pipeline, over this result
+             */
+            now?: string | null;
+            /**
+             * Now Run Id
+             * @description That newer run
+             */
+            now_run_id?: string | null;
         };
         /** VideoRunsResponse */
         VideoRunsResponse: {
@@ -7298,6 +7387,8 @@ export interface operations {
                 run?: string | null;
                 /** @description Names containing this, any case */
                 q?: string | null;
+                /** @description recent: last run first */
+                sort?: string;
                 offset?: number;
                 limit?: number;
             };
@@ -7414,6 +7505,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideosRunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_runs_api_v1_videos_all_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunListResponse"];
                 };
             };
             /** @description Validation Error */

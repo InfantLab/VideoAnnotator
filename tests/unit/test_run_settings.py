@@ -131,7 +131,9 @@ def test_an_old_project_starts_from_its_newest_run(db, user, tmp_path):
     assert found["source"]["from"]["name"] == "Newest"
 
 
-def test_a_project_with_neither_falls_back_to_the_last_run(db, user, tmp_path):
+def test_a_project_with_neither_starts_from_the_defaults_and_offers_the_last_run(
+    db, user, tmp_path
+):
     project = make_dataset(db, _name())
     run_settings.record_run(
         db,
@@ -147,7 +149,10 @@ def test_a_project_with_neither_falls_back_to_the_last_run(db, user, tmp_path):
         db, user=user, project_id=str(project.id), storage=JobsDb(tmp_path).storage
     )
 
-    assert found["source"]["kind"] == "last_used"
+    assert found["source"]["kind"] == "defaults"
+    assert found["selected_pipelines"] == []
+    assert found["last_run"]["selected_pipelines"] == ["scene_detection"]
+    assert found["last_run"]["name"] == "Mine"
 
 
 def test_a_chosen_workflow_comes_first(db, user):

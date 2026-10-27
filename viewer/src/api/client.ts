@@ -57,6 +57,7 @@ import type { VideoNote, VideoNoteCreate, VideoNoteUpdate, VideoRuns } from '@/t
 import type { Preset, PresetCreateRequest, PresetListResponse, PresetUpdateRequest } from '@/types/presets';
 import type {
   Activity,
+  RunListResponse,
   RunSettings,
   VideosQuery,
   VideosResponse,
@@ -1216,6 +1217,7 @@ class APIClient {
     if (query.notInProject) params.set('not_in_project', 'true');
     if (query.run) params.set('run', query.run);
     if (query.q) params.set('q', query.q);
+    if (query.sort) params.set('sort', query.sort);
     if (query.offset) params.set('offset', String(query.offset));
     params.set('limit', String(query.limit ?? 2000));
     return this.request(`/api/v1/videos?${params}`);
@@ -1238,6 +1240,11 @@ class APIClient {
   /** Runs with videos waiting or running, and those just finished (spec 029 R17). */
   async getActivity(): Promise<Activity> {
     return this.request('/api/v1/videos/activity');
+  }
+
+  /** Every run, those going on first, then newest first (UAT D2). */
+  async listRuns(limit = 50, offset = 0): Promise<RunListResponse> {
+    return this.request(`/api/v1/videos/all-runs?limit=${limit}&offset=${offset}`);
   }
 
   /** Add videos to a project by path; a project that followed its folder becomes a selection. */

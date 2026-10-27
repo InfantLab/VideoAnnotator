@@ -38,12 +38,12 @@ describe('App Rendering', () => {
 });
 
 describe('the nav (spec 029 FR-018, SC-004)', () => {
-  it('has Home, Videos, Ask AI and Pipelines, then Help and Settings, and nothing else', async () => {
+  it('has Home, Videos, Runs, Ask AI and Pipelines, then Help and Settings, and nothing else', async () => {
     render(<App />);
     const header = await screen.findByRole('banner');
     const nav = header.querySelector('nav')!;
     const entries = [...nav.querySelectorAll('a')].map((a) => a.getAttribute('href'));
-    expect(entries).toEqual(['/home', '/videos', '/ask', '/pipelines']);
+    expect(entries).toEqual(['/home', '/videos', '/runs', '/ask', '/pipelines']);
     const links = [...header.querySelectorAll('a')].map((a) => a.getAttribute('href'));
     expect(links).toEqual(expect.arrayContaining(['/help', '/settings']));
     for (const gone of ['/jobs', '/jobs/new', '/results', '/datasets']) expect(links).not.toContain(gone);

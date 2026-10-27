@@ -12,7 +12,11 @@ const toast = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error:
 vi.mock('sonner', () => ({ toast }));
 
 const client = () => Object.getPrototypeOf(getApiClient());
-const show = (address: string) => renderAt(address, [{ path: '/videos', element: <Videos /> }]);
+const show = (address: string) =>
+  renderAt(address, [
+    { path: '/videos', element: <Videos /> },
+    { path: '/runs/:runId', element: <Videos /> },
+  ]);
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.restoreAllMocks());
@@ -44,7 +48,7 @@ describe('Save as workflow', () => {
   it('from a run: the settings it ran with', async () => {
     const api = mockVideosApi({ videos: (q) => videosResponse(q, { runs: [{ ...FINISHED_RUN, job_ids: ['j1'] }] }) });
     vi.spyOn(client(), 'getJob').mockResolvedValue({ id: 'j1', selected_pipelines: ['scene_detection'], config: { scene_detection: { threshold: 0.4 } } });
-    show('/videos?run=b1');
+    show('/runs/b1');
     await userEvent.click(await screen.findByRole('button', { name: /Save as workflow/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Save workflow' }));
     await waitFor(() =>
@@ -85,9 +89,9 @@ describe("a run whose project uses a workflow (T050)", () => {
       presets: [workflow({ export_choices: { table: 'parquet', elan: false, methods: true } })],
       total: 1,
     });
-    show('/videos?run=b1');
+    show('/runs/b1');
     const headline = await screen.findByTestId('run-headline');
-    await waitFor(() => expect(within(headline).getByRole('button', { name: /Download \(Parquet\)/ })).toBeInTheDocument());
+    await waitFor(() => expect(within(headline).getByRole('button', { name: /Download table \(Parquet\)/ })).toBeInTheDocument());
     expect(within(headline).queryByRole('button', { name: /ELAN/ })).toBeNull();
   });
 });

@@ -4,6 +4,7 @@ R1, R2, R12)."""
 from __future__ import annotations
 
 import os
+from datetime import datetime, timedelta
 
 from tests.fixtures.video_index import JobsDb, write_video
 from videoannotator import video_index
@@ -261,3 +262,36 @@ def test_runs_group_jobs_by_batch_with_counts(tmp_path):
     assert not single.active and single.finished_at is not None
     assert [v.name for v in run_videos(index, "b1")] == ["a.mp4", "b.mp4"]
     assert runs(index)[0].id == solo.job_id
+
+
+def test_a_newer_run_going_on_shows_over_an_older_result(tmp_path):
+    jobs = JobsDb(tmp_path)
+    video = write_video(tmp_path / "data" / "p01.mp4")
+    now = datetime.now()
+    jobs.make_job(
+        video,
+        created_at=now - timedelta(hours=1),
+        pipelines={"scene_detection": ("completed", None, None)},
+    )
+    newer = jobs.make_job(
+        video,
+        batch_id="b2",
+        created_at=now,
+        pipelines={"scene_detection": ("running", None, None)},
+    )
+
+    [found] = _index(jobs).videos()
+
+    scenes = found.results["scene_detection"]
+    assert (scenes.state, scenes.now, scenes.now_run_id) == (DONE, RUNNING, "b2")
+    assert newer.batch_id == "b2"
+
+
+def test_a_finished_newer_run_leaves_nothing_going_on(tmp_path):
+    jobs = JobsDb(tmp_path)
+    video = write_video(tmp_path / "data" / "p01.mp4")
+    jobs.make_job(video, pipelines={"scene_detection": ("completed", None, None)})
+
+    [found] = _index(jobs).videos()
+
+    assert found.results["scene_detection"].now is None

@@ -54,7 +54,7 @@ describe('the Runs tab', () => {
     expect(cards[0]).toHaveTextContent('Second (2026-10-20)');
     expect(cards[0]).toHaveTextContent('No audio track');
     expect(cards[0]).toHaveTextContent('Face analysis · min_face_size: 40');
-    expect(within(cards[0]).getByRole('link', { name: 'Second' })).toHaveAttribute('href', '/videos?run=b2');
+    expect(within(cards[0]).getByRole('link', { name: 'Second' })).toHaveAttribute('href', '/runs/b2');
     expect(cards[0]).toHaveTextContent('~/VideoAnnotator/Second');
     expect(within(cards[0]).getByRole('button', { name: /Download all files/ })).toBeInTheDocument();
     expect(within(cards[0]).getByRole('button', { name: /Delete run/ })).toBeInTheDocument();

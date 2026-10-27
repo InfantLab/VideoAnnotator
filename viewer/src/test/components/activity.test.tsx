@@ -21,8 +21,8 @@ describe('ActivityIndicator', () => {
     show();
     const button = await screen.findByRole('button', { name: 'Runs going on: 1 run · 31/48' });
     await userEvent.click(button);
-    expect(await screen.findByRole('link', { name: /Peekaboo faces/ })).toHaveAttribute('href', '/videos?run=b2');
-    expect(screen.getByRole('link', { name: /First faces/ })).toHaveAttribute('href', '/videos?run=b1');
+    expect(await screen.findByRole('link', { name: /Peekaboo faces/ })).toHaveAttribute('href', '/runs/b2');
+    expect(screen.getByRole('link', { name: /First faces/ })).toHaveAttribute('href', '/runs/b1');
   });
 
   it('says when a run finished, with the results table next', async () => {

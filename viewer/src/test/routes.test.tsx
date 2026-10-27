@@ -41,7 +41,7 @@ describe('old addresses', () => {
   it.each([
     ['/jobs', '/videos'],
     ['/batches', '/videos'],
-    ['/batches/b1', '/videos?run=b1'],
+    ['/batches/b1', '/runs/b1'],
     ['/datasets', '/videos'],
     ['/results', '/videos'],
     ['/library', '/videos'],
@@ -76,9 +76,10 @@ describe('new addresses', () => {
 });
 
 describe('the root (R18)', () => {
-  it('opens Videos once there are results', async () => {
+  it('opens Home, its dashboard, even once there are results (D3)', async () => {
     visit('/');
-    await waitFor(() => expect(where()).toBe('/videos'));
+    expect(await screen.findByTestId('start-points')).toBeInTheDocument();
+    expect(where()).toBe('/');
   });
 
   it('opens Home on a new server', async () => {

@@ -1,16 +1,16 @@
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, GitCompare, Loader2, Play, RotateCcw, Square, Table2, Video } from 'lucide-react';
+import { ChevronRight, FileText, GitCompare, Loader2, Play, RotateCcw, Square, Table2, Video } from 'lucide-react';
 
-import { apiClient, type ExportScope } from '@/api/client';
+import { apiClient } from '@/api/client';
 import { RunDeleteButton } from '@/components/RunDeleteButton';
+import { KindIcons } from '@/components/runs/KindIcons';
+import { RunStateIcon } from '@/components/runs/RunStateIcon';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { saveBlob } from '@/lib/exports';
+import { useRunActions } from '@/hooks/useRunActions';
 import { notify } from '@/lib/notify';
-import { finishedCount, isSingle, isVlmRun, runStatus, videosWord } from '@/lib/runs';
-import { runState } from '@/lib/runTarget';
+import { finishedCount, isVlmRun, runDuration, runOutcome, runStateOf, videosWord } from '@/lib/runs';
 import { userMessage } from '@/lib/userMessage';
 import { hrefOf } from '@/lib/videosScope';
 import type { ExportChoices, RunSummary } from '@/types/videos';
@@ -28,59 +28,12 @@ interface RunHeaderProps {
   children?: ReactNode;
 }
 
-/** A run as a filter of Videos (spec 029 R12): its progress, actions and, once finished, its results table. */
+/** A run's own page (UAT D2): what it ran, how it went, and its results. */
 export function RunHeader({ run, firstVideoPath, exportChoices, children }: RunHeaderProps) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [methodsOpen, setMethodsOpen] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
-  const single = isSingle(run);
+  const { single, scope, table, busy, setBusy, runAgain, cancel, retry, download } = useRunActions(run, exportChoices);
   const finished = finishedCount(run);
-  const scope: ExportScope = { kind: 'run', id: run.id };
-  const table = exportChoices?.table ?? 'csv';
-
-  const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['videos'] });
-  };
-  const cancel = useMutation({
-    mutationFn: async (): Promise<void> => {
-      if (single) await apiClient.cancelJob(run.id);
-      else await apiClient.cancelBatch(run.id);
-    },
-    onSuccess: () => {
-      refresh();
-      notify({ title: `Stopping ${run.name}`, body: 'Videos already finished keep their results.', action: { label: 'Run again…', onClick: () => runAgain() } });
-    },
-    onError: (error) => notify({ title: "Couldn't stop the run", body: userMessage(error), tone: 'error' }),
-  });
-  const retry = useMutation({
-    mutationFn: async (): Promise<void> => {
-      if (single) await apiClient.retryJob(run.id);
-      else await apiClient.retryBatch(run.id);
-    },
-    onSuccess: () => {
-      refresh();
-      notify({ title: `Running the failed ${run.failed === 1 ? 'video' : 'videos'} again`, action: { label: 'Show run', to: hrefOf({ run: run.id }) } });
-    },
-    onError: (error) => notify({ title: "Couldn't run them again", body: userMessage(error), tone: 'error' }),
-  });
-
-  const runAgain = () =>
-    navigate('/run', {
-      state: runState({ target: { kind: 'rerun', runId: run.id, label: run.name, single, videoCount: run.total } }),
-    });
-
-  const download = async (kind: 'table' | 'elan') => {
-    setBusy(kind);
-    try {
-      const file = await apiClient.exportResults(scope, kind, table);
-      saveBlob(file.blob, file.filename ?? (kind === 'table' ? `${run.name}.${table}` : `${run.name}.eaf`));
-    } catch (error) {
-      notify({ title: "Couldn't export", body: userMessage(error), tone: 'error' });
-    } finally {
-      setBusy(null);
-    }
-  };
 
   const compare = async () => {
     if (!firstVideoPath) return;
@@ -100,86 +53,114 @@ export function RunHeader({ run, firstVideoPath, exportChoices, children }: RunH
     }
   };
 
+  const state = runStateOf(run);
+  const took = runDuration(run);
+
   return (
-    <section className="space-y-3 rounded-lg border p-4" data-testid="run-header">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold">{run.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            Run of {videosWord(run.total)}
-            {run.project && (
-              <>
-                {' '}in <Link to={hrefOf({ project: run.project.id })} className="text-foreground hover:underline">{run.project.name}</Link>
-              </>
+    <section className="space-y-3" data-testid="run-header">
+      <nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="Breadcrumb">
+        <Link to="/runs" className="hover:text-foreground hover:underline">
+          Runs
+        </Link>
+        <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+        <span className="truncate text-foreground">{run.name}</span>
+      </nav>
+      <div className="space-y-3 rounded-lg border p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <h1 className="flex min-w-0 items-center gap-2 text-2xl font-semibold">
+              <RunStateIcon state={state} className="h-5 w-5" />
+              <span className="truncate" title={run.name}>{run.name}</span>
+            </h1>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+              <span>
+                {videosWord(run.total)}
+                {run.project && (
+                  <>
+                    {' '}in <Link to={hrefOf({ project: run.project.id })} className="text-foreground hover:underline">{run.project.name}</Link>
+                  </>
+                )}
+              </span>
+              <span aria-hidden="true">·</span>
+              <KindIcons pipelines={run.pipelines} />
+              {run.started_at && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>{formatWhen(run.started_at)}</span>
+                </>
+              )}
+              {took && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>{took}</span>
+                </>
+              )}
+              <span aria-hidden="true">·</span>
+              <span data-testid="run-state">{runOutcome(run)}</span>
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {run.active && (
+              <Button variant="outline" size="sm" onClick={() => cancel.mutate()} disabled={cancel.isPending}>
+                <Square className="mr-1 h-4 w-4" />
+                Stop
+              </Button>
             )}
-            {run.started_at && <> · started {formatWhen(run.started_at)}</>}
-            {' · '}
-            <span data-testid="run-state">{runStatus(run)}</span>
-          </p>
+            {!run.active && run.failed > 0 && (
+              <Button variant="outline" size="sm" onClick={() => retry.mutate()} disabled={retry.isPending}>
+                <RotateCcw className="mr-1 h-4 w-4" />
+                Retry failed videos
+              </Button>
+            )}
+            {!run.active && (
+              <Button variant="outline" size="sm" onClick={runAgain}>
+                <Play className="mr-1 h-4 w-4" />
+                Run again…
+              </Button>
+            )}
+            {children}
+            <RunDeleteButton runId={run.id} single={single} videoCount={run.total} name={run.name} after="/runs" />
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {run.active && (
-            <Button variant="outline" size="sm" onClick={() => cancel.mutate()} disabled={cancel.isPending}>
-              <Square className="mr-1 h-4 w-4" />
-              Cancel
+
+        {run.active && (
+          <div className="space-y-1">
+            <Progress value={run.total ? (finished / run.total) * 100 : 0} aria-label="Run progress" />
+            <p className="text-xs text-muted-foreground">You can close this tab; results will be here.</p>
+          </div>
+        )}
+
+        {run.done > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted/50 p-3" data-testid="run-headline">
+            <p className="mr-2 text-sm">
+              <span className="font-medium">Results:</span> open a video below to see them on its timeline, or take
+              {run.active ? ' those finished so far' : ' all of them'}:
+            </p>
+            <Button size="sm" onClick={() => download('table')} disabled={busy !== null}>
+              {busy === 'table' ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Table2 className="mr-1 h-4 w-4" />}
+              Download table{table === 'parquet' ? ' (Parquet)' : ''}
             </Button>
-          )}
-          {!run.active && run.failed > 0 && (
-            <Button variant="outline" size="sm" onClick={() => retry.mutate()} disabled={retry.isPending}>
-              <RotateCcw className="mr-1 h-4 w-4" />
-              Retry failed videos
-            </Button>
-          )}
-          {!run.active && (
-            <Button variant="outline" size="sm" onClick={runAgain}>
-              <Play className="mr-1 h-4 w-4" />
-              Run again…
-            </Button>
-          )}
-          {children}
-          <RunDeleteButton runId={run.id} single={single} videoCount={run.total} name={run.name} />
-        </div>
+            {exportChoices?.elan !== false && (
+              <Button variant="outline" size="sm" onClick={() => download('elan')} disabled={busy !== null}>
+                <Video className="mr-1 h-4 w-4" />
+                ELAN
+              </Button>
+            )}
+            {exportChoices?.methods !== false && (
+              <Button variant="outline" size="sm" onClick={() => setMethodsOpen(true)}>
+                <FileText className="mr-1 h-4 w-4" />
+                Methods
+              </Button>
+            )}
+            {isVlmRun(run) && (
+              <Button variant="outline" size="sm" onClick={compare} disabled={busy !== null || !firstVideoPath}>
+                <GitCompare className="mr-1 h-4 w-4" />
+                Compare answers
+              </Button>
+            )}
+          </div>
+        )}
       </div>
-
-      {run.active && (
-        <div className="space-y-1">
-          <Progress value={run.total ? (finished / run.total) * 100 : 0} aria-label="Run progress" />
-          <p className="text-xs text-muted-foreground">
-            {finished} of {run.total} finished · {run.running} running · {run.waiting} waiting
-            {run.failed > 0 && ` · ${run.failed} failed`}. You can close this tab; results will be here.
-          </p>
-        </div>
-      )}
-
-      {!run.active && run.done > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted/50 p-3" data-testid="run-headline">
-          <p className="mr-2 font-medium">
-            {videosWord(run.done)} → results table
-          </p>
-          <Button size="sm" onClick={() => download('table')} disabled={busy !== null}>
-            {busy === 'table' ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Table2 className="mr-1 h-4 w-4" />}
-            Download{table === 'parquet' ? ' (Parquet)' : ''}
-          </Button>
-          {exportChoices?.elan !== false && (
-            <Button variant="outline" size="sm" onClick={() => download('elan')} disabled={busy !== null}>
-              <Video className="mr-1 h-4 w-4" />
-              ELAN
-            </Button>
-          )}
-          {exportChoices?.methods !== false && (
-            <Button variant="outline" size="sm" onClick={() => setMethodsOpen(true)}>
-              <FileText className="mr-1 h-4 w-4" />
-              Methods
-            </Button>
-          )}
-          {isVlmRun(run) && (
-            <Button variant="outline" size="sm" onClick={compare} disabled={busy !== null || !firstVideoPath}>
-              <GitCompare className="mr-1 h-4 w-4" />
-              Compare answers
-            </Button>
-          )}
-        </div>
-      )}
       {methodsOpen && (
         <Suspense fallback={null}>
           <MethodsDialog scope={scope} open={methodsOpen} onOpenChange={setMethodsOpen} />

@@ -156,7 +156,7 @@ describe('progress while a run is going (T032)', () => {
     show(`/videos?project=${PROJECT_ID}`);
     const progress = await screen.findByTestId('scope-progress');
     expect(progress).toHaveTextContent('Peekaboo faces: running 31/48');
-    expect(within(progress).getByRole('link')).toHaveAttribute('href', '/videos?run=b2');
+    expect(within(progress).getByRole('link')).toHaveAttribute('href', '/runs/b2');
   });
 
   it("sums a folder's rows still moving", async () => {
@@ -186,4 +186,28 @@ it('does not list a run on the left', async () => {
   const nav = await screen.findByRole('navigation', { name: 'Videos by place' });
   expect(within(nav).queryByText(run().name)).toBeNull();
   expect(VIDEOS.length).toBe(4);
+});
+
+describe('status in place (UAT #6, #43)', () => {
+  it('a newer run going on shows over an older result, linked to the run', async () => {
+    const rerun = video('p01_t1.mp4', {
+      results: {
+        face_analysis: { state: 'done', run_id: 'b1', finished_at: '2026-10-12T10:00:00Z', error: null, now: 'running', now_run_id: 'b2' },
+      },
+    });
+    mockVideosApi({ videos: (q) => videosResponse(q, { videos: [rerun], total: 1 }) });
+    show();
+    const cell = await screen.findByTestId('result-now');
+    expect(cell).toHaveTextContent('running');
+    expect(cell).toHaveAttribute('href', '/runs/b2');
+  });
+
+  it('the sidebar folds away', async () => {
+    mockVideosApi();
+    show();
+    await userEvent.click(await screen.findByTestId('sidebar-toggle'));
+    expect(screen.getByRole('button', { name: 'Show folders and projects' })).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(screen.getByTestId('sidebar-toggle'));
+    expect(screen.getByRole('button', { name: 'Hide folders and projects' })).toBeInTheDocument();
+  });
 });

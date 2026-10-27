@@ -47,6 +47,7 @@ def test_defaults_on_a_fresh_server(api):
             "changed_at": None,
             "from": None,
         },
+        "last_run": None,
     }
 
 

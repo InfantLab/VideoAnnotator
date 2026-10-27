@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
+import { Loader2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 import type { ExportScope } from '@/api/client';
 import { APIError, isNeedsKey } from '@/api/handleError';
@@ -46,13 +46,37 @@ function exportScopeOf(query: VideosQuery, videos: VideoItem[]): ExportScope | n
 
 const isNoServer = (error: unknown) => error instanceof APIError && error.status === 0;
 
+const SIDEBAR_KEY = 'vav.videos.sidebarHidden';
+
+/** The sidebar folds away, remembered in this browser (Caspar, batch 3). */
+function useSidebarHidden(): [boolean, () => void] {
+  const [hidden, setHidden] = useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggle = () =>
+    setHidden((was) => {
+      try {
+        localStorage.setItem(SIDEBAR_KEY, was ? '0' : '1');
+      } catch {
+        /* private window: for this visit only */
+      }
+      return !was;
+    });
+  return [hidden, toggle];
+}
+
 /**
  * Every video the server knows, by place: all, not in a project, a project,
  * a folder, or a run (spec 029 US1, US2, US5).
  */
 export default function Videos() {
   const [params, setParams] = useSearchParams();
-  const query = useMemo(() => queryOf(params), [params]);
+  const { runId } = useParams();
+  const query = useMemo(() => (runId ? { run: runId } : queryOf(params)), [runId, params]);
   const scopeKey = paramsOf(query).toString();
   const filter = params.get('q') ?? '';
   const { data, error, isLoading } = useVideos(query);
@@ -60,6 +84,7 @@ export default function Videos() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [naming, setNaming] = useState(false);
   const projects = useProjects();
+  const [sidebarHidden, toggleSidebar] = useSidebarHidden();
 
   useEffect(() => setSelected(new Set()), [scopeKey]);
 
@@ -68,7 +93,12 @@ export default function Videos() {
     const needle = filter.trim().toLowerCase();
     return needle ? all.filter((v) => v.name.toLowerCase().includes(needle)) : all;
   }, [data, filter]);
-  const pipelines = useMemo(() => pipelinesOf(data?.videos ?? [], order), [data, order]);
+  const runPipelines = query.run ? data?.runs.find((r) => r.id === query.run)?.pipelines : undefined;
+  // A run's page shows the run's pipelines only (batch 3 mock-up).
+  const pipelines = useMemo(
+    () => pipelinesOf(data?.videos ?? [], order).filter((p) => !runPipelines || runPipelines.includes(p)),
+    [data, order, runPipelines],
+  );
   const title = scopeTitle(data?.scope, query);
   const context = listContextOf(query);
   const selectedPaths = (data?.videos ?? []).map((v) => v.path).filter((p) => selected.has(p));
@@ -97,6 +127,9 @@ export default function Videos() {
       return next;
     });
 
+  const oldRunAddress = !runId && params.get('run');
+  if (oldRunAddress) return <Navigate to={hrefOf({ run: oldRunAddress })} replace />;
+
   if (isNoServer(error)) {
     return (
       <div className="container mx-auto space-y-4 px-6 py-8">
@@ -107,9 +140,21 @@ export default function Videos() {
   }
 
   return (
-    <div className="container mx-auto grid gap-6 px-6 py-6 md:grid-cols-[15rem_1fr]">
-      <aside className="md:sticky md:top-20 md:self-start">
-        <Sidebar counts={data?.counts} current={query} onNewProject={() => setNaming(true)} />
+    <div className={`container mx-auto grid gap-6 px-6 py-6 ${sidebarHidden ? 'md:grid-cols-[2rem_1fr]' : 'md:grid-cols-[15rem_1fr]'}`}>
+      <aside className="space-y-1 md:sticky md:top-20 md:self-start">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground"
+          onClick={toggleSidebar}
+          aria-label={sidebarHidden ? 'Show folders and projects' : 'Hide folders and projects'}
+          title={sidebarHidden ? 'Show folders and projects' : 'Hide folders and projects'}
+          aria-expanded={!sidebarHidden}
+          data-testid="sidebar-toggle"
+        >
+          {sidebarHidden ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+        </Button>
+        {!sidebarHidden && <Sidebar counts={data?.counts} current={query} onNewProject={() => setNaming(true)} />}
         <NewProjectDialog
           open={naming}
           onOpenChange={setNaming}
@@ -119,17 +164,19 @@ export default function Videos() {
         />
       </aside>
       <main className="min-w-0 space-y-4">
-        <PageHelp page="videos">
-          Every <Term word="video" /> the server knows, by <Term word="folder" /> and <Term word="project" />, with
-          the results each has. Pick some, then <strong>Run</strong> or <strong>Export</strong>.
-        </PageHelp>
+        {!query.run && (
+          <PageHelp page="videos">
+            Every <Term word="video" /> the server knows, by <Term word="folder" /> and <Term word="project" />, with
+            the results each has. Pick some, then <strong>Run</strong> or <strong>Export</strong>.
+          </PageHelp>
+        )}
 
         {error && !data && !isNeedsKey(error) && (
           <p className="text-sm text-destructive" role="alert">
             {userMessage(error)}{' '}
             {query.run && (
-              <Link to="/videos" className="text-foreground underline">
-                All videos
+              <Link to="/runs" className="text-foreground underline">
+                All runs
               </Link>
             )}
           </p>
@@ -202,6 +249,8 @@ export default function Videos() {
         ) : (
           data && (
             <VideosTable
+              caption={run ? `Videos in this run (${data.total})` : undefined}
+              openColumn={!!run}
               videos={videos}
               pipelines={pipelines}
               nameOf={nameOf}
