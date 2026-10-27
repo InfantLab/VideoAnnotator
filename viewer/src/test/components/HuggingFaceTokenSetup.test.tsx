@@ -156,9 +156,9 @@ describe('Settings: Hugging Face token card (spec 031)', () => {
       set: false, source: null, envVar: null, account: null, check: null,
     });
     renderCard();
-    expect(await screen.findByText('Set (account caspar, saved on this server).')).toBeInTheDocument();
+    expect(await screen.findByTestId('hf-token-state')).toHaveTextContent('Token working · account caspar');
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
-    expect(await screen.findByText(/^Not set\./)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('hf-token-state')).toHaveTextContent('Not set'));
     expect(remove).toHaveBeenCalled();
   });
 
@@ -167,7 +167,7 @@ describe('Settings: Hugging Face token card (spec 031)', () => {
       set: true, source: 'environment', envVar: 'HUGGINGFACE_TOKEN', account: null, check: 'ok',
     });
     renderCard();
-    expect(await screen.findByText(/from HUGGINGFACE_TOKEN in the server's environment/)).toBeInTheDocument();
+    expect(await screen.findByText(/the server was started with \(HUGGINGFACE_TOKEN\)/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
   });
 
@@ -176,7 +176,8 @@ describe('Settings: Hugging Face token card (spec 031)', () => {
       set: false, source: null, envVar: null, account: null, check: null,
     });
     renderCard(false);
-    expect(await screen.findByText(/^Not set\./)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('hf-token-state')).toHaveTextContent('Not set'));
+    expect(screen.getByText(/Only an administrator of this server can add it/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add a token' })).not.toBeInTheDocument();
   });
 
@@ -186,7 +187,8 @@ describe('Settings: Hugging Face token card (spec 031)', () => {
       set: false, source: null, envVar: null, account: null, check: null,
     });
     renderCard('unknown');
-    expect(await screen.findByText(/^Not set\./)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('hf-token-state')).toHaveTextContent('Not set'));
+    expect(screen.getByRole('link', { name: 'accept the pyannote licence' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add a token' })).not.toBeInTheDocument();
     expect(screen.getByText(/To add or change it from here/)).toBeInTheDocument();
   });

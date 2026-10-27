@@ -75,3 +75,48 @@ export function tokenFormatProblem(token: string): string | null {
     }
     return 'A key starts with "va_" followed by 43 characters.';
 }
+
+export type ConnectionCheck =
+    | { ok: true; user: { name: string; isAdmin: boolean } | null; authRequired: boolean }
+    | { ok: false; problem: 'no-server' | 'needs-key' | 'key-refused' | 'server-error'; authRequired?: boolean };
+
+/**
+ * Whether `token` works on the server at `url`, checked with exactly what was
+ * typed (UAT #51): the saved key plays no part. Health says whether a key is
+ * needed; /auth/me says whose the key is.
+ */
+export async function checkConnection(url: string, token: string): Promise<ConnectionCheck> {
+    const base = normalizeApiUrl(url);
+    const key = token.trim();
+    let authRequired = false;
+    try {
+        const health = await fetch(`${base}/api/v1/system/health`);
+        if (!health.ok) return { ok: false, problem: 'server-error' };
+        const body = await health.json().catch(() => null);
+        authRequired = body?.security?.auth_required === true;
+    } catch {
+        return { ok: false, problem: 'no-server' };
+    }
+    if (!key) return authRequired ? { ok: false, problem: 'needs-key', authRequired } : { ok: true, user: null, authRequired };
+    try {
+        const me = await fetch(`${base}/api/v1/auth/me`, { headers: { Authorization: `Bearer ${key}` } });
+        if (me.status === 401 || me.status === 403) return { ok: false, problem: 'key-refused', authRequired };
+        if (me.ok) {
+            const user = await me.json();
+            return {
+                ok: true,
+                user: { name: user.username || user.email || 'your key', isAdmin: user.is_admin === true },
+                authRequired,
+            };
+        }
+        // A server from before /auth/me: a list it guards says whether the key works.
+        const jobs = await fetch(`${base}/api/v1/jobs?per_page=1`, { headers: { Authorization: `Bearer ${key}` } });
+        if (jobs.ok) return { ok: true, user: null, authRequired };
+        if (jobs.status === 401 || jobs.status === 403 || jobs.status === 404) {
+            return { ok: false, problem: 'key-refused', authRequired };
+        }
+        return { ok: false, problem: 'server-error', authRequired };
+    } catch {
+        return { ok: false, problem: 'no-server' };
+    }
+}

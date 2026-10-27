@@ -19,10 +19,10 @@ describe('FileUploader', () => {
       ),
     ]);
 
-    expect(await screen.findByText('Person Tracking (COCO)')).toBeInTheDocument();
-    expect(screen.getByText('Video File')).toBeInTheDocument();
-    expect(screen.queryByText('Unknown File Type')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Process 2 Files/ })).toBeEnabled();
+    expect(await screen.findByText('People and pose')).toBeInTheDocument();
+    expect(screen.getByText('Video')).toBeInTheDocument();
+    expect(screen.queryByText('Not recognised')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open 2 files' })).toBeEnabled();
   });
 
   it('a video with only ELAN ground truth can be opened', async () => {
@@ -32,7 +32,7 @@ describe('FileUploader', () => {
       new File(['<ANNOTATION_DOCUMENT></ANNOTATION_DOCUMENT>'], 'truth.eaf'),
     ]);
 
-    expect(await screen.findByText('ELAN Ground Truth (.eaf)')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Process 2 Files/ })).toBeEnabled();
+    expect(await screen.findByText('ELAN annotations')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open 2 files' })).toBeEnabled();
   });
 });

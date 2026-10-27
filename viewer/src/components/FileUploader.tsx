@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Upload, Video, FileText, Music, Users, Eye, AlertCircle, CheckCircle2, Loader2, X } from 'lucide-react';
+import { Upload, Video, FileText, Music, AlertCircle, CheckCircle2, Loader2, X } from 'lucide-react';
+import { kindColour, kindOfPipeline } from '@/lib/resultKinds';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -43,32 +44,17 @@ interface FileStatus {
 }
 
 const FileTypeIcon = ({ type }: { type: DetectedFileType }) => {
-  switch (type) {
-    case 'video': return <Video className="w-4 h-4" />;
-    case 'audio': return <Music className="w-4 h-4" />;
-    case 'person_tracking': return <Users className="w-4 h-4" />;
-    case 'speech_recognition': return <FileText className="w-4 h-4" />;
-    case 'speaker_diarization': return <Users className="w-4 h-4" />;
-    case 'scene_detection': return <Eye className="w-4 h-4" />;
-    case 'vlm_annotation': return <Eye className="w-4 h-4" />;
-    case 'elan_ground_truth': return <CheckCircle2 className="w-4 h-4" />;
-    case 'face_analysis': return <Eye className="w-4 h-4" />;
-    case 'openface3_faces': return <Eye className="w-4 h-4" />;
-    case 'complete_results': return <CheckCircle2 className="w-4 h-4" />;
-    default: return <AlertCircle className="w-4 h-4" />;
-  }
+  const kind = kindOfPipeline(type === 'openface3_faces' ? 'face_openface3_embedding' : type);
+  const Icon = kind?.icon ?? (type === 'video' ? Video : type === 'audio' ? Music : type === 'unknown' ? AlertCircle : FileText);
+  return <Icon className="w-4 h-4" style={kind ? { color: kindColour(kind) } : undefined} aria-hidden="true" />;
 };
 
-const FileTypeLabel = ({ type, confidence }: { type: DetectedFileType; confidence: number }) => {
-  return (
-    <span className={`text-xs px-2 py-1 rounded ${confidence >= 0.8 ? 'bg-green-100 text-green-800' :
-      confidence >= 0.5 ? 'bg-yellow-100 text-yellow-800' :
-        'bg-red-100 text-red-800'
-      }`}>
-      {describeFileType(type)}
-    </span>
-  );
-};
+const FileTypeLabel = ({ type, confidence }: { type: DetectedFileType; confidence: number }) => (
+  <span className={confidence < 0.5 ? 'text-amber-700 dark:text-amber-400' : undefined}>
+    {describeFileType(type)}
+    {confidence < 0.8 && confidence >= 0.5 && ' (probably)'}
+  </span>
+);
 
 export const FileUploader = ({ onVideoLoad, onAnnotationLoad, onFilesLoaded }: FileUploaderProps) => {
   const [fileStatuses, setFileStatuses] = useState<FileStatus[]>([]);
@@ -204,7 +190,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad, onFilesLoaded }: F
     }
   }, [handleFilesSelected]);
 
-  const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = useCallback((event: React.DragEvent<HTMLElement>) => {
     event.preventDefault();
     const files = event.dataTransfer.files;
     if (files) {
@@ -212,7 +198,7 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad, onFilesLoaded }: F
     }
   }, [handleFilesSelected]);
 
-  const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOver = useCallback((event: React.DragEvent<HTMLElement>) => {
     event.preventDefault();
   }, []);
 
@@ -233,169 +219,115 @@ export const FileUploader = ({ onVideoLoad, onAnnotationLoad, onFilesLoaded }: F
   const canProcess = hasVideoFile && hasPipelineData && !isProcessing;
 
   return (
-    <Card className="p-8 max-w-4xl mx-auto">
+    <Card className="p-6">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <Upload className="w-12 h-12 mx-auto text-primary" />
-          <h2 className="text-2xl font-bold">Load Video & Annotations</h2>
-          <p className="text-muted-foreground">
-            Select multiple files from VideoAnnotator output or drag & drop them here.
-          </p>
-        </div>
-
-        {/* File Drop Zone */}
-        <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isProcessing
+        {/* A real button, so the keyboard reaches it too (UAT #60); dropping still works. */}
+        <button
+          type="button"
+          className={`w-full rounded-lg border-2 border-dashed p-8 text-center transition-colors ${isProcessing
             ? 'border-muted bg-muted/10'
-            : 'border-border hover:border-primary cursor-pointer'
+            : 'border-border hover:border-primary focus-visible:border-primary focus-visible:outline-none'
             }`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onClick={() => !isProcessing && fileInputRef.current?.click()}
+          disabled={isProcessing}
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept=".mp4,.webm,.avi,.mov,.json,.vtt,.rttm,.eaf,.wav,.mp3"
-            onChange={handleFileInputChange}
-            className="hidden"
-            disabled={isProcessing}
-          />
-
           {isProcessing ? (
-            <div className="space-y-4">
+            <span className="block space-y-4">
               <Loader2 className="w-8 h-8 mx-auto animate-spin text-primary" />
-              <div className="space-y-2">
-                <p className="text-sm font-medium">{processingStage}</p>
+              <span className="block space-y-2">
+                <span className="block text-sm font-medium">{processingStage}</span>
                 <Progress value={processingProgress} className="w-full max-w-md mx-auto" />
-              </div>
-            </div>
+              </span>
+            </span>
           ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-lg font-medium">
-                  {hasFiles ? 'Add more files or process current selection' : 'Click to select files or drag & drop'}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Supported: Video (.mp4, .webm), Annotations (.json), Subtitles (.vtt), Speaker data (.rttm), Audio (.wav)
-                </p>
-              </div>
-            </div>
+            <span className="block space-y-2">
+              <Upload className="w-8 h-8 mx-auto text-primary" aria-hidden="true" />
+              <span className="block text-lg font-medium">
+                {hasFiles ? 'Choose more files' : 'Choose files'}
+              </span>
+              <span className="block text-sm text-muted-foreground">or drop them here</span>
+            </span>
           )}
-        </div>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".mp4,.webm,.avi,.mov,.json,.vtt,.rttm,.eaf,.wav,.mp3"
+          onChange={handleFileInputChange}
+          className="hidden"
+          disabled={isProcessing}
+        />
+        <p className="text-sm text-muted-foreground">
+          A video (MP4, WebM, MOV or AVI) with the results that go with it: files from a VideoAnnotator run,
+          subtitles (.vtt), speaker turns (.rttm) or ELAN annotations (.eaf).
+        </p>
 
-        {/* File List */}
         {hasFiles && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Selected Files ({fileStatuses.length})</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearAllFiles}
-                disabled={isProcessing}
-              >
-                Clear All
+              <h3 className="text-lg font-medium">{fileStatuses.length === 1 ? '1 file' : `${fileStatuses.length} files`}</h3>
+              <Button variant="ghost" size="sm" onClick={clearAllFiles} disabled={isProcessing}>
+                Clear
               </Button>
             </div>
 
-            <div className="grid gap-2 max-h-64 overflow-y-auto">
+            <ul className="grid gap-2 max-h-64 overflow-y-auto">
               {fileStatuses.map((status, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 p-3 border rounded-lg bg-card"
-                >
+                <li key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-card">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <FileTypeIcon type={status.detected.type} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{status.file.name}</p>
+                      <p className="text-sm font-medium truncate" title={status.file.name}>{status.file.name}</p>
                       <p className="text-xs text-muted-foreground">
                         <FileTypeLabel type={status.detected.type} confidence={status.detected.confidence} />
+                        {status.error && <span className="text-destructive"> · {status.error}</span>}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {status.status === 'success' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                    {status.status === 'error' && <AlertCircle className="w-4 h-4 text-red-500" />}
-                    {status.status === 'processing' && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
-
+                    {status.status === 'success' && <CheckCircle2 className="w-4 h-4 text-green-600" aria-label="read" />}
+                    {status.status === 'error' && <AlertCircle className="w-4 h-4 text-red-600" aria-label="can't be read" />}
+                    {status.status === 'processing' && <Loader2 className="w-4 h-4 animate-spin text-primary" aria-label="reading" />}
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => removeFile(index)}
                       disabled={isProcessing}
+                      aria-label={`Remove ${status.file.name}`}
                     >
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
 
-            {/* File Validation Summary */}
-            <div className="p-3 border rounded-lg bg-muted/10">
-              <div className="text-sm space-y-1">
-                <div className="flex items-center gap-2">
-                  {hasVideoFile ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-red-500" />
-                  )}
-                  <span className={hasVideoFile ? 'text-green-700' : 'text-red-700'}>
-                    Video file {hasVideoFile ? 'found' : 'required'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {hasPipelineData ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-red-500" />
-                  )}
-                  <span className={hasPipelineData ? 'text-green-700' : 'text-red-700'}>
-                    Pipeline data {hasPipelineData ? 'found' : 'required'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+            {(!hasVideoFile || !hasPipelineData) && (
+              <p className="text-sm text-amber-700 dark:text-amber-400" role="status">
+                {!hasVideoFile && !hasPipelineData
+                  ? 'Add a video and at least one results file.'
+                  : !hasVideoFile
+                    ? 'Add the video these results are for.'
+                    : 'Add at least one results file for this video.'}
+              </p>
+            )}
 
-        {/* Action Buttons */}
-        <div className="space-y-4">
-          {hasFiles && (
-            <Button
-              onClick={processFiles}
-              disabled={!canProcess}
-              className="w-full"
-              size="lg"
-            >
+            <Button onClick={processFiles} disabled={!canProcess} className="w-full" size="lg">
               {isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processing...
+                  Opening…
                 </>
               ) : (
-                `🚀 Process ${fileStatuses.length} Files`
+                `Open ${fileStatuses.length === 1 ? '1 file' : `${fileStatuses.length} files`}`
               )}
             </Button>
-          )}
-
-        </div>
-
-        {/* Format Information */}
-        <div className="text-xs text-muted-foreground space-y-1 border-t pt-4">
-          <p><strong>Supported VideoAnnotator formats:</strong></p>
-          <p>• Person Tracking: COCO JSON format with keypoints</p>
-          <p>• Face Analysis: OpenFace3 JSON with 98 landmarks, emotions, head pose, gaze</p>
-          <p>• Speech Recognition: WebVTT files (.vtt)</p>
-          <p>• Speaker Diarization: RTTM files (.rttm)</p>
-          <p>• Scene Detection: JSON arrays with scene data</p>
-          <p>• Video: MP4, WebM, AVI, MOV</p>
-          <p>• Audio: WAV, MP3 (optional)</p>
-        </div>
+          </div>
+        )}
       </div>
     </Card>
   );

@@ -11,7 +11,11 @@ from pydantic import BaseModel
 
 from ... import secrets_store
 from ...config_env import huggingface_token, huggingface_token_source
+from ...database_location import database_path
+from ...models_dir import models_dir
 from ...registry.pipeline_registry import get_registry
+from ...results_folder import display_path, results_root
+from ...utils.logging_config import logs_dir
 from ...version import __version__ as videoannotator_version
 from .. import extras_install, restart
 from ..background_tasks import get_background_manager
@@ -534,6 +538,40 @@ async def get_database_info_endpoint():
             message=f"Failed to get database info: {e!s}",
             hint="Check database connection and server logs",
         ) from e
+
+
+class ServerFolder(BaseModel):
+    path: str
+    display_path: str
+
+
+class ServerLocations(BaseModel):
+    """Where this server keeps things, for whoever runs it (UAT #16)."""
+
+    results: ServerFolder
+    models: ServerFolder
+    logs: ServerFolder
+    database: ServerFolder
+
+
+def _folder(path: Any) -> ServerFolder:
+    return ServerFolder(path=str(path), display_path=display_path(path))
+
+
+@router.get(
+    "/locations",
+    response_model=ServerLocations,
+    summary="Where results, model weights, logs and the database are kept",
+)
+async def server_locations(
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> ServerLocations:
+    return ServerLocations(
+        results=_folder(results_root()),
+        models=_folder(models_dir()),
+        logs=_folder(logs_dir()),
+        database=_folder(database_path()),
+    )
 
 
 # --- Hugging Face token (spec 031) ---

@@ -1,221 +1,114 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { CheckCircle, AlertCircle, Settings, ExternalLink, Eye, EyeOff, Rocket, Stethoscope } from 'lucide-react';
+import { ExternalLink, Eye, EyeOff, KeyRound, Loader2, Stethoscope } from 'lucide-react';
 import { apiClient } from '@/api/client';
-import { handleAPIError } from '@/api/handleError';
 import { runConnectionDiagnostics, formatDiagnosticReport, type DiagnosticReport } from '@/lib/connectionDiagnostics';
 import {
   API_TOKEN_STORAGE_KEY,
   API_URL_STORAGE_KEY,
+  checkConnection,
   defaultApiUrl,
   describeApiUrl,
   normalizeApiUrl,
   servedWithApi,
-  tokenFormatProblem
+  tokenFormatProblem,
+  type ConnectionCheck
 } from '@/lib/apiConnection';
 import { TokenHelp } from '@/components/TokenHelp';
+import { StateBadge, type StateTone } from '@/components/settings/StateBadge';
+import type { Connection } from '@/hooks/useConnection';
 
 interface TokenSetupProps {
+  /** The saved connection as the rest of the viewer sees it (useConnection). */
+  connection?: Connection;
   onTokenConfigured?: () => void;
 }
 
-interface TokenStatus {
-  isValid: boolean;
-  user?: string;
-  permissions?: string[];
-  expiresAt?: string;
-  error?: string;
-  /** From GET /api/v1/auth/me, fetched alongside validation. `undefined` when the
-   * server predates that endpoint (404) - not the same as a known non-admin (`false`). */
-  isAdmin?: boolean;
-  username?: string;
-}
+const savedUrl = () => localStorage.getItem(API_URL_STORAGE_KEY) ?? defaultApiUrl();
+const savedToken = () => localStorage.getItem(API_TOKEN_STORAGE_KEY) ?? (import.meta.env.VITE_API_TOKEN || '');
 
-export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
-  const [apiUrl, setApiUrl] = useState(() => localStorage.getItem(API_URL_STORAGE_KEY) ?? defaultApiUrl());
-  const [token, setToken] = useState(() => {
-    const saved = localStorage.getItem(API_TOKEN_STORAGE_KEY);
-    if (saved !== null) return saved;
-    return import.meta.env.VITE_API_TOKEN || '';
-  });
+/** The saved connection as a badge (UAT #63): whether the key works, whose it is. */
+const connectionState = (connection: Connection): { tone: StateTone; text: string } => {
+  switch (connection.state) {
+    case 'checking':
+      return { tone: 'checking', text: 'Checking…' };
+    case 'no-server':
+      return { tone: 'bad', text: "Can't reach the server" };
+    case 'needs-key':
+      return { tone: 'warn', text: 'This server needs a key' };
+    case 'key-refused':
+      return { tone: 'bad', text: 'The server refuses this key' };
+    case 'connected':
+      if (!connection.user) return { tone: 'ok', text: 'Connected' };
+      return {
+        tone: 'ok',
+        text: `Connected as ${connection.user.name} · ${connection.user.isAdmin ? 'administrator' : 'not an administrator'}`,
+      };
+  }
+};
+
+const PROBLEMS: Record<Exclude<ConnectionCheck, { ok: true }>['problem'], string> = {
+  'no-server': "Nothing answered at that address. Check the server is running and the address is right.",
+  'needs-key': 'The server answered, but it needs a key. Paste one, or see how to get one below.',
+  'key-refused': "The server answered, but it doesn't accept this key. It may have expired or been revoked; get a new one below.",
+  'server-error': 'The server answered with an error. Try again, or use Find the problem.',
+};
+
+export function TokenSetup({ connection, onTokenConfigured }: TokenSetupProps) {
+  const [apiUrl, setApiUrl] = useState(savedUrl);
+  const [token, setToken] = useState(savedToken);
   const tokenProblem = tokenFormatProblem(token);
   const [showToken, setShowToken] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
-  const [tokenStatus, setTokenStatus] = useState<TokenStatus | null>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [serverAuthRequired, setServerAuthRequired] = useState<boolean | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState<ConnectionCheck | null>(null);
   const [diagnosticReport, setDiagnosticReport] = useState<DiagnosticReport | null>(null);
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
 
-  // Check token validity - Uses the robust client validation
-  const validateToken = async (testUrl?: string, testToken?: string) => {
-    const urlToTest = testUrl ?? apiUrl;
-    const tokenToTest = testToken !== undefined ? testToken : token;
+  const changed = apiUrl !== savedUrl() || token !== savedToken();
+  const connected = connection?.state === 'connected';
 
-    setIsValidating(true);
-
-    // Update API client temporarily for this test
-    const originalUrl = apiClient.baseURL;
-    const originalToken = apiClient.token;
-    apiClient.updateConfig(urlToTest, tokenToTest);
-
-    try {
-      // Use the robust validation from API client
-      // This checks both health AND permissions (by hitting /jobs)
-      const result = await apiClient.validateToken();
-
-      // Fetch admin status alongside validation (GET /api/v1/auth/me). Best-effort:
-      // a 404 just means an older server that predates this endpoint, a 401 means
-      // the token isn't actually authenticated - neither should block showing the
-      // rest of the validation result.
-      let currentUser: { isAdmin: boolean; username: string } | null = null;
-      if (result.isValid && tokenToTest) {
-        try {
-          const me = await apiClient.getCurrentUser();
-          currentUser = { isAdmin: me.isAdmin, username: me.username };
-        } catch {
-          // Leave isAdmin/username undefined - see TokenStatus.isAdmin doc comment.
-        }
-      }
-
-      setTokenStatus({
-        isValid: result.isValid,
-        user: result.user,
-        permissions: result.permissions,
-        expiresAt: result.expiresAt,
-        error: result.error,
-        isAdmin: currentUser?.isAdmin,
-        username: currentUser?.username
-      });
-
-      // Also update auth required status
-      try {
-        const health = await apiClient.getSystemHealth();
-        setServerAuthRequired(health.security?.auth_required ?? null);
-      } catch {
-        // Ignore health check failure here, validateToken result is what matters
-      }
-
-    } catch (error: unknown) {
-      setTokenStatus({
-        isValid: false,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    } finally {
-      // Restore original config
-      apiClient.updateConfig(originalUrl, originalToken);
-      setIsValidating(false);
-    }
-  };
-
-  // Save configuration
-  const saveConfiguration = () => {
-    const finalUrl = normalizeApiUrl(apiUrl);
-    setApiUrl(finalUrl);
-
+  const save = (url: string, key: string) => {
+    const finalUrl = normalizeApiUrl(url);
     localStorage.setItem(API_URL_STORAGE_KEY, finalUrl);
-    localStorage.setItem(API_TOKEN_STORAGE_KEY, token);
-    setHasUnsavedChanges(false);
-
-    apiClient.updateConfig(finalUrl, token);
-
-    // Show success message
-    console.log(`✅ Configuration saved: URL=${finalUrl}, Token=${token ? '***' : '(empty)'}`);
-
-    // Note: The validation error (if any) is separate from saving the config
-    // The config is saved successfully even if the server requires auth
-
+    localStorage.setItem(API_TOKEN_STORAGE_KEY, key);
+    apiClient.updateConfig(finalUrl, key);
     onTokenConfigured?.();
-
-    // Force a page refresh to ensure all components pick up the new token
-    // This is necessary because some queries might be cached
-    console.log('🔄 Reloading page to apply new token configuration...');
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
+    // Every cached query was made with the old address or key.
+    setTimeout(() => window.location.reload(), 300);
   };
 
-  // Load saved configuration on mount
-  // Don't auto-validate - let user click "Test Connection" button
-  useEffect(() => {
-    const savedUrl = localStorage.getItem(API_URL_STORAGE_KEY);
-    const savedToken = localStorage.getItem(API_TOKEN_STORAGE_KEY);
-
-    if (savedUrl !== null) setApiUrl(savedUrl);
-    
-    if (savedToken !== null) setToken(savedToken);
-
-    // Don't auto-validate - it makes the page slow and isn't essential
-    // User can click "Test Connection" if they want to validate
-  }, []);
-
-  // Track changes and clear stale validation status
-  useEffect(() => {
-    const savedUrl = localStorage.getItem(API_URL_STORAGE_KEY);
-    const savedToken = localStorage.getItem(API_TOKEN_STORAGE_KEY);
-
-    // Compare with saved values (handling nulls)
-    const currentSavedUrl = savedUrl ?? defaultApiUrl();
-    const currentSavedToken = savedToken !== null ? savedToken : (import.meta.env.VITE_API_TOKEN || '');
-
-    const hasChanges = apiUrl !== currentSavedUrl || token !== currentSavedToken;
-    setHasUnsavedChanges(hasChanges);
-
-    // Clear validation status when token/url changes to avoid showing stale results
-    if (hasChanges) {
-      setTokenStatus(null);
+  // One step (UAT #51): check what was typed, and save it if it works.
+  const connect = async () => {
+    setChecking(true);
+    setResult(null);
+    setDiagnosticReport(null);
+    try {
+      const outcome = await checkConnection(apiUrl, token);
+      setResult(outcome);
+      if (outcome.ok) save(apiUrl, token.trim());
+    } finally {
+      setChecking(false);
     }
-  }, [apiUrl, token]);
+  };
 
   const resetToDefaults = () => {
-    const defaultUrl = defaultApiUrl();
-    const defaultToken = import.meta.env.VITE_API_TOKEN || ''; // Empty = anonymous
-
-    localStorage.removeItem(API_URL_STORAGE_KEY);
-    if (defaultToken) {
-        localStorage.setItem(API_TOKEN_STORAGE_KEY, defaultToken);
-    } else {
-        localStorage.removeItem(API_TOKEN_STORAGE_KEY);
-    }
-
-    setApiUrl(defaultUrl);
-    setToken(defaultToken);
-    setHasUnsavedChanges(false); // Already saved
-
-    // Update the global API client
-    apiClient.updateConfig(defaultUrl, defaultToken);
-
-    // Clear any previous token status
-    setTokenStatus(null);
-
-    // Auto-test the defaults
-    setTimeout(() => {
-      validateToken(defaultUrl, defaultToken);
-    }, 100);
-  };
-
-  const handleTestConnection = () => {
-    validateToken();
+    setApiUrl(defaultApiUrl());
+    setToken(import.meta.env.VITE_API_TOKEN || '');
+    setResult(null);
   };
 
   const handleRunDiagnostics = async () => {
     setIsRunningDiagnostics(true);
     setDiagnosticReport(null);
-
     try {
       const report = await runConnectionDiagnostics(apiUrl, token || undefined);
       setDiagnosticReport(report);
-
-      // Auto-copy to clipboard for easy sharing
-      const formatted = formatDiagnosticReport(report);
-      navigator.clipboard.writeText(formatted).catch(() => {
-        // Clipboard write failed, ignore
+      navigator.clipboard.writeText(formatDiagnosticReport(report)).catch(() => {
+        // Clipboard blocked; the report is on the page.
       });
     } catch (error) {
       console.error('Diagnostics failed:', error);
@@ -224,316 +117,176 @@ export function TokenSetup({ onTokenConfigured }: TokenSetupProps) {
     }
   };
 
-  // Check if this is a first-time user (no saved token)
-  const isFirstTimeUser = !localStorage.getItem(API_TOKEN_STORAGE_KEY) && !tokenStatus;
+  const state = connection ? connectionState(connection) : null;
+  const failed = result && result.ok === false ? result : null;
+  const help = (
+    <>
+      <TokenHelp />
+      <Button variant="link" size="sm" className="pl-0" asChild>
+        <a
+          href="https://github.com/InfantLab/VideoAnnotator/blob/master/docs/usage/CLIENT_TOKEN_SETUP_GUIDE.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1"
+        >
+          The full guide to keys <ExternalLink className="h-3 w-3" />
+        </a>
+      </Button>
+    </>
+  );
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* First-Time User Guide (T040) */}
-      {isFirstTimeUser && (
-        <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40">
-          <Rocket className="h-5 w-5 text-blue-600" />
-          <AlertTitle className="text-blue-900 dark:text-blue-200 font-semibold">Welcome! Let's get you connected</AlertTitle>
-          <AlertDescription className="text-blue-800 dark:text-blue-200 space-y-3 mt-2">
-            <p>
-              To run pipelines, connect this viewer to your VideoAnnotator server with an API key.
-              The quickest way is the one-click link the server prints the first time it starts; see{' '}
-              <a href="#how-to-get-a-key" className="font-medium underline">How to get a key</a> below.
-            </p>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            VideoAnnotator API Configuration
+    <Card data-testid="connection-card">
+      <CardHeader className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <KeyRound className="h-5 w-5" aria-hidden="true" />
+            Server and key
           </CardTitle>
-          <CardDescription>
-            Configure your VideoAnnotator server connection and authentication token.
-            This is needed to start runs and see their results.
-          </CardDescription>
-        </CardHeader>
+          {state && <StateBadge tone={state.tone} testId="key-state">{state.text}</StateBadge>}
+        </div>
+        <CardDescription>The VideoAnnotator server this viewer uses, and your key for it.</CardDescription>
+      </CardHeader>
 
-        <CardContent className="space-y-6">
-          {/* Server URL Configuration */}
-          <div className="space-y-2">
-            <Label htmlFor="api-url">Server URL</Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="api-url"
-                  value={apiUrl}
-                  onChange={(e) => setApiUrl(e.target.value)}
-                  placeholder={describeApiUrl('')}
-                />
-              </div>
-              {import.meta.env.DEV && (
-                <Button
-                  variant={!apiUrl ? "default" : "outline"}
-                  onClick={() => setApiUrl('')}
-                  title="Use local proxy (avoids CORS issues)"
-                  type="button"
-                  className={!apiUrl ? "bg-green-600 hover:bg-green-700" : ""}
-                >
-                  {!apiUrl ? "Using Proxy" : "Use Proxy"}
-                </Button>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {!apiUrl
-                ? (import.meta.env.DEV
-                  ? "Using the dev server's proxy to the API (recommended for local development)"
-                  : `Using the server that served this page (${describeApiUrl('')})`)
-                : "The base URL of your VideoAnnotator API server, e.g. http://127.0.0.1:18011"}
-            </p>
+      <CardContent className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="api-url">Server address</Label>
+          <div className="flex gap-2">
+            <Input
+              id="api-url"
+              value={apiUrl}
+              onChange={(e) => {
+                setApiUrl(e.target.value);
+                setResult(null);
+              }}
+              className="flex-1"
+            />
+            {import.meta.env.DEV && (
+              <Button variant="outline" onClick={() => setApiUrl('')} title="Use the dev server's proxy" type="button" disabled={!apiUrl}>
+                Use the proxy
+              </Button>
+            )}
           </div>
+          <p className="text-sm text-muted-foreground">
+            {apiUrl
+              ? 'For example http://127.0.0.1:18011.'
+              : import.meta.env.DEV
+                ? "Empty: the dev server's proxy to the API."
+                : `Empty: the server that served this page (${describeApiUrl('')}).`}
+          </p>
+        </div>
 
-          {/* Token Configuration */}
-          <div className="space-y-2">
-            <Label htmlFor="api-token">
-              API Token
-              {serverAuthRequired === false && <span className="text-muted-foreground"> (Optional)</span>}
-              {serverAuthRequired === true && <span className="text-destructive"> (Required)</span>}
-              {serverAuthRequired === null && <span className="text-muted-foreground"> (Click Test Connection to check)</span>}
-            </Label>
-            <div className="relative">
-              <Input
-                id="api-token"
-                type={showToken ? "text" : "password"}
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder={
-                  serverAuthRequired === false
-                    ? "Leave empty for anonymous access"
-                    : serverAuthRequired === true
-                      ? "va_ followed by 43 characters (required by this server)"
-                      : "va_ followed by 43 characters, or empty if authentication is off"
-                }
-                className="pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3"
-                onClick={() => setShowToken(!showToken)}
-              >
-                {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        <div className="space-y-2">
+          <Label htmlFor="api-token">Key</Label>
+          <div className="relative">
+            <Input
+              id="api-token"
+              type={showToken ? 'text' : 'password'}
+              value={token}
+              onChange={(e) => {
+                setToken(e.target.value);
+                setResult(null);
+              }}
+              placeholder="va_ followed by 43 characters"
+              className="pr-10"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute right-0 top-0 h-full px-3"
+              onClick={() => setShowToken(!showToken)}
+              aria-label={showToken ? 'Hide the key' : 'Show the key'}
+            >
+              {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
+          {tokenProblem && (
+            <p className="text-sm text-destructive" role="alert">{tokenProblem}</p>
+          )}
+          {!tokenProblem && !token.trim() && (
+            <p className="text-sm text-muted-foreground">Leave it empty only if the server was started without keys.</p>
+          )}
+        </div>
+
+        {failed && (
+          <div role="alert" className="space-y-2 rounded-md border border-amber-500/50 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+            <p>{PROBLEMS[failed.problem]}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={handleRunDiagnostics} disabled={isRunningDiagnostics}>
+                <Stethoscope className="mr-1 h-4 w-4" />
+                {isRunningDiagnostics ? 'Looking…' : 'Find the problem'}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => save(apiUrl, token.trim())} disabled={Boolean(tokenProblem)}>
+                Save anyway
               </Button>
             </div>
-            {tokenProblem && (
-              <p className="text-sm text-destructive" role="alert">{tokenProblem}</p>
-            )}
-            {!token && serverAuthRequired === false && (
-              <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-md p-3">
-                <p className="text-sm text-green-800 dark:text-green-200">
-                  ✅ <strong>No token set</strong> - You'll connect anonymously (your server doesn't require authentication)
-                </p>
-              </div>
-            )}
-            {!token && serverAuthRequired === true && (
-              <div className="bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
-                <div className="space-y-3">
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
-                    ⚠️ <strong>No token set</strong> - Your server requires authentication.
-                  </p>
-                  <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                    See <a href="#how-to-get-a-key" className="font-medium underline">How to get a key</a> below.
-                  </p>
-                </div>
-              </div>
-            )}
-            {!token && serverAuthRequired === null && (
-              <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-md p-3">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  💡 <strong>No token set</strong> - Click "Test Connection" to check if your server requires authentication.
-                </p>
-              </div>
-            )}
-            {token.trim() && tokenStatus && !tokenStatus.isValid && serverAuthRequired === true && (
-              <div className="bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800 rounded-md p-3 mt-2">
-                <div className="space-y-3">
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
-                    💡 <strong>Token invalid or authentication failed</strong>
-                  </p>
-                  <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                    See <a href="#how-to-get-a-key" className="font-medium underline">How to get a key</a> below.
-                  </p>
-                </div>
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground">
-              💡 Click "Test Connection" to verify your configuration
-            </p>
           </div>
+        )}
+        {result?.ok && <p role="status" className="text-sm text-green-700 dark:text-green-400">Connected. Reloading…</p>}
 
-          <Separator />
+        {diagnosticReport && (
+          <Alert>
+            <Stethoscope className="h-4 w-4" />
+            <AlertTitle>What was tried</AlertTitle>
+            <AlertDescription>
+              <ul className="mt-2 space-y-1 text-sm">
+                {diagnosticReport.results.map((r, i) => (
+                  <li key={i}>
+                    {r.passed ? 'Worked' : 'Failed'}: {r.test}
+                    {r.error && <span className="block text-xs text-destructive">{r.error}</span>}
+                  </li>
+                ))}
+              </ul>
+              {diagnosticReport.recommendations.length > 0 && (
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-xs">
+                  {diagnosticReport.recommendations.map((rec, i) => (
+                    <li key={i}>{rec}</li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-2 text-xs text-muted-foreground">Copied, to send to whoever helps you.</p>
+            </AlertDescription>
+          </Alert>
+        )}
 
-          {/* Token Status */}
-          {tokenStatus && (
-            <Alert>
-              <div className="flex items-start gap-2">
-                {tokenStatus.isValid ? (
-                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                ) : (
-                  <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
-                )}
-                <div className="flex-1">
-                  <AlertDescription>
-                    {tokenStatus.isValid ? (
-                      <div className="space-y-2">
-                        <p className="font-medium text-green-700 dark:text-green-300">✅ Token is valid and working!</p>
-                        {tokenStatus.user && (
-                          <div>Authenticated as: <Badge variant="secondary">{tokenStatus.user}</Badge></div>
-                        )}
-                        {tokenStatus.username && (
-                          <div>Server identity: <Badge variant="secondary">{tokenStatus.username}</Badge></div>
-                        )}
-                        {tokenStatus.isAdmin !== undefined && (
-                          <div>
-                            Admin access:{' '}
-                            <Badge variant={tokenStatus.isAdmin ? 'secondary' : 'outline'}>
-                              {tokenStatus.isAdmin ? 'Yes' : 'No'}
-                            </Badge>
-                            {!tokenStatus.isAdmin && (
-                              <span className="ml-1 text-xs text-muted-foreground">
-                                (needed for pipeline installs — see below)
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {tokenStatus.expiresAt && (
-                          <p className="text-sm text-muted-foreground">
-                            Expires: {new Date(tokenStatus.expiresAt).toLocaleString()}
-                          </p>
-                        )}
-                        {hasUnsavedChanges && (
-                          <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded p-2 mt-2">
-                            <p className="text-sm text-green-800 dark:text-green-200 font-medium">
-                              ⚠️ <strong>Remember to click "Save Configuration"</strong> below to apply this token!
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <p className="font-medium text-red-700 dark:text-red-300">❌ {tokenStatus.error}</p>
-                      </div>
-                    )}
-                  </AlertDescription>
-                </div>
-              </div>
-            </Alert>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Once connected the badge says so; the button comes back with a change. */}
+          {(changed || !connected) && (
+            <Button
+              onClick={() => void connect()}
+              disabled={checking || Boolean(tokenProblem) || (!apiUrl.trim() && !servedWithApi())}
+            >
+              {checking && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+              {checking ? 'Checking…' : 'Connect'}
+            </Button>
           )}
-
-          {/* Diagnostic Report */}
-          {diagnosticReport && (
-            <Alert className={diagnosticReport.summary === 'all_passed' ? 'border-green-500' : 'border-yellow-500'}>
-              <Stethoscope className="h-4 w-4" />
-              <AlertTitle>Connection Diagnostics</AlertTitle>
-              <AlertDescription>
-                <div className="space-y-3 mt-2">
-                  <div className="text-sm">
-                    Status: <Badge variant={diagnosticReport.summary === 'all_passed' ? 'default' : 'destructive'}>
-                      {diagnosticReport.summary.replace('_', ' ').toUpperCase()}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-1">
-                    {diagnosticReport.results.map((result, i) => (
-                      <div key={i} className="text-sm flex items-start gap-2">
-                        <span>{result.passed ? '✅' : '❌'}</span>
-                        <span className="flex-1">
-                          <strong>{result.test}</strong>
-                          {result.duration && <span className="text-muted-foreground"> ({Math.round(result.duration)}ms)</span>}
-                          {result.error && <div className="text-red-600 text-xs mt-1">{result.error}</div>}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {diagnosticReport.recommendations.length > 0 && (
-                    <div className="bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800 rounded p-3 mt-2">
-                      <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-200 mb-2">Recommendations:</p>
-                      <ul className="text-xs text-yellow-800 dark:text-yellow-200 space-y-1">
-                        {diagnosticReport.recommendations.map((rec, i) => (
-                          <li key={i}>• {rec}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  <p className="text-xs text-muted-foreground">
-                    Report copied to clipboard. Share with support if needed.
-                  </p>
-                </div>
-              </AlertDescription>
-            </Alert>
+          {changed && (
+            <Button variant="ghost" onClick={() => { setApiUrl(savedUrl()); setToken(savedToken()); setResult(null); }}>
+              Undo changes
+            </Button>
           )}
+          <Button
+            variant="ghost"
+            onClick={resetToDefaults}
+            title={`Address: ${describeApiUrl(defaultApiUrl())}, no key`}
+          >
+            Reset to defaults
+          </Button>
+        </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <Button
-              onClick={handleTestConnection}
-              disabled={isValidating}
-              variant="outline"
-            >
-              {isValidating ? 'Testing...' : 'Test Connection'}
-            </Button>
-
-            <Button
-              onClick={handleRunDiagnostics}
-              disabled={isRunningDiagnostics}
-              variant="outline"
-              className="text-blue-600 hover:text-blue-700 dark:text-blue-300"
-            >
-              <Stethoscope className="h-4 w-4 mr-2" />
-              {isRunningDiagnostics ? 'Running...' : 'Run Diagnostics'}
-            </Button>
-
-            <Button
-              onClick={resetToDefaults}
-              variant="outline"
-              className="text-orange-600 hover:text-orange-700 dark:text-orange-300"
-              title={`Reset to: URL=${describeApiUrl(defaultApiUrl())}, Token=${import.meta.env.VITE_API_TOKEN ? '(from build settings)' : '(empty)'}`}
-            >
-              Reset to Defaults
-            </Button>
-
-            <Button
-              onClick={saveConfiguration}
-              disabled={Boolean(tokenProblem) || (!apiUrl.trim() && !servedWithApi())}
-            >
-              Save Configuration
-            </Button>
-
-            {hasUnsavedChanges && (
-              <Badge variant="secondary">Unsaved changes</Badge>
-            )}
-          </div>
-
-          <Separator />
-
-          {/* Help Section */}
-          <div className="space-y-3">
+        {connected ? (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-muted-foreground">How to get another key</summary>
+            <div className="mt-3 space-y-2">{help}</div>
+          </details>
+        ) : (
+          <div className="space-y-2">
             <h4 id="how-to-get-a-key" className="font-medium">How to get a key</h4>
-            <TokenHelp />
-
-            <Button variant="link" size="sm" className="pl-0" asChild>
-              <a
-                href="https://github.com/InfantLab/VideoAnnotator/blob/master/docs/usage/CLIENT_TOKEN_SETUP_GUIDE.md"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1"
-              >
-                View Token Setup Guide <ExternalLink className="h-3 w-3" />
-              </a>
-            </Button>
+            {help}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

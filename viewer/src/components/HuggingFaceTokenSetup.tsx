@@ -12,6 +12,7 @@ import { APIError, apiErrorEnvelope, isNeedsKey, NEEDS_KEY_MESSAGE } from '@/api
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { StateBadge, type StateTone } from '@/components/settings/StateBadge';
 import type { HuggingFaceTokenStatus, ReadinessItem } from '@/types/pipelines';
 
 const TOKENS_PAGE = 'https://huggingface.co/settings/tokens';
@@ -208,7 +209,21 @@ export const HuggingFaceTokenSetup = ({
   );
 };
 
-/** Settings: whether the server has a token, where from, and change or remove it (spec 031). */
+const PYANNOTE_LICENCE = 'https://huggingface.co/pyannote/speaker-diarization-community-1';
+
+/** The token's state as a badge (UAT #14): working, rejected, not set. */
+const tokenState = (s: HuggingFaceTokenStatus | undefined, error: unknown, isError: boolean): { tone: StateTone; text: string } => {
+  if (!s) {
+    if (isNeedsKey(error)) return { tone: 'off', text: NEEDS_KEY_MESSAGE };
+    return isError ? { tone: 'bad', text: "Couldn't ask the server" } : { tone: 'checking', text: 'Checking…' };
+  }
+  if (!s.set) return { tone: 'off', text: 'Not set' };
+  if (s.check === 'invalid') return { tone: 'bad', text: 'Hugging Face rejects it' };
+  if (s.check === 'unknown') return { tone: 'warn', text: "Set, but Hugging Face couldn't be reached to check it" };
+  return { tone: 'ok', text: s.account ? `Token working · account ${s.account}` : 'Token working' };
+};
+
+/** Settings: whether the server has a token, what needs it, and change or remove it (spec 031, UAT #14). */
 export const HuggingFaceTokenCard = ({ isAdmin }: { isAdmin: boolean | 'unknown' }) => {
   const queryClient = useQueryClient();
   const status = useQuery({
@@ -246,41 +261,58 @@ export const HuggingFaceTokenCard = ({ isAdmin }: { isAdmin: boolean | 'unknown'
   });
 
   const s = status.data;
-  const describe = (): string => {
-    if (!s) {
-      if (isNeedsKey(status.error)) return NEEDS_KEY_MESSAGE;
-      return status.isError ? "Couldn't ask the server." : 'Checking…';
-    }
-    if (!s.set) return 'Not set. Speaker turns needs one to download its models.';
-    const where = s.source === 'environment' ? `from ${s.envVar} in the server's environment` : 'saved on this server';
-    const account = s.account ? `account ${s.account}, ` : '';
-    const check = s.check === 'invalid' ? ' Hugging Face rejects it.' : s.check === 'unknown' ? " Couldn't check it with Hugging Face." : '';
-    return `Set (${account}${where}).${check}`;
-  };
+  const state = tokenState(s, status.error, status.isError);
+  const working = s?.set && s.check !== 'invalid';
+  const canChange = isAdmin !== false && s && s.source !== 'environment';
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Hugging Face token</CardTitle>
+    <Card data-testid="huggingface-token">
+      <CardHeader className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="text-base">Hugging Face token</CardTitle>
+          <StateBadge tone={state.tone} testId="hf-token-state">{state.text}</StateBadge>
+        </div>
         <CardDescription>
-          Lets the server download models whose licence you've accepted on Hugging Face. It stays on this server.
+          Needed by pyannote (who spoke when). Its models are free, but Hugging Face lets an account download them
+          only after accepting their licence, so the server needs a token from that account. The token stays on the
+          server.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-2 text-sm">
-        <p>{describe()}</p>
+      <CardContent className="space-y-3 text-sm">
+        {!working && (
+          <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
+            <li>
+              Sign in to Hugging Face (or make a free account) and{' '}
+              <a href={TOKENS_PAGE} target="_blank" rel="noreferrer" className="underline">
+                create a Read token
+              </a>
+              .
+            </li>
+            <li>
+              With the same account,{' '}
+              <a href={PYANNOTE_LICENCE} target="_blank" rel="noreferrer" className="underline">
+                accept the pyannote licence
+              </a>
+              .
+            </li>
+            <li>Paste the token here. The server checks it with Hugging Face before saving it.</li>
+          </ol>
+        )}
         {s?.source === 'environment' && (
           <p className="text-xs text-muted-foreground">
-            The environment's token is the one used; one saved here wouldn't replace it.
+            This token comes from the settings the server was started with ({s.envVar}), so it's changed there, not
+            here.
           </p>
         )}
-        {isAdmin !== false && s && s.source !== 'environment' && !editing && !hasConfiguredApiToken() && (
+        {s?.source === 'saved' && working && <p className="text-xs text-muted-foreground">Saved on the server.</p>}
+        {canChange && !editing && !hasConfiguredApiToken() && (
           <p className="text-xs">
             To add or change it from here: <NextStep kind="no-key" />
           </p>
         )}
-        {isAdmin !== false && s && s.source !== 'environment' && !editing && hasConfiguredApiToken() && (
+        {canChange && !editing && hasConfiguredApiToken() && (
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+            <Button size="sm" variant={s.set ? 'outline' : 'default'} onClick={() => setEditing(true)}>
               {s.set ? 'Change' : 'Add a token'}
             </Button>
             {s.source === 'saved' && (
@@ -289,6 +321,9 @@ export const HuggingFaceTokenCard = ({ isAdmin }: { isAdmin: boolean | 'unknown'
               </Button>
             )}
           </div>
+        )}
+        {isAdmin === false && !working && (
+          <p className="text-xs text-muted-foreground">Only an administrator of this server can add it: ask whoever runs it.</p>
         )}
         {editing && (
           <form
@@ -318,9 +353,6 @@ export const HuggingFaceTokenCard = ({ isAdmin }: { isAdmin: boolean | 'unknown'
             <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>
               Cancel
             </Button>
-            <a href={TOKENS_PAGE} target="_blank" rel="noreferrer" className="text-xs underline">
-              Get a Read token
-            </a>
           </form>
         )}
         {outcome && (

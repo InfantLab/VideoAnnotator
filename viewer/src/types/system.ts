@@ -1,3 +1,5 @@
+import type { components } from '@/api/schema';
+
 // System health and status types for VideoAnnotator API
 
 export interface SystemMemory {
@@ -86,3 +88,6 @@ export interface SystemHealthResponse {
     workers?: WorkersInfo;
     uptime_seconds: number;
 }
+
+/** GET /api/v1/system/locations. */
+export type ServerLocations = components['schemas']['ServerLocations'];

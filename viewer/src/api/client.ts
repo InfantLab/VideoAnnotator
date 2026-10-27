@@ -17,7 +17,7 @@ import type {
   ExtrasGroupInfo,
   HuggingFaceTokenStatus
 } from '@/types/pipelines';
-import type { SystemHealthResponse } from '@/types/system';
+import type { ServerLocations, SystemHealthResponse } from '@/types/system';
 import type {
   BatchCancelResponse,
   BatchListResponse,
@@ -671,6 +671,11 @@ class APIClient {
   }
 
   /** Whether the server has a Hugging Face token (spec 031); never the token. */
+  /** Where the server keeps results, model weights, logs and its database (UAT #16). */
+  async getServerLocations(): Promise<ServerLocations> {
+    return this.request<ServerLocations>('/api/v1/system/locations');
+  }
+
   async getHuggingFaceToken(): Promise<HuggingFaceTokenStatus> {
     return mapTokenStatus(await this.request<Record<string, unknown>>('/api/v1/system/huggingface-token'));
   }

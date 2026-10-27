@@ -1,12 +1,13 @@
-// Settings → Model servers (VideoAnnotator spec 033): the servers Ask AI and
-// runs can send frames to, adding and checking one, and the remote switch.
+// Settings → Ask AI (VideoAnnotator spec 033, UAT #15): the model servers Ask AI
+// and runs can send frames to, whether each answers, adding one, the remote switch.
 // A key typed here goes to the server and is never shown again.
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Plus, Server, Trash2 } from 'lucide-react';
+import { Cloud, HardDrive, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import { APIError, apiErrorEnvelope } from '@/api/handleError';
-import { EndpointBadge } from '@/components/ask/EndpointBadge';
+import { StateBadge } from '@/components/settings/StateBadge';
+import { isThisComputer } from '@/lib/endpointWords';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +38,45 @@ const errorText = (error: unknown): string => {
   return hint ? `${userMessage(error)} ${hint}` : userMessage(error);
 };
 
+/** Where a server is, with its icon (viewer design: HardDrive here, Cloud elsewhere). */
+function Where({ server }: { server: ModelServer }) {
+  const { host } = server.endpoint;
+  const remote = server.endpoint.class === 'remote';
+  const Icon = remote ? Cloud : HardDrive;
+  const text = remote ? `Remote · ${host}` : isThisComputer(host) ? 'This computer' : `Local network · ${host}`;
+  return (
+    <span
+      data-testid="server-where"
+      data-class={server.endpoint.class}
+      className={`inline-flex items-center gap-1 text-xs ${remote ? 'text-amber-800 dark:text-amber-300' : 'text-muted-foreground'}`}
+    >
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+      {text}
+    </span>
+  );
+}
+
+/** Whether Ask AI can use the server now, and which models it has (UAT #15). */
+function Reachable({ server }: { server: ModelServer }) {
+  const models = useQuery({
+    queryKey: ['videoannotator', 'vlm', 'models', server.id],
+    queryFn: () => apiClient.getVlmModels(server.id),
+    retry: false,
+    staleTime: 30_000,
+  });
+  if (models.isLoading) return <StateBadge tone="checking">Checking…</StateBadge>;
+  if (models.isError) return <StateBadge tone="bad">Can&apos;t reach it</StateBadge>;
+  const names = models.data?.models ?? [];
+  if (names.length === 0) return <StateBadge tone="warn">Reachable, but no models yet</StateBadge>;
+  return (
+    <span title={names.join(', ')}>
+      <StateBadge tone="ok">
+        Reachable · {names.length === 1 ? names[0] : `${names.length} models`}
+      </StateBadge>
+    </span>
+  );
+}
+
 function ServerRow({ server, onRemoved }: { server: ModelServer; onRemoved: () => void }) {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,26 +88,28 @@ function ServerRow({ server, onRemoved }: { server: ModelServer; onRemoved: () =
       setError(errorText(e));
     }
   };
+  const key = keyText(server);
+  // "This computer (Ollama)" already says its kind.
+  const kind = server.name.includes(KIND_SHORT[server.kind]) ? null : KIND_SHORT[server.kind];
   return (
-    <li className="space-y-1 rounded border p-3" data-testid="model-server">
+    <li className="space-y-1.5 rounded border p-3" data-testid="model-server">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <span className="font-medium">{server.name}</span>{' '}
-          <span className="text-xs text-muted-foreground">{KIND_SHORT[server.kind]}</span>
-          <div className="font-mono text-xs text-muted-foreground">{server.base_url}</div>
+        <div className="min-w-0">
+          <span className="font-medium">{server.name}</span>
+          {kind && <span className="text-xs text-muted-foreground"> · {kind}</span>}
+          <div className="truncate font-mono text-xs text-muted-foreground" title={server.base_url}>
+            {server.base_url}
+          </div>
         </div>
-        <EndpointBadge
-          endpoint={{ host: server.endpoint.host, class: server.endpoint.class, confirmed: server.endpoint.confirmed }}
-          model={server.name}
-          showNote={false}
-        />
+        <Reachable server={server} />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span>
-          {keyText(server)}
-          {server.endpoint.before_switch && ' · Confirmed before remote servers needed switching on'}
+        <span className="flex flex-wrap items-center gap-x-2">
+          <Where server={server} />
+          {key && <span>· {key}</span>}
+          {server.endpoint.before_switch && <span>· Confirmed before remote servers needed switching on</span>}
           {server.endpoint.class === 'remote' && !server.endpoint.sendable && !server.endpoint.confirmed && (
-            <> · frames go there only after someone confirms it in Ask AI</>
+            <span>· frames go there only after someone confirms it in Ask AI</span>
           )}
         </span>
         {server.removable &&
@@ -351,12 +393,12 @@ export function ModelServers({ isAdmin }: { isAdmin: boolean | 'unknown' }) {
   return (
     <Card data-testid="model-servers">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Server className="h-5 w-5" /> Model servers
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Sparkles className="h-5 w-5" aria-hidden="true" /> Ask AI: where the models run
         </CardTitle>
         <CardDescription>
-          Where Ask AI and runs send frames to be answered. This server's own Ollama is always listed; add the
-          llama.cpp, vLLM or LM Studio server your lab already runs.
+          Ask AI sends frames to one of these to be answered. Ollama on the server's computer is always listed; you
+          can add one your lab already runs (llama.cpp, vLLM, LM Studio).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -388,9 +430,7 @@ export function ModelServers({ isAdmin }: { isAdmin: boolean | 'unknown' }) {
               </Button>
             )}
             <p className="text-xs text-muted-foreground">
-              Keys entered here are kept on the server in <code className="rounded bg-muted px-1">{servers.data.keys_file}</code>,
-              beside its database, and never shown again; a copy of that folder carries them. A key from an environment
-              variable is never stored.
+              A key typed here is kept on the server and never shown again.
             </p>
           </>
         )}

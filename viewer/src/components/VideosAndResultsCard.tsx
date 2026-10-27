@@ -90,7 +90,7 @@ export function VideosAndResultsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Videos and results</CardTitle>
+        <CardTitle className="text-base">Videos and results</CardTitle>
         <CardDescription>Where VideoAnnotator reads videos from, and writes results to</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">

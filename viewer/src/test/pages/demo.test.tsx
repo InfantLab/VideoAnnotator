@@ -10,6 +10,12 @@ import { renderAt } from '@/test/fixtures/renderPage';
 import { FIXTURES, mockVideoApi, wideLayout } from '@/test/videoPageHarness';
 import { DEMO_DATA_SETS } from '@/utils/debugUtils';
 
+// The file picker sits inside the app's nav, which asks the server about itself.
+vi.mock('@/contexts/ServerCapabilitiesContext', () => ({
+  useServerCapabilitiesContext: () => ({ capabilities: null, isLoading: false, error: null, refresh: vi.fn() }),
+  useServerVersion: () => null,
+}));
+
 // jsdom can't read a video's metadata, which the merger asks the browser for.
 vi.mock('@/lib/parsers/merger', async (original) => ({
   ...(await original<typeof import('@/lib/parsers/merger')>()),
@@ -70,7 +76,7 @@ describe('/viewer?demo=', () => {
     wideLayout();
     show('/viewer');
     expect(screen.getByRole('heading', { name: 'Open files from this computer' })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /Open the demo/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Peekaboo' }));
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Open files from this computer' })).toBeNull());
   });
 });

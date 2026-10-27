@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HardDrive, Globe, X } from 'lucide-react';
+import { Cloud, HardDrive, X } from 'lucide-react';
 import { badgeText, localNote, NOTE_DISMISSED_KEY } from '@/lib/endpointWords';
 import type { ModelEndpoint } from '@/types/ask';
 
@@ -46,7 +46,7 @@ export function EndpointBadge({ endpoint, model, showNote: noteAllowed = true, i
             : 'inline-flex items-center gap-1.5 rounded-full border border-emerald-600/40 bg-emerald-50 px-3 py-1 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200'
         }
       >
-        {remote ? <Globe className="h-4 w-4" /> : <HardDrive className="h-4 w-4" />}
+        {remote ? <Cloud className="h-4 w-4" /> : <HardDrive className="h-4 w-4" />}
         {badgeText(endpoint, model)}
       </span>
       {!remote && noteAllowed && showNote && (

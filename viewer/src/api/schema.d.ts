@@ -2391,6 +2391,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/system/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Where results, model weights, logs and the database are kept */
+        get: operations["server_locations_api_v1_system_locations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/huggingface-token": {
         parameters: {
             query?: never;
@@ -5172,6 +5189,23 @@ export interface components {
             name: string;
             /** Size Bytes */
             size_bytes: number;
+        };
+        /** ServerFolder */
+        ServerFolder: {
+            /** Path */
+            path: string;
+            /** Display Path */
+            display_path: string;
+        };
+        /**
+         * ServerLocations
+         * @description Where this server keeps things, for whoever runs it (UAT #16).
+         */
+        ServerLocations: {
+            results: components["schemas"]["ServerFolder"];
+            models: components["schemas"]["ServerFolder"];
+            logs: components["schemas"]["ServerFolder"];
+            database: components["schemas"]["ServerFolder"];
         };
         /**
          * Share
@@ -8773,6 +8807,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    server_locations_api_v1_system_locations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServerLocations"];
                 };
             };
         };

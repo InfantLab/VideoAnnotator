@@ -182,21 +182,22 @@ export async function detectFileTypes(files: File[]): Promise<DetectedFile[]> {
   return Promise.all(files.map(detectFileType));
 }
 
+/** What a file holds, in the words the rest of the viewer uses for its results (P8). */
 export function describeFileType(type: DetectedFileType): string {
   switch (type) {
-    case 'video': return 'Video File';
-    case 'audio': return 'Audio File';
-    case 'person_tracking': return 'Person Tracking (COCO)';
-    case 'speech_recognition': return 'Speech Recognition (WebVTT)';
-    case 'speaker_diarization': return 'Speaker Diarization (RTTM)';
-    case 'scene_detection': return 'Scene Detection (JSON)';
-    case 'vlm_annotation': return 'VLM Frame Annotation (JSON)';
-    case 'elan_ground_truth': return 'ELAN Ground Truth (.eaf)';
-    case 'face_analysis': return 'Face Analysis (COCO)';
-    case 'openface3_faces': return 'OpenFace3 Analysis (JSON)';
-    case 'complete_results': return 'Complete Results (VideoAnnotator)';
-    case 'provenance': return 'Provenance Record';
-    default: return 'Unknown File Type';
+    case 'video': return 'Video';
+    case 'audio': return 'Audio';
+    case 'person_tracking': return 'People and pose';
+    case 'speech_recognition': return 'Speech (subtitles)';
+    case 'speaker_diarization': return 'Speakers: who spoke when';
+    case 'scene_detection': return 'Scenes';
+    case 'vlm_annotation': return 'Ask AI answers';
+    case 'elan_ground_truth': return 'ELAN annotations';
+    case 'face_analysis': return 'Faces and expression';
+    case 'openface3_faces': return 'Face measures (OpenFace 3)';
+    case 'complete_results': return 'All results from a run';
+    case 'provenance': return 'How the results were made';
+    default: return 'Not recognised';
   }
 }
 

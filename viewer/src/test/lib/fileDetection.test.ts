@@ -121,6 +121,6 @@ describe('validateFileSize', () => {
 });
 
 it('describes each type', () => {
-  expect(describeFileType('openface3_faces')).toBe('OpenFace3 Analysis (JSON)');
-  expect(describeFileType('unknown')).toBe('Unknown File Type');
+  expect(describeFileType('openface3_faces')).toBe('Face measures (OpenFace 3)');
+  expect(describeFileType('unknown')).toBe('Not recognised');
 });

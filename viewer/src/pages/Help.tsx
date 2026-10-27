@@ -72,11 +72,24 @@ export default function Help() {
         <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-[9rem_1fr]" data-testid="glossary">
           {Object.entries(GLOSSARY).map(([word, meaning]) => (
             <div key={word} className="contents">
-              <dt className="font-medium capitalize">{word}</dt>
+              <dt className="font-medium">{word.charAt(0).toUpperCase() + word.slice(1)}</dt>
               <dd className="text-muted-foreground">{meaning}</dd>
             </div>
           ))}
         </dl>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">Your key</h2>
+        <p className="text-sm text-muted-foreground">
+          The viewer uses a key to talk to the server.{' '}
+          <Link to="/settings" className="underline">
+            Settings
+          </Link>{' '}
+          shows whether yours works, whose it is and how to get one. Installing pipelines and adding a Hugging Face
+          token need an administrator&apos;s key: whoever runs the server can make one with{' '}
+          <code className="rounded bg-muted px-1">videoannotator generate-token --user &lt;your email&gt; --admin</code>.
+        </p>
       </section>
 
       <section className="space-y-3">

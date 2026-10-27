@@ -22,6 +22,7 @@ vi.mock('@/api/client', () => ({
     removeModelServer: vi.fn(),
     checkModelServer: vi.fn(),
     setRemoteModelServers: vi.fn(),
+    getVlmModels: vi.fn(),
   },
 }));
 
@@ -60,6 +61,10 @@ describe('Settings → Model servers', () => {
     vi.clearAllMocks();
     stubPointerCapture();
     vi.mocked(apiClient.listModelServers).mockResolvedValue(serversResponse());
+    vi.mocked(apiClient.getVlmModels).mockImplementation(async (server) => {
+      if (server === 'lab') throw new APIError('unreachable', 0);
+      return { baseUrl: '', models: ['gemma4:12b', 'qwen3.5:9b'], server: server ?? 'default', kind: 'ollama' };
+    });
   });
 
   it('lists the servers, the default first and not removable', async () => {
@@ -67,12 +72,18 @@ describe('Settings → Model servers', () => {
     const rows = await screen.findAllByTestId('model-server');
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent(DEFAULT_SERVER.name);
+    // Its name says Ollama already, and it needs no key: neither is repeated (UAT #15).
+    expect(rows[0].textContent?.match(/Ollama/g)).toHaveLength(1);
+    expect(rows[0]).not.toHaveTextContent('no key');
+    expect(within(rows[0]).getByTestId('server-where')).toHaveTextContent('This computer');
+    expect(await within(rows[0]).findByText('Reachable · 2 models')).toBeInTheDocument();
     expect(within(rows[0]).queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
     expect(rows[1]).toHaveTextContent('lab-gpu');
     expect(rows[1]).toHaveTextContent('OpenAI-compatible');
-    expect(rows[1]).toHaveTextContent('key set');
-    expect(within(rows[1]).getByTestId('endpoint-badge')).toHaveTextContent('Local · lab-gpu on 10.0.4.12');
-    expect(screen.getByText('/data/model_server_keys.json')).toBeInTheDocument();
+    expect(rows[1]).toHaveTextContent('has a key');
+    expect(within(rows[1]).getByTestId('server-where')).toHaveTextContent('Local network · 10.0.4.12');
+    expect(await within(rows[1]).findByText("Can't reach it")).toBeInTheDocument();
+    expect(screen.queryByText('/data/model_server_keys.json')).not.toBeInTheDocument();
   });
 
   it('marks a server confirmed before the switch existed', async () => {
@@ -80,8 +91,8 @@ describe('Settings → Model servers', () => {
     renderCard();
     const rows = await screen.findAllByTestId('model-server');
     expect(rows[1]).toHaveTextContent('Confirmed before remote servers needed switching on');
-    expect(rows[1]).toHaveTextContent("no key ($FARM_KEY isn't set)");
-    expect(within(rows[1]).getByTestId('endpoint-badge')).toHaveAttribute('data-class', 'remote');
+    expect(rows[1]).toHaveTextContent("no key (FARM_KEY isn't set)");
+    expect(within(rows[1]).getByTestId('server-where')).toHaveAttribute('data-class', 'remote');
   });
 
   it('adds a server only after a check passes, and never shows the key', async () => {

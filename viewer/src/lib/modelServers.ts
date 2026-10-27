@@ -11,12 +11,12 @@ export const KIND_SHORT: Record<ModelServerKind, string> = {
   openai_compatible: 'OpenAI-compatible',
 };
 
-/** Where a server's key comes from, without ever the key. */
-export function keyText(server: Pick<ModelServer, 'has_key' | 'key_source' | 'api_key_env'>): string {
-  if (server.key_source === 'env' && server.api_key_env) return `key from $${server.api_key_env}`;
-  if (server.has_key) return 'key set';
-  if (server.api_key_env) return `no key ($${server.api_key_env} isn't set)`;
-  return 'no key';
+/** Where a server's key comes from, without ever the key; null when it has none. */
+export function keyText(server: Pick<ModelServer, 'has_key' | 'key_source' | 'api_key_env'>): string | null {
+  if (server.key_source === 'env' && server.api_key_env) return `key from ${server.api_key_env}`;
+  if (server.has_key) return 'has a key';
+  if (server.api_key_env) return `no key (${server.api_key_env} isn't set)`;
+  return null;
 }
 
 export const MODEL_SERVERS_QUERY_KEY = ['model-servers'] as const;
