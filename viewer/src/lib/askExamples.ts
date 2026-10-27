@@ -9,11 +9,11 @@ export const EXAMPLE_QUESTIONS: ExampleQuestion[] = [
     title: 'Touch',
     text:
       "Is the adult's hand or arm touching the infant's body? Overlap caused only by the camera angle is not touch.\n" +
-      'Answer with one word: touching or not_touching.',
+      'Answer with one of: touching, not touching.',
   },
   {
     title: 'Gaze',
-    text: 'Where is the infant looking?\nAnswer with one word: at_caregiver, at_object or elsewhere.',
+    text: 'Where is the infant looking?\nAnswer with one of: at the caregiver, at an object, elsewhere.',
   },
   {
     title: 'Number of people',

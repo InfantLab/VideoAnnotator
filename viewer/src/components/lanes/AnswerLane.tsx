@@ -1,10 +1,10 @@
-import { lanePercent, timeAtClick, type LaneMarker } from '@/lib/lanes';
+import { formatClockTenths, lanePercent, timeAtClick, type LaneMarker } from '@/lib/lanes';
 
 interface AnswerLaneProps<M extends LaneMarker> {
   markers: M[];
   duration: number;
-  /** Hue per distinct answer, so the same answer has the same colour. */
-  hues: Map<string, number>;
+  /** Each answer's colour, the same answer the same colour (UAT #23). */
+  colourOf: (marker: M) => string;
   highlight?: number | null;
   onSeek?: (t: number) => void;
   onHover?: (marker: M | null) => void;
@@ -24,7 +24,7 @@ const statusWord = (m: LaneMarker) =>
  * answer that didn't fit its shape are drawn as their own shapes, never as an
  * answer (Principle VI).
  */
-export function AnswerLane<M extends LaneMarker>({ markers, duration, hues, highlight, onSeek, onHover }: AnswerLaneProps<M>) {
+export function AnswerLane<M extends LaneMarker>({ markers, duration, colourOf, highlight, onSeek, onHover }: AnswerLaneProps<M>) {
   return (
     <svg
       className="block h-6 w-full overflow-visible"
@@ -36,7 +36,6 @@ export function AnswerLane<M extends LaneMarker>({ markers, duration, hues, high
       <line x1="0" x2="100%" y1="12" y2="12" stroke="currentColor" strokeOpacity={0.15} />
       {markers.map((m, i) => {
         const selected = highlight !== undefined && highlight !== null && Math.abs(m.t - highlight) < 1e-6;
-        const hue = hues.get(m.label ?? '') ?? 0;
         return (
           <svg
             key={`${m.t}-${i}`}
@@ -49,7 +48,7 @@ export function AnswerLane<M extends LaneMarker>({ markers, duration, hues, high
             data-label={m.label ?? ''}
             data-selected={selected ? 'true' : 'false'}
             role="button"
-            aria-label={`${m.t.toFixed(1)} s: ${statusWord(m)}`}
+            aria-label={`${formatClockTenths(m.t)}: ${statusWord(m)}`}
             onClick={(e) => {
               e.stopPropagation();
               onSeek?.(m.t);
@@ -57,7 +56,7 @@ export function AnswerLane<M extends LaneMarker>({ markers, duration, hues, high
             onMouseEnter={() => onHover?.(m)}
             onMouseLeave={() => onHover?.(null)}
           >
-            <title>{`${m.t.toFixed(1)} s: ${statusWord(m)}`}</title>
+            <title>{`${formatClockTenths(m.t)}: ${statusWord(m)}`}</title>
             {m.status === 'answered' && m.fit === false && (
               <circle
                 r={selected ? 7 : 5}
@@ -68,10 +67,13 @@ export function AnswerLane<M extends LaneMarker>({ markers, duration, hues, high
               />
             )}
             {m.status === 'answered' && m.fit !== false && (
-              <circle r={selected ? 7 : 5} fill={`hsl(${hue} 70% 50%)`} stroke={selected ? 'hsl(var(--foreground))' : 'none'} strokeWidth={2} />
+              <circle r={selected ? 7 : 5} fill={colourOf(m)} stroke={selected ? 'hsl(var(--foreground))' : 'none'} strokeWidth={2} />
             )}
             {m.status === 'error' && (
-              <path d="M-5,-5L5,5M5,-5L-5,5" stroke="hsl(var(--destructive))" strokeWidth={selected ? 3 : 2} />
+              <g stroke="currentColor" strokeOpacity={0.6} strokeWidth={selected ? 2.5 : 1.5} fill="none">
+                <circle r={selected ? 7 : 5} />
+                <path d="M-3,-3L3,3M3,-3L-3,3" />
+              </g>
             )}
             {m.status === 'skipped' && (
               <rect x={-4} y={-4} width={8} height={8} fill="none" stroke="currentColor" strokeOpacity={0.6} strokeDasharray="2 1" />

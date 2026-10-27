@@ -116,11 +116,11 @@
         "name": "bad name",
         "shape": [
           {
-            "name": "Touch",
+            "name": "the \"touch\"",
             "kind": "yes_no"
           }
         ],
-        "problem": "Field 1: 'Touch' isn't a usable name: start with a lower-case letter, then lower-case letters, digits or _ (at most 40)."
+        "problem": "Field 1: 'the \"touch\"' isn't a usable name: give it a name of 1 to 40 characters, without quotes or backslashes."
       },
       {
         "name": "duplicate",
@@ -457,7 +457,7 @@
       "prompt": "Return ONLY: TOUCH or NO_TOUCH",
       "expect": [
         {
-          "name": "answer",
+          "name": "Answer",
           "kind": "choice",
           "values": [
             "TOUCH",
@@ -471,7 +471,7 @@
       "prompt": "Answer with one of: smile, frown, neutral",
       "expect": [
         {
-          "name": "answer",
+          "name": "Answer",
           "kind": "choice",
           "values": [
             "smile",
@@ -486,7 +486,7 @@
       "prompt": "Is the baby smiling? (yes/no)",
       "expect": [
         {
-          "name": "answer",
+          "name": "Answer",
           "kind": "yes_no"
         }
       ]
@@ -496,7 +496,7 @@
       "prompt": "How happy does the infant look, on a scale of 1 to 5?",
       "expect": [
         {
-          "name": "answer",
+          "name": "Answer",
           "kind": "number",
           "min": 1,
           "max": 5
@@ -508,7 +508,7 @@
       "prompt": "Classify as TOUCH only if:\nThe mother's hand or arm is actually in physical contact with the infant's body.\n\nClassify as NO_TOUCH if:\nThe mother's hand or arm visually overlaps the infant in the image, but one is clearly in front of or behind the other (the apparent contact is camera perspective, not real contact).\nThe mother's hand or arm is near but not actually touching the infant.\n\nReturn ONLY: TOUCH or NO_TOUCH.",
       "expect": [
         {
-          "name": "answer",
+          "name": "Answer",
           "kind": "choice",
           "values": [
             "TOUCH",
@@ -522,7 +522,7 @@
       "prompt": "Is the adult touching the child? Who started it? Return ONLY: TOUCH or NO_TOUCH",
       "expect": [
         {
-          "name": "answer",
+          "name": "Answer",
           "kind": "choice",
           "values": [
             "TOUCH",
@@ -536,11 +536,11 @@
       "prompt": "Is the infant crying? yes or no.\nWho comforts them? Answer with one of: mother, father, nobody.",
       "expect": [
         {
-          "name": "answer",
+          "name": "Answer",
           "kind": "yes_no"
         },
         {
-          "name": "answer_2",
+          "name": "Answer 2",
           "kind": "choice",
           "values": [
             "mother",
@@ -557,28 +557,28 @@
     },
     {
       "name": "example: Touch",
-      "prompt": "Is the adult's hand or arm touching the infant's body? Overlap caused only by the camera angle is not touch.\nAnswer with one word: touching or not_touching.",
+      "prompt": "Is the adult's hand or arm touching the infant's body? Overlap caused only by the camera angle is not touch.\nAnswer with one of: touching, not touching.",
       "expect": [
         {
-          "name": "answer",
+          "name": "Answer",
           "kind": "choice",
           "values": [
             "touching",
-            "not_touching"
+            "not touching"
           ]
         }
       ]
     },
     {
       "name": "example: Gaze",
-      "prompt": "Where is the infant looking?\nAnswer with one word: at_caregiver, at_object or elsewhere.",
+      "prompt": "Where is the infant looking?\nAnswer with one of: at the caregiver, at an object, elsewhere.",
       "expect": [
         {
-          "name": "answer",
+          "name": "Answer",
           "kind": "choice",
           "values": [
-            "at_caregiver",
-            "at_object",
+            "at the caregiver",
+            "at an object",
             "elsewhere"
           ]
         }
@@ -589,7 +589,7 @@
       "prompt": "How many people can you see?\nAnswer with a number only.",
       "expect": [
         {
-          "name": "answer",
+          "name": "Answer",
           "kind": "number"
         }
       ]
@@ -599,7 +599,7 @@
       "prompt": "What is the infant's posture?\nAnswer with one word: lying, sitting, standing or held.",
       "expect": [
         {
-          "name": "answer",
+          "name": "Answer",
           "kind": "choice",
           "values": [
             "lying",
@@ -615,7 +615,7 @@
       "prompt": "What is happening?\nAnswer with one of: feeding, playing, reading, changing, sleeping, other.",
       "expect": [
         {
-          "name": "answer",
+          "name": "Answer",
           "kind": "choice",
           "values": [
             "feeding",

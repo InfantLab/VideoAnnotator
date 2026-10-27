@@ -133,3 +133,113 @@ ticked), not silently from your last run. The last run is offered visibly instea
 1. A run's page keeps the Videos sidebar, made collapsible.
 2. The demo stays at the bottom of Home for everyone; the demo is to be made as rich as possible, as
    a reference for what the pipelines can find.
+
+## Batch 5: Ask AI
+
+Answers #21–27, #29, #30, #50, #56–58, #65 (D4, D5; #28 is decided by them). The page keeps its
+layout: question on the left, video on the right, then the timeline, the answers and the tally.
+
+### Question and answer shape (#27, #29, #30, #57, #58; D4, D5)
+
+```
+ Question                                                         [Examples ▾]
+ ┌──────────────────────────────────────────────────────────────────────────┐
+ │ How many adults are in the room, and is the child smiling?               │
+ │                                                                          │
+ │ Answer as JSON with "Adults": a number, "Child smiling": yes or no.      │ ← written by Fields,
+ └──────────────────────────────────────────────────────────────────────────┘   in the text, editable
+ Answer   ┃ Free text ┃▐ Fields ▌┃                              ← clearly selected (#30)
+          Adults           [number      ▾]   ✕
+          Child smiling    [yes or no   ▾]   ✕
+          [+ Add a field]   [Suggest from the question]
+          ☐ Make the model answer in exactly this form   (this server can enforce it)
+```
+
+- Free text by default (D4). Fields writes its sentence into the question, where you can see and
+  edit it; changing a field rewrites that sentence (D5). Nothing else is added to what's sent.
+- Field names as typed ("Child smiling", "Child's mood"); the column and JSON key are made from
+  them behind the scenes (#29).
+- The tick box forces the format through the server's structured output: off by default, shown only
+  where the server supports it (D5).
+- Suggest proposes one field per part of the question ("adults: number", "child smiling: yes or
+  no"), or says it found none; it never replaces fields you made without asking (#57).
+- Examples use plain words: "touching or not touching", "at the caregiver" (#58).
+
+### Model, and where it asks (#21, #22, #25, #26)
+
+```
+ Model    [ gemma4:12b                ▾ ]   🖴 On this computer
+                                            (☁ On ai.example.org: frames leave this computer)
+
+ Ask at   (•) This frame: 0:12.4, frame 186                       [ Try ]
+          ( ) The moments below: every [5] s from [0:00] to [end]  =  4 moments    [ Try on 4 ]
+          Whole video: 43 moments, about 2 min                    [ Run on whole video ]
+
+ Frames per moment  [ 1 ▾ ]  [0.2] s apart, centred on the moment
+          Sends 0:12.2 · 0:12.4 · 0:12.6, so the model can see movement around the moment.
+```
+
+- Where it runs sits beside the picker, in words and an icon (#25); the top-right badge goes.
+- "This frame" names the time and frame number from the player bar (#21, built in batch 4).
+- The moments' grid is spelled out on the same line as its button, with no shuffle icon (#22).
+- Frames per moment: 1, 3 or 5 frames, apart by a fraction of a second (0.04–2 s), always centred
+  on the moment, with the times it will send written out (#26).
+
+### Answers: one key, one selection (#23, #24, #27, #50)
+
+```
+ Answers                                                              [ Export ▾ ]
+                0:00        0:05        0:10        0:15        0:20
+ Try 14:02 · gemma4:12b · Fields    ●                                         ← only the frame tried
+ Run 14:10 · gemma4:12b · Fields    ●     ●     ◉     ●     ●     ●            ◉ = selected
+ Run 14:31 · qwen2.5vl  · Fields    ●     ●     ●     ●     ●     ●
+          Child smiling:  ● yes  ● no  ● no answer               ← one colour key, no red (#23, #50)
+
+ ┌ Time ┬ Run 14:10 · gemma4:12b ───────┬ Run 14:31 · qwen2.5vl ───────┐
+ │      │ Adults │ Child smiling        │ Adults │ Child smiling       │
+ │ 0:00 │ 2      │ yes                  │ 2      │ yes                 │
+ │▶0:10 │ 1      │ no                   │ 1      │ yes                 │ ← selected row = ◉ dot
+ └──────┴────────┴──────────────────────┴────────┴─────────────────────┘
+ Tally (Run 14:10):  Child smiling  yes 4 · no 2      Adults  1 ×2 · 2 ×4
+```
+
+- Each try or run is labelled by when, model and shape, the same on its track, its table columns
+  and its tally, so two tries of one question can be told apart (#24).
+- Dots are coloured by the answer, from one key under the timeline: the first field's values for
+  Fields, the answer itself for short free-text answers. Neutral categorical colours, never red;
+  failed or missing answers are hollow grey (#23, #50).
+- Selecting a row, a dot or a tally line selects the same moment everywhere (#24).
+- The tally counts one try or run at a time, chosen above it, never mixing a frame try into a run's
+  counts (#50).
+- A free-text reply that is valid JSON (in ```json fences or not) is shown in columns, marked
+  "read from the reply"; what's stored stays the reply as given (#27, D4).
+- Times as `0:30` everywhere, including frame thumbnails (#50).
+
+### The video, history and saved questions (#50, #56, #65)
+
+```
+ 2UWdXP.joke1.rep2…Peekaboo_h265.mp4   [ Choose another video ▾ ]
+     ┌ Videos on the server ───────────── Search… ┐
+     │ expCP2.mov                       ran 26 Oct │
+     │ 2UWdXP.joke1.rep2…Peekaboo.mp4   ran 26 Oct │
+     │ …                                           │
+     ├ From this computer: [ Upload a video… ]     ┤
+     └─────────────────────────────────────────────┘
+
+ History           ★ How many adults…  · Run 14:10 · gemma4:12b · Caspar     ⋯
+ Saved questions     Is the child touching the tablet?                        ⋯  Use · Delete
+```
+
+- Choose another video lists the server's videos first, with upload second (#56).
+- History names people, not user ids (#50).
+- Deleting a history entry asks whether to remove its question from Saved questions too, and saved
+  questions can be deleted on their own (#65).
+
+### Decided (Caspar, 2026-10-27)
+
+1. Dots are always coloured by the answer, free text included, and consistently: an answer keeps its
+   colour across every try and run of the same question. 16 distinct colours; beyond 16 answers, the
+   15 most common keep theirs and every other answer takes a shade of the colour of the answer it
+   reads most like (similar answers, similar colours). Similarity is by shared letter sequences, no
+   model needed; embeddings could replace it later.
+2. Where the server can't enforce the format, the tick box shows, disabled, saying so.

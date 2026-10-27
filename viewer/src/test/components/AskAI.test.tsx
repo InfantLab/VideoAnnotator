@@ -184,11 +184,11 @@ describe('Ask AI', () => {
       const question = await screen.findByLabelText('Question');
       await userEvent.click(screen.getByRole('button', { name: /Examples/ }));
       await userEvent.click(await screen.findByText('Gaze'));
-      expect((question as HTMLTextAreaElement).value).toContain('at_caregiver');
+      expect((question as HTMLTextAreaElement).value).toContain('at the caregiver');
       await userEvent.click(screen.getByRole('button', { name: /Examples/ }));
       await userEvent.click(await screen.findByText('Touch'));
       await userEvent.click(await screen.findByRole('button', { name: 'Replace' }));
-      expect((question as HTMLTextAreaElement).value).toContain('touching or not_touching');
+      expect((question as HTMLTextAreaElement).value).toContain('touching, not touching');
     });
   });
 
@@ -293,7 +293,7 @@ describe('Ask AI', () => {
       });
       renderAsk();
       await screen.findByTestId('ask-video');
-      fireEvent.change(screen.getByLabelText('Frames per sample'), { target: { value: '3' } });
+      fireEvent.change(screen.getByLabelText('Frames per moment'), { target: { value: '3' } });
       expect(await screen.findByText(/2 of 3 frames/)).toBeInTheDocument();
       expect(apiClient.getFrames).toHaveBeenCalledWith(expect.objectContaining({ path: VIDEO, t: 0, frames: 3 }));
     });

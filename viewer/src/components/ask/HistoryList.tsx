@@ -1,11 +1,23 @@
 import { useState } from 'react';
 import { Check, Eye, EyeOff, Pencil, Star, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { entryTitle, samplingSummary } from '@/lib/ask';
 import { cn } from '@/lib/utils';
+import { formatWhen } from '@/lib/when';
 import type { AskEntry, AskLibraryPrompt } from '@/types/ask';
 
 export interface HistoryFilters {
@@ -28,13 +40,43 @@ interface HistoryListProps {
   onRestoreLibrary: (prompt: AskLibraryPrompt) => void;
   onLibraryUpdate: (prompt: AskLibraryPrompt, change: { name?: string; starred?: boolean; hidden?: boolean }) => void;
   onLibraryDelete: (prompt: AskLibraryPrompt) => void;
+  /** Delete an entry; `alsoQuestion` removes its question from the earlier questions too (UAT #65). */
+  onDelete: (entry: AskEntry, alsoQuestion: boolean) => void;
 }
 
-const when = (iso: string | null | undefined) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
-};
+const when = (iso: string | null | undefined) => formatWhen(iso);
+
+function DeleteEntry({ entry, onDelete }: { entry: AskEntry; onDelete: HistoryListProps['onDelete'] }) {
+  const [open, setOpen] = useState(false);
+  const [alsoQuestion, setAlsoQuestion] = useState(true);
+  return (
+    <>
+      <Button size="icon" variant="ghost" className="h-6 w-6" aria-label="Delete" onClick={() => setOpen(true)}>
+        <Trash2 className="h-3 w-3" />
+      </Button>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete “{entryTitle(entry)}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {entry.kind === 'run'
+                ? 'It leaves this history; the run and its results stay on the Runs page.'
+                : 'Its answers are deleted.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked={alsoQuestion} onCheckedChange={(on) => setAlsoQuestion(on === true)} />
+            Also remove the question from earlier questions
+          </label>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction onClick={() => onDelete(entry, alsoQuestion)}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
 
 function Rename({ initial, onDone }: { initial: string; onDone: (name: string | null) => void }) {
   const [value, setValue] = useState(initial);
@@ -109,7 +151,7 @@ export function HistoryList(props: HistoryListProps) {
                     {samplingSummary(entry.sampling)}
                   </span>
                   <span className="block truncate text-muted-foreground">
-                    {entry.video_name} · {entry.user_id ?? 'someone'} · {when(entry.created_at)}
+                    {entry.video_name} · {entry.user_name ?? 'someone'} · {when(entry.created_at)}
                     {entry.status === 'running' && ' · going'}
                     {entry.status === 'stopped' && ' · stopped'}
                     {entry.status === 'failed' && ' · failed'}
@@ -140,6 +182,7 @@ export function HistoryList(props: HistoryListProps) {
                     {isShown ? <Eye className="h-3 w-3 text-primary" /> : <EyeOff className="h-3 w-3" />}
                   </Button>
                 )}
+                <DeleteEntry entry={entry} onDelete={props.onDelete} />
               </div>
               {renaming === entry.id && (
                 <Rename

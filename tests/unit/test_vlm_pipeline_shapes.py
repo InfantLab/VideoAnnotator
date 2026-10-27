@@ -88,7 +88,11 @@ def test_ollama_gets_the_schema_as_format_and_answers_are_checked(video, tmp_pat
         "TOUCH",
     ]
     p, data = _run(
-        video, tmp_path, answer_shape=SHAPE, base_url="http://127.0.0.1:11434"
+        video,
+        tmp_path,
+        answer_shape=SHAPE,
+        enforce_shape=True,
+        base_url="http://127.0.0.1:11434",
     )
     schema = FakeOllama.calls[0]["schema"]
     assert schema == answer_shape.to_json_schema(answer_shape.validate_shape(SHAPE))
@@ -134,6 +138,7 @@ def test_openai_compatible_sends_response_format(video, tmp_path, fakes):
         base_url=OPENAI,
         model=fakes.model,
         answer_shape=SHAPE,
+        enforce_shape=True,
     )
     body = fakes.chat_requests[0].body
     assert body["response_format"]["type"] == "json_schema"
@@ -144,7 +149,9 @@ def test_openai_compatible_sends_response_format(video, tmp_path, fakes):
     assert fakes.recorded_capabilities == [(OPENAI, True)]
 
 
-def test_a_server_that_rejects_the_schema_gets_it_in_the_prompt(video, tmp_path, fakes):
+def test_a_server_that_rejects_the_schema_gets_the_question_unchanged(
+    video, tmp_path, fakes
+):
     fakes.reject_schema = True
     fakes.replies = ['{"touch": "no", "initiator": "none"}']
     p, data = _run(
@@ -154,15 +161,14 @@ def test_a_server_that_rejects_the_schema_gets_it_in_the_prompt(video, tmp_path,
         base_url=OPENAI,
         model=fakes.model,
         answer_shape=SHAPE,
+        enforce_shape=True,
     )
     with_schema = [r for r in fakes.chat_requests if "response_format" in r.body]
     assert len(with_schema) == 1
     later = fakes.chat_requests[-1].body
     assert "response_format" not in later
-    assert later["messages"][0]["content"][0]["text"].endswith(
-        '{"touch": "yes" or "no", "initiator": "mother" or "infant" or "both" or '
-        '"none"}'
-    )
+    # Nothing hidden is added to the question (D5).
+    assert later["messages"][0]["content"][0]["text"] == vlm_pipeline.DEFAULT_PROMPT
     assert {a["label"] for a in data["annotations"]} == {"no"}
     assert p.run_summary()["structured_output"] == "prompt_only"
     assert fakes.recorded_capabilities == [(OPENAI, False)]
@@ -175,3 +181,20 @@ def test_unshaped_output_is_unchanged(video, tmp_path):
             assert key not in a
     assert "vlm_answer_shape" not in data
     assert "schema" not in FakeOllama.calls[0]
+
+
+def test_an_unforced_shape_reads_replies_but_sends_no_schema(video, tmp_path, fakes):
+    fakes.replies = ['{"touch": "no", "initiator": "none"}']
+    _, data = _run(
+        video,
+        tmp_path,
+        backend="openai_compatible",
+        base_url=OPENAI,
+        model=fakes.model,
+        answer_shape=SHAPE,
+    )
+    assert all("response_format" not in r.body for r in fakes.chat_requests)
+    assert fakes.chat_requests[0].body["messages"][0]["content"][0]["text"] == (
+        vlm_pipeline.DEFAULT_PROMPT
+    )
+    assert {a["fit"] for a in data["annotations"]} == {True}

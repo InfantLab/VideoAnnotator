@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { KIND_WORDS, KINDS, shapeProblem } from '@/lib/answerShape';
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 import type { AnswerShape, AnswerShapeField, SuggestShapeResponse } from '@/types/ask';
 
 interface AnswerShapeEditorProps {
@@ -14,14 +16,17 @@ interface AnswerShapeEditorProps {
   onSuggest?: () => Promise<SuggestShapeResponse>;
   /** Set when the chosen server is known not to enforce shapes: its name. */
   cantEnforce?: string | null;
+  /** Force the shape through the server's structured output (D5); absent where it can't be offered. */
+  enforce?: boolean;
+  onEnforce?: (on: boolean) => void;
   fieldId?: string;
 }
 
 const blankField = (shape: AnswerShape): AnswerShapeField => {
   const used = new Set(shape.map((f) => f.name));
   let n = shape.length + 1;
-  while (used.has(n === 1 ? 'answer' : `answer_${n}`)) n += 1;
-  return { name: n === 1 ? 'answer' : `answer_${n}`, kind: 'yes_no' };
+  while (used.has(n === 1 ? 'Answer' : `Answer ${n}`)) n += 1;
+  return { name: n === 1 ? 'Answer' : `Answer ${n}`, kind: 'yes_no' };
 };
 
 function Values({ field, onChange, label }: { field: AnswerShapeField; onChange: (values: string[]) => void; label: string }) {
@@ -66,7 +71,7 @@ function Values({ field, onChange, label }: { field: AnswerShapeField; onChange:
 const asNumber = (text: string): number | null => (text.trim() === '' || !Number.isFinite(Number(text)) ? null : Number(text));
 
 /** The answer's shape: free text, or named fields (spec 033 FR-018). */
-export function AnswerShapeEditor({ value, onChange, onSuggest, cantEnforce, fieldId = 'answer-shape' }: AnswerShapeEditorProps) {
+export function AnswerShapeEditor({ value, onChange, onSuggest, cantEnforce, enforce, onEnforce, fieldId = 'answer-shape' }: AnswerShapeEditorProps) {
   const [proposal, setProposal] = useState<SuggestShapeResponse | null>(null);
   const [suggesting, setSuggesting] = useState(false);
   const [suggestError, setSuggestError] = useState<string | null>(null);
@@ -98,20 +103,29 @@ export function AnswerShapeEditor({ value, onChange, onSuggest, cantEnforce, fie
   return (
     <div className="space-y-2" data-testid="answer-shape">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Label id={`${fieldId}-label`}>Answer shape</Label>
-        <div className="flex gap-1" role="group" aria-labelledby={`${fieldId}-label`}>
-          <Button type="button" size="sm" variant={value ? 'outline' : 'secondary'} aria-pressed={!value} onClick={() => onChange(null)}>
-            Free text
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={value ? 'secondary' : 'outline'}
-            aria-pressed={Boolean(value)}
-            onClick={() => !value && onChange([blankField([])])}
-          >
-            Fields
-          </Button>
+        <Label id={`${fieldId}-label`}>Answer</Label>
+        {/* Which is chosen reads at a glance: filled, not a shade of grey (UAT #30). */}
+        <div className="inline-flex rounded-md border p-0.5" role="radiogroup" aria-labelledby={`${fieldId}-label`}>
+          {[
+            { on: !value, label: 'Free text', pick: () => value && onChange(null) },
+            { on: Boolean(value), label: 'Fields', pick: () => !value && onChange([blankField([])]) },
+          ].map((choice) => (
+            <button
+              key={choice.label}
+              type="button"
+              role="radio"
+              aria-checked={choice.on}
+              className={cn(
+                'rounded px-3 py-1 text-sm',
+                choice.on ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+              )}
+              onClick={choice.pick}
+            >
+              {choice.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1">
           {onSuggest && (
             <Button type="button" size="sm" variant="ghost" className="gap-1" disabled={suggesting} onClick={() => void suggest()}>
               {suggesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Suggest
@@ -130,7 +144,7 @@ export function AnswerShapeEditor({ value, onChange, onSuggest, cantEnforce, fie
               <ul className="text-xs">
                 {(proposal.shape as unknown as AnswerShape).map((f) => (
                   <li key={f.name}>
-                    <span className="font-mono">{f.name}</span> · {KIND_WORDS[f.kind]}
+                    <span className="font-medium">{f.name}</span> · {KIND_WORDS[f.kind]}
                     {f.values?.length ? `: ${f.values.join(', ')}` : ''}
                     {f.kind === 'number' && (f.min != null || f.max != null) ? ` ${f.min ?? ''}–${f.max ?? ''}` : ''}
                   </li>
@@ -171,7 +185,7 @@ export function AnswerShapeEditor({ value, onChange, onSuggest, cantEnforce, fie
               <div className="flex flex-wrap items-center gap-1">
                 <Input
                   aria-label={`Field ${i + 1} name`}
-                  className="h-8 w-36 font-mono text-xs"
+                  className="h-8 w-40 text-xs"
                   value={field.name}
                   onChange={(e) => update(i, { name: e.target.value })}
                 />
@@ -247,10 +261,27 @@ export function AnswerShapeEditor({ value, onChange, onSuggest, cantEnforce, fie
               {problem}
             </p>
           )}
-          {cantEnforce && (
-            <p className="text-xs text-muted-foreground">
-              {cantEnforce} can't enforce the answer shape; answers are checked after.
-            </p>
+          <p className="text-xs text-muted-foreground">
+            The sentence these fields make is in your question above; edit it there if you like. Answers are read into these
+            fields.
+          </p>
+          {onEnforce && (
+            <label className={cn('flex items-start gap-2 text-xs', cantEnforce && 'text-muted-foreground')} data-testid="enforce-shape">
+              <Checkbox
+                checked={Boolean(enforce) && !cantEnforce}
+                disabled={Boolean(cantEnforce)}
+                onCheckedChange={(on) => onEnforce(on === true)}
+                aria-label="Make the model answer in exactly this form"
+              />
+              <span>
+                Make the model answer in exactly this form
+                <span className="block text-muted-foreground">
+                  {cantEnforce
+                    ? `${cantEnforce} can't enforce it; the sentence in your question asks for it instead.`
+                    : 'The server holds the model to these fields. Off, the sentence in your question asks for them.'}
+                </span>
+              </span>
+            </label>
           )}
         </div>
       )}

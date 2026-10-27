@@ -12,10 +12,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 
 from . import prompt_library
-from .database.models import AskEntry
+from .database.models import AskEntry, User
 
 
 def own_session() -> Session:
@@ -135,6 +135,18 @@ def _iso(value: datetime | None) -> str | None:
     return value.isoformat()
 
 
+def _user_name(entry: Any) -> str | None:
+    """Who asked, as people are named elsewhere, not their id (UAT #50)."""
+    db = object_session(entry)
+    if not entry.user_id or db is None:
+        return None
+    try:
+        user = db.get(User, uuid.UUID(str(entry.user_id)))
+    except ValueError:
+        return None
+    return (user.full_name or user.username) if user is not None else None
+
+
 def to_dict(entry: AskEntry) -> dict[str, Any]:
     return {
         "id": str(entry.id),
@@ -156,6 +168,7 @@ def to_dict(entry: AskEntry) -> dict[str, Any]:
         "answers": entry.answers,
         "job_id": entry.job_id,
         "user_id": entry.user_id,
+        "user_name": _user_name(entry),
         "name": entry.name,
         "starred": bool(entry.starred),
         "created_at": _iso(entry.created_at),

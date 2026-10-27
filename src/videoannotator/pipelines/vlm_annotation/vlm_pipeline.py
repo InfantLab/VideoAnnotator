@@ -200,6 +200,7 @@ class VLMAnnotationPipeline(BasePipeline):
             "abort_after_consecutive_failures": 5,
             "options": {"temperature": 0, "top_p": 0.9},
             "answer_shape": None,  # a list of fields (spec 033 R8)
+            "enforce_shape": False,  # send it as a schema (D5)
         }
         if config:
             default_config.update(config)
@@ -357,7 +358,13 @@ class VLMAnnotationPipeline(BasePipeline):
 
         annotations: list[dict[str, Any]] = []
         skipped: list[dict[str, Any]] = []
-        schema = shapes.to_json_schema(self._shape) if self._shape else None
+        # The shape reads replies into fields; it's sent as a schema only when
+        # forced (D5): otherwise the question's own words ask for the shape.
+        schema = (
+            shapes.to_json_schema(self._shape)
+            if self._shape and self.config.get("enforce_shape")
+            else None
+        )
         structured_output: str | None = None
         key_refused: str | None = None
         consecutive_failures = 0

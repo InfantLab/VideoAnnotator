@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { AnswerLane } from '@/components/lanes/AnswerLane';
 import { SampleTicks } from '@/components/lanes/SampleTicks';
 import { TimeAxis } from '@/components/lanes/TimeAxis';
-import { categoryHues } from '@/lib/categoryColors';
+import { answerColours } from '@/lib/answerColours';
+
+const grey = () => 'grey';
+const colours = (ms: LaneMarker[]) => answerColours('q', ms.map((m) => ({ ...m, fields: null }))).colour;
 import { axisTicks, formatClock, type LaneMarker } from '@/lib/lanes';
 
 const markers: LaneMarker[] = [
@@ -15,23 +18,24 @@ const markers: LaneMarker[] = [
 
 describe('lanes', () => {
   it('places markers by time', () => {
-    render(<AnswerLane markers={markers} duration={100} hues={categoryHues(['TOUCH', 'NO_TOUCH'])} />);
+    render(<AnswerLane markers={markers} duration={100} colourOf={colours(markers)} />);
     const xs = screen.getAllByTestId('answer-marker').map((m) => m.getAttribute('x'));
     expect(xs).toEqual(['0%', '25%', '50%', '75%']);
   });
 
   it('seeks to a marker when it is clicked', () => {
     const onSeek = vi.fn();
-    render(<AnswerLane markers={markers} duration={100} hues={new Map()} onSeek={onSeek} />);
+    render(<AnswerLane markers={markers} duration={100} colourOf={grey} onSeek={onSeek} />);
     fireEvent.click(screen.getAllByTestId('answer-marker')[1]);
     expect(onSeek).toHaveBeenCalledWith(25);
   });
 
   it('draws errors and skipped samples as their own shapes, not answers', () => {
-    render(<AnswerLane markers={markers} duration={100} hues={new Map()} />);
+    render(<AnswerLane markers={markers} duration={100} colourOf={grey} />);
     const [answered, , error, skipped] = screen.getAllByTestId('answer-marker');
     expect(answered.querySelector('circle')).not.toBeNull();
-    expect(error.querySelector('circle')).toBeNull();
+    // Hollow and grey: a failure is not an answer, and red is never an answer's colour (UAT #50).
+    expect(error.querySelector('circle')?.getAttribute('fill')).toBeNull();
     expect(error.querySelector('path')).not.toBeNull();
     expect(skipped.querySelector('rect')).not.toBeNull();
     expect(error.getAttribute('aria-label')).toContain('the model failed');
@@ -44,7 +48,7 @@ describe('lanes', () => {
       { t: 2, status: 'answered', label: 'TOUCH' },
       { t: 3, status: 'answered', label: 'NO_TOUCH' },
     ];
-    render(<AnswerLane markers={twice} duration={10} hues={categoryHues(['TOUCH', 'NO_TOUCH'])} />);
+    render(<AnswerLane markers={twice} duration={10} colourOf={colours(twice)} />);
     const fills = screen.getAllByTestId('answer-marker').map((m) => m.querySelector('circle')?.getAttribute('fill'));
     expect(fills[0]).toBe(fills[1]);
     expect(fills[0]).not.toBe(fills[2]);

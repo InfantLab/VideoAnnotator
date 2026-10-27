@@ -30,13 +30,13 @@ describe('AnswerShapeEditor', () => {
     const spy = vi.fn();
     render(<Harness spy={spy} />);
     expect(screen.queryByTestId('shape-field')).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Fields' }));
+    expect(screen.getByRole('radio', { name: 'Free text' })).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(screen.getByRole('radio', { name: 'Fields' }));
     expect(screen.getAllByTestId('shape-field')).toHaveLength(1);
-    expect(spy).toHaveBeenLastCalledWith([{ name: 'answer', kind: 'yes_no' }]);
+    expect(spy).toHaveBeenLastCalledWith([{ name: 'Answer', kind: 'yes_no' }]);
     await userEvent.click(screen.getByRole('button', { name: /Add a field/ }));
     expect(screen.getAllByTestId('shape-field')).toHaveLength(2);
-    expect(screen.getByText("lab-gpu can't enforce the answer shape; answers are checked after.")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Free text' }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Free text' }));
     expect(spy).toHaveBeenLastCalledWith(null);
   });
 
@@ -85,5 +85,18 @@ describe('AnswerShapeEditor', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Discard' }));
     expect(spy).not.toHaveBeenCalled();
     expect(screen.queryByTestId('shape-proposal')).not.toBeInTheDocument();
+  });
+});
+
+describe('forcing the shape (D5)', () => {
+  it('is off by default, and disabled with the reason where the server can’t enforce it', () => {
+    const onEnforce = vi.fn();
+    const { rerender } = render(<AnswerShapeEditor value={TWO} onChange={vi.fn()} enforce={false} onEnforce={onEnforce} />);
+    const box = within(screen.getByTestId('enforce-shape')).getByRole('checkbox');
+    expect(box).not.toBeChecked();
+    expect(box).toBeEnabled();
+    rerender(<AnswerShapeEditor value={TWO} onChange={vi.fn()} enforce onEnforce={onEnforce} cantEnforce="lab-gpu" />);
+    expect(within(screen.getByTestId('enforce-shape')).getByRole('checkbox')).toBeDisabled();
+    expect(screen.getByTestId('enforce-shape')).toHaveTextContent("lab-gpu can't enforce it");
   });
 });

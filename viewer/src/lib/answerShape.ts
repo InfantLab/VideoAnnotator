@@ -19,7 +19,9 @@ const RESERVED = new Set(['label', 'reasoning', 'fit', 'fit_problem', 't']);
 const MAX_FIELDS = 12;
 const MAX_VALUES = 30;
 const MAX_VALUE_LENGTH = 60;
-const NAME = /^[a-z][a-z0-9_]{0,39}$/;
+// Names as the researcher types them ("Child smiling"), the JSON key as is (D5, UAT #29).
+// eslint-disable-next-line no-control-regex -- control characters are what it rules out
+const NAME = /^[^\x00-\x1f"\\\s](?:[^\x00-\x1f"\\]{0,38}[^\x00-\x1f"\\\s])?$/;
 
 const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
@@ -35,11 +37,11 @@ export function shapeProblem(raw: unknown): string | null {
     const field = item as Record<string, unknown>;
     const name = field.name;
     if (typeof name !== 'string' || !NAME.test(name)) {
-      return `Field ${i}: '${String(name)}' isn't a usable name: start with a lower-case letter, then lower-case letters, digits or _ (at most 40).`;
+      return `Field ${i}: '${String(name)}' isn't a usable name: give it a name of 1 to 40 characters, without quotes or backslashes.`;
     }
-    if (RESERVED.has(name)) return `Field ${i}: '${name}' is reserved; choose another name.`;
-    if (seen.has(name)) return `Field ${i}: '${name}' is used twice.`;
-    seen.add(name);
+    if (RESERVED.has(name.toLowerCase())) return `Field ${i}: '${name}' is reserved; choose another name.`;
+    if (seen.has(name.toLowerCase())) return `Field ${i}: '${name}' is used twice.`;
+    seen.add(name.toLowerCase());
     const where = `Field ${i} (${name})`;
     const kind = field.kind;
     if (!KINDS.includes(kind as AnswerShapeField['kind'])) {
@@ -92,7 +94,8 @@ const PARENTHESISED = /\(([^()\n]+)\)/g;
 const SCALE = /\bscale\s+(?:of|from)\s+(-?\d+(?:\.\d+)?)\s*(?:to|-)\s*(-?\d+(?:\.\d+)?)/gi;
 const YES_OR_NO = /\byes\s+or\s+no\b/gi;
 const A_NUMBER = /\b(?:answer|reply|respond)\s+with\s+(?:a|one)\s+(?:whole\s+)?number\b/gi;
-const ITEM = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+// Up to four words: plain values read better than underscored ones (UAT #58).
+const ITEM = /^[A-Za-z0-9][A-Za-z0-9_'-]*(?: [A-Za-z0-9][A-Za-z0-9_'-]*){0,3}$/;
 const SPLIT = /\s*(?:,|\/|\bor\b)\s*/i;
 
 type Spec = Omit<AnswerShapeField, 'name'>;
@@ -115,6 +118,36 @@ function listField(values: string[]): Spec {
 const parseNumber = (text: string): number => Number(text);
 
 /** Fields for the lists of options the question itself gives, or null. */
+// A question of several parts, none listing its answers (UAT #57): "How many
+// adults are in the room, and is the child smiling?" is a number and a yes or no.
+const PARTS = /[?\n]+|[.;]\s+|,?\s+and\s+(?=(?:is|are|does|do|did|can|has|have|was|were|how\s+many)\b)/i;
+const HOW_MANY = /^how\s+many\s+([a-z' -]+?)(?:\s+(?:are|is|can|do|does|in|on)\b|$)/i;
+const YES_NO_Q = /^(?:is|are|does|do|did|can|has|have|was|were)\s+(.+)$/i;
+const LEADING = /^(?:there\s+)?(?:the|a|an|any|some)\s+/i;
+const QUESTION = /^(?:how|what|where|who|whom|which|why|when|is|are|does|do|did|can|has|have|was|were)\b/i;
+
+function label(words: string): string {
+  let text = words.trim().replace(/^[ ,.:]+|[ ,.:]+$/g, '').replace(LEADING, '').trim().replace(/\s+/g, ' ');
+  if (text.length > 40) text = text.slice(0, 40).replace(/\s+\S*$/, '');
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** One field per part of the question, when every part says its kind; else null (the server's `_by_parts`). */
+function byParts(prompt: string): AnswerShape | null {
+  const fields: AnswerShape = [];
+  for (const part of prompt.split(new RegExp(PARTS.source, 'gi')).map((p) => p.trim())) {
+    if (!part || !QUESTION.test(part)) continue;
+    const many = HOW_MANY.exec(part);
+    const yesNo = many ? null : YES_NO_Q.exec(part);
+    if (many) fields.push({ name: label(many[1]), kind: 'number' });
+    else if (yesNo) fields.push({ name: label(yesNo[1]), kind: 'yes_no' });
+    else return null;
+  }
+  const names = fields.map((f) => f.name.toLowerCase());
+  if (!fields.length || fields.length > MAX_FIELDS || new Set(names).size !== names.length || names.includes('')) return null;
+  return shapeProblem(fields) ? null : fields;
+}
+
 export function suggestByRule(prompt: string): AnswerShape | null {
   const found: Array<{ start: number; end: number; rank: number; spec: Spec }> = [];
   for (const m of prompt.matchAll(LIST_AFTER_TRIGGER)) {
@@ -145,6 +178,39 @@ export function suggestByRule(prompt: string): AnswerShape | null {
     kept.push(f.spec);
     end = f.end;
   }
-  if (!kept.length) return null;
-  return kept.slice(0, MAX_FIELDS).map((spec, i) => ({ name: i === 0 ? 'answer' : `answer_${i + 1}`, ...spec }));
+  if (!kept.length) return byParts(prompt);
+  return kept.slice(0, MAX_FIELDS).map((spec, i) => ({ name: i === 0 ? 'Answer' : `Answer ${i + 1}`, ...spec }));
+}
+
+const quoted = (text: string) => `"${text}"`;
+
+function fieldWords(field: AnswerShapeField): string {
+  if (field.kind === 'yes_no') return '"yes" or "no"';
+  if (field.kind === 'choice') return field.values?.length ? `one of ${field.values.map(quoted).join(', ')}` : 'one of the allowed answers';
+  if (field.kind === 'number') {
+    if (field.min != null && field.max != null) return `a number from ${field.min} to ${field.max}`;
+    return 'a number';
+  }
+  return 'a few words';
+}
+
+/**
+ * What Fields writes into the question, where the researcher sees and can edit
+ * it (viewer design D5): 'Answer as JSON with "Adults": a number, "Child smiling": "yes" or "no".'
+ */
+export function shapeSentence(shape: AnswerShape): string {
+  const parts = shape.filter((f) => f.name.trim()).map((f) => `${quoted(f.name.trim())}: ${fieldWords(f)}`);
+  return parts.length ? `Answer as JSON with ${parts.join(', ')}.` : '';
+}
+
+/** The question with Fields' sentence for `before` replaced by the one for `after` (added if it isn't there; removed for none). */
+export function withShapeSentence(question: string, before: AnswerShape | null, after: AnswerShape | null): string {
+  const old = before ? shapeSentence(before) : '';
+  const next = after ? shapeSentence(after) : '';
+  if (old && question.includes(old)) {
+    if (next) return question.replace(old, next);
+    return question.replace(new RegExp(`\\s*${old.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), '');
+  }
+  if (!next || question.includes(next)) return question;
+  return question.trim() ? `${question.trimEnd()}\n\n${next}` : next;
 }

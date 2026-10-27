@@ -3489,6 +3489,11 @@ export interface components {
             job_id?: string | null;
             /** User Id */
             user_id?: string | null;
+            /**
+             * User Name
+             * @description Who asked, by name
+             */
+            user_name?: string | null;
             /** Name */
             name?: string | null;
             /**
@@ -5009,6 +5014,12 @@ export interface components {
              * @default false
              */
             think: boolean;
+            /**
+             * Enforce Shape
+             * @description Force the answer shape through the server's structured output (D5); off, the shape only reads the reply into fields
+             * @default false
+             */
+            enforce_shape: boolean;
             /** @default {
              *       "interval": 5,
              *       "start": 0,
@@ -5317,6 +5328,12 @@ export interface components {
              * @default false
              */
             think: boolean;
+            /**
+             * Enforce Shape
+             * @description Force the answer shape through the server's structured output (D5); off, the shape only reads the reply into fields
+             * @default false
+             */
+            enforce_shape: boolean;
             /** @default {
              *       "interval": 5,
              *       "start": 0,

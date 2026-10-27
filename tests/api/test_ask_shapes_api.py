@@ -59,6 +59,7 @@ def _body(video, fake, **kwargs):
         "base_url": LAB,
         "backend": "openai_compatible",
         "answer_shape": SHAPE,
+        "enforce_shape": True,
     }
     body.update(kwargs)
     return body

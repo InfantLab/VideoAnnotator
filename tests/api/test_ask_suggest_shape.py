@@ -38,7 +38,7 @@ def test_the_rule_makes_no_model_call(fake):
     body = _suggest(fake, "Is the adult touching? Return ONLY: TOUCH or NO_TOUCH")
     assert body == {
         "shape": [
-            {"name": "answer", "kind": "choice", "values": ["TOUCH", "NO_TOUCH"]}
+            {"name": "Answer", "kind": "choice", "values": ["TOUCH", "NO_TOUCH"]}
         ],
         "made_by": "rule",
         "message": "Suggested from your question.",
@@ -75,7 +75,7 @@ def test_the_model_is_asked_text_only_when_the_rule_finds_nothing(fake):
 
 
 def test_an_unusable_proposal_is_no_shape(fake):
-    fake.replies = [json.dumps({"fields": [{"name": "Label!", "kind": "text"}]})]
+    fake.replies = [json.dumps({"fields": [{"name": 'say "it"', "kind": "text"}]})]
     body = _suggest(fake, "What is happening?")
     assert (body["shape"], body["made_by"]) == (None, None)
     assert "Add fields yourself" in body["message"]

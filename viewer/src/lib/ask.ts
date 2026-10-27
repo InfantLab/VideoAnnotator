@@ -1,6 +1,8 @@
 /** Helpers for the Ask AI window (spec 027). */
 import type { AskAnswer, AskEntry, AskSampling } from '@/types/ask';
+import { answerKey, answerText } from '@/lib/answerColours';
 import { formatClock } from './lanes';
+import { formatWhen } from './when';
 
 export const MAX_SHOWN = 4;
 const SAME_TIME = 1e-3;
@@ -10,6 +12,13 @@ export function entryTitle(entry: Pick<AskEntry, 'name' | 'prompt'>): string {
   if (entry.name) return entry.name;
   const line = entry.prompt.trim().split('\n')[0] || '(empty question)';
   return line.length > 60 ? `${line.slice(0, 57)}…` : line;
+}
+
+/** How a try or run is told apart from another of the same question: its name, else "Run 14:10 · gemma4:12b · Fields" (UAT #24). */
+export function entryLabel(entry: Pick<AskEntry, 'name' | 'kind' | 'created_at' | 'model' | 'answer_shape'>): string {
+  if (entry.name) return entry.name;
+  const kind = entry.kind === 'run' ? 'Run' : 'Try';
+  return [`${kind} ${formatWhen(entry.created_at)}`, entry.model, entry.answer_shape?.length ? 'Fields' : null].filter(Boolean).join(' · ');
 }
 
 /** "every 5 s · 3 frames 0.5 s apart · 0:10 to 0:20" */
@@ -64,11 +73,11 @@ export function alignRows(columns: AskAnswer[][]): AlignedRow[] {
   }));
 }
 
-const answerKey = (a: AskAnswer) => (a.status === 'answered' ? `a:${a.label ?? ''}` : a.status);
+const repeatKey = (a: AskAnswer) => (a.status === 'answered' ? `a:${a.label ?? ''}` : a.status);
 
 /** A moment tried more than once that didn't get the same answer each time. */
 export function repeatsDiffer(answers: AskAnswer[]): boolean {
-  return answers.length > 1 && new Set(answers.map(answerKey)).size > 1;
+  return answers.length > 1 && new Set(answers.map(repeatKey)).size > 1;
 }
 
 export interface Tally {
@@ -82,6 +91,7 @@ export interface Tally {
 /** Distinct answers with counts, most common first; errors, skipped and misfits apart. */
 export function tally(answers: AskAnswer[]): Tally {
   const counts = new Map<string, number>();
+  const shown = new Map<string, string>();
   let errors = 0;
   let skipped = 0;
   let misfits = 0;
@@ -89,14 +99,21 @@ export function tally(answers: AskAnswer[]): Tally {
     if (a.status === 'error') errors++;
     else if (a.status === 'skipped') skipped++;
     else if (a.fit === false) misfits++;
-    else counts.set(a.label ?? '', (counts.get(a.label ?? '') ?? 0) + 1);
+    else {
+      // Grouped loosely ("Happy." and "happy" are one answer), shown as first written (UAT #24).
+      const key = answerKey(a);
+      if (!shown.has(key)) shown.set(key, answerText(a));
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
   }
-  const sorted = [...counts.entries()].sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]));
+  const sorted = [...counts.entries()]
+    .map(([key, n]) => [shown.get(key) ?? key, n] as [string, number])
+    .sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]));
   return { answers: sorted, errors, skipped, misfits };
 }
 
 export const ALLOWED_ANSWERS_HINT =
-  "Say in the question which answers are allowed, e.g. 'Answer with one word: touching or not_touching.'";
+  "Say in the question which answers are allowed, e.g. 'Answer with one of: touching, not touching.'";
 
 export const SAMPLING_DOCS_URL = 'https://github.com/InfantLab/VideoAnnotator/blob/master/docs/usage/ask_ai.md#sampling';
 

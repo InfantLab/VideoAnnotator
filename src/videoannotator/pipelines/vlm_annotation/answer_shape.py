@@ -25,7 +25,8 @@ MAX_VALUE_LENGTH = 60
 TEXT_MAX_LENGTH = 200
 DIDNT_FIT = "DIDN'T FIT"
 
-_NAME = re.compile(r"[a-z][a-z0-9_]{0,39}")
+# Names as the researcher types them ("Child smiling"), the JSON key as is (D5, UAT #29).
+_NAME = re.compile(r"[^\x00-\x1f\"\\\s](?:[^\x00-\x1f\"\\]{0,38}[^\x00-\x1f\"\\\s])?")
 
 
 @dataclass(frozen=True)
@@ -76,14 +77,14 @@ def validate_shape(raw: Any) -> list[Field]:
         name = item.get("name")
         if not isinstance(name, str) or not _NAME.fullmatch(name):
             raise ValueError(
-                f"Field {i}: '{name}' isn't a usable name: start with a lower-case "
-                "letter, then lower-case letters, digits or _ (at most 40)."
+                f"Field {i}: '{name}' isn't a usable name: give it a name of 1 to 40 "
+                "characters, without quotes or backslashes."
             )
-        if name in RESERVED:
+        if name.lower() in RESERVED:
             raise ValueError(f"Field {i}: '{name}' is reserved; choose another name.")
-        if name in seen:
+        if name.lower() in seen:
             raise ValueError(f"Field {i}: '{name}' is used twice.")
-        seen.add(name)
+        seen.add(name.lower())
         kind = item.get("kind")
         where = f"Field {i} ({name})"
         if kind not in KINDS:
@@ -299,7 +300,8 @@ _A_NUMBER = re.compile(
     r"\b(?:answer|reply|respond)\s+with\s+(?:a|one)\s+(?:whole\s+)?number\b",
     re.IGNORECASE,
 )
-_ITEM = re.compile(r"[A-Za-z0-9][A-Za-z0-9_\-]*")
+# Up to four words: plain values read better than underscored ones (UAT #58).
+_ITEM = re.compile(r"[A-Za-z0-9][A-Za-z0-9_\-']*(?: [A-Za-z0-9][A-Za-z0-9_\-']*){0,3}")
 _SPLIT = re.compile(r"\s*(?:,|/|\bor\b)\s*", re.IGNORECASE)
 
 
@@ -356,9 +358,56 @@ def suggest_by_rule(prompt: str) -> list[Field] | None:
         kept.append(spec)
         end = stop
     if not kept:
-        return None
+        return _by_parts(prompt)
     raw = [
-        {"name": "answer" if i == 0 else f"answer_{i + 1}", **spec}
+        {"name": "Answer" if i == 0 else f"Answer {i + 1}", **spec}
         for i, spec in enumerate(kept[:MAX_FIELDS])
     ]
     return validate_shape(raw)
+
+
+# A question of several parts, none listing its answers (UAT #57): "How many
+# adults are in the room, and is the child smiling?" is a number and a yes or no.
+_PARTS = re.compile(
+    r"[?\n]+|[.;]\s+|,?\s+and\s+(?=(?:is|are|does|do|did|can|has|have|was|were|"
+    r"how\s+many)\b)",
+    re.IGNORECASE,
+)
+_HOW_MANY = re.compile(
+    r"^how\s+many\s+([a-z' -]+?)(?:\s+(?:are|is|can|do|does|in|on)\b|$)", re.I
+)
+_YES_NO_Q = re.compile(r"^(?:is|are|does|do|did|can|has|have|was|were)\s+(.+)$", re.I)
+_LEADING = re.compile(r"^(?:there\s+)?(?:the|a|an|any|some)\s+", re.I)
+_QUESTION = re.compile(
+    r"^(?:how|what|where|who|whom|which|why|when|is|are|does|do|did|can|has|have|was|were)\b",
+    re.I,
+)
+
+
+def _label(words: str) -> str:
+    text = _LEADING.sub("", words.strip(" ,.:")).strip()
+    text = re.sub(r"\s+", " ", text)
+    if len(text) > 40:
+        text = text[:40].rsplit(" ", 1)[0]
+    return text[:1].upper() + text[1:]
+
+
+def _by_parts(prompt: str) -> list[Field] | None:
+    """One field per part of the question, when every part says its kind; else None."""
+    raw: list[dict[str, Any]] = []
+    for part in (p.strip() for p in _PARTS.split(prompt)):
+        if not part or not _QUESTION.match(part):
+            continue
+        if m := _HOW_MANY.match(part):
+            raw.append({"name": _label(m.group(1)), "kind": "number"})
+        elif m := _YES_NO_Q.match(part):
+            raw.append({"name": _label(m.group(1)), "kind": "yes_no"})
+        else:
+            return None
+    names = [f["name"].lower() for f in raw]
+    if not raw or len(raw) > MAX_FIELDS or len(set(names)) != len(names) or "" in names:
+        return None
+    try:
+        return validate_shape(raw)
+    except ValueError:
+        return None

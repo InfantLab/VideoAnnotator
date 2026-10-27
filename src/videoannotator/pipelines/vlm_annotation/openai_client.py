@@ -225,9 +225,9 @@ class OpenAICompatibleVLMClient:
 
     @staticmethod
     def _prompt_only(prompt: str, schema: dict[str, Any]) -> tuple[str, None, str]:
-        from .answer_shape import describe_for_prompt
-
-        return f"{prompt}\n\n{describe_for_prompt(schema)}", None, "prompt_only"
+        # Nothing hidden is added to the question (D5, P1): it already says the
+        # shape in words the researcher can see.
+        return prompt, None, "prompt_only"
 
     def _body(
         self,

@@ -68,3 +68,22 @@ def test_the_prompt_text_for_a_server_that_cant_enforce_it():
         'or "no", "initiator": "mother" or "infant" or "both" or "none", '
         '"confidence": a number from 1 to 5}'
     )
+
+
+@pytest.mark.parametrize(
+    ("prompt", "fields"),
+    [
+        (
+            "How many adults are in the room, and is the child smiling?",
+            [("Adults", "number"), ("Child smiling", "yes_no")],
+        ),
+        (
+            "Is the baby crying? How many toys can you see?",
+            [("Baby crying", "yes_no"), ("Toys", "number")],
+        ),
+        ("What is the mother doing with her hands?", None),
+    ],
+)
+def test_a_question_of_several_parts_gets_a_field_per_part(prompt, fields):
+    found = shapes.suggest_by_rule(prompt)
+    assert ([(f.name, f.kind) for f in found] if found else None) == fields

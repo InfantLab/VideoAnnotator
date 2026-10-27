@@ -26,15 +26,16 @@ describe('misfits', () => {
 
   it('the tally counts misfits apart from the values', () => {
     render(<Tally answers={[fits, misfit, misfit]} />);
-    expect(screen.getAllByTestId('tally-item').map((li) => li.textContent)).toEqual(['yes 1']);
+    // Field by field (UAT #24).
+    expect(screen.getAllByTestId('tally-field').map((f) => f.textContent)).toEqual(['touchyes 1', 'initiatoradult 1']);
     expect(screen.getByTestId('tally-misfits')).toHaveTextContent("didn't fit 2");
   });
 
   it('the lane draws a misfit as its own mark', () => {
-    render(<AnswerLane markers={[fits, misfit]} duration={10} hues={new Map([['yes', 120]])} />);
+    render(<AnswerLane markers={[fits, misfit]} duration={10} colourOf={() => 'hsl(120, 70%, 50%)'} />);
     const [a, b] = screen.getAllByTestId('answer-marker');
     expect(a).toHaveAttribute('data-status', 'answered');
     expect(b).toHaveAttribute('data-status', 'misfit');
-    expect(b).toHaveAttribute('aria-label', "5.0 s: didn't fit the answer shape");
+    expect(b).toHaveAttribute('aria-label', "0:05.0: didn't fit the answer shape");
   });
 });

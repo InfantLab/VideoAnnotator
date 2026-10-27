@@ -8,6 +8,8 @@ interface EndpointBadgeProps {
   model: string;
   /** The one-time note under a local badge; off where many badges are listed. */
   showNote?: boolean;
+  /** Beside the model picker, left-aligned (UAT #25). */
+  inline?: boolean;
 }
 
 const noteSeen = () => {
@@ -19,7 +21,7 @@ const noteSeen = () => {
 };
 
 /** Where the model runs, always in view (FR-014); a remote one as a warning (FR-015). */
-export function EndpointBadge({ endpoint, model, showNote: noteAllowed = true }: EndpointBadgeProps) {
+export function EndpointBadge({ endpoint, model, showNote: noteAllowed = true, inline = false }: EndpointBadgeProps) {
   const [showNote, setShowNote] = useState(() => !noteSeen());
   if (!endpoint) return null;
   const remote = endpoint.class === 'remote';
@@ -34,7 +36,7 @@ export function EndpointBadge({ endpoint, model, showNote: noteAllowed = true }:
   };
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className={inline ? 'flex flex-col items-start gap-1' : 'flex flex-col items-end gap-1'}>
       <span
         data-testid="endpoint-badge"
         data-class={endpoint.class}

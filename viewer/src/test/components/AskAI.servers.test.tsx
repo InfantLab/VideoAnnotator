@@ -166,7 +166,7 @@ describe('Ask AI model servers', () => {
       renderAsk();
       await waitFor(() => expect(screen.getByRole('combobox', { name: 'Model' })).toHaveTextContent('gemma-3-12b'));
       await waitFor(() => expect(clipOption().disabled).toBe(false));
-      await userEvent.selectOptions(screen.getByLabelText('Frames per sample'), 'clip');
+      await userEvent.selectOptions(screen.getByLabelText('Frames per moment'), 'clip');
       expect(screen.getByLabelText('Clip length (s)')).toHaveValue(2);
       await userEvent.type(screen.getByLabelText('Question'), 'What happens?');
       await userEvent.click(screen.getByRole('button', { name: /Try on this frame/ }));

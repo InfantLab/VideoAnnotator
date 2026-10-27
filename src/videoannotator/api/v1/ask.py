@@ -142,6 +142,7 @@ class Entry(BaseModel):
     answers: list[Answer] | None = None
     job_id: str | None = None
     user_id: str | None = None
+    user_name: str | None = Field(None, description="Who asked, by name")
     name: str | None = None
     starred: bool = False
     created_at: str
@@ -158,6 +159,11 @@ class TryRequest(BaseModel):
     backend: BackendName = "ollama"
     answer_shape: ShapeIn | None = None
     think: bool = False
+    enforce_shape: bool = Field(
+        False,
+        description="Force the answer shape through the server's structured "
+        "output (D5); off, the shape only reads the reply into fields",
+    )
     sampling: Sampling = Sampling()
     at: float | None = Field(None, description='One moment: "Try on this frame"')
     count: int | None = Field(None, description='"Try on N moments"')
@@ -445,6 +451,7 @@ def _answer_try(
     s: Sampling,
     backend: str = "ollama",
     shape: list[shapes.Field] | None = None,
+    enforce: bool = False,
 ) -> None:
     """Answer each moment in turn, saving each answer as it lands."""
     import cv2
@@ -453,7 +460,9 @@ def _answer_try(
     spacing = s.spacing or s.interval
     defaults = VLMAnnotationPipeline({}).config
     gate = gate_for(base_url, model)
-    schema: dict[str, Any] = {"schema": shapes.to_json_schema(shape)} if shape else {}
+    schema: dict[str, Any] = (
+        {"schema": shapes.to_json_schema(shape)} if shape and enforce else {}
+    )
     status = "done"
     with ask_history.own_session() as db:
         try:
@@ -621,6 +630,7 @@ def create_try(
             body.sampling,
             body.backend,
             shape,
+            body.enforce_shape,
         ),
         name=f"ask-try-{entry.id}",
         daemon=True,
@@ -1007,6 +1017,11 @@ class RunRequest(BaseModel):
     backend: BackendName = "ollama"
     answer_shape: ShapeIn | None = None
     think: bool = False
+    enforce_shape: bool = Field(
+        False,
+        description="Force the answer shape through the server's structured "
+        "output (D5); off, the shape only reads the reply into fields",
+    )
     sampling: Sampling = Sampling()
 
 
@@ -1048,6 +1063,8 @@ def create_run(
         vlm_config["backend"] = body.backend
     if shape:
         vlm_config["answer_shape"] = shapes.shape_dicts(shape)
+        if body.enforce_shape:
+            vlm_config["enforce_shape"] = True
     config = {"vlm_annotation": vlm_config}
     job = BatchJob(
         # Read in place, never copied (spec 022).
@@ -1328,10 +1345,11 @@ A researcher asks a vision model this question about moments in a video:
 {question}
 ---
 
-Propose the answer's fields: what a researcher would want as separate columns.
-Each field has a name (lower-case letters, digits and _), a kind (choice,
-yes_no, number or text), values for a choice, and min and max for a number
-when the question gives a range. Use as few fields as the question needs."""
+Propose the answer's fields: one field for each thing the question asks, as a
+researcher would want separate columns. Each field has a name in plain words, as
+a column heading ("Adults", "Child smiling"), a kind (choice, yes_no, number or
+text), values for a choice in plain words, and min and max for a number when
+the question gives a range. Don't merge two things asked into one field."""
 
 # The proposal's own shape, sent as the schema so the reply parses.
 SUGGEST_SCHEMA: dict[str, Any] = {

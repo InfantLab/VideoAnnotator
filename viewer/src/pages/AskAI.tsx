@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { userMessage } from '@/lib/userMessage';
+import { errorCode, userMessage } from '@/lib/userMessage';
 import { PageHelp } from '@/components/PageHelp';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -39,16 +39,16 @@ import { VideoPicker } from '@/components/ask/VideoPicker';
 import { useServerCapabilitiesContext } from '@/contexts/ServerCapabilitiesContext';
 import { useVlmModels } from '@/hooks/useVlmModels';
 import { useRunAnswers } from '@/hooks/useRunAnswers';
-import { entryTitle, framesSentNote, fullSampling, MAX_SHOWN, nearest, samplingSummary } from '@/lib/ask';
-import { categoryHues } from '@/lib/categoryColors';
+import { entryLabel, entryTitle, framesSentNote, fullSampling, MAX_SHOWN, nearest, samplingSummary } from '@/lib/ask';
+import { answerColours, colourOf, reasoningOf } from '@/lib/answerColours';
 import { parseApiError } from '@/lib/errorHandling';
 import { estimate } from '@/lib/estimate';
 import { saveBlob, zipBlobs } from '@/lib/exports';
-import { formatClock } from '@/lib/lanes';
+import { formatClock, formatClockTenths } from '@/lib/lanes';
 import { chooseMoments, samplePoints, samplingToConfig } from '@/lib/sampling';
 import { askWizardStart } from '@/lib/wizardStart';
 import { runState } from '@/lib/runTarget';
-import { cleanShape, DIDNT_FIT, shapeProblem } from '@/lib/answerShape';
+import { cleanShape, shapeProblem, withShapeSentence } from '@/lib/answerShape';
 import { KIND_SHORT, MODEL_SERVERS_QUERY_KEY } from '@/lib/modelServers';
 import {
   DEFAULT_SAMPLING,
@@ -106,7 +106,7 @@ function FrameStrip({ path, t, sampling }: { path: string; t: number | null; sam
           <figure key={f.frame_number} className="shrink-0">
             <img src={`data:image/jpeg;base64,${f.jpeg_base64}`} alt={`Frame ${f.frame_number}`} className="h-20 rounded border" />
             <figcaption className="text-center text-[10px] text-muted-foreground tabular-nums">
-              {f.timestamp_sec.toFixed(2)} s
+              {formatClockTenths(f.timestamp_sec)}
             </figcaption>
           </figure>
         ))}
@@ -181,6 +181,8 @@ function NoModel({ unreachable, detail, server }: { unreachable: boolean; detail
  * kept in a history shared on the server, then run on the whole video with
  * answers arriving as they come.
  */
+const LEGEND_SHOWN = 16;
+
 const AskAI = () => {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
@@ -194,6 +196,13 @@ const AskAI = () => {
   const [model, setModel] = useState(() => params.get('model') ?? '');
   const [sampling, setSampling] = useState<AskSampling>(() => samplingFromParams(params));
   const [answerShape, setAnswerShape] = useState<AnswerShape | null>(null);
+  // Forcing the shape through the server's structured output: an explicit choice, off by default (D5).
+  const [enforceShape, setEnforceShape] = useState(false);
+  /** Fields writes its sentence into the question, visibly (D5). */
+  const changeShape = (next: AnswerShape | null) => {
+    setQuestion((q) => withShapeSentence(q, answerShape, next));
+    setAnswerShape(next);
+  };
   const [samplingKey, setSamplingKey] = useState(0);
   const [restoredId, setRestoredId] = useState<string | null>(null);
   const [shown, setShown] = useState<string[]>([]);
@@ -363,17 +372,27 @@ const AskAI = () => {
       entry.kind === 'run' && entry.job_id ? runAnswers[entry.job_id]?.answers ?? [] : entry.answers ?? [],
     [runAnswers],
   );
+  // One colour per answer, kept across every try and run of a question (UAT #23).
+  const colours = useMemo(() => {
+    const byQuestion = new Map<string, AskAnswer[]>();
+    for (const entry of shownEntries) byQuestion.set(entry.prompt, [...(byQuestion.get(entry.prompt) ?? []), ...answersOf(entry)]);
+    return new Map([...byQuestion].map(([prompt, answers]) => [prompt, answerColours(prompt, answers)]));
+  }, [shownEntries, answersOf]);
+  const colourFor = (entry: AskEntry) => (answer: Pick<AskAnswer, 'label' | 'fields'>) =>
+    colours.get(entry.prompt)?.colour(answer) ?? colourOf(undefined);
   const columns: AnswerColumn[] = shownEntries.map((entry) => ({
     key: entry.id,
-    title: entryTitle(entry),
-    subtitle: `${entry.kind === 'run' ? 'run' : 'try'} · ${entry.model} · ${samplingSummary(entry.sampling)}`,
+    title: entryLabel(entry),
+    subtitle: `${entryTitle(entry)} · ${samplingSummary(entry.sampling)}`,
     answers: answersOf(entry),
     frames: entry.sampling.frames ?? 1,
+    colour: colourFor(entry),
   }));
   const shownAnswers = columns.flatMap((c) => c.answers);
-  const hues = categoryHues(
-    shownAnswers.filter((a) => a.status === 'answered' && a.fit !== false && a.label !== DIDNT_FIT).map((a) => a.label ?? ''),
-  );
+  // The tally counts one try or run at a time, never a frame try into a run (UAT #50).
+  const [tallyId, setTallyId] = useState<string | null>(null);
+  const tallyEntry =
+    shownEntries.find((e) => e.id === tallyId) ?? shownEntries.find((e) => e.kind === 'run') ?? shownEntries[0];
   const nearestSample = nearest(points, time);
   const nearestAnswer = nearest(
     shownAnswers.map((a) => a.t),
@@ -424,6 +443,21 @@ const AskAI = () => {
     seek(answer.t);
   };
 
+  /** Remove a question from the earlier ones; one a run used stays with the run, hidden here (UAT #65). */
+  const forgetQuestion = async (prompt: AskLibraryPrompt) => {
+    try {
+      await apiClient.deletePrompt(prompt.sha256);
+    } catch (e) {
+      if (errorCode(e) !== 'PROMPT_USED_BY_JOBS') {
+        setNotice(`Couldn't delete that question: ${userMessage(e)}`);
+        return;
+      }
+      await apiClient.updatePrompt(prompt.sha256, { hidden: true });
+      setNotice('A run used that question, so it stays with the run; it no longer shows here.');
+    }
+    await queryClient.invalidateQueries({ queryKey: ['ask', 'entries'] });
+  };
+
   const show = (id: string) => setShown((prev) => [id, ...prev.filter((x) => x !== id)].slice(0, MAX_SHOWN));
 
   /** Sends nothing to a remote model server until someone has agreed to it (FR-015). */
@@ -454,6 +488,7 @@ const AskAI = () => {
     }
   };
 
+  const cantEnforce = server && server.structured_output === false ? server.name : null;
   const request = {
     video_path: videoPath,
     prompt: question,
@@ -461,6 +496,7 @@ const AskAI = () => {
     base_url: server?.base_url ?? endpoint?.baseUrl ?? null,
     backend,
     answer_shape: answerShape ? (cleanShape(answerShape) as unknown as Record<string, unknown>[]) : null,
+    enforce_shape: Boolean(answerShape) && enforceShape && !cantEnforce,
     think: false,
     sampling,
   };
@@ -484,7 +520,7 @@ const AskAI = () => {
   const config = () => ({
     ...samplingToConfig(sampling),
     ...serverConfig(),
-    ...(answerShape ? { answer_shape: cleanShape(answerShape) } : {}),
+    ...(answerShape ? { answer_shape: cleanShape(answerShape), ...(enforceShape && !cantEnforce ? { enforce_shape: true } : {}) } : {}),
   });
   const moreVideos = () => {
     const start = askWizardStart(question, model, config());
@@ -664,7 +700,6 @@ const AskAI = () => {
             </p>
           )}
         </div>
-        <EndpointBadge endpoint={endpoint} model={model} />
       </div>
 
       {noModels && <NoModel unreachable={models.isError} detail={unreachableDetail} server={server} />}
@@ -697,21 +732,27 @@ const AskAI = () => {
                 shapeEditor={
                   <AnswerShapeEditor
                     value={answerShape}
-                    onChange={setAnswerShape}
-                    cantEnforce={server && server.structured_output === false ? server.name : null}
+                    onChange={changeShape}
+                    enforce={enforceShape}
+                    onEnforce={setEnforceShape}
+                    cantEnforce={cantEnforce}
                     onSuggest={() =>
                       apiClient.suggestShape({ prompt: question, model: model || null, base_url: request.base_url, backend })
                     }
                   />
                 }
+                whereItRuns={<EndpointBadge endpoint={endpoint} model={model} inline />}
                 onTryHere={tryHere}
+                here={`${formatClockTenths(time)}${stream.data?.fps ? `, frame ${Math.round(time * stream.data.fps).toLocaleString()}` : ''}`}
                 onTryMoments={tryMany}
                 tryCount={tryMoments.length}
+                momentsFrom={samplingSummary(sampling)}
                 busy={busy || anyTryRunning}
                 disabled={Boolean(noModels) || shapeInvalid}
               />
               <SamplingControls
                 key={samplingKey}
+                at={debouncedSample}
                 sampling={sampling}
                 onChange={setSampling}
                 count={points.length}
@@ -753,11 +794,17 @@ const AskAI = () => {
                       .updatePrompt(prompt.sha256, change)
                       .then(() => queryClient.invalidateQueries({ queryKey: ['ask', 'entries'] }))
                   }
-                  onLibraryDelete={(prompt) =>
+                  onLibraryDelete={(prompt) => void forgetQuestion(prompt)}
+                  onDelete={(entry, alsoQuestion) =>
                     void apiClient
-                      .deletePrompt(prompt.sha256)
-                      .then(() => queryClient.invalidateQueries({ queryKey: ['ask', 'entries'] }))
-                      .catch((e) => setNotice(`Couldn't delete that question: ${userMessage(e)}`))
+                      .deleteEntry(entry.id)
+                      .then(async () => {
+                        setShown((prev) => prev.filter((id) => id !== entry.id));
+                        const prompt = (history.data?.library ?? []).find((p) => p.text === entry.prompt);
+                        if (alsoQuestion && prompt) await forgetQuestion(prompt);
+                        await queryClient.invalidateQueries({ queryKey: ['ask'] });
+                      })
+                      .catch((e) => setNotice(`Couldn't delete it: ${userMessage(e)}`))
                   }
                 />
               </div>
@@ -865,8 +912,8 @@ const AskAI = () => {
                       <span className="text-xs text-muted-foreground"> ({framesSentNote(featured.answer, featured.sampling.frames ?? 1)})</span>
                     )}
                   </p>
-                  {featured.answer.reasoning && featured.answer.reasoning !== featured.answer.label && (
-                    <p className="whitespace-pre-wrap text-xs text-muted-foreground">{featured.answer.reasoning}</p>
+                  {reasoningOf(featured.answer) && (
+                    <p className="whitespace-pre-wrap text-xs text-muted-foreground">{reasoningOf(featured.answer)}</p>
                   )}
                   {featured.answer.status !== 'skipped' && (
                     <FrameStrip path={videoPath} t={featured.answer.t} sampling={featured.sampling} />
@@ -889,12 +936,12 @@ const AskAI = () => {
               </div>
               {shownEntries.map((entry) => (
                 <div key={entry.id} className="contents">
-                  <LaneLabel title={entryTitle(entry)} subtitle={`${entry.kind === 'run' ? 'run' : 'try'} · ${entry.model}`} />
+                  <LaneLabel title={entryLabel(entry)} subtitle={entryTitle(entry)} />
                   <div className="relative">
-                    <AnswerLane
+                    <AnswerLane<AskAnswer>
                       markers={answersOf(entry)}
                       duration={duration}
-                      hues={hues}
+                      colourOf={colourFor(entry)}
                       highlight={nearestAnswer}
                       onSeek={(t) => {
                         const answer = answersOf(entry).find((a) => Math.abs(a.t - t) < 1e-6);
@@ -911,13 +958,54 @@ const AskAI = () => {
             {!shownEntries.length && (
               <p className="text-xs text-muted-foreground">Answers appear here as tracks, one per try or run you show.</p>
             )}
+            {[...colours].map(([prompt, { legend }]) => {
+              const field = shownEntries.find((e) => e.prompt === prompt)?.answer_shape?.[0]?.name;
+              return (
+                legend.length > 0 && (
+                  <div key={prompt} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" data-testid="answer-legend">
+                    {(field || colours.size > 1) && (
+                      <span className="text-muted-foreground">{field ? `${field}:` : `${entryTitle({ name: null, prompt })}:`}</span>
+                    )}
+                    {legend.slice(0, LEGEND_SHOWN).map((item) => (
+                      <span key={item.key} className="inline-flex max-w-[16rem] items-center gap-1" title={`${item.label}: ${item.count}`}>
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: item.colour }} aria-hidden="true" />
+                        <span className="truncate">{item.label || '(empty)'}</span>
+                      </span>
+                    ))}
+                    {legend.length > LEGEND_SHOWN && <span className="text-muted-foreground">and {legend.length - LEGEND_SHOWN} more</span>}
+                  </div>
+                )
+              );
+            })}
           </Card>
 
           <div className="grid gap-4 lg:grid-cols-[1fr_minmax(240px,320px)]">
             <AnswersTable columns={columns} highlight={nearestAnswer} onSeek={seek} />
             <Card className="space-y-3 p-3">
-              <h2 className="text-sm font-semibold">Answers so far</h2>
-              <Tally answers={shownAnswers} />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold">Answers so far</h2>
+                {shownEntries.length > 1 && tallyEntry && (
+                  <select
+                    aria-label="Count the answers of"
+                    className="h-7 max-w-full rounded-md border border-input bg-background px-1 text-xs"
+                    value={tallyEntry.id}
+                    onChange={(e) => setTallyId(e.target.value)}
+                  >
+                    {shownEntries.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {entryLabel(e)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              {tallyEntry && (
+                <Tally
+                  answers={answersOf(tallyEntry)}
+                  colour={colourFor(tallyEntry)}
+                  selected={answersOf(tallyEntry).find((a) => nearestAnswer !== null && Math.abs(a.t - nearestAnswer) < 1e-3) ?? null}
+                />
+              )}
               <Button variant="outline" size="sm" className="gap-1" disabled={!shownEntries.length} onClick={() => void exportShown()}>
                 <Download className="h-4 w-4" /> Export table
               </Button>
