@@ -4,6 +4,7 @@
  */
 import { apiClient } from '@/api/client';
 import { APIError } from '@/api/handleError';
+import { runSubject } from '@/lib/runName';
 import { userMessage } from '@/lib/userMessage';
 
 export interface UploadRunResult {
@@ -13,14 +14,6 @@ export interface UploadRunResult {
   failed: { name: string; reason: string }[];
 }
 
-/** A name for a run when the user doesn't type one: the folder picked, else the selection. */
-export function defaultRunName(files: File[]): string {
-  const folder = (files[0] as File & { webkitRelativePath?: string })?.webkitRelativePath?.split('/')[0];
-  if (folder) return folder;
-  const stamp = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-  return files.length === 1 ? `${files[0]?.name ?? '1 video'} — ${stamp}` : `${files.length} videos — ${stamp}`;
-}
-
 export async function uploadRun(
   files: File[],
   selectedPipelines: string[],
@@ -28,7 +21,7 @@ export async function uploadRun(
   options: { name?: string; projectId?: string | null; onProgress?: (done: number) => void } = {},
 ): Promise<UploadRunResult> {
   const runId = crypto.randomUUID();
-  const name = options.name?.trim() || defaultRunName(files);
+  const name = options.name?.trim() || runSubject(null, null, files);
   const created: string[] = [];
   const failed: UploadRunResult['failed'] = [];
   for (const file of files) {

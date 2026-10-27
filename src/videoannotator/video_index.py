@@ -386,7 +386,7 @@ def build_index(
 def _run_name(jobs: list[JobSummary]) -> str:
     from types import SimpleNamespace
 
-    from .results_folder import run_folder_of
+    from .results_folder import read_record, run_folder_of
 
     for job in jobs:
         if job.batch_name:
@@ -394,7 +394,10 @@ def _run_name(jobs: list[JobSummary]) -> str:
     for job in jobs:
         folder = run_folder_of(SimpleNamespace(output_dir=job.output_dir))
         if folder is not None:
-            return folder.name
+            # The name the run was given, not its folder's: that one carries
+            # the date and a number to keep folders apart (UAT #41).
+            recorded = ((read_record(folder) or {}).get("run") or {}).get("name")
+            return str(recorded) if recorded else folder.name
     video = next((j.video_path for j in jobs if j.video_path), None)
     return f"Run of {Path(video).name}" if video else "Run"
 

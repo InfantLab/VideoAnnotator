@@ -9,7 +9,8 @@ import { NeedsServer } from '@/components/NeedsServer';
 import { PageHelp } from '@/components/PageHelp';
 import { ChooseVideos, type Chosen } from '@/components/run/ChooseVideos';
 import { StartRun } from '@/components/run/StartRun';
-import { defaultRunName, uploadRun } from '@/components/run/uploadRun';
+import { uploadRun } from '@/components/run/uploadRun';
+import { runName, runSubject } from '@/lib/runName';
 import { WhatToFind } from '@/components/run/WhatToFind';
 import { WorkflowPicker } from '@/components/workflows/WorkflowPicker';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ import { useRunSettings } from '@/hooks/useRunSettings';
 import { notify } from '@/lib/notify';
 import { configFor, withDefaults } from '@/lib/pipelineDefaults';
 import { isPipelineSelectable, partitionSelection } from '@/lib/pipelineExtras';
-import { projectOf, runStartOf, targetLabel, type RunTarget } from '@/lib/runTarget';
+import { projectOf, runStartOf, type RunTarget } from '@/lib/runTarget';
 import { videosWord } from '@/lib/runs';
 import { rememberRunSetup, weightsNotesFor } from '@/lib/runSetup';
 import { userMessage } from '@/lib/userMessage';
@@ -160,7 +161,11 @@ export default function NewRun() {
           ? `of ${target.label}, used again`
           : 'on the server';
   const projectName = target?.kind === 'project' ? target.name : target?.kind === 'videos' ? target.projectName ?? null : null;
-  const defaultName = files ? defaultRunName(files) : target ? (target.kind === 'rerun' ? `${target.label} (rerun)` : targetLabel(target)) : '';
+  // The name the run gets if none is typed; sent as it is, so the field's grey text is the truth (UAT #41).
+  const defaultName = runName(
+    runSubject(target, paths, files),
+    selected.map((id) => pipelines.find((p) => p.id === id)?.name || id),
+  );
   const blocked =
     selected.length === 0
       ? 'Choose at least one thing to find.'
@@ -179,7 +184,7 @@ export default function NewRun() {
       let started: number;
       let skipped: string[] = [];
       if (files) {
-        const result = await uploadRun(files, selected, runConfig, { name, projectId: projectOf(target) });
+        const result = await uploadRun(files, selected, runConfig, { name: name.trim() || defaultName, projectId: projectOf(target) });
         if (!result.created.length) throw new Error(result.failed.map((f) => `${f.name}: ${f.reason}`).join('; '));
         runId = result.runId;
         started = result.created.length;
@@ -200,7 +205,7 @@ export default function NewRun() {
           paths: paths ?? [],
           selected_pipelines: selected,
           config: runConfig,
-          name: name.trim() || undefined,
+          name: name.trim() || defaultName,
           project_id: projectOf(target),
         });
         runId = result.run_id;

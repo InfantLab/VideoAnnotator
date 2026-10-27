@@ -55,6 +55,7 @@ describe('with a target, Start is the only confirmation', () => {
     expect(api.getRunSettings).toHaveBeenCalledWith({ project: PROJECT_ID, workflow: null });
     expect(screen.getByTestId('settings-source')).toHaveTextContent("Settings from: this project's settings, last changed");
     await waitFor(() => expect(button).toBeEnabled());
+    expect(document.getElementById('run-name')).toHaveAttribute('placeholder', 'Peekaboo study · DeepFace');
     fireEvent.click(button);
 
     await waitFor(() => expect(api.runVideos).toHaveBeenCalledTimes(1));
@@ -62,7 +63,8 @@ describe('with a target, Start is the only confirmation', () => {
       paths: [`${PK}/p01_t1.mp4`, `${PK}/p02_t1.mp4`, `${PK}/p04_t1.mp4`],
       selected_pipelines: ['face_analysis'],
       config: { face_analysis: { min_face_size: 40 } },
-      name: undefined,
+      // The name in the field's grey text is the one the run gets (UAT #41).
+      name: 'Peekaboo study · DeepFace',
       project_id: PROJECT_ID,
     });
     await waitFor(() => expect(landed(view.container)?.address).toBe('/videos?run=b9'));

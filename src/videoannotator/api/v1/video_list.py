@@ -27,7 +27,8 @@ from ...batch.types import BatchJob, JobStatus
 from ...database.crud import SavedDatasetCRUD
 from ...database.database import get_db
 from ...projects import Catalog, catalog_for, folder_videos, with_videos
-from ...results_folder import RunFolder, display_path, folder_ref, run_name
+from ...registry.pipeline_registry import get_registry
+from ...results_folder import RunFolder, display_path, folder_ref
 from ...storage.config import get_storage_root
 from ...storage.manager import get_storage_provider
 from ...video_index import Run, Video, VideoIndex
@@ -551,15 +552,37 @@ def _unusable(raw: str, storage: Any) -> tuple[Path | None, str | None]:
     return resolved, None
 
 
-def _default_name(paths: list[Path], dataset: Any | None, index: VideoIndex) -> str:
+def _default_name(
+    paths: list[Path],
+    dataset: Any | None,
+    index: VideoIndex,
+    pipelines: list[str] | None = None,
+) -> str:
+    """What the run is on, then what it finds: "expCP2 · PySceneDetect + CLIP".
+
+    The viewer sends the same name (viewer/src/lib/runName.ts); the date is
+    shown beside a run's name, never in it (UAT #41).
+    """
     if dataset is not None:
-        return str(dataset.name)
-    folders = {p.parent for p in paths if not _uploaded(index, p)}
-    if len(folders) == 1 and len(paths) > 1:
-        return next(iter(folders)).name
-    if len(paths) == 1:
-        return paths[0].stem
-    return run_name()
+        subject = str(dataset.name)
+    else:
+        folders = {p.parent for p in paths if not _uploaded(index, p)}
+        if len(folders) == 1 and len(paths) > 1:
+            subject = next(iter(folders)).name
+        elif len(paths) == 1:
+            subject = paths[0].stem
+        else:
+            subject = f"{len(paths)} videos"
+    names = [_pipeline_name(p) for p in pipelines or []]
+    if not names:
+        return subject
+    found = ", ".join(names) if len(names) <= 2 else f"{len(names)} pipelines"
+    return f"{subject} · {found}"
+
+
+def _pipeline_name(pipeline: str) -> str:
+    meta = get_registry().get(pipeline)
+    return meta.display_name if meta else pipeline
 
 
 def _uploaded(index: VideoIndex, path: Path) -> bool:
@@ -642,7 +665,9 @@ def start_run(
 
     index = catalog.index.extended(str(p) for p in usable)
     batch_id = str(uuid.uuid4())
-    batch_name = (name or "").strip() or _default_name(usable, dataset, index)
+    batch_name = (name or "").strip() or _default_name(
+        usable, dataset, index, selected_pipelines
+    )
     created: list[BatchJob] = []
     for video in usable:
         try:

@@ -96,7 +96,9 @@ def test_settings_are_remembered_and_videos_join_the_project(api):
     r = _run(api, [video, other], project_id=project["id"], config=config)
 
     assert r.status_code == 201, r.text
-    assert r.json()["name"] == "QS"
+    assert (
+        r.json()["name"] == "QS · PySceneDetect + CLIP"
+    )  # what it ran on, then what it found (UAT #41)
     job = _job(r.json()["created"][0])
     assert job.dataset_id == project["id"]
     held = api.videos(project=project["id"])
@@ -110,7 +112,7 @@ def test_settings_are_remembered_and_videos_join_the_project(api):
     assert settings["source"]["from"]["kind"] == "run"
     last = api.client.get("/api/v1/videos/run-settings").json()
     assert last["source"]["kind"] == "last_used"
-    assert last["source"]["name"] == "QS"
+    assert last["source"]["name"] == "QS · PySceneDetect + CLIP"
 
 
 def test_an_unknown_project(api):
