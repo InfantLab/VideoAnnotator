@@ -1,64 +1,77 @@
-# Handover: v1.7.0 UAT fixes (2026-10-26)
+# Handover: v1.7.0 UAT fixes (updated 2026-10-27)
 
-For the agent that builds the fixes. Branch `1.7-dev`. Specs 027–029 and 033 are built; v1.7.0
-is now in **UAT and refinement** ([`roadmap_v1.7.0.md`](roadmap_v1.7.0.md), Phase 1): fixes land
-on `1.7-dev` as refinements, not new specs.
+For the agent that carries on with the fixes. Branch `1.7-dev`. Specs 027–029 and 033 are built;
+v1.7.0 is in **UAT and refinement** ([`roadmap_v1.7.0.md`](roadmap_v1.7.0.md), Phase 1): fixes
+land on `1.7-dev` as refinements, not new specs.
+
+## Where it stands
+
+Batches 0–5 are done (2026-10-26/27, commits from `6773414` to `0b7c474`). Every fixed finding
+in [`uat_v1.7.0.md`](uat_v1.7.0.md) says what was done and in which commit. **Left: batches 6,
+7 and 8**, plus two small leftovers:
+
+| Batch | Open findings | Notes |
+|---|---|---|
+| 6. Settings, Help, open files | 14, 15, 16 (rest), 18, 51 (rest), 60, 62, 63 | Straight to code |
+| 7. New run | 35, 59 (42 and 44 are done) | **ASCII mock-up for Caspar first** |
+| 8. Videos table | 7, 8, 10, 45 | Straight to code; #10 is "a value per cell, not a tick" (P4) |
+| Leftovers | 36 (local/remote icons: `HardDrive`/`Cloud`), Open items in `viewer_design.md` | |
+
+Suggested order: 6 and 8, then the batch 7 mock-up, then 7. Spec 010 reconciliation with the
+Videos page goes with batch 8 (roadmap).
 
 ## Read first
 
 1. [`viewer_design.md`](viewer_design.md): principles P1–P9, page structure, icons, colour,
-   names, patterns, and decisions D1–D5. Every fix follows it; it overrides specs 023/029/033
-   where its decision log says so.
-2. [`uat_v1.7.0.md`](uat_v1.7.0.md): 65 findings (1–37 Caspar's, 38–65 from two Playwright
-   walk-throughs), each tagged with the principles it breaks, grouped into batches 0–8 at the top.
-3. `AGENTS.md` §23 for viewer code conventions.
+   names, patterns, decisions D1–D7. Every fix follows it.
+2. [`uat_v1.7.0.md`](uat_v1.7.0.md): the findings and their status; batches at the top.
+3. [`uat_v1.7.0_mockups.md`](uat_v1.7.0_mockups.md): the mock-ups Caspar approved for batches 3
+   and 5, with his decisions; add batch 7's there.
+4. `AGENTS.md` §23 for viewer code conventions.
 
-## Decisions already made (don't reopen without Caspar)
+## Decisions made (don't reopen without Caspar)
 
-- **D1** Pipelines named model first, task second ("pyannote community-1 · who spoke when").
-- **D2** A Runs page in the nav; a run is also still a filter of Videos.
-- **D3** Home is a dashboard (runs going on and finished, recent videos and projects, start
-  points) and the viewer opens on it.
-- **D4** Ask AI answers are free text by default; structure comes from the prompt, visibly.
-- **D5** Fields writes its instruction visibly into the question; forcing the format
-  (Ollama `format`, OpenAI-compatible `response_format`) only by an explicit tick box, off by
-  default. Fields helps, never restricts. This changes spec 033's server code
-  (`pipelines/vlm_annotation/answer_shape.py`, `ollama_client.py`, `openai_client.py`), not just
-  the viewer.
-
-## Suggested order
-
-0. **Server stability (#55)** first: SQLite errors under ordinary use ("database is locked",
-   "another row available", a 500 in `GET /api/v1/ask/entries` at `api/v1/ask.py:734`). Look for
-   sessions or connections shared across threads. Evidence: `logs/errors.log`, 2026-10-26.
-1. **Bugs and hazards (batch 1)**: no design needed. Highest value: #38/#39 (claims connected
-   without a key; errors that say "set AUTH_REQUIRED=false"), #42 (two clicks to run 21 videos ×
-   8 pipelines), #12/#52 (overflow, 768 px header), #31 (Layers panel), #47 (overlay labels).
-2. **Names, icons, colour (batch 2)**: one registry field for the display name (D1), the icon
-   table in `viewer_design.md`, one hue per result kind. Most later batches depend on it.
-3. **Runs page and Home dashboard (batch 3)**, then batches 4–8 in any order.
-
-Write a short ASCII mock-up for Caspar before building batches 3 and 5 and the New run rework
-(batch 7); the rest can go straight to code.
+- **D1** Pipelines named model first, task second. **D2** Runs page in the nav (`/runs`, a run's
+  page at `/runs/<id>`). **D3** Home is a dashboard and the viewer opens on it. **D4** Ask AI
+  answers are free text by default. **D5** Fields writes its sentence into the question; forcing
+  the format is an explicit tick box (`enforce_shape`), off by default. **D6** The Video page's
+  Data tab opens on a summary. **D7** H.265: the server makes an H.264 copy on request
+  (`playable.py`, `/api/v1/videos/playable-copy`).
+- Caspar, 2026-10-27: the Videos sidebar is collapsible and stays on a run's page; the demo stays
+  at the bottom of Home (to be made as rich as possible later); Ask AI answers are always
+  coloured, consistently per question (`lib/answerColours.ts`); an unsupported force tick is
+  shown disabled.
+- **No backward compatibility work for data from before v1.7.0** (old run names, old addresses
+  beyond the redirects that exist): it's the first public release.
 
 ## How to work
 
 - Commit and push each tested piece without asking; update the finding's status in the UAT log
-  (`Fixed <date>, <commit>`) in the same commit.
-- Viewer: `cd viewer && bun run lint && bun run test:run`; rebuild with
-  `bash scripts/build_viewer.sh` and commit `viewer_static/` (CI checks it).
-- Server: `pytest tests/`, `ruff check .`, `mypy src/videoannotator`.
-- To see a change in the real app, the walk-through harness from this session is easy to rebuild:
-  Playwright and Chromium are installed under `viewer/node_modules`; the server runs at
-  `http://127.0.0.1:18011` (viewer at `/viewer/`, connect link `/viewer-connect?token=…`). Make
-  a throwaway key with `videoannotator generate-token --user uat-claude@example.com --no-admin
-  --expires-days 7`, label anything created "UAT-Claude", delete it afterwards, and revoke the
-  key (no CLI command for that: `get_token_manager().revoke_token(token)` from
-  `videoannotator.auth.token_manager`).
-- Headless Chromium can't play H.265 (all demo files); that's #54, not a regression.
+  (`Fixed <date>, \`<commit subject>\``) in the same commit.
+- **Run the tests for what you changed, not the full suites** (Caspar: full runs per batch are
+  excessive); lint and type checks are quick, so run those. Pre-commit and CI cover the rest.
+  - Viewer: `cd viewer && bun run lint && bunx tsc --noEmit -p tsconfig.app.json`, then
+    `bunx vitest run <files>`. Rebuild with `bash scripts/build_viewer.sh` and commit
+    `viewer_static/` (CI checks it). After an API change: `bash scripts/gen_viewer_api_types.sh`
+    (needs `.venv/bin` on PATH).
+  - Server: `.venv/bin/python -m pytest <files>`, `.venv/bin/ruff check .`, `ruff format`.
+- Known failures that aren't yours: `viewer/src/test/lib/lanePerformance.test.ts` (environment);
+  `tests/api/test_ask_suggest_shape.py` run alone (missing table; passes in a wider run);
+  `routes.test.tsx > /videos` sometimes times out under load.
+- To see a change in the real app: start `.venv/bin/videoannotator server --port 18998` in the
+  background, make a throwaway key with `videoannotator generate-token --user
+  uat-claude@example.com --username uat-claude --key-name UAT-Claude --no-admin --expires-days 1
+  --port 18998 -o <scratch>/realkey.json </dev/null`, open `/viewer-connect?token=…`, drive it
+  with Playwright (installed under `viewer/node_modules`; require it via `createRequire` from
+  `viewer/package.json`). Afterwards revoke the key
+  (`get_token_manager().revoke_token(token)` from `videoannotator.auth.token_manager`) and stop
+  the server (find its PID with `ps -eo pid,args`; `pkill -f` kills your own shell).
+- Ollama with gemma4:12b is reachable from the dev container, so Ask AI can be tried for real.
+- Headless Chromium can't play H.265; the demo files are H.265, so use "Make a copy this browser
+  can play" (D7) in walk-throughs.
 
 ## Open questions for Caspar (small)
 
-Icon set at 16 px, the Video page data table's default view, an H.264 copy for H.265 videos,
-and whether the uat-claude user left in the database should be removed (there's no command for
-it).
+Icon set at 16 px in both themes (`viewer_design.md` Open); whether the uat-claude user left in
+the database should be removed (no command for it); old playable copies are never cleaned up
+(`<storage root>/playable/`), which may want a rule later.
