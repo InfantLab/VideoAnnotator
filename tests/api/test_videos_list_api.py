@@ -204,3 +204,46 @@ def test_a_folder_names_its_subfolders_with_videos(api):
 
     assert [f["name"] for f in body["subfolders"]] == ["pk", "qs"]
     assert body["total"] == 0
+
+
+def test_values_for_finished_results(api, tmp_path):
+    clip = write_video(api.shared / "pk" / "p01.mp4")
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "p01_speaker_diarization.rttm").write_text(
+        "SPEAKER p01 1 0.0 1.0 <NA> <NA> A <NA> <NA>\n"
+        "SPEAKER p01 1 1.0 1.0 <NA> <NA> B <NA> <NA>\n"
+    )
+    job = api.jobs.make_job(
+        clip,
+        output_dir=out,
+        pipelines={"speaker_diarization": ("completed", None, None)},
+    )
+
+    result = api.videos()["videos"][0]["results"]["speaker_diarization"]
+    assert result["job_id"] == job.job_id
+    r = api.client.post(
+        "/api/v1/videos/values",
+        json={
+            "results": [
+                {"job_id": job.job_id, "pipeline": "speaker_diarization"},
+                {"job_id": job.job_id, "pipeline": "scene_detection"},
+                {"job_id": "nope", "pipeline": "speaker_diarization"},
+            ]
+        },
+    )
+
+    assert r.status_code == 200
+    assert r.json()["values"] == {
+        f"{job.job_id}/speaker_diarization": {
+            "count": 2,
+            "text": "2 speakers",
+            "detail": "2 turns",
+        }
+    }
+
+
+def test_each_video_says_when_it_was_added(api):
+    _fill(api)
+    by_name = {v["name"]: v for v in api.videos()["videos"]}
+    assert by_name["home.mp4"]["added_at"] is not None

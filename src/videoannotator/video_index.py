@@ -46,6 +46,7 @@ class PipelineState:
         return {
             "state": self.state,
             "run_id": self.run_id,
+            "job_id": self.job_id,
             "finished_at": self.finished_at,
             "error": self.error,
             "now": self.now,

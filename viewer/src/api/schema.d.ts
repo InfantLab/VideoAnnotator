@@ -1644,6 +1644,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/videos/values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What each finished result found, as one value (UAT #10)
+         * @description Per (job, pipeline): a count and a short text from its result file ("3 speakers", "412 words", "12 answers"), for the Videos table. Read with the export readers and cached by file.
+         */
+        post: operations["result_values_for_api_v1_videos_values_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/videos/runs": {
         parameters: {
             query?: never;
@@ -4877,6 +4897,31 @@ export interface components {
             /** Download Url */
             download_url: string;
         };
+        /** ResultRef */
+        ResultRef: {
+            /** Job Id */
+            job_id: string;
+            /** Pipeline */
+            pipeline: string;
+        };
+        /** ResultValueOut */
+        ResultValueOut: {
+            /**
+             * Count
+             * @description What the value counts, to sort by
+             */
+            count: number;
+            /**
+             * Text
+             * @description As a cell shows it: "3 speakers", "412 words"
+             */
+            text: string;
+            /**
+             * Detail
+             * @description More, for a tooltip
+             */
+            detail?: string | null;
+        };
         /** RunAnswers */
         RunAnswers: {
             /** Status */
@@ -5398,6 +5443,21 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** ValuesRequest */
+        ValuesRequest: {
+            /** Results */
+            results: components["schemas"]["ResultRef"][];
+        };
+        /** ValuesResponse */
+        ValuesResponse: {
+            /**
+             * Values
+             * @description By `<job_id>/<pipeline>`; a result without a readable file is left out
+             */
+            values: {
+                [key: string]: components["schemas"]["ResultValueOut"];
+            };
+        };
         /** VideoCounts */
         VideoCounts: {
             /** All */
@@ -5444,6 +5504,11 @@ export interface components {
             /** Last Run At */
             last_run_at?: string | null;
             /**
+             * Added At
+             * @description When it was first run (an upload: when it was uploaded), to tell copies with one name apart
+             */
+            added_at?: string | null;
+            /**
              * Run Job Id
              * @description In a run's list: this video's job in that run, to open it on
              */
@@ -5480,6 +5545,11 @@ export interface components {
              * @description The run it is from: a batch id or a job id
              */
             run_id: string;
+            /**
+             * Job Id
+             * @description The job that wrote it, to ask `POST /values`
+             */
+            job_id: string;
             /** Finished At */
             finished_at?: string | null;
             /**
@@ -7661,6 +7731,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActivityResponse"];
+                };
+            };
+        };
+    };
+    result_values_for_api_v1_videos_values_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValuesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValuesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -40,6 +40,11 @@ Superseded by 029:
 - **How videos belong to a dataset.** Projects hold videos by path (manifest entries may carry
   `path`), not only through spec 008's `dataset_id` job tag that this spec's Assumptions rely on.
 
+Also since (v1.7.0 UAT batch 8, 2026-10-27): each cell of the Videos table shows what a result
+found ("3 speakers", "412 words", "12 answers"), not only its state, and sorts by it.
+`POST /api/v1/videos/values` gives these per (job, pipeline) without the viewer fetching the
+files (in the spirit of FR-005); they are counts per video, not a distribution of labels.
+
 Still open:
 
 - The corpus-wide label distribution (User Story 1 scenarios 2 and 3, FR-003).

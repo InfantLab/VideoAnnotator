@@ -71,8 +71,9 @@ describe('the table', () => {
     expect(header).toEqual(['', 'Video', 'Folder', 'Projects', 'DeepFace', 'Whisper large-v3-turbo']);
     expect(screen.getByRole('columnheader', { name: 'DeepFace' })).toHaveAttribute('title', 'DeepFace · where they are and their expression');
     const first = rows()[0];
-    expect(within(first).getByLabelText('DeepFace: done')).toHaveTextContent('✓');
-    expect(within(first).getByLabelText('Whisper large-v3-turbo: failed: No audio track')).toHaveTextContent('✕');
+    // What was found, not a tick (UAT #10).
+    expect(await within(first).findByLabelText('DeepFace: 2 faces (most in one frame)')).toHaveTextContent('2 faces');
+    expect(within(first).getByLabelText('Whisper large-v3-turbo: failed: No audio track')).toHaveTextContent('✕ failed');
     expect(within(rows()[1]).getByLabelText('DeepFace: running')).toHaveTextContent('●');
     expect(within(rows()[3]).getByLabelText('DeepFace: not run')).toHaveTextContent('–');
   });
@@ -82,7 +83,7 @@ describe('the table', () => {
     show();
     await screen.findAllByTestId('video-row');
     expect(within(rows()[2]).getByText('not on the server')).toBeInTheDocument();
-    expect(within(rows()[2]).getByLabelText('DeepFace: done')).toBeInTheDocument();
+    expect(await within(rows()[2]).findByLabelText(/^DeepFace: 2 faces/)).toBeInTheDocument();
   });
 
   it('shows a video in two projects with both chips', async () => {
@@ -90,7 +91,47 @@ describe('the table', () => {
     show();
     await screen.findAllByTestId('video-row');
     expect(within(rows()[0]).getByRole('link', { name: 'Peekaboo study' })).toHaveAttribute('href', `/videos?project=${PROJECT_ID}`);
+    // The second on hover, so the row stays one line (UAT #45).
+    expect(within(rows()[0]).getByText('+1').parentElement).toHaveAttribute('title', 'Peekaboo study, QS2');
+  });
+
+  it("in a project, shows only a video's other projects", async () => {
+    mockVideosApi();
+    show(`/videos?project=${PROJECT_ID}`);
+    await screen.findAllByTestId('video-row');
+    expect(screen.getByRole('columnheader', { name: 'Also in' })).toBeInTheDocument();
     expect(within(rows()[0]).getByRole('link', { name: 'QS2' })).toBeInTheDocument();
+    expect(within(rows()[0]).queryByRole('link', { name: 'Peekaboo study' })).toBeNull();
+  });
+
+  it('sorts by what a column found, failed and not run last (UAT #10)', async () => {
+    mockVideosApi();
+    show();
+    await screen.findAllByTestId('video-row');
+    await within(rows()[0]).findByText('2 faces');
+    fireEvent.click(within(screen.getByRole('columnheader', { name: 'Whisper large-v3-turbo' })).getByRole('button'));
+    expect(screen.getByRole('columnheader', { name: 'Whisper large-v3-turbo' })).toHaveAttribute('aria-sort', 'descending');
+    // Only p01 ran Whisper, and it failed: it comes before the three never run.
+    expect(rows()[0]).toHaveTextContent('p01_t1.mp4');
+    fireEvent.click(within(screen.getByRole('columnheader', { name: 'Video' })).getByRole('button'));
+    expect(rows().map((r) => within(r).getByTestId('file-name').textContent)).toEqual([
+      'p01_t1.mp4',
+      'p02_t1.mp4',
+      'p03_t1.mp4',
+      'p04_t1.mp4',
+    ]);
+  });
+
+  it('keeps both ends of a long name, and says when an upload came (UAT #7, #8)', async () => {
+    const long = (n: number) =>
+      video(`2UWdXP.joke1.rep${n}.take1.Peekaboo_h265.mp4`, { folder: 'uploads', added_at: '2026-09-26T19:26:48Z' });
+    mockVideosApi({ videos: (q) => videosResponse(q, { videos: [long(2), long(3)], total: 2 }) });
+    show();
+    await screen.findAllByTestId('video-row');
+    const names = screen.getAllByTestId('file-name');
+    expect(names[0].lastElementChild).toHaveTextContent('.Peekaboo_h265.mp4');
+    expect(names[0].firstElementChild).toHaveTextContent('2UWdXP.joke1.rep2.take1');
+    expect(rows()[0]).toHaveTextContent('Uploaded 26 Sep');
   });
 
   it('opens a row on the Video page, moving through the same list', async () => {
@@ -192,7 +233,7 @@ describe('status in place (UAT #6, #43)', () => {
   it('a newer run going on shows over an older result, linked to the run', async () => {
     const rerun = video('p01_t1.mp4', {
       results: {
-        face_analysis: { state: 'done', run_id: 'b1', finished_at: '2026-10-12T10:00:00Z', error: null, now: 'running', now_run_id: 'b2' },
+        face_analysis: { state: 'done', run_id: 'b1', job_id: 'j1', finished_at: '2026-10-12T10:00:00Z', error: null, now: 'running', now_run_id: 'b2' },
       },
     });
     mockVideosApi({ videos: (q) => videosResponse(q, { videos: [rerun], total: 1 }) });

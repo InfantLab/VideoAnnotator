@@ -58,6 +58,7 @@ import type { VideoNote, VideoNoteCreate, VideoNoteUpdate, VideoRuns } from '@/t
 import type { Preset, PresetCreateRequest, PresetListResponse, PresetUpdateRequest } from '@/types/presets';
 import type {
   Activity,
+  ResultValues,
   RunListResponse,
   RunSettings,
   VideosQuery,
@@ -1239,6 +1240,15 @@ class APIClient {
     if (query.offset) params.set('offset', String(query.offset));
     params.set('limit', String(query.limit ?? 2000));
     return this.request(`/api/v1/videos?${params}`);
+  }
+
+  /** What each finished result found, as one value, by `<job_id>/<pipeline>` (UAT #10). */
+  async getResultValues(results: { job_id: string; pipeline: string }[]): Promise<ResultValues> {
+    const response = await this.request<{ values: ResultValues }>('/api/v1/videos/values', {
+      method: 'POST',
+      body: JSON.stringify({ results }),
+    });
+    return response.values;
   }
 
   /** One run on any videos the server can read (spec 029 R8). */

@@ -26,9 +26,11 @@ export const PK = '/data/pk';
 export const PROJECT_ID = 'd-peekaboo';
 export const OTHER_PROJECT_ID = 'd-qs2';
 
+let jobs = 0;
 const done = (run_id: string, finished_at = '2026-10-12T10:00:00Z') => ({
   state: 'done',
   run_id,
+  job_id: `j${++jobs}`,
   finished_at,
   error: null,
 });
@@ -53,7 +55,7 @@ export const VIDEOS: VideoItem[] = [
   video('p01_t1.mp4', {
     results: {
       face_analysis: done('b1'),
-      speech_recognition: { state: 'failed', run_id: 'b1', finished_at: null, error: 'No audio track' },
+      speech_recognition: { state: 'failed', run_id: 'b1', job_id: 'j-p01', finished_at: null, error: 'No audio track' },
     },
     projects: [
       { id: PROJECT_ID, name: 'Peekaboo study' },
@@ -61,7 +63,7 @@ export const VIDEOS: VideoItem[] = [
     ],
   }),
   video('p02_t1.mp4', {
-    results: { face_analysis: { state: 'running', run_id: 'b2', finished_at: null, error: null } },
+    results: { face_analysis: { state: 'running', run_id: 'b2', job_id: 'j-p02', finished_at: null, error: null } },
   }),
   video('p03_t1.mp4', { available: false, results: { face_analysis: done('b1') } }),
   video('p04_t1.mp4', { results: {}, projects: [], last_run_at: null }),
@@ -260,6 +262,14 @@ export function mockVideosApi(
   return {
     listVideos: vi.spyOn(client, 'listVideos').mockImplementation(async (query: VideosQuery = {}) =>
       (options.videos ?? videosResponse)(query),
+    ),
+    // Every finished face result found two faces.
+    getResultValues: vi.spyOn(client, 'getResultValues').mockImplementation(async (results: { job_id: string; pipeline: string }[]) =>
+      Object.fromEntries(
+        results
+          .filter((r) => r.pipeline === 'face_analysis')
+          .map((r) => [`${r.job_id}/${r.pipeline}`, { count: 2, text: '2 faces', detail: 'most in one frame' }]),
+      ),
     ),
     getActivity: vi.spyOn(client, 'getActivity').mockResolvedValue(options.activity ?? { active: [], recent: [] }),
     listRuns: vi

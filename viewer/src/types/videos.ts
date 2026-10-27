@@ -24,6 +24,9 @@ export type RunSettingsSource = Schemas['RunSettingsSource'];
 export type VideosRunRequest = Schemas['VideosRunRequest'];
 export type VideosRunResponse = Schemas['VideosRunResponse'];
 export type ProjectSettings = Schemas['RunSettings'];
+export type ResultValue = Schemas['ResultValueOut'];
+/** By `<job_id>/<pipeline>`. */
+export type ResultValues = Record<string, ResultValue>;
 
 /** One scope of the Videos page (none: all videos). */
 export interface VideosQuery {

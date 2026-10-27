@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Search } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, Search } from 'lucide-react';
 
+import { FileName } from '@/components/FileName';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { kindColour, kindOfPipeline } from '@/lib/resultKinds';
 import type { ListContext } from '@/lib/listNavigation';
+import { formatDay } from '@/lib/when';
 import { folderLabel, hrefOf, shortFolder, videoLink } from '@/lib/videosScope';
-import type { VideoItem, VideoResult } from '@/types/videos';
+import { useResultValues, valueKey } from '@/hooks/useResultValues';
+import type { ResultValue, ResultValues, VideoItem, VideoResult } from '@/types/videos';
 
 const ROW_HEIGHT = 40;
 /** Past this many rows only those on screen are drawn (as the Video page's Data tab). */
@@ -24,7 +27,17 @@ const MARKS: Record<string, { mark: string; word: string; className: string }> =
   failed: { mark: '✕', word: 'failed', className: 'text-destructive' },
 };
 
-function ResultMark({ title, result, inRun }: { title: string; result: VideoResult | undefined; inRun?: string }) {
+function ResultMark({
+  title,
+  result,
+  inRun,
+  value,
+}: {
+  title: string;
+  result: VideoResult | undefined;
+  inRun?: string;
+  value?: ResultValue;
+}) {
   if (!result) {
     return (
       <span className="text-muted-foreground" title={`${title}: not run`} aria-label={`${title}: not run`}>
@@ -50,13 +63,63 @@ function ResultMark({ title, result, inRun }: { title: string; result: VideoResu
       </Link>
     );
   }
+  // What was found, not that it ran (UAT #10, viewer design P4).
+  if (result.state === 'done' && value) {
+    const label = `${title}: ${value.text}${value.detail ? ` (${value.detail})` : ''}`;
+    return (
+      <span className={cn('whitespace-nowrap', value.count === 0 && 'text-muted-foreground')} title={label} aria-label={label}>
+        {value.text}
+      </span>
+    );
+  }
   const look = MARKS[result.state] ?? MARKS.waiting;
   const label = `${title}: ${look.word}${result.error ? `: ${result.error}` : ''}`;
+  if (result.state === 'failed') {
+    return (
+      <span className={cn('whitespace-nowrap text-xs', look.className)} title={label} aria-label={label}>
+        {look.mark} failed
+      </span>
+    );
+  }
   return (
     <span className={look.className} title={label} aria-label={label}>
       {look.mark}
     </span>
   );
+}
+
+type SortKey = { column: 'name' | 'folder' | string; descending: boolean };
+
+/** A pipeline column's sort value: what was found, then done without a value, failed, not run. */
+function rank(video: VideoItem, pipeline: string, values: ResultValues): number {
+  const result = video.results[pipeline];
+  if (!result) return -3;
+  if (result.state === 'failed') return -2;
+  if (result.state !== 'done') return -1.5;
+  const value = values[valueKey(result.job_id, pipeline)];
+  return value ? value.count : -1;
+}
+
+function sorted(videos: VideoItem[], sort: SortKey | null, values: ResultValues): VideoItem[] {
+  if (!sort) return videos;
+  const sign = sort.descending ? -1 : 1;
+  const byName = (a: VideoItem, b: VideoItem) => a.name.localeCompare(b.name, undefined, { numeric: true });
+  return [...videos].sort((a, b) => {
+    if (sort.column === 'name') return sign * byName(a, b);
+    if (sort.column === 'folder') return sign * a.folder.localeCompare(b.folder) || byName(a, b);
+    const ra = rank(a, sort.column, values);
+    const rb = rank(b, sort.column, values);
+    // Not run and failed stay at the bottom either way.
+    if (ra < 0 || rb < 0) return rb - ra || byName(a, b);
+    return sign * (ra - rb) || byName(a, b);
+  });
+}
+
+/** Where a video is: its folder, or for an upload when it came (UAT #8: copies of one name). */
+function whereText(video: VideoItem): string {
+  if (video.folder !== 'uploads') return shortFolder(video.folder);
+  const day = formatDay(video.added_at);
+  return day ? `Uploaded ${day}` : 'Uploaded';
 }
 
 interface VideosTableProps {
@@ -94,8 +157,20 @@ export function VideosTable({
   caption,
   openColumn = false,
 }: VideosTableProps) {
+  // In a project, every row is in it: show only its other projects (UAT #45).
+  const shownProjects = (video: VideoItem) =>
+    context.kind === 'project' ? video.projects.filter((p) => p.id !== context.id) : video.projects;
   // An empty Projects column only takes room (UAT #5).
-  const anyProjects = videos.some((v) => v.projects.length > 0);
+  const anyProjects = videos.some((v) => shownProjects(v).length > 0);
+  const values = useResultValues(videos, pipelines);
+  const [sort, setSort] = useState<SortKey | null>(null);
+  const shown = useMemo(() => sorted(videos, sort, values), [videos, sort, values]);
+  const sortBy = (column: string) =>
+    setSort((now) =>
+      now?.column === column
+        ? { column, descending: !now.descending }
+        : { column, descending: column !== 'name' && column !== 'folder' },
+    );
   const navigate = useNavigate();
   const filterRef = useRef<HTMLInputElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -140,7 +215,7 @@ export function VideosTable({
     }
   };
 
-  const rows = videos.slice(first, last).map((video) => (
+  const rows = shown.slice(first, last).map((video) => (
     <tr
       key={video.path}
       tabIndex={0}
@@ -161,15 +236,14 @@ export function VideosTable({
           aria-label={`Select ${video.name}`}
         />
       </td>
-      <td className="max-w-[18rem] px-2">
-        <div className="flex items-center gap-2">
+      <td className="max-w-[24rem] px-2">
+        <div className="flex min-w-0 items-center gap-2">
           <Link
             to={videoLink(video, context)}
-            className="truncate font-medium hover:underline"
-            title={video.path}
+            className="min-w-0 font-medium hover:underline"
             onClick={(event) => event.stopPropagation()}
           >
-            {video.name}
+            <FileName name={video.name} title={video.path} />
           </Link>
           {!video.available && (
             <Badge variant="outline" className="shrink-0 text-[10px] text-muted-foreground" title="The file has moved or been deleted; its results are kept">
@@ -191,22 +265,21 @@ export function VideosTable({
         </td>
       )}
       <td className="max-w-[14rem] truncate px-2 text-muted-foreground" title={folderLabel(video.folder)}>
-        {shortFolder(video.folder)}
+        {whereText(video)}
       </td>
-      {anyProjects && <td className="px-2" onClick={(event) => event.stopPropagation()}>
-        <div className="flex flex-wrap gap-1">
-          {video.projects.map((project) => (
-            <Link key={project.id} to={hrefOf({ project: project.id })}>
-              <Badge variant="secondary" className="text-[10px] font-normal">
-                {project.name}
-              </Badge>
-            </Link>
-          ))}
-        </div>
-      </td>}
+      {anyProjects && (
+        <td className="max-w-[12rem] px-2" onClick={(event) => event.stopPropagation()}>
+          <ProjectChips projects={shownProjects(video)} />
+        </td>
+      )}
       {pipelines.map((pipeline) => (
         <td key={pipeline} className="px-2 text-center">
-          <ResultMark title={nameOf(pipeline)} result={video.results[pipeline]} inRun={context.kind === 'run' ? context.id : undefined} />
+          <ResultMark
+            title={nameOf(pipeline)}
+            result={video.results[pipeline]}
+            inRun={context.kind === 'run' ? context.id : undefined}
+            value={video.results[pipeline] ? values[valueKey(video.results[pipeline].job_id, pipeline)] : undefined}
+          />
         </td>
       ))}
     </tr>
@@ -242,10 +315,15 @@ export function VideosTable({
                   aria-label="Select every video shown"
                 />
               </th>
-              <th className="px-2 py-2 font-medium">Video</th>
+              {/* Table cells ignore max-width, so the name needs a floor to show both ends (UAT #7). */}
+              <th className="min-w-[20rem] px-2 py-2 font-medium" aria-sort={ariaSort(sort, 'name')}>
+                <SortButton column="name" sort={sort} onSort={sortBy}>Video</SortButton>
+              </th>
               {openColumn && <th className="w-20 px-2 py-2" aria-label="Open" />}
-              <th className="px-2 py-2 font-medium">Folder</th>
-              {anyProjects && <th className="px-2 py-2 font-medium">Projects</th>}
+              <th className="px-2 py-2 font-medium" aria-sort={ariaSort(sort, 'folder')}>
+                <SortButton column="folder" sort={sort} onSort={sortBy}>Folder</SortButton>
+              </th>
+              {anyProjects && <th className="px-2 py-2 font-medium">{context.kind === 'project' ? 'Also in' : 'Projects'}</th>}
               {pipelines.map((pipeline) => {
                 const kind = kindOfPipeline(pipeline);
                 const Icon = kind?.icon;
@@ -255,11 +333,17 @@ export function VideosTable({
                     key={pipeline}
                     className="max-w-[7.5rem] px-2 py-2 text-center align-bottom font-medium leading-tight"
                     title={task ? `${nameOf(pipeline)} · ${task}` : nameOf(pipeline)}
+                    aria-sort={ariaSort(sort, pipeline)}
                   >
-                    <span className="flex flex-col items-center gap-1">
+                    <button
+                      type="button"
+                      className="mx-auto flex flex-col items-center gap-1 rounded hover:text-foreground"
+                      onClick={() => sortBy(pipeline)}
+                    >
                       {Icon && <Icon className="h-4 w-4" style={{ color: kindColour(kind) }} aria-hidden="true" />}
                       <span className="line-clamp-2">{nameOf(pipeline)}</span>
-                    </span>
+                      <SortArrow column={pipeline} sort={sort} />
+                    </button>
                   </th>
                 );
               })}
@@ -274,6 +358,52 @@ export function VideosTable({
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function ariaSort(sort: SortKey | null, column: string): 'ascending' | 'descending' | undefined {
+  if (sort?.column !== column) return undefined;
+  return sort.descending ? 'descending' : 'ascending';
+}
+
+function SortArrow({ column, sort }: { column: string; sort: SortKey | null }) {
+  if (sort?.column !== column) return null;
+  const Arrow = sort.descending ? ArrowDown : ArrowUp;
+  return <Arrow className="h-3 w-3" aria-hidden="true" />;
+}
+
+function SortButton({
+  column,
+  sort,
+  onSort,
+  children,
+}: {
+  column: string;
+  sort: SortKey | null;
+  onSort: (column: string) => void;
+  children: string;
+}) {
+  return (
+    <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => onSort(column)}>
+      {children}
+      <SortArrow column={column} sort={sort} />
+    </button>
+  );
+}
+
+/** One chip and "+2", on one line, the rest on hover (UAT #45). */
+function ProjectChips({ projects }: { projects: VideoItem['projects'] }) {
+  if (projects.length === 0) return null;
+  const [first, ...rest] = projects;
+  return (
+    <div className="flex min-w-0 items-center gap-1" title={projects.map((p) => p.name).join(', ')}>
+      <Link to={hrefOf({ project: first.id })} className="min-w-0">
+        <Badge variant="secondary" className="block max-w-full truncate text-[10px] font-normal">
+          {first.name}
+        </Badge>
+      </Link>
+      {rest.length > 0 && <span className="shrink-0 text-xs text-muted-foreground">+{rest.length}</span>}
     </div>
   );
 }

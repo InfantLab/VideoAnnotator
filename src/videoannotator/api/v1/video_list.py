@@ -23,14 +23,14 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ... import run_settings, video_index
+from ... import result_values, run_settings, video_index
 from ...batch.types import BatchJob, JobStatus
 from ...database.crud import SavedDatasetCRUD
 from ...database.database import get_db
 from ...projects import Catalog, catalog_for, folder_videos, with_videos
 from ...registry.pipeline_registry import get_registry
 from ...results_folder import RunFolder, display_path, folder_ref
-from ...storage.config import get_storage_root
+from ...storage.config import get_job_storage_path, get_storage_root
 from ...storage.manager import get_storage_provider
 from ...video_index import Run, Video, VideoIndex
 from ..database import get_storage_backend
@@ -61,6 +61,7 @@ class ProjectRef(BaseModel):
 class VideoResult(BaseModel):
     state: str = Field(description="done, running, waiting or failed")
     run_id: str = Field(description="The run it is from: a batch id or a job id")
+    job_id: str = Field(description="The job that wrote it, to ask `POST /values`")
     finished_at: datetime | None = None
     error: str | None = Field(default=None, description="Why it failed, if it did")
     now: str | None = Field(
@@ -83,6 +84,11 @@ class VideoItem(BaseModel):
         "result, else its newest state"
     )
     last_run_at: datetime | None = None
+    added_at: datetime | None = Field(
+        default=None,
+        description="When it was first run (an upload: when it was uploaded), to "
+        "tell copies with one name apart",
+    )
     run_job_id: str | None = Field(
         default=None,
         description="In a run's list: this video's job in that run, to open it on",
@@ -181,6 +187,7 @@ def _item(video: Video, catalog: Catalog, run_id: str | None = None) -> VideoIte
         projects=[ProjectRef(**p) for p in catalog.projects_of(video.key)],
         results={k: VideoResult(**v.to_dict()) for k, v in video.results.items()},
         last_run_at=video.last_run_at,
+        added_at=video.jobs[-1].created_at if video.jobs else None,
     )
 
 
@@ -950,3 +957,63 @@ async def activity(
         active=[_activity(r, catalog) for r in active],
         recent=[_activity(r, catalog) for r in finished],
     )
+
+
+# ---------------------------------------------------------------------------
+# A value per result (UAT #10)
+# ---------------------------------------------------------------------------
+
+MAX_VALUES = 2_000
+
+
+class ResultRef(BaseModel):
+    job_id: str
+    pipeline: str
+
+
+class ValuesRequest(BaseModel):
+    results: list[ResultRef] = Field(max_length=MAX_VALUES)
+
+
+class ResultValueOut(BaseModel):
+    count: int = Field(description="What the value counts, to sort by")
+    text: str = Field(description='As a cell shows it: "3 speakers", "412 words"')
+    detail: str | None = Field(default=None, description="More, for a tooltip")
+
+
+class ValuesResponse(BaseModel):
+    values: dict[str, ResultValueOut] = Field(
+        description="By `<job_id>/<pipeline>`; a result without a readable file "
+        "is left out"
+    )
+
+
+@router.post(
+    "/values",
+    response_model=ValuesResponse,
+    summary="What each finished result found, as one value (UAT #10)",
+    description=(
+        "Per (job, pipeline): a count and a short text from its result file "
+        '("3 speakers", "412 words", "12 answers"), for the Videos table. Read '
+        "with the export readers and cached by file."
+    ),
+)
+def result_values_for(
+    body: ValuesRequest,
+    db: Session = Depends(get_db),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> ValuesResponse:
+    jobs = catalog_for(get_storage_backend(), db).index.jobs_by_id
+    values: dict[str, ResultValueOut] = {}
+    for ref in body.results:
+        job = jobs.get(ref.job_id)
+        if job is None:
+            continue
+        # As batch.result_files.job_folder, from the summary the index keeps.
+        folder = Path(
+            job.output_dir or job.storage_path or get_job_storage_path(job.job_id)
+        )
+        value = result_values.result_value(folder, ref.pipeline)
+        if value is not None:
+            values[f"{ref.job_id}/{ref.pipeline}"] = ResultValueOut(**value.to_dict())
+    return ValuesResponse(values=values)
