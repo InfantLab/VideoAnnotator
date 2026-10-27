@@ -94,6 +94,7 @@ describe('Ask AI model servers', () => {
       path: VIDEO,
       name: 'p01_t1.mp4',
       duration_sec: 32,
+      playable_copy: 'none',
     });
     vi.mocked(apiClient.listEntries).mockResolvedValue({ entries: [], library: [], next_before: null });
     vi.mocked(apiClient.getFrames).mockResolvedValue({ t: 0, frames: [], requested: 1 });

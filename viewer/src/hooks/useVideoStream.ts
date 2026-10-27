@@ -6,7 +6,7 @@ import { apiClient } from '@/api/client';
 export const REFRESH_BEFORE_MS = 5 * 60 * 1000;
 
 interface Stream {
-  url: string;
+  token: string;
   expiresAt: number;
 }
 
@@ -18,6 +18,8 @@ interface Stream {
  */
 export function useVideoStream(path: string | null | undefined, available: boolean, videoRef: RefObject<HTMLVideoElement>) {
   const [stream, setStream] = useState<Stream | null>(null);
+  // Its playable copy instead of the original (viewer design D7).
+  const [copy, setCopy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const resumeAt = useRef<{ time: number; playing: boolean } | null>(null);
   const fetching = useRef(false);
@@ -31,7 +33,7 @@ export function useVideoStream(path: string | null | undefined, available: boole
         if (keepPlace && video) resumeAt.current = { time: video.currentTime, playing: !video.paused };
         const token = await apiClient.streamToken(path);
         setError(null);
-        setStream({ url: apiClient.streamUrl(path, token.token), expiresAt: new Date(token.expires_at).getTime() });
+        setStream({ token: token.token, expiresAt: new Date(token.expires_at).getTime() });
       } catch (e) {
         setError(e instanceof Error ? e : new Error(String(e)));
       } finally {
@@ -43,9 +45,12 @@ export function useVideoStream(path: string | null | undefined, available: boole
 
   useEffect(() => {
     setStream(null);
+    setCopy(false);
     resumeAt.current = null;
     void fetchToken(false);
   }, [fetchToken]);
+
+  const url = stream && path ? apiClient.streamUrl(path, stream.token, copy) : undefined;
 
   useEffect(() => {
     if (!stream) return;
@@ -57,7 +62,7 @@ export function useVideoStream(path: string | null | undefined, available: boole
   // After a swap the element starts again from 0: put it back where it was.
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !stream) return;
+    if (!video || !url) return;
     const restore = () => {
       const at = resumeAt.current;
       if (!at) return;
@@ -67,15 +72,15 @@ export function useVideoStream(path: string | null | undefined, available: boole
     };
     video.addEventListener('loadedmetadata', restore);
     return () => video.removeEventListener('loadedmetadata', restore);
-  }, [stream, videoRef]);
+  }, [url, videoRef]);
 
   // A media error doesn't say why; ask the server whether the token is the problem.
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !stream) return;
+    if (!video || !url) return;
     const onError = async () => {
       try {
-        const probe = await fetch(stream.url, { headers: { Range: 'bytes=0-0' } });
+        const probe = await fetch(url!, { headers: { Range: 'bytes=0-0' } });
         if (probe.status === 401) void fetchToken(true);
       } catch {
         // Offline or refused: the player's own message stands.
@@ -83,7 +88,14 @@ export function useVideoStream(path: string | null | undefined, available: boole
     };
     video.addEventListener('error', onError);
     return () => video.removeEventListener('error', onError);
-  }, [stream, videoRef, fetchToken]);
+  }, [url, videoRef, fetchToken]);
 
-  return { url: stream?.url, error };
+  /** Play the copy from where the original was. */
+  const playCopy = useCallback(() => {
+    const video = videoRef.current;
+    if (video) resumeAt.current = { time: video.currentTime, playing: false };
+    setCopy(true);
+  }, [videoRef]);
+
+  return { url, error, copy, playCopy };
 }

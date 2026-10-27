@@ -15,6 +15,7 @@ export type AskRunAnswers = Schemas['RunAnswers'];
 export type AskFrames = Schemas['FramesResponse'];
 export type UploadedVideo = Schemas['VideoUploadResponse'];
 export type StreamToken = Schemas['StreamTokenResponse'];
+export type PlayableCopy = Schemas['PlayableCopyResponse'];
 export type ModelServer = Schemas['ModelServerOut'];
 export type ModelServersResponse = Schemas['ModelServersResponse'];
 export type ModelServerAdd = Schemas['ModelServerAdd'];

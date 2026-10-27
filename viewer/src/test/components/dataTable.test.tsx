@@ -17,7 +17,7 @@ const demoRows = () =>
     'job-1',
   ).sort((a, b) => a.start - b.start);
 
-function table(rows: Row[], over: Partial<Parameters<typeof DataTable>[0]> = {}) {
+function table(rows: Row[], over: Partial<Parameters<typeof DataTable>[0]> & { summary?: boolean } = {}) {
   const props = {
     rows,
     currentTime: 0,
@@ -28,7 +28,11 @@ function table(rows: Row[], over: Partial<Parameters<typeof DataTable>[0]> = {})
     runLabels: {},
     ...over,
   };
-  return { props, ...render(<DataTable {...props} />) };
+  delete (props as { summary?: boolean }).summary;
+  const view = render(<DataTable {...props} />);
+  // Most of these are about every row; the summary has its own tests.
+  if (!over.summary) fireEvent.click(screen.getByRole('radio', { name: 'All rows' }));
+  return { props, ...view };
 }
 
 const highlighted = () => screen.getAllByTestId('data-row').filter((r) => r.getAttribute('aria-selected') === 'true');
@@ -105,5 +109,22 @@ describe('the Data tab and the timeline (SC-005)', () => {
     expect(picked).toHaveLength(1);
     expect(within(picked[0]).getByText('Speakers')).toBeInTheDocument();
     expect(within(picked[0]).getAllByText('SPEAKER_00').length).toBeGreaterThan(0);
+  });
+});
+
+describe('the Data tab summary (D6, UAT #46)', () => {
+  it('shows one row per event, without per-class scores or repeats, and answers as plain text', () => {
+    const rows = demoRows();
+    const answer = { ...rows[0], pipeline: 'vlm_annotation', measure: 'vlm_label', label: 'There are **4** people', track: '', value: null };
+    const repeated = rows.find((r) => r.measure === 'speech')!;
+    table([...rows, answer, { ...repeated }].sort((a, b) => a.start - b.start), { summary: true });
+    expect(screen.getByRole('radio', { name: 'Summary' })).toHaveAttribute('aria-checked', 'true');
+    const count = Number((screen.getByTestId('row-count').textContent ?? '').split(' ')[0]);
+    expect(count).toBeLessThan(rows.length / 2);
+    const texts = screen.getAllByTestId('data-row').map((r) => r.textContent ?? '');
+    expect(texts.some((t) => t.includes('There are 4 people'))).toBe(true);
+    expect(texts.filter((t) => t.includes(repeated.label!) && t.includes('Speech'))).toHaveLength(1);
+    fireEvent.click(screen.getByRole('radio', { name: 'All rows' }));
+    expect(screen.getByTestId('row-count')).toHaveTextContent(`${rows.length + 2} rows`);
   });
 });

@@ -48,6 +48,7 @@ import type {
   ModelServerPatch,
   ModelServerSettings,
   ModelServersResponse,
+  PlayableCopy,
   StreamToken,
   SuggestShapeResponse,
   UploadedVideo,
@@ -1197,10 +1198,22 @@ class APIClient {
     return this.request('/api/v1/videos/stream-token', { method: 'POST', body: JSON.stringify({ path }) });
   }
 
-  /** The `<video>` src for `path`: the token is the credential (a video element can't send the key). */
-  streamUrl(path: string, token: string): string {
+  /** The `<video>` src for `path`: the token is the credential (a video element can't send the key). `copy`: its playable copy (D7). */
+  streamUrl(path: string, token: string, copy = false): string {
     const base = getApiBaseUrl().replace(/\/$/, '');
-    return `${base}/api/v1/videos/stream?${new URLSearchParams({ path, token })}`;
+    const params = new URLSearchParams({ path, token });
+    if (copy) params.set('copy', 'true');
+    return `${base}/api/v1/videos/stream?${params}`;
+  }
+
+  /** Whether `path` has a copy every browser can play (viewer design D7). */
+  async getPlayableCopy(path: string): Promise<PlayableCopy> {
+    return this.request(`/api/v1/videos/playable-copy?${new URLSearchParams({ path })}`);
+  }
+
+  /** Start making that copy on the server. */
+  async makePlayableCopy(path: string): Promise<PlayableCopy> {
+    return this.request('/api/v1/videos/playable-copy', { method: 'POST', body: JSON.stringify({ path }) });
   }
 
   /** Every run on one video, with its files, and the projects holding it (spec 028). */

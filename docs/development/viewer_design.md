@@ -197,9 +197,9 @@ settings hashes, raw files) sits behind one consistent "Technical details" discl
 | D3 | 2026-10-26 | Home is a dashboard and the viewer opens on it | Spec 023/029: Home only for first run and no server; set-up viewer opens on Videos |
 | D4 | 2026-10-26 | Ask AI answers are free text by default; structure comes from the prompt, visibly; nothing hidden is added to what the model receives (P1) | Spec 033 answer shapes as a separate, hidden structured layer |
 | D5 | 2026-10-26 | Fields writes its instruction visibly into the question; forcing the format (server-side structured output) only by an explicit tick box, off by default, offered where the server supports it. Fields helps, never restricts: if it grows rules or steps, cut it back | Spec 033 R8 (schema sent by default; a hidden sentence appended for servers that can't enforce) and its field-name rules (UAT #29) |
+| D6 | 2026-10-27 | The Video page's Data tab shows a summary by default: one row per event a researcher would name (a turn, a scene, a face's top emotion, an answer as text), duplicates removed; "All rows" shows the raw rows (UAT #46) | Spec 028 US3: every table row beside the video |
+| D7 | 2026-10-27 | A video the browser can't play gets "Make a copy this browser can play": the server makes an H.264 copy with ffmpeg, keeps it beside the results and plays it from then on; results still come from the original (UAT #54) | Telling the researcher to re-encode with ffmpeg |
 
 ## Open
 
 - **Icon set**: the table above is a first pass; check it reads at 16 px in both themes.
-- **Data table default**: summarised view as proposed, or the raw rows with better filters.
-- **H.265**: make an H.264 copy for viewing on the server, or keep telling users to re-encode.

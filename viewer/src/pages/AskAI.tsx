@@ -5,6 +5,7 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Download, Film, Loader2 } from 'lucide-react';
 
+import { PlayableCopyOffer } from '@/components/PlayableCopyOffer';
 import { PlayerBar } from '@/components/video/PlayerBar';
 import { apiClient } from '@/api/client';
 import { APIError, isNeedsKey } from '@/api/handleError';
@@ -199,6 +200,8 @@ const AskAI = () => {
   const [time, setTime] = useState(0);
   const [mediaDuration, setMediaDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  // Its playable copy instead of the original (viewer design D7).
+  const [useCopy, setUseCopy] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [cantPlay, setCantPlay] = useState(false);
   const [filters, setFilters] = useState<HistoryFilters>({ thisVideo: true, mine: false });
@@ -343,6 +346,7 @@ const AskAI = () => {
     setShown([]);
     setSelected(null);
     setCantPlay(false);
+    setUseCopy(false);
     setMediaDuration(0);
   }, [videoPath]);
 
@@ -765,7 +769,7 @@ const AskAI = () => {
                   ref={videoRef}
                   data-testid="ask-video"
                   className="max-h-[60vh] w-full cursor-pointer rounded bg-black"
-                  src={apiClient.streamUrl(videoPath, stream.data.token)}
+                  src={apiClient.streamUrl(videoPath, stream.data.token, useCopy)}
                   preload="metadata"
                   onClick={playPause}
                   onPlay={() => setIsPlaying(true)}
@@ -813,9 +817,18 @@ const AskAI = () => {
               {cantPlay && (
                 <Alert data-testid="cant-play">
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    This browser can't show this video: its format (often H.265) isn't supported here. Questions and runs
-                    still work, because the server reads the video itself. Chrome, Edge or Safari usually play it.
+                  <AlertDescription className="space-y-2">
+                    <p>
+                      This browser can't show this video: its format (often H.265) isn't supported here. Questions and runs
+                      still work, because the server reads the video itself.
+                    </p>
+                    <PlayableCopyOffer
+                      path={videoPath}
+                      onReady={() => {
+                        setCantPlay(false);
+                        setUseCopy(true);
+                      }}
+                    />
                   </AlertDescription>
                 </Alert>
               )}

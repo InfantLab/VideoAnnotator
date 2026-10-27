@@ -153,7 +153,7 @@ export const UNDRAWN_MEASURES = new Set([
 ]);
 
 /** A shaped Ask AI answer's fields (spec 033): `vlm.<name>`, in the Data tab with the answer. */
-const isAnswerField = (measure: string) => measure.startsWith('vlm.');
+export const isAnswerField = (measure: string) => measure.startsWith('vlm.');
 
 const BY_MEASURE = new Map<string, LaneKind>();
 for (const k of [...LANE_KINDS, NOTES_KIND]) for (const m of k.measures) BY_MEASURE.set(m, k);

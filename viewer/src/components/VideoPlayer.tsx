@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useRef, useCallback, useMemo, useState } from 'react';
+import { forwardRef, useEffect, useRef, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StandardAnnotationData, OverlaySettings, COCOPersonAnnotation, WebVTTCue, RTTMSegment, SceneAnnotation, LAIONFaceAnnotation, COCO_SKELETON_CONNECTIONS, YOLO_POSE_PALETTE, YOLO_LIMB_COLORS, YOLO_KEYPOINT_COLORS, OpenFace3ActionUnit, OpenFace3ActionUnits } from '@/types/annotations';
 import { getDominantEmotion } from '@/lib/parsers/face';
 import { sampledAtTime } from '@/lib/sampledAtTime';
@@ -36,6 +36,8 @@ const MEDIA_ERROR_NAMES: Record<number, string> = {
   4: 'MEDIA_ERR_SRC_NOT_SUPPORTED',
 };
 
+const MAX_CAPTION_LINES = 3;
+
 interface VideoPlayerProps {
   videoFile: File | null;
   /** A video streamed from the server (spec 028); used as the `src` as given. */
@@ -51,10 +53,12 @@ interface VideoPlayerProps {
   onTimeUpdate: (time: number) => void;
   onDurationChange: (duration: number) => void;
   onPlayStateChange: (playing: boolean) => void;
+  /** What the server can do when the picture won't show: make a playable copy (D7). */
+  playableFix?: ReactNode;
 }
 
 export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
-  ({ videoFile, videoUrl: streamUrl, missingVideoMessage, annotationData, currentTime, overlaySettings: overlaySettingsProp, openface3Settings: openface3SettingsProp, overlays, onTimeUpdate, onDurationChange, onPlayStateChange }, ref) => {
+  ({ videoFile, videoUrl: streamUrl, missingVideoMessage, annotationData, currentTime, overlaySettings: overlaySettingsProp, openface3Settings: openface3SettingsProp, overlays, onTimeUpdate, onDurationChange, onPlayStateChange, playableFix }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [objectUrl, setObjectUrl] = useState<string>('');
@@ -256,6 +260,11 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
           const last = lines[lines.length - 1];
           if (last !== undefined && ctx.measureText(`${last} ${word}`).width <= maxWidth) lines[lines.length - 1] = `${last} ${word}`;
           else lines.push(word);
+        }
+        // At most three lines: a long cue shouldn't cover the picture (the Data tab has it whole).
+        if (lines.length > MAX_CAPTION_LINES) {
+          lines.length = MAX_CAPTION_LINES;
+          lines[MAX_CAPTION_LINES - 1] = `${lines[MAX_CAPTION_LINES - 1].replace(/\s+\S*$/, '')} …`;
         }
         const lineHeight = 24;
         const x = ctx.canvas.width / 2;
@@ -917,7 +926,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
             </div>
           )}
           {playbackProblem && (
-            <PlaybackProblemNotice problem={playbackProblem} codec={codec} />
+            <PlaybackProblemNotice problem={playbackProblem} codec={codec} fix={playableFix} />
           )}
           {!videoFile && !streamUrl && missingVideoMessage && (
             <div role="alert" className="absolute inset-0 flex items-center justify-center p-6">
@@ -942,7 +951,7 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
  * in order of effort. (A lossless hev1 -> hvc1 remux was tested and made no
  * difference in Chrome or Edge, so it isn't offered.)
  */
-function PlaybackProblemNotice({ problem, codec }: { problem: PlaybackProblem; codec: VideoCodecInfo | null }) {
+function PlaybackProblemNotice({ problem, codec, fix }: { problem: PlaybackProblem; codec: VideoCodecInfo | null; fix?: ReactNode }) {
   const isHevc = codec?.label === 'H.265/HEVC';
   const claim = codec ? browserClaimFor(codec.fourcc) : 'unknown';
   const reported =
@@ -963,22 +972,26 @@ function PlaybackProblemNotice({ problem, codec }: { problem: PlaybackProblem; c
             hardware video decoding isn&apos;t available to it.
           </p>
         )}
-        <p className="mt-2 text-muted-foreground">Annotations are still available below. To see the video:</p>
-        <ol className="mt-1 list-decimal space-y-1 pl-5 text-muted-foreground">
-          {isHevc && (
+        <p className="mt-2 text-muted-foreground">Annotations are still available below.{fix ? '' : ' To see the video:'}</p>
+        {fix ? (
+          <div className="mt-2">{fix}</div>
+        ) : (
+          <ol className="mt-1 list-decimal space-y-1 pl-5 text-muted-foreground">
+            {isHevc && (
+              <li>
+                Open it in Chrome with hardware acceleration on (Settings → System). Edge on
+                Windows depends on Microsoft&apos;s &ldquo;HEVC Video Extensions&rdquo; and the
+                graphics driver, and can fail even with both installed.
+              </li>
+            )}
             <li>
-              Open it in Chrome with hardware acceleration on (Settings → System). Edge on
-              Windows depends on Microsoft&apos;s &ldquo;HEVC Video Extensions&rdquo; and the
-              graphics driver, and can fail even with both installed.
+              Re-encode it to H.264, e.g.
+              <code className="mt-1 block break-all rounded bg-muted px-2 py-1 font-mono text-xs">
+                ffmpeg -i in.mp4 -c:v libx264 -crf 18 -c:a copy out.mp4
+              </code>
             </li>
-          )}
-          <li>
-            Re-encode it to H.264, e.g.
-            <code className="mt-1 block break-all rounded bg-muted px-2 py-1 font-mono text-xs">
-              ffmpeg -i in.mp4 -c:v libx264 -crf 18 -c:a copy out.mp4
-            </code>
-          </li>
-        </ol>
+          </ol>
+        )}
         <details className="mt-2 text-xs text-muted-foreground">
           <summary className="cursor-pointer">Details</summary>
           <p className="mt-1">Browser reported: {reported}</p>

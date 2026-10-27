@@ -1714,6 +1714,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/videos/playable-copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether a video has a copy every browser can play (H.264) */
+        get: operations["get_playable_copy_api_v1_videos_playable_copy_get"];
+        put?: never;
+        /** Make a copy of a video every browser can play (H.264), in the background */
+        post: operations["make_playable_copy_api_v1_videos_playable_copy_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/videos/stream": {
         parameters: {
             query?: never;
@@ -4519,6 +4537,21 @@ export interface components {
             /** Has Videos */
             has_videos: boolean;
         };
+        /** PlayableCopyRequest */
+        PlayableCopyRequest: {
+            /** Path */
+            path: string;
+        };
+        /** PlayableCopyResponse */
+        PlayableCopyResponse: {
+            /**
+             * State
+             * @description none, making, ready, failed or unavailable
+             */
+            state: string;
+            /** Error */
+            error?: string | null;
+        };
         /**
          * PresetCreateRequest
          * @description Body for `POST /presets`. Also accepts a previously-exported preset's
@@ -5219,6 +5252,12 @@ export interface components {
              * @description Frames per second, for frame numbers and stepping
              */
             fps?: number | null;
+            /**
+             * Playable Copy
+             * @description An H.264 copy for browsers that can't play the original: none, making, ready, failed or unavailable (no ffmpeg)
+             * @default none
+             */
+            playable_copy: string;
         };
         /** Subfolder */
         Subfolder: {
@@ -7769,11 +7808,77 @@ export interface operations {
             };
         };
     };
+    get_playable_copy_api_v1_videos_playable_copy_get: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayableCopyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    make_playable_copy_api_v1_videos_playable_copy_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlayableCopyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayableCopyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     stream_video_api_v1_videos_stream_get: {
         parameters: {
             query: {
                 path: string;
                 token: string;
+                /** @description Its playable copy, if one was made */
+                copy?: boolean;
             };
             header?: never;
             path?: never;

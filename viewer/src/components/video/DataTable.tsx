@@ -26,9 +26,19 @@ interface DataTableProps {
   runLabels: Record<string, string>;
 }
 
+/** An answer's markdown as plain text: "There are **4** people" reads "There are 4 people" (UAT #46). */
+const plain = (text: string) => text.replace(/\*\*|__|`/g, '').replace(/^#+\s*/gm, '').replace(/\s+/g, ' ').trim();
+
+/** Which speaker, person or face, when the row says one and its text doesn't already. */
+function trackText(row: Row): string {
+  if (!row.track || row.track === row.label) return '';
+  if (/^\d+$/.test(row.track)) return row.measure === 'person' ? `person ${row.track}` : `face ${row.track}`;
+  return row.track;
+}
+
 function cellText(row: Row): string {
   if (row.label && row.value !== null) return `${row.label} ${formatValue(row.value)}`;
-  if (row.label) return row.label;
+  if (row.label) return row.measure === 'vlm_label' ? plain(row.label) : row.label;
   if (row.value !== null) return formatValue(row.value);
   return row.confidence !== null ? `confidence ${formatValue(row.confidence)}` : '';
 }
@@ -36,6 +46,7 @@ function cellText(row: Row): string {
 /** The video's results table beside the video, following playback (spec 028 US3). */
 export function DataTable({ rows, currentTime, selectedRow, onRowClick, filter, onFilterChange, runLabels }: DataTableProps) {
   const [search, setSearch] = useState('');
+  const [summary, setSummary] = useState(true);
   const [following, setFollowing] = useState(true);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewport, setViewport] = useState(FALLBACK_VIEWPORT);
@@ -50,7 +61,7 @@ export function DataTable({ rows, currentTime, selectedRow, onRowClick, filter, 
     return [...known, ...other];
   }, [rows]);
   const kind = filter === 'all' || kinds.some((k) => k.kind === filter) ? filter : 'all';
-  const shown = useMemo(() => filterRows(rows, kind, search), [rows, kind, search]);
+  const shown = useMemo(() => filterRows(rows, kind, search, summary), [rows, kind, search, summary]);
   const playing = shownAtTime(rows, shown, currentTime);
   const selectedPosition = selectedRow === null ? -1 : shown.indexOf(selectedRow);
   const highlight = selectedPosition >= 0 && !following ? selectedPosition : playing;
@@ -112,10 +123,32 @@ export function DataTable({ rows, currentTime, selectedRow, onRowClick, filter, 
         />
       </div>
       <div className="flex items-center justify-between px-3 pb-1 text-muted-foreground">
-        <span data-testid="row-count">
-          {shown.length === rows.length
-            ? `${rows.length.toLocaleString()} rows`
-            : `${shown.length.toLocaleString()} of ${rows.length.toLocaleString()} rows`}
+        <span className="flex items-center gap-2">
+          <span className="inline-flex rounded-md border p-0.5" role="radiogroup" aria-label="Rows shown">
+            {[
+              { on: true, label: 'Summary', title: 'One row per turn, scene, emotion or answer' },
+              { on: false, label: 'All rows', title: 'Every row of the results, with every score' },
+            ].map((choice) => (
+              <button
+                key={choice.label}
+                type="button"
+                className={cn('rounded px-1.5 py-0.5', summary === choice.on ? 'bg-muted text-foreground' : 'hover:text-foreground')}
+                role="radio"
+                aria-checked={summary === choice.on}
+                title={choice.title}
+                onClick={() => setSummary(choice.on)}
+              >
+                {choice.label}
+              </button>
+            ))}
+          </span>
+          <span data-testid="row-count">
+            {summary
+              ? `${shown.length.toLocaleString()} ${shown.length === 1 ? 'event' : 'events'}`
+              : shown.length === rows.length
+                ? `${rows.length.toLocaleString()} rows`
+                : `${shown.length.toLocaleString()} of ${rows.length.toLocaleString()} rows`}
+          </span>
         </span>
         {!following && (
           <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setFollowing(true)}>
@@ -171,7 +204,7 @@ export function DataTable({ rows, currentTime, selectedRow, onRowClick, filter, 
                   {tableKindOf(row).label}
                 </span>
                 <span role="cell" className="w-20 shrink-0 truncate text-muted-foreground">
-                  {row.track || row.measure}
+                  {trackText(row)}
                 </span>
                 <span role="cell" className="min-w-0 flex-1 truncate">
                   {text}

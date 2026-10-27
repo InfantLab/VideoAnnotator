@@ -128,6 +128,7 @@ describe('Ask AI', () => {
       path: VIDEO,
       name: 'p01_t1.mp4',
       duration_sec: 32,
+      playable_copy: 'none',
     });
     vi.mocked(apiClient.listEntries).mockResolvedValue({ entries: [], library: [], next_before: null });
     vi.mocked(apiClient.getJobs).mockResolvedValue({ jobs: [], total: 0 } as never);

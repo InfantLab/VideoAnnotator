@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { userMessage } from '@/lib/userMessage';
 import { PageHelp } from '@/components/PageHelp';
 import { Link, useNavigate } from 'react-router-dom';
@@ -131,6 +131,8 @@ export interface VideoSource {
   /** The server path; null for local files. */
   path: string | null;
   videoUrl?: string;
+  /** Offered when the browser can't show the picture (D7). */
+  playableFix?: ReactNode;
   videoFile?: File | null;
   missingVideoMessage?: string;
   /** The server's duration, before the element knows its own. */
@@ -434,6 +436,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
               ref={videoRef}
               videoFile={source.videoFile ?? null}
               videoUrl={source.videoUrl}
+              playableFix={source.playableFix}
               missingVideoMessage={source.missingVideoMessage}
               annotationData={annotationData}
               currentTime={currentTime}

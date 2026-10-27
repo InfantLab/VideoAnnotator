@@ -32,7 +32,7 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ... import video_notes
+from ... import playable, video_notes
 from ...database.database import get_db
 from ...database_location import database_path
 from ...projects import catalog_for
@@ -503,6 +503,11 @@ class StreamTokenResponse(BaseModel):
     fps: float | None = Field(
         default=None, description="Frames per second, for frame numbers and stepping"
     )
+    playable_copy: str = Field(
+        default="none",
+        description="An H.264 copy for browsers that can't play the original: "
+        "none, making, ready, failed or unavailable (no ffmpeg)",
+    )
 
 
 @router.post(
@@ -526,7 +531,43 @@ async def stream_token(
         # when this browser can't play the video's codec.
         duration_sec=duration,
         fps=fps,
+        playable_copy=playable.state(path).state,
     )
+
+
+class PlayableCopyRequest(BaseModel):
+    path: str
+
+
+class PlayableCopyResponse(BaseModel):
+    state: str = Field(description="none, making, ready, failed or unavailable")
+    error: str | None = None
+
+
+@router.get(
+    "/playable-copy",
+    response_model=PlayableCopyResponse,
+    summary="Whether a video has a copy every browser can play (H.264)",
+)
+async def get_playable_copy(
+    path: str = Query(...),
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> PlayableCopyResponse:
+    found = playable.state(readable_video(path))
+    return PlayableCopyResponse(state=found.state, error=found.error)
+
+
+@router.post(
+    "/playable-copy",
+    response_model=PlayableCopyResponse,
+    summary="Make a copy of a video every browser can play (H.264), in the background",
+)
+async def make_playable_copy(
+    body: PlayableCopyRequest,
+    _user: dict[str, Any] | None = Depends(validate_api_key),
+) -> PlayableCopyResponse:
+    found = playable.start(readable_video(body.path))
+    return PlayableCopyResponse(state=found.state, error=found.error)
 
 
 @router.get(
@@ -537,6 +578,7 @@ async def stream_token(
 async def stream_video(
     path: str = Query(...),
     token: str = Query(...),
+    copy: bool = Query(False, description="Its playable copy, if one was made"),
 ) -> FileResponse:
     invalid = APIError(
         status_code=401,
@@ -556,4 +598,13 @@ async def stream_video(
             code="VIDEO_NOT_FOUND",
             message=f"No video at '{resolved}': it may have been moved or deleted.",
         )
+    if copy:
+        made = playable.copy_path(resolved)
+        if not made.is_file():
+            raise APIError(
+                status_code=404,
+                code="NO_PLAYABLE_COPY",
+                message="This video has no playable copy yet.",
+            )
+        return FileResponse(made, media_type="video/mp4")
     return FileResponse(resolved)

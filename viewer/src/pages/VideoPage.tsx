@@ -9,6 +9,7 @@ import { useRunFiles } from '@/hooks/useRunFiles';
 import { useVideoRuns } from '@/hooks/useVideoRuns';
 import { userMessage } from '@/lib/userMessage';
 import { useVideoStream } from '@/hooks/useVideoStream';
+import { PlayableCopyOffer } from '@/components/PlayableCopyOffer';
 import { parseFrom } from '@/lib/listNavigation';
 import type { RunControls } from '@/components/lanes/RunMenu';
 import {
@@ -112,6 +113,7 @@ function VideoPageFor() {
         name: info.name,
         path: info.path,
         videoUrl: stream.url,
+        playableFix: info.available && !stream.copy ? <PlayableCopyOffer path={info.path} onReady={stream.playCopy} /> : undefined,
         missingVideoMessage: !info.available
           ? info.unavailable_reason ?? 'This video is no longer on the server.'
           : stream.error
