@@ -58,8 +58,8 @@ tools, decisions, journeys). Built by, in order:
 - [ ] [`specs/029-videos-and-projects`](../../specs/029-videos-and-projects/spec.md): one Videos page
       with folders and projects (from saved datasets), settings projects remember, workflows
       (from presets), the new nav, help in context. Takes over v1.6.0's Phase 6 (corpus
-      overview); [`specs/010-corpus-analysis-foundations`](../../specs/010-corpus-analysis-foundations/spec.md)
-      to be reconciled with it. Built 2026-10-21
+      overview). [`specs/010-corpus-analysis-foundations`](../../specs/010-corpus-analysis-foundations/spec.md)'s
+      rest (label distribution, ELAN agreement) is deferred to v1.8.0 (2026-10-28). Built 2026-10-21
       ([checks](../../specs/029-videos-and-projects/checks.md): walk-through done in a browser;
       SC-001 with a first-time user and the pilot journeys still to do).
 - [ ] Movement metrics (spec to write, after 029; pulled forward from v1.8.0 Phase 3): simple

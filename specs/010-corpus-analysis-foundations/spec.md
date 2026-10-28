@@ -2,9 +2,10 @@
 
 **Feature Branch**: `010-corpus-analysis-foundations`
 **Created**: 2026-08-26
-**Status**: Draft, not started. Was scheduled for v1.6.0 Phase 6, which moved to v1.7.0 and became
-spec 029. Part of it is superseded by 029; the rest is open (see
-[Status after spec 029](#status-after-spec-029-2026-10-22))
+**Status**: Deferred to v1.8.0 at the earliest (decided 2026-10-28). Was scheduled for v1.6.0
+Phase 6, which moved to v1.7.0 and became spec 029. Part of it is superseded by 029; the rest
+waits for pilot feedback (see [Status after spec 029](#status-after-spec-029-2026-10-22) and
+[Decision](#decision-2026-10-28))
 **Input**: User description: "Give a researcher an at-a-glance view of an entire dataset's results — completion coverage, label distribution, and ground-truth agreement where available — without opening every video individually. Deliberately scoped as foundations: basic counts and rates, not a full statistics suite. Deeper analysis (kappa, significance testing, plots) stays in the existing Python research repo."
 
 ## Relationship to Existing Specs
@@ -51,6 +52,20 @@ Still open:
 - The ELAN agreement rollup (User Story 2, FR-004).
 - `GET /api/v1/datasets/{id}/summary` (not built) and the viewer's summary card (handoff item 3).
 - SC-001 to SC-004 as written.
+
+### Decision (2026-10-28)
+
+Not in v1.7.0 (Caspar). Moved to v1.8.0 at the earliest, and only if pilot labs ask for it:
+
+- It needs a lot of work to get right. Ask AI answers are free text by default (viewer design
+  D4), so a label distribution only means something for short labels or Fields answers, and
+  only when every video was asked the same question. ELAN agreement needs a way to pair each
+  video with its ELAN file and each answer with an ELAN tier, which nothing does yet.
+- It isn't a common demand. Nobody outside the team has asked for it, and the results table
+  export already gives R or Python everything needed to compute both numbers.
+
+If it comes back, rewrite this spec in the viewer's words first (project, run, answer), starting
+from the pilot's account of how labs code ground truth.
 
 The text below is unchanged from 2026-08-26 and still uses the old words (dataset, job, batch).
 

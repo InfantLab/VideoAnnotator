@@ -169,6 +169,24 @@ deleted every cached model. Write a spec before implementing.
 
 ---
 
+### Phase 5: Corpus Summary (spec 010, only if the pilot asks)
+
+**Problem**: a project shows each video's results (spec 029, Videos), but not the project as a
+whole: how often each answer came up across its videos, or how well Ask AI agreed with a human
+coder's ELAN files where there are some.
+
+**Solution**, if pilot labs want it inside the viewer rather than from the results table in R:
+- [ ] A label distribution across a project's videos, for one question with short-label or
+      Fields answers, latest run per video.
+- [ ] An agreement rate with ELAN ground truth, saying how many videos it covers; needs a way
+      to pair videos with ELAN files and answers with tiers.
+
+**Reference**: [`specs/010-corpus-analysis-foundations`](../../specs/010-corpus-analysis-foundations/spec.md)
+(deferred from v1.7.0 on 2026-10-28; see its Decision). Rewrite the spec in the viewer's words
+before implementing.
+
+---
+
 ## ✅ Success Criteria
 
 - [ ] A third-party plugin package (≤ 50 lines) is installable and runnable through the standard

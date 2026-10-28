@@ -77,8 +77,8 @@ built 2026-10-24 (`specs/033-model-connectors/checks.md`: checked against fakes 
 docs; T055, the walk-through with real servers and SC-001/SC-003, still to do). Now (from 2026-10-26): UAT and
 refinement of the built viewer, fixes on `1.7-dev`, not new specs (`docs/development/uat_v1.7.0.md`);
 batches 0–5 done 2026-10-27, 6–8 next (`docs/development/handover_v1.7.0_uat.md`).
-Then, in the v1.7.0 roadmap: the movement-metrics spec, spec 032 (tests), docs, the pilot;
-reconcile spec 010 with the Videos page.
+Then, in the v1.7.0 roadmap: the movement-metrics spec, spec 032 (tests), docs, the pilot.
+Spec 010's rest (label distribution, ELAN agreement) is deferred to v1.8.0 (2026-10-28).
 ## Recent Changes
 - 033-model-connectors: `backend: openai_compatible` (`pipelines/vlm_annotation/clients.py`,
   `openai_client.py`); answer shapes (`answer_shape.py`; `fields`/`fit`/`fit_problem`, wide CSV);
