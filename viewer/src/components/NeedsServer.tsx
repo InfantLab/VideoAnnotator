@@ -29,7 +29,7 @@ export function NeedsServer({ what }: { what: string }) {
             <Button asChild variant="outline" size="sm">
               <Link to="/viewer">
                 <FolderOpen className="mr-2 h-4 w-4" aria-hidden="true" />
-                Open files from this computer
+                Open files from your computer
               </Link>
             </Button>
             <Button asChild variant="outline" size="sm">

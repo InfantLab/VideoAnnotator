@@ -2,7 +2,8 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 import { useQueries } from '@tanstack/react-query';
 
 import { ConfigValidationPanel } from '@/components/ConfigValidationPanel';
-import { DynamicPipelineParameters } from '@/components/DynamicPipelineParameters';
+import { PipelineSettings } from '@/components/DynamicPipelineParameters';
+import { settingsSummary } from '@/lib/pipelineSettings';
 import { PipelineSelectionStep } from '@/components/run/PipelineChoice';
 import { pipelineSchemaQueryOptions, useRefreshPipelineCatalog } from '@/hooks/usePipelineCatalog';
 import { useConfigValidation } from '@/hooks/useConfigValidation';
@@ -27,7 +28,7 @@ interface WhatToFindProps {
   onValidity?: (valid: boolean) => void;
 }
 
-/** The pipelines to run, with their guide, and their settings (spec 029 R9). */
+/** The pipelines to run, each with its settings folded under it (spec 029 R9, UAT #35). */
 export function WhatToFind({
   pipelines,
   isLoading,
@@ -51,6 +52,7 @@ export function WhatToFind({
     const byId = new Map(selected.map((id, i) => [id, schemas[i]?.data?.parameters] as const));
     return pipelines.map((p) => (byId.get(p.id) ? { ...p, parameters: byId.get(p.id)! } : p));
   }, [pipelines, selected, schemas]);
+  const byId = useMemo(() => new Map(withSchemas.map((p) => [p.id, p] as const)), [withSchemas]);
 
   useEffect(() => {
     if (Object.keys(config).length > 0) validateConfig(config);
@@ -75,18 +77,17 @@ export function WhatToFind({
         selectionNotices={notices}
         onDismissNotices={onDismissNotices}
         presetBar={workflows}
+        settingsCue={(id) => {
+          const pipeline = byId.get(id);
+          // Until its settings are known, a row still offers them.
+          return pipeline?.parameters ? settingsSummary(pipeline, config) || 'settings' : 'settings';
+        }}
+        renderSettings={(id) => {
+          const pipeline = byId.get(id);
+          return pipeline ? <PipelineSettings pipeline={pipeline} config={config} onConfigChange={onConfig} /> : null;
+        }}
       />
-      {selected.length > 0 && (
-        <section className="space-y-3">
-          <h3 className="font-medium">Settings</h3>
-          <p className="text-sm text-muted-foreground">
-            Each pipeline&apos;s main settings; hover a name for what it does and its default. Change only what your
-            study needs.
-          </p>
-          <DynamicPipelineParameters pipelines={withSchemas} selectedPipelineIds={selected} config={config} onConfigChange={onConfig} />
-          <ConfigValidationPanel validationResult={validationResult} isValidating={isValidating} />
-        </section>
-      )}
+      {selected.length > 0 && <ConfigValidationPanel validationResult={validationResult} isValidating={isValidating} />}
     </div>
   );
 }

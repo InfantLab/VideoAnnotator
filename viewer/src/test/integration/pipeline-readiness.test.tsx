@@ -100,7 +100,7 @@ const renderSelected = (pipelines: PipelineDescriptor[], selected: string[], onC
   );
 };
 
-const card = (name: string) => screen.getByText(name, { selector: 'span' }).closest('div[data-locked="true"], label') as HTMLElement;
+const card = (name: string) => screen.getByText(name, { selector: 'span' }).closest('div[data-locked="true"], [data-testid="pipeline-row"]') as HTMLElement;
 
 describe('Pipeline readiness cards', () => {
   beforeEach(() => {

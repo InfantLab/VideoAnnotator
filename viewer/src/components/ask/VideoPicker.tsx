@@ -119,7 +119,7 @@ export function VideoPicker({ onChoose }: VideoPickerProps) {
         data-testid="video-drop"
       >
         <Upload className="h-8 w-8 text-muted-foreground" />
-        <p className="font-medium">Or drop a video from this computer here</p>
+        <p className="font-medium">Or drop a video from your computer here</p>
         <p className="text-sm text-muted-foreground">It's kept on your VideoAnnotator server, once, to ask about and run on.</p>
         <Button onClick={() => input.current?.click()} disabled={progress !== null}>
           Choose a video

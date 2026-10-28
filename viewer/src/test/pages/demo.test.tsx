@@ -75,8 +75,8 @@ describe('/viewer?demo=', () => {
     mockVideoApi();
     wideLayout();
     show('/viewer');
-    expect(screen.getByRole('heading', { name: 'Open files from this computer' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Open files from your computer' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Peekaboo' }));
-    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Open files from this computer' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Open files from your computer' })).toBeNull());
   });
 });

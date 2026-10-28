@@ -320,8 +320,9 @@ the pipeline they belong to.
 
 - Size and time on the button's line; above 10 video × pipeline pairs it still asks first (#42).
 
-### Open for Caspar
+### Decided (Caspar, 2026-10-27/28)
 
-1. Non-administrators: keep the server-folder tab, locked and last (above), or hide it?
-2. Is "about 25 min" worth showing before the first video finishes (an estimate from benchmarks),
-   or keep today's "estimated once the first video finishes"?
+1. Settings sit under their pipeline as an accordion, collapsed by default (above).
+2. Non-administrators keep the server-folder tab, locked and last, saying why.
+3. No time estimate before the first video finishes: keep "estimated once the first video
+   finishes"; Start shows the size ("6 videos × 5 pipelines").

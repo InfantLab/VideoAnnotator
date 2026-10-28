@@ -27,7 +27,7 @@ describe('Home', () => {
     expect(within(points).getAllByRole('button').map((b) => b.querySelector('.font-semibold')?.textContent)).toEqual([
       'Ask AI about a video',
       'Run pipelines on videos',
-      'Open files from this computer',
+      'Open files from your computer',
     ]);
     await userEvent.click(within(points).getByRole('button', { name: /Run pipelines on videos/ }));
     expect(landed(view.container)?.address).toBe('/run');
@@ -82,7 +82,7 @@ describe('Home', () => {
     server.capabilities = null;
     mockVideosApi();
     show();
-    expect(screen.getByRole('button', { name: /Open files from this computer/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Open files from your computer/ })).toBeEnabled();
     expect(screen.getByRole('button', { name: /Ask AI about a video/ })).toBeDisabled();
     expect(screen.getByRole('link', { name: /^Peekaboo/ })).toHaveAttribute('href', '/viewer?demo=peekaboo-rep3-v1.1.1');
   });

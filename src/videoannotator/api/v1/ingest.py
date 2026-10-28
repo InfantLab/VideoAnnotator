@@ -391,8 +391,8 @@ async def access(
         )
     elif not (user or {}).get("is_admin", False):
         reason = (
-            "Only an administrator can choose videos on this computer. Use an "
-            "administrator key (see Settings), or upload the videos."
+            "Only an administrator can choose videos from the server's folders. "
+            "Use an administrator's key (see Settings), or upload the videos."
         )
     elif not folders:
         if not in_container():

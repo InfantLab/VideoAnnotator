@@ -44,7 +44,7 @@ export function VideoContext({
 }
 
 interface HeaderActionsProps {
-  /** The video on the server, to run pipelines on; none for files from this computer. */
+  /** The video on the server, to run pipelines on; none for files from your computer. */
   video: { path: string; name: string } | null;
   /** The runs the lanes show: Export offers each. */
   shownRuns: RunRef[];

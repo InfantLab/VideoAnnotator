@@ -6,14 +6,10 @@ land on `1.7-dev` as refinements, not new specs.
 
 ## Where it stands
 
-Batches 0–6 and 8 are done (2026-10-26/27, commits from `6773414` to `82b7494`; batch 6 in
-`1fe6a5f`, batch 8 in `82b7494`, spec 010's status updated with it). Every fixed finding in
-[`uat_v1.7.0.md`](uat_v1.7.0.md) says what was done and in which commit. **Left: batch 7**:
-
-| Batch | Open findings | Notes |
-|---|---|---|
-| 7. New run | 35, 59 (42 and 44 are done) | Mock-up written ([`uat_v1.7.0_mockups.md`](uat_v1.7.0_mockups.md), "Batch 7"), **waiting for Caspar's answers** to its two open questions before building |
-| Leftovers | Open items in `viewer_design.md` | |
+All batches (0–8) are done (2026-10-26 to 28; batch 6 `1fe6a5f`, batch 8 `82b7494`, batch 7
+the commit after the mock-up). Every fixed finding in [`uat_v1.7.0.md`](uat_v1.7.0.md) says what
+was done and in which commit. Left: the Open items in `viewer_design.md`, the walk-throughs
+(027 T068, 028 T062, 033 T055), and whatever Caspar's next pass finds.
 
 Not done in batch 8, on purpose: filtering the Videos table by column (sorting covers "none
 found" and "failed"); result values are cached in memory only, so the first Videos page after a

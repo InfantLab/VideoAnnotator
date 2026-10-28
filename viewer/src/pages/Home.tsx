@@ -182,7 +182,7 @@ export default function Home() {
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3" data-testid="start-points">
         <StartPoint icon={<Sparkles className="h-5 w-5" />} title="Ask AI about a video" about="Try a question on a few moments, then the whole video" onClick={() => navigate('/ask')} disabled={!connected} />
         <StartPoint icon={<Play className="h-5 w-5" />} title="Run pipelines on videos" about="Speech, faces, people, scenes: one table for a folder" onClick={() => navigate('/run')} disabled={!connected} />
-        <StartPoint icon={<FolderOpen className="h-5 w-5" />} title="Open files from this computer" about="A video and its result files, no server needed" onClick={() => navigate('/viewer')} />
+        <StartPoint icon={<FolderOpen className="h-5 w-5" />} title="Open files from your computer" about="A video and its result files, no server needed" onClick={() => navigate('/viewer')} />
       </div>
 
       {showSetup && (

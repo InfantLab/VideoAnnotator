@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -48,7 +48,9 @@ export const PipelineSelectionStep = ({
   selectionNotices = [],
   onDismissNotices,
   presetBar,
-  manage = false
+  manage = false,
+  settingsCue,
+  renderSettings
 }: {
   pipelines: PipelineDescriptor[];
   selectedPipelines: string[];
@@ -63,7 +65,19 @@ export const PipelineSelectionStep = ({
   presetBar?: ReactNode;
   /** Install and check pipelines without choosing any for a run (the Pipelines page). */
   manage?: boolean;
+  /** A chosen pipeline's settings in a few words, on its row ("defaults", "Age on"). */
+  settingsCue?: (pipelineId: string) => string;
+  /** A chosen pipeline's settings, opened under its row (UAT #35). */
+  renderSettings?: (pipelineId: string) => ReactNode;
 }) => {
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const toggleOpen = (id: string) =>
+    setOpen((now) => {
+      const next = new Set(now);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const groupedPipelines = useMemo(() => {
     const groups = new Map<string, PipelineDescriptor[]>();
     pipelines.forEach((pipeline) => {
@@ -73,13 +87,15 @@ export const PipelineSelectionStep = ({
       groups.set(groupKey, current);
     });
 
-    return Array.from(groups.entries())
+    const sorted = Array.from(groups.entries())
       .map(([groupName, list]) => ({
         groupName,
         list: list.slice().sort((a, b) => a.name.localeCompare(b.name))
       }))
       .sort((a, b) => groupRank(a.groupName) - groupRank(b.groupName) || a.groupName.localeCompare(b.groupName));
-  }, [pipelines]);
+    // New run: one list, the kind's icon on each row instead of headings (UAT #35).
+    return manage ? sorted : [{ groupName: '', list: sorted.flatMap((g) => g.list) }];
+  }, [pipelines, manage]);
 
   const blockedSelection = pipelines.filter(
     (p) => selectedPipelines.includes(p.id) && !isPipelineSelectable(p)
@@ -210,22 +226,22 @@ export const PipelineSelectionStep = ({
           {isAdmin === false && (
             <>
               Pipelines marked "Not installed" below require an <strong>admin-scoped</strong> API
-              key to install, which yours doesn't have. See the "Getting Help" tab on the{" "}
-              <Link to="/settings" className="underline">
-                Settings
+              key to install, which yours doesn't have. See "Your key" on{" "}
+              <Link to="/help" className="underline">
+                Help
               </Link>{" "}
-              page for how to get one.
+              for how to get one.
             </>
           )}
           {isAdmin === 'unknown' && (
             <>
               Pipelines marked "Not installed" below can be installed from here, but only with an{" "}
               <strong>admin-scoped</strong> API key. If you're running your own single-user
-              server, your token is usually admin already — see the "Getting Help" tab on the{" "}
+              server, your key is usually an administrator&apos;s already: whether it is shows on{" "}
               <Link to="/settings" className="underline">
                 Settings
-              </Link>{" "}
-              page for details.
+              </Link>
+              .
             </>
           )}
         </p>
@@ -234,10 +250,12 @@ export const PipelineSelectionStep = ({
       <div className="space-y-6">
         {groupedPipelines.map(({ groupName, list }) => (
           <div key={groupName} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-foreground">{GROUP_NAMES[groupName] ?? groupName}</h3>
-            </div>
-            <div className="space-y-3">
+            {groupName && (
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">{GROUP_NAMES[groupName] ?? groupName}</h3>
+              </div>
+            )}
+            <div className={manage ? "space-y-3" : "space-y-2"}>
               {list.map((pipeline) => {
                 const mode = pipelineCardMode(pipeline);
                 if (mode !== 'selectable') {
@@ -342,14 +360,16 @@ export const PipelineSelectionStep = ({
                     </div>
                   );
                 }
+                const cue = checked ? settingsCue?.(pipeline.id) : undefined;
+                const opened = checked && open.has(pipeline.id);
                 return (
-                  <label
+                  <div
                     key={pipeline.id}
-                    className={`flex cursor-pointer flex-col gap-1 rounded-lg border p-3 transition hover:border-primary/70 ${checked ? 'border-primary bg-primary/5' : 'border-border bg-card'
-                      }`}
+                    data-testid="pipeline-row"
+                    className={`rounded-lg border transition ${checked ? 'border-primary bg-primary/5' : 'border-border bg-card hover:border-primary/70'}`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2">
+                      <label className="flex min-w-0 cursor-pointer items-center gap-3" title={description}>
                         <input
                           type="checkbox"
                           className="rounded"
@@ -357,20 +377,30 @@ export const PipelineSelectionStep = ({
                           onChange={() => togglePipeline(pipeline.id)}
                         />
                         <PipelineTitle pipeline={pipeline} />
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {pipeline.version && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                            v{pipeline.version}
-                          </Badge>
-                        )}
-
-                      </div>
+                      </label>
+                      {cue && renderSettings && (
+                        <button
+                          type="button"
+                          className="ml-auto flex min-w-0 max-w-full items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                          aria-expanded={opened}
+                          aria-label={`${pipeline.name} settings: ${cue}`}
+                          onClick={() => toggleOpen(pipeline.id)}
+                          data-testid="settings-cue"
+                        >
+                          <span className={`truncate ${cue === 'defaults' ? '' : 'text-foreground'}`}>{cue}</span>
+                          <ChevronRight className={`h-3.5 w-3.5 shrink-0 transition-transform ${opened ? 'rotate-90' : ''}`} aria-hidden="true" />
+                        </button>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{description}</p>
-                    <ReadinessDetails notes={pipeline.readiness?.notes} />
-                    <PipelineAbout pipeline={pipeline} />
-                  </label>
+                    <div className="px-3">
+                      <ReadinessDetails notes={pipeline.readiness?.notes} />
+                    </div>
+                    {opened && renderSettings && (
+                      <div className="border-t px-4 pb-2" data-testid="pipeline-settings">
+                        {renderSettings(pipeline.id)}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>

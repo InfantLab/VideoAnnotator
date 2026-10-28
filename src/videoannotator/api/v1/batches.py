@@ -400,7 +400,7 @@ async def rerun_batch(
             raise APIError(
                 status_code=403,
                 code="ADMIN_REQUIRED",
-                message="Only an administrator can choose a folder on this computer.",
+                message="Only an administrator can choose a folder on the server.",
             )
         require_local_caller(http_request)
         folder = resolve_within_roots(relocate_folder)

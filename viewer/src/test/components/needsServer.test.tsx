@@ -14,7 +14,7 @@ describe('NeedsServer', () => {
 
     expect(screen.getByText('Videos lists the videos on a server.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Connect' })).toHaveAttribute('href', '/settings');
-    expect(screen.getByRole('link', { name: /Open files from this computer/ })).toHaveAttribute('href', '/viewer');
+    expect(screen.getByRole('link', { name: /Open files from your computer/ })).toHaveAttribute('href', '/viewer');
     expect(screen.getByRole('link', { name: /Demos/ }).getAttribute('href')).toMatch(/^\/viewer\?demo=/);
   });
 });

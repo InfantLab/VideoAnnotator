@@ -181,7 +181,7 @@ export default function NewRun() {
   const count = files ? files.length : target?.kind === 'rerun' ? (target.single ? 1 : target.videoCount ?? null) : paths ? paths.length : null;
   const names = files ? files.map((f) => f.name) : paths ? paths.map(fileName) : [];
   const where = files
-    ? 'from this computer, uploaded first'
+    ? 'from your computer, uploaded first'
     : target?.kind === 'folder'
       ? `in ${target.path}`
       : target?.kind === 'project'
@@ -278,10 +278,34 @@ export default function NewRun() {
           Back
         </Button>
         <h1 className="text-3xl font-bold">New run</h1>
-        <PageHelp page="newRun">
-          Choose what to find in {chosen ? names.length === 1 ? names[0] : `these ${videosWord(count ?? 0)}` : 'some videos'}, then start.
-        </PageHelp>
+        <PageHelp page="newRun">Choose what to find in some videos, then start.</PageHelp>
       </div>
+
+      {chosen && (
+        <p className="flex items-baseline gap-x-3 text-sm" data-testid="run-videos">
+          <span className="text-muted-foreground">Videos</span>
+          <span className="min-w-0 truncate">
+            {count === null ? 'Counting…' : videosWord(count)} {where}
+            {names.length > 0 && (
+              <span className="text-muted-foreground" title={names.join('\n')}>
+                : {names.slice(0, 2).join(', ')}
+                {names.length > 2 && ` +${names.length - 2}`}
+              </span>
+            )}
+          </span>
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto p-0"
+            onClick={() => {
+              setTarget(null);
+              setFiles(null);
+            }}
+          >
+            Change
+          </Button>
+        </p>
+      )}
 
       {!chosen && (
         <Card>
@@ -298,7 +322,7 @@ export default function NewRun() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>1. What to find</CardTitle>
+              <CardTitle>What to find</CardTitle>
             </CardHeader>
             <CardContent>
               <WhatToFind
@@ -320,17 +344,12 @@ export default function NewRun() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>2. Start</CardTitle>
+              <CardTitle>Start</CardTitle>
             </CardHeader>
             <CardContent>
               <StartRun
                 count={count}
-                names={names}
-                where={where}
-                pipelineTitles={selected.map((id) => {
-                  const p = pipelines.find((x) => x.id === id);
-                  return p?.title || p?.name || id;
-                })}
+                pipelineTitles={selected.map((id) => pipelines.find((x) => x.id === id)?.name || id)}
                 setupNotes={weightsNotesFor(pipelines, selected)}
                 name={name}
                 onName={setName}

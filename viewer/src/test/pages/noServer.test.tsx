@@ -31,7 +31,7 @@ describe.each([
     renderAt(path, [{ path, element }]);
     const card = await screen.findByTestId('needs-server');
     expect(within(card).getByRole('link', { name: 'Connect' })).toHaveAttribute('href', '/settings');
-    expect(within(card).getByRole('link', { name: /Open files from this computer/ })).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: /Open files from your computer/ })).toBeInTheDocument();
     expect(within(card).getByRole('link', { name: /Demos/ })).toBeInTheDocument();
   });
 });

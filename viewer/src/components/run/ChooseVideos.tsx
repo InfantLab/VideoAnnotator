@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { FolderOpen, FolderKanban, History, Upload } from 'lucide-react';
+import { FolderKanban, HardDrive, History, Lock, Upload } from 'lucide-react';
 
 import { NoFolderAccess, ServerFolderPicker, type ServerFolderSelection } from '@/components/ServerFolderPicker';
 import { Button } from '@/components/ui/button';
@@ -14,10 +14,16 @@ export type Chosen = { target: RunTarget } | { files: File[] };
 
 const VIDEO_TYPES = 'video/*,.mp4,.avi,.mov,.mkv,.webm,.wmv,.flv,.m4v';
 
-/** New run without a target: which videos (spec 029 R9). */
+/**
+ * New run without a target: which videos (spec 029 R9). "Your computer" is
+ * always the researcher's, "the server" where VideoAnnotator runs (UAT #59).
+ * Opens on the server's folders only for someone who can use them.
+ */
 export function ChooseVideos({ onChoose }: { onChoose: (chosen: Chosen) => void }) {
   const access = useIngestAccess();
-  const [tab, setTab] = useState('folder');
+  const [picked, setTab] = useState<string | null>(null);
+  const locked = !access.isLoading && !access.canReadInPlace;
+  const tab = picked ?? (access.isLoading || locked ? 'upload' : 'folder');
   const [folder, setFolder] = useState<ServerFolderSelection | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [search, setSearch] = useState('');
@@ -46,18 +52,20 @@ export function ChooseVideos({ onChoose }: { onChoose: (chosen: Chosen) => void 
 
   return (
     <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-      <TabsList className="flex-wrap">
-        <TabsTrigger value="folder">
-          <FolderOpen className="mr-2 h-4 w-4" />A shared folder
-        </TabsTrigger>
+      <TabsList className="h-auto flex-wrap">
         <TabsTrigger value="upload">
-          <Upload className="mr-2 h-4 w-4" />This computer
+          <Upload className="mr-2 h-4 w-4" />
+          Upload from your computer
         </TabsTrigger>
         <TabsTrigger value="project">
           <FolderKanban className="mr-2 h-4 w-4" />A project
         </TabsTrigger>
         <TabsTrigger value="video">
           <History className="mr-2 h-4 w-4" />A video you ran before
+        </TabsTrigger>
+        <TabsTrigger value="folder" title={locked ? access.access?.reason ?? undefined : undefined}>
+          {locked ? <Lock className="mr-2 h-4 w-4" aria-hidden="true" /> : <HardDrive className="mr-2 h-4 w-4" />}
+          A folder on the server
         </TabsTrigger>
       </TabsList>
 
@@ -76,8 +84,8 @@ export function ChooseVideos({ onChoose }: { onChoose: (chosen: Chosen) => void 
 
       <TabsContent value="upload" className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Videos on this computer are uploaded to the server, then run there. Videos already on the server are quicker
-          from a shared folder.
+          Videos on your computer are uploaded to the server, then run there.
+          {!locked && ' Videos already on the server are quicker from a folder on the server.'}
         </p>
         <input
           ref={fileInput}

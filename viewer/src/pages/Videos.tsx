@@ -275,7 +275,7 @@ function EmptyScope({ query }: { query: VideosQuery }) {
       ? 'No videos in this folder.'
       : query.notInProject
         ? 'Every video is in a project.'
-        : 'No videos yet. Pick a folder on the left, or start a run from Home to upload videos from this computer.';
+        : 'No videos yet. Pick a folder on the left, or start a run from Home to upload videos from your computer.';
   return (
     <p className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground" data-testid="videos-empty">
       {text}

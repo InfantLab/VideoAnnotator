@@ -21,10 +21,7 @@ import { videosWord } from '@/lib/runs';
 interface StartRunProps {
   /** How many videos; null while a folder or project is still being listed. */
   count: number | null;
-  /** A few of their names. */
-  names: string[];
-  /** Where they are: "in /data/pk", "already on the server". */
-  where: string;
+  /** The chosen pipelines, by the model that runs (D1). */
   pipelineTitles: string[];
   setupNotes: SetupNote[];
   name: string;
@@ -42,8 +39,6 @@ const ASK_ABOVE = 10;
 /** What will run, on what, and the one button that starts it (spec 029 FR-017). */
 export function StartRun({
   count,
-  names,
-  where,
   pipelineTitles,
   setupNotes,
   name,
@@ -61,18 +56,12 @@ export function StartRun({
   return (
     <div className="space-y-4" data-testid="start-run">
       <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[8rem_1fr]">
-        <dt className="text-muted-foreground">Videos</dt>
-        <dd>
-          {count === null ? 'Counting…' : videosWord(count)} {where}
-          {names.length > 0 && (
-            <span className="block text-xs text-muted-foreground">
-              {names.slice(0, 5).join(', ')}
-              {count !== null && count > 5 && `, and ${count - 5} more`}
-            </span>
-          )}
+        <dt className="text-muted-foreground">Size</dt>
+        <dd title={pipelineTitles.join(', ')}>
+          {pipelineTitles.length === 0
+            ? 'Nothing chosen yet'
+            : `${count === null ? 'Counting…' : videosWord(count)} × ${things}`}
         </dd>
-        <dt className="text-muted-foreground">To find</dt>
-        <dd>{pipelineTitles.length ? pipelineTitles.join(', ') : 'Nothing chosen yet'}</dd>
         <dt className="text-muted-foreground">How long</dt>
         <dd>
           Estimated once the first video finishes, from how long these videos actually take.
@@ -109,7 +98,7 @@ export function StartRun({
         {starting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
         {starting ? 'Starting…' : count ? `Start run on ${videosWord(count)}` : 'Start run'}
       </Button>
-      <p className="text-xs text-muted-foreground">You can close this tab once it has started; results will be on the Videos page.</p>
+      <p className="text-xs text-muted-foreground">You can close this tab once it has started; results appear on Videos and Runs.</p>
       <AlertDialog open={asking} onOpenChange={setAsking}>
         <AlertDialogContent>
           <AlertDialogHeader>

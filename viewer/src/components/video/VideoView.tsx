@@ -526,7 +526,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
               </TabsContent>
               <TabsContent value="runs" className="min-h-0 flex-1 overflow-auto px-3 text-xs">
                 {source.local ? (
-                  <p className="text-muted-foreground">Files from this computer, not a run on a server.</p>
+                  <p className="text-muted-foreground">Files from your computer, not a run on a server.</p>
                 ) : (
                   <RunsPanel runs={source.runDetails ?? []} videoName={source.name} />
                 )}

@@ -52,7 +52,7 @@ export default function Help() {
           <Button asChild variant="outline">
             <Link to="/viewer">
               <FolderOpen className="mr-2 h-4 w-4" />
-              Open files from this computer
+              Open files from your computer
             </Link>
           </Button>
         </div>

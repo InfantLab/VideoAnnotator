@@ -89,6 +89,22 @@ describe('with a target, Start is the only confirmation', () => {
     );
   });
 
+  it("folds each pipeline's settings under its row, saying what differs (UAT #35)", async () => {
+    mockRunApi(RUN_SETTINGS.project);
+    open({ target: { kind: 'project', id: PROJECT_ID, name: 'Peekaboo study' } });
+
+    const cue = await screen.findByTestId('settings-cue');
+    await waitFor(() => expect(cue).toHaveTextContent('min_face_size: 40'));
+    expect(cue).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('pipeline-settings')).toBeNull();
+    fireEvent.click(cue);
+    const settings = screen.getByTestId('pipeline-settings');
+    // Named once; what it does is on hover, not repeated under the name.
+    expect(within(settings).queryByText('Smallest face to look for, in pixels')).toBeNull();
+    fireEvent.click(within(settings).getByRole('button', { name: 'Reset' }));
+    await waitFor(() => expect(screen.getByTestId('settings-cue')).toHaveTextContent('defaults'));
+  });
+
   it('a selection: exactly those videos', async () => {
     const api = mockRunApi(RUN_SETTINGS.last_used);
     open({ target: { kind: 'videos', paths: ['/data/pk/a.mp4', '/elsewhere/b.mp4'], label: '2 videos' } });
@@ -191,10 +207,19 @@ describe('without a target', () => {
     expect(await startButton()).toHaveTextContent('Start run on 3 videos');
   });
 
-  it('uploads videos from this computer as one run', async () => {
+  it("opens on upload for someone who can't use the server's folders, which stay, locked (UAT #59)", async () => {
+    mockRunApi();
+    open();
+    await waitFor(() => expect(screen.getByRole('tab', { name: /Upload from your computer/ })).toHaveAttribute('aria-selected', 'true'));
+    const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
+    expect(tabs[tabs.length - 1]).toBe('A folder on the server');
+    expect(screen.getByRole('tab', { name: /A folder on the server/ })).toHaveAttribute('title', 'Not shared.');
+  });
+
+  it('uploads videos from your computer as one run', async () => {
     const api = mockRunApi(RUN_SETTINGS.last_used);
     const view = open();
-    await userEvent.click(await screen.findByRole('tab', { name: /This computer/ }));
+    await userEvent.click(await screen.findByRole('tab', { name: /Upload from your computer/ }));
     const input = screen.getByTestId('upload-input') as HTMLInputElement;
     const files = [new File(['a'], 'a.mp4'), new File(['b'], 'b.mp4')];
     fireEvent.change(input, { target: { files } });
