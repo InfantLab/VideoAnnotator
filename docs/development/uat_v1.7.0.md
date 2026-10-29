@@ -114,7 +114,7 @@ Positive, keep: Ask AI's estimate says "about 42 s (rough guess until you try it
 Found while making the 5-clip demo of baby 4JDccE
 ([handover_babyjokes_dataset.md](handover_babyjokes_dataset.md)), with the six default pipelines.
 
-| # | Where | What | Wanted |
+| # | Where | Finding | Status |
 |---|---|---|---|
 | 66 | Speech: what was said (Whisper) | Repetition loops: "Om nom nom" ×223 in a 7 s clip (compression ratio 44.5), "this is my new hat" looped over 14 s. Cause: `temperature` is a fixed 0.0 (`speech_pipeline.py` `_transcribe_options`), which turns off faster-whisper's fallback that re-decodes a segment whose compression ratio is over 2.4. With the fallback (0.0 to 1.0 in steps of 0.2) the loops go, but the nom-nom clip drops to "My turn! Your turn!" and the hat clip loses its last 8 s | Caspar to decide: the fallback by default (changes outputs, so a re-baseline and a CHANGELOG line), or a loop guard only, or keep today's and say so on the pipeline's page · P1 |
 | 67 | Speech: what was said (Whisper) | Language left to detection: a 4 s clip of a baby squealing (Tearing Paper) comes out as Korean, "오오오오오" | Caspar to decide: a project-level language setting the demo and tutorial set to English, or drop segments whose detected language has low probability · P1 |
