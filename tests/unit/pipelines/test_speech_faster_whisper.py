@@ -19,6 +19,7 @@ from videoannotator.pipelines.audio_processing import whisper_base_pipeline
 from videoannotator.pipelines.audio_processing.speech_pipeline import (
     SpeechPipeline,
     _suppress_tokens,
+    _temperatures,
 )
 
 REPO = "mobiuslabsgmbh/faster-whisper-large-v3-turbo"
@@ -165,10 +166,24 @@ def test_settings_reach_transcribe(faster_whisper, cpu):
     options = faster_whisper.model.transcribe.call_args.kwargs
     assert options["language"] == "en"
     assert options["beam_size"] == 3
-    assert options["temperature"] == 0.2
+    assert options["temperature"] == (0.2, 0.4, 0.6, 0.8, 1.0)
     assert options["word_timestamps"] is False
     assert options["suppress_tokens"] == [-1, 50363]
     assert options["vad_filter"] is False
+
+
+@pytest.mark.parametrize(
+    ("start", "fallback", "expected"),
+    [
+        (0.0, True, (0.0, 0.2, 0.4, 0.6, 0.8, 1.0)),
+        (0.0, False, 0.0),
+        (0.5, True, (0.5, 0.7, 0.9)),
+        (1.0, True, 1.0),
+    ],
+)
+def test_temperature_fallback(start, fallback, expected):
+    """On by default so looping text is decoded again (UAT #66)."""
+    assert _temperatures(start, fallback) == expected
 
 
 @pytest.mark.parametrize(

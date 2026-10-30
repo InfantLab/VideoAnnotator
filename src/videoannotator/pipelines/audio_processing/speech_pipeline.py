@@ -38,6 +38,19 @@ def _suppress_tokens(value: Any) -> list[int] | None:
     return [int(v) for v in str(value).split(",") if v.strip()]
 
 
+def _temperatures(start: Any, fallback: Any) -> float | tuple[float, ...]:
+    """faster-whisper retries a segment at each further temperature only when
+    it gets a sequence; a single float turns its loop and confidence checks off
+    (UAT #66)."""
+    start = float(start)
+    if not fallback or start >= 1.0:
+        return start
+    steps = [start]
+    while steps[-1] + 0.2 <= 1.0 + 1e-9:
+        steps.append(round(steps[-1] + 0.2, 4))
+    return tuple(steps)
+
+
 class SpeechPipeline(WhisperBasePipeline):
     """Speech recognition pipeline using Whisper (faster-whisper runtime).
 
@@ -134,7 +147,10 @@ class SpeechPipeline(WhisperBasePipeline):
             "task": self.config.get("task", "transcribe"),
             "beam_size": self.config.get("beam_size", 5),
             "best_of": self.config.get("best_of", 5),
-            "temperature": self.config.get("temperature", 0.0),
+            "temperature": _temperatures(
+                self.config.get("temperature", 0.0),
+                self.config.get("temperature_fallback", True),
+            ),
             "patience": self.config.get("patience", 1.0),
             "length_penalty": self.config.get("length_penalty", 1.0),
             "word_timestamps": self.config.get("word_timestamps", True),

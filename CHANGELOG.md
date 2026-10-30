@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Speech recognition retries looping text** (UAT #66): a stretch that comes out repeating
+  itself, or that the model is unsure of, is decoded again at a higher temperature (0.2 steps up
+  to 1.0), as Whisper does by default. Before, a fixed temperature of 0.0 switched that off, and a
+  7 s clip of "om nom nom" came out as "nom" 223 times. Outputs change only where that happened;
+  the demo clip's transcript is unchanged. `temperature_fallback: false` decodes once, as before.
+
 - **A remote model server needs the switch** (spec 033): a remote address confirmed since this
   version needs remote servers switched on as well; addresses confirmed before it keep working
   without the switch. `GET /ask/endpoint` adds `sendable` and `before_switch`.

@@ -77,6 +77,17 @@ config_schema:
     type: float
     default: 0.0
     description: Temperature for sampling (0.0 for deterministic)
+  temperature_fallback:
+    group: technical
+    label: "Retry repeated or unsure text"
+    type: boolean
+    default: true
+    description: >-
+      When a stretch comes out looping ("nom nom nom…" many times over) or the model is unsure,
+      decode it again at a higher temperature, in steps of 0.2 up to 1.0. Off decodes once at the
+      sampling temperature, as before v1.7.0.
+    reason: "Whisper's own default (temperature (0.0, 0.2, …, 1.0) with a compression ratio limit of 2.4). With it off, a 7 s clip of a parent saying \"om nom nom\" came out as the word nom 223 times (UAT #66)."
+    reason_source: https://github.com/SYSTRAN/faster-whisper/blob/master/faster_whisper/transcribe.py
   patience:
     group: technical
     label: "Beam search patience"
