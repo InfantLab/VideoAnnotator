@@ -382,7 +382,7 @@ On every page, the Video page included. One line, each link once:
 ```
 
 - "Video Annotation Viewer … Powered by VideoAnnotator ↗" goes: the viewer is part of
-  VideoAnnotator. The server's version only when connected, and only if it differs is it shown
+  VideoAnnotator. The server's version shows only when connected, in amber when it differs
   in amber ("server 1.6.0: older than this viewer").
 - "How to cite" is the Zenodo record (the concept DOI, so it always reaches the latest version).
 - On the Video page the footer is the same line in the space under the timeline, which today is
