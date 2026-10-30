@@ -16,19 +16,10 @@ that searches his email, and what happens in VideoAnnotator once the records exi
   tutorial walk-through uses all 54, downloaded from Zenodo.
 - **InfantLab/babyjokes gets archived.** Its README first points at the new records.
 
-The demo baby is 4JDccE: 28 months, spoken to in English and Spanish, and she laughed at four of
-the jokes but not at Tearing Paper. (2UWdXP, the baby in today's demo, never laughed, which makes
-a dull demo.) The clips:
-
-| Joke | Clip | Parent's rating | Laughed |
-|---|---|---|---|
-| NomNomNom | `4JDccE.joke1.rep2.take1.NomNomNom_h265.mp4` | Funny | Yes |
-| That's not a hat | `4JDccE.joke2.rep3.take1.ThatsNotAHat_h265.mp4` | Funny | Yes |
-| Peekaboo | `4JDccE.joke3.rep2.take1.Peekaboo_h265.mp4` | Funny | Yes |
-| That's not a cat | `4JDccE.joke4.rep3.take1.ThatsNotACat_h265.mp4` | Funny | Yes |
-| Tearing paper | `4JDccE.joke5.rep1.take1.TearingPaper_h265.mp4` | Not funny | No |
-
-About 7 MB of video, 4 to 20 seconds each.
+The demo baby is still to choose (Caspar, from the full corpus if none of the 4 open-sample
+babies is good enough). Tried and rejected: 2UWdXP, today's demo baby, who never laughed; and
+4JDccE, whose image quality and framing are poor (2026-10-30). A good demo baby laughs at some
+jokes and not others, is clearly framed with the parent, and has consent for public use.
 
 ## Still to decide
 
