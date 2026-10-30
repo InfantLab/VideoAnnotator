@@ -118,3 +118,11 @@ Found while making the 5-clip demo of baby 4JDccE
 |---|---|---|---|
 | 66 | Speech: what was said (Whisper) | Repetition loops: "Om nom nom" ×223 in a 7 s clip (compression ratio 44.5), "this is my new hat" looped over 14 s. Cause: `temperature` is a fixed 0.0 (`speech_pipeline.py` `_transcribe_options`), which turns off faster-whisper's fallback that re-decodes a segment whose compression ratio is over 2.4. With the fallback (0.0 to 1.0 in steps of 0.2) the loops go, but the nom-nom clip drops to "My turn! Your turn!" and the hat clip loses its last 8 s | The fallback by default (Caspar, 2026-10-30): a new setting, `temperature_fallback`, on unless switched off, so existing settings files mean the same. The demo clip's transcript is unchanged, so no re-baseline. Fixed 2026-10-30, `fix(speech): retry looping text, as Whisper does by default` · P1 |
 | 67 | Speech: what was said (Whisper) | Language left to detection: a 4 s clip of a baby squealing (Tearing Paper) comes out as Korean, "오오오오오" | Won't fix (Caspar, 2026-10-30): language stays detected per video; anyone who knows it can set `language`. · P1 |
+
+### Caspar, 2026-10-30
+
+| # | Where | Finding | Status |
+|---|---|---|---|
+| 68 | Everywhere | Nowhere in the viewer to report a problem: a researcher who finds one has to know the GitHub repo exists | Mock-up: [batch 9](uat_v1.7.0_mockups.md#batch-9-reporting-a-problem-the-footer-tips-on-the-video-page) · P1 |
+| 69 | Footer | Not on every page (the Video page has none); links to the VideoAnnotator repo twice ("Powered by VideoAnnotator" and "Source"), and "Powered by" no longer fits now the viewer is part of VideoAnnotator | Mock-up: batch 9 · P8 |
+| 70 | Video page | Layers, notes and previous/next through a list are easy to miss; the home page needs no onboarding | Mock-up: batch 9 · P1 |

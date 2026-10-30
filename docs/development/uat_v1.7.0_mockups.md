@@ -326,3 +326,99 @@ the pipeline they belong to.
 2. Non-administrators keep the server-folder tab, locked and last, saying why.
 3. No time estimate before the first video finishes: keep "estimated once the first video
    finishes"; Start shows the size ("6 videos × 5 pipelines").
+
+## Batch 9: reporting a problem, the footer, tips on the Video page
+
+Answers #68, #69 and #70. Nothing new is sent anywhere by the viewer itself: a report goes where
+the researcher sends it, with what they can read first (P1).
+
+### Report a problem (#68)
+
+One dialog, opened from the footer on every page, the Video page's `?` menu, and every error
+message ("Something went wrong", a failed run's "why?", a connection that won't work).
+
+```
+ ┌ Report a problem ─────────────────────────────────────────────────────────┐
+ │ What happened?                                                            │
+ │ ┌───────────────────────────────────────────────────────────────────────┐ │
+ │ │ The Speech lane is empty but the Data tab shows words                 │ │
+ │ └───────────────────────────────────────────────────────────────────────┘ │
+ │ What did you expect? (optional)                                           │
+ │ ┌───────────────────────────────────────────────────────────────────────┐ │
+ │ └───────────────────────────────────────────────────────────────────────┘ │
+ │                                                                           │
+ │ [✓] Add details that help us find it                                      │
+ │     ▸ What's added                                                        │
+ │       Viewer 1.7.0 · server 1.7.0 at 127.0.0.1:18011 · Firefox 132,      │
+ │       Linux · 1440 × 900 · page: the Video page                           │
+ │       [✓] the video's name: 2UWdXP.joke1.rep3…Peekaboo_h265.mp4          │
+ │       Last 3 errors: "Can't read …speech_recognition.vtt: …"  (14:02)     │
+ │       Never added: your key, folder paths, results.                       │
+ │                                                                           │
+ │ A screenshot helps: add one to the issue or email after it opens.         │
+ │                                                                           │
+ │           [ Copy ]   [ Email it ]   [ Open a GitHub issue ↗ ]             │
+ └───────────────────────────────────────────────────────────────────────────┘
+```
+
+- **GitHub issue**: a new issue in InfantLab/VideoAnnotator, title and body filled in, for people
+  with a GitHub account. A `bug_report.yml` issue template with the same headings, so reports that
+  start on GitHub look the same.
+- **Email**: the user's own mail program with the report filled in, to the project's address. For
+  researchers without GitHub, which is most of them.
+- **Copy**: for anything else (a lab's Teams channel, a support thread).
+- The details are shown before anything leaves, and each can be unticked. The video's name is
+  ticked by default only for demo clips; a study's file names can identify people, so for those
+  it starts unticked (P1).
+- Errors come from a small list the viewer keeps in memory of its own failures (a file it
+  couldn't read, a request the server refused), not from the browser console.
+
+### The footer (#69)
+
+On every page, the Video page included. One line, each link once:
+
+```
+ VideoAnnotator 1.7.0 · server 1.7.0      Help · Docs ↗ · Source ↗ · How to cite ↗ · Report a problem
+```
+
+- "Video Annotation Viewer … Powered by VideoAnnotator ↗" goes: the viewer is part of
+  VideoAnnotator. The server's version only when connected, and only if it differs is it shown
+  in amber ("server 1.6.0: older than this viewer").
+- "How to cite" is the Zenodo record (the concept DOI, so it always reaches the latest version).
+- On the Video page the footer is the same line in the space under the timeline, which today is
+  empty below the last lane; it scrolls with the lanes rather than taking fixed height.
+
+### Tips on the Video page (#70)
+
+The first time someone opens a video, a few tips, one at a time, each pointing at the thing it's
+about. Only tips for what is on screen: no list tip for a video opened on its own, no notes tip
+without a server.
+
+```
+                           ┌──────────────────────────────────────────┐
+  peekaboo · 3 of 48 ‹ ›   │ 1 of 4                                    │
+  ▲                        │ You opened this from a list: ‹ › go to    │
+  └────────────────────────│ the previous or next video in it, with    │
+                           │ the same lanes shown.                     │
+                           │                     [ Skip tips ] [ Next ]│
+                           └──────────────────────────────────────────┘
+```
+
+1. **List** (when opened from a run, project or folder): "‹ › go to the previous or next video in
+   it, with the same lanes shown."
+2. **Layers**: "Choose which results show as lanes, and which are drawn on the video."
+3. **A lane**: "Click a lane to select it; [ and ] jump to its previous or next event."
+4. **Notes** (with a server): "Press N for a note at this moment, Shift+N twice for a span. They're
+   kept with the video on the server and listed in the Notes tab."
+
+- Skip ends them; they don't come back by themselves. The `?` menu becomes Help: Keys, "Show the
+  tips again", Report a problem.
+- Remembered in this browser only, like the panel's open or closed state.
+- Built from the popover the viewer already has; no tour library.
+
+### Questions
+
+1. **Where should emailed reports go?** A project address (e.g. a shared InfantLab inbox) or yours.
+2. **The footer on the Video page**: under the lanes as above, or leave the Video page without one
+   and put Help, Docs and Report a problem only in its `?` menu?
+3. **Tips**: the four above, or others (the Data tab's "All rows", Compare, overlays)?
