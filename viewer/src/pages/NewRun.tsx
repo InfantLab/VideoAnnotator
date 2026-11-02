@@ -17,8 +17,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePipelineCatalog } from '@/hooks/usePipelineCatalog';
 import { useRunSettings } from '@/hooks/useRunSettings';
+import { useYourDefaults } from '@/hooks/useYourDefaults';
 import { notify } from '@/lib/notify';
-import { configFor, withDefaults } from '@/lib/pipelineDefaults';
+import { configFor, withDefaults, withYours } from '@/lib/pipelineDefaults';
 import { isPipelineSelectable, partitionSelection } from '@/lib/pipelineExtras';
 import { projectOf, runStartOf, type RunTarget } from '@/lib/runTarget';
 import { videosWord } from '@/lib/runs';
@@ -36,6 +37,8 @@ interface Settings {
   selected: string[];
   config: Record<string, unknown>;
   source: ReactNode;
+  /** Settings that came with a run being repeated are kept as they were, without your defaults. */
+  exact?: boolean;
 }
 
 /** The server's prefill, said in words (spec 029 FR-012). */
@@ -116,6 +119,8 @@ export default function NewRun() {
   const usesServer = !own && !(target?.kind === 'rerun' && !workflowId);
   const server = useRunSettings({ project: projectOf(target), workflow: workflowId }, chosen && usesServer);
   const targetVideos = useTargetVideos(target);
+  const yours = useYourDefaults(chosen);
+  const [yoursFilled, setYoursFilled] = useState<string[]>([]);
 
   const settings: Settings | null = useMemo(() => {
     if (own) {
@@ -124,11 +129,12 @@ export default function NewRun() {
         selected: own.selectedPipelines ?? [],
         config: own.config ?? {},
         source: own.label ?? 'the settings you came with',
+        exact: true,
       };
     }
     if (target?.kind === 'rerun' && !workflowId) {
       return rerunSettings.data
-        ? { key: `rerun:${target.runId}`, ...rerunSettings.data, source: `the run “${target.label}”` }
+        ? { key: `rerun:${target.runId}`, ...rerunSettings.data, source: `the run “${target.label}”`, exact: true }
         : null;
     }
     if (!server.data) return null;
@@ -163,7 +169,7 @@ export default function NewRun() {
   }, [own, target, workflowId, rerunSettings.data, server.data, fromLastRun]);
 
   useEffect(() => {
-    if (!settings || !pipelines.length || applied === settings.key) return;
+    if (!settings || !pipelines.length || applied === settings.key || yours.isLoading) return;
     // Nothing ticked that the user, a project, a workflow or a last run didn't choose (UAT #42, P6).
     const wanted = settings.selected;
     const known = wanted.filter((id) => pipelines.some((p) => p.id === id));
@@ -171,9 +177,12 @@ export default function NewRun() {
     const unknown = wanted.filter((id) => !known.includes(id)).map((id) => `${id}: not on this server`);
     setSelected(kept);
     setNotices([...leftOut, ...unknown]);
-    setConfig(withDefaults(pipelines, settings.config));
+    // Your defaults fill only what the starting point leaves unset, and are said (UAT #71, P6).
+    const filled = settings.exact ? { config: settings.config, filled: [] } : withYours(yours.data?.config ?? {}, settings.config);
+    setConfig(withDefaults(pipelines, filled.config));
+    setYoursFilled(filled.filled);
     setApplied(settings.key);
-  }, [settings, pipelines, applied]);
+  }, [settings, pipelines, applied, yours.isLoading, yours.data]);
 
   const onConfig = useCallback((updater: (prev: Record<string, unknown>) => Record<string, unknown>) => setConfig(updater), []);
 
@@ -334,7 +343,26 @@ export default function NewRun() {
                 onSelect={setSelected}
                 config={config}
                 onConfig={onConfig}
-                source={settings?.source ?? '…'}
+                source={
+                  settings ? (
+                    <>
+                      {settings.source}
+                      {selected.some((id) => yoursFilled.includes(id)) && (
+                        <span className="text-muted-foreground" data-testid="your-defaults-used">
+                          {' '}
+                          · with your defaults for{' '}
+                          {selected
+                            .filter((id) => yoursFilled.includes(id))
+                            .map((id) => pipelines.find((p) => p.id === id)?.name || id)
+                            .join(', ')}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    '…'
+                  )
+                }
+                yours={yours.data?.config}
                 workflows={<WorkflowPicker value={workflowId} onChange={setWorkflowId} />}
                 notices={notices}
                 onDismissNotices={() => setNotices([])}

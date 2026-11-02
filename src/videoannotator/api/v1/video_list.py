@@ -528,6 +528,45 @@ async def get_run_settings(
     return RunSettingsResponse.model_validate(found)
 
 
+class YourDefaults(BaseModel):
+    config: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Settings by pipeline id; a pipeline left out keeps its own",
+    )
+    updated_at: str | None = None
+
+
+@router.get(
+    "/run-settings/defaults",
+    response_model=YourDefaults,
+    summary="The caller's own default settings for each pipeline",
+    description=(
+        "Set on the viewer's Pipelines page. New run fills them into settings "
+        "its starting point leaves unset; a project or workflow is never changed."
+    ),
+)
+def get_your_defaults(
+    db: Session = Depends(get_db),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> YourDefaults:
+    return YourDefaults.model_validate(run_settings.your_defaults(db, user))
+
+
+@router.put(
+    "/run-settings/defaults",
+    response_model=YourDefaults,
+    summary="Keep the caller's own default settings for each pipeline",
+)
+def put_your_defaults(
+    body: YourDefaults,
+    db: Session = Depends(get_db),
+    user: dict[str, Any] | None = Depends(validate_api_key),
+) -> YourDefaults:
+    return YourDefaults.model_validate(
+        run_settings.set_your_defaults(db, user, body.config)
+    )
+
+
 # ---------------------------------------------------------------------------
 # One run on any videos (R8)
 # ---------------------------------------------------------------------------

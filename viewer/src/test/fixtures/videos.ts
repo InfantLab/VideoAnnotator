@@ -253,6 +253,7 @@ export function mockVideosApi(
     settings?: RunSettings;
     datasets?: SavedDataset[];
     presets?: Preset[];
+    yours?: Record<string, Record<string, unknown>>;
   } = {},
 ) {
   vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -301,6 +302,10 @@ export function mockVideosApi(
     updatePreset: vi.spyOn(client, 'updatePreset').mockImplementation(async (id: string, body: Partial<Preset>) => workflow({ id, ...body })),
     deletePreset: vi.spyOn(client, 'deletePreset').mockResolvedValue(undefined),
     getPipelineCatalog: vi.spyOn(client, 'getPipelineCatalog').mockResolvedValue(CATALOG),
+    getYourDefaults: vi.spyOn(client, 'getYourDefaults').mockResolvedValue({ config: options.yours ?? {}, updated_at: null }),
+    putYourDefaults: vi
+      .spyOn(client, 'putYourDefaults')
+      .mockImplementation(async (config: Record<string, Record<string, unknown>>) => ({ config, updated_at: '2026-11-02T10:00:00Z' })),
     exportResults: vi.spyOn(client, 'exportResults').mockResolvedValue({ blob: new Blob(['run,video\n']), filename: 'Videos.csv', summary: null }),
   };
 }

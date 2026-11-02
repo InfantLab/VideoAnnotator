@@ -1590,6 +1590,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/videos/run-settings/defaults": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's own default settings for each pipeline
+         * @description Set on the viewer's Pipelines page. New run fills them into settings its starting point leaves unset; a project or workflow is never changed.
+         */
+        get: operations["get_your_defaults_api_v1_videos_run_settings_defaults_get"];
+        /** Keep the caller's own default settings for each pipeline */
+        put: operations["put_your_defaults_api_v1_videos_run_settings_defaults_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/videos/run": {
         parameters: {
             query?: never;
@@ -5761,6 +5782,20 @@ export interface components {
              */
             frames: components["schemas"]["PreviewFrame"][];
         };
+        /** YourDefaults */
+        YourDefaults: {
+            /**
+             * Config
+             * @description Settings by pipeline id; a pipeline left out keeps its own
+             */
+            config?: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
+            /** Updated At */
+            updated_at?: string | null;
+        };
         /**
          * ConfigValidationRequest
          * @description Request for full configuration validation.
@@ -7637,6 +7672,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_your_defaults_api_v1_videos_run_settings_defaults_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YourDefaults"];
+                };
+            };
+        };
+    };
+    put_your_defaults_api_v1_videos_run_settings_defaults_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YourDefaults"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YourDefaults"];
                 };
             };
             /** @description Validation Error */

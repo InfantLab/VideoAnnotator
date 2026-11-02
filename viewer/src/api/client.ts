@@ -61,6 +61,7 @@ import type {
   ResultValues,
   RunListResponse,
   RunSettings,
+  YourDefaults,
   VideosQuery,
   VideosResponse,
   VideosRunRequest,
@@ -1263,6 +1264,15 @@ class APIClient {
     if (params.workflow) query.set('workflow', params.workflow);
     const suffix = query.toString() ? `?${query}` : '';
     return this.request(`/api/v1/videos/run-settings${suffix}`);
+  }
+
+  /** Your own default settings per pipeline, set on the Pipelines page (UAT #71). */
+  async getYourDefaults(): Promise<YourDefaults> {
+    return this.request('/api/v1/videos/run-settings/defaults');
+  }
+
+  async putYourDefaults(config: YourDefaults['config']): Promise<YourDefaults> {
+    return this.request('/api/v1/videos/run-settings/defaults', { method: 'PUT', body: JSON.stringify({ config }) });
   }
 
   /** Runs with videos waiting or running, and those just finished (spec 029 R17). */

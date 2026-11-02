@@ -2,7 +2,6 @@ import { ReactNode, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertCircle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { parseApiError } from "@/lib/errorHandling";
@@ -17,7 +16,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { extrasGroupOf, isPipelineSelectable, notReadyReason, PIPELINE_CARD_BADGE, pipelineCardMode } from "@/lib/pipelineExtras";
 import { hasConfiguredApiToken } from "@/api/client";
 import { APIError } from "@/api/handleError";
-import { PipelineAbout, PipelineTitle } from '@/components/PipelineGuide';
+import { PipelineTitle } from '@/components/PipelineGuide';
 import { pipelineSummary } from '@/lib/pipelineGuide';
 
 /**
@@ -50,7 +49,9 @@ export const PipelineSelectionStep = ({
   presetBar,
   manage = false,
   settingsCue,
-  renderSettings
+  renderSettings,
+  renderReady,
+  headings = true
 }: {
   pipelines: PipelineDescriptor[];
   selectedPipelines: string[];
@@ -63,12 +64,16 @@ export const PipelineSelectionStep = ({
   onDismissNotices?: () => void;
   /** The workflow picker; a slot so the step stays usable without a server that has them. */
   presetBar?: ReactNode;
-  /** Install and check pipelines without choosing any for a run (the Pipelines page). */
+  /** Install and check pipelines without choosing any for a run: the Pipelines page, with `renderReady`. */
   manage?: boolean;
   /** A chosen pipeline's settings in a few words, on its row ("defaults", "Age on"). */
   settingsCue?: (pipelineId: string) => string;
   /** A chosen pipeline's settings, opened under its row (UAT #35). */
   renderSettings?: (pipelineId: string) => ReactNode;
+  /** With `manage`: a ready pipeline's entry (the Pipelines page, UAT #71). */
+  renderReady?: (pipeline: PipelineDescriptor) => ReactNode;
+  /** With `manage`: the kinds' headings (Sound, Faces…). */
+  headings?: boolean;
 }) => {
   const [open, setOpen] = useState<Set<string>>(new Set());
   const toggleOpen = (id: string) =>
@@ -94,8 +99,8 @@ export const PipelineSelectionStep = ({
       }))
       .sort((a, b) => groupRank(a.groupName) - groupRank(b.groupName) || a.groupName.localeCompare(b.groupName));
     // New run: one list, the kind's icon on each row instead of headings (UAT #35).
-    return manage ? sorted : [{ groupName: '', list: sorted.flatMap((g) => g.list) }];
-  }, [pipelines, manage]);
+    return manage && headings ? sorted : [{ groupName: '', list: sorted.flatMap((g) => g.list) }];
+  }, [pipelines, manage, headings]);
 
   const blockedSelection = pipelines.filter(
     (p) => selectedPipelines.includes(p.id) && !isPipelineSelectable(p)
@@ -340,26 +345,7 @@ export const PipelineSelectionStep = ({
 
                 const checked = selectedPipelines.includes(pipeline.id);
                 const description = pipelineSummary(pipeline);
-                if (manage) {
-                  return (
-                    <div key={pipeline.id} className="flex flex-col gap-1 rounded-lg border border-border bg-card p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <PipelineTitle pipeline={pipeline} />
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <Badge className="text-[10px] px-1.5 py-0 bg-green-600 hover:bg-green-600">Ready</Badge>
-                          {pipeline.version && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                              v{pipeline.version}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{description}</p>
-                      <ReadinessDetails notes={pipeline.readiness?.notes} />
-                      <PipelineAbout pipeline={pipeline} defaultOpen />
-                    </div>
-                  );
-                }
+                if (manage) return <div key={pipeline.id}>{renderReady?.(pipeline)}</div>;
                 const cue = checked ? settingsCue?.(pipeline.id) : undefined;
                 const opened = checked && open.has(pipeline.id);
                 return (

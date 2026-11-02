@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { PageHelp } from '@/components/PageHelp';
 import { ExternalLink, KeyRound, Loader2, RefreshCw, Server as ServerIcon, Settings, Sparkles } from 'lucide-react';
 
@@ -22,6 +22,8 @@ import { usePipelineCatalog, useRefreshPipelineCatalog } from '@/hooks/usePipeli
 
 import vavIcon from '@/assets/v-a-v.icon.png';
 
+const TABS = ['connection', 'ask', 'server'];
+
 const CreateSettings = () => {
   // The address the viewer actually calls, also when it's kept relative (UAT #16).
   const [serverUrl, setServerUrl] = useState(() => describeApiUrl(getApiBaseUrl()));
@@ -41,6 +43,9 @@ const CreateSettings = () => {
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
+
+  // `/settings#ask` opens on that tab (Pipelines → Model servers).
+  const hash = useLocation().hash.slice(1);
 
   const refresh = async () => {
     setRefreshing(true);
@@ -66,7 +71,7 @@ const CreateSettings = () => {
       </PageHelp>
       <ThemeChoice />
 
-      <Tabs defaultValue="connection" className="space-y-4">
+      <Tabs defaultValue={TABS.includes(hash) ? hash : 'connection'} className="space-y-4">
         <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="connection" className="flex items-center gap-2">
             <KeyRound className="h-4 w-4" aria-hidden="true" />

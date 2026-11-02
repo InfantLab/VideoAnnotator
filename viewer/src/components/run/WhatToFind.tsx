@@ -26,6 +26,8 @@ interface WhatToFindProps {
   onDismissNotices?: () => void;
   /** Reports whether the settings can be used (validation, URL fields). */
   onValidity?: (valid: boolean) => void;
+  /** Your own defaults by pipeline, marked where they set a value (UAT #71). */
+  yours?: Record<string, Record<string, unknown>>;
 }
 
 /** The pipelines to run, each with its settings folded under it (spec 029 R9, UAT #35). */
@@ -43,6 +45,7 @@ export function WhatToFind({
   notices,
   onDismissNotices,
   onValidity,
+  yours,
 }: WhatToFindProps) {
   const refresh = useRefreshPipelineCatalog();
   const { validationResult, isValidating, validateConfig } = useConfigValidation();
@@ -84,7 +87,7 @@ export function WhatToFind({
         }}
         renderSettings={(id) => {
           const pipeline = byId.get(id);
-          return pipeline ? <PipelineSettings pipeline={pipeline} config={config} onConfigChange={onConfig} /> : null;
+          return pipeline ? <PipelineSettings pipeline={pipeline} config={config} onConfigChange={onConfig} yours={yours?.[id]} /> : null;
         }}
       />
       {selected.length > 0 && <ConfigValidationPanel validationResult={validationResult} isValidating={isValidating} />}

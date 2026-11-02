@@ -100,12 +100,14 @@ const SettingRow = ({
   tip,
   wide = false,
   changed = false,
+  changedWords = 'changed from the default',
+  description,
   onReset,
   children,
 }: {
   label: string;
   htmlFor?: string;
-  /** The description goes in the tip, not under the name (UAT #35). */
+  /** Under the name only on the Pipelines page; New run has it in the tip (UAT #35, #71). */
   description?: string;
   hint?: string;
   /** What it does and its default, on hover or focus (spec 029 FR-024). */
@@ -113,6 +115,8 @@ const SettingRow = ({
   wide?: boolean;
   /** Differs from its default: marked, with Reset (UAT #35, P6). */
   changed?: boolean;
+  /** "your default" where your own default set it (UAT #71). */
+  changedWords?: string;
   onReset?: () => void;
   children: ReactNode;
 }) => (
@@ -144,10 +148,11 @@ const SettingRow = ({
           {label}
         </Label>
       )}
+      {description && <p className="text-xs text-muted-foreground">{description}</p>}
       {hint && <p className="text-[11px] text-muted-foreground/80">{hint}</p>}
       {changed && (
         <p className="flex items-center gap-2 text-[11px] text-primary" data-testid="setting-changed">
-          <span>● changed from the default</span>
+          <span>● {changedWords}</span>
           {onReset && (
             <button type="button" className="underline hover:text-foreground" onClick={onReset}>
               Reset
@@ -164,10 +169,14 @@ interface PipelineSettingsProps {
   pipeline: PipelineDescriptor;
   config: Record<string, unknown>;
   onConfigChange: DynamicPipelineParametersProps['onConfigChange'];
+  /** This pipeline's settings from your own defaults, marked as such where they're used (UAT #71). */
+  yours?: Record<string, unknown>;
+  /** Each setting's description under its name, not only on hover: the Pipelines page (UAT #71). */
+  describe?: boolean;
 }
 
-/** One pipeline's settings, without a frame: under its row in New run (UAT #35). */
-export const PipelineSettings = ({ pipeline, config, onConfigChange }: PipelineSettingsProps) => {
+/** One pipeline's settings, without a frame: under its row in New run (UAT #35), and on Pipelines. */
+export const PipelineSettings = ({ pipeline, config, onConfigChange, yours, describe = false }: PipelineSettingsProps) => {
   const handleValuesChange = (pipelineId: string, values: Record<string, unknown>) => {
     onConfigChange((prevConfig) => ({
       ...prevConfig,
@@ -225,6 +234,12 @@ export const PipelineSettings = ({ pipeline, config, onConfigChange }: PipelineS
       hint: fieldHint || undefined,
       tip: settingTip(parameter),
       changed: isChanged(parameter, pipelineConfig),
+      changedWords:
+        yours?.[parameter.name] !== undefined &&
+        JSON.stringify(normalizeValue(parameter, yours[parameter.name])) === JSON.stringify(currentValue)
+          ? 'your default'
+          : undefined,
+      description: describe ? parameter.description : undefined,
       onReset: () => handleValueChange(pipeline.id, parameter, undefined),
     };
 

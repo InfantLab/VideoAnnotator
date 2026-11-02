@@ -15,15 +15,18 @@ vi.mock('sonner', () => ({ toast }));
 
 const client = () => Object.getPrototypeOf(getApiClient());
 
-function mockRunApi(settings = RUN_SETTINGS.defaults) {
-  const api = mockVideosApi({ settings });
+function mockRunApi(settings = RUN_SETTINGS.defaults, yours?: Record<string, Record<string, unknown>>) {
+  const api = mockVideosApi({ settings, yours });
   return {
     ...api,
     getPipelineSchema: vi.spyOn(client(), 'getPipelineSchema').mockImplementation(async (id: string) => ({
       pipeline: { id, name: id },
       parameters:
         id === 'face_analysis'
-          ? [{ name: 'min_face_size', type: 'number', default: 30, description: 'Smallest face to look for, in pixels' }]
+          ? [
+              { name: 'min_face_size', type: 'number', default: 30, description: 'Smallest face to look for, in pixels' },
+              { name: 'max_faces', type: 'number', default: 10 },
+            ]
           : [],
     })),
     validateConfig: vi.spyOn(client(), 'validateConfig').mockResolvedValue({ valid: true, errors: [], warnings: [] }),
@@ -103,6 +106,20 @@ describe('with a target, Start is the only confirmation', () => {
     expect(within(settings).queryByText('Smallest face to look for, in pixels')).toBeNull();
     fireEvent.click(within(settings).getByRole('button', { name: 'Reset' }));
     await waitFor(() => expect(screen.getByTestId('settings-cue')).toHaveTextContent('defaults'));
+  });
+
+  it('your defaults fill what the project leaves unset, and are said (UAT #71)', async () => {
+    const api = mockRunApi(RUN_SETTINGS.project, { face_analysis: { min_face_size: 50, max_faces: 3 } });
+    open({ target: { kind: 'project', id: PROJECT_ID, name: 'Peekaboo study' } });
+
+    const button = await startButton();
+    expect(await screen.findByTestId('your-defaults-used')).toHaveTextContent('with your defaults for DeepFace');
+    fireEvent.click(await screen.findByTestId('settings-cue'));
+    expect(await screen.findByText('● your default')).toBeInTheDocument();
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    await waitFor(() => expect(api.runVideos).toHaveBeenCalled());
+    expect(api.runVideos.mock.calls[0][0].config).toEqual({ face_analysis: { min_face_size: 40, max_faces: 3 } });
   });
 
   it('a selection: exactly those videos', async () => {

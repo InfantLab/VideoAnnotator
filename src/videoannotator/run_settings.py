@@ -6,6 +6,11 @@ last run is remembered too (`user_preferences`, `last_run_settings`). New run
 starts from, in order: the chosen workflow, the project's current settings,
 the settings of the project's newest run, the caller's last run, the defaults.
 Recorded where runs are created, so the CLI and API keep them current too.
+
+Each user may also keep their own defaults per pipeline (`pipeline_defaults`,
+set on the viewer's Pipelines page). The viewer fills them into settings the
+starting point leaves unset, marked, so a run records them explicitly; they
+never change what a project or workflow says.
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 LAST_RUN = "last_run_settings"
+YOUR_DEFAULTS = "pipeline_defaults"
 ANONYMOUS = "anonymous"
 
 
@@ -89,6 +95,33 @@ def last_used(db: Any, user: dict[str, Any] | None) -> dict[str, Any] | None:
 
     row = db.get(UserPreference, (user_key(user), LAST_RUN))
     return row.value if row is not None and isinstance(row.value, dict) else None
+
+
+def your_defaults(db: Any, user: dict[str, Any] | None) -> dict[str, Any]:
+    """`{config, updated_at}`: the caller's own defaults, keyed by pipeline."""
+    from .database.models import UserPreference
+
+    row = db.get(UserPreference, (user_key(user), YOUR_DEFAULTS))
+    value = row.value if row is not None and isinstance(row.value, dict) else {}
+    return {
+        "config": dict(value.get("config") or {}),
+        "updated_at": value.get("updated_at"),
+    }
+
+
+def set_your_defaults(
+    db: Any, user: dict[str, Any] | None, config: dict[str, Any]
+) -> dict[str, Any]:
+    """Keep only pipelines with at least one setting; empty means none."""
+    kept = {
+        pipeline: dict(values)
+        for pipeline, values in config.items()
+        if isinstance(values, dict) and values
+    }
+    value = {"config": kept, "updated_at": _now()}
+    _set_preference(db, user_key(user), YOUR_DEFAULTS, value)
+    db.commit()
+    return value
 
 
 def _newest_run_settings(storage: Any, dataset_id: str) -> dict[str, Any] | None:

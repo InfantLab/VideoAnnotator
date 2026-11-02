@@ -1,11 +1,10 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, Download, Pencil, Play, Trash2, Upload } from 'lucide-react';
+import { useQueries, useQuery } from '@tanstack/react-query';
+import { ChevronDown, Download, Pencil, Play, Plus, Trash2, Upload } from 'lucide-react';
 
 import { apiClient } from '@/api/client';
-import { PageHelp } from '@/components/PageHelp';
-import { Term } from '@/components/Term';
+import { WorkflowEditor } from '@/components/workflows/WorkflowEditor';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,17 +17,18 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
+import { pipelineSchemaQueryOptions } from '@/hooks/usePipelineCatalog';
 import { usePipelineNames } from '@/hooks/usePipelineNames';
 import { useProjects } from '@/hooks/useProjects';
 import { useWorkflowActions, useWorkflows } from '@/hooks/useWorkflows';
 import { saveBlob } from '@/lib/exports';
 import { notify } from '@/lib/notify';
+import { settingsSummary } from '@/lib/pipelineSettings';
 import { runState } from '@/lib/runTarget';
 import { userMessage } from '@/lib/userMessage';
 import { applyBody, workflowFile } from '@/lib/workflows';
+import type { PipelineDescriptor } from '@/types/pipelines';
 import type { Preset, PresetCreateRequest } from '@/types/presets';
 import { formatDay } from '@/lib/when';
 
@@ -44,11 +44,17 @@ const fileName = (name: string) => `${name.replace(/[^\w\- ]+/g, '').trim() || '
 function WorkflowCard({ workflow, projects }: { workflow: Preset; projects: { id: string; name: string }[] }) {
   const navigate = useNavigate();
   const { nameOf } = usePipelineNames();
-  const { update: rename, remove } = useWorkflowActions();
+  const { remove } = useWorkflowActions();
   const { update } = useProjects();
-  const [naming, setNaming] = useState(false);
-  const [name, setName] = useState(workflow.name);
+  const [editing, setEditing] = useState(false);
   const [removing, setRemoving] = useState(false);
+  // Each pipeline with what differs from its defaults: "DeepFace (Age on)" (UAT #71, P6).
+  const schemas = useQueries({ queries: workflow.selected_pipelines.map((id) => pipelineSchemaQueryOptions(id)) });
+  const pipelines = workflow.selected_pipelines.map((id, i) => {
+    const parameters = schemas[i]?.data?.parameters;
+    const cue = parameters ? settingsSummary({ id, name: id, parameters } as PipelineDescriptor, workflow.config) : '';
+    return cue && cue !== 'defaults' ? `${nameOf(id)} (${cue})` : nameOf(id);
+  });
 
   const exportFile = () => {
     saveBlob(new Blob([JSON.stringify(workflowFile(workflow), null, 2)], { type: 'application/json' }), fileName(workflow.name));
@@ -66,7 +72,7 @@ function WorkflowCard({ workflow, projects }: { workflow: Preset; projects: { id
           <h3 className="font-semibold">{workflow.name}</h3>
           <span className="text-xs text-muted-foreground">{origin(workflow)}</span>
         </div>
-        <p className="text-sm">{workflow.selected_pipelines.map(nameOf).join(', ') || 'No pipelines'}</p>
+        <p className="text-sm">{pipelines.join(', ') || 'No pipelines'}</p>
         {workflow.unavailable_pipelines?.length ? (
           <p className="text-xs text-amber-700">Not on this server now: {workflow.unavailable_pipelines.map(nameOf).join(', ')}</p>
         ) : null}
@@ -94,9 +100,9 @@ function WorkflowCard({ workflow, projects }: { workflow: Preset; projects: { id
             <Download className="mr-1 h-4 w-4" />
             Export
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => setNaming(true)}>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
             <Pencil className="mr-1 h-4 w-4" />
-            Rename
+            Edit
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setRemoving(true)}>
             <Trash2 className="mr-1 h-4 w-4" />
@@ -104,30 +110,7 @@ function WorkflowCard({ workflow, projects }: { workflow: Preset; projects: { id
           </Button>
         </div>
       </CardContent>
-      <Dialog open={naming} onOpenChange={setNaming}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rename {workflow.name}</DialogTitle>
-          </DialogHeader>
-          <Input value={name} onChange={(e) => setName(e.target.value)} aria-label="Workflow name" autoFocus />
-          <DialogFooter>
-            <Button
-              disabled={!name.trim()}
-              onClick={() =>
-                rename.mutate(
-                  { id: workflow.id, body: { name: name.trim() } },
-                  {
-                    onSuccess: () => setNaming(false),
-                    onError: (e) => notify({ title: "Couldn't rename it", body: userMessage(e), tone: 'error' }),
-                  },
-                )
-              }
-            >
-              Rename
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {editing && <WorkflowEditor workflow={workflow} open onOpenChange={setEditing} />}
       <AlertDialog open={removing} onOpenChange={setRemoving}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -153,12 +136,13 @@ function WorkflowCard({ workflow, projects }: { workflow: Preset; projects: { id
   );
 }
 
-/** Pipelines → Workflows (spec 029 FR-016): saved settings, applied, used, shared. */
+/** Pipelines → Workflows (spec 029 FR-016, UAT #71): saved settings, made, applied, used, shared. */
 export function WorkflowsSection() {
   const { data: workflows = [], isLoading } = useWorkflows();
   const { create } = useWorkflowActions();
   const projects = useQuery({ queryKey: ['videos', 'projects-list'], queryFn: () => apiClient.listDatasets(), retry: false });
   const input = useRef<HTMLInputElement>(null);
+  const [making, setMaking] = useState(false);
 
   const importFile = async (file: File) => {
     try {
@@ -176,10 +160,16 @@ export function WorkflowsSection() {
 
   return (
     <section id="workflows" className="space-y-4" data-testid="workflows">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-2xl font-bold">
-          <Term word="workflow">Workflows</Term>
-        </h2>
+      <p className="text-sm">
+        A workflow is a set of pipelines and their settings saved under a name: to run the same way again, to give a
+        project the same settings, or to send to a colleague as a file. Nothing uses one until you choose it, in New run
+        or on a project.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" onClick={() => setMaking(true)}>
+          <Plus className="mr-1 h-4 w-4" />
+          New workflow
+        </Button>
         <input
           ref={input}
           type="file"
@@ -194,12 +184,12 @@ export function WorkflowsSection() {
         />
         <Button size="sm" variant="outline" onClick={() => input.current?.click()}>
           <Upload className="mr-1 h-4 w-4" />
-          Import workflow
+          Import a file
         </Button>
       </div>
-      <PageHelp page="workflows">Pipelines and settings saved under a name, used only when you choose them.</PageHelp>
+      {making && <WorkflowEditor open onOpenChange={setMaking} />}
       {!isLoading && workflows.length === 0 && (
-        <p className="text-sm text-muted-foreground">None yet. Save one from a project or a run: Save as workflow.</p>
+        <p className="text-sm text-muted-foreground">None yet. Make one here, or save one from a project or a run with Save as workflow.</p>
       )}
       <div className="grid gap-3 md:grid-cols-2">
         {workflows.map((w) => (

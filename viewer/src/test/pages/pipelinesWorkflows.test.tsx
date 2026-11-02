@@ -1,4 +1,4 @@
-/** Pipelines → Workflows (spec 029 FR-016, T049). */
+/** Pipelines → Workflows (spec 029 FR-016, T049; UAT #71). */
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,7 +15,7 @@ const saved = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/exports', async (original) => ({ ...(await original<typeof import('@/lib/exports')>()), saveBlob: saved }));
 
 const client = () => Object.getPrototypeOf(getApiClient());
-const show = () => renderAt('/pipelines', [{ path: '/pipelines', element: <Pipelines /> }]);
+const show = () => renderAt('/pipelines#workflows', [{ path: '/pipelines', element: <Pipelines /> }]);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -65,18 +65,39 @@ describe('Workflows', () => {
     expect(toast.success).toHaveBeenCalledWith('Workflow Faces 40 imported', expect.anything());
   });
 
-  it('renames and deletes', async () => {
+  it('edits and deletes', async () => {
     const api = mockVideosApi();
     show();
-    await userEvent.click(within(await card()).getByRole('button', { name: /Rename/ }));
-    const field = screen.getByLabelText('Workflow name');
+    await userEvent.click(within(await card()).getByRole('button', { name: /Edit/ }));
+    const field = screen.getByLabelText('Name');
     await userEvent.clear(field);
     await userEvent.type(field, 'Faces 50');
-    await userEvent.click(screen.getByRole('button', { name: 'Rename' }));
-    await waitFor(() => expect(api.updatePreset).toHaveBeenCalledWith('w-faces40', { name: 'Faces 50' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() =>
+      expect(api.updatePreset).toHaveBeenCalledWith('w-faces40', {
+        name: 'Faces 50',
+        selected_pipelines: ['face_analysis'],
+        config: { face_analysis: { min_face_size: 40 } },
+      }),
+    );
     await userEvent.click(within(await card()).getByRole('button', { name: /Delete/ }));
     await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(api.deletePreset).toHaveBeenCalled());
+  });
+
+  it('says what a workflow is, and makes one here', async () => {
+    const api = mockVideosApi();
+    show();
+    expect(await screen.findByText(/A workflow is a set of pipelines and their settings/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /New workflow/ }));
+    await userEvent.type(screen.getByLabelText('Name'), 'Scenes only');
+    const make = screen.getByRole('button', { name: 'Make workflow' });
+    expect(make).toBeDisabled();
+    await userEvent.click(await screen.findByRole('checkbox', { name: /PySceneDetect/ }));
+    await userEvent.click(make);
+    await waitFor(() =>
+      expect(api.createPreset).toHaveBeenCalledWith({ name: 'Scenes only', selected_pipelines: ['scene_detection'], config: {} }),
+    );
   });
 
   it('a preset saved before is listed as a workflow', async () => {

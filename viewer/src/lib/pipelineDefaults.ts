@@ -26,3 +26,18 @@ export function configFor(selected: string[], config: Record<string, unknown>): 
   const entries = Object.entries(config).filter(([id]) => selected.includes(id));
   return entries.length ? Object.fromEntries(entries) : undefined;
 }
+
+/** `config` with your own defaults under what it already sets, and the pipelines they filled anything in (UAT #71). */
+export function withYours(
+  yours: Record<string, Record<string, unknown>>,
+  config: Record<string, unknown>,
+): { config: Record<string, unknown>; filled: string[] } {
+  const next: Record<string, unknown> = { ...config };
+  const filled: string[] = [];
+  for (const [pipeline, values] of Object.entries(yours)) {
+    const current = next[pipeline] && typeof next[pipeline] === 'object' ? (next[pipeline] as Record<string, unknown>) : {};
+    if (Object.keys(values).some((name) => current[name] === undefined)) filled.push(pipeline);
+    next[pipeline] = { ...values, ...current };
+  }
+  return { config: next, filled };
+}

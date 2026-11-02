@@ -21,6 +21,7 @@ export type RunListResponse = Schemas['RunListResponse'];
 export type Activity = Schemas['ActivityResponse'];
 export type RunSettings = Schemas['RunSettingsResponse'];
 export type RunSettingsSource = Schemas['RunSettingsSource'];
+export type YourDefaults = Schemas['YourDefaults'];
 export type VideosRunRequest = Schemas['VideosRunRequest'];
 export type VideosRunResponse = Schemas['VideosRunResponse'];
 export type ProjectSettings = Schemas['RunSettings'];

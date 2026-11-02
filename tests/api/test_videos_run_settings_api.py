@@ -171,3 +171,26 @@ def test_a_folder_ingest(api, monkeypatch):
     assert r.status_code == 201, r.text
     found = _settings(api, project=project["id"])
     assert found["config"] == {"scene_detection": {"threshold": 0.3}}
+
+
+def test_your_defaults_are_kept_per_caller(api):
+    r = api.client.get("/api/v1/videos/run-settings/defaults")
+    assert r.json() == {"config": {}, "updated_at": None}
+
+    r = api.client.put(
+        "/api/v1/videos/run-settings/defaults",
+        json={
+            "config": {
+                "speech_recognition": {"language": "en"},
+                "face_analysis": {},
+            }
+        },
+    )
+
+    assert r.status_code == 200, r.text
+    found = api.client.get("/api/v1/videos/run-settings/defaults").json()
+    assert found["config"] == {"speech_recognition": {"language": "en"}}
+    assert found["updated_at"]
+    # New run's starting point is unchanged: the viewer fills them in, marked.
+    assert _settings(api)["source"]["kind"] == "defaults"
+    assert _settings(api)["config"] == {}

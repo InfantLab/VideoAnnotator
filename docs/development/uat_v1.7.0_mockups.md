@@ -558,3 +558,19 @@ Last on the Pipelines tab, short:
 2. Workflows: a tab here (above), or a page of their own?
 3. The name: keep "Pipelines" (Help's glossary and every page say it), with "plugin" only for
    how one is added?
+
+### Decided (Caspar, 2026-11-02)
+
+1. Settings are editable here as your own defaults, which New run starts from.
+2. Workflows are a tab on Pipelines.
+3. The name stays "Pipelines"; "plugin" only for how one is added.
+
+Built 2026-11-02. How your defaults fit with the rest (P6): they fill only settings that the starting
+point (a project, a workflow, your last run, the defaults) leaves unset, never what one sets, and
+New run says so ("with your defaults for Whisper", and "● your default" on the setting). A run
+records them like any other setting. A run being repeated, or settings brought from Ask AI, are
+kept exactly. Kept per user on the server (`user_preferences`, `pipeline_defaults`;
+`GET/PUT /api/v1/videos/run-settings/defaults`). Found while building: deprecated pipelines aren't
+in the catalog, so there is no "Older pipelines" fold; there is no developer guide to building a
+pipeline yet, so the developers' line links to the pipelines' source. Edit replaces Rename on a
+workflow card.
