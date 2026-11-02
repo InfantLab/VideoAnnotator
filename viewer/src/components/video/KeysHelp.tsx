@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
@@ -7,6 +9,7 @@ const KEYS: [string, string][] = [
   ['Shift + ← →', 'One second back or on'],
   ['↓ ↑', 'A tenth of a second back or on'],
   ['[ ]', 'Previous or next event in the selected track'],
+  ['N', 'A note at this moment; Shift + N twice for a span'],
   ['+ −', 'Zoom the timeline in or out'],
   ['0', 'Show the whole video'],
   ['Ctrl/⌘ + wheel', 'Zoom around the pointer'],
@@ -14,12 +17,20 @@ const KEYS: [string, string][] = [
   ['Ctrl + Shift + D', 'Debug panel'],
 ];
 
-/** The keys, behind a `?` button (spec 028 R8). */
-export function KeysHelp() {
+/**
+ * Help on the Video page, behind its `?` button: the keys (spec 028 R8), the
+ * tips again, and reporting a problem (UAT #68, #70).
+ */
+export function KeysHelp({ onTips, onReport }: { onTips?: () => void; onReport?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const then = (action: () => void) => () => {
+    setOpen(false);
+    action();
+  };
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-7 w-7 font-semibold" aria-label="Keyboard keys" title="Keyboard keys (?)">
+        <Button variant="ghost" size="icon" className="h-7 w-7 font-semibold" aria-label="Help and keys" title="Help and keys">
           ?
         </Button>
       </PopoverTrigger>
@@ -34,6 +45,20 @@ export function KeysHelp() {
           ))}
         </dl>
         <p className="mt-2 text-muted-foreground">Keys do nothing while you type in a box.</p>
+        {(onTips || onReport) && (
+          <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+            {onTips && (
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={then(onTips)}>
+                Show the tips again
+              </Button>
+            )}
+            {onReport && (
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={then(onReport)}>
+                Report a problem
+              </Button>
+            )}
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );

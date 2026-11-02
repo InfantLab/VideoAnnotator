@@ -7,7 +7,8 @@ land on `1.7-dev` as refinements, not new specs.
 ## Where it stands
 
 All batches (0–8) are done (2026-10-26 to 28; batch 6 `1fe6a5f`, batch 8 `82b7494`, batch 7
-the commit after the mock-up). Every fixed finding in [`uat_v1.7.0.md`](uat_v1.7.0.md) says what
+the commit after the mock-up). Batch 9 (#68–70: report a problem, the footer, Video page tips)
+done 2026-11-02; #66 (Whisper loops) fixed and #67 closed 2026-10-30. Every fixed finding in [`uat_v1.7.0.md`](uat_v1.7.0.md) says what
 was done and in which commit. Left: the Open items in `viewer_design.md`, the walk-throughs
 (027 T068, 028 T062, 033 T055), and whatever Caspar's next pass finds.
 

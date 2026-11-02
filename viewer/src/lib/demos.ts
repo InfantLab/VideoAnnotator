@@ -20,6 +20,12 @@ export const DEMOS: { key: DemoKey; title: string; description: string }[] = [
   },
 ];
 
+/** A demo clip's own name, which can go in a problem report as it identifies nobody. */
+export function isDemoVideo(name: string | null | undefined): boolean {
+  if (!name) return false;
+  return Object.values(DEMO_DATA_SETS).some((set) => set.video.split('/').pop() === name);
+}
+
 export function isDemoKey(value: string | null): value is DemoKey {
   return value !== null && value in DEMO_DATA_SETS;
 }

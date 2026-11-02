@@ -14,6 +14,17 @@ export const VERSION: string = pkg.version;
 export const GITHUB_URL = 'https://github.com/InfantLab/VideoAnnotator';
 export const APP_NAME = 'Video Annotation Viewer';
 
+const release = (version: string) => version.split('.').slice(0, 2).join('.');
+
+/** "older" or "newer" when the server isn't the viewer's release, else null. */
+export function serverDiffers(server: string, viewer: string = VERSION): 'older' | 'newer' | null {
+  const [a, b] = [release(server), release(viewer)];
+  if (a === b) return null;
+  const [sMajor, sMinor] = a.split('.').map(Number);
+  const [vMajor, vMinor] = b.split('.').map(Number);
+  return sMajor < vMajor || (sMajor === vMajor && sMinor < vMinor) ? 'older' : 'newer';
+}
+
 /**
  * Get formatted version string
  */

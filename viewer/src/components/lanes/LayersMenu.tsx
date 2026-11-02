@@ -44,7 +44,7 @@ export function LayersMenu({ lanes, toggles, showLanes, setOverlays }: LayersMen
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
+        <Button variant="outline" size="sm" className="h-6 px-2 text-xs" data-tip="layers">
           <Layers className="mr-1 h-3.5 w-3.5" />
           Layers
         </Button>

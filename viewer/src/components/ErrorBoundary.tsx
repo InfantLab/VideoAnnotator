@@ -3,6 +3,8 @@
  * Catches React rendering errors and displays them with ErrorDisplay
  */
 
+import { ReportProblemButton } from '@/components/ReportProblem';
+import { recordError } from '@/lib/errorLog';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { parseApiError } from '@/lib/errorHandling';
@@ -64,6 +66,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
         // Log error to console for debugging
         console.error('React Error Boundary caught an error:', error, errorInfo);
+        recordError(error);
 
         // You can also log to an error reporting service here
         // Example: logErrorToService(error, errorInfo);
@@ -125,6 +128,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                             >
                                 Go Home
                             </Button>
+                            <ReportProblemButton variant="outline" />
                         </div>
 
                         {/* Stack trace in development */}

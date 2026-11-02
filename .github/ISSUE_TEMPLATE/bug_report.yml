@@ -1,0 +1,25 @@
+# The viewer's "Report a problem" fills these fields by id (what, expected,
+# details) through the new-issue address; keep the ids if the wording changes.
+name: Report a problem
+description: Something in VideoAnnotator didn't work, or didn't make sense.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did and what you saw. A screenshot helps.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: >-
+        VideoAnnotator's version, the server's, your browser and system. The viewer's
+        "Report a problem" fills this in; from the command line, paste `videoannotator version`.
+      render: text

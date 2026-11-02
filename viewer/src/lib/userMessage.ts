@@ -8,6 +8,7 @@
  * the raw message.
  */
 import { APIError, apiErrorEnvelope } from '@/api/handleError';
+import { recordError } from '@/lib/errorLog';
 
 const MESSAGES: Record<string, string> = {
   JOB_NOT_FOUND: "That run isn't on this server any more.",
@@ -43,8 +44,15 @@ export function inViewerWords(message: string, code?: string): string {
   return code ? `The server couldn't do that (${code}).` : "The server couldn't do that.";
 }
 
+/** What the user is shown, also kept for a problem report with its code (UAT #68). */
 export function userMessage(error: unknown): string {
   const code = errorCode(error);
+  const shown = toWords(error, code);
+  recordError(code ? `${shown} (${code})` : shown);
+  return shown;
+}
+
+function toWords(error: unknown, code: string | undefined): string {
   if (code && MESSAGES[code]) return MESSAGES[code];
   if (error instanceof APIError && error.status === 0) {
     return "Can't reach the server. Check it's running, and the address in Settings.";

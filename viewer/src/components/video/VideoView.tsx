@@ -14,6 +14,9 @@ import type { ProvenanceByRun, RunFileRef } from '@/hooks/useRunFiles';
 import { AboutPanel } from '@/components/video/AboutPanel';
 import { DataTable } from '@/components/video/DataTable';
 import { KeysHelp } from '@/components/video/KeysHelp';
+import { VideoTips } from '@/components/video/VideoTips';
+import { TIPS_START_BY_THEMSELVES, markTipsSeen, tipsSeen } from '@/lib/videoTips';
+import { ReportProblemDialog } from '@/components/ReportProblem';
 import { HeaderActions, VideoContext } from '@/components/video/Header';
 import { DebugPanel } from '@/components/DebugPanel';
 import { Footer } from '@/components/Footer';
@@ -333,6 +336,12 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
   const editNote = (note: VideoNote) => setEditing({ id: note.id, start: note.start_sec, end: note.end_sec ?? null, text: note.text });
 
   const [debugOpen, setDebugOpen] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [tipsOn, setTipsOn] = useState(() => TIPS_START_BY_THEMSELVES && !tipsSeen());
+  const endTips = useCallback(() => {
+    markTipsSeen();
+    setTipsOn(false);
+  }, []);
   const shownRuns = useMemo(() => {
     const seen = new Map<string, RunRef>();
     for (const lane of lanes) if (lane.run && !seen.has(lane.run.id)) seen.set(lane.run.id, lane.run);
@@ -404,7 +413,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
             </Button>
           )}
           {notes && (
-            <Button variant="ghost" size="sm" className="h-8" onClick={newNote} title="A note at this moment (N); Shift+N twice for a span">
+            <Button variant="ghost" size="sm" className="h-8" onClick={newNote} title="A note at this moment (N); Shift+N twice for a span" data-tip="notes">
               <StickyNote className="mr-1 h-4 w-4" />
               Note
             </Button>
@@ -415,7 +424,7 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
             onDebug={() => setDebugOpen(true)}
             onLoadOther={source.local ? onBack : undefined}
           />
-          <KeysHelp />
+          <KeysHelp onTips={() => setTipsOn(true)} onReport={() => setReporting(true)} />
           <Button
             variant="ghost"
             size="icon"
@@ -543,6 +552,8 @@ export function VideoView({ source, videoRef, startAt = 0, onBack }: VideoViewPr
       </div>
 
       <DebugPanel isOpen={debugOpen} onClose={() => setDebugOpen(false)} />
+      <ReportProblemDialog open={reporting} onOpenChange={setReporting} video={source.name} />
+      <VideoTips active={tipsOn && !files.loading} onEnd={endTips} />
       <HeightHandle
         height={timelineHeight}
         onResize={setDraggedHeight}

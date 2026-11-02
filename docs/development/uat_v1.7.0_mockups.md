@@ -416,9 +416,11 @@ without a server.
 - Remembered in this browser only, like the panel's open or closed state.
 - Built from the popover the viewer already has; no tour library.
 
-### Questions
+### Decided (Caspar, 2026-11-02)
 
-1. **Where should emailed reports go?** A project address (e.g. a shared InfantLab inbox) or yours.
-2. **The footer on the Video page**: under the lanes as above, or leave the Video page without one
-   and put Help, Docs and Report a problem only in its `?` menu?
-3. **Tips**: the four above, or others (the Data tab's "All rows", Compare, overlays)?
+1. Emailed reports go to infantologist@gmail.com.
+2. The same footer on every page, the Video page included.
+3. The four tips as a start; Caspar tries them and says what to add.
+
+Built 2026-11-02. Found while building: every page already had a footer (on long pages it is only
+at the very bottom), so #69 became what the footer says, not where it is.

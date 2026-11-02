@@ -4,6 +4,9 @@ import './index.css'
 import './utils/version' // Load version info and make it available globally
 import './utils/debugUtils' // Load debug utilities and make them available globally
 import { reloadForNewBuild } from './lib/staleBuild'
+import { installErrorLog } from './lib/errorLog'
+
+installErrorLog();
 
 // Vite fires this when a lazily loaded page's file is gone: this tab predates
 // an upgrade. Reloading gets the current build instead of an error screen.
