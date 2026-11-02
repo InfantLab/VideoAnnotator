@@ -424,3 +424,137 @@ without a server.
 
 Built 2026-11-02. Found while building: every page already had a footer (on long pages it is only
 at the very bottom), so #69 became what the footer says, not where it is.
+
+## Batch 10: the Pipelines page
+
+Answers #71. Today the page is for installing; this makes it the place to learn what each pipeline
+does and how it's set, day to day, with installing as one part of that (P1, P6, P7, P8).
+
+### The top: what a pipeline is
+
+```
+ Pipelines                                                         [ ▶ New run ]
+ A pipeline is a published research tool (a model and the code around it) that
+ VideoAnnotator runs on your videos for you. Each finds one kind of thing, such as who
+ spoke when or where faces are, and writes it as results you can view, compare and export.
+ They run on the server; your videos aren't sent anywhere else.
+
+ [ Pipelines ]   [ Workflows · 2 ]
+```
+
+- Two tabs: Workflows moves out from the bottom into its own tab (below). The tab is in the URL
+  (`/pipelines#workflows`), so New run and Help can link to it.
+
+### Each pipeline: what it finds, its settings, where it comes from
+
+One row each, grouped under Sound, Faces, People, Scenes, collapsed by default; a row says what it
+needs, if anything, without opening.
+
+```
+ Sound
+  🔊 pyannote community-1   who spoke when     Needs setup: a Hugging Face key ▸
+  🗨 Whisper large-v3-turbo what was said                                 Ready    ▾
+     ┌───────────────────────────────────────────────────────────────────────────┐
+     │ Writes each stretch of speech with its words and times: a Speech lane on  │
+     │ the Video page; exports as WebVTT and CSV.                                │
+     │                                                                           │
+     │ Settings                     default        your last run, 30 Oct         │
+     │ Language                     detected       English ●                     │
+     │   The language spoken; left to detection, each video is guessed alone.    │
+     │ Retry looping text           on                                           │
+     │   Re-reads a stretch that repeats itself, as Whisper does by default.     │
+     │ Word times                   off                                          │
+     │ ▸ Technical settings (9)                                                  │
+     │                                                                           │
+     │ ▸ About: homepage · 13 min of audio in 1m03s on a GPU · Cite (BibTeX)     │
+     │                                     [ ▶ Run on videos… ]  v1.7.0          │
+     └───────────────────────────────────────────────────────────────────────────┘
+ Faces
+  😊 DeepFace               where faces are and their expression          Ready    ▸
+  🙂 OpenFace 3             action units, gaze, head pose     Not installed [ Install ]
+ People
+  🧍 YOLO26 pose            where people are and how they move           Ready    ▸
+ …
+```
+
+- **Settings** read as a reference: each in one line with its default, and under it, in a
+  sentence, what it changes (the description that is only on hover in New run). The second
+  column shows where your last run differed (●), so "why is Age on?" has an answer here too.
+  Settings are changed for a run in New run, or saved under a name as a workflow; this page
+  doesn't keep a third set of its own (see the decision below).
+- **Run on videos…** opens New run with this pipeline ticked.
+- **What it finds** says the lane and the files, in the viewer's words, so a researcher knows
+  what to expect before running it.
+- Install, setup and restart stay as they are, on the row they're about. The deprecated
+  "Whisper + pyannote" goes under "Older pipelines" at the end, folded.
+
+### Ask AI: set apart, saying how it differs
+
+Not a row among the others but its own panel after them, in Ask AI's colour.
+
+```
+ ┌ ✨ Ask AI ──────────────────────────────────────────────────────────────────┐
+ │ Different from the pipelines above. They're each one published model,     │
+ │ tested on a benchmark, finding one fixed thing. With Ask AI you write the │
+ │ question, and you choose the model that answers it:                       │
+ │                                                                           │
+ │  · Your question decides what's found: "Is the child looking at the       │
+ │    caregiver?" Answers are as good as the question and the model.         │
+ │  · No benchmark applies. Try a question on a few moments first, check the │
+ │    answers yourself, then run it on your videos.                          │
+ │  · The model runs on a model server you set up (Ollama, LM Studio,        │
+ │    llama.cpp…), on this computer or another. Now: Ollama · qwen3.5 ●      │
+ │  · Slower: each moment is one question to the model.                      │
+ │                                                                           │
+ │             [ Try a question ]   [ Model servers ]   ▸ Settings (13)       │
+ └───────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Try a question** opens Ask AI; **Model servers** opens Settings → Ask AI.
+- The model line is live (P1): "No model server yet" with Model servers as the one thing to do.
+
+### Workflows tab: what one is, and making one here
+
+```
+ [ Pipelines ]   [ Workflows · 2 ]
+
+ A workflow is a set of pipelines and their settings saved under a name: to run the same
+ way again, to give a project the same settings, or to send to a colleague as a file.
+ Nothing uses one until you choose it, in New run or on a project.
+
+ [ + New workflow ]   [ Import a file ]
+
+ Peekaboo standard            from the project peekaboo · 26 Oct
+ pyannote, Whisper, DeepFace (Age on)
+ [ Use in a new run ] [ Apply to a project ▾ ] [ Edit ] [ Export ] [ ⋯ ]
+```
+
+- **New workflow**: a name and New run's "What to find" (ticks, settings under each); no videos.
+  Also still saved from a project or a run, as now.
+- **Edit** opens the same; today a workflow can only be renamed.
+- Each card says what differs from the defaults ("DeepFace (Age on)"), as New run's rows do.
+
+### Adding another tool
+
+Last on the Pipelines tab, short:
+
+```
+ Another tool you'd like?
+ VideoAnnotator comes with the pipelines above. To suggest one, Report a problem and say
+ which tool and what it finds, or open a GitHub issue ↗. Many questions need no new
+ pipeline: Ask AI can look for what you describe.
+ Developers: from VideoAnnotator 1.8 a pipeline can be added as a plugin, a Python package
+ installed beside it, which then shows on this page. How a pipeline is built ↗
+```
+
+- "Plugin" is used only here, for that way of adding one; the thing itself stays a pipeline
+  everywhere (P8).
+
+### To decide
+
+1. Settings on this page: a reference (above), or also editable as "your defaults" that New run
+   starts from? Editable means a third place settings come from, beside a project's and a
+   workflow's; recommended: the reference, with New run and workflows for changing them.
+2. Workflows: a tab here (above), or a page of their own?
+3. The name: keep "Pipelines" (Help's glossary and every page say it), with "plugin" only for
+   how one is added?
