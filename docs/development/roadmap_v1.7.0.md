@@ -96,8 +96,10 @@ Built as spec 033 (2026-10-24); the walk-through with real servers is still to d
 
 ### Phase 3: Docs and Tutorials, Written Against the New Viewer
 
-- [ ] **Tutorial**: the Peekaboo demo video from start to finish (install, run, review, export,
-      analyse in R and Python).
+- [ ] **Tutorial**: the BabyJokes public set ([10.5281/zenodo.23913806](https://doi.org/10.5281/zenodo.23913806),
+      390 clips with parents' ratings) from start to finish: install, open the 5-clip demo,
+      download, run, review, Ask AI, export, and in R and Python check the results against the
+      parents' answers. Chapters to record and the plan: [handover_babyjokes_dataset.md](handover_babyjokes_dataset.md).
 - [ ] **Which pipeline for which question**, in the field's terms: caregiver speech, infant
       vocalisations, movement, faces, joint attention, touch.
 - [ ] **A model card per pipeline**: the model, what it was trained on (few include infants), known

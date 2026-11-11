@@ -1,167 +1,148 @@
-# Handover: the BabyJokes dataset on Zenodo and Databrary
+# Handover: the BabyJokes demo and tutorial
 
-Started 2026-10-29. This covers what Caspar does outside the repo, a brief for the desktop agent
-that searches his email, and what happens in VideoAnnotator once the records exist.
+Started 2026-10-29; rewritten 2026-11-11 once the dataset was published. The October plan (a
+54-clip open sample, a brief for an email search, how to deposit on Zenodo and Databrary) is done
+or overtaken; it is in git history.
 
-## Decided (Caspar, 2026-10-29)
+## The records
 
-- **Name: BabyJokes.** "LookitLaughter" goes.
-- **The open sample, 54 clips of 4 babies, goes on Zenodo** as "BabyJokes: open sample" with its
-  own DOI. Every row in the metadata has Lookit consent `accepted`, use of media `public`, sharing
-  `public` and no withdrawal (checked 2026-10-29). Ethics covers it.
-- **The full corpus, about 1,400 clips, goes on Databrary** as "BabyJokes: full corpus". Only
-  authorised researchers can see it; Databrary's institutional agreement is the gate. Lookit's
-  consent asked parents about Databrary (the `DatabraryShare` column).
-- **VideoAnnotator's demo is 5 clips of one baby, one per joke**, kept inside this repo. The
-  tutorial walk-through uses all 54, downloaded from Zenodo.
-- **InfantLab/babyjokes gets archived.** Its README first points at the new records.
+| | |
+|---|---|
+| Zenodo, cite this | **BabyJokes**, version 1.1 (2026-11-03): [10.5281/zenodo.23913806](https://doi.org/10.5281/zenodo.23913806) |
+| Zenodo, all versions | [10.5281/zenodo.23808041](https://doi.org/10.5281/zenodo.23808041) (resolves to the newest) |
+| Zenodo, version 1.0 | 10.5281/zenodo.23808042 (2026-10-30). Has no ratings: don't cite it |
+| Databrary | [volume 2013](https://nyu.databrary.org/volume/2013): 1,380 clips, 90 sessions, authorised researchers only |
+| Licence | CC BY 4.0 |
+| Ethics | Goldsmiths, Department of Psychology, reference 1408 |
 
-The demo baby is still to choose (Caspar, from the full corpus if none of the 4 open-sample
-babies is good enough). Tried and rejected: 2UWdXP, today's demo baby, who never laughed; and
-4JDccE, whose image quality and framing are poor (2026-10-30). A good demo baby laughs at some
-jokes and not others, is clearly framed with the parent, and has consent for public use.
+Version 1.1's files, each downloadable on its own from
+`https://zenodo.org/records/23913806/files/<name>?download=1`:
+
+- `babyjokes-public-v1.0.zip`: 390 `.mp4` clips in `public/`, 447 MB (unchanged from 1.0).
+- `babyjokes-public-clips.csv`: one row per clip: `file, child_id, session, joke_position,
+  repetition, take, joke, age_days, bytes, sha256`.
+- `babyjokes-public-ratings.csv`: one row per clip, the same keys plus `parent_laughed` (Yes/No)
+  and `parent_how_funny` / `parent_how_funny_score` (1 Not funny to 5 Extremely funny).
+- `README.md`: the dataset card.
+
+What the data looks like (checked 2026-11-11):
+
+- 390 clips, 25 children, 26 sessions (BQKXCD took part twice), aged 111 to 890 days.
+- Clips per child run from 9 to 30: 22 clips are re-takes. "Every child has 15 clips" is the wrong
+  check; one clip per session × game × repetition is the right one, and only
+  `2UWdXP.sess1.joke3.rep1.take1.ThatsNotAHat` is missing (the parent rated that attempt, but
+  Lookit saved no video of it; the old babyjokes repo lacks it too).
+- Parents said the baby laughed on 155 clips, not on 235. Nobody answered "Extremely funny": in
+  practice the scale is 1–4 (143, 142, 88, 17).
+- A parent rated each repetition once, so every take of a repetition carries the same rating. Count
+  repetitions, not clips (keep the last take), or some ratings count twice.
+- The 54 ratings in the old babyjokes sheet match version 1.1 exactly.
+
+Lab only, never in the demo or tutorial: `complete\` and `manifest.csv` in Caspar's
+`LookitLaughterRELEASE` folder.
+
+## The demo: 5 clips of one family, in the repo
+
+One clip per game from one family, with results from the six default pipelines, bundled with the
+viewer. It replaces `peekaboo-rep3-v1.1.1` (`viewer/src/lib/demos.ts`), which fetches v1.1.1
+results of 2UWdXP from the old video-annotation-viewer repo.
+
+A good demo family is clearly framed with parent and baby both in view, and the baby laughs at
+some games and not others. Rejected: 2UWdXP (never laughed), 4JDccE (image quality and framing).
+Shortlist from the ratings (games with a "laughed" out of 5, laughed clips out of all):
+
+| Child | Age (days) | Games | Clips | Note |
+|---|---|---|---|---|
+| A4J4QA | 276 | 3/5 | 11/19 | |
+| C354X4 | 190 | 3/5 | 5/15 | |
+| FVM73L | 298 | 3/5 | 7/16 | |
+| LJLA66 | 222 | 3/5 | 8/16 | |
+| PSJN3Y | 733 | 3/5 | 6/15 | a toddler, for contrast |
+| AQBE7J | 559 | 2/5 | 5/15 | one "Very funny" |
+| 3dC3SQ | 780 | 4/5 | 9/15 | |
+
+Caspar picks by watching. Then, per game, the repetition that shows the most: a laugh for the games
+the baby liked, a clear "no" for one it didn't.
+
+## The tutorial: the full public set
+
+### The question it answers
+
+**Do the tools see what the parents saw?** For each clip the parent said whether the baby laughed.
+The tutorial runs VideoAnnotator over all 390 clips, then checks its findings against the parents'
+answers, and asks the study's own question: does laughing fall off from the first repetition to the
+third, and does that depend on the game and the baby's age?
+
+That gives a new user one complete research loop (data in, pipelines, look, ask, export, analyse)
+on real infant data with a ground truth they didn't make. It is also honest about limits: no
+pipeline detects laughter as such. The signals are the face pipeline's expressions, the audio
+pipeline's voice emotion, and Ask AI's "Did the baby laugh?" asked of a vision model, and part of
+the lesson is how far each gets.
+
+### Chapters
+
+Each chapter is one recording of 3 to 6 minutes and one section of a written page with the same
+steps and screenshots. Short chapters can be re-recorded alone when the viewer changes; the
+roadmap's 10-minute screencast is cut from them.
+
+| # | Chapter | On screen | Learner's time |
+|---|---|---|---|
+| 0 | What we'll do | The dataset, the question, what you'll end with | – |
+| 1 | Install, open the demo | Start-up program, Docker; the 5-clip demo opens with results, nothing downloaded | 15 min |
+| 2 | Get the data | The DOI page; download the zip and both CSVs; unzip into the folder shared with VideoAnnotator | 10 min (447 MB) |
+| 3 | Videos and a project | Videos → the shared folder → 390 videos; a project "BabyJokes" from the folder | 5 min |
+| 4 | Run the pipelines | New run on the project: which pipelines and why; the time estimate; start it and leave it | overnight (see below) |
+| 5 | Look at one family | The Video page: layers, a lane, notes; previous/next through the family's 15 clips; a clip the parent said was funny next to one they didn't | 10 min |
+| 6 | Ask AI | "Did the baby laugh?" as a Yes/No answer, on a few clips, then on the project; local model, what's sent where | 20 min + run |
+| 7 | Results out | Export the results table (CSV); what its columns are; the methods text | 5 min |
+| 8 | Analysis in R and in Python | Join the table to `babyjokes-public-ratings.csv` on the file name; agreement with the parents (a 2 × 2 table, kappa); laughing by repetition × game, by age | 30 min |
+| 9 | What to take away | Where the tools agreed with the parents and where not; why (infants, home webcams); cite the tool and the data | – |
+
+### Following along
+
+- **Running all 390 takes time.** The recording starts the run, cuts, and comes back to it
+  finished. The learner chooses one of three:
+  1. run all 390 overnight (a GPU helps a lot);
+  2. run one game, e.g. Peekaboo's 78 clips, and do chapter 8 on those;
+  3. skip the wait with our results for all 390 (see below), and still run a few clips themselves
+     in chapter 4.
+- **Times are measured, not guessed**: the full run on Caspar's laptop GPU (RTX 4060) and a CPU-only
+  run of one game, before anything is recorded. The tutorial quotes both.
+- **Downloading is by browser from the DOI**, as anyone would. No extra command to learn; the
+  checksum check is three lines in chapter 8's scripts, not a step on screen.
+- **The analysis scripts live in the repo** (`examples/babyjokes/analysis.R`, `analysis.py`) and a
+  test runs them on the demo's results table, so a viewer change that breaks the export breaks CI,
+  not the tutorial.
+- **Recording**: the release-candidate build, a fresh server with no earlier runs, one fixed window
+  size, the viewer in light mode; nothing on screen from Caspar's own data.
+
+### To check before writing it
+
+- Which face is the baby's. Face results hold both parent and baby; the analysis needs the baby's
+  (the smaller face, or person tracking's child/adult label). If the export can't tell them apart,
+  that's a fix before the tutorial, not a workaround in it.
+- How a learner loads our results for option 3: a folder they drop into the shared folder and the
+  server picks up, or an import. If neither exists yet, decide whether it's worth building.
+
+## In this repo
+
+- [ ] Run the six default pipelines on all 390 on this machine; record times; look at the results
+      table at that size (the first UAT pass on a real project of hundreds of videos).
+- [ ] Caspar picks the demo family; bundle the 5 clips and their results; switch
+      `viewer/src/lib/demos.ts` to them; re-baseline `tests/integration/test_output_baseline.py`
+      if its demo clip changes.
+- [ ] Retire `scripts/prepare_babyjokes_open_sample.py` (it built the 54-clip open sample, which was
+      never deposited).
+- [ ] The two checks above (whose face; loading our results).
+- [ ] `examples/babyjokes/` analysis scripts and their test.
+- [ ] The written tutorial in `docs/usage/`, then the recordings.
+- [ ] Cite the dataset (10.5281/zenodo.23913806) in the README, the tutorial and the demo's About.
+- [ ] Archive InfantLab/babyjokes, its README pointing at the Zenodo and Databrary records.
 
 ## Still to decide
 
-1. **Licence for the open sample.** Suggested: CC BY-NC 4.0 (anyone may reuse it with credit, not
-   commercially). Check it against the consent wording the desktop agent finds; if parents agreed
-   to "public" use without limits, CC BY 4.0 is also possible.
-2. **The parents' free-text comments** (`ParentFeedback`, e.g. "She is very jovial and
-   smiles/laughs a little at everything"). They're already public on GitHub, but a citable
-   release is a good moment to drop them. The prep script leaves them out unless
-   `--keep-feedback`.
-3. **Creators on the Zenodo record**: who designed the Lookit study and collected the videos, and
-   their ORCIDs.
-
-## Brief for the desktop agent
-
-Paste this to the agent that can read Caspar's email:
-
-> Search my email (all years) for what I need to deposit the BabyJokes dataset: videos of parents
-> showing jokes to their babies, collected online through Lookit (MIT's platform, now Children
-> Helping Science). It may be called BabyJokes, LookitLaughter, Lookit laughter, baby laughter
-> online or the Lookit humour study. Report back, with the date and sender of each email you use:
->
-> 1. **Ethics approval** for the Lookit study: committee and institution, reference number,
->    approval date, any amendments, and what it says about sharing the videos (publicly, with
->    researchers, on Databrary). Attach or quote the approved wording if there is one.
-> 2. **The Lookit study itself**: its title, study ID or link, when data collection ran, and the
->    consent text parents saw, especially the choices about how their videos may be used
->    (private, scientific, public) and the question about Databrary.
-> 3. **The full dataset's size**: how many videos and families. My old README says 1,425 videos.
-> 4. **What I sent Jerry for his PhD**: when, what (how many videos, which metadata), how it was
->    sent, and any data sharing agreement or conditions attached. Jerry's full name, institution
->    and supervisor.
-> 5. **Databrary**: whether I have (or had) a Databrary account or authorised investigator status,
->    which institution sponsored it, and any Databrary volume already made.
-> 6. **Zenodo or DOIs**: any earlier deposit or DOI for this dataset or the babyjokes repo.
-> 7. **Credits**: who else worked on the study (design, collection, coding), funders and grant
->    numbers to acknowledge, and the Sage Ethical AI hackathon 2023 contacts.
->
-> Don't send, forward or reply to anything. If something isn't in my email, say so rather than
-> guessing.
-
-## Zenodo: what Caspar does
-
-1. Run the prep script. It downloads the clips and metadata from the old repo, checks consent on
-   every row, and writes the upload folder:
-
-   ```bash
-   python scripts/prepare_babyjokes_open_sample.py ~/babyjokes_open_sample
-   ```
-
-   It gives `videos/` (54 clips), `metadata.csv`, `README.md` (the dataset card) and `SHA256SUMS`;
-   79 MB in all.
-2. On [zenodo.org](https://zenodo.org), sign in and choose **New upload**. Use the InfantLab
-   account that holds VideoAnnotator's DOI, so both sit together.
-3. **Reserve a DOI** first (the "Get a DOI now" button). That DOI goes into the babyjokes README and
-   VideoAnnotator before anything is published.
-4. Upload the files: the 54 clips (one file each, not a zip, so they can be downloaded one at a
-   time), `metadata.csv`, `README.md` and `SHA256SUMS`. That's 57 files; Zenodo allows 100.
-5. Fill in the record:
-
-   | Field | Value |
-   |---|---|
-   | Resource type | Dataset |
-   | Title | BabyJokes: open sample |
-   | Creators | Caspar Addyman (ORCID), and the study team from the email search |
-   | Description | The first three paragraphs of the generated `README.md` |
-   | Licence | Decided above (suggested CC BY-NC 4.0) |
-   | Keywords | infant humour, laughter, parent–infant interaction, Lookit, developmental psychology, video |
-   | Related works | *Is supplemented by* `https://github.com/InfantLab/babyjokes`; *Is referenced by* VideoAnnotator, `10.5281/zenodo.16961751` |
-   | Funding | From the email search |
-   | Version | 1.0 |
-
-6. Publish. Then send the DOI and the record number (the digits in `zenodo.org/records/<number>`)
-   back to this repo's agent.
-
-## Databrary: what Caspar does
-
-Databrary only lets in researchers whose institution has signed its access agreement, and a
-volume is only shared once its files have release levels. In order:
-
-1. **Authorisation.** If the email search finds no current authorised investigator status,
-   register at [databrary.org](https://databrary.org) and ask for authorisation through Caspar's
-   current institution. The institution's signatory has to sign Databrary's agreement, which can
-   take weeks, so start this first.
-2. **Make a volume** "BabyJokes: full corpus". Its overview (title, description, the Zenodo open
-   sample as a related link, the ethics reference) can be public even when the videos aren't.
-3. **Upload by family.** One Databrary session per family, with the child's age and the clips as
-   files. Before uploading, keep only clips where
-   `DatabraryShare` is `yes` and `Withdrawal` is `0`.
-4. **Release levels.** Set each file to *Authorized users*: any authorised Databrary researcher can
-   see it, nobody else can. The 54 open-sample clips may be *Public*, matching their consent.
-5. **Share the volume** and send its link back here.
-
-From then on, a researcher who asks for the full set ("available on request") is sent to
-Databrary instead of being emailed files.
-
-## What happens in this repo
-
-Before the records exist:
-
-- [x] `scripts/prepare_babyjokes_open_sample.py` (2026-10-29).
-- [ ] The 5-clip demo inside the repo, with results from the six default pipelines, replacing
-      the single 2UWdXP clip that today is fetched from the old video-annotation-viewer repo.
-- [ ] The new babyjokes README (below), ready to push when the DOI is reserved.
-
-Once the Zenodo DOI is reserved:
-
-- [ ] Push the babyjokes README, then archive the repo (Settings → Archive this repository).
-- [ ] `videoannotator demo download babyjokes`: fetches the 54 clips and `metadata.csv` from
-      Zenodo into a folder and checks `SHA256SUMS`, for the tutorial.
-- [ ] The tutorial walk-through on the 54: run the pipelines as a project, export the table, and
-      in R join the parents' `HowFunny` and `LaughYesNo` to what the pipelines found.
-- [ ] Cite the dataset DOI in VideoAnnotator's README and docs.
-
-## The new babyjokes README (draft)
-
-```markdown
-# BabyJokes (archived)
-
-This repository held code from the 2023 Sage Ethical AI hackathon for analysing videos of parents
-showing simple jokes to their babies. It is archived and no longer maintained.
-
-## The data
-
-- **BabyJokes: open sample**: 54 clips of 4 babies with parents' ratings, free to download:
-  https://doi.org/<ZENODO DOI>
-- **BabyJokes: full corpus**: about 1,400 clips, for researchers through Databrary:
-  <DATABRARY VOLUME LINK>
-
-The `LookitLaughter.test/` folder here is the same open sample; please cite the Zenodo DOI.
-
-## The tools
-
-Use [VideoAnnotator](https://github.com/InfantLab/VideoAnnotator), which grew out of this project:
-its demo and tutorial use the BabyJokes open sample.
-
-## Hackathon
-
-- Write-up: [Quantifying Parent-Child Interactions](https://medium.com/sage-ai/unlocking-parent-child-interactions-advancing-video-understanding-with-multi-modal-llms-c570ab487183)
-- London team: https://github.com/chilledgeek/ethical_ai_hackathon_2023
-- US team: https://github.com/yutsai84/Ask-Anything
-- Motivating video: https://www.youtube.com/watch?v=mt0Um-ZNbj4
-
-MIT licence for the code. The videos are under the licence on the Zenodo record.
-```
+1. **Publishing our results for all 390** (option 3 above): a separate Zenodo record ("BabyJokes:
+   VideoAnnotator results", with the VideoAnnotator version that made them, linked to the dataset)
+   or a file beside the tutorial. Either way without face embeddings, which are close to biometric.
+2. **Which vision model Ask AI uses in chapter 6**: one small enough for a laptop (via Ollama), and
+   whether the tutorial also shows a remote model server.
