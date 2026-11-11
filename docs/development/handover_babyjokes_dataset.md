@@ -144,8 +144,9 @@ on the dev container: RTX 4060 laptop GPU (8 GB), two clips at a time (`MAX_CONC
 ### To check before writing it
 
 - Which face is the baby's. Face results hold both parent and baby; the analysis needs the baby's.
-  The full run showed the export can't tell them apart: face analysis rows have no `track`
-  (UAT #75). That's a fix before the tutorial, not a workaround in it.
+  Fixed 2026-11-11 (UAT #75): faces now share their person's `track`, and nothing is labelled
+  parent or infant by default, so the tutorial picks the baby's track itself (the smaller person).
+  The 390 need the face pipelines and person tracking run again for this.
 - How a learner loads our results for option 3: a folder they drop into the shared folder and the
   server picks up, or an import. If neither exists yet, decide whether it's worth building.
 
