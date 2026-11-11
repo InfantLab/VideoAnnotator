@@ -15,7 +15,7 @@
     "features": {
         "ghcr.io/devcontainers/features/github-cli:1": {},
         "ghcr.io/devcontainers/features/node:1": {
-            "version": "lts"
+            "version": "24"
         },
         "ghcr.io/shyim/devcontainers-features/bun:0": {}
     },
