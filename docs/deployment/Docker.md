@@ -117,7 +117,7 @@ docker run --gpus all --rm videoannotator:all python -c "import torch; print('CU
 
 ## What's in the image
 
-- Ubuntu 24.04, Python 3.13 (installed by uv), ffmpeg
+- Ubuntu 26.04, Python 3.13 (installed by uv), ffmpeg
 - VideoAnnotator and the extras you chose, installed from `uv.lock` without the dev tools
 - The server starts with `videoannotator server --host 0.0.0.0 --port 18011`
 

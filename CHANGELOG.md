@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The Docker image builds on Ubuntu 26.04 LTS** (was 24.04). Python stays 3.13 from uv; the
+  system packages (ffmpeg, OpenCV's libraries) are unchanged.
 - **Speech recognition retries looping text** (UAT #66): a stretch that comes out repeating
   itself, or that the model is unsure of, is decoded again at a higher temperature (0.2 steps up
   to 1.0), as Whisper does by default. Before, a fixed temperature of 0.0 switched that off, and a

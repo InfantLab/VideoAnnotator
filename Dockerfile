@@ -15,7 +15,7 @@
 #   docker build --build-arg EXTRAS=scene,person -t videoannotator:scene-person .
 #   docker run --gpus all -p 18011:18011 -v videoannotator-models:/app/models videoannotator:all
 
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG DEBIAN_FRONTEND=noninteractive
@@ -44,7 +44,7 @@ ARG SKIP_IMAGE_UV_SYNC=false
 ARG EXTRAS=""
 
 COPY pyproject.toml uv.lock .python-version README.md ./
-# Ubuntu 24.04 ships Python 3.12; this installs the .python-version one (3.13).
+# Ubuntu's own Python isn't the project's; this installs the .python-version one (3.13).
 RUN uv python install
 
 COPY src/ ./src/
