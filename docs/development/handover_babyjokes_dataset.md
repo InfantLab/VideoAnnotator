@@ -116,18 +116,43 @@ roadmap's 10-minute screencast is cut from them.
 - **Recording**: the release-candidate build, a fresh server with no earlier runs, one fixed window
   size, the viewer in light mode; nothing on screen from Caspar's own data.
 
+### The full run (2026-11-11)
+
+The six default pipelines (face analysis, OpenFace 3, person tracking, scene detection, speaker
+diarization, speech recognition; not Ask AI) on all 390, as one run in a project "BabyJokes",
+on the dev container: RTX 4060 laptop GPU (8 GB), two clips at a time (`MAX_CONCURRENT_JOBS=2`).
+
+- Download of the zip from Zenodo: 1 min 55 s; all 390 checksums match.
+- **390 of 390 finished, none failed, in 3 h 34 min.** 85 min of video (clips 11 s median, 62 s
+  longest): 1.8 clips a minute, 2.5 s of wall time per second of video.
+- Per clip, start to finish: 58 s median, 97 s for the slowest tenth, 210 s at most.
+- Where the pipelines' time goes (seconds per second of video, median):
+
+  | Pipeline | Share | s per s of video |
+  |---|---|---|
+  | Speaker diarization | 39% | 0.71 |
+  | Face analysis | 26% | 0.67 |
+  | OpenFace 3 | 14% | 0.38 |
+  | Speech recognition | 13% | 0.36 |
+  | Scene detection | 6% | 0.17 |
+  | Person tracking | 3% | 0.06 |
+
+- 42% of the time is outside the pipelines (UAT #72), so the run could be much shorter.
+- The run's results table: 2 min 49 s to export, 91 MB, 295,184 rows (UAT #74).
+- Still to measure: a CPU-only run of one game, for the tutorial's other estimate.
+
 ### To check before writing it
 
-- Which face is the baby's. Face results hold both parent and baby; the analysis needs the baby's
-  (the smaller face, or person tracking's child/adult label). If the export can't tell them apart,
-  that's a fix before the tutorial, not a workaround in it.
+- Which face is the baby's. Face results hold both parent and baby; the analysis needs the baby's.
+  The full run showed the export can't tell them apart: face analysis rows have no `track`
+  (UAT #75). That's a fix before the tutorial, not a workaround in it.
 - How a learner loads our results for option 3: a folder they drop into the shared folder and the
   server picks up, or an import. If neither exists yet, decide whether it's worth building.
 
 ## In this repo
 
-- [ ] Run the six default pipelines on all 390 on this machine; record times; look at the results
-      table at that size (the first UAT pass on a real project of hundreds of videos).
+- [x] Run the six default pipelines on all 390 on this machine; record times; look at the results
+      table at that size (2026-11-11; UAT #72–75).
 - [ ] Caspar picks the demo family; bundle the 5 clips and their results; switch
       `viewer/src/lib/demos.ts` to them; re-baseline `tests/integration/test_output_baseline.py`
       if its demo clip changes.

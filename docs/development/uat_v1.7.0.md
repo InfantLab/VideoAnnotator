@@ -132,3 +132,15 @@ Found while making the 5-clip demo of baby 4JDccE
 | # | Where | Finding | Status |
 |---|---|---|---|
 | 71 | Pipelines | In the nav beside Videos, Runs and Ask AI, but only a plain list about installing, with nothing for using a pipeline: it doesn't say what a pipeline is or how another tool could be added; Ask AI sits in the list as if it were one more model, though it works quite differently; no pipeline's settings can be seen; Workflows hides at the bottom, unexplained, and none can be made there | Says what a pipeline is; each one opens to what it finds (its lane and files), your own defaults for its settings (each described under its name, saved as you change them) and Run on videos…; Ask AI in its own panel saying how it differs, with whether a model server answers now; Another tool you'd like? (suggest one; plugins from 1.8); Workflows as a tab that says what one is, with New workflow and Edit. New run fills your defaults into settings its starting point leaves unset and says so ("with your defaults for Whisper", "● your default"). Fixed 2026-11-02, `feat(viewer): the Pipelines page: your defaults, Ask AI apart, workflows made there` · P1 P6 P7 P8 |
+
+### BabyJokes, all 390 clips (Claude, 2026-11-11)
+
+The six default pipelines on the whole public set as one run in a project (timings in
+[handover_babyjokes_dataset.md](handover_babyjokes_dataset.md)). 390 of 390 finished, none failed.
+
+| # | Where | Finding | Status |
+|---|---|---|---|
+| 72 | Runs | 42% of the time is outside the pipelines: clips spent 6.7 h in all between start and finish, the pipelines 3.9 h of it, so about 26 s a clip goes on something else (most likely loading every model again for each clip). The GPU sat mostly at 0–50% | Open |
+| 73 | Videos | `GET /api/v1/videos?project=…` takes 7.5 s for the 390-video project, and the same for `limit=50`: the whole scope is worked out before the page is cut | Open |
+| 74 | Export: results table | The run's table takes 2 min 49 s (91 MB, 295,184 rows), with nothing to show it's working, longer than a browser download will wait for comfortably | Open |
+| 75 | Export: results table | Face analysis rows have no `track`, though most frames have two faces (parent and baby); only person tracking's rows have one. An analysis can't tell the baby's face from the parent's except by box size | Open: blocks the tutorial's analysis (chapter 8) |
