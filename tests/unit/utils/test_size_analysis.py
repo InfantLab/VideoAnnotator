@@ -68,6 +68,7 @@ class TestPersonTrackingSizeAnalysisIntegration:
             "iou_threshold": 0.7,
             "track_mode": True,
             "tracker": "bytetrack",
+            "guess_roles_by_size": True,
             "person_identity": {
                 "enabled": True,
                 "id_format": "semantic",
@@ -87,14 +88,17 @@ class TestPersonTrackingSizeAnalysisIntegration:
             },
         }
 
-    def test_size_based_analysis_enabled_by_default(self, pipeline_config):
-        """Test that size-based analysis is enabled by default in pipeline."""
-        pipeline = PersonTrackingPipeline(pipeline_config)
+    def test_size_based_analysis_off_by_default(self):
+        """Parent/infant from box size is a guess about one kind of study."""
+        pipeline = PersonTrackingPipeline()
 
-        # Check default configuration - size_analysis is at root level
         size_config = pipeline.config.get("size_analysis", {})
 
-        assert size_config.get("enabled", True) is True
+        assert pipeline.config["guess_roles_by_size"] is False
+        assert size_config["enabled"] is False
+        assert (
+            pipeline.config["person_identity"]["automatic_labeling"]["enabled"] is False
+        )
         assert size_config.get("height_threshold", 0.4) == 0.4
         assert size_config.get("confidence", 0.7) == 0.7
 
@@ -303,7 +307,7 @@ class TestSizeBasedAnalysisConfiguration:
 
         # Size analysis config is separate at root level
         size_analysis = pipeline.config.get("size_analysis", {})
-        assert size_analysis.get("enabled", True) is True
+        assert size_analysis["enabled"] is False
         assert size_analysis.get("height_threshold", 0.4) == 0.4
         assert size_analysis.get("confidence", 0.7) == 0.7
 

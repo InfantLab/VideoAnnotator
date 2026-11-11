@@ -123,6 +123,7 @@
       "iscrowd": 0,
       "score": 1.0,
       "face_id": 0,
+      "person_id": "person_demo_clip_001",
       "timestamp": 0.0,
       "frame_number": 0,
       "backend": "deepface",

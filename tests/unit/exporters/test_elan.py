@@ -59,7 +59,9 @@ def test_one_tier_per_pipeline_track(eaf):
         "person_tracking person_demo_clip_001 (parent)",
         "person_tracking person_demo_clip_002 (parent)",
         "face_analysis faces",
+        "face_analysis person_demo_clip_001",
         "face_openface3_embedding faces",
+        "face_openface3_embedding person_demo_clip_001",
         "vlm_annotation labels",
     ]
 

@@ -1,1 +1,0 @@
-import{a1 as a,a0 as r,a3 as n,_ as t}from"./index-rH0GQ0l_.js";const s=["videos","run-settings","defaults"];function i(e=!0){return a({queryKey:s,queryFn:()=>t.getYourDefaults(),enabled:e,retry:!1})}function f(){const e=r();return n({mutationFn:u=>t.putYourDefaults(u),onSuccess:u=>e.setQueryData(s,u)})}export{f as a,i as u};

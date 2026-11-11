@@ -26,7 +26,11 @@ from videoannotator.exporters.native_formats import (
 )
 from videoannotator.pipelines.base_pipeline import BasePipeline, FrameFailures
 from videoannotator.provenance import weights_ref
-from videoannotator.utils.person_identity import PersonIdentityManager
+from videoannotator.utils.person_identity import (
+    link_faces_to_persons,
+    load_person_annotations,
+    persons_at,
+)
 from videoannotator.utils.torch_settings import restored_torch_settings
 from videoannotator.version import __version__
 
@@ -204,7 +208,6 @@ class OpenFace3Pipeline(BasePipeline):
             "person_identity": {
                 "enabled": True,
                 "link_to_persons": True,
-                "iou_threshold": 0.5,
                 "require_person_id": False,  # Graceful fallback
             },
         }
@@ -229,7 +232,6 @@ class OpenFace3Pipeline(BasePipeline):
         self.next_face_id = 0
 
         # Person identity management
-        self.identity_manager: Any = None
 
         # Performance metrics
         self.processing_times: list[float] = []
@@ -356,123 +358,6 @@ class OpenFace3Pipeline(BasePipeline):
             }
             return
 
-    def _load_person_tracks(self, video_path: str) -> list[dict[str, Any]] | None:
-        """Load person tracking data for face-person linking."""
-        if not self.config["person_identity"]["link_to_persons"]:
-            return None
-
-        # Initialize person identity manager if needed
-        if self.identity_manager is None:
-            try:
-                self.identity_manager = PersonIdentityManager(
-                    config=self.config.get("person_identity", {})
-                )
-            except Exception as e:
-                self.logger.warning(f"Failed to initialize PersonIdentityManager: {e}")
-                return None
-
-        # Look for person tracking data
-        video_name = Path(video_path).stem
-        person_data_paths = [
-            Path(video_path).parent / f"person_tracking_{video_name}.json",
-            Path("data") / f"person_tracking_{video_name}.json",
-            Path("demo_results") / f"person_tracking_{video_name}.json",
-        ]
-
-        for person_data_path in person_data_paths:
-            if person_data_path.exists():
-                try:
-                    with open(person_data_path) as f:
-                        person_data = json.load(f)
-
-                    # Extract annotations with person tracks
-                    if "annotations" in person_data:
-                        self.logger.info(
-                            f"Loaded person tracks from {person_data_path}"
-                        )
-                        return person_data["annotations"]
-                except Exception as e:
-                    self.logger.warning(
-                        f"Failed to load person data from {person_data_path}: {e}"
-                    )
-
-        self.logger.info("No person tracking data found")
-        return None
-
-    def _get_frame_person_annotations(
-        self, person_tracks: list[dict[str, Any]], image_id: int
-    ) -> list[dict[str, Any]]:
-        """Get person annotations for a specific frame."""
-        if not person_tracks:
-            return []
-
-        frame_persons = []
-        for ann in person_tracks:
-            if ann.get("image_id") == image_id:
-                frame_persons.append(ann)
-
-        return frame_persons
-
-    def _link_face_to_person(
-        self, face_bbox: list[float], person_annotations: list[dict[str, Any]]
-    ) -> dict[str, Any]:
-        """Link a face detection to a person using IoU matching."""
-        if not person_annotations:
-            return {}
-
-        iou_threshold = self.config["person_identity"]["iou_threshold"]
-        best_match = None
-        best_iou = 0.0
-
-        for person_ann in person_annotations:
-            person_bbox = person_ann.get("bbox", [])
-            if len(person_bbox) == 4:
-                iou = self._calculate_iou(face_bbox, person_bbox)
-                if iou > best_iou and iou >= iou_threshold:
-                    best_iou = iou
-                    best_match = person_ann
-
-        if best_match:
-            person_id = best_match.get("person_id", "unknown")
-            person_label = best_match.get("person_label", "unknown")
-            person_label_confidence = best_match.get("person_label_confidence", 0.0)
-            person_labeling_method = best_match.get("person_labeling_method", "unknown")
-
-            return {
-                "person_id": person_id,
-                "person_label": person_label,
-                "person_label_confidence": person_label_confidence,
-                "person_labeling_method": person_labeling_method,
-                "face_person_iou": best_iou,
-            }
-
-        return {}
-
-    def _calculate_iou(self, bbox1: list[float], bbox2: list[float]) -> float:
-        """Calculate Intersection over Union (IoU) between two bounding boxes."""
-        x1, y1, w1, h1 = bbox1
-        x2, y2, w2, h2 = bbox2
-
-        # Convert to corner coordinates
-        x1_max, y1_max = x1 + w1, y1 + h1
-        x2_max, y2_max = x2 + w2, y2 + h2
-
-        # Calculate intersection
-        inter_x1 = max(x1, x2)
-        inter_y1 = max(y1, y2)
-        inter_x2 = min(x1_max, x2_max)
-        inter_y2 = min(y1_max, y2_max)
-
-        if inter_x2 <= inter_x1 or inter_y2 <= inter_y1:
-            return 0.0
-
-        inter_area = (inter_x2 - inter_x1) * (inter_y2 - inter_y1)
-        area1 = w1 * h1
-        area2 = w2 * h2
-        union_area = area1 + area2 - inter_area
-
-        return inter_area / union_area if union_area > 0 else 0.0
-
     def get_schema(self) -> dict[str, Any]:
         """Get the output schema for OpenFace 3.0 face analysis annotations."""
         return {
@@ -549,10 +434,17 @@ class OpenFace3Pipeline(BasePipeline):
         start_processing_time = time.time()
 
         # Load person tracking data for face-person linking
-        person_tracks = self._load_person_tracks(video_path)
+        person_config = self.config["person_identity"]
+        person_tracks = (
+            load_person_annotations(output_dir, Path(video_path).stem)
+            if output_dir
+            and person_config.get("enabled", True)
+            and person_config.get("link_to_persons", True)
+            else []
+        )
         if person_tracks:
             self.logger.info(f"Loaded {len(person_tracks)} person track annotations")
-        elif self.config["person_identity"]["require_person_id"]:
+        elif person_config["require_person_id"]:
             raise ValueError("Person tracking data required but not found")
 
         # Open video
@@ -622,22 +514,25 @@ class OpenFace3Pipeline(BasePipeline):
                 # Process frame with OpenFace 3.0
                 face_results = self._process_frame(frame, timestamp)
 
-                # Get person annotations for this frame
-                frame_persons = (
-                    self._get_frame_person_annotations(person_tracks, frame_idx + 1)
-                    if person_tracks
-                    else []
+                linked = link_faces_to_persons(
+                    [face["detection"]["bbox"] for face in face_results],
+                    persons_at(person_tracks, timestamp),
                 )
-
-                # Convert to COCO annotations with person linking
-                for face_result in face_results:
-                    # Get face bounding box for person linking
-                    face_bbox = face_result.get("bbox", [])
-
-                    # Link face to person
-                    person_info = self._link_face_to_person(face_bbox, frame_persons)
-
-                    # Create annotation with person information
+                for face_result, person in zip(face_results, linked, strict=True):
+                    person_info = (
+                        {
+                            "person_id": person["person_id"],
+                            "person_label": person.get("person_label", "unknown"),
+                            "person_label_confidence": person.get(
+                                "label_confidence", 0.0
+                            ),
+                            "person_labeling_method": person.get(
+                                "labeling_method", "none"
+                            ),
+                        }
+                        if person
+                        else None
+                    )
                     annotation = self._create_face_annotation(
                         annotation_id=annotation_id,
                         image_id=frame_idx + 1,

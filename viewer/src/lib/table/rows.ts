@@ -183,6 +183,11 @@ const event = (start: number, measures: Measure[], rest: Partial<Event> = {}): E
   ...rest,
 });
 
+/** The person track a face was linked to; "unknown" means none. */
+function linkedPerson(a: Json): string {
+  return truthy(a.person_id) && a.person_id !== 'unknown' ? pyStr(a.person_id) : '';
+}
+
 function readPerson(source: string): FileContents {
   const [annotations, images] = loadCoco(source);
   const events = annotations.map((a) => {
@@ -212,8 +217,13 @@ function readDeepface(source: string): FileContents {
     if (a.gender !== null && a.gender !== undefined) {
       measures.push(measure('gender', text(a.gender), null, num(a.gender_confidence)));
     }
-    // face_id is the face's index within its frame, not a track over time.
-    return event(time(a, image, 'timestamp'), measures, { frame: frameOf(a, image), box: boxOf(a) });
+    // face_id is the face's index within its frame, not a track over time;
+    // the person it's linked to is.
+    return event(time(a, image, 'timestamp'), measures, {
+      frame: frameOf(a, image),
+      track: linkedPerson(a),
+      box: boxOf(a),
+    });
   });
   return { events, annotatedModel: null };
 }
@@ -265,7 +275,7 @@ function readOpenface3(source: string): FileContents {
       }
     }
 
-    const track = features.track_id;
+    const track = linkedPerson(a) || features.track_id;
     return event(start !== null ? start : time(a, image, 'timestamp'), measures, {
       frame: frameOf(a, image),
       track: track !== null && track !== undefined ? pyStr(track) : '',

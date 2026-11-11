@@ -171,6 +171,12 @@ def _box(annotation: dict[str, Any]) -> tuple[float, float, float, float] | None
     return None
 
 
+def _linked_person(a: dict[str, Any]) -> str:
+    """The person track a face was linked to; "unknown" means none."""
+    person = a.get("person_id")
+    return str(person) if person and person != "unknown" else ""
+
+
 def read_person(path: Path) -> FileContents:
     annotations, images = _load_coco(path)
     events = []
@@ -232,11 +238,13 @@ def read_deepface(path: Path) -> FileContents:
                     confidence=_number(a.get("gender_confidence")),
                 )
             )
-        # face_id is the face's index within its frame, not a track over time.
+        # face_id is the face's index within its frame, not a track over time;
+        # the person it's linked to is.
         events.append(
             Event(
                 start=_time(a, image, "timestamp"),
                 frame=_frame(a, image),
+                track=_linked_person(a),
                 box=_box(a),
                 measures=measures,
             )
@@ -300,7 +308,7 @@ def read_openface3(path: Path) -> FileContents:
                 if _number(emotion.get(key)) is not None:
                     measures.append(Measure(key, value=_number(emotion[key])))
 
-        track = features.get("track_id")
+        track = _linked_person(a) or features.get("track_id")
         events.append(
             Event(
                 start=start if start is not None else _time(a, image, "timestamp"),

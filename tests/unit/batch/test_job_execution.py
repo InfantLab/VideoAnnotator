@@ -114,6 +114,28 @@ class TestRunJobPipelines(unittest.TestCase):
         self.assertIn("first", result.pipeline_results)
         self.assertNotIn("second", result.pipeline_results)
 
+    def test_person_tracking_runs_before_the_face_pipelines(self):
+        """The face pipelines link faces to person tracking's output."""
+        ran = []
+        pipeline_classes = {}
+        for name in ("face_analysis", "scene_detection", "person_tracking"):
+            cls = self._succeeding_pipeline_class()
+            cls.return_value.process.side_effect = lambda *a, name=name, **k: (
+                ran.append(name) or [{"annotation": "ok"}]
+            )
+            pipeline_classes[name] = cls
+        self.storage.load_job_metadata.return_value = BatchJob(
+            job_id="job-under-test", status=JobStatus.RUNNING
+        )
+
+        run_job_pipelines(
+            self._job(["face_analysis", "scene_detection", "person_tracking"]),
+            self.storage,
+            pipeline_classes,
+        )
+
+        self.assertEqual(ran, ["person_tracking", "face_analysis", "scene_detection"])
+
     def test_unavailable_pipeline_is_reported_not_silently_dropped(self):
         """A selected pipeline the server couldn't load (e.g. its import
         failed after a live install) used to be skipped with only a log

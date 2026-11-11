@@ -31,6 +31,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Faces are linked to people** (UAT #75): in a run with person tracking, each face (face
+  analysis and OpenFace 3) is linked to the person track whose head points (nose, eyes, ears) fall
+  inside it, and its rows in the table and ELAN share that person's `track`. Person tracking now
+  runs first in a job so its tracks are there. Before, the link was on by default but never made:
+  the face pipelines looked for a file name person tracking doesn't write, face analysis's frame
+  lookup was a stub, and matching by box overlap couldn't link a face to its much larger body box.
+  Faces with no person to link to keep an empty `track`, as before.
+- **Person tracking no longer labels people "parent" or "infant" by default**. That guess from box
+  height suits one kind of study and is often wrong (in a BabyJokes clip it called both people
+  "parent"). `guess_roles_by_size: true` turns it back on; tracks are numbered either way.
 - **The Docker image builds on Ubuntu 26.04 LTS** (was 24.04). Python stays 3.13 from uv; the
   system packages (ffmpeg, OpenCV's libraries) are unchanged.
 - **Speech recognition retries looping text** (UAT #66): a stretch that comes out repeating

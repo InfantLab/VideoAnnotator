@@ -9,6 +9,7 @@ labeling of person identities.
 import json
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -440,3 +441,88 @@ def get_available_labels() -> list[str]:
 def get_label_aliases(label: str) -> list[str]:
     """Get list of aliases for a person label."""
     return PERSON_LABELS.get(label, {}).get("aliases", [])
+
+
+# COCO-17 keypoints 0-4: nose, eyes, ears.
+HEAD_KEYPOINTS = range(5)
+
+
+def load_person_annotations(output_dir: str | Path, video_id: str) -> list[dict]:
+    """Person tracking's annotations for a video, from its output beside ours.
+
+    Empty when person tracking hasn't run in this job: the face pipelines then
+    leave faces unlinked rather than fail.
+    """
+    path = Path(output_dir) / f"{video_id}_person_tracking.json"
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return []
+    return [a for a in data.get("annotations", []) if a.get("person_id")]
+
+
+def persons_at(
+    person_annotations: list[dict], timestamp: float, tolerance: float = 0.5
+) -> list[dict]:
+    """The people at person tracking's sampled moment nearest `timestamp`."""
+    times = {a["timestamp"] for a in person_annotations if "timestamp" in a}
+    if not times:
+        return []
+    nearest = min(times, key=lambda t: abs(t - timestamp))
+    if abs(nearest - timestamp) > tolerance:
+        return []
+    return [a for a in person_annotations if a.get("timestamp") == nearest]
+
+
+def link_faces_to_persons(
+    face_bboxes: list[list[float]], persons: list[dict]
+) -> list[dict | None]:
+    """For each face box `[x, y, w, h]`, the person annotation it belongs to.
+
+    A face belongs to the person whose head keypoints fall inside it. Box
+    overlap can't decide: a face is a small part of its person's box, and a
+    baby on a lap is inside the adult's box too. Without head keypoints, the
+    smallest person box holding most of the face. One face per person.
+    """
+    candidates = []
+    for i, face in enumerate(face_bboxes):
+        if len(face) != 4:
+            continue
+        for person in persons:
+            score = _face_person_score(face, person)
+            if score is not None:
+                candidates.append((score, i, person))
+    candidates.sort(key=lambda c: c[0], reverse=True)
+
+    linked: list[dict | None] = [None] * len(face_bboxes)
+    taken = set()
+    for _, i, person in candidates:
+        if linked[i] is None and person["person_id"] not in taken:
+            linked[i] = person
+            taken.add(person["person_id"])
+    return linked
+
+
+def _face_person_score(
+    face: list[float], person: dict
+) -> tuple[int, float, float] | None:
+    x, y, w, h = face
+    # Ears sit at the edge of a face box, or just outside it.
+    mx, my = 0.25 * w, 0.25 * h
+    keypoints = person.get("keypoints") or []
+    inside = 0
+    for k in HEAD_KEYPOINTS:
+        if len(keypoints) >= 3 * k + 3 and keypoints[3 * k + 2] > 0:
+            px, py = keypoints[3 * k], keypoints[3 * k + 1]
+            inside += x - mx <= px <= x + w + mx and y - my <= py <= y + h + my
+
+    box = person.get("bbox") or []
+    if len(box) != 4:
+        return (inside, 0.0, 0.0) if inside else None
+    bx, by, bw, bh = box
+    overlap_w = max(0.0, min(x + w, bx + bw) - max(x, bx))
+    overlap_h = max(0.0, min(y + h, by + bh) - max(y, by))
+    held = overlap_w * overlap_h / (w * h) if w * h > 0 else 0.0
+    if inside or held >= 0.8:
+        return (inside, held, -bw * bh)
+    return None

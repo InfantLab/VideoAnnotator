@@ -5,7 +5,6 @@ all custom schema dependencies. Uses native FOSS libraries for all data
 representation and export.
 """
 
-import json
 import logging
 import os
 import threading
@@ -23,7 +22,11 @@ from videoannotator.exporters.native_formats import (
 )
 from videoannotator.pipelines.base_pipeline import BasePipeline, FrameFailures
 from videoannotator.provenance import weights_ref
-from videoannotator.utils.person_identity import PersonIdentityManager
+from videoannotator.utils.person_identity import (
+    link_faces_to_persons,
+    load_person_annotations,
+    persons_at,
+)
 from videoannotator.version import __version__
 
 
@@ -159,7 +162,6 @@ class FaceAnalysisPipeline(BasePipeline):
             "person_identity": {
                 "enabled": True,
                 "link_to_persons": True,
-                "iou_threshold": 0.5,
                 "require_person_id": False,  # Graceful fallback
             },
         }
@@ -169,7 +171,6 @@ class FaceAnalysisPipeline(BasePipeline):
             merged_config.update(config)
         super().__init__(merged_config)
         self.face_cascade: Any = None
-        self.identity_manager: Any = None  # Will be initialized during processing
         self.logger = logging.getLogger(__name__)
 
     def initialize(self) -> None:
@@ -283,40 +284,24 @@ class FaceAnalysisPipeline(BasePipeline):
         # Get video metadata
         video_metadata = self._get_video_metadata(video_path)
 
-        # Initialize PersonIdentityManager if person linking is enabled
+        persons: list[dict[str, Any]] = []
         person_config = self.config.get("person_identity", {})
         if person_config.get("enabled", True) and person_config.get(
             "link_to_persons", True
         ):
-            if person_tracks:
-                # Create identity manager from existing person tracks
-                self.identity_manager = PersonIdentityManager.from_person_tracks(
-                    person_tracks, video_metadata["video_id"]
-                )
-                self.logger.info(
-                    f"Loaded PersonIdentityManager with {len(person_tracks)} person tracks"
-                )
+            persons = person_tracks or (
+                load_person_annotations(output_dir, video_metadata["video_id"])
+                if output_dir
+                else []
+            )
+            if persons:
+                self.logger.info(f"Linking faces to {len(persons)} person detections")
+            elif person_config.get("require_person_id", False):
+                raise ValueError("Person tracks required but not available")
             else:
-                # Try to load person tracks from default location
-                person_tracks = self._load_person_tracks(
-                    video_metadata["video_id"], output_dir
+                self.logger.info(
+                    "No person tracks available, proceeding without person linking"
                 )
-                if person_tracks:
-                    self.identity_manager = PersonIdentityManager.from_person_tracks(
-                        person_tracks, video_metadata["video_id"]
-                    )
-                    self.logger.info(
-                        f"Loaded PersonIdentityManager from file with {len(person_tracks)} person tracks"
-                    )
-                elif not person_config.get("require_person_id", False):
-                    self.identity_manager = None
-                    self.logger.info(
-                        "No person tracks available, proceeding without person linking"
-                    )
-                else:
-                    raise ValueError("Person tracks required but not available")
-        else:
-            self.identity_manager = None
 
         # Initialize detection backend
         self._initialize_backend()
@@ -369,33 +354,23 @@ class FaceAnalysisPipeline(BasePipeline):
                     continue
                 frame_failures.succeeded()
 
-                # Link faces to persons if identity manager is available
-                if self.identity_manager is not None and face_annotations:
-                    # Get person annotations for this frame from person tracks
-                    frame_person_annotations = self._get_frame_person_annotations(
-                        timestamp, frame_num
+                if persons and face_annotations:
+                    linked = link_faces_to_persons(
+                        [face.get("bbox", []) for face in face_annotations],
+                        persons_at(persons, timestamp),
                     )
-
-                    # Link each face to a person using IoU matching
-                    for face_ann in face_annotations:
-                        person_id = self._link_face_to_person(
-                            face_ann, frame_person_annotations
-                        )
-                        if person_id:
-                            face_ann["person_id"] = person_id
-
-                            # Add person label information if available
-                            label_info = self.identity_manager.get_person_label(
-                                person_id
+                    for face_ann, person in zip(face_annotations, linked, strict=True):
+                        if person is None:
+                            continue
+                        face_ann["person_id"] = person["person_id"]
+                        if person.get("person_label"):
+                            face_ann["person_label"] = person["person_label"]
+                            face_ann["person_label_confidence"] = person.get(
+                                "label_confidence"
                             )
-                            if label_info:
-                                face_ann["person_label"] = label_info["label"]
-                                face_ann["person_label_confidence"] = label_info[
-                                    "confidence"
-                                ]
-                                face_ann["person_labeling_method"] = label_info[
-                                    "method"
-                                ]
+                            face_ann["person_labeling_method"] = person.get(
+                                "labeling_method"
+                            )
 
                 # Assign unique annotation IDs
                 for face_ann in face_annotations:
@@ -415,74 +390,6 @@ class FaceAnalysisPipeline(BasePipeline):
 
         self.logger.info(f"Face analysis complete: {len(annotations)} detections")
         return annotations
-
-    def _load_person_tracks(
-        self, video_id: str, output_dir: str | None = None
-    ) -> list[dict[str, Any]] | None:
-        """Load person tracking data from file."""
-        person_data_paths = [
-            Path(output_dir or ".") / f"person_tracking_{video_id}.json",
-            Path("data") / f"person_tracking_{video_id}.json",
-            Path("demo_results") / f"person_tracking_{video_id}.json",
-        ]
-
-        for person_data_path in person_data_paths:
-            if person_data_path.exists():
-                try:
-                    with open(person_data_path) as f:
-                        person_data = json.load(f)
-
-                    # Extract annotations with person tracks
-                    if "annotations" in person_data:
-                        self.logger.info(
-                            f"Loaded person tracks from {person_data_path}"
-                        )
-                        return person_data["annotations"]
-                except Exception as e:
-                    self.logger.warning(
-                        f"Failed to load person data from {person_data_path}: {e}"
-                    )
-
-        return None
-
-    def _get_frame_person_annotations(
-        self, timestamp: float, frame_num: int
-    ) -> list[dict[str, Any]]:
-        """Get person annotations for a specific frame from the loaded identity manager.
-
-        Returns an empty list when no identity manager is present. In a full
-        implementation this would search loaded person tracks by timestamp or
-        frame number.
-        """
-        if not self.identity_manager:
-            return []
-
-        # This would typically load from cached person tracks data
-        # For now, return empty list as the identity manager doesn't store frame-specific data
-        # In a full implementation, this would search loaded person tracks by timestamp/frame
-        return []
-
-    def _link_face_to_person(
-        self, face_annotation: dict[str, Any], person_annotations: list[dict[str, Any]]
-    ) -> str | None:
-        """Link a face detection to a person using IoU matching via PersonIdentityManager.
-
-        Returns the linked person identifier or None if linking is not
-        possible.
-        """
-        if not self.identity_manager or not person_annotations:
-            return None
-
-        face_bbox = face_annotation.get("bbox", [])
-        if len(face_bbox) != 4:
-            return None
-
-        # Use PersonIdentityManager's linking method
-        return self.identity_manager.link_face_to_person(
-            face_bbox,
-            person_annotations,
-            iou_threshold=self.config["person_identity"]["iou_threshold"],
-        )
 
     def _get_video_metadata(self, video_path: str) -> dict[str, Any]:
         """Extract video metadata."""
@@ -894,5 +801,4 @@ class FaceAnalysisPipeline(BasePipeline):
         """Cleanup resources."""
         # Reset attributes
         self.face_cascade = None
-        self.identity_manager = None
         self.is_initialized = False

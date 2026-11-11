@@ -100,7 +100,7 @@
       "area": 36180,
       "iscrowd": 0,
       "segmentation": [],
-      "person_id": "unknown",
+      "person_id": "person_demo_clip_001",
       "person_label": "unknown",
       "person_label_confidence": 0.0,
       "person_labeling_method": "none",

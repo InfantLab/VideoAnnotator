@@ -10,7 +10,10 @@ from videoannotator.utils.person_identity import (
     PersonLabel,
     get_available_labels,
     get_label_aliases,
+    link_faces_to_persons,
+    load_person_annotations,
     normalize_person_label,
+    persons_at,
 )
 
 # ---------------------------------------------------------------------------
@@ -340,3 +343,72 @@ class TestGetLabelAliases:
 
     def test_unknown_label(self):
         assert get_label_aliases("alien") == []
+
+
+# ---------------------------------------------------------------------------
+# Linking faces to person tracks
+# ---------------------------------------------------------------------------
+
+
+def _person(person_id, bbox, head=None, timestamp=0.0):
+    """A person-tracking annotation; `head` is (x, y) for nose, eyes, ears."""
+    keypoints = [0.0] * 51
+    for k, (x, y) in enumerate(head or []):
+        keypoints[3 * k : 3 * k + 3] = [x, y, 2]
+    return {
+        "person_id": person_id,
+        "bbox": bbox,
+        "keypoints": keypoints,
+        "timestamp": timestamp,
+    }
+
+
+class TestLinkFacesToPersons:
+    def test_baby_on_a_lap_goes_by_head_points(self):
+        # The baby's face is inside the adult's box as well as its own.
+        adult = _person("adult", [100, 0, 400, 480], head=[(300, 80)] * 5)
+        baby = _person("baby", [250, 250, 150, 200], head=[(320, 300)] * 5)
+        adult_face, baby_face = [260, 40, 80, 90], [290, 270, 60, 60]
+        assert link_faces_to_persons([baby_face, adult_face], [adult, baby]) == [
+            baby,
+            adult,
+        ]
+
+    def test_without_head_points_the_smallest_box_holding_the_face(self):
+        adult = _person("adult", [100, 0, 400, 480])
+        baby = _person("baby", [250, 250, 150, 200])
+        assert link_faces_to_persons([[290, 270, 60, 60]], [adult, baby]) == [baby]
+
+    def test_one_face_per_person(self):
+        baby = _person("baby", [250, 250, 150, 200], head=[(320, 300)] * 5)
+        faces = [[290, 270, 60, 60], [295, 275, 50, 50]]
+        assert link_faces_to_persons(faces, [baby]).count(baby) == 1
+
+    def test_a_face_outside_everyone_stays_unlinked(self):
+        adult = _person("adult", [100, 0, 200, 200], head=[(150, 50)] * 5)
+        assert link_faces_to_persons([[500, 300, 50, 50], []], [adult]) == [
+            None,
+            None,
+        ]
+
+
+class TestPersonsAt:
+    def test_nearest_sampled_moment(self):
+        early = _person("a", [0, 0, 1, 1], timestamp=0.0)
+        late = _person("b", [0, 0, 1, 1], timestamp=1.0)
+        assert persons_at([early, late], 0.8) == [late]
+
+    def test_none_beyond_the_tolerance(self):
+        assert persons_at([_person("a", [0, 0, 1, 1], timestamp=0.0)], 2.0) == []
+
+
+class TestLoadPersonAnnotations:
+    def test_reads_person_trackings_output(self, tmp_path):
+        tracked = _person("person_clip_001", [0, 0, 1, 1])
+        (tmp_path / "clip_person_tracking.json").write_text(
+            json.dumps({"annotations": [tracked, {"id": 2}]})
+        )
+        assert load_person_annotations(tmp_path, "clip") == [tracked]
+
+    def test_empty_when_person_tracking_didnt_run(self, tmp_path):
+        assert load_person_annotations(tmp_path, "clip") == []

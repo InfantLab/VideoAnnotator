@@ -159,7 +159,19 @@ def _run(
     return job
 
 
+# The face pipelines link each face to a person from person tracking's output,
+# so that has to exist before they run.
+RUNS_FIRST = ("person_tracking",)
+
+
 def _resolve_pipelines(job: BatchJob, pipeline_classes: dict[str, type]) -> list[str]:
+    return sorted(
+        _requested_pipelines(job, pipeline_classes),
+        key=lambda name: name not in RUNS_FIRST,
+    )
+
+
+def _requested_pipelines(job: BatchJob, pipeline_classes: dict[str, type]) -> list[str]:
     if not job.selected_pipelines:
         return list(pipeline_classes.keys())
 

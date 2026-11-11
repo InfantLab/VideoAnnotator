@@ -44,9 +44,10 @@ person_tracking:
     enabled: true
     id_format: "semantic" # "semantic" (person_video_001) or "integer" (1, 2, 3)
 
-    # Automatic labeling with size-based inference (enabled by default)
+    # Automatic labeling with size-based inference (off by default: a guess
+    # that suits parent-and-baby videos only; see configs/person_identity.yaml)
     automatic_labeling:
-      enabled: true
+      enabled: false
       confidence_threshold: 0.7
 
       # Size-based labeling - primary method for adult/child classification

@@ -65,6 +65,15 @@ config_schema:
     type: boolean
     default: true
     description: Enable tracking logic
+  guess_roles_by_size:
+    group: behavioural
+    label: "Label people parent or infant by size"
+    type: boolean
+    default: false
+    description: >-
+      Calls each person "parent" or "infant" from how tall their box is in the frame. A guess that
+      fits a parent and baby filmed together, and is often wrong (a baby held up close, an adult
+      far away). Off by default: tracks are numbered, and which one is whom is for your analysis.
 examples:
   - cli: videoannotator job submit demo.mp4 --pipelines person_tracking
     description: Submit person tracking job

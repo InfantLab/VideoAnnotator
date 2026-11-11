@@ -63,9 +63,12 @@ class PersonTrackingPipeline(BasePipeline):
             "tracker": "bytetrack",  # or "botsort"
             "pose_format": "coco_17",  # COCO 17 keypoints
             "min_keypoint_confidence": 0.3,
+            # Labelling people parent/infant from box size suits one kind of
+            # study only, so it's opt-in; the two passes below follow this.
+            "guess_roles_by_size": False,
             # Size-based analysis (integrated simple analyzer)
             "size_analysis": {
-                "enabled": True,
+                "enabled": False,
                 "height_threshold": 0.4,
                 "confidence": 0.7,
                 "adult_label": "parent",
@@ -76,7 +79,7 @@ class PersonTrackingPipeline(BasePipeline):
                 "enabled": True,
                 "id_format": "semantic",  # "semantic" or "integer"
                 "automatic_labeling": {
-                    "enabled": True,
+                    "enabled": False,
                     "confidence_threshold": 0.7,
                     "size_based": {
                         "enabled": True,
@@ -199,7 +202,9 @@ class PersonTrackingPipeline(BasePipeline):
             auto_labeling_config = self.config.get("person_identity", {}).get(
                 "automatic_labeling", {}
             )
-            if auto_labeling_config.get("enabled", True):
+            if auto_labeling_config.get("enabled", False) or self.config.get(
+                "guess_roles_by_size", False
+            ):
                 self.logger.info("Applying automatic person labeling...")
 
                 # Get person tracks for labeling
@@ -246,7 +251,10 @@ class PersonTrackingPipeline(BasePipeline):
 
         # Size-based analysis pass (independent of identity manager labels)
         size_cfg = self.config.get("size_analysis", {})
-        if size_cfg.get("enabled", True) and annotations:
+        if annotations and (
+            size_cfg.get("enabled", False)
+            or self.config.get("guess_roles_by_size", False)
+        ):
             try:
                 # Run analyzer on all annotations that have person_id
                 size_labels = run_size_based_analysis(

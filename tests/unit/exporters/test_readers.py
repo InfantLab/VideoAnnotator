@@ -68,8 +68,25 @@ def test_deepface_face_emotion_age_gender(folder):
         assert by_measure["gender"][0].label == a["gender"]
     else:
         assert "age" not in by_measure and "gender" not in by_measure
-    # face_id is an index within the frame, not a track.
-    assert event.track == ""
+    # face_id is an index within the frame, not a track; a linked person is.
+    assert event.track == a.get("person_id", "")
+
+
+def test_a_face_linked_to_a_person_takes_its_track(tmp_path):
+    native = _coco("demo_clip_face_detections.json")
+    native["annotations"] = native["annotations"][:2]
+    native["annotations"][0]["person_id"] = "person_clip_001"
+    native["annotations"][1]["person_id"] = "unknown"
+    path = tmp_path / "clip_face_detections.json"
+    path.write_text(json.dumps(native))
+    assert [e.track for e in read_deepface(path).events] == ["person_clip_001", ""]
+
+    native = _coco("demo_clip_openface3_analysis.json")
+    native["annotations"] = native["annotations"][:2]
+    native["annotations"][0]["person_id"] = "person_clip_002"
+    path = tmp_path / "clip_openface3_analysis.json"
+    path.write_text(json.dumps(native))
+    assert read_openface3(path).events[0].track == "person_clip_002"
 
 
 def test_openface3_action_units_pose_gaze():

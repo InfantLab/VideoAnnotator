@@ -136,9 +136,10 @@ config_schema:
     default:
       enabled: true
       link_to_persons: true
-      iou_threshold: 0.5
       require_person_id: false
-    description: Person identity linking configuration
+    description: >-
+      Links each face to the person-tracking track whose head (nose, eyes, ears) is inside it, so a
+      face and its person share one track. Only when person tracking runs in the same run.
 examples:
   - cli: videoannotator job submit demo.mp4 --pipelines face_analysis
     description: Submit face analysis job with default settings
