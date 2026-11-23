@@ -14,7 +14,8 @@ redesigned viewer.
 **Main Goal**: an outside lab can go from install to results in R or Python, on its own videos,
 without help, and a researcher new to AI video analysis can ask questions of a video and get
 systematic answers without help.
-**Target Release**: when the pilot's fixes are in. No deadline.
+**Target Release**: week of 2026-11-23. The pilot follows the public release (Caspar,
+2026-11-23): its feedback sets v1.7.x, it is not a gate on v1.7.0.
 **Current Status**: In development on `1.7-dev` (from 2026-10-18). Phase 1: viewer design done
 (spec 023); specs 027–029 built 2026-10-19 to 2026-10-21, each with a walk-through or check by a
 person still to do (see Phase 1); movement metrics not yet specified. Phase 2 (connectors) built
@@ -34,7 +35,7 @@ v1.6.0's principles, plus:
   viewer doesn't show the API's words.
 - ✅ **Nothing to set up before the first result.** Projects and workflows are offered after the
   fact, never required (spec 023 Decisions 2 and 5).
-- ✅ **Pilot on what will be announced.**
+- ✅ **Pilot on what was announced**: the released v1.7.0, after launch.
 
 ---
 
@@ -116,15 +117,18 @@ Built as spec 033 (2026-10-24); the walk-through with real servers is still to d
 
 ---
 
-### Phase 4: Pilot (on the release candidates)
+### Phase 4: Pilot (after the public release)
 
-Outside testing runs on what will be announced (Caspar, 2026-10-17; before that it followed the
-v1.6.0 tag, 2026-10-14). Spec 024's T083 (a pilot researcher on macOS) runs here too.
+Outside testing runs on the released v1.7.0, after it is announced (Caspar, 2026-11-23; before
+that it was planned on the release candidates, 2026-10-17). It is not a release gate. Spec 024's
+T083 (a pilot researcher on macOS) runs here too.
 
 - [ ] 3–5 labs outside the team (conference contacts first) run it on about ten of their own
       videos, with a concrete ask: tell us where it broke.
 - [ ] Their reports go in the public issue tracker. Label starter tasks `good first issue`.
-- [ ] Pilot feedback sets the order of v1.6.x and v1.7 work.
+- [ ] Pilot feedback sets the order of v1.7.x and v1.8 work.
+- [ ] Update `paper/paper.md` and its research impact statement with the pilot's use, and tell the
+      editors on #10182.
 - [ ] With permission, record who used it and for what.
 
 ---
@@ -204,8 +208,6 @@ seam, API fuzzing, mutation reports, and the coverage gate.
 ### Launch
 
 - [ ] Tag `v1.7.0`, GitHub release, Zenodo DOI, `CITATION.cff` updated.
-- [ ] Update `paper/paper.md` and its research impact statement with the pilot's use, and tell the
-      editors on #10182.
 - [ ] Announce: mailing lists, webinar, conference tutorial.
 
 ---
@@ -232,7 +234,7 @@ seam, API fuzzing, mutation reports, and the coverage gate.
       says where the model runs.
 - [ ] Everything the viewer does is available from the CLI with `--json` (MCP if Phase 5 lands).
 
-**The pilot's measures** (before launch):
+**The pilot's measures** (after launch; not a release gate):
 
 - [ ] A researcher outside the team installs it, works through the tutorial on their own machine,
       and gets the tidy export into R or Python without help.
@@ -242,6 +244,6 @@ seam, API fuzzing, mutation reports, and the coverage gate.
 
 ---
 
-**Last Updated**: 2026-10-26
-**Target Release**: when the pilot's fixes are in
+**Last Updated**: 2026-11-23
+**Target Release**: week of 2026-11-23; the pilot follows
 **Status**: In development — Public Release
