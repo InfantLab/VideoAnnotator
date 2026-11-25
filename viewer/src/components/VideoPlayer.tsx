@@ -439,13 +439,13 @@ export const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         const activeAUs = (Object.entries(aus) as Array<[
           keyof OpenFace3ActionUnits,
           OpenFace3ActionUnit
-        ]>).filter(([_, au]) => au.presence && au.intensity > 0.5);
+        ]>).filter(([_, au]) => au.presence);
         
         if (activeAUs.length > 0) {
           const labelY = scaledY + (height * scaleY) + 25;
           const auText = activeAUs
             .map(([name, au]) => {
-              return `${String(name).replace('AU', '').replace('_', ' ')}: ${au.intensity.toFixed(1)}`;
+              return `${String(name).replace('AU', '').replace('_', ' ')}: ${au.score.toFixed(2)}`;
             })
             .join(', ');
           

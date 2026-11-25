@@ -1,10 +1,10 @@
 {
   "info": {
     "description": "VideoAnnotator COCO Export",
-    "version": "1.6.0rc1",
+    "version": "1.7.0.dev0",
     "year": 2026,
     "contributor": "VideoAnnotator",
-    "date_created": "2026-10-18T13:57:44.688506+00:00"
+    "date_created": "2026-11-25T16:55:46.576027+00:00"
   },
   "licenses": [],
   "images": [
@@ -123,7 +123,6 @@
       "iscrowd": 0,
       "score": 1.0,
       "face_id": 0,
-      "person_id": "person_demo_clip_001",
       "timestamp": 0.0,
       "frame_number": 0,
       "backend": "deepface",
@@ -138,7 +137,11 @@
         "sad": 0.007020892575383186,
         "surprise": 8.854901352606248e-06,
         "neutral": 0.5005189776420593
-      }
+      },
+      "person_id": "person_demo_clip_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 2,
@@ -168,7 +171,11 @@
         "sad": 0.0001484436943428591,
         "surprise": 2.9269452191268107e-15,
         "neutral": 0.0055118585005402565
-      }
+      },
+      "person_id": "person_demo_clip_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 3,
@@ -198,7 +205,11 @@
         "sad": 0.1283949464559555,
         "surprise": 0.011528752744197845,
         "neutral": 0.3144477903842926
-      }
+      },
+      "person_id": "person_demo_clip_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 4,
@@ -228,7 +239,11 @@
         "sad": 0.00099570385646075,
         "surprise": 6.845889686298706e-14,
         "neutral": 0.989529550075531
-      }
+      },
+      "person_id": "person_demo_clip_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 5,
@@ -258,7 +273,11 @@
         "sad": 0.807786226272583,
         "surprise": 2.326404137420468e-05,
         "neutral": 0.0062611280009150505
-      }
+      },
+      "person_id": "person_demo_clip_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 6,
@@ -288,7 +307,11 @@
         "sad": 0.08668018132448196,
         "surprise": 0.009516592137515545,
         "neutral": 0.5726858973503113
-      }
+      },
+      "person_id": "person_demo_clip_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 7,
@@ -318,7 +341,11 @@
         "sad": 0.0622648149728775,
         "surprise": 0.0022800727747380733,
         "neutral": 0.7684034109115601
-      }
+      },
+      "person_id": "person_demo_clip_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 8,
@@ -348,7 +375,11 @@
         "sad": 0.4693676829338074,
         "surprise": 1.7237823390914286e-09,
         "neutral": 0.0012883644085377455
-      }
+      },
+      "person_id": "person_demo_clip_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 9,
@@ -378,7 +409,11 @@
         "sad": 0.09505744278430939,
         "surprise": 1.6818454184885923e-08,
         "neutral": 0.8717531561851501
-      }
+      },
+      "person_id": "person_demo_clip_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 10,
@@ -408,7 +443,11 @@
         "sad": 0.0035333186388015747,
         "surprise": 1.531935777165927e-05,
         "neutral": 0.0012376117520034313
-      }
+      },
+      "person_id": "person_demo_clip_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 11,
@@ -438,7 +477,11 @@
         "sad": 0.9530519247055054,
         "surprise": 2.168141008951352e-07,
         "neutral": 0.023949705064296722
-      }
+      },
+      "person_id": "person_demo_clip_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 12,
@@ -468,7 +511,11 @@
         "sad": 0.1846972107887268,
         "surprise": 4.6937082515796646e-05,
         "neutral": 0.05002906173467636
-      }
+      },
+      "person_id": "person_demo_clip_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 13,
@@ -498,7 +545,11 @@
         "sad": 0.1749536693096161,
         "surprise": 8.726917440071702e-05,
         "neutral": 0.16317445039749146
-      }
+      },
+      "person_id": "person_demo_clip_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 14,
@@ -528,7 +579,11 @@
         "sad": 0.43892720341682434,
         "surprise": 0.0009815552039071918,
         "neutral": 0.3675908148288727
-      }
+      },
+      "person_id": "person_demo_clip_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 15,
@@ -558,7 +613,11 @@
         "sad": 0.0006920580053701997,
         "surprise": 0.00013466080417856574,
         "neutral": 0.02481408789753914
-      }
+      },
+      "person_id": "person_demo_clip_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 16,
@@ -588,7 +647,11 @@
         "sad": 0.8288086652755737,
         "surprise": 1.6631488506391179e-06,
         "neutral": 0.0916195660829544
-      }
+      },
+      "person_id": "person_demo_clip_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 17,
@@ -618,7 +681,11 @@
         "sad": 0.0010671643540263176,
         "surprise": 0.0007404079078696668,
         "neutral": 0.004487446043640375
-      }
+      },
+      "person_id": "person_demo_clip_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 18,
@@ -648,7 +715,11 @@
         "sad": 0.049132090061903,
         "surprise": 0.008606784977018833,
         "neutral": 0.11413057148456573
-      }
+      },
+      "person_id": "person_demo_clip_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     },
     {
       "id": 19,
@@ -678,7 +749,11 @@
         "sad": 0.9949032068252563,
         "surprise": 8.129408875668515e-14,
         "neutral": 2.7312097472531605e-07
-      }
+      },
+      "person_id": "person_demo_clip_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
     }
   ],
   "categories": [
@@ -694,7 +769,7 @@
       "name": "face_analysis",
       "sub_pipeline": null
     },
-    "videoannotator_version": "1.6.0rc1",
+    "videoannotator_version": "1.7.0.dev0",
     "models": [
       {
         "name": "DeepFace Emotion",
@@ -729,7 +804,6 @@
       "person_identity": {
         "enabled": true,
         "link_to_persons": true,
-        "iou_threshold": 0.5,
         "require_person_id": false
       }
     },
@@ -739,10 +813,10 @@
       "cudnn_deterministic": false,
       "deterministic_algorithms": false,
       "anomaly_detection": false,
-      "cublas_workspace_config": null
+      "cublas_workspace_config": ":4096:8"
     },
-    "created_at": "2026-10-18T13:55:26.830398+00:00",
-    "job_id": "10f91051-cfdf-4728-9ab4-d76f718ff349",
+    "created_at": "2026-11-25T16:55:35.652786+00:00",
+    "job_id": "8af1d4a5-a81d-4ef2-a7c5-34c9bfd0df1c",
     "input": {
       "name": "demo_clip.mp4",
       "sha256": "0b809c13772c8cdff2a5355f958b5b70115cf8d5d7b461199d36056d3a8295b0"

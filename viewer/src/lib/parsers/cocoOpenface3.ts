@@ -24,7 +24,7 @@ interface COCOOpenFace3Annotation {
     landmarks_2d?: [number, number][];
     action_units?: {
       [key: string]: {
-        intensity: number;
+        score: number;
         presence: boolean;
       };
     };
@@ -142,14 +142,14 @@ export class COCOOpenFace3Parser {
     if (annotation.openface3.action_units) {
       const auMap = annotation.openface3.action_units;
       action_units = {
-        AU01_Inner_Brow_Raiser: auMap['AU01_Inner_Brow_Raiser'] || { intensity: 0, presence: false },
-        AU02_Outer_Brow_Raiser: auMap['AU02_Outer_Brow_Raiser'] || { intensity: 0, presence: false },
-        AU04_Brow_Lowerer: auMap['AU04_Brow_Lowerer'] || { intensity: 0, presence: false },
-        AU05_Upper_Lid_Raiser: auMap['AU05_Upper_Lid_Raiser'] || { intensity: 0, presence: false },
-        AU06_Cheek_Raiser: auMap['AU06_Cheek_Raiser'] || { intensity: 0, presence: false },
-        AU07_Lid_Tightener: auMap['AU07_Lid_Tightener'] || { intensity: 0, presence: false },
-        AU09_Nose_Wrinkler: auMap['AU09_Nose_Wrinkler'] || { intensity: 0, presence: false },
-        AU10_Upper_Lip_Raiser: auMap['AU10_Upper_Lip_Raiser'] || { intensity: 0, presence: false }
+        AU01_Inner_Brow_Raiser: auMap['AU01_Inner_Brow_Raiser'] || { score: 0, presence: false },
+        AU02_Outer_Brow_Raiser: auMap['AU02_Outer_Brow_Raiser'] || { score: 0, presence: false },
+        AU04_Brow_Lowerer: auMap['AU04_Brow_Lowerer'] || { score: 0, presence: false },
+        AU06_Cheek_Raiser: auMap['AU06_Cheek_Raiser'] || { score: 0, presence: false },
+        AU09_Nose_Wrinkler: auMap['AU09_Nose_Wrinkler'] || { score: 0, presence: false },
+        AU12_Lip_Corner_Puller: auMap['AU12_Lip_Corner_Puller'] || { score: 0, presence: false },
+        AU25_Lips_Part: auMap['AU25_Lips_Part'] || { score: 0, presence: false },
+        AU26_Jaw_Drop: auMap['AU26_Jaw_Drop'] || { score: 0, presence: false }
       };
     }
 

@@ -12,9 +12,9 @@ export interface OpenFace3Landmark {
   y: number;
 }
 
-// OpenFace3 Action Unit with intensity and presence
+// OpenFace 3 Action Unit: its chance of occurring (0-1), present above 0.5
 export interface OpenFace3ActionUnit {
-  intensity: number;
+  score: number;
   presence: boolean;
 }
 
@@ -23,11 +23,11 @@ export interface OpenFace3ActionUnits {
   AU01_Inner_Brow_Raiser: OpenFace3ActionUnit;
   AU02_Outer_Brow_Raiser: OpenFace3ActionUnit;
   AU04_Brow_Lowerer: OpenFace3ActionUnit;
-  AU05_Upper_Lid_Raiser: OpenFace3ActionUnit;
   AU06_Cheek_Raiser: OpenFace3ActionUnit;
-  AU07_Lid_Tightener: OpenFace3ActionUnit;
   AU09_Nose_Wrinkler: OpenFace3ActionUnit;
-  AU10_Upper_Lip_Raiser: OpenFace3ActionUnit;
+  AU12_Lip_Corner_Puller: OpenFace3ActionUnit;
+  AU25_Lips_Part: OpenFace3ActionUnit;
+  AU26_Jaw_Drop: OpenFace3ActionUnit;
 }
 
 // OpenFace3 Head Pose (3D orientation)

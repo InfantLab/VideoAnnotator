@@ -23,7 +23,6 @@ export function overlaySettingsFromLanes(overlays: Record<string, boolean>): Ove
 export const OPENFACE3_OVERLAYS = [
   { key: 'faces.landmarks', label: 'Landmarks', setting: 'landmarks_2d' },
   { key: 'faces.gaze', label: 'Gaze', setting: 'gaze' },
-  { key: 'faces.head_pose', label: 'Head pose', setting: 'head_pose' },
   { key: 'faces.action_units', label: 'Action units', setting: 'action_units' },
 ] as const;
 

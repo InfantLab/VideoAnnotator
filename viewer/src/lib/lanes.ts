@@ -179,7 +179,8 @@ function rowLabel(kind: string, key: string, labels: Set<string>): string {
   if (kind === 'people' || kind === 'faces') {
     const n = /(\d+)$/.exec(key)?.[1];
     const name = n !== undefined ? `${kind === 'people' ? 'person' : 'face'} ${Number(n)}` : key;
-    const label = [...labels].filter(Boolean).join(', ');
+    // Person tracking says "unknown" unless asked to guess roles (UAT #75).
+    const label = [...labels].filter((l) => l && l !== 'unknown').join(', ');
     return label ? `${name} (${label})` : name;
   }
   // "AU01_Inner_Brow_Raiser" → "AU01 inner brow raiser" (UAT #37).

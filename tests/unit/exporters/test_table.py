@@ -91,7 +91,9 @@ def test_numbers_round_trip_exactly(run_folder):
     assert row["end"] == ""  # a moment, not an interval
     assert row["track"] == first["person_id"]
     assert row["model"] == "models/yolo/yolo26n-pose.pt"
-    assert row["videoannotator_version"] == "1.6.0rc1"
+    assert (
+        row["videoannotator_version"] == native["provenance"]["videoannotator_version"]
+    )
     assert row["file"] == "demo_clip_person_tracking.json"
 
 

@@ -239,7 +239,7 @@ function readOpenface3(source: string): FileContents {
     const units = features.action_units;
     if (isDict(units)) {
       for (const [name, unit] of Object.entries(units)) {
-        if (isDict(unit)) measures.push(measure('action_unit', name, num(unit.intensity)));
+        if (isDict(unit)) measures.push(measure('action_unit', name, num(unit.score)));
       }
       for (const [name, unit] of Object.entries(units)) {
         if (isDict(unit) && unit.presence !== null && unit.presence !== undefined) {
@@ -250,7 +250,7 @@ function readOpenface3(source: string): FileContents {
 
     for (const [name, components] of [
       ['head_pose', ['pitch', 'yaw', 'roll']],
-      ['gaze', ['direction_x', 'direction_y', 'direction_z']],
+      ['gaze', ['yaw', 'pitch', 'direction_x', 'direction_y', 'direction_z']],
     ] as const) {
       const part = features[name];
       if (isDict(part)) {

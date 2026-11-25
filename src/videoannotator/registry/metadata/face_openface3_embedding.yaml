@@ -1,8 +1,8 @@
 name: face_openface3_embedding
 display_name: OpenFace 3
-title: "Faces: action units, gaze, head pose"
+title: "Faces: action units and gaze"
 summary: >-
-  Finds faces in each sampled frame and measures facial action units, gaze direction, head pose and expression. Also describes each face in a way that tells people apart.
+  Finds faces in each sampled frame and measures eight facial action units (each as its chance of being present, 0 to 1), gaze direction and, if turned on, expression, but not head pose. Also describes each face in a way that tells people apart.
 homepage: https://github.com/CMU-MultiComp-Lab/OpenFace-3.0
 benchmarks:
   - name: "DISFA"

@@ -89,7 +89,7 @@ def test_a_face_linked_to_a_person_takes_its_track(tmp_path):
     assert read_openface3(path).events[0].track == "person_clip_002"
 
 
-def test_openface3_action_units_pose_gaze():
+def test_openface3_action_units_and_gaze():
     native = _coco("demo_clip_openface3_analysis.json")
     events = read_openface3(FIXTURES / "demo_clip_openface3_analysis.json").events
     assert len(events) == len(native["annotations"])
@@ -98,7 +98,9 @@ def test_openface3_action_units_pose_gaze():
         assert event.start == features["timestamp"]
         assert event.box == tuple(a["bbox"])
         units = {m.label: m.value for m in event.measures if m.measure == "action_unit"}
-        assert units == {k: v["intensity"] for k, v in features["action_units"].items()}
+        assert units == {k: v["score"] for k, v in features["action_units"].items()}
+        assert "AU12_Lip_Corner_Puller" in units
+        assert all(0 <= v <= 1 for v in units.values())
         presence = {
             m.label: m.value
             for m in event.measures
@@ -107,11 +109,12 @@ def test_openface3_action_units_pose_gaze():
         assert presence == {
             k: int(v["presence"]) for k, v in features["action_units"].items()
         }
-        pose = {m.label: m.value for m in event.measures if m.measure == "head_pose"}
-        assert pose == {k: features["head_pose"][k] for k in ("pitch", "yaw", "roll")}
-        gaze = [m for m in event.measures if m.measure == "gaze"]
-        assert {m.label for m in gaze} == {"direction_x", "direction_y", "direction_z"}
-        assert all(m.confidence == features["gaze"]["confidence"] for m in gaze)
+        assert not [m for m in event.measures if m.measure == "head_pose"]
+        gaze = {m.label: m.value for m in event.measures if m.measure == "gaze"}
+        assert gaze == {
+            k: features["gaze"][k]
+            for k in ("yaw", "pitch", "direction_x", "direction_y", "direction_z")
+        }
 
 
 def test_openface3_emotion_when_enabled(tmp_path):

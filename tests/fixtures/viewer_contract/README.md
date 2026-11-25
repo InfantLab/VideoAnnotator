@@ -45,6 +45,12 @@ community-1 (same day, once a token was saved): 3 turns from one speaker, where 
 mother's last turn between two speakers (checked by listening). The tolerances were kept: two runs on
 the GTX 1060 gave identical files for every pipeline but person tracking (within 0.00004 %).
 
+Re-baselined 2026-11-25 on the RTX 4060 (UAT #78): both OpenFace 3 files, whose action units,
+expression and gaze had been read from the wrong model outputs; and, left stale by UAT #75 (faces
+linked to people, no role guess), `person_tracking.json`, `person_tracks.json` and
+`face_detections.json`. `scene_detection.json` is kept from the GTX 1060: on the 4060 its scores
+differ in the fourth decimal (0.6352 for 0.6340), so the exact check fails there, as before.
+
 `legacy/` keeps the previous set, without provenance, so both contract tests prove that older
 outputs still open, parse the same, and are labelled "version not recorded".
 

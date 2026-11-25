@@ -56,6 +56,29 @@ def patch_scipy_compatibility():
 
 
 OPENFACE3_AVAILABLE = False  # Will be updated to True after successful lazy import
+
+# The multitask model's outputs, in its order (OpenFace 3.0's demo2.py). It
+# estimates no head pose. Until UAT #78 these were guessed and misread.
+AU_NAMES = (
+    "AU01_Inner_Brow_Raiser",
+    "AU02_Outer_Brow_Raiser",
+    "AU04_Brow_Lowerer",
+    "AU06_Cheek_Raiser",
+    "AU09_Nose_Wrinkler",
+    "AU12_Lip_Corner_Puller",
+    "AU25_Lips_Part",
+    "AU26_Jaw_Drop",
+)
+EMOTION_LABELS = (
+    "neutral",
+    "happiness",
+    "sadness",
+    "surprise",
+    "fear",
+    "disgust",
+    "anger",
+    "contempt",
+)
 _OPENFACE3_UNAVAILABLE_REASON = "OpenFace 3.0 not installed"
 
 # These are assigned during lazy import; declare for type checkers.
@@ -183,8 +206,7 @@ class OpenFace3Pipeline(BasePipeline):
 
     Provides comprehensive facial behavior analysis including:
     - 2D and 3D facial landmarks (68-point model)
-    - Facial Action Units (AU) intensity and presence
-    - Head pose estimation (rotation and translation)
+    - Facial Action Units (AU): 8 scores, each its chance of occurring
     - Gaze direction and eye gaze
     - Basic emotion recognition
     """
@@ -196,7 +218,6 @@ class OpenFace3Pipeline(BasePipeline):
             "landmark_model": "98_point",  # Use 98_point - we have the correct model
             "enable_3d_landmarks": True,
             "enable_action_units": True,
-            "enable_head_pose": True,
             "enable_gaze": True,
             "enable_emotions": False,  # Experimental feature
             "batch_size": 1,
@@ -306,7 +327,6 @@ class OpenFace3Pipeline(BasePipeline):
             if any(
                 [
                     self.config["enable_action_units"],
-                    self.config["enable_head_pose"],
                     self.config["enable_gaze"],
                     self.config["enable_emotions"],
                 ]
@@ -337,7 +357,6 @@ class OpenFace3Pipeline(BasePipeline):
                     "landmarks": True,
                     "3d_landmarks": self.config["enable_3d_landmarks"],
                     "action_units": self.config["enable_action_units"],
-                    "head_pose": self.config["enable_head_pose"],
                     "gaze": self.config["enable_gaze"],
                     "emotions": self.config["enable_emotions"],
                     "face_tracking": self.config["track_faces"],
@@ -380,10 +399,6 @@ class OpenFace3Pipeline(BasePipeline):
                 "person_labeling_method": "string",  # How person was labeled
                 "attributes": {
                     "action_units": "object",  # AU intensities and presence
-                    "head_pose": {
-                        "rotation": "array[3]",  # [rx, ry, rz] in radians
-                        "translation": "array[3]",  # [tx, ty, tz] in mm
-                    },
                     "gaze": {
                         "direction": "array[3]",  # 3D gaze direction vector
                         "left_eye": "array[2]",  # 2D gaze point for left eye
@@ -688,7 +703,7 @@ class OpenFace3Pipeline(BasePipeline):
                     # Advanced analysis with MultitaskPredictor
                     if self.multitask_predictor and w > 0 and h > 0:
                         try:
-                            au_output, pose_output, emotion_output = (
+                            emotion_output, gaze_output, au_output = (
                                 self.multitask_predictor.predict(face_roi)
                             )
 
@@ -698,19 +713,13 @@ class OpenFace3Pipeline(BasePipeline):
                                     au_output
                                 )
 
-                            if self.config["enable_head_pose"]:
-                                face_data["head_pose"] = self._parse_head_pose(
-                                    pose_output
-                                )
-
                             if self.config["enable_emotions"]:
                                 face_data["emotion"] = self._parse_emotions(
                                     emotion_output
                                 )
 
-                            # Note: Gaze processing would use pose_output or separate gaze model
                             if self.config["enable_gaze"]:
-                                face_data["gaze"] = self._parse_gaze(pose_output)
+                                face_data["gaze"] = self._parse_gaze(gaze_output)
 
                         except Exception as e:
                             self.logger.warning(
@@ -799,10 +808,6 @@ class OpenFace3Pipeline(BasePipeline):
         if "action_units" in face_data:
             openface_data["action_units"] = face_data["action_units"]
 
-        # Add head pose
-        if "head_pose" in face_data:
-            openface_data["head_pose"] = face_data["head_pose"]
-
         # Add gaze information
         if "gaze" in face_data:
             openface_data["gaze"] = face_data["gaze"]
@@ -879,7 +884,6 @@ class OpenFace3Pipeline(BasePipeline):
                 "facial_landmarks_98",
                 "3d_landmarks",
                 "action_units",
-                "head_pose",
                 "gaze_estimation",
                 "emotion_recognition",
                 "face_tracking",
@@ -898,114 +902,45 @@ class OpenFace3Pipeline(BasePipeline):
         return info
 
     def _parse_action_units(self, au_output):
-        """Parse Action Units from MultitaskPredictor output."""
-        # au_output shape: (1, 8)
-        # Need to determine which AUs these 8 values represent
-        au_values = au_output.detach().cpu().numpy().flatten()
+        """The model's 8 AU scores, in its order (OpenFace 3.0's demo2.py).
 
-        # Standard FACS Action Units mapping (based on common OpenFace implementations)
-        au_mapping = {
-            0: "AU01_Inner_Brow_Raiser",
-            1: "AU02_Outer_Brow_Raiser",
-            2: "AU04_Brow_Lowerer",
-            3: "AU05_Upper_Lid_Raiser",
-            4: "AU06_Cheek_Raiser",
-            5: "AU07_Lid_Tightener",
-            6: "AU09_Nose_Wrinkler",
-            7: "AU10_Upper_Lip_Raiser",
-        }
-
-        action_units = {}
-        for idx, au_name in au_mapping.items():
-            intensity = float(au_values[idx])
-            # Convert to 0-5 intensity scale and presence detection
-            normalized_intensity = max(
-                0, min(5, (intensity + 4) * 1.25)
-            )  # Normalize range
-            presence = normalized_intensity > 0.5
-
-            action_units[au_name] = {
-                "intensity": normalized_intensity,
-                "presence": presence,
-            }
-
-        return action_units
-
-    def _parse_head_pose(self, pose_output):
-        """Parse head pose from MultitaskPredictor output."""
-        # pose_output shape: (1, 2)
-        pose_values = pose_output.detach().cpu().numpy().flatten()
-
-        # Determine which angles these represent (likely pitch and yaw)
+        Each is the AU's predicted chance of occurring, trained against 0/1
+        labels and thresholded at 0.5 (train_mix_au_dev.py); not an intensity.
+        """
+        scores = np.clip(au_output.detach().cpu().numpy().flatten(), 0.0, 1.0)
         return {
-            "pitch": float(pose_values[0]) * 180 / np.pi,  # Convert to degrees
-            "yaw": float(pose_values[1]) * 180 / np.pi,
-            "roll": 0.0,  # Not available from current output
-            "confidence": 0.8,  # Default confidence
+            name: {"score": float(score), "presence": bool(score > 0.5)}
+            for name, score in zip(AU_NAMES, scores, strict=True)
         }
 
     def _parse_emotions(self, emotion_output):
-        """Parse emotions from MultitaskPredictor output."""
-        # emotion_output shape: (1, 8)
-        emotion_probs = emotion_output.detach().cpu().numpy().flatten()
-
-        # Standard emotion mapping (common in facial expression research)
-        emotion_labels = [
-            "neutral",
-            "happiness",
-            "sadness",
-            "anger",
-            "fear",
-            "surprise",
-            "disgust",
-            "contempt",
-        ]
-
-        # Softmax normalization
-        exp_probs = np.exp(emotion_probs - np.max(emotion_probs))
-        normalized_probs = exp_probs / np.sum(exp_probs)
-
+        """The 8 AffectNet expressions, in the model's order (demo2.py)."""
+        logits = emotion_output.detach().cpu().numpy().flatten()
+        exp = np.exp(logits - np.max(logits))
+        normalized_probs = exp / np.sum(exp)
         probabilities = {
             label: float(prob)
-            for label, prob in zip(emotion_labels, normalized_probs, strict=False)
+            for label, prob in zip(EMOTION_LABELS, normalized_probs, strict=True)
         }
-
-        # Find dominant emotion
-        dominant_idx = np.argmax(normalized_probs)
-        dominant = emotion_labels[dominant_idx]
-
-        # Calculate valence and arousal
-        valence = self._calculate_valence(probabilities)
-        arousal = self._calculate_arousal(probabilities)
-
+        dominant_idx = int(np.argmax(normalized_probs))
         return {
-            "dominant": dominant,
+            "dominant": EMOTION_LABELS[dominant_idx],
             "probabilities": probabilities,
-            "valence": valence,
-            "arousal": arousal,
+            "valence": self._calculate_valence(probabilities),
+            "arousal": self._calculate_arousal(probabilities),
             "confidence": float(normalized_probs[dominant_idx]),
         }
 
-    def _parse_gaze(self, pose_output):
-        """Parse gaze from MultitaskPredictor output using head pose as proxy."""
-        # For now, use head pose as gaze direction proxy
-        # In future versions, this could use a dedicated gaze model
-        pose_values = pose_output.detach().cpu().numpy().flatten()
-
-        # Convert head pose to gaze direction vector
-        pitch = pose_values[0]
-        yaw = pose_values[1]
-
-        # Convert to 3D direction vector
-        direction_x = np.sin(yaw) * np.cos(pitch)
-        direction_y = -np.sin(pitch)
-        direction_z = np.cos(yaw) * np.cos(pitch)
-
+    def _parse_gaze(self, gaze_output):
+        """Gaze (yaw, pitch) in radians, and as a 3D direction the way
+        OpenFace 3.0's demo2.py converts it."""
+        yaw, pitch = (float(v) for v in gaze_output.detach().cpu().numpy().flatten())
         return {
-            "direction_x": float(direction_x),
-            "direction_y": float(direction_y),
-            "direction_z": float(direction_z),
-            "confidence": 0.7,  # Lower confidence since this is head pose proxy
+            "yaw": yaw,
+            "pitch": pitch,
+            "direction_x": float(-np.cos(pitch) * np.sin(yaw)),
+            "direction_y": float(-np.sin(pitch)),
+            "direction_z": float(-np.cos(pitch) * np.cos(yaw)),
         }
 
     def _calculate_valence(self, probabilities):

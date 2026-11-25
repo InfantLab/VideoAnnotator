@@ -15,6 +15,6 @@ Department of Psychology, reference 1408.
 
 The results are VideoAnnotator 1.7.0.dev0's six default pipelines (face analysis, OpenFace 3,
 person tracking, scene detection, speaker diarization, speech recognition), made 2026-11-25 with
-`videoannotator process`; each file records what made it. OpenFace 3's detailed file and person
+`videoannotator process`; each file records what made it. OpenFace 3's files were made again the same day, after its outputs were found to be misread (UAT #78). OpenFace 3's detailed file and person
 tracking's per-person summary are left out to keep the viewer small. The viewer's demos are listed
 in `viewer/src/lib/demos.ts`.

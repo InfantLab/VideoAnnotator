@@ -56,12 +56,12 @@ def test_one_tier_per_pipeline_track(eaf):
         "scene_detection scenes",
         "speech_recognition speech",
         "speaker_diarization SPEAKER_00",
-        "person_tracking person_demo_clip_001 (parent)",
-        "person_tracking person_demo_clip_002 (parent)",
-        "face_analysis faces",
+        "person_tracking person_demo_clip_001 (unknown)",
+        "person_tracking person_demo_clip_002 (unknown)",
         "face_analysis person_demo_clip_001",
-        "face_openface3_embedding faces",
+        "face_analysis person_demo_clip_002",
         "face_openface3_embedding person_demo_clip_001",
+        "face_openface3_embedding person_demo_clip_002",
         "vlm_annotation labels",
     ]
 

@@ -44,10 +44,9 @@ below). Stable for unchanged input (FR-015).
 | | `age` | | estimated age | | |
 | | `gender` | `gender` | | `gender_confidence` | |
 | face_openface3_embedding (`_openface3_analysis.json`) | `face` | | | `openface3.confidence` | box; `track` = `openface3.track_id` when present |
-| | `action_unit` | AU name (`AU01_Inner_Brow_Raiser`) | intensity | | one row per AU |
-| | `action_unit_presence` | AU name | 1 or 0 | | one row per AU |
-| | `head_pose` | `pitch`, `yaw`, `roll` | degrees | pose `confidence` | |
-| | `gaze` | `direction_x`, `direction_y`, `direction_z` | component | gaze `confidence` | |
+| | `action_unit` | AU name (`AU12_Lip_Corner_Puller`; 8 AUs) | chance of occurring, 0–1 | | one row per AU |
+| | `action_unit_presence` | AU name | 1 or 0 (chance > 0.5) | | one row per AU |
+| | `gaze` | `yaw`, `pitch` (radians), `direction_x`, `direction_y`, `direction_z` | angle or component | | |
 | | `emotion` | `dominant` | | its probability | when emotions were enabled |
 | | `emotion_score` | emotion name | probability | | |
 | | `valence`, `arousal` | | value | | |

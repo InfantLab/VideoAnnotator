@@ -19,7 +19,7 @@ describe('the Video page timeline', () => {
     await lanesLoaded();
     const groups = screen.getAllByRole('group').map((g) => g.dataset.kind);
     expect(new Set(groups)).toEqual(
-      new Set(['speech', 'speakers', 'people', 'faces', 'emotion', 'scenes', 'ask_ai', 'action_units', 'head_pose', 'gaze', 'person_area', 'notes']),
+      new Set(['speech', 'speakers', 'people', 'faces', 'emotion', 'scenes', 'ask_ai', 'action_units', 'gaze', 'person_area', 'notes']),
     );
     // The researcher's own lane is always there, last.
     expect(groups[groups.length - 1]).toBe('notes');
@@ -31,7 +31,7 @@ describe('the Video page timeline', () => {
     const [speakers] = lane('speakers');
     expect(within(speakers).getByText('SPEAKER_00')).toBeInTheDocument();
     const [people] = lane('people');
-    expect(within(people).getByText('person 1 (parent)')).toBeInTheDocument();
+    expect(within(people).getByText('person 1')).toBeInTheDocument();
   });
 
   it('gives every lane and row label a tooltip saying what it shows and what made it', async () => {

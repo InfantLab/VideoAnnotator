@@ -71,7 +71,6 @@ class TestOpenFace3Pipeline:
             "device": "cpu",
             "detection_confidence": 0.8,
             "enable_action_units": True,
-            "enable_head_pose": True,
             "max_faces": 10,
         }
         pipeline = OpenFace3Pipeline(config)
@@ -79,7 +78,6 @@ class TestOpenFace3Pipeline:
         assert pipeline.config["device"] == "cpu"
         assert pipeline.config["detection_confidence"] == 0.8
         assert pipeline.config["enable_action_units"] is True
-        assert pipeline.config["enable_head_pose"] is True
         assert pipeline.config["max_faces"] == 10
 
     def test_schema_structure(self):
@@ -101,7 +99,7 @@ class TestOpenFace3Pipeline:
         # Check OpenFace3 specific fields are in attributes
         attributes_schema = annotation_schema["attributes"]
         assert "action_units" in attributes_schema
-        assert "head_pose" in attributes_schema
+        assert "head_pose" not in attributes_schema  # the model estimates none
         assert "gaze" in attributes_schema
         assert "emotion" in attributes_schema
 
@@ -115,9 +113,18 @@ class TestOpenFace3Pipeline:
         assert info["output_format"] == "COCO"
         assert "face_detection" in info["capabilities"]
         assert "action_units" in info["capabilities"]
-        assert "head_pose" in info["capabilities"]
+        assert "head_pose" not in info["capabilities"]
         assert "gaze_estimation" in info["capabilities"]
         assert "emotion_recognition" in info["capabilities"]
+
+
+def _tensor(values):
+    """A stand-in for a model output tensor."""
+    tensor = Mock()
+    tensor.detach.return_value.cpu.return_value.numpy.return_value = np.array(
+        [values], dtype=float
+    )
+    return tensor
 
 
 @pytest.mark.unit
@@ -129,48 +136,30 @@ class TestOpenFace3FeatureParsing:
         self.pipeline = OpenFace3Pipeline({"device": "cpu"})
 
     def test_action_units_parsing(self):
-        """Test Action Units parsing from tensor output."""
-        # Mock tensor data (8 AU values)
-        mock_tensor = Mock()
-        mock_tensor.detach.return_value.cpu.return_value.numpy.return_value.flatten.return_value = np.array(
-            [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+        """The 8 scores are OpenFace 3.0's AUs in its order (UAT #78)."""
+        parsed = self.pipeline._parse_action_units(
+            _tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.9, -0.2, 1.3])
         )
+        assert list(parsed) == [
+            "AU01_Inner_Brow_Raiser",
+            "AU02_Outer_Brow_Raiser",
+            "AU04_Brow_Lowerer",
+            "AU06_Cheek_Raiser",
+            "AU09_Nose_Wrinkler",
+            "AU12_Lip_Corner_Puller",
+            "AU25_Lips_Part",
+            "AU26_Jaw_Drop",
+        ]
+        assert parsed["AU12_Lip_Corner_Puller"] == {
+            "score": pytest.approx(0.9),
+            "presence": True,
+        }
+        assert parsed["AU09_Nose_Wrinkler"]["presence"] is False  # 0.5 is not over
+        assert parsed["AU25_Lips_Part"]["score"] == 0.0
+        assert parsed["AU26_Jaw_Drop"]["score"] == 1.0
 
-        parsed = self.pipeline._parse_action_units(mock_tensor)
-
-        assert isinstance(parsed, dict)
-        assert len(parsed) == 8  # 8 Action Units
-
-        # Check first AU structure
-        first_au_key = next(iter(parsed.keys()))
-        first_au = parsed[first_au_key]
-        assert "intensity" in first_au
-        assert "presence" in first_au
-        assert isinstance(first_au["intensity"], (float, int))  # Can be float or int
-        assert isinstance(first_au["presence"], bool)
-        assert 0 <= first_au["intensity"] <= 5
-
-    def test_head_pose_parsing(self):
-        """Test Head Pose parsing from tensor output."""
-        # Mock tensor data (2 pose values: pitch, yaw)
-        mock_tensor = Mock()
-        mock_tensor.detach.return_value.cpu.return_value.numpy.return_value.flatten.return_value = np.array(
-            [0.1, 0.2]
-        )
-
-        parsed = self.pipeline._parse_head_pose(mock_tensor)
-
-        assert isinstance(parsed, dict)
-        assert "pitch" in parsed
-        assert "yaw" in parsed
-        assert "roll" in parsed
-        assert "confidence" in parsed
-
-        # Values should be in degrees
-        assert isinstance(parsed["pitch"], float)
-        assert isinstance(parsed["yaw"], float)
-        assert parsed["roll"] == 0.0  # Not available from current output
-        assert 0 <= parsed["confidence"] <= 1
+    def test_no_head_pose(self):
+        assert not hasattr(self.pipeline, "_parse_head_pose")
 
     def test_emotions_parsing(self):
         """Test Emotions parsing from tensor output."""
@@ -205,28 +194,42 @@ class TestOpenFace3FeatureParsing:
         assert 0.0 <= parsed["arousal"] <= 1.0
 
     def test_gaze_parsing(self):
-        """Test Gaze parsing from tensor output."""
-        # Mock tensor data (using head pose as proxy)
-        mock_tensor = Mock()
-        mock_tensor.detach.return_value.cpu.return_value.numpy.return_value.flatten.return_value = np.array(
-            [0.1, 0.2]
+        """(yaw, pitch) in radians, made 3D as OpenFace 3.0's demo2.py does."""
+        parsed = self.pipeline._parse_gaze(_tensor([0.0, 0.0]))
+        assert parsed == {
+            "yaw": 0.0,
+            "pitch": 0.0,
+            "direction_x": pytest.approx(0.0),
+            "direction_y": pytest.approx(0.0),
+            "direction_z": pytest.approx(-1.0),
+        }
+        looking_up = self.pipeline._parse_gaze(_tensor([0.0, 0.5]))
+        assert looking_up["pitch"] == 0.5
+        assert looking_up["direction_y"] < 0
+
+    def test_predict_outputs_are_read_in_the_models_order(self):
+        """MultitaskPredictor.predict returns (emotion, gaze, au); until UAT #78
+        the pipeline read them as (au, pose, emotion)."""
+        emotion = _tensor([0, 5, 0, 0, 0, 0, 0, 0])
+        gaze = _tensor([0.1, 0.2])
+        au = _tensor([0, 0, 0, 0, 0, 0.9, 0, 0])
+        pipeline = OpenFace3Pipeline({"device": "cpu", "enable_emotions": True})
+        predictor = Mock()
+        predictor.predict.return_value = (emotion, gaze, au)
+        pipeline.multitask_predictor = predictor
+        pipeline.face_detector = Mock()
+        pipeline.face_detector.detect_faces.return_value = (
+            np.array([[0, 0, 20, 20, 0.99]]),
+            None,
         )
-
-        parsed = self.pipeline._parse_gaze(mock_tensor)
-
-        assert isinstance(parsed, dict)
-        assert "direction_x" in parsed
-        assert "direction_y" in parsed
-        assert "direction_z" in parsed
-        assert "confidence" in parsed
-
-        # Direction values should be floats
-        assert isinstance(parsed["direction_x"], float)
-        assert isinstance(parsed["direction_y"], float)
-        assert isinstance(parsed["direction_z"], float)
-
-        # Confidence should be reasonable
-        assert 0 <= parsed["confidence"] <= 1
+        pipeline.landmark_detector = Mock()
+        pipeline.landmark_detector.detect_landmarks.return_value = None
+        faces = pipeline._process_frame(np.zeros((40, 40, 3), dtype=np.uint8), 0.0)
+        assert len(faces) == 1
+        face = faces[0]
+        assert face["action_units"]["AU12_Lip_Corner_Puller"]["presence"] is True
+        assert face["gaze"]["yaw"] == pytest.approx(0.1)
+        assert face["emotion"]["dominant"] == "happiness"
 
     def test_valence_calculation(self):
         """Test valence calculation from emotion probabilities."""
@@ -319,9 +322,8 @@ class TestOpenFace3Integration:
             "detection": {"bbox": [100, 100, 50, 60], "confidence": 0.95},
             "landmarks_2d": np.array([[110, 120], [120, 125], [130, 130]]),
             "action_units": {
-                "AU01_Inner_Brow_Raiser": {"intensity": 2.5, "presence": True}
+                "AU12_Lip_Corner_Puller": {"score": 0.9, "presence": True}
             },
-            "head_pose": {"pitch": 10.0, "yaw": -5.0, "roll": 0.0, "confidence": 0.8},
             "gaze": {
                 "direction_x": 0.1,
                 "direction_y": 0.2,
@@ -353,7 +355,6 @@ class TestOpenFace3Integration:
         assert openface_data["confidence"] == 0.95
         assert openface_data["timestamp"] == 1.5
         assert "action_units" in openface_data
-        assert "head_pose" in openface_data
         assert "gaze" in openface_data
         assert "emotion" in openface_data
 

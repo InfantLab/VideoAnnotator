@@ -298,7 +298,6 @@ async def get_pipeline_debug_info():
                                 "max": 1.0,
                             },
                             "enable_gaze": {"type": "bool", "default": True},
-                            "enable_head_pose": {"type": "bool", "default": True},
                         },
                     },
                 ],

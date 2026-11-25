@@ -107,17 +107,16 @@ CSV files are UTF-8 with a header row; missing values are empty fields.
 
 | Pipeline | `measure` | `label` | `value` | `confidence` |
 |---|---|---|---|---|
-| person_tracking | `person` | `parent`, `infant`, … (a size heuristic: check it) | | detection score |
+| person_tracking | `person` | `unknown`, or `parent` and `infant` with `guess_roles_by_size` on (a guess from box size: check it) | | detection score |
 | face_analysis | `face` | | | detection score |
 | | `emotion` | most likely expression | | its probability |
 | | `emotion_score` | each expression | its score | |
 | | `age` | | estimated age | |
 | | `gender` | estimated gender | | its probability |
 | face_openface3_embedding | `face` | | | detection score |
-| | `action_unit` | AU name (`AU01_Inner_Brow_Raiser`) | intensity | |
-| | `action_unit_presence` | AU name | 1 present, 0 absent | |
-| | `head_pose` | `pitch`, `yaw`, `roll` | degrees | pose confidence |
-| | `gaze` | `direction_x`, `direction_y`, `direction_z` | component | gaze confidence |
+| | `action_unit` | AU name: `AU01_Inner_Brow_Raiser`, `AU02_Outer_Brow_Raiser`, `AU04_Brow_Lowerer`, `AU06_Cheek_Raiser`, `AU09_Nose_Wrinkler`, `AU12_Lip_Corner_Puller`, `AU25_Lips_Part`, `AU26_Jaw_Drop` | its chance of occurring, 0 to 1 (not an intensity) | |
+| | `action_unit_presence` | AU name | 1 if that chance is over 0.5, else 0 | |
+| | `gaze` | `yaw`, `pitch` (radians); `direction_x`, `direction_y`, `direction_z` (a unit vector) | angle or component | |
 | | `emotion`, `emotion_score`, `valence`, `arousal` | as above | | |
 | scene_detection | `scene` | scene type | | score |
 | | `scene_score` | each scene type | its score | |

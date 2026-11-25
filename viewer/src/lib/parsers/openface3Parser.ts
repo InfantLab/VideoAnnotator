@@ -1,7 +1,7 @@
 /**
  * OpenFace3 Parser
  * Converts OpenFace3 JSON format to StandardFaceAnnotation format
- * Supports all OpenFace3 features: landmarks, action units, head pose, gaze, emotions
+ * Supports OpenFace 3 features: landmarks, action units, gaze, emotions (and head pose in old files)
  */
 
 import { 

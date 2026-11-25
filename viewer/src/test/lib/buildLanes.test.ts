@@ -52,7 +52,7 @@ describe('buildLanes', () => {
     const lanes = buildLanes(demoRows(), RUNS);
     const kinds = new Set(lanes.map((l) => l.kind));
     expect(kinds).toEqual(
-      new Set(['speech', 'speakers', 'people', 'faces', 'emotion', 'scenes', 'ask_ai', 'action_units', 'head_pose', 'gaze', 'person_area']),
+      new Set(['speech', 'speakers', 'people', 'faces', 'emotion', 'scenes', 'ask_ai', 'action_units', 'gaze', 'person_area']),
     );
     expect(lanes.every((l) => l.status === 'ok' && l.run?.label === 'run 12 Oct')).toBe(true);
     expect(lanes[0].kind).toBe('speech');

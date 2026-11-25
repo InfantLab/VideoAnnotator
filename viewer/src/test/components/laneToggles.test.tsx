@@ -49,7 +49,7 @@ describe('lanes as the controls', () => {
   it('has no eye on kinds that draw nothing on the video', async () => {
     renderVideoPage();
     await lanesLoaded();
-    for (const kind of ['action_units', 'head_pose', 'gaze', 'person_area']) {
+    for (const kind of ['action_units', 'gaze', 'person_area']) {
       expect(within(lane(kind)[0]).queryByTestId('lane-eye')).toBeNull();
     }
   });

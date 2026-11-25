@@ -188,6 +188,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`/api/v1/ask`**: tries, history entries, runs and their answers, sample frames, and where the
   model server is.
 
+### Fixed
+
+- **OpenFace 3's action units, expression and gaze were misread** (UAT #78), since the pipeline was
+  added. Its model returns (expression, gaze, action units); the pipeline read them as (action
+  units, head pose, expression). So the "action units" were the expression scores under guessed AU
+  names, "expression" was a softmax of the AU scores, and "head pose" was gaze. Now: the 8 AUs the
+  model predicts, in its order (AU01, AU02, AU04, AU06, AU09, **AU12**, AU25, AU26), each as
+  `score`, its chance of being present (0–1), and present above 0.5 as the model was trained;
+  expressions in the model's order; gaze as `yaw` and `pitch` (radians) and a direction made as
+  OpenFace's own demo makes it. No head pose: the model estimates none, so the option and the
+  overlay are gone. OpenFace 3 results made before this are wrong; run it again.
+- **The results table of a large run took minutes** (UAT #74): loading each job scanned all
+  pipeline results, as `pipeline_results.job_id` had no index (nor `annotations.job_id`). Indexed,
+  and an existing database gains both at start: a 390-video run's table in 21 s, not 2 min 49 s.
+  The export panel says it's working, with the seconds, and the Export button reads Exporting… if
+  the panel is closed.
+
 ## [1.6.0] - 2026-10-18
 
 The consolidation release: one repository, current dependencies, a clean first contact, results

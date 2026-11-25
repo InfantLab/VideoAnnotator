@@ -267,7 +267,7 @@ def read_openface3(path: Path) -> FileContents:
             for name, unit in units.items():
                 if isinstance(unit, dict):
                     measures.append(
-                        Measure("action_unit", name, _number(unit.get("intensity")))
+                        Measure("action_unit", name, _number(unit.get("score")))
                     )
             for name, unit in units.items():
                 if isinstance(unit, dict) and unit.get("presence") is not None:
@@ -281,7 +281,7 @@ def read_openface3(path: Path) -> FileContents:
 
         for measure, components in (
             ("head_pose", ("pitch", "yaw", "roll")),
-            ("gaze", ("direction_x", "direction_y", "direction_z")),
+            ("gaze", ("yaw", "pitch", "direction_x", "direction_y", "direction_z")),
         ):
             part = features.get(measure)
             if isinstance(part, dict):

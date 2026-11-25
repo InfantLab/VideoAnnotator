@@ -89,7 +89,7 @@ const KINDS: Omit<LaneKind, 'order'>[] = [
   {
     kind: 'action_units',
     label: 'Action units',
-    description: 'Facial muscle movements (FACS action units), intensity per sampled face',
+    description: 'Facial muscle movements (FACS action units): the chance each is present, 0 to 1, per sampled face',
     measures: ['action_unit'],
     form: 'numeric',
     rowsBy: 'label',

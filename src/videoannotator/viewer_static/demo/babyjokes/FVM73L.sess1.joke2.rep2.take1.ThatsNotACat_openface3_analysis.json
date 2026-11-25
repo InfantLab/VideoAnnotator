@@ -4,7 +4,7 @@
     "version": "1.7.0.dev0",
     "year": 2026,
     "contributor": "VideoAnnotator",
-    "date_created": "2026-11-25T10:10:01.911532+00:00"
+    "date_created": "2026-11-25T17:07:18.580867+00:00"
   },
   "licenses": [],
   "images": [
@@ -842,49 +842,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 1.5451782941818237,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 4.723174721002579,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 2.1407651901245117,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 3.9922555536031723,
-            "presence": true
+            "score": 0.0018209685804322362,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 3.5506701469421387,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 3.973851278424263,
-            "presence": true
+            "score": 0.48408830165863037,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 2.468288838863373,
+            "score": 0.0,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.09782545268535614,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.993782639503479,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 3.879321664571762,
+          "AU26_Jaw_Drop": {
+            "score": 0.9925392866134644,
             "presence": true
           }
         },
-        "head_pose": {
-          "pitch": -16.877523797601153,
-          "yaw": 10.01317429022823,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.16638541221618652,
-          "direction_y": 0.2903268337249756,
-          "direction_z": 0.9423514008522034,
-          "confidence": 0.7
+          "yaw": -0.29456835985183716,
+          "pitch": 0.17476285994052887,
+          "direction_x": 0.2859045122880598,
+          "direction_y": -0.17387461459026488,
+          "direction_z": -0.9423514356408725
         }
       }
     },
@@ -1601,49 +1596,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 5,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 3.1687864661216736,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 3.3090829849243164,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 3.189687132835388,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 3.400871604681015,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 3.917398378252983,
-            "presence": true
+            "score": 1.3032727110839915e-05,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 3.4175527095794678,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 4.8702048137784,
-            "presence": true
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.013363366946578026,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.012765632010996342,
+            "presence": false
+          },
+          "AU26_Jaw_Drop": {
+            "score": 0.0,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -15.084921866911088,
-          "yaw": 13.233719474463253,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.22103534638881683,
-          "direction_y": 0.26025041937828064,
-          "direction_z": 0.9399005174636841,
-          "confidence": 0.7
+          "yaw": -0.26328155398368835,
+          "pitch": 0.23097197711467743,
+          "direction_x": 0.25333930274772676,
+          "direction_y": -0.22892379714977149,
+          "direction_z": -0.9399005760088809
         }
       }
     },
@@ -2360,49 +2350,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 3.649536371231079,
-            "presence": true
+            "score": 0.017432305961847305,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 3.17375585436821,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 3.502119332551956,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 3.0512836575508118,
-            "presence": true
+            "score": 0.14819809794425964,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 3.131408542394638,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 3.801349177956581,
-            "presence": true
+            "score": 0.07053559273481369,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 3.0410391092300415,
+            "score": 0.0354507714509964,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.5198181867599487,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 3.869732618331909,
+          "AU25_Lips_Part": {
+            "score": 0.6566641330718994,
             "presence": true
+          },
+          "AU26_Jaw_Drop": {
+            "score": 0.22282540798187256,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -17.45056983877605,
-          "yaw": 6.061632805827644,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.10073815286159515,
-          "direction_y": 0.2998828887939453,
-          "direction_z": 0.9486422538757324,
-          "confidence": 0.7
+          "yaw": -0.30456990003585815,
+          "pitch": 0.10579545050859451,
+          "direction_x": 0.29820621640270595,
+          "direction_y": -0.10559820520236901,
+          "direction_z": -0.9486422252655745
         }
       }
     },
@@ -3119,49 +3104,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 3.444511890411377,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 2.0976287126541138,
-            "presence": true
+            "score": 0.001229302491992712,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 2.153666615486145,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 2.6648470759391785,
-            "presence": true
+            "score": 0.05392008274793625,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 2.956428974866867,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 3.77040795981884,
-            "presence": true
+            "score": 0.05677710473537445,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 4.649302028119564,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 3.956136107444763,
-            "presence": true
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.10616417229175568,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.2331167608499527,
+            "presence": false
+          },
+          "AU26_Jaw_Drop": {
+            "score": 0.15191859006881714,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -10.56185790040734,
-          "yaw": 9.261856042847766,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.15821997821331024,
-          "direction_y": 0.18329696357250214,
-          "direction_z": 0.9702416062355042,
-          "confidence": 0.7
+          "yaw": -0.18433919548988342,
+          "pitch": 0.1616498827934265,
+          "direction_x": 0.18090733747465867,
+          "direction_y": -0.16094679834227152,
+          "direction_z": -0.9702415489718023
         }
       }
     },
@@ -3878,49 +3858,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 1.9345730543136597,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 5,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 2.4347877502441406,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 3.2654644548892975,
-            "presence": true
+            "score": 0.0041601937264204025,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 3.9832916110754013,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 4.521525949239731,
-            "presence": true
+            "score": 0.1865847408771515,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 2.3203200101852417,
+            "score": 0.0,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.9182919263839722,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 4.685217812657356,
+          "AU25_Lips_Part": {
+            "score": 0.8436534404754639,
             "presence": true
+          },
+          "AU26_Jaw_Drop": {
+            "score": 0.0068383654579520226,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -12.888428652483368,
-          "yaw": -1.8680112745518245,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": -0.031775929033756256,
-          "direction_y": 0.2230532467365265,
-          "direction_z": 0.9742882251739502,
-          "confidence": 0.7
+          "yaw": -0.22494551539421082,
+          "pitch": -0.0326029472053051,
+          "direction_x": 0.22293471356051037,
+          "direction_y": 0.03259717161671149,
+          "direction_z": -0.9742882211605988
         }
       }
     },
@@ -4637,49 +4612,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 2.449410557746887,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 5,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 2.5862321257591248,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 3.1066420674324036,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 4.3217795342206955,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 4.95699442923069,
-            "presence": true
+            "score": 0.0006251186714507639,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 2.556406259536743,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 5,
-            "presence": true
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.4704819917678833,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.31297725439071655,
+            "presence": false
+          },
+          "AU26_Jaw_Drop": {
+            "score": 0.0,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -14.045344877120346,
-          "yaw": 14.928916931173413,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.24991865456104279,
-          "direction_y": 0.24268972873687744,
-          "direction_z": 0.9373592734336853,
-          "confidence": 0.7
+          "yaw": -0.2451375126838684,
+          "pitch": 0.26055875420570374,
+          "direction_x": 0.23449802385790566,
+          "direction_y": -0.2576204861976124,
+          "direction_z": -0.9373592491131897
         }
       }
     },
@@ -5396,49 +5366,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 3.9728671312332153,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 4.7889237850904465,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 3.5390207171440125,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 2.4009519815444946,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 3.5906587541103363,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 4.313600659370422,
-            "presence": true
+            "score": 0.0001631656487006694,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 2.9729536175727844,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 4.835381507873535,
-            "presence": true
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.20487923920154572,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.043736785650253296,
+            "presence": false
+          },
+          "AU26_Jaw_Drop": {
+            "score": 0.0,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -14.38191440130377,
-          "yaw": 3.4191100959081084,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.05777031555771828,
-          "direction_y": 0.24838413298130035,
-          "direction_z": 0.9669373631477356,
-          "confidence": 0.7
+          "yaw": -0.25101175904273987,
+          "pitch": 0.05967472866177559,
+          "direction_x": 0.24794201253586784,
+          "direction_y": -0.05963931728758973,
+          "direction_z": -0.9669373869352316
         }
       }
     },
@@ -6155,49 +6120,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 4.200991839170456,
-            "presence": true
+            "score": 0.005386972334235907,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 5,
-            "presence": true
+            "score": 0.0038338331505656242,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 3.1188224256038666,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 3.4445856511592865,
-            "presence": true
+            "score": 0.018415052443742752,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 4.276692345738411,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 5,
-            "presence": true
+            "score": 0.038293324410915375,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 3.940400332212448,
+            "score": 0.0,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.42447200417518616,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.5772210359573364,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 5,
-            "presence": true
+          "AU26_Jaw_Drop": {
+            "score": 0.010442284867167473,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -16.08359626885721,
-          "yaw": 11.175541859596523,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.18622936308383942,
-          "direction_y": 0.2770395576953888,
-          "direction_z": 0.9426386952400208,
-          "confidence": 0.7
+          "yaw": -0.28071171045303345,
+          "pitch": 0.19505000114440918,
+          "direction_x": 0.27178634175421756,
+          "direction_y": -0.19381558822637968,
+          "direction_z": -0.9426386912260297
         }
       }
     },
@@ -6914,49 +6874,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 2.2577208280563354,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 3.8577206432819366,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 1.3918507099151611,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 4.374254196882248,
-            "presence": true
+            "score": 0.003950283396989107,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 3.0344130098819733,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 3.404223322868347,
-            "presence": true
+            "score": 0.06608299911022186,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 2.307453155517578,
+            "score": 0.0,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.5872371792793274,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 3.470083624124527,
+          "AU25_Lips_Part": {
+            "score": 0.8597018718719482,
+            "presence": true
+          },
+          "AU26_Jaw_Drop": {
+            "score": 0.815744161605835,
             "presence": true
           }
         },
-        "head_pose": {
-          "pitch": -11.95672254780193,
-          "yaw": 8.300423247351139,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.1412314474582672,
-          "direction_y": 0.20717279613018036,
-          "direction_z": 0.9680563807487488,
-          "confidence": 0.7
+          "yaw": -0.20868417620658875,
+          "pitch": 0.14486971497535706,
+          "direction_x": 0.20500261083620172,
+          "direction_y": -0.14436351068323938,
+          "direction_z": -0.9680563549368141
         }
       }
     },
@@ -7673,49 +7628,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 2.4616748094558716,
-            "presence": true
+            "score": 0.003226037137210369,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 1.0803085565567017,
+            "score": 0.55197674036026,
             "presence": true
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 1.159014105796814,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 3.455823063850403,
-            "presence": true
+            "score": 0.14932526648044586,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 2.5238071382045746,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 3.368460237979889,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 4.462100863456726,
+            "score": 0.0,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.0,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.934481680393219,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 3.331902027130127,
-            "presence": true
+          "AU26_Jaw_Drop": {
+            "score": 0.0,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -13.30990255069193,
-          "yaw": 0.3406931174926888,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.005786461755633354,
-          "direction_y": 0.23021793365478516,
-          "direction_z": 0.9731218814849854,
-          "confidence": 0.7
+          "yaw": -0.23230162262916565,
+          "pitch": 0.005946216639131308,
+          "direction_x": 0.23021386036081085,
+          "direction_y": -0.00594618159864173,
+          "direction_z": -0.9731218944316119
         }
       }
     },
@@ -8432,49 +8382,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 4.640059731900692,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 4.83508013188839,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 2.6430875062942505,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 3.3043983578681946,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 3.6904051899909973,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 4.443638399243355,
-            "presence": true
+            "score": 0.023994848132133484,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 3.1876233220100403,
+            "score": 0.0,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.8974837064743042,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 4.9791451916098595,
+          "AU25_Lips_Part": {
+            "score": 0.8844073414802551,
             "presence": true
+          },
+          "AU26_Jaw_Drop": {
+            "score": 0.0015568977687507868,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -16.235941930747053,
-          "yaw": 4.524979834565937,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.07574731856584549,
-          "direction_y": 0.27959343791007996,
-          "direction_z": 0.9571258425712585,
-          "confidence": 0.7
+          "yaw": -0.28337064385414124,
+          "pitch": 0.07897579669952393,
+          "direction_x": 0.27872196443746167,
+          "direction_y": -0.07889372463519856,
+          "direction_z": -0.9571258259776025
         }
       }
     },
@@ -9191,49 +9136,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 3.410557061433792,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 3.913695067167282,
-            "presence": true
+            "score": 0.030709736049175262,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 1.6594910621643066,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 1.911395788192749,
-            "presence": true
+            "score": 0.1225685104727745,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 3.4286463260650635,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 4.689406752586365,
-            "presence": true
+            "score": 0.26697832345962524,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 4.724438488483429,
+            "score": 0.2335413694381714,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.21812847256660461,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.9363675117492676,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 4.11292627453804,
-            "presence": true
+          "AU26_Jaw_Drop": {
+            "score": 0.0,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -13.89232814914455,
-          "yaw": -1.4718790857113024,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": -0.024934951215982437,
-          "direction_y": 0.24009805917739868,
-          "direction_z": 0.9704283475875854,
-          "confidence": 0.7
+          "yaw": -0.24246686697006226,
+          "pitch": -0.02568913623690605,
+          "direction_x": 0.24001884249558866,
+          "direction_y": 0.025686310817490607,
+          "direction_z": -0.9704283428897081
         }
       }
     },
@@ -9950,49 +9890,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 0.4278683662414551,
+            "score": 0.0,
             "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 1.7952769994735718,
-            "presence": true
-          },
-          "AU04_Brow_Lowerer": {
-            "intensity": 0,
+            "score": 0.0,
             "presence": false
           },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 2.380092144012451,
-            "presence": true
+          "AU04_Brow_Lowerer": {
+            "score": 0.0025999248027801514,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 1.0312318801879883,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 1.9240084290504456,
-            "presence": true
+            "score": 0.053582027554512024,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 1.4484387636184692,
+            "score": 0.0,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.07460559904575348,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.8539074063301086,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 2.1278217434883118,
-            "presence": true
+          "AU26_Jaw_Drop": {
+            "score": 0.0,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -14.537822006845776,
-          "yaw": 10.348040535987383,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.1738758385181427,
-          "direction_y": 0.25101903080940247,
-          "direction_z": 0.9522377252578735,
-          "confidence": 0.7
+          "yaw": -0.2537328600883484,
+          "pitch": 0.1806073784828186,
+          "direction_x": 0.24693615987939424,
+          "direction_y": -0.17962710585576375,
+          "direction_z": -0.9522376992043009
         }
       }
     },
@@ -10709,49 +10644,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 1.7173931002616882,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 0.8412182331085205,
-            "presence": true
+            "score": 0.00017432754975743592,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 1.7859840393066406,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 0.5599576234817505,
-            "presence": true
+            "score": 0.048552483320236206,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 2.1956193447113037,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 3.4596610069274902,
-            "presence": true
+            "score": 0.01327509619295597,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 4.605023115873337,
+            "score": 0.0,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.0,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.904411792755127,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 2.732190191745758,
-            "presence": true
+          "AU26_Jaw_Drop": {
+            "score": 0.0,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -11.71637502109835,
-          "yaw": 2.618908398081275,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.044740647077560425,
-          "direction_y": 0.20306715369224548,
-          "direction_z": 0.9781421422958374,
-          "confidence": 0.7
+          "yaw": -0.2044893205165863,
+          "pitch": 0.04570857435464859,
+          "direction_x": 0.2028550525231546,
+          "direction_y": -0.045692659729666324,
+          "direction_z": -0.9781421208150977
         }
       }
     },
@@ -11468,49 +11398,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 3.0995288491249084,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 3.790087550878525,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 0.9530127048492432,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 3.8900411874055862,
-            "presence": true
+            "score": 0.0013876727316528559,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 2.912583649158478,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 3.725610077381134,
-            "presence": true
+            "score": 0.022252803668379784,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 2.21113383769989,
+            "score": 0.0,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.9048711657524109,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 3.7785761058330536,
+          "AU25_Lips_Part": {
+            "score": 0.9822391867637634,
+            "presence": true
+          },
+          "AU26_Jaw_Drop": {
+            "score": 0.7435138821601868,
             "presence": true
           }
         },
-        "head_pose": {
-          "pitch": -13.542395359849994,
-          "yaw": 8.6544430510903,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.14629113674163818,
-          "direction_y": 0.2341647893190384,
-          "direction_z": 0.9611273407936096,
-          "confidence": 0.7
+          "yaw": -0.2363593876361847,
+          "pitch": 0.15104852616786957,
+          "direction_x": 0.23149855721430154,
+          "direction_y": -0.1504748024862127,
+          "direction_z": -0.9611273338244168
         }
       }
     },
@@ -12227,49 +12152,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 3.76013845205307,
-            "presence": true
+            "score": 0.0012653999729081988,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 1.7710506916046143,
-            "presence": true
+            "score": 0.023593757301568985,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 1.4149481058120728,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 2.9877161979675293,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 2.80861958861351,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 3.545673191547394,
-            "presence": true
+            "score": 0.0016100781504064798,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 3.2658198475837708,
+            "score": 0.0,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.0052780527621507645,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.973137378692627,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 3.54801744222641,
-            "presence": true
+          "AU26_Jaw_Drop": {
+            "score": 0.0,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -13.061225608295521,
-          "yaw": 5.340456183254447,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.09066574275493622,
-          "direction_y": 0.2259921282529831,
-          "direction_z": 0.9699006676673889,
-          "confidence": 0.7
+          "yaw": -0.22796139121055603,
+          "pitch": 0.09320854395627975,
+          "direction_x": 0.2250111459466012,
+          "direction_y": -0.09307363919895112,
+          "direction_z": -0.9699006556787456
         }
       }
     },
@@ -12986,49 +12906,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 2.772878408432007,
-            "presence": true
+            "score": 0.015436418354511261,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 3.6887820065021515,
-            "presence": true
+            "score": 0.009383453987538815,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 1.6126930713653564,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 4.2121583968400955,
-            "presence": true
+            "score": 0.016129158437252045,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 2.966417670249939,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 3.282475471496582,
-            "presence": true
+            "score": 0.022569604218006134,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 1.7304030060768127,
+            "score": 0.008123498409986496,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.5142834782600403,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 3.646369129419327,
+          "AU25_Lips_Part": {
+            "score": 0.9660634398460388,
             "presence": true
+          },
+          "AU26_Jaw_Drop": {
+            "score": 0.16942846775054932,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -12.288294081060197,
-          "yaw": 4.100488273404699,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.06986767798662186,
-          "direction_y": 0.21283076703548431,
-          "direction_z": 0.9745879173278809,
-          "confidence": 0.7
+          "yaw": -0.21447119116783142,
+          "pitch": 0.07156702131032944,
+          "direction_x": 0.21228595493728514,
+          "direction_y": -0.07150594449905853,
+          "direction_z": -0.9745878991849132
         }
       }
     },
@@ -13745,49 +13660,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 2.2196465730667114,
-            "presence": true
+            "score": 0.03948543593287468,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 1.8967992067337036,
-            "presence": true
+            "score": 0.07995393872261047,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 1.6482245922088623,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 2.8422117233276367,
-            "presence": true
+            "score": 0.00927913747727871,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 2.9862378537654877,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 3.7264731526374817,
-            "presence": true
+            "score": 0.21143294870853424,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 3.744002878665924,
+            "score": 0.00012677069753408432,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.38476887345314026,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.9608070850372314,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 3.263275623321533,
-            "presence": true
+          "AU26_Jaw_Drop": {
+            "score": 0.04857024550437927,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -13.813550454804915,
-          "yaw": 2.495150066075698,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.042275700718164444,
-          "direction_y": 0.23876312375068665,
-          "direction_z": 0.9701572060585022,
-          "confidence": 0.7
+          "yaw": -0.24109193682670593,
+          "pitch": 0.043548583984375,
+          "direction_x": 0.23853675534602997,
+          "direction_y": -0.04353482045917166,
+          "direction_z": -0.9701571706463732
         }
       }
     },
@@ -14504,49 +14414,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 1.4748388528823853,
-            "presence": true
-          },
-          "AU02_Outer_Brow_Raiser": {
-            "intensity": 1.3944166898727417,
-            "presence": true
-          },
-          "AU04_Brow_Lowerer": {
-            "intensity": 0,
+            "score": 0.006342677865177393,
             "presence": false
           },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 0.2007502317428589,
+          "AU02_Outer_Brow_Raiser": {
+            "score": 0.00554279237985611,
+            "presence": false
+          },
+          "AU04_Brow_Lowerer": {
+            "score": 0.006680529564619064,
             "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 0.8631551265716553,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 1.6114941239356995,
-            "presence": true
-          },
-          "AU09_Nose_Wrinkler": {
-            "intensity": 0.3592374920845032,
+            "score": 0.0,
             "presence": false
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 1.4241161942481995,
-            "presence": true
+          "AU09_Nose_Wrinkler": {
+            "score": 0.0,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.021823057904839516,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.2959067225456238,
+            "presence": false
+          },
+          "AU26_Jaw_Drop": {
+            "score": 0.019017692655324936,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -9.349168058555332,
-          "yaw": 4.387314383636569,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.07548212260007858,
-          "direction_y": 0.1624506264925003,
-          "direction_z": 0.9838253259658813,
-          "confidence": 0.7
+          "yaw": -0.16317376494407654,
+          "pitch": 0.07657308131456375,
+          "direction_x": 0.16197459948527057,
+          "direction_y": -0.07649827301270426,
+          "direction_z": -0.9838253113981466
         }
       }
     },
@@ -15263,49 +15168,44 @@
         ],
         "action_units": {
           "AU01_Inner_Brow_Raiser": {
-            "intensity": 3.199063688516617,
-            "presence": true
+            "score": 0.005942857824265957,
+            "presence": false
           },
           "AU02_Outer_Brow_Raiser": {
-            "intensity": 4.511807858943939,
-            "presence": true
+            "score": 0.0,
+            "presence": false
           },
           "AU04_Brow_Lowerer": {
-            "intensity": 2.7685563266277313,
-            "presence": true
-          },
-          "AU05_Upper_Lid_Raiser": {
-            "intensity": 2.255426347255707,
-            "presence": true
+            "score": 0.24541139602661133,
+            "presence": false
           },
           "AU06_Cheek_Raiser": {
-            "intensity": 3.272295445203781,
-            "presence": true
-          },
-          "AU07_Lid_Tightener": {
-            "intensity": 5,
-            "presence": true
+            "score": 0.02933519519865513,
+            "presence": false
           },
           "AU09_Nose_Wrinkler": {
-            "intensity": 3.609572947025299,
+            "score": 0.14296188950538635,
+            "presence": false
+          },
+          "AU12_Lip_Corner_Puller": {
+            "score": 0.1596779227256775,
+            "presence": false
+          },
+          "AU25_Lips_Part": {
+            "score": 0.895462691783905,
             "presence": true
           },
-          "AU10_Upper_Lip_Raiser": {
-            "intensity": 4.274779856204987,
-            "presence": true
+          "AU26_Jaw_Drop": {
+            "score": 0.005463808309286833,
+            "presence": false
           }
         },
-        "head_pose": {
-          "pitch": -9.874488152904767,
-          "yaw": 2.2260175608887467,
-          "roll": 0.0,
-          "confidence": 0.8
-        },
         "gaze": {
-          "direction_x": 0.03826615586876869,
-          "direction_y": 0.17149044573307037,
-          "direction_z": 0.984442412853241,
-          "confidence": 0.7
+          "yaw": -0.17234233021736145,
+          "pitch": 0.038851335644721985,
+          "direction_x": 0.17136103801175318,
+          "direction_y": -0.03884156251116091,
+          "direction_z": -0.984442343498707
         }
       }
     }
@@ -15450,7 +15350,6 @@
       "landmark_model": "98_point",
       "enable_3d_landmarks": true,
       "enable_action_units": true,
-      "enable_head_pose": true,
       "enable_gaze": true,
       "enable_emotions": false,
       "batch_size": 1,
@@ -15472,8 +15371,8 @@
       "anomaly_detection": false,
       "cublas_workspace_config": ":4096:8"
     },
-    "created_at": "2026-11-25T10:09:59.479603+00:00",
-    "job_id": "1e144220-5027-4a9d-9a87-0dd023e02517",
+    "created_at": "2026-11-25T17:07:16.420839+00:00",
+    "job_id": "016fe9ad-3791-441a-963e-3262e3d46e2a",
     "input": {
       "name": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat.mp4",
       "sha256": "04ba35e9de9cae1ecc429334cd33f793c1c30c83df11949122c4204e6b98c088"

@@ -4,30 +4,22 @@
     {
       "person_id": "person_demo_clip_001",
       "track_id": 1,
-      "video_id": "demo_clip",
-      "label": "parent",
-      "confidence": 0.7,
-      "method": "automatic_size_based",
-      "timestamp": null
+      "video_id": "demo_clip"
     },
     {
       "person_id": "person_demo_clip_002",
       "track_id": 2,
-      "video_id": "demo_clip",
-      "label": "parent",
-      "confidence": 0.7,
-      "method": "automatic_size_based",
-      "timestamp": null
+      "video_id": "demo_clip"
     }
   ],
   "labeling_metadata": {
     "total_persons": 2,
-    "labeled_persons": 2,
+    "labeled_persons": 0,
     "id_format": "semantic",
     "detections_summary": {
       "total_detections": 22,
       "unique_persons": 2,
-      "labeled_persons": 2
+      "labeled_persons": 0
     }
   },
   "provenance": {
@@ -36,7 +28,7 @@
       "name": "person_tracking",
       "sub_pipeline": null
     },
-    "videoannotator_version": "1.6.0rc1",
+    "videoannotator_version": "1.7.0.dev0",
     "models": [
       {
         "name": "models/yolo/yolo26n-pose.pt",
@@ -53,8 +45,9 @@
       "tracker": "bytetrack",
       "pose_format": "coco_17",
       "min_keypoint_confidence": 0.3,
+      "guess_roles_by_size": false,
       "size_analysis": {
-        "enabled": true,
+        "enabled": false,
         "height_threshold": 0.4,
         "confidence": 0.7,
         "adult_label": "parent",
@@ -64,7 +57,7 @@
         "enabled": true,
         "id_format": "semantic",
         "automatic_labeling": {
-          "enabled": true,
+          "enabled": false,
           "confidence_threshold": 0.7,
           "size_based": {
             "enabled": true,
@@ -96,8 +89,8 @@
       "anomaly_detection": false,
       "cublas_workspace_config": ":4096:8"
     },
-    "created_at": "2026-10-18T13:57:48.649116+00:00",
-    "job_id": "10f91051-cfdf-4728-9ab4-d76f718ff349",
+    "created_at": "2026-11-25T16:55:33.454578+00:00",
+    "job_id": "8af1d4a5-a81d-4ef2-a7c5-34c9bfd0df1c",
     "input": {
       "name": "demo_clip.mp4",
       "sha256": "0b809c13772c8cdff2a5355f958b5b70115cf8d5d7b461199d36056d3a8295b0"
