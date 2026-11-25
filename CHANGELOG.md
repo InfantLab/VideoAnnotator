@@ -43,11 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "parent"). `guess_roles_by_size: true` turns it back on; tracks are numbered either way.
 - **The Docker image builds on Ubuntu 26.04 LTS** (was 24.04). Python stays 3.13 from uv; the
   system packages (ffmpeg, OpenCV's libraries) are unchanged.
-- **Speech recognition retries looping text** (UAT #66): a stretch that comes out repeating
-  itself, or that the model is unsure of, is decoded again at a higher temperature (0.2 steps up
-  to 1.0), as Whisper does by default. Before, a fixed temperature of 0.0 switched that off, and a
-  7 s clip of "om nom nom" came out as "nom" 223 times. Outputs change only where that happened;
-  the demo clip's transcript is unchanged. `temperature_fallback: false` decodes once, as before.
+- **Speech recognition gives the same transcript every run, with loops shortened** (UAT #66,
+  #76). Whisper can write one word over and over on repetitive child-directed speech, laughter or
+  noise (a 7 s clip of "om nom nom" came out as "nom" 223 times). A word or phrase (up to six
+  words) repeated more than 8 times in a row now keeps 8, followed by `[…]`, and so do runs of
+  identical lines; the segment is marked `repeats_shortened`. `shorten_repeats: 0` keeps the
+  transcript as decoded. Decoding stays at one temperature: Whisper's temperature fallback
+  (`temperature_fallback: true`, off by default) removes some loops but samples at random, so the
+  same video gave a different transcript each run. The demo clip's transcript is unchanged.
+  Comparison of Whisper sizes, Qwen3-ASR and Parakeet: `docs/development/speech_models_v1.7.0.md`.
 
 - **A remote model server needs the switch** (spec 033): a remote address confirmed since this
   version needs remote servers switched on as well; addresses confirmed before it keep working

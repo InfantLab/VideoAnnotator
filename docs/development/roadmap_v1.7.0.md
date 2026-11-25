@@ -101,10 +101,16 @@ Built as spec 033 (2026-10-24); the walk-through with real servers is still to d
       390 clips with parents' ratings) from start to finish: install, open the 5-clip demo,
       download, run, review, Ask AI, export, and in R and Python check the results against the
       parents' answers. Chapters to record and the plan: [handover_babyjokes_dataset.md](handover_babyjokes_dataset.md).
+      Chapter 9 includes "compare before you trust": one clip through three speech models
+      (Whisper loops, Parakeet drops it, Qwen3-ASR hears "Ah! Ah!"), and listening where they
+      disagree.
 - [ ] **Which pipeline for which question**, in the field's terms: caregiver speech, infant
       vocalisations, movement, faces, joint attention, touch.
 - [ ] **A model card per pipeline**: the model, what it was trained on (few include infants), known
       failure modes, licence (Ultralytics is AGPL-3.0; pyannote models are gated), what to cite.
+      Speech: Whisper loops on repetitive child-directed speech and laughter, so shortened
+      (`[…]`) stretches are to be listened to, not trusted
+      ([speech_models_v1.7.0.md](speech_models_v1.7.0.md)).
 - [ ] **Data protection**: what runs where, what never leaves the machine, what changes with a
       hosted backend or a cloud agent.
 - [ ] **Contributing a pipeline**: a guide and template, with `vlm_annotation` as the worked
@@ -161,6 +167,12 @@ parts of the CLI still prompt interactively.
 ### Phase 6: New Pipelines, Whichever the Pilot Labs Ask For
 
 Candidates, none committed (the Phase 1 pipeline review may promote some before the pilot):
+- **Speech on Qwen3-ASR** (found 2026-11-25, [speech_models_v1.7.0.md](speech_models_v1.7.0.md)):
+  on the BabyJokes demo clips the only model tried that neither looped nor invented text, where
+  every Whisper size did. Its own timestamps were wrong there, so: its text with times from
+  Whisper's words or a better aligner. First a spike: vLLM serving it as an OpenAI-compatible
+  `/v1/audio/transcriptions` server, through the model servers (spec 033), with no new dependency.
+  v1.7.x.
 - **Voice Type Classifier**: key child, other child, female adult, male adult. Already standard in
   child-language research. VTC 2 depends on pyannote.audio and has no stated licence (audit §8).
 - **Diarization on Sortformer** (moved from v1.6.0 Phase 5c, 2026-10-17, spec 030 Q2): first a

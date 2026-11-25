@@ -81,13 +81,26 @@ config_schema:
     group: technical
     label: "Retry repeated or unsure text"
     type: boolean
-    default: true
+    default: false
     description: >-
-      When a stretch comes out looping ("nom nom nom…" many times over) or the model is unsure,
-      decode it again at a higher temperature, in steps of 0.2 up to 1.0. Off decodes once at the
-      sampling temperature, as before v1.7.0.
-    reason: "Whisper's own default (temperature (0.0, 0.2, …, 1.0) with a compression ratio limit of 2.4). With it off, a 7 s clip of a parent saying \"om nom nom\" came out as the word nom 223 times (UAT #66)."
-    reason_source: https://github.com/SYSTRAN/faster-whisper/blob/master/faster_whisper/transcribe.py
+      Decode a stretch that comes out looping, or that the model is unsure of, again at a higher
+      temperature, in steps of 0.2 up to 1.0. Off by default: the retries sample at random, so
+      the same video gives a different transcript each run; loops are shortened instead
+      (shorten_repeats).
+    reason: "On by default from 2026-10-30 (UAT #66), off again from 2026-11-25 (UAT #76): on five BabyJokes clips the retries replaced loops with run-to-run differences (one clip came out as \"Oh, man\" four times, \"Oh, no, no, no!\", and 900 characters of \"nom\" in three runs), and sometimes with invented text. At 0.0 the same clip gives the same transcript every time."
+    reason_source: https://github.com/InfantLab/VideoAnnotator/blob/master/docs/development/speech_models_v1.7.0.md
+  shorten_repeats:
+    group: behavioural
+    label: "Shorten repeated text"
+    type: integer
+    min: 0
+    default: 8
+    description: >-
+      Whisper can write one word or phrase dozens of times over ("no, no, no…" for 17 s). A word,
+      or a phrase of up to three words, repeated more than this many times in a row keeps this
+      many, then "[…]"; so do runs of identical lines. 0 keeps the transcript as decoded.
+    reason: "Loops run to dozens or hundreds of repeats; real repetition in baby games is shorter (a parent says \"peekaboo\" six times in one BabyJokes clip), so 8 keeps it. UAT #76."
+    reason_source: https://github.com/InfantLab/VideoAnnotator/blob/master/docs/development/speech_models_v1.7.0.md
   patience:
     group: technical
     label: "Beam search patience"

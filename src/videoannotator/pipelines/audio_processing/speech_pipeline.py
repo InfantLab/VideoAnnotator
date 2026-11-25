@@ -16,6 +16,7 @@ from videoannotator.config_env import load_env_file
 from videoannotator.version import __version__
 
 from .native_files import write_webvtt
+from .repeats import shorten_repeats
 from .whisper_base_pipeline import WhisperBasePipeline, faster_whisper_available
 
 load_env_file()
@@ -149,7 +150,7 @@ class SpeechPipeline(WhisperBasePipeline):
             "best_of": self.config.get("best_of", 5),
             "temperature": _temperatures(
                 self.config.get("temperature", 0.0),
-                self.config.get("temperature_fallback", True),
+                self.config.get("temperature_fallback", False),
             ),
             "patience": self.config.get("patience", 1.0),
             "length_penalty": self.config.get("length_penalty", 1.0),
@@ -226,17 +227,7 @@ class SpeechPipeline(WhisperBasePipeline):
         Returns:
             Processed transcription result
         """
-        word_timestamps = [
-            {
-                "word": word.word.strip(),
-                "start": float(word.start),
-                "end": float(word.end),
-                "confidence": float(word.probability),
-            }
-            for segment in segments
-            for word in segment.words or []
-        ]
-        segment_dicts = [
+        decoded = [
             {
                 "id": segment.id,
                 "start": float(segment.start),
@@ -247,15 +238,33 @@ class SpeechPipeline(WhisperBasePipeline):
                 "avg_logprob": float(segment.avg_logprob),
                 "compression_ratio": float(segment.compression_ratio),
                 "no_speech_prob": float(segment.no_speech_prob),
+                "words": [
+                    {
+                        "raw": word.word,
+                        "word": word.word.strip(),
+                        "start": float(word.start),
+                        "end": float(word.end),
+                        "confidence": float(word.probability),
+                    }
+                    for word in segment.words or []
+                ],
             }
             for segment in segments
+        ]
+        segment_dicts = shorten_repeats(
+            decoded, int(self.config.get("shorten_repeats", 8) or 0)
+        )
+        word_timestamps = [
+            {k: v for k, v in word.items() if k != "raw"}
+            for segment in segment_dicts
+            for word in segment.pop("words")
         ]
         end = segment_dicts[-1]["end"] if segment_dicts else 0.0
 
         speech_result = {
             "video_id": video_id,
             "timestamp": 0.0,  # Start time
-            "transcript": "".join(s.text for s in segments).strip(),
+            "transcript": " ".join(s["text"] for s in segment_dicts).strip(),
             "language": getattr(info, "language", None) or "unknown",
             "confidence": 0.0,  # Whisper doesn't provide overall confidence
             "words": word_timestamps,
