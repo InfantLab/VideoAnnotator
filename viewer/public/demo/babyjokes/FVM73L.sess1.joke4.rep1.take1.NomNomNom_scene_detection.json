@@ -1,0 +1,110 @@
+{
+  "info": {
+    "description": "VideoAnnotator COCO Export",
+    "version": "1.7.0.dev0",
+    "year": 2026,
+    "contributor": "VideoAnnotator",
+    "date_created": "2026-11-25T10:15:38.232418+00:00"
+  },
+  "licenses": [],
+  "images": [
+    {
+      "id": "FVM73L.sess1.joke4.rep1.take1.NomNomNom_frame_000180",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000000.jpg",
+      "video_id": "FVM73L.sess1.joke4.rep1.take1.NomNomNom",
+      "frame_number": 0,
+      "timestamp": 10.606673177083332
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": "FVM73L.sess1.joke4.rep1.take1.NomNomNom_frame_000180",
+      "category_id": 1,
+      "bbox": [
+        0,
+        0,
+        640,
+        480
+      ],
+      "area": 307200,
+      "iscrowd": 0,
+      "score": 0.6356866955757141,
+      "video_id": "FVM73L.sess1.joke4.rep1.take1.NomNomNom",
+      "timestamp": 10.606673177083332,
+      "start_time": 0,
+      "end_time": 21.213346354166664,
+      "duration": 21.213346354166664,
+      "scene_type": "nursery",
+      "frame_start": 0,
+      "frame_end": 360,
+      "all_scores": {
+        "living room": 0.00013109836436342448,
+        "kitchen": 0.0033315334003418684,
+        "bedroom": 0.00012916549167130142,
+        "outdoor": 0.013249112293124199,
+        "clinic": 0.3374831974506378,
+        "nursery": 0.6356866955757141,
+        "office": 0.009931695647537708,
+        "playground": 5.7553192164050415e-05
+      }
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "scene",
+      "supercategory": "video_segment",
+      "description": "Video scene segment with temporal bounds"
+    }
+  ],
+  "provenance": {
+    "schema_version": 1,
+    "pipeline": {
+      "name": "scene_detection",
+      "sub_pipeline": null
+    },
+    "videoannotator_version": "1.7.0.dev0",
+    "models": [
+      {
+        "name": "ViT-B-32 (laion2b_s34b_b79k)",
+        "source": "open_clip",
+        "revision": "ac4f8c4b88af6d963118cbf40ad93176d092abbedfcb752601ae1866352656e6",
+        "revision_kind": "sha256"
+      }
+    ],
+    "settings": {
+      "threshold": 30.0,
+      "min_scene_length": 2.0,
+      "scene_prompts": [
+        "living room",
+        "kitchen",
+        "bedroom",
+        "outdoor",
+        "clinic",
+        "nursery",
+        "office",
+        "playground"
+      ],
+      "clip_model": "ViT-B-32",
+      "use_gpu": true,
+      "keyframe_extraction": "middle"
+    },
+    "determinism": {
+      "deterministic": false,
+      "cudnn_benchmark": false,
+      "cudnn_deterministic": false,
+      "deterministic_algorithms": false,
+      "anomaly_detection": false,
+      "cublas_workspace_config": ":4096:8"
+    },
+    "created_at": "2026-11-25T10:15:35.141492+00:00",
+    "job_id": "575839a5-18d6-4dc0-8531-314ac47cd426",
+    "input": {
+      "name": "FVM73L.sess1.joke4.rep1.take1.NomNomNom.mp4",
+      "sha256": "11de58dd7ea9753da34c121442060517fe6e2772b9c7a72d557ebddcdd97530a"
+    }
+  }
+}

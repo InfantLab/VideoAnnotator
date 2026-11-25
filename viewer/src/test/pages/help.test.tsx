@@ -12,7 +12,7 @@ describe('Help', () => {
     const glossary = screen.getByTestId('glossary');
     for (const meaning of Object.values(GLOSSARY)) expect(within(glossary).getByText(meaning)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Run pipelines on videos/ })).toHaveAttribute('href', '/run');
-    expect(screen.getByRole('link', { name: 'Peekaboo' })).toHaveAttribute('href', '/viewer?demo=peekaboo-rep3-v1.1.1');
+    expect(screen.getByRole('link', { name: 'Peekaboo' })).toHaveAttribute('href', '/viewer?demo=babyjokes-peekaboo');
     const docs = screen.getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('https://infantlab.github.io/'));
     expect(docs.length).toBeGreaterThanOrEqual(8);
     for (const link of docs) expect(link).toHaveAttribute('target', '_blank');

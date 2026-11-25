@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import Index from '@/pages/Index';
 import { renderAt } from '@/test/fixtures/renderPage';
 import { FIXTURES, mockVideoApi, wideLayout } from '@/test/videoPageHarness';
-import { DEMO_DATA_SETS } from '@/utils/debugUtils';
+import { DEMO_DATA_SETS } from '@/lib/demos';
 
 // The file picker sits inside the app's nav, which asks the server about itself.
 vi.mock('@/contexts/ServerCapabilitiesContext', () => ({
@@ -56,18 +56,18 @@ describe('/viewer?demo=', () => {
     mockVideoApi();
     wideLayout();
     const fetched = serveDemo();
-    show('/viewer?demo=peekaboo-rep3-v1.1.1');
+    show('/viewer?demo=babyjokes-peekaboo');
 
     expect(await screen.findAllByTestId('lane-label', {}, { timeout: 5000 })).not.toHaveLength(0);
     const urls = fetched.mock.calls.map(([u]) => String(u));
-    expect(urls).toContain(DEMO_DATA_SETS['peekaboo-rep3-v1.1.1'].video);
-    expect(urls).toContain(DEMO_DATA_SETS['peekaboo-rep3-v1.1.1'].webvtt);
+    expect(urls).toContain(DEMO_DATA_SETS['babyjokes-peekaboo'].video);
+    expect(urls).toContain(DEMO_DATA_SETS['babyjokes-peekaboo'].results.find((u) => u.endsWith('.vtt')));
   });
 
   it('says so when the demo cannot be fetched', async () => {
     vi.spyOn(global, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
-    show('/viewer?demo=peekaboo-rep3-v1.1.1');
-    expect(await screen.findByRole('alert')).toHaveTextContent('internet connection');
+    show('/viewer?demo=babyjokes-peekaboo');
+    expect(await screen.findByRole('alert')).toHaveTextContent('viewer is still running');
   });
 
   it('offers the demos beside opening files', async () => {

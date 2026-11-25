@@ -1,0 +1,972 @@
+{
+  "info": {
+    "description": "VideoAnnotator COCO Export",
+    "version": "1.7.0.dev0",
+    "year": 2026,
+    "contributor": "VideoAnnotator",
+    "date_created": "2026-11-25T10:09:50.523534+00:00"
+  },
+  "licenses": [],
+  "images": [
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_0",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000000.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 0,
+      "timestamp": 0.0
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_17",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000017.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 17,
+      "timestamp": 0.9969567216637528
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_34",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000034.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 34,
+      "timestamp": 1.9939134433275056
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_51",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000051.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 51,
+      "timestamp": 2.9908701649912586
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_68",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000068.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 68,
+      "timestamp": 3.9878268866550113
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_85",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000085.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 85,
+      "timestamp": 4.984783608318764
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_102",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000102.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 102,
+      "timestamp": 5.981740329982517
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_136",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000136.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 136,
+      "timestamp": 7.975653773310023
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_153",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000153.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 153,
+      "timestamp": 8.972610494973775
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_170",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000170.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 170,
+      "timestamp": 9.969567216637529
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_187",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000187.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 187,
+      "timestamp": 10.96652393830128
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_204",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000204.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 204,
+      "timestamp": 11.963480659965034
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_221",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000221.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 221,
+      "timestamp": 12.960437381628786
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_238",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000238.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 238,
+      "timestamp": 13.95739410329254
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_255",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000255.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 255,
+      "timestamp": 14.954350824956293
+    },
+    {
+      "id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_272",
+      "width": 640,
+      "height": 480,
+      "file_name": "frame_000272.jpg",
+      "video_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat",
+      "frame_number": 272,
+      "timestamp": 15.951307546620045
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_0",
+      "category_id": 100,
+      "bbox": [
+        162.0,
+        137.0,
+        105.0,
+        140.0
+      ],
+      "area": 14700.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 0.0,
+      "frame_number": 0,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "sad",
+      "emotion_confidence": 0.5573208332061768,
+      "emotion_scores": {
+        "angry": 0.020573340356349945,
+        "disgust": 2.808641966112191e-06,
+        "fear": 0.12726615369319916,
+        "happy": 0.0731947124004364,
+        "sad": 0.5573208332061768,
+        "surprise": 0.006425193045288324,
+        "neutral": 0.21521702408790588
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 2,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_0",
+      "category_id": 100,
+      "bbox": [
+        311.0,
+        262.0,
+        83.0,
+        94.0
+      ],
+      "area": 7802.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 1,
+      "timestamp": 0.0,
+      "frame_number": 0,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "neutral",
+      "emotion_confidence": 0.8743860125541687,
+      "emotion_scores": {
+        "angry": 4.489193372592126e-07,
+        "disgust": 4.3740591660831885e-14,
+        "fear": 0.0032850916031748056,
+        "happy": 0.01682456210255623,
+        "sad": 0.10550364851951599,
+        "surprise": 2.6659353125069174e-07,
+        "neutral": 0.8743860125541687
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 3,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_17",
+      "category_id": 100,
+      "bbox": [
+        324.0,
+        279.0,
+        91.0,
+        95.0
+      ],
+      "area": 8645.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 0.9969567216637528,
+      "frame_number": 17,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "sad",
+      "emotion_confidence": 0.9816327691078186,
+      "emotion_scores": {
+        "angry": 0.0001349094818579033,
+        "disgust": 2.2988540877122432e-05,
+        "fear": 0.01703260838985443,
+        "happy": 8.025396527955309e-05,
+        "sad": 0.9816327691078186,
+        "surprise": 1.1912598685270837e-09,
+        "neutral": 0.0010965135879814625
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 4,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_34",
+      "category_id": 100,
+      "bbox": [
+        296.0,
+        280.0,
+        88.0,
+        93.0
+      ],
+      "area": 8184.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 1.9939134433275056,
+      "frame_number": 34,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "sad",
+      "emotion_confidence": 0.8186582326889038,
+      "emotion_scores": {
+        "angry": 1.026543486659648e-06,
+        "disgust": 1.4609357057437933e-09,
+        "fear": 0.012445253320038319,
+        "happy": 0.008772525005042553,
+        "sad": 0.8186582326889038,
+        "surprise": 2.0319724569617392e-08,
+        "neutral": 0.16012299060821533
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 5,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_51",
+      "category_id": 100,
+      "bbox": [
+        301.0,
+        274.0,
+        89.0,
+        95.0
+      ],
+      "area": 8455.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 2.9908701649912586,
+      "frame_number": 51,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "sad",
+      "emotion_confidence": 0.9691846966743469,
+      "emotion_scores": {
+        "angry": 0.00018018868286162615,
+        "disgust": 9.993690355258877e-07,
+        "fear": 0.030561769381165504,
+        "happy": 3.769055410884903e-06,
+        "sad": 0.9691846966743469,
+        "surprise": 1.1439268421398197e-09,
+        "neutral": 6.862238660687581e-05
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 6,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_68",
+      "category_id": 100,
+      "bbox": [
+        302.0,
+        243.0,
+        88.0,
+        103.0
+      ],
+      "area": 9064.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 3.9878268866550113,
+      "frame_number": 68,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "sad",
+      "emotion_confidence": 0.9887953996658325,
+      "emotion_scores": {
+        "angry": 0.001267341198399663,
+        "disgust": 8.096865400375464e-08,
+        "fear": 0.008953699842095375,
+        "happy": 0.0008837916539050639,
+        "sad": 0.9887953996658325,
+        "surprise": 1.5214446369427037e-10,
+        "neutral": 9.961959585780278e-05
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 7,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_85",
+      "category_id": 100,
+      "bbox": [
+        278.0,
+        268.0,
+        96.0,
+        105.0
+      ],
+      "area": 10080.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 4.984783608318764,
+      "frame_number": 85,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "sad",
+      "emotion_confidence": 0.9670876860618591,
+      "emotion_scores": {
+        "angry": 7.455718878190964e-05,
+        "disgust": 5.887946485927387e-08,
+        "fear": 0.024530639871954918,
+        "happy": 0.007956727407872677,
+        "sad": 0.9670876860618591,
+        "surprise": 7.275721003452418e-08,
+        "neutral": 0.00035027816193178296
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 8,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_102",
+      "category_id": 100,
+      "bbox": [
+        256.0,
+        283.0,
+        97.0,
+        92.0
+      ],
+      "area": 8924.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 5.981740329982517,
+      "frame_number": 102,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "happy",
+      "emotion_confidence": 0.9197769165039062,
+      "emotion_scores": {
+        "angry": 0.023989683017134666,
+        "disgust": 1.3296026779574532e-10,
+        "fear": 0.007461355999112129,
+        "happy": 0.9197769165039062,
+        "sad": 0.04729601368308067,
+        "surprise": 1.2197762089272146e-07,
+        "neutral": 0.0014759451150894165
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 9,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_136",
+      "category_id": 100,
+      "bbox": [
+        280.0,
+        263.0,
+        92.0,
+        99.0
+      ],
+      "area": 9108.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 7.975653773310023,
+      "frame_number": 136,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "sad",
+      "emotion_confidence": 0.9592177867889404,
+      "emotion_scores": {
+        "angry": 5.156236147740856e-05,
+        "disgust": 1.147757178188158e-08,
+        "fear": 0.038509614765644073,
+        "happy": 7.393748819595203e-05,
+        "sad": 0.9592177867889404,
+        "surprise": 1.0137735095838707e-08,
+        "neutral": 0.0021470554638653994
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 10,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_153",
+      "category_id": 100,
+      "bbox": [
+        70.0,
+        238.0,
+        116.0,
+        130.0
+      ],
+      "area": 15080.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 8.972610494973775,
+      "frame_number": 153,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "fear",
+      "emotion_confidence": 0.5888343453407288,
+      "emotion_scores": {
+        "angry": 0.0009345160215161741,
+        "disgust": 9.203409717883915e-06,
+        "fear": 0.5888343453407288,
+        "happy": 0.00019146637350786477,
+        "sad": 0.4022502601146698,
+        "surprise": 3.0152881663525477e-05,
+        "neutral": 0.007750088348984718
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 11,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_153",
+      "category_id": 100,
+      "bbox": [
+        242.0,
+        263.0,
+        96.0,
+        105.0
+      ],
+      "area": 10080.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 1,
+      "timestamp": 8.972610494973775,
+      "frame_number": 153,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "sad",
+      "emotion_confidence": 0.9963839650154114,
+      "emotion_scores": {
+        "angry": 5.0424296205164865e-05,
+        "disgust": 4.9504247923159994e-11,
+        "fear": 0.0035632329527288675,
+        "happy": 5.6591038521958126e-09,
+        "sad": 0.9963839650154114,
+        "surprise": 3.755687167511512e-13,
+        "neutral": 2.4414280233031604e-06
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 12,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_170",
+      "category_id": 100,
+      "bbox": [
+        60.0,
+        231.0,
+        115.0,
+        121.0
+      ],
+      "area": 13915.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 9.969567216637529,
+      "frame_number": 170,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "neutral",
+      "emotion_confidence": 0.5307868123054504,
+      "emotion_scores": {
+        "angry": 0.03094414249062538,
+        "disgust": 2.1153993657208048e-05,
+        "fear": 0.0858716070652008,
+        "happy": 0.003020933596417308,
+        "sad": 0.3492722809314728,
+        "surprise": 8.312643331009895e-05,
+        "neutral": 0.5307868123054504
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 13,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_170",
+      "category_id": 100,
+      "bbox": [
+        242.0,
+        281.0,
+        97.0,
+        87.0
+      ],
+      "area": 8439.0,
+      "iscrowd": 0,
+      "score": 0.99,
+      "face_id": 1,
+      "timestamp": 9.969567216637529,
+      "frame_number": 170,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "sad",
+      "emotion_confidence": 0.7967914342880249,
+      "emotion_scores": {
+        "angry": 0.002733789151534438,
+        "disgust": 2.546987047935545e-07,
+        "fear": 0.20036377012729645,
+        "happy": 3.895249278684787e-07,
+        "sad": 0.7967914342880249,
+        "surprise": 9.439863335458654e-10,
+        "neutral": 0.00011036050273105502
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 14,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_187",
+      "category_id": 100,
+      "bbox": [
+        52.0,
+        230.0,
+        108.0,
+        117.0
+      ],
+      "area": 12636.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 10.96652393830128,
+      "frame_number": 187,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "fear",
+      "emotion_confidence": 0.5409317016601562,
+      "emotion_scores": {
+        "angry": 0.001702522742561996,
+        "disgust": 1.567340859764954e-06,
+        "fear": 0.5409317016601562,
+        "happy": 0.0034188092686235905,
+        "sad": 0.2002081722021103,
+        "surprise": 1.4524528523907065e-05,
+        "neutral": 0.2537226974964142
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 15,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_187",
+      "category_id": 100,
+      "bbox": [
+        240.0,
+        253.0,
+        91.0,
+        113.0
+      ],
+      "area": 10283.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 1,
+      "timestamp": 10.96652393830128,
+      "frame_number": 187,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "fear",
+      "emotion_confidence": 0.9458940625190735,
+      "emotion_scores": {
+        "angry": 1.355388667434454e-05,
+        "disgust": 6.207504128774577e-12,
+        "fear": 0.9458940625190735,
+        "happy": 0.004284675698727369,
+        "sad": 0.04414171725511551,
+        "surprise": 7.595436909468845e-05,
+        "neutral": 0.005590049084275961
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 16,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_204",
+      "category_id": 100,
+      "bbox": [
+        55.0,
+        233.0,
+        108.0,
+        116.0
+      ],
+      "area": 12528.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 11.963480659965034,
+      "frame_number": 204,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "fear",
+      "emotion_confidence": 0.9190581440925598,
+      "emotion_scores": {
+        "angry": 0.001083719078451395,
+        "disgust": 1.9576805243559647e-06,
+        "fear": 0.9190581440925598,
+        "happy": 0.00010453077993588522,
+        "sad": 0.07630202919244766,
+        "surprise": 1.9837918330267712e-07,
+        "neutral": 0.003449443494901061
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 17,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_204",
+      "category_id": 100,
+      "bbox": [
+        259.0,
+        252.0,
+        87.0,
+        109.0
+      ],
+      "area": 9483.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 1,
+      "timestamp": 11.963480659965034,
+      "frame_number": 204,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "happy",
+      "emotion_confidence": 0.5178869366645813,
+      "emotion_scores": {
+        "angry": 9.461380250286311e-05,
+        "disgust": 2.0125866034489959e-13,
+        "fear": 0.4690689444541931,
+        "happy": 0.5178869366645813,
+        "sad": 0.00164927972946316,
+        "surprise": 1.1657207323878538e-05,
+        "neutral": 0.011288496665656567
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 18,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_221",
+      "category_id": 100,
+      "bbox": [
+        90.0,
+        219.0,
+        101.0,
+        121.0
+      ],
+      "area": 12221.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 0,
+      "timestamp": 12.960437381628786,
+      "frame_number": 221,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "sad",
+      "emotion_confidence": 0.4867914319038391,
+      "emotion_scores": {
+        "angry": 0.008619050495326519,
+        "disgust": 8.564954441681039e-06,
+        "fear": 0.4505116939544678,
+        "happy": 0.005750703159719706,
+        "sad": 0.4867914319038391,
+        "surprise": 2.7046453396906145e-06,
+        "neutral": 0.04831577464938164
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_002",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 19,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_221",
+      "category_id": 100,
+      "bbox": [
+        267.0,
+        249.0,
+        86.0,
+        105.0
+      ],
+      "area": 9030.0,
+      "iscrowd": 0,
+      "score": 1.0,
+      "face_id": 1,
+      "timestamp": 12.960437381628786,
+      "frame_number": 221,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "fear",
+      "emotion_confidence": 0.9197017550468445,
+      "emotion_scores": {
+        "angry": 0.0009112139814533293,
+        "disgust": 1.3838643564412223e-09,
+        "fear": 0.9197017550468445,
+        "happy": 0.026658644899725914,
+        "sad": 0.027398081496357918,
+        "surprise": 0.0001097987696994096,
+        "neutral": 0.025220442563295364
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 20,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_238",
+      "category_id": 100,
+      "bbox": [
+        279.0,
+        227.0,
+        82.0,
+        104.0
+      ],
+      "area": 8528.0,
+      "iscrowd": 0,
+      "score": 0.99,
+      "face_id": 0,
+      "timestamp": 13.95739410329254,
+      "frame_number": 238,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "fear",
+      "emotion_confidence": 0.9934279918670654,
+      "emotion_scores": {
+        "angry": 5.417960346676409e-05,
+        "disgust": 1.6864287744056128e-12,
+        "fear": 0.9934279918670654,
+        "happy": 0.0002503257419448346,
+        "sad": 0.006187083199620247,
+        "surprise": 3.861187281017919e-08,
+        "neutral": 8.04520896053873e-05
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 21,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_255",
+      "category_id": 100,
+      "bbox": [
+        286.0,
+        262.0,
+        89.0,
+        91.0
+      ],
+      "area": 8099.0,
+      "iscrowd": 0,
+      "score": 0.99,
+      "face_id": 0,
+      "timestamp": 14.954350824956293,
+      "frame_number": 255,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "sad",
+      "emotion_confidence": 0.8652406930923462,
+      "emotion_scores": {
+        "angry": 0.003892628476023674,
+        "disgust": 4.5166561335463484e-07,
+        "fear": 0.10538756102323532,
+        "happy": 0.006401245482265949,
+        "sad": 0.8652406930923462,
+        "surprise": 6.367483729263768e-05,
+        "neutral": 0.01901378110051155
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    },
+    {
+      "id": 22,
+      "image_id": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_frame_272",
+      "category_id": 100,
+      "bbox": [
+        257.0,
+        298.0,
+        96.0,
+        92.0
+      ],
+      "area": 8832.0,
+      "iscrowd": 0,
+      "score": 0.96,
+      "face_id": 0,
+      "timestamp": 15.951307546620045,
+      "frame_number": 272,
+      "backend": "deepface",
+      "detector": "retinaface",
+      "emotion": "happy",
+      "emotion_confidence": 0.9999996423721313,
+      "emotion_scores": {
+        "angry": 3.8756407860773834e-08,
+        "disgust": 2.6374019880031827e-16,
+        "fear": 2.662651183982234e-07,
+        "happy": 0.9999996423721313,
+        "sad": 7.52720339391999e-08,
+        "surprise": 2.2483986228394315e-08,
+        "neutral": 6.881913261480577e-09
+      },
+      "person_id": "person_FVM73L.sess1.joke2.rep2.take1.ThatsNotACat_001",
+      "person_label": "unknown",
+      "person_label_confidence": 0.0,
+      "person_labeling_method": "none"
+    }
+  ],
+  "categories": [
+    {
+      "id": 100,
+      "name": "face",
+      "supercategory": "person"
+    }
+  ],
+  "provenance": {
+    "schema_version": 1,
+    "pipeline": {
+      "name": "face_analysis",
+      "sub_pipeline": null
+    },
+    "videoannotator_version": "1.7.0.dev0",
+    "models": [
+      {
+        "name": "DeepFace Emotion",
+        "source": "deepface",
+        "revision": "e8e8851d3fa05c001b1c27fd8841dfe08d7f82bb786a53ad8776725b7a1e824c",
+        "revision_kind": "sha256"
+      },
+      {
+        "name": "DeepFace detector retinaface",
+        "source": "deepface",
+        "revision": "ecb2393a89da3dd3d6796ad86660e298f62a0c8ae7578d92eb6af14e0bb93adf",
+        "revision_kind": "sha256"
+      }
+    ],
+    "settings": {
+      "detection_backend": "deepface",
+      "emotion_backend": "deepface",
+      "confidence_threshold": 0.7,
+      "min_face_size": 30,
+      "scale_factor": 1.1,
+      "min_neighbors": 5,
+      "max_faces": 10,
+      "detect_emotions": true,
+      "detect_age": false,
+      "detect_gender": false,
+      "deepface": {
+        "emotion_model": "VGG-Face",
+        "age_gender_model": "VGG-Face",
+        "detector_backend": "retinaface",
+        "enforce_detection": false
+      },
+      "person_identity": {
+        "enabled": true,
+        "link_to_persons": true,
+        "require_person_id": false
+      }
+    },
+    "determinism": {
+      "deterministic": false,
+      "cudnn_benchmark": false,
+      "cudnn_deterministic": false,
+      "deterministic_algorithms": false,
+      "anomaly_detection": false,
+      "cublas_workspace_config": ":4096:8"
+    },
+    "created_at": "2026-11-25T10:09:35.795273+00:00",
+    "job_id": "1e144220-5027-4a9d-9a87-0dd023e02517",
+    "input": {
+      "name": "FVM73L.sess1.joke2.rep2.take1.ThatsNotACat.mp4",
+      "sha256": "04ba35e9de9cae1ecc429334cd33f793c1c30c83df11949122c4204e6b98c088"
+    }
+  }
+}

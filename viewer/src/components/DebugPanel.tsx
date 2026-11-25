@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { DEMO_DATA_SETS } from '@/utils/debugUtils';
+import { DEMO_DATA_SETS } from '@/lib/demos';
 import { detectFileType } from '@/lib/parsers/merger';
 
 interface DebugPanelProps {

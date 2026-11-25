@@ -84,6 +84,6 @@ describe('Home', () => {
     show();
     expect(screen.getByRole('button', { name: /Open files from your computer/ })).toBeEnabled();
     expect(screen.getByRole('button', { name: /Ask AI about a video/ })).toBeDisabled();
-    expect(screen.getByRole('link', { name: /^Peekaboo/ })).toHaveAttribute('href', '/viewer?demo=peekaboo-rep3-v1.1.1');
+    expect(screen.getByRole('link', { name: /^Peekaboo/ })).toHaveAttribute('href', '/viewer?demo=babyjokes-peekaboo');
   });
 });

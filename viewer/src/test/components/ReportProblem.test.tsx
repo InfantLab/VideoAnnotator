@@ -5,13 +5,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ReportProblemDialog } from '@/components/ReportProblem';
 import { clearErrors, recordError } from '@/lib/errorLog';
-import { DEMO_DATA_SETS } from '@/utils/debugUtils';
+import { DEMO_DATA_SETS } from '@/lib/demos';
 
 vi.mock('@/contexts/ServerCapabilitiesContext', () => ({
   useServerCapabilitiesContext: () => ({ capabilities: { version: '1.7.0' } }),
 }));
 
-const DEMO = DEMO_DATA_SETS['peekaboo-rep3-v1.1.1'].video.split('/').pop()!;
+const DEMO = DEMO_DATA_SETS['babyjokes-peekaboo'].video.split('/').pop()!;
 const show = (video: string | null = null) =>
   render(<ReportProblemDialog open onOpenChange={() => {}} video={video} />);
 

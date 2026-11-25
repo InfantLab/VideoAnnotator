@@ -176,6 +176,9 @@ outputs/
 *.mkv
 *.wmv
 *.flv
+# The demo clips ship with the viewer (viewer/src/lib/demos.ts).
+!viewer/public/demo/**/*.mp4
+!src/videoannotator/viewer_static/demo/**/*.mp4
 *.webm
 *.m4v
 *.3gp
@@ -222,6 +225,8 @@ benchmark.json
 # Audio processing temp files
 *.rttm
 !tests/fixtures/**/*.rttm
+!viewer/public/demo/**/*.rttm
+!src/videoannotator/viewer_static/demo/**/*.rttm
 *.lab
 *.TextGrid
 

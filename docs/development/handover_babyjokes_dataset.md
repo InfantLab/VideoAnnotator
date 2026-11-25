@@ -43,26 +43,30 @@ Lab only, never in the demo or tutorial: `complete\` and `manifest.csv` in Caspa
 
 ## The demo: 5 clips of one family, in the repo
 
-One clip per game from one family, with results from the six default pipelines, bundled with the
-viewer. It replaces `peekaboo-rep3-v1.1.1` (`viewer/src/lib/demos.ts`), which fetches v1.1.1
-results of 2UWdXP from the old video-annotation-viewer repo.
+Done 2026-11-25. **FVM73L** (298 days), chosen by Caspar from AETYX2, DAVN6G and FVM73L, the three
+with the best framing: the only one of them with all five games (AETYX2 has no Nom Nom Nom; DAVN6G
+never laughed), and the most varied answers. One repetition per game (the parent's answer):
 
-A good demo family is clearly framed with parent and baby both in view, and the baby laughs at
-some games and not others. Rejected: 2UWdXP (never laughed), 4JDccE (image quality and framing).
-Shortlist from the ratings (games with a "laughed" out of 5, laughed clips out of all):
+| Clip | Laughed? |
+|---|---|
+| `FVM73L.sess1.joke1.rep2.take1.Peekaboo` | yes (at every repetition) |
+| `FVM73L.sess1.joke2.rep2.take1.ThatsNotACat` | yes (not at rep 1) |
+| `FVM73L.sess1.joke3.rep1.take1.ThatsNotAHat` | no (at no repetition) |
+| `FVM73L.sess1.joke4.rep1.take1.NomNomNom` | no (at no repetition) |
+| `FVM73L.sess1.joke5.rep3.take1.TearingPaper` | yes (rep 3 only, rated 3: its highest) |
 
-| Child | Age (days) | Games | Clips | Note |
-|---|---|---|---|---|
-| A4J4QA | 276 | 3/5 | 11/19 | |
-| C354X4 | 190 | 3/5 | 5/15 | |
-| FVM73L | 298 | 3/5 | 7/16 | |
-| LJLA66 | 222 | 3/5 | 8/16 | |
-| PSJN3Y | 733 | 3/5 | 6/15 | a toddler, for contrast |
-| AQBE7J | 559 | 2/5 | 5/15 | one "Very funny" |
-| 3dC3SQ | 780 | 4/5 | 9/15 | |
-
-Caspar picks by watching. Then, per game, the repetition that shows the most: a laugh for the games
-the baby liked, a clear "no" for one it didn't.
+- The clips and the six default pipelines' results are in `viewer/public/demo/babyjokes/` (12 MB,
+  with a README citing the dataset), so they ship inside the viewer and open offline, on any build;
+  `viewer/src/lib/demos.ts` lists them, Peekaboo first. Home names the dataset and its licence.
+  They replace `peekaboo-rep3-v1.1.1`, fetched from the old video-annotation-viewer repo.
+- H.264, so every browser plays them (the old demo was H.265).
+- Made with `videoannotator process` after the speech fix (UAT #76), so Nom Nom Nom's transcript
+  reads "Oh, no, no, no, no, no, no, no, no, […]" rather than "no" ×240.
+- `tests/integration/test_output_baseline.py` still runs on the old 2UWdXP clip
+  (`viewer/demo-assets/`), which is only a test fixture now; it didn't need re-baselining.
+- To remake: run the six pipelines on the five clips, copy the files the README lists, and
+  `bash scripts/build_viewer.sh`. `viewer/src/test/lib/demos.test.ts` checks every file is there
+  and read as what it is.
 
 ## The tutorial: the full public set
 
@@ -78,6 +82,10 @@ on real infant data with a ground truth they didn't make. It is also honest abou
 pipeline detects laughter as such. The signals are the face pipeline's expressions, the audio
 pipeline's voice emotion, and Ask AI's "Did the baby laugh?" asked of a vision model, and part of
 the lesson is how far each gets.
+
+Speech transcripts on these clips are a lesson of their own (chapter 9): Whisper loops on
+sing-song games and laughter, Qwen3-ASR doesn't, and on Tearing Paper rep 3, where the parent said
+the baby laughed, Qwen3-ASR writes "Hahaha" ([speech_models_v1.7.0.md](speech_models_v1.7.0.md)).
 
 ### Chapters
 
@@ -154,15 +162,15 @@ on the dev container: RTX 4060 laptop GPU (8 GB), two clips at a time (`MAX_CONC
 
 - [x] Run the six default pipelines on all 390 on this machine; record times; look at the results
       table at that size (2026-11-11; UAT #72–75).
-- [ ] Caspar picks the demo family; bundle the 5 clips and their results; switch
-      `viewer/src/lib/demos.ts` to them; re-baseline `tests/integration/test_output_baseline.py`
-      if its demo clip changes.
+- [x] Caspar picks the demo family; bundle the 5 clips and their results; switch
+      `viewer/src/lib/demos.ts` to them (FVM73L, 2026-11-25; the baseline test keeps its clip).
 - [ ] Retire `scripts/prepare_babyjokes_open_sample.py` (it built the 54-clip open sample, which was
       never deposited).
 - [ ] The two checks above (whose face; loading our results).
 - [ ] `examples/babyjokes/` analysis scripts and their test.
 - [ ] The written tutorial in `docs/usage/`, then the recordings.
-- [ ] Cite the dataset (10.5281/zenodo.23913806) in the README, the tutorial and the demo's About.
+- [ ] Cite the dataset (10.5281/zenodo.23913806) in the README and the tutorial (the demo's files
+      and Home cite it, 2026-11-25).
 - [ ] Archive InfantLab/babyjokes, its README pointing at the Zenodo and Databrary records.
 
 ## Still to decide

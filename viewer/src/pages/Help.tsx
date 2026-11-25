@@ -58,10 +58,13 @@ export default function Help() {
         </div>
         <p className="text-sm text-muted-foreground">
           No server yet? Open a demo:{' '}
-          {DEMOS.map((d) => (
-            <Link key={d.key} to={`/viewer?demo=${d.key}`} className="underline">
-              {d.title}
-            </Link>
+          {DEMOS.map((d, i) => (
+            <span key={d.key}>
+              {i > 0 && ', '}
+              <Link to={`/viewer?demo=${d.key}`} className="underline">
+                {d.title}
+              </Link>
+            </span>
           ))}
           .
         </p>

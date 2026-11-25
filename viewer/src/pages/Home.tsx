@@ -11,7 +11,7 @@ import { Card } from '@/components/ui/card';
 import { useConnection } from '@/hooks/useConnection';
 import { pipelineCatalogQueryOptions } from '@/hooks/usePipelineCatalog';
 import { useRuns } from '@/hooks/useRuns';
-import { DEMOS } from '@/lib/demos';
+import { DEMO_DATASET, DEMOS } from '@/lib/demos';
 import { hrefOf, videoLink } from '@/lib/videosScope';
 import { formatDay, formatWhen } from '@/lib/when';
 import type { PipelineDescriptor } from '@/types/pipelines';
@@ -251,7 +251,14 @@ export default function Home() {
 
       <section className="space-y-2 border-t pt-6">
         <h2 className="text-lg font-semibold">Try it on a demo clip</h2>
-        <p className="text-sm text-muted-foreground">Real results on a short clip, opened on the Video page. No server needed.</p>
+        <p className="text-sm text-muted-foreground">
+          One family playing five games, with what the parent said afterwards: real results opened on the Video page,
+          no server needed. The clips are from{' '}
+          <a href={DEMO_DATASET.url} className="underline" target="_blank" rel="noreferrer">
+            {DEMO_DATASET.name}
+          </a>
+          , a public collection of babies watching their parents play ({DEMO_DATASET.licence}).
+        </p>
         <div className="flex flex-wrap gap-2">
           {DEMOS.map((d) => (
             <Button key={d.key} variant="secondary" className="h-auto whitespace-normal py-2 text-left" asChild>
