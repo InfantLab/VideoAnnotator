@@ -1,0 +1,6 @@
+"file","child_id","session","joke_position","repetition","take","joke","parent_laughed","parent_how_funny","parent_how_funny_score"
+"public/FVM73L.sess1.joke1.rep2.take1.Peekaboo.mp4","FVM73L","1","1","2","1","Peekaboo","Yes","Slightly funny","2"
+"public/FVM73L.sess1.joke2.rep2.take1.ThatsNotACat.mp4","FVM73L","1","2","2","1","ThatsNotACat","Yes","Slightly funny","2"
+"public/FVM73L.sess1.joke3.rep1.take1.ThatsNotAHat.mp4","FVM73L","1","3","1","1","ThatsNotAHat","No","Not funny","1"
+"public/FVM73L.sess1.joke4.rep1.take1.NomNomNom.mp4","FVM73L","1","4","1","1","NomNomNom","No","Slightly funny","2"
+"public/FVM73L.sess1.joke5.rep3.take1.TearingPaper.mp4","FVM73L","1","5","3","1","TearingPaper","Yes","Funny","3"

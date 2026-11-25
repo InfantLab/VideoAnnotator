@@ -168,7 +168,13 @@ on the dev container: RTX 4060 laptop GPU (8 GB), two clips at a time (`MAX_CONC
 - [ ] Retire `scripts/prepare_babyjokes_open_sample.py` (it built the 54-clip open sample, which was
       never deposited).
 - [ ] The two checks above (whose face; loading our results).
-- [ ] `examples/babyjokes/` analysis scripts and their test.
+- [x] `examples/babyjokes/` analysis scripts and their test (2026-11-25; checked on the 5 demo
+      clips; `SMILE_SHARE` 0.25 is provisional until the fixed run on all 390. The R test skips
+      where R isn't installed, which includes CI).
+- [ ] Run person tracking, face analysis and OpenFace 3 again on all 390 after UAT #78: the
+      2026-11-11 "faces linked to people" run's OpenFace 3 is wrong (88 done, the rest
+      cancelled). The videos are read from `/root/data/babyjokes/public` (a link to
+      `temp/babyjokes/public`).
 - [ ] The written tutorial in `docs/usage/`, then the recordings.
 - [ ] Cite the dataset (10.5281/zenodo.23913806) in the README and the tutorial (the demo's files
       and Home cite it, 2026-11-25).

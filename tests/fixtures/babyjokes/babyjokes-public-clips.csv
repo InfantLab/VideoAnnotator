@@ -1,0 +1,6 @@
+"file","child_id","session","joke_position","repetition","take","joke","age_days","bytes","sha256"
+"public/FVM73L.sess1.joke1.rep2.take1.Peekaboo.mp4","FVM73L","1","1","2","1","Peekaboo","298","1538831","ab76eb090d8ed9502532759a1785643d452a99a66f7c079730def30d78003f2c"
+"public/FVM73L.sess1.joke2.rep2.take1.ThatsNotACat.mp4","FVM73L","1","2","2","1","ThatsNotACat","298","1396242","04ba35e9de9cae1ecc429334cd33f793c1c30c83df11949122c4204e6b98c088"
+"public/FVM73L.sess1.joke3.rep1.take1.ThatsNotAHat.mp4","FVM73L","1","3","1","1","ThatsNotAHat","298","1322123","ed10bdd62a5967b41fb3e8a7167782aca5e202f5d91dd45a37975f54bd315531"
+"public/FVM73L.sess1.joke4.rep1.take1.NomNomNom.mp4","FVM73L","1","4","1","1","NomNomNom","298","1744025","11de58dd7ea9753da34c121442060517fe6e2772b9c7a72d557ebddcdd97530a"
+"public/FVM73L.sess1.joke5.rep3.take1.TearingPaper.mp4","FVM73L","1","5","3","1","TearingPaper","298","2265304","2ffa4bb2ebffa413b9d17899f6da15917192d56e77c7d0af02143a11ef506933"
