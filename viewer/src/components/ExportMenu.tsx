@@ -3,8 +3,8 @@
 // videos. The server builds them from the result files; this only asks and
 // saves what comes back.
 
-import { lazy, Suspense, useState } from 'react';
-import { ChevronDown, ChevronUp, FileText, Table2, Video } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { ChevronDown, ChevronUp, FileText, Loader2, Table2, Video } from 'lucide-react';
 import { apiClient, type ExportResults, type ExportScope } from '@/api/client';
 import { apiErrorEnvelope } from '@/api/handleError';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,24 @@ import { userMessage } from '@/lib/userMessage';
 const MethodsDialog = lazy(() => import('./MethodsDialog'));
 
 type Busy = 'csv' | 'parquet' | 'elan' | null;
+
+const BUSY_NAMES: Record<Exclude<Busy, null>, string> = {
+  csv: 'the results table',
+  parquet: 'the results table',
+  elan: 'the ELAN files',
+};
+
+/** Seconds since `since`, ticking once a second; null when not busy. */
+function useElapsed(since: number | null): number | null {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (since === null) return;
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [since]);
+  return since === null ? null : Math.max(0, Math.floor((now - since) / 1000));
+}
 
 const FALLBACK_NAMES: Record<Exclude<Busy, null>, string> = {
   csv: 'results.csv',
@@ -74,6 +92,8 @@ export function ExportMenu({ scope, popover = false }: ExportMenuProps) {
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<ExportResults>('latest');
   const [busy, setBusy] = useState<Busy>(null);
+  const [busySince, setBusySince] = useState<number | null>(null);
+  const elapsed = useElapsed(busySince);
   const [problem, setProblem] = useState<string | null>(null);
   const [parquetHint, setParquetHint] = useState<string | null>(null);
   const [lines, setLines] = useState<string[]>([]);
@@ -83,6 +103,7 @@ export function ExportMenu({ scope, popover = false }: ExportMenuProps) {
 
   const run = async (which: Exclude<Busy, null>) => {
     setBusy(which);
+    setBusySince(Date.now());
     setProblem(null);
     setLines([]);
     try {
@@ -102,6 +123,7 @@ export function ExportMenu({ scope, popover = false }: ExportMenuProps) {
       }
     } finally {
       setBusy(null);
+      setBusySince(null);
     }
   };
 
@@ -159,6 +181,15 @@ export function ExportMenu({ scope, popover = false }: ExportMenuProps) {
 
   const feedback = (
     <>
+      {busy && (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          <span>
+            Preparing {BUSY_NAMES[busy]}… {elapsed ?? 0} s.
+            {(elapsed ?? 0) >= 5 && ' Many videos take a minute or more; it saves when ready.'}
+          </span>
+        </p>
+      )}
       {parquetHint && <ParquetHint hint={parquetHint} />}
       {problem && (
         <p className="text-sm text-destructive" role="alert">
@@ -188,7 +219,8 @@ export function ExportMenu({ scope, popover = false }: ExportMenuProps) {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" size="sm">
-            Export
+            {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden /> : null}
+            {busy ? 'Exporting…' : 'Export'}
             <ChevronDown className="h-4 w-4 ml-1" />
           </Button>
         </PopoverTrigger>

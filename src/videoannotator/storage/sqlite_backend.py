@@ -162,6 +162,16 @@ class SQLiteStorageBackend(StorageBackend):
             conn.execute(
                 text("CREATE INDEX IF NOT EXISTS ix_jobs_batch_id ON jobs (batch_id)")
             )
+            # Without these each job's load scans the whole table: 0.4 s a job
+            # on a large database, three minutes to export a 390-video run
+            # (UAT #74).
+            for table in ("pipeline_results", "annotations"):
+                conn.execute(
+                    text(
+                        f"CREATE INDEX IF NOT EXISTS ix_{table}_job_id "
+                        f"ON {table} (job_id)"
+                    )
+                )
             conn.commit()
 
     def _batch_job_to_db_job(self, batch_job: "BatchJob") -> Job:

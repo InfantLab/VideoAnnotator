@@ -75,6 +75,19 @@ describe('ExportMenu', () => {
     expect(screen.getByText(/Skipped notes.txt \(clip3\)/)).toBeInTheDocument();
   });
 
+  it('says it is working while the table is prepared, even with the panel closed (UAT #74)', async () => {
+    let finish: (value: Awaited<ReturnType<typeof apiClient.exportResults>>) => void = () => {};
+    vi.mocked(apiClient.exportResults).mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    render(<ExportMenu scope={{ kind: 'run', id: 'r1' }} popover />);
+    await userEvent.click(screen.getByRole('button', { name: /export/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Results table (CSV)' }));
+    expect(screen.getByRole('status')).toHaveTextContent(/Preparing the results table… \d+ s/);
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: /exporting…/i })).toBeInTheDocument();
+    finish({ blob: new Blob(['a,b']), filename: 'Run.csv', summary: null });
+    await waitFor(() => expect(screen.getByRole('button', { name: /^export$/i })).toBeInTheDocument());
+  });
+
   it('asks for ELAN files of a job', async () => {
     vi.mocked(apiClient.exportResults).mockResolvedValue({ blob: new Blob(['x']), filename: null, summary: null });
     render(<ExportMenu scope={{ kind: 'job', id: 'j1' }} />);

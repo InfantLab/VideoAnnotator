@@ -146,7 +146,8 @@ on the dev container: RTX 4060 laptop GPU (8 GB), two clips at a time (`MAX_CONC
   | Person tracking | 3% | 0.06 |
 
 - 42% of the time is outside the pipelines (UAT #72), so the run could be much shorter.
-- The run's results table: 2 min 49 s to export, 91 MB, 295,184 rows (UAT #74).
+- The run's results table: 2 min 49 s to export, 91 MB, 295,184 rows (UAT #74); 21 s since
+  2026-11-25.
 - Still to measure: a CPU-only run of one game, for the tutorial's other estimate.
 
 ### To check before writing it

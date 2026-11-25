@@ -96,7 +96,7 @@ class PipelineResult(Base):
     __tablename__ = "pipeline_results"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    job_id = Column(String, ForeignKey("jobs.id"), nullable=False)
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=False, index=True)
     pipeline_name = Column(String, nullable=False)
     status = Column(String, nullable=False)
 
@@ -129,7 +129,7 @@ class Annotation(Base):
     __tablename__ = "annotations"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    job_id = Column(String, ForeignKey("jobs.id"), nullable=False)
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=False, index=True)
     pipeline = Column(String, nullable=False)
 
     # Annotation data stored as JSON
