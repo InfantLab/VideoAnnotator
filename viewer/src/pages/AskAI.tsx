@@ -121,6 +121,9 @@ function FrameStrip({ path, t, sampling }: { path: string; t: number | null; sam
   );
 }
 
+/** The server's plain "start it" hint, which the message already says; its container hint is worth showing. */
+const GENERIC_START_HINT = /^Start it with 'ollama serve'\.?$/;
+
 /** What's missing when there's no model to ask, in words (US1 scenario 4). */
 function NoModel({ unreachable, detail, server }: { unreachable: boolean; detail?: string; server?: ModelServer }) {
   if (server && server.id !== DEFAULT_SERVER_ID) {
@@ -152,20 +155,29 @@ function NoModel({ unreachable, detail, server }: { unreachable: boolean; detail
   return (
     <Alert data-testid="no-model">
       <AlertTriangle className="h-4 w-4" />
-      <AlertTitle>{unreachable ? "Ask AI can't reach the model server" : 'No model to ask yet'}</AlertTitle>
-      <AlertDescription className="space-y-1 text-sm">
+      <AlertTitle>{unreachable ? "Ollama isn't running" : 'No model to ask yet'}</AlertTitle>
+      <AlertDescription className="space-y-2 text-sm">
         {unreachable ? (
-          <p>
-            Ask AI sends frames to a vision model running in Ollama. Install it from{' '}
-            <a className="underline" href="https://ollama.com/download" target="_blank" rel="noreferrer">
-              ollama.com/download
-            </a>{' '}
-            and start it, then reload this page.{detail ? ` ${detail}` : ''}
-          </p>
+          <>
+            <p>
+              Ask AI sends frames to a vision model in Ollama. If Ollama is installed, start it: open the Ollama app,
+              or run <code>ollama serve</code> in a terminal. This page notices when it's running.
+            </p>
+            <p>
+              Not installed yet? Get it from{' '}
+              <a className="underline" href="https://ollama.com/download" target="_blank" rel="noreferrer">
+                ollama.com/download
+              </a>
+              .
+            </p>
+            {detail && !GENERIC_START_HINT.test(detail) && (
+              <p className="text-xs text-muted-foreground">{detail}</p>
+            )}
+          </>
         ) : (
           <p>
-            The model server is running but has no model. Get one with <code>ollama pull qwen3.5:9b</code> (or any
-            vision model), then reload this page.
+            Ollama is running but has no model. Get one with <code>ollama pull qwen3.5:9b</code> (or any vision
+            model). This page notices when it's there.
           </p>
         )}
         <p>
@@ -243,7 +255,7 @@ const AskAI = () => {
   const server = servers.find((s) => s.id === serverId) ?? servers.find((s) => s.id === DEFAULT_SERVER_ID);
   const backend = server?.kind ?? 'ollama';
 
-  const models = useVlmModels({ enabled: Boolean(capabilities), server: server?.id });
+  const models = useVlmModels({ enabled: Boolean(capabilities), server: server?.id, pollWhileMissing: true });
   const endpointQuery = useQuery({
     queryKey: ['ask', 'endpoint', server?.base_url ?? ''],
     queryFn: () => apiClient.getEndpoint(server?.base_url),

@@ -162,7 +162,8 @@ describe('Ask AI', () => {
     it("says what's missing when the model server can't be reached", async () => {
       vi.mocked(apiClient.getVlmModels).mockRejectedValue(new APIError('Cannot reach the model server', 503));
       renderAsk();
-      expect(await screen.findByText(/can't reach the model server/i)).toBeInTheDocument();
+      expect(await screen.findByText("Ollama isn't running")).toBeInTheDocument();
+      expect(screen.getByText('ollama serve')).toBeInTheDocument();
       expect(screen.getByText(/ollama.com\/download/)).toBeInTheDocument();
     });
 

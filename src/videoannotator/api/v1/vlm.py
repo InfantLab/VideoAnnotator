@@ -114,11 +114,12 @@ def list_vlm_models(
             client = OllamaVLMClient(base_url=base_url, timeout=10)
             models = client.list_models()
         except OllamaUnavailableError as e:
+            logger.info("Ollama unreachable at %s: %s", base_url, e)
             raise APIError(
                 status_code=503,
                 code="OLLAMA_UNREACHABLE",
                 message=f"Cannot reach Ollama server at {base_url}",
-                hint=f"{e} {unreachable_hint(base_url)}",
+                hint=unreachable_hint(base_url),
             ) from e
     else:
         models = require_model_list(db, kind, base_url)
