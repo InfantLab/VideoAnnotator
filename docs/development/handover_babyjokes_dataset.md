@@ -201,7 +201,10 @@ The project's latest results (that run plus the 11 Nov run's scene, speaker and 
       The clips are read from `/root/data/babyjokes/public`, a link to `temp/babyjokes/public`
       that a container restart removes; the server needs
       `VIDEOANNOTATOR_INGEST_ROOTS=/root/data/babyjokes:/workspaces/VideoAnnotator/temp/babyjokes`.
-- [ ] The written tutorial in `docs/usage/`, then the recordings.
+- [x] The written tutorial: `docs/usage/tutorial_babyjokes.md` (2026-11-26; no screenshots yet,
+      they come with the recordings). Chapter 6 (Ask AI) names no model until that's decided;
+      option 3 (our results for all 390) isn't offered until that's decided.
+- [ ] The recordings, and the CPU-only time for one game.
 - [ ] Cite the dataset (10.5281/zenodo.23913806) in the README and the tutorial (the demo's files
       and Home cite it, 2026-11-25).
 - [ ] Archive InfantLab/babyjokes, its README pointing at the Zenodo and Databrary records.
