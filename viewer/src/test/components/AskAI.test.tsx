@@ -159,6 +159,22 @@ describe('Ask AI', () => {
       expect(screen.getAllByTestId('answer-marker')).toHaveLength(1);
     });
 
+    it('a try on several moments says which one the answer is, and steps to the others', async () => {
+      const two = entry({ moments: [0, 5], answers: [answer(0, 'TOUCH'), answer(5, 'NO_TOUCH')] });
+      vi.mocked(apiClient.createTry).mockResolvedValue({ ...two, status: 'running', answers: [] });
+      vi.mocked(apiClient.getEntry).mockResolvedValue(two);
+      renderAsk();
+      await userEvent.type(await screen.findByLabelText('Question'), 'Is the adult touching the infant?');
+      await userEvent.click(await screen.findByTestId('try-moments'));
+      expect(apiClient.createTry).toHaveBeenCalledWith(expect.objectContaining({ count: expect.any(Number) }));
+      const featured = await screen.findByTestId('featured-answer', {}, { timeout: 3000 });
+      expect(within(featured).getByText('Moment 2 of 2')).toBeInTheDocument();
+      expect(within(featured).getByText('NO_TOUCH')).toBeInTheDocument();
+      await userEvent.click(within(featured).getByRole('button', { name: 'Previous moment' }));
+      expect(within(featured).getByText('Moment 1 of 2')).toBeInTheDocument();
+      expect(within(featured).getByText('TOUCH')).toBeInTheDocument();
+    });
+
     it("says what's missing when the model server can't be reached", async () => {
       vi.mocked(apiClient.getVlmModels).mockRejectedValue(new APIError('Cannot reach the model server', 503));
       renderAsk();

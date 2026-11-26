@@ -31,7 +31,7 @@ interface VlmModelPickerProps {
  * hard-block configuration just because Ollama isn't running yet.
  */
 export const VlmModelPicker = ({ value, onChange, fieldId, server, serverName }: VlmModelPickerProps) => {
-  const { data, isLoading, isError, error } = useVlmModels({ server });
+  const { data, isLoading, isError, error } = useVlmModels({ server, pollWhileMissing: true });
   // The server's own Ollama keeps its words; another server is named as the user named it.
   const ollama = !server || server === 'default';
   const name = serverName ?? 'the model server';
@@ -93,12 +93,12 @@ export const VlmModelPicker = ({ value, onChange, fieldId, server, serverName }:
           <p className="text-xs text-muted-foreground">
             {ollama
               ? isError
-                ? `Can't reach the configured Ollama server (${handleAPIError(error)}). Type a model name, or start Ollama and reload.`
+                ? `${handleAPIError(error)}. Start Ollama (the app, or "ollama serve") and the list fills in by itself, or type a model name.`
                 : data && data.models.length === 0
                   ? `Ollama is reachable at ${data.baseUrl} but nothing is pulled yet — run "ollama pull <model>", or type a model name to pull later.`
                   : 'Type the exact model name as it appears in "ollama list".'
               : isError
-                ? `Can't reach ${name} (${handleAPIError(error)}). Type a model name, or start the server and reload.`
+                ? `Can't reach ${name} (${handleAPIError(error)}). Start the server and the list fills in by itself, or type a model name.`
                 : data && data.models.length === 0
                   ? `${name} is reachable at ${data.baseUrl} but lists no models: load one in the server first.`
                   : 'Type the model name as the server lists it.'}

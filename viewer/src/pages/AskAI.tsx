@@ -62,6 +62,9 @@ import {
 } from '@/types/ask';
 
 const TRY_COUNT = 10;
+
+/** The answer shown beside the video, and the try or run it came from. */
+type Featured = { answer: AskAnswer; sampling: AskSampling; entry?: AskEntry };
 const TRY_POLL_MS = 1000;
 const FRAMES_DEBOUNCE_MS = 150;
 const TOKEN_REFRESH_MS = 45 * 60 * 1000;
@@ -229,8 +232,9 @@ const AskAI = () => {
   const [pendingSend, setPendingSend] = useState<null | (() => Promise<void>)>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [hovered, setHovered] = useState<{ answer: AskAnswer; sampling: AskSampling } | null>(null);
-  const [selected, setSelected] = useState<{ answer: AskAnswer; sampling: AskSampling } | null>(null);
+  const [hovered, setHovered] = useState<Featured | null>(null);
+  const [selected, setSelected] = useState<Featured | null>(null);
+  const [pressed, setPressed] = useState<'here' | 'moments' | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const [serverId, setServerId] = useState<string | null>(() => params.get('server'));
@@ -421,16 +425,26 @@ const AskAI = () => {
         done: latestRunState?.done ?? 0,
       }
     : null;
-  const anyTryRunning = shownEntries.some((e) => e.kind === 'try' && e.status === 'running');
+  const runningTry = shownEntries.find((e) => e.kind === 'try' && e.status === 'running');
+  const anyTryRunning = Boolean(runningTry);
+  const trying = runningTry ? ((runningTry.moments?.length ?? 1) > 1 ? 'moments' : 'here') : pressed;
 
   const latest = (() => {
     for (const entry of shownEntries) {
       const answers = answersOf(entry);
-      if (answers.length) return { answer: answers[answers.length - 1], sampling: fullSampling(entry.sampling) };
+      if (answers.length) return { answer: answers[answers.length - 1], sampling: fullSampling(entry.sampling), entry };
     }
     return null;
   })();
   const featured = hovered ?? selected ?? latest;
+  // A try on several moments: which one the card shows, so the rest aren't missed.
+  const featuredOf = (() => {
+    const entry = featured?.entry;
+    if (!featured || !entry) return null;
+    const answers = answersOf(entry);
+    const index = answers.findIndex((a) => Math.abs(a.t - featured.answer.t) < 1e-6);
+    return index < 0 ? null : { entry, answers, index };
+  })();
 
   const seek = (t: number) => {
     const clamped = Math.max(0, duration > 0 ? Math.min(t, duration) : t);
@@ -451,7 +465,7 @@ const AskAI = () => {
   };
 
   const select = (entry: AskEntry, answer: AskAnswer) => {
-    setSelected({ answer, sampling: fullSampling(entry.sampling) });
+    setSelected({ answer, sampling: fullSampling(entry.sampling), entry });
     seek(answer.t);
   };
 
@@ -513,8 +527,14 @@ const AskAI = () => {
     sampling,
   };
   const shapeInvalid = answerShape !== null && shapeProblem(answerShape) !== null;
-  const tryHere = () => send(() => asked(() => apiClient.createTry({ ...request, at: Math.round(time * 1000) / 1000 })));
-  const tryMany = () => send(() => asked(() => apiClient.createTry({ ...request, count: TRY_COUNT })));
+  const tryHere = () => {
+    setPressed('here');
+    send(() => asked(() => apiClient.createTry({ ...request, at: Math.round(time * 1000) / 1000 })));
+  };
+  const tryMany = () => {
+    setPressed('moments');
+    send(() => asked(() => apiClient.createTry({ ...request, count: TRY_COUNT })));
+  };
   const runWhole = () => send(() => asked(() => apiClient.createRun(request)));
 
   const stop = async () => {
@@ -760,6 +780,7 @@ const AskAI = () => {
                 tryCount={tryMoments.length}
                 momentsFrom={samplingSummary(sampling)}
                 busy={busy || anyTryRunning}
+                trying={trying}
                 disabled={Boolean(noModels) || shapeInvalid}
               />
               <SamplingControls
@@ -903,6 +924,34 @@ const AskAI = () => {
 
               {featured && (
                 <Card className="space-y-2 p-3" data-testid="featured-answer">
+                  {featuredOf && featuredOf.answers.length > 1 && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground" data-testid="featured-step">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2"
+                        aria-label="Previous moment"
+                        disabled={featuredOf.index <= 0}
+                        onClick={() => select(featuredOf.entry, featuredOf.answers[featuredOf.index - 1])}
+                      >
+                        ‹
+                      </Button>
+                      <span className="tabular-nums">
+                        Moment {featuredOf.index + 1} of {featuredOf.answers.length}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2"
+                        aria-label="Next moment"
+                        disabled={featuredOf.index >= featuredOf.answers.length - 1}
+                        onClick={() => select(featuredOf.entry, featuredOf.answers[featuredOf.index + 1])}
+                      >
+                        ›
+                      </Button>
+                      <span>· all of them are in the table below</span>
+                    </div>
+                  )}
                   <p className="text-sm">
                     <span className="text-muted-foreground tabular-nums">{formatClock(featured.answer.t)} </span>
                     {featured.answer.status === 'answered' && featured.answer.fit === false ? (
@@ -960,7 +1009,7 @@ const AskAI = () => {
                         if (answer) select(entry, answer);
                         else seek(t);
                       }}
-                      onHover={(m) => setHovered(m ? { answer: m, sampling: fullSampling(entry.sampling) } : null)}
+                      onHover={(m) => setHovered(m ? { answer: m, sampling: fullSampling(entry.sampling), entry } : null)}
                     />
                     <Playhead time={time} duration={duration} />
                   </div>

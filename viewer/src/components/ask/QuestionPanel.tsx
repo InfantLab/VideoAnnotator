@@ -28,6 +28,8 @@ interface QuestionPanelProps {
   /** The moments the try picks from, in words: "every 5 s, 0:00 to the end" (UAT #22). */
   momentsFrom: string;
   busy: boolean;
+  /** Which try is under way, so its own button shows the spinner. */
+  trying?: 'here' | 'moments' | null;
   disabled: boolean;
 }
 
@@ -62,14 +64,23 @@ export function QuestionPanel(props: QuestionPanelProps) {
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <Button onClick={props.onTryHere} disabled={blocked} className="gap-1" data-testid="try-here">
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crosshair className="h-4 w-4" />}
+            {busy && props.trying !== 'moments' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Crosshair className="h-4 w-4" />
+            )}
             Try on this frame
           </Button>
           <span className="text-xs text-muted-foreground tabular-nums">{props.here}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={props.onTryMoments} disabled={blocked || props.tryCount === 0} className="gap-1" data-testid="try-moments">
-            <ListChecks className="h-4 w-4" /> Try on {props.tryCount} moment{props.tryCount === 1 ? '' : 's'}
+            {busy && props.trying === 'moments' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ListChecks className="h-4 w-4" />
+            )}{' '}
+            Try on {props.tryCount} moment{props.tryCount === 1 ? '' : 's'}
           </Button>
           <span className="text-xs text-muted-foreground">spread over the moments set below: {props.momentsFrom}</span>
         </div>
