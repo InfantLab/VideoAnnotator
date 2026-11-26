@@ -151,6 +151,17 @@ print_viewer_info() {
 # Started via `&` (not `exec`) in both modes so this script can poll for
 # health and print the viewer link once it's actually reachable — `exec`
 # would hand off the process image and end the script right there.
+# A server already on this port would answer the health poll below, so the
+# script would report success for a process it didn't start, then return
+# immediately when its own (port-clash) server exits.
+if curl -sf -m 3 "http://127.0.0.1:${PORT}/health" >/dev/null 2>&1; then
+    echo "[ERROR] A server is already running on port ${PORT}:" >&2
+    ps -eo pid,lstart,args | grep "[v]ideoannotator server" >&2 || true
+    echo "  It is serving http://${DISPLAY_HOST}:${PORT}/viewer — use it, or stop it" >&2
+    echo "  (kill <PID>) and run va-start again, or pick another port: --port 18012" >&2
+    exit 1
+fi
+
 echo "[START] Starting server..."
 if [[ "$BACKGROUND" == true ]]; then
     LOG_FILE="$(mktemp -t videoannotator-server-XXXXXX.log)"
@@ -163,15 +174,15 @@ fi
 SERVER_PID=$!
 
 for _ in $(seq 1 30); do
-    if curl -sf "http://127.0.0.1:${PORT}/health" >/dev/null 2>&1; then
-        echo "[OK] Server is up: http://${DISPLAY_HOST}:${PORT}"
-        print_viewer_info
-        break
-    fi
     if ! kill -0 "$SERVER_PID" 2>/dev/null; then
         echo "[ERROR] Server process exited before becoming healthy" >&2
         [[ -n "${LOG_FILE:-}" ]] && cat "$LOG_FILE" >&2
         exit 1
+    fi
+    if curl -sf -m 3 "http://127.0.0.1:${PORT}/health" >/dev/null 2>&1; then
+        echo "[OK] Server is up: http://${DISPLAY_HOST}:${PORT}"
+        print_viewer_info
+        break
     fi
     sleep 1
 done
