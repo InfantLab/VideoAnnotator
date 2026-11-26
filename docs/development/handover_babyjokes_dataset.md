@@ -150,6 +150,25 @@ on the dev container: RTX 4060 laptop GPU (8 GB), two clips at a time (`MAX_CONC
   2026-11-25.
 - Still to measure: a CPU-only run of one game, for the tutorial's other estimate.
 
+### First results on all 390 (2026-11-26)
+
+The project's latest results (that run plus the 11 Nov run's scene, speaker and speech results;
+286,354 rows, a 66 s export) through `examples/babyjokes/`, `SMILE_SHARE` 0.25. Python and R agree.
+368 repetitions rated; 354 with the baby's face found.
+
+| Measure | Agree with parent | kappa | AUC of the share |
+|---|---|---|---|
+| OpenFace 3 AU12, ≥ 25% of the baby's faces | 65% of 351 | 0.17 | 0.57 |
+| DeepFace "happy", ≥ 25% | 53% of 346 | 0.03 | 0.52 |
+
+- AU12's kappa runs 0.07 to 0.20 over thresholds 0.05 to 0.5 (best at 0.3); DeepFace's stays at
+  chance. Slight agreement at best: the tutorial's honest answer is "not much", and why.
+- Parents: Peekaboo laughed at most (0.53–0.58 by repetition), Tearing Paper least (0.12–0.25);
+  in the logistic model, game matters (Peekaboo +0.77, Tearing Paper −0.99) and repetition doesn't
+  (−0.14, p 0.33). AU12 shows none of the game pattern. Laughing rises with age (0.16 under 6
+  months, 0.38–0.41 over), and so does AU12 (0.09 to 0.20–0.30).
+- Before reading much into it: check the baby really is the smaller person, on a sample of clips.
+
 ### To check before writing it
 
 - Which face is the baby's. Face results hold both parent and baby; the analysis needs the baby's.
@@ -171,10 +190,12 @@ on the dev container: RTX 4060 laptop GPU (8 GB), two clips at a time (`MAX_CONC
 - [x] `examples/babyjokes/` analysis scripts and their test (2026-11-25; checked on the 5 demo
       clips; `SMILE_SHARE` 0.25 is provisional until the fixed run on all 390. The R test skips
       where R isn't installed, which includes CI).
-- [ ] Run person tracking, face analysis and OpenFace 3 again on all 390 after UAT #78: the
-      2026-11-11 "faces linked to people" run's OpenFace 3 is wrong (88 done, the rest
-      cancelled). The videos are read from `/root/data/babyjokes/public` (a link to
-      `temp/babyjokes/public`).
+- [x] Run person tracking, face analysis and OpenFace 3 again on all 390 after UAT #78
+      (2026-11-26, "BabyJokes all 390 (faces, people, OpenFace fixed)"): 390 of 390 in 1 h 55 min,
+      none failed. The 2026-11-11 "faces linked to people" run's OpenFace 3 is wrong; ignore it.
+      The clips are read from `/root/data/babyjokes/public`, a link to `temp/babyjokes/public`
+      that a container restart removes; the server needs
+      `VIDEOANNOTATOR_INGEST_ROOTS=/root/data/babyjokes:/workspaces/VideoAnnotator/temp/babyjokes`.
 - [ ] The written tutorial in `docs/usage/`, then the recordings.
 - [ ] Cite the dataset (10.5281/zenodo.23913806) in the README and the tutorial (the demo's files
       and Home cite it, 2026-11-25).
