@@ -239,13 +239,20 @@ def _counts(catalog: Catalog) -> VideoCounts:
     held = catalog.in_any_project()
     folders: dict[str, int] = {}
     uploads = 0
+    readable: dict[str, bool] = {}
+
+    def is_readable(folder: str) -> bool:
+        if folder not in readable:
+            readable[folder] = _readable(folder)
+        return readable[folder]
+
     for video in videos:
         if video.uploaded:
             uploads += 1
-        elif _readable(video.folder):
+        elif is_readable(video.folder):
             folders[video.folder] = folders.get(video.folder, 0) + 1
     for dataset in catalog.datasets:
-        if dataset.server_folder and _readable(dataset.server_folder):
+        if dataset.server_folder and is_readable(dataset.server_folder):
             folders.setdefault(str(Path(dataset.server_folder).expanduser()), 0)
     listed = [
         FolderCount(path=f, label=display_path(f), count=n)

@@ -1,10 +1,20 @@
-"""A job's results and annotations are found by index, not a table scan (UAT #74)."""
+"""Jobs, their results and annotations are found by index, not a table scan
+(UAT #73, #74)."""
 
 import sqlite3
 
 from videoannotator.storage.sqlite_backend import SQLiteStorageBackend
 
-INDEXES = {"ix_pipeline_results_job_id", "ix_annotations_job_id"}
+INDEXES = {
+    "ix_pipeline_results_job_id",
+    "ix_annotations_job_id",
+    # jobs_signature(), on every Videos request (UAT #73)
+    "ix_jobs_status",
+    "ix_jobs_created_at",
+    "ix_jobs_started_at",
+    "ix_jobs_completed_at",
+    "ix_pipeline_results_status",
+}
 
 
 def _indexes(path):

@@ -4,6 +4,7 @@ R1, R2, R12)."""
 from __future__ import annotations
 
 import os
+import time
 from datetime import datetime, timedelta
 
 from tests.fixtures.video_index import JobsDb, write_video
@@ -226,6 +227,40 @@ def test_the_cache_rebuilds_when_the_jobs_change(tmp_path):
     jobs.make_job(write_video(tmp_path / "b.mp4"))
 
     assert len(video_index.cached_index(jobs.storage).videos()) == 2
+
+
+def test_paths_resolve_as_before_through_linked_folders_and_files(tmp_path):
+    real = tmp_path / "real"
+    real.mkdir()
+    write_video(real / "a.mp4")
+    (tmp_path / "linked").symlink_to(real)
+    (real / "b.mp4").symlink_to(real / "a.mp4")
+    index = video_index.VideoIndex([])
+    for raw in (
+        str(tmp_path / "linked" / "a.mp4"),
+        str(tmp_path / "linked" / "b.mp4"),
+        str(tmp_path / "linked" / "missing.mp4"),
+        str(tmp_path / "linked" / ".." / "real" / "a.mp4"),
+        f"{tmp_path}//real/./a.mp4",
+        "relative/a.mp4",
+        "~/a.mp4",
+    ):
+        assert index.resolved(raw) == video_index._resolve(raw), raw
+
+
+def test_an_unchanged_index_answers_at_once_and_refreshes_behind(tmp_path, monkeypatch):
+    video_index.clear_cache()
+    jobs = JobsDb(tmp_path)
+    jobs.make_job(write_video(tmp_path / "a.mp4"))
+    first = video_index.cached_index(jobs.storage)
+    monkeypatch.setattr(video_index, "CACHE_SECONDS", 0.0)
+
+    assert video_index.cached_index(jobs.storage) is first
+    for _ in range(100):
+        if video_index.cached_index(jobs.storage) is not first:
+            break
+        time.sleep(0.05)
+    assert video_index.cached_index(jobs.storage) is not first
 
 
 # -- runs (T009) -----------------------------------------------------------

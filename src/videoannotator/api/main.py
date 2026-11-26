@@ -59,6 +59,24 @@ def apply_scipy_compatibility_patch():
 apply_scipy_compatibility_patch()
 
 
+def _warm_video_index() -> None:
+    """Build the video index behind startup, so the first Videos page doesn't
+    wait for it (seconds with a few thousand jobs on a slow disk, UAT #73)."""
+    import threading
+
+    def warm() -> None:
+        try:
+            from ..storage.config import get_storage_root
+            from ..video_index import cached_index
+            from .database import get_storage_backend
+
+            cached_index(get_storage_backend(), uploads_root=get_storage_root())
+        except Exception:
+            logger.exception("Building the video index at startup failed")
+
+    threading.Thread(target=warm, name="video-index-warm", daemon=True).start()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
@@ -237,6 +255,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "Background job processing started",
             extra={"component": "background_tasks"},
         )
+        _warm_video_index()
     else:
         logger.warning(
             "Background job processing disabled (VIDEOANNOTATOR_BACKGROUND_PROCESSING)",

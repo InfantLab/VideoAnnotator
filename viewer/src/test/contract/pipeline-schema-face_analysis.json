@@ -201,11 +201,10 @@
       "name": "person_identity",
       "type": "object",
       "label": "Link faces to people",
-      "description": "Person identity linking configuration",
+      "description": "Links each face to the person-tracking track whose head (nose, eyes, ears) is inside it, so a face and its person share one track. Only when person tracking runs in the same run.",
       "default": {
         "enabled": true,
         "link_to_persons": true,
-        "iou_threshold": 0.5,
         "require_person_id": false
       },
       "enum": null,

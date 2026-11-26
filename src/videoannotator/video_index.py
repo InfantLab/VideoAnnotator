@@ -13,6 +13,7 @@ cached until the jobs change or a few seconds pass.
 
 from __future__ import annotations
 
+import logging
 import os
 import threading
 import time
@@ -239,8 +240,21 @@ class VideoIndex:
     def resolved(self, raw: str) -> str:
         found = self._resolved.get(raw)
         if found is None:
-            found = self._resolved[raw] = _resolve(raw)
+            found = self._resolved[raw] = self._resolve_in_parent(raw)
         return found
+
+    def _resolve_in_parent(self, raw: str) -> str:
+        """`_resolve(raw)`, with its folder resolved once for all its files:
+        resolving checks every folder on the way, about 1 ms each on a slow
+        disk, for thousands of paths (UAT #73)."""
+        path = os.path.expanduser(raw)
+        head, name = os.path.split(path)
+        if not os.path.isabs(path) or head == path or name in ("", ".", ".."):
+            return _resolve(raw)
+        candidate = os.path.join(self.resolved(head), name)
+        if os.path.islink(candidate):
+            return _resolve(candidate)
+        return candidate
 
     def _add_path(self, path: str) -> None:
         if path in self._stats:
@@ -482,26 +496,88 @@ def latest_pairs(index: VideoIndex, keys: Iterable[str]) -> set[tuple[str, str]]
 # -- the cache (R11) ---------------------------------------------------------
 
 CACHE_SECONDS = 5.0
+# How long a path's resolution is trusted: it changes only when a symlink
+# on its way does, and resolving thousands of paths on a slow disk takes
+# seconds (UAT #73).
+RESOLVE_SECONDS = 600.0
 
 _cache_lock = threading.Lock()
+# One build at a time: the Videos page asks for several things at once, and
+# each building its own index made every one of them slow.
+_build_lock = threading.Lock()
 _cache: dict[int, tuple[tuple[Any, ...], float, VideoIndex]] = {}
 
 
 def cached_index(storage: Any, uploads_root: Path | None = None) -> VideoIndex:
-    """The index for `storage`, rebuilt when its jobs change or after a few
-    seconds (files can move without a job changing)."""
+    """The index for `storage`, rebuilt when its jobs change. With the same
+    jobs, an index older than a few seconds is still answered with and rebuilt
+    behind it, as files can move without a job changing."""
     signature = (storage.jobs_signature(), str(uploads_root))
     now = time.monotonic()
     with _cache_lock:
         cached = _cache.get(id(storage))
         if cached and cached[0] == signature and now - cached[1] < CACHE_SECONDS:
             return cached[2]
-    index = build_index(storage.job_summaries(), uploads_root=uploads_root)
+    if cached and cached[0] == signature:
+        # The same jobs: answer now, and look again for moved files after.
+        _refresh_later(storage, signature, uploads_root)
+        return cached[2]
+    return _build(storage, signature, uploads_root, since=now)
+
+
+_refreshing: set[int] = set()
+
+
+def _refresh_later(
+    storage: Any, signature: tuple[Any, ...], uploads_root: Path | None
+) -> None:
     with _cache_lock:
-        _cache[id(storage)] = (signature, now, index)
+        if id(storage) in _refreshing:
+            return
+        _refreshing.add(id(storage))
+
+    def refresh() -> None:
+        try:
+            _build(storage, signature, uploads_root, since=time.monotonic())
+        except Exception:
+            logging.getLogger(__name__).exception("Refreshing the video index failed")
+        finally:
+            with _cache_lock:
+                _refreshing.discard(id(storage))
+
+    threading.Thread(target=refresh, name="video-index-refresh", daemon=True).start()
+
+
+def _build(
+    storage: Any, signature: tuple[Any, ...], uploads_root: Path | None, since: float
+) -> VideoIndex:
+    """One build at a time; a build that finished after `since` will do."""
+    with _build_lock:
+        with _cache_lock:
+            cached = _cache.get(id(storage))
+            if cached and cached[0] == signature and cached[1] >= since:
+                return cached[2]
+        index = VideoIndex(
+            storage.job_summaries(), uploads_root, _resolved=_resolutions()
+        ).build()
+        with _cache_lock:
+            _cache[id(storage)] = (signature, time.monotonic(), index)
     return index
 
 
+_resolve_cache: tuple[float, dict[str, str]] = (0.0, {})
+
+
+def _resolutions() -> dict[str, str]:
+    global _resolve_cache
+    now = time.monotonic()
+    if now - _resolve_cache[0] > RESOLVE_SECONDS:
+        _resolve_cache = (now, {})
+    return _resolve_cache[1]
+
+
 def clear_cache() -> None:
+    global _resolve_cache
     with _cache_lock:
         _cache.clear()
+        _resolve_cache = (0.0, {})

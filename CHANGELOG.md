@@ -199,6 +199,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   expressions in the model's order; gaze as `yaw` and `pitch` (radians) and a direction made as
   OpenFace's own demo makes it. No head pose: the model estimates none, so the option and the
   overlay are gone. OpenFace 3 results made before this are wrong; run it again.
+- **The Videos page took 20 s to minutes on a large server** (UAT #73): every request rebuilt the
+  index of videos, resolving each job's paths folder by folder, and requests arriving together each
+  built their own. Folders are now resolved once, an unchanged index answers at once and is rebuilt
+  behind the request, builds are shared, the server builds it at start, and the check for changed
+  jobs reads indexes. With ~1,200 jobs: 0.1 s, about 1.5 s while the index refreshes.
 - **The results table of a large run took minutes** (UAT #74): loading each job scanned all
   pipeline results, as `pipeline_results.job_id` had no index (nor `annotations.job_id`). Indexed,
   and an existing database gains both at start: a 390-video run's table in 21 s, not 2 min 49 s.

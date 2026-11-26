@@ -235,6 +235,8 @@ def _datasets_signature(datasets: list[Any]) -> str:
 
 
 _lock = threading.Lock()
+# One build at a time: requests arriving together share it (UAT #73).
+_build_lock = threading.Lock()
 _cached: dict[str, tuple[int, str, float, Catalog]] = {}
 
 
@@ -252,9 +254,19 @@ def cached_catalog(index: VideoIndex, datasets: list[Any]) -> Catalog:
             and now - cached[2] < CACHE_SECONDS
         ):
             return cached[3]
-    catalog = build_catalog(index, datasets)
-    with _lock:
-        _cached["catalog"] = (id(index), signature, now, catalog)
+    with _build_lock:
+        with _lock:
+            cached = _cached.get("catalog")
+            if (
+                cached is not None
+                and cached[0] == id(index)
+                and cached[1] == signature
+                and cached[2] >= now
+            ):
+                return cached[3]
+        catalog = build_catalog(index, datasets)
+        with _lock:
+            _cached["catalog"] = (id(index), signature, time.monotonic(), catalog)
     return catalog
 
 

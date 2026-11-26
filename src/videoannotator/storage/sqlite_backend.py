@@ -172,6 +172,21 @@ class SQLiteStorageBackend(StorageBackend):
                         f"ON {table} (job_id)"
                     )
                 )
+            # jobs_signature() runs on every Videos request; these let it read
+            # small indexes, not every job's settings (UAT #73).
+            for table, column in (
+                ("jobs", "status"),
+                ("jobs", "created_at"),
+                ("jobs", "started_at"),
+                ("jobs", "completed_at"),
+                ("pipeline_results", "status"),
+            ):
+                conn.execute(
+                    text(
+                        f"CREATE INDEX IF NOT EXISTS ix_{table}_{column} "
+                        f"ON {table} ({column})"
+                    )
+                )
             conn.commit()
 
     def _batch_job_to_db_job(self, batch_job: "BatchJob") -> Job:
@@ -503,18 +518,18 @@ class SQLiteStorageBackend(StorageBackend):
     def jobs_signature(self) -> tuple[Any, ...]:
         try:
             with self.SessionLocal() as session:
-                times = session.query(
-                    func.count(Job.id),
-                    func.max(Job.created_at),
-                    func.max(Job.started_at),
-                    func.max(Job.completed_at),
-                ).one()
-                statuses = session.query(Job.status, func.count(Job.id)).group_by(
-                    Job.status
+                # One aggregate per query: SQLite reads a max() from its
+                # index only when it is alone.
+                times = (
+                    session.query(func.count()).select_from(Job).scalar(),
+                    session.query(func.max(Job.created_at)).scalar(),
+                    session.query(func.max(Job.started_at)).scalar(),
+                    session.query(func.max(Job.completed_at)).scalar(),
                 )
-                results = session.query(
-                    PipelineResult.status, func.count(PipelineResult.id)
-                ).group_by(PipelineResult.status)
+                statuses = session.query(Job.status, func.count()).group_by(Job.status)
+                results = session.query(PipelineResult.status, func.count()).group_by(
+                    PipelineResult.status
+                )
                 return (
                     tuple(times),
                     tuple(sorted(statuses)),
