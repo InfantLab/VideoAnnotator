@@ -216,3 +216,16 @@ def test_parquet_without_pyarrow_says_how_to_install(run_folder, tmp_path, monke
     monkeypatch.setattr(builtins, "__import__", no_pyarrow)
     with pytest.raises(ParquetNotInstalled, match=r"videoannotator\[parquet\]"):
         write_parquet(from_folder(run_folder), tmp_path / "t.parquet")
+
+
+def test_a_video_from_two_runs_counts_once(run_folder):
+    """Latest results can take a video's pipelines from two runs (UAT 2026-11-26:
+    390 clips were summarised as 780 videos)."""
+    from dataclasses import replace
+
+    results = from_folder(run_folder)
+    again = [replace(v, run="Another run") for v in results.videos]
+    summary = write_csv(
+        replace(results, videos=results.videos + again), io.StringIO(newline="")
+    )
+    assert summary.videos == len({v.video for v in results.videos}) == 1

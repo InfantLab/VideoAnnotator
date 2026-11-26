@@ -1,6 +1,6 @@
 /** Every address, old and new, lands somewhere (spec 029 R13, SC-006; R18). */
 import { render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getApiClient } from '@/api/client';
 import App from '@/App';
@@ -21,6 +21,12 @@ function visit(address: string, state?: unknown) {
   render(<App />);
 }
 const where = () => window.location.pathname + window.location.search;
+
+// The pages load lazily; compiling Videos' for the first time takes the test
+// runner about 16 s, longer than any one test should wait, so it's done here.
+beforeAll(async () => {
+  await import('@/pages/Videos');
+}, 60_000);
 
 beforeEach(() => {
   server.capabilities = { version: '1.7.0' };

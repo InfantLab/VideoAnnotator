@@ -33,6 +33,9 @@ const plain = (text: string) => text.replace(/\*\*|__|`/g, '').replace(/^#+\s*/g
 function trackText(row: Row): string {
   if (!row.track || row.track === row.label) return '';
   if (/^\d+$/.test(row.track)) return row.measure === 'person' ? `person ${row.track}` : `face ${row.track}`;
+  // "person_<whole video name>_001" → "person 1", as the timeline names it (UAT #77).
+  const person = /^person_.*_(\d+)$/.exec(row.track);
+  if (person) return `person ${Number(person[1])}`;
   return row.track;
 }
 
@@ -203,7 +206,7 @@ export function DataTable({ rows, currentTime, selectedRow, onRowClick, filter, 
                 <span role="cell" className="w-20 shrink-0 truncate">
                   {tableKindOf(row).label}
                 </span>
-                <span role="cell" className="w-20 shrink-0 truncate text-muted-foreground">
+                <span role="cell" className="w-20 shrink-0 truncate text-muted-foreground" title={row.track || undefined}>
                   {trackText(row)}
                 </span>
                 <span role="cell" className="min-w-0 flex-1 truncate">

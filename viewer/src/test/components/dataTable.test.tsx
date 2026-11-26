@@ -112,6 +112,15 @@ describe('the Data tab and the timeline (SC-005)', () => {
   });
 });
 
+describe('the Data tab, people (UAT #77)', () => {
+  it('names a person as the timeline does, keeping the full id to hover', () => {
+    const face = demoRows().find((r) => r.measure === 'face' && r.track.startsWith('person_'))!;
+    table([{ ...face, track: 'person_FVM73L.sess1.joke1.rep2.take1.Peekaboo_002' }]);
+    const cell = within(screen.getByTestId('data-row')).getByText('person 2');
+    expect(cell).toHaveAttribute('title', 'person_FVM73L.sess1.joke1.rep2.take1.Peekaboo_002');
+  });
+});
+
 describe('the Data tab summary (D6, UAT #46)', () => {
   it('shows one row per event, without per-class scores or repeats, and answers as plain text', () => {
     const rows = demoRows();

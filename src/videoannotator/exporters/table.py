@@ -260,6 +260,8 @@ def rows(
     summary = summary if summary is not None else ExportSummary()
     notes = _Notes(notes_for, summary)
     pipelines: set[str] = set()
+    # A video's results can come from several runs, one entry each; count it once.
+    covered: set[str] = set()
     for video in results.videos:
         researcher = notes.rows_for(video)
         if researcher:
@@ -278,7 +280,8 @@ def rows(
             for item in read
         ]
         if video_table:
-            summary.videos += 1
+            covered.add(video.video)
+            summary.videos = len(covered)
             summary.rows += len(video_table)
             pipelines.update(r.pipeline for r in video_table)
         yield from video_table
