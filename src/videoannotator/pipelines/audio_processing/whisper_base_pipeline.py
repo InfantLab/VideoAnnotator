@@ -8,6 +8,7 @@ import gc
 import logging
 import tempfile
 import warnings
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,7 @@ import numpy as np
 import torch
 
 from videoannotator.pipelines.base_pipeline import BasePipeline
+from videoannotator.utils import model_cache
 from videoannotator.utils.model_loader import log_model_download
 
 from ...provenance import ModelRef
@@ -83,6 +85,17 @@ def model_repository(model: str) -> str:
     return _MODELS[model]
 
 
+@dataclass(frozen=True)
+class _LoadedWhisper:
+    """What loading a Whisper model settled, kept with it between videos."""
+
+    model: Any
+    device: torch.device
+    used_cuda_initially: bool
+    fell_back_to_cpu: bool
+    refs: tuple[ModelRef, ...]
+
+
 class WhisperBasePipeline(BasePipeline):
     """Base pipeline for Whisper-based audio processing tasks.
 
@@ -122,17 +135,42 @@ class WhisperBasePipeline(BasePipeline):
         self.logger = logging.getLogger(__name__)
         self.is_initialized: bool = False
         self.whisper_model: Any | None = None
+        self._shared: model_cache.Entry | None = None
         self.device: torch.device = torch.device("cpu")
         # Fallback state flags (for diagnostics/tests)
         self.used_cuda_initially = False
         self.fell_back_to_cpu = False
 
     def initialize(self) -> None:
-        """Initialize the Whisper model and resources."""
+        """Load the Whisper model, or reuse it from an earlier video."""
         if self.is_initialized:
             return
+        key = (
+            "whisper",
+            str(self.config["whisper_model"]),
+            str(self.config.get("device", "auto")),
+            self._compute_type(),
+        )
+        before = list(self._model_refs)
+        try:
+            self._shared = model_cache.get(key, self._load_on_device)
+        except ImportError as e:
+            # Optional dependency: allow the pipeline to exist but remain uninitialized.
+            # Downstream pipelines check `self.whisper_model` before inference.
+            self.logger.warning(f"Whisper dependency unavailable: {e}")
+            self.is_initialized = True
+            return
+        loaded: _LoadedWhisper = self._shared.value
+        self.whisper_model = loaded.model
+        self.device = loaded.device
+        self.used_cuda_initially = loaded.used_cuda_initially
+        self.fell_back_to_cpu = loaded.fell_back_to_cpu
+        self._model_refs[:] = [*before, *loaded.refs]
+        self.is_initialized = True
+        self.logger.info("WhisperBasePipeline initialized successfully")
 
-        # Setup device
+    def _load_on_device(self) -> _LoadedWhisper:
+        refs_before = len(self._model_refs)
         requested_device = self.config.get("device", "auto")
         explicit_cuda = requested_device == "cuda"
         if requested_device == "auto":
@@ -158,12 +196,6 @@ class WhisperBasePipeline(BasePipeline):
 
         try:
             self._load_whisper_model()
-        except ImportError as e:
-            # Optional dependency: allow the pipeline to exist but remain uninitialized.
-            # Downstream pipelines check `self.whisper_model` before inference.
-            self.logger.warning(f"Whisper dependency unavailable: {e}")
-            self.is_initialized = True
-            return
         except RuntimeError as e:
             # Fallback only if CUDA was opportunistic (auto) and failed with a
             # CUDA-specific issue, such as CTranslate2 not finding cuDNN.
@@ -177,7 +209,7 @@ class WhisperBasePipeline(BasePipeline):
                 )
                 self.device = torch.device("cpu")
                 self.fell_back_to_cpu = True
-                self._model_refs.clear()
+                del self._model_refs[refs_before:]
                 try:
                     self._load_whisper_model()
                 except Exception as retry_e:
@@ -187,8 +219,13 @@ class WhisperBasePipeline(BasePipeline):
             else:
                 raise
 
-        self.is_initialized = True
-        self.logger.info("WhisperBasePipeline initialized successfully")
+        return _LoadedWhisper(
+            self.whisper_model,
+            self.device,
+            self.used_cuda_initially,
+            self.fell_back_to_cpu,
+            tuple(self._model_refs[refs_before:]),
+        )
 
     def _compute_type(self) -> str:
         if not self.config.get("use_fp16", True):
@@ -352,8 +389,10 @@ class WhisperBasePipeline(BasePipeline):
 
     def cleanup(self) -> None:
         """Clean up resources used by the pipeline."""
-        # CTranslate2 frees its GPU memory when the model is released.
+        # CTranslate2 frees its GPU memory when the model is released; the
+        # cache keeps it for the next video until it's been idle a while.
         self.whisper_model = None
+        self._shared = None
         gc.collect()
         if self.device.type == "cuda":
             torch.cuda.empty_cache()

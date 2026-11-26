@@ -9,6 +9,7 @@ from typing import Any
 
 from ...config_env import huggingface_token
 from ...provenance import hub_ref
+from ...utils import model_cache
 from ..base_pipeline import BasePipeline
 from .ffmpeg_utils import extract_audio_from_video
 from .native_files import write_rttm
@@ -55,6 +56,7 @@ class DiarizationPipeline(BasePipeline):
             default_config.update(config)
         super().__init__(default_config)
         self.diarization_model = None
+        self._shared: model_cache.Entry | None = None
 
     @property
     def pipeline_name(self) -> str:
@@ -79,20 +81,20 @@ class DiarizationPipeline(BasePipeline):
                 "Set HUGGINGFACE_TOKEN (e.g. in .env) or disable with use_auth_token=False"
             )
 
-        self.logger.info(f"Loading diarization model: {self.config['model']}")
+        model = self.config["model"]
 
-        try:
-            if hf_token:
-                self.diarization_model = PyAnnotePipeline.from_pretrained(
-                    self.config["model"], token=hf_token
-                )
-            else:
-                self.diarization_model = PyAnnotePipeline.from_pretrained(
-                    self.config["model"]
-                )
-        except Exception as e:
-            self.logger.error(f"Failed to load diarization model: {e}")
-            raise
+        def load() -> Any:
+            self.logger.info(f"Loading diarization model: {model}")
+            try:
+                if hf_token:
+                    return PyAnnotePipeline.from_pretrained(model, token=hf_token)
+                return PyAnnotePipeline.from_pretrained(model)
+            except Exception as e:
+                self.logger.error(f"Failed to load diarization model: {e}")
+                raise
+
+        self._shared = model_cache.get(("pyannote", model, bool(hf_token)), load)
+        self.diarization_model = self._shared.value
 
         self._model_refs.append(hub_ref(self.config["model"]))
         self.is_initialized = True
@@ -138,11 +140,13 @@ class DiarizationPipeline(BasePipeline):
                     "audio track, or ffmpeg failed (see the pipeline log)"
                 )
 
-            output = self.diarization_model(
-                _load_waveform(audio_path),
-                min_speakers=self.config["min_speakers"],
-                max_speakers=self.config["max_speakers"],
-            )
+            waveform = _load_waveform(audio_path)
+            with model_cache.turn(self._shared):
+                output = self.diarization_model(
+                    waveform,
+                    min_speakers=self.config["min_speakers"],
+                    max_speakers=self.config["max_speakers"],
+                )
         # pyannote.audio 4 wraps the Annotation in a DiarizeOutput.
         diarization = (
             output if hasattr(output, "itertracks") else output.speaker_diarization
@@ -215,8 +219,8 @@ class DiarizationPipeline(BasePipeline):
 
     def cleanup(self) -> None:
         """Cleanup diarization resources."""
-        if self.diarization_model is not None:
-            del self.diarization_model
-            self.diarization_model = None
+        # The cache keeps the model for the next video until it's idle a while.
+        self.diarization_model = None
+        self._shared = None
         self.is_initialized = False
         self.logger.info("DiarizationPipeline cleanup complete")

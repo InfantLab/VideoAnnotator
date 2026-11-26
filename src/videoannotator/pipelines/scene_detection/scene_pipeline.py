@@ -19,6 +19,7 @@ from videoannotator.exporters.native_formats import (
 )
 from videoannotator.pipelines.base_pipeline import BasePipeline
 from videoannotator.provenance import clip_ref
+from videoannotator.utils import model_cache
 from videoannotator.version import __version__
 
 _CLIP_PRETRAINED = "laion2b_s34b_b79k"
@@ -75,6 +76,7 @@ class SceneDetectionPipeline(BasePipeline):
         self.clip_preprocess = None
         self.clip_tokenizer = None
         self.device = None
+        self._shared: model_cache.Entry | None = None
 
     def process(
         self,
@@ -263,7 +265,7 @@ class SceneDetectionPipeline(BasePipeline):
                                 self.clip_preprocess(image).unsqueeze(0).to(self.device)
                             )
 
-                            with torch.no_grad():
+                            with model_cache.turn(self._shared), torch.no_grad():
                                 # open_clip's model(image, text) returns raw
                                 # (image_features, text_features, logit_scale) —
                                 # not (logits_per_image, logits_per_text) like the
@@ -321,21 +323,22 @@ class SceneDetectionPipeline(BasePipeline):
         if not CLIP_AVAILABLE:
             raise ImportError("CLIP not available for scene classification")
 
-        self.device = (
+        device = (
             "cuda" if self.config["use_gpu"] and torch.cuda.is_available() else "cpu"
         )
-        self.clip_model, _, self.clip_preprocess = (
-            open_clip.create_model_and_transforms(
-                self.config["clip_model"],
-                pretrained=_CLIP_PRETRAINED,
-                device=self.device,
+        name = self.config["clip_model"]
+
+        def load() -> tuple[Any, Any, Any]:
+            model, _, preprocess = open_clip.create_model_and_transforms(
+                name, pretrained=_CLIP_PRETRAINED, device=device
             )
-        )
-        self.clip_tokenizer = open_clip.get_tokenizer(self.config["clip_model"])
-        self._model_refs.append(clip_ref(self.config["clip_model"], _CLIP_PRETRAINED))
-        self.logger.info(
-            f"CLIP model loaded: {self.config['clip_model']} on {self.device}"
-        )
+            self.logger.info(f"CLIP model loaded: {name} on {device}")
+            return model, preprocess, open_clip.get_tokenizer(name)
+
+        self._shared = model_cache.get(("clip", name, _CLIP_PRETRAINED, device), load)
+        self.clip_model, self.clip_preprocess, self.clip_tokenizer = self._shared.value
+        self.device = device
+        self._model_refs.append(clip_ref(name, _CLIP_PRETRAINED))
 
     def _save_coco_annotations(
         self,
@@ -428,11 +431,8 @@ class SceneDetectionPipeline(BasePipeline):
 
     def cleanup(self) -> None:
         """Clean up pipeline resources."""
-        if self.clip_model is not None:
-            # Move to CPU to free GPU memory
-            if hasattr(self.clip_model, "to") and self.device == "cuda":
-                self.clip_model.to(torch.device("cpu"))
-
+        # The cache keeps CLIP for the next video until it's idle a while.
+        self._shared = None
         self.clip_model = None
         self.clip_preprocess = None
         self.clip_tokenizer = None

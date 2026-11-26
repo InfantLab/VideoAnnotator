@@ -129,6 +129,28 @@ Note (2026-09-24): the VLM pipeline itself already exists in core as `vlm_annota
 
 ## Cross-cutting concerns for v1.8-v2.0
 
+### Throughput on many videos
+
+v1.7.0 keeps the slowest-loading models (pyannote, Whisper, CLIP) loaded between videos
+(`utils/model_cache.py`, UAT #72): about 5 s saved per ~16 s clip on a six-pipeline run, ~17%.
+Most of what remains is the pipelines' own work, so the next gains need a different shape of run:
+
+- **Run by pipeline, not by video.** A run over many videos does one pipeline on every video, then
+  the next, instead of every pipeline on one video. Each model is loaded once and is the only one
+  on the GPU, so more videos can run side by side without running out of memory; the first
+  pipeline's results arrive for every video early. Needs the job and run status to report
+  progress per pipeline, and the viewer's run page to show it.
+- **Decode each video once.** Person tracking, both face pipelines and scene detection each read
+  and decode the whole video. A shared frame reader (or a cache of sampled frames) would save
+  most of that; the face pipelines' time is largely decoding and detecting faces again.
+- **Batch frames on the GPU.** The face pipelines run one frame (one face) at a time; batching
+  would use the GPU properly, which sat at 0–50% during the BabyJokes runs.
+- **Keep any pipeline loaded**, not just the three: the job runner keeps pipeline objects between
+  videos (UAT #72's option B). Little gain for today's pipelines (person tracking ~0.6 s), more for
+  plugins with heavy models; it needs per-job state reset in every pipeline.
+- **Schedule by GPU memory**, not a fixed `MAX_CONCURRENT_JOBS`: run as many as fit.
+
+
 ### Reproducibility
 
 VLM outputs vary with sampling, model version, prompt phrasing. Standard practice for research papers: pin the HF revision SHA, set `temperature=0` and a fixed seed, store the exact prompt verbatim, report inference framework + version + quantisation. The reproducibility plumbing (above; pulled forward to v1.6.0) makes this enforceable: every annotation carries the full reproducibility envelope.

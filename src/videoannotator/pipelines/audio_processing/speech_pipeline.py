@@ -13,6 +13,7 @@ import numpy as np
 import torch
 
 from videoannotator.config_env import load_env_file
+from videoannotator.utils import model_cache
 from videoannotator.version import __version__
 
 from .native_files import write_webvtt
@@ -205,11 +206,13 @@ class SpeechPipeline(WhisperBasePipeline):
 
         try:
             self.logger.info("Performing speech recognition")
-            segments, info = self.whisper_model.transcribe(
-                waveform.astype(np.float32), **self._transcribe_options()
-            )
-            # A generator: decoding happens here, so errors are raised here.
-            return self._process_transcription_result(list(segments), info, video_id)
+            with model_cache.turn(self._shared):
+                segments, info = self.whisper_model.transcribe(
+                    waveform.astype(np.float32), **self._transcribe_options()
+                )
+                # A generator: decoding happens here, so errors are raised here.
+                decoded = list(segments)
+            return self._process_transcription_result(decoded, info, video_id)
         except Exception as e:
             raise RuntimeError(f"Speech recognition failed: {e}") from e
 

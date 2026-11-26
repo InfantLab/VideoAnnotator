@@ -190,6 +190,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Runs over many videos load the slowest models once** (UAT #72): speaker diarization, speech
+  recognition and scene detection keep their models loaded between videos, taking turns when two
+  videos run at once, and release them after `VIDEOANNOTATOR_MODEL_IDLE_SECONDS` (300) unused.
+  All six default pipelines on a 16 s clip: 29.5 s → 24.7 s, with the same results. The wait
+  before each pipeline, checking for earlier results, is gone too (an index, with #74).
 - **OpenFace 3's action units, expression and gaze were misread** (UAT #78), since the pipeline was
   added. Its model returns (expression, gaze, action units); the pipeline read them as (action
   units, head pose, expression). So the "action units" were the expression scores under guessed AU

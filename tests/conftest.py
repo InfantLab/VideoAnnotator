@@ -24,6 +24,16 @@ os.environ["VIDEOANNOTATOR_DB_PATH"] = str(_import_time_db)
 os.environ["DATABASE_URL"] = f"sqlite:///{_import_time_db}"
 
 
+@pytest.fixture(autouse=True)
+def models_not_kept_between_tests(monkeypatch):
+    """Tests swap model classes for mocks; a model kept from one would leak."""
+    from videoannotator.utils import model_cache
+
+    monkeypatch.setenv("VIDEOANNOTATOR_MODEL_IDLE_SECONDS", "0")
+    yield
+    model_cache.clear()
+
+
 # --- Speech Pipeline Robustness Fixture ---
 @pytest.fixture(autouse=True)
 def patch_speech_pipeline_cuda(monkeypatch):

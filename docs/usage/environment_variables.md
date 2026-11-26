@@ -33,6 +33,7 @@ Control concurrent job processing and retry behavior:
 | `WORKER_POLL_INTERVAL` | `5` | Seconds between database polls for new jobs |
 | `MAX_JOB_RETRIES` | `3` | Maximum retry attempts for failed jobs |
 | `RETRY_DELAY_BASE` | `2.0` | Base delay (seconds) for exponential backoff |
+| `VIDEOANNOTATOR_MODEL_IDLE_SECONDS` | `300` | Speaker diarization, speech recognition and scene detection keep their models loaded between videos, and release them after this many seconds unused (freeing the GPU for other work). `0` loads them for each video |
 | `VIDEOANNOTATOR_BACKGROUND_PROCESSING` | `true` | Run submitted jobs in the API server. `false` accepts jobs but never runs them; the test suite sets it so tests don't run real models |
 
 **Tuning `MAX_CONCURRENT_JOBS`**:
