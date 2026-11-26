@@ -128,11 +128,14 @@ uv run videoannotator --dev
 
 **One-command start (Linux, macOS, WSL)**: `scripts/start_server.sh` syncs the environment, sets
 up the database and an admin API key (asking for an admin email the first time), starts the
-server, and prints the viewer login link once the server is up. It is safe to re-run. Pass
-`--background` to keep the server running after the terminal closes, and `--help` for the other
-options (port, extras to install, non-interactive use). To shorten the commands, add
+server, and prints the viewer login link once the server is up. It is safe to re-run: if
+VideoAnnotator is already running, it says so and offers to use that server, restart it, or start
+another one on a free port. `--status` says whether it is running and where, and `--stop` stops
+it. Pass `--background` to keep the server running after the terminal closes, and `--help` for
+the other options (port, extras to install, non-interactive use). To shorten the commands, add
 `source /path/to/VideoAnnotator/scripts/shell_aliases.sh` to your `~/.bashrc` or `~/.zshrc`: then
-`va-start` runs the script and `va` runs `uv run videoannotator`, from any folder. The dev
+`va-start`, `va-status` and `va-stop` run the script and `va` runs `uv run videoannotator`, from
+any folder. The dev
 container sets these up for you, and also puts `va` and `videoannotator` on the PATH as commands,
 so they work in scripts and non-interactive shells too.
 

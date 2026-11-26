@@ -1,20 +1,19 @@
 #!/usr/bin/env bash
 # One-command VideoAnnotator startup: syncs dependencies, ensures the
-# database + an admin API key exist, starts the API server, and — since
-# Video Annotation Viewer is bundled and served by this same process at
-# /viewer, not a separate frontend to start — prints the ready-to-click
-# viewer login link once the server is actually up. Wraps the same
-# `videoannotator setup-db`/`server` CLI commands from the README's "Get
-# Started in 60 Seconds" quick start; this script just sequences and
-# idempotency-checks them so a first-time user (or someone restarting after
-# a container/VS Code restart) doesn't have to remember the order or which
-# flags matter.
+# database + an admin API key exist, starts the API server, and prints the
+# viewer link once the server is actually up (the viewer is served by this
+# same process at /viewer). If VideoAnnotator is already running on the port,
+# it offers to use that one instead of failing.
 #
 # Usage:
-#   scripts/start_server.sh                         # interactive, foreground
-#   scripts/start_server.sh --background             # detached, survives this terminal closing
+#   scripts/start_server.sh                  # start (or offer the running one)
+#   scripts/start_server.sh --background     # detached, survives this terminal closing
 #   scripts/start_server.sh --port 18012 --admin-email me@example.com
-#   scripts/start_server.sh --non-interactive         # never prompts; uses defaults/flags/env only
+#   scripts/start_server.sh --status         # is it running? where?
+#   scripts/start_server.sh --stop           # stop the server on the port
+#   scripts/start_server.sh --use-existing   # if one is running, just use it
+#   scripts/start_server.sh --restart        # if one is running, stop it and start fresh
+#   scripts/start_server.sh --non-interactive  # never prompts (uses a running server if any)
 #
 # Env var equivalents (flags take precedence): VIDEOANNOTATOR_HOST, PORT,
 # ADMIN_EMAIL, ADMIN_USERNAME, SYNC_EXTRAS (e.g. "llm" or "all").
@@ -34,9 +33,12 @@ BACKGROUND=false
 SKIP_SYNC=false
 NON_INTERACTIVE=false
 [ -t 0 ] || NON_INTERACTIVE=true
+# What to do when a server already holds the port: ask | use | restart.
+IF_RUNNING=ask
+MODE=start
 
 usage() {
-    sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [[ $# -gt 0 ]]; do
@@ -49,6 +51,10 @@ while [[ $# -gt 0 ]]; do
         --background|-d) BACKGROUND=true; shift ;;
         --skip-sync) SKIP_SYNC=true; shift ;;
         --non-interactive) NON_INTERACTIVE=true; shift ;;
+        --use-existing) IF_RUNNING=use; shift ;;
+        --restart) IF_RUNNING=restart; shift ;;
+        --status) MODE=status; shift ;;
+        --stop) MODE=stop; shift ;;
         -h|--help) usage; exit 0 ;;
         *) echo "[ERROR] Unknown argument: $1" >&2; usage; exit 1 ;;
     esac
@@ -58,6 +64,206 @@ if ! command -v uv >/dev/null 2>&1; then
     echo "[ERROR] uv is not installed. Install it first:" >&2
     echo "  curl -LsSf https://astral.sh/uv/install.sh | sh" >&2
     exit 1
+fi
+
+DISPLAY_HOST="$HOST"
+# 127.0.0.1, not localhost: the viewer only works from that origin.
+[[ "$HOST" == "0.0.0.0" || "$HOST" == "localhost" ]] && DISPLAY_HOST="127.0.0.1"
+
+# --- 0. Is something already on the port? ---------------------------------
+# Checked before anything else: someone re-running va-start with a server
+# already up almost always wants that server, and finding out shouldn't wait
+# on a dependency sync.
+
+port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
+
+# Generous timeout: a server busy analysing video can be slow to answer.
+health_json() { curl -sf -m 5 "http://127.0.0.1:$1/health" 2>/dev/null; }
+
+# PID listening on a port. lsof (macOS, most Linux), then ss, then /proc
+# (minimal containers, such as the dev container, have neither tool).
+listener_pid() {
+    local port="$1" pid="" hex inode fd
+    if command -v lsof >/dev/null 2>&1; then
+        pid="$(lsof -nP -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+    elif command -v ss >/dev/null 2>&1; then
+        pid="$(ss -ltnpH "sport = :$port" 2>/dev/null | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2 || true)"
+    elif [[ -r /proc/net/tcp ]]; then
+        hex="$(printf '%04X' "$port")"
+        inode="$(awk -v p=":$hex" '$2 ~ p"$" && $4 == "0A" {print $10; exit}' \
+            /proc/net/tcp /proc/net/tcp6 2>/dev/null || true)"
+        if [[ -n "$inode" ]]; then
+            for fd in /proc/[0-9]*/fd/*; do
+                if [[ "$(readlink "$fd" 2>/dev/null)" == "socket:[$inode]" ]]; then
+                    pid="${fd#/proc/}"; pid="${pid%%/*}"; break
+                fi
+            done
+        fi
+    fi
+    echo "$pid"
+}
+
+next_free_port() {
+    local p
+    for p in $(seq $(( $1 + 1 )) $(( $1 + 20 ))); do
+        port_open "$p" || { echo "$p"; return; }
+    done
+}
+
+# Sets RUNNING (none | va | busy | other), RUNNING_PID and RUNNING_DESC.
+probe_port() {
+    local json pid args started version
+    RUNNING=none RUNNING_PID="" RUNNING_DESC=""
+    port_open "$PORT" || return 0
+    pid="$(listener_pid "$PORT")"
+    args="" started=""
+    if [[ -n "$pid" ]]; then
+        args="$(ps -o args= -p "$pid" 2>/dev/null || true)"
+        started="$(ps -o lstart= -p "$pid" 2>/dev/null | sed 's/  */ /g; s/^ //' || true)"
+    fi
+    RUNNING_PID="$pid"
+    json="$(health_json "$PORT" || true)"
+    if [[ "$json" == *"VideoAnnotator API is running"* ]]; then
+        RUNNING=va
+        version="$(sed -n 's/.*"videoannotator_version":"\([^"]*\)".*/\1/p' <<<"$json")"
+        RUNNING_DESC="version ${version:-unknown}"
+        # The server's own clock beats ps's lstart, which drifts in containers.
+        started="$(sed -n 's/.*"started_at":"\([0-9-]*\)T\([0-9]*:[0-9]*\).*/\1 \2 UTC/p' <<<"$json")"
+    elif [[ -z "$json" && ( -z "$args" || "$args" == *videoannotator* ) ]]; then
+        RUNNING=busy
+    else
+        RUNNING=other
+        RUNNING_DESC="${args:-an unknown program}"
+    fi
+    [[ -n "$started" ]] && RUNNING_DESC="${RUNNING_DESC:+$RUNNING_DESC, }started $started"
+    [[ -n "$pid" ]] && RUNNING_DESC="${RUNNING_DESC:+$RUNNING_DESC, }process $pid"
+    return 0
+}
+
+describe_running() {
+    case "$RUNNING" in
+        va)
+            echo "VideoAnnotator is already running on port $PORT."
+            echo "  Viewer:  http://${DISPLAY_HOST}:${PORT}/viewer"
+            echo "  ($RUNNING_DESC)"
+            ;;
+        busy)
+            echo "A VideoAnnotator server is on port $PORT but isn't answering."
+            echo "  It may be busy with a heavy run, or stuck.${RUNNING_DESC:+ ($RUNNING_DESC)}"
+            ;;
+        other)
+            echo "Port $PORT is in use by another program, not VideoAnnotator:"
+            echo "  $RUNNING_DESC"
+            ;;
+    esac
+}
+
+stop_running() {
+    local pid="$RUNNING_PID" _
+    if [[ -z "$pid" ]]; then
+        echo "[ERROR] Can't tell which process holds port $PORT, so can't stop it." >&2
+        echo "  Look for it with: ps aux | grep videoannotator" >&2
+        return 1
+    fi
+    echo "[STOP] Stopping the server on port $PORT (process $pid)..."
+    kill "$pid" 2>/dev/null || true
+    for _ in $(seq 1 15); do
+        port_open "$PORT" || { echo "[OK] Stopped"; return 0; }
+        sleep 1
+    done
+    echo "[STOP] Still running after 15s; forcing it to stop..."
+    kill -9 "$pid" 2>/dev/null || true
+    for _ in $(seq 1 5); do
+        port_open "$PORT" || { echo "[OK] Stopped"; return 0; }
+        sleep 1
+    done
+    echo "[ERROR] Port $PORT is still in use." >&2
+    return 1
+}
+
+probe_port
+
+if [[ "$MODE" == status ]]; then
+    if [[ "$RUNNING" == none ]]; then
+        echo "VideoAnnotator is not running on port $PORT."
+        echo "  Start it with: va-start  (or scripts/start_server.sh)"
+        exit 3
+    fi
+    describe_running
+    [[ "$RUNNING" == va ]] && exit 0 || exit 1
+fi
+
+if [[ "$MODE" == stop ]]; then
+    if [[ "$RUNNING" == none ]]; then
+        echo "Nothing is running on port $PORT."
+        exit 0
+    fi
+    if [[ "$RUNNING" == other ]]; then
+        describe_running
+        echo "Not stopping it: it isn't VideoAnnotator." >&2
+        exit 1
+    fi
+    stop_running
+    exit $?
+fi
+
+if [[ "$RUNNING" != none ]]; then
+    echo
+    describe_running
+    echo
+    choice=""
+    case "$IF_RUNNING" in
+        use) [[ "$RUNNING" == va ]] && choice=use ;;
+        restart) [[ "$RUNNING" != other ]] && choice=restart ;;
+    esac
+    ALT_PORT="$(next_free_port "$PORT")"
+    if [[ -z "$choice" && "$NON_INTERACTIVE" == true ]]; then
+        if [[ "$RUNNING" == va ]]; then
+            choice=use
+        else
+            echo "[ERROR] Can't start on port $PORT." >&2
+            [[ "$RUNNING" == busy ]] && echo "  To stop it and start fresh: --restart" >&2
+            [[ -n "$ALT_PORT" ]] && echo "  To start on another port: --port $ALT_PORT" >&2
+            exit 1
+        fi
+    fi
+    if [[ -z "$choice" ]]; then
+        options=() labels=()
+        if [[ "$RUNNING" == va ]]; then
+            options+=(use);     labels+=("Use it (nothing else to do; open the link above)")
+        fi
+        if [[ "$RUNNING" != other ]]; then
+            options+=(restart); labels+=("Restart it (stops it, then starts a fresh one here; any run in progress stops)")
+        fi
+        if [[ -n "$ALT_PORT" ]]; then
+            options+=(alt);     labels+=("Start another one on port $ALT_PORT")
+        fi
+        options+=(cancel);      labels+=("Cancel")
+        echo "What would you like to do?"
+        for i in "${!options[@]}"; do
+            echo "  $((i + 1))) ${labels[$i]}"
+        done
+        while [[ -z "$choice" ]]; do
+            read -r -p "Choose 1-${#options[@]} [1]: " answer
+            answer="${answer:-1}"
+            if [[ "$answer" =~ ^[0-9]+$ ]] && (( answer >= 1 && answer <= ${#options[@]} )); then
+                choice="${options[$((answer - 1))]}"
+            fi
+        done
+        echo
+    fi
+    case "$choice" in
+        use)
+            echo "[OK] Using the server that's already running."
+            echo "  Viewer: http://${DISPLAY_HOST}:${PORT}/viewer"
+            echo "  If the viewer asks you to sign in: uv run videoannotator generate-token --port $PORT"
+            echo "  To stop it: va-stop  (or scripts/start_server.sh --stop)"
+            exit 0
+            ;;
+        restart) stop_running || exit 1 ;;
+        alt) PORT="$ALT_PORT"; echo "[INFO] Starting on port $PORT instead." ;;
+        cancel) exit 0 ;;
+    esac
 fi
 
 # --- 1. Dependencies -------------------------------------------------------
@@ -126,24 +332,19 @@ SETUP_OUTPUT="$(uv run videoannotator setup-db --admin-email "$ADMIN_EMAIL" --ad
 echo "$SETUP_OUTPUT"
 CONNECT_LINK="$(echo "$SETUP_OUTPUT" | grep -oE 'http://[^[:space:]]+/viewer-connect\?token=[^[:space:]]+' || true)"
 
-DISPLAY_HOST="$HOST"
-# 127.0.0.1, not localhost: the viewer only works from that origin.
-[[ "$HOST" == "0.0.0.0" || "$HOST" == "localhost" ]] && DISPLAY_HOST="127.0.0.1"
-
 print_viewer_info() {
     if [[ "${VIDEOANNOTATOR_ENABLE_VIEWER:-true}" == "false" ]]; then
-        echo "[INFO] Viewer disabled (VIDEOANNOTATOR_ENABLE_VIEWER=false)"
+        echo "  Viewer:  disabled (VIDEOANNOTATOR_ENABLE_VIEWER=false)"
         return
     fi
     # Video Annotation Viewer isn't a separate process — this same server
     # already serves it at /viewer, mounted whenever ENABLE_VIEWER is true.
     if [[ -n "$CONNECT_LINK" ]]; then
-        echo "[VIEWER] First time here — open this to log the viewer in:"
-        echo "  $CONNECT_LINK"
+        echo "  Viewer:  open this link to sign the viewer in (first time only):"
+        echo "           $CONNECT_LINK"
     else
-        echo "[VIEWER] http://${DISPLAY_HOST}:${PORT}/viewer"
-        echo "  (no fresh API key this run — admin already existed; if the viewer isn't"
-        echo "  logged in, run: uv run videoannotator generate-token --port $PORT)"
+        echo "  Viewer:  http://${DISPLAY_HOST}:${PORT}/viewer"
+        echo "           If it asks you to sign in: uv run videoannotator generate-token --port $PORT"
     fi
 }
 
@@ -151,17 +352,6 @@ print_viewer_info() {
 # Started via `&` (not `exec`) in both modes so this script can poll for
 # health and print the viewer link once it's actually reachable — `exec`
 # would hand off the process image and end the script right there.
-# A server already on this port would answer the health poll below, so the
-# script would report success for a process it didn't start, then return
-# immediately when its own (port-clash) server exits.
-if curl -sf -m 3 "http://127.0.0.1:${PORT}/health" >/dev/null 2>&1; then
-    echo "[ERROR] A server is already running on port ${PORT}:" >&2
-    ps -eo pid,lstart,args | grep "[v]ideoannotator server" >&2 || true
-    echo "  It is serving http://${DISPLAY_HOST}:${PORT}/viewer — use it, or stop it" >&2
-    echo "  (kill <PID>) and run va-start again, or pick another port: --port 18012" >&2
-    exit 1
-fi
-
 echo "[START] Starting server..."
 if [[ "$BACKGROUND" == true ]]; then
     LOG_FILE="$(mktemp -t videoannotator-server-XXXXXX.log)"
@@ -173,26 +363,38 @@ else
 fi
 SERVER_PID=$!
 
-for _ in $(seq 1 30); do
+# Our process must still be alive before /health counts: otherwise a server
+# that grabbed the port in the meantime would answer for it.
+UP=false
+for _ in $(seq 1 60); do
     if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-        echo "[ERROR] Server process exited before becoming healthy" >&2
+        echo >&2
+        echo "[ERROR] The server stopped before it was ready (see the messages above)." >&2
         [[ -n "${LOG_FILE:-}" ]] && cat "$LOG_FILE" >&2
         exit 1
     fi
-    if curl -sf -m 3 "http://127.0.0.1:${PORT}/health" >/dev/null 2>&1; then
-        echo "[OK] Server is up: http://${DISPLAY_HOST}:${PORT}"
-        print_viewer_info
+    if health_json "$PORT" >/dev/null; then
+        UP=true
         break
     fi
     sleep 1
 done
 
+echo
+if [[ "$UP" == true ]]; then
+    echo "[OK] VideoAnnotator is running on port $PORT."
+    print_viewer_info
+else
+    echo "[WARN] The server hasn't answered after 60s; it may still be starting."
+    echo "  Check with: va-status  (or scripts/start_server.sh --status)"
+fi
+
 if [[ "$BACKGROUND" == true ]]; then
     disown
-    echo "  Logs:  tail -f $LOG_FILE"
-    echo "  Stop:  kill $SERVER_PID"
+    echo "  Logs:    tail -f $LOG_FILE"
+    echo "  Stop:    va-stop  (or scripts/start_server.sh --stop)"
 else
-    echo "  (Ctrl+C stops the server)"
+    echo "  Stop:    Ctrl+C here, or va-stop from another terminal"
     trap 'kill "$SERVER_PID" 2>/dev/null || true' INT TERM
     wait "$SERVER_PID"
 fi
