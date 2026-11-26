@@ -87,6 +87,9 @@ and installing from source in your own Python environment
 - **[Documentation](docs/README.md)**: install options, every pipeline, output formats,
   configuration and troubleshooting.
 - **[Getting started](docs/usage/GETTING_STARTED.md)**: a first run, step by step.
+- **[Tutorial: BabyJokes](docs/usage/tutorial_babyjokes.md)**: one study from start to finish, on
+  390 public clips of babies at home: run the pipelines, export the table, analyse it in R or
+  Python against what the parents said.
 - **[Results out](docs/usage/exporting_results.md)**: the results table, ELAN files and the
   methods paragraph, from the viewer, the command line (`videoannotator export`) or the API.
 - **[Command line and API](docs/usage/demo_commands.md)**: everything the viewer does can also be
@@ -106,6 +109,9 @@ Zenodo. https://doi.org/10.5281/zenodo.16961751
 ```
 
 Please also cite the models behind the pipelines you used; each output file names them.
+
+The demo clips and the tutorial use the BabyJokes dataset: Addyman, C. *BabyJokes*, version 1.1.
+Zenodo. https://doi.org/10.5281/zenodo.23913806 (CC BY 4.0). Please cite it if you use the data.
 
 ## Contributing and contact
 

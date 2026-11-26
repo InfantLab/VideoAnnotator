@@ -205,8 +205,8 @@ The project's latest results (that run plus the 11 Nov run's scene, speaker and 
       they come with the recordings). Chapter 6 (Ask AI) names no model until that's decided;
       option 3 (our results for all 390) isn't offered until that's decided.
 - [ ] The recordings, and the CPU-only time for one game.
-- [ ] Cite the dataset (10.5281/zenodo.23913806) in the README and the tutorial (the demo's files
-      and Home cite it, 2026-11-25).
+- [x] Cite the dataset (10.5281/zenodo.23913806) in the README and the tutorial (2026-11-26; the
+      demo's files and Home cite it, 2026-11-25).
 - [ ] Archive InfantLab/babyjokes, its README pointing at the Zenodo and Databrary records.
 
 ## Still to decide
