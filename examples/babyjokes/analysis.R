@@ -41,6 +41,9 @@ frames <- aggregate(frame ~ video + track, people, function(f) length(unique(f))
 tracks <- merge(tracks, frames)
 tracks$share <- tracks$frame / ave(tracks$frame, tracks$video, FUN = max)
 tracks <- tracks[tracks$share >= MIN_TRACK_SHARE, ]
+# With only one person found it is usually the parent: a baby lying down,
+# held, or half hidden in a seat often isn't detected as a person at all.
+tracks <- tracks[ave(tracks$area, tracks$video, FUN = length) >= 2, ]
 tracks <- tracks[order(tracks$video, tracks$area), ]
 baby <- tracks[!duplicated(tracks$video), c("video", "track")]
 

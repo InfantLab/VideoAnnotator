@@ -56,7 +56,11 @@ def load(
 
 
 def baby_tracks(table: pd.DataFrame) -> pd.DataFrame:
-    """Each clip's baby: the smallest person seen often enough."""
+    """Each clip's baby: the smaller person, of two or more seen often enough.
+
+    With only one person found it is usually the parent: a baby lying down,
+    held, or half hidden in a seat often isn't detected as a person at all.
+    Those clips get no baby rather than the parent's face."""
     people = table[table["measure"] == "person"].assign(
         area=lambda d: d["width"] * d["height"]
     )
@@ -67,6 +71,7 @@ def baby_tracks(table: pd.DataFrame) -> pd.DataFrame:
         "max"
     )
     seen = tracks[tracks["share"] >= MIN_TRACK_SHARE].reset_index()
+    seen = seen[seen.groupby("video")["track"].transform("size") >= 2]
     return seen.sort_values("area").groupby("video").head(1)[["video", "track"]]
 
 

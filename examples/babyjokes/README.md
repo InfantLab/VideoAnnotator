@@ -19,7 +19,10 @@ What they do:
 
 1. **Find the baby.** Person tracking follows each person but doesn't say who is who; in these
    games the baby is the smaller person on screen. Faces share their person's `track`, so the
-   baby's faces are the rows on the baby's track. Check a few clips on the Video page.
+   baby's faces are the rows on the baby's track. A clip with only one person found gets no baby:
+   that person is usually the parent, as a baby lying down, held or half hidden in a seat is often
+   not detected at all. Check a few clips on the Video page; on 12 checked, the rule picked the
+   baby in 9.
 2. **Did the baby smile?** For each clip, the share of the baby's faces with OpenFace 3's AU12
    (lip corner puller) present, and the share DeepFace calls happy. A clip counts as a smile when
    that share is at least `SMILE_SHARE` (0.25; change it and watch the agreement move).

@@ -167,7 +167,12 @@ The project's latest results (that run plus the 11 Nov run's scene, speaker and 
   in the logistic model, game matters (Peekaboo +0.77, Tearing Paper −0.99) and repetition doesn't
   (−0.14, p 0.33). AU12 shows none of the game pattern. Laughing rises with age (0.16 under 6
   months, 0.38–0.41 over), and so does AU12 (0.09 to 0.20–0.30).
-- Before reading much into it: check the baby really is the smaller person, on a sample of clips.
+- Is the baby the smaller person? On 12 random clips (one frame each, boxes drawn) the rule
+  picked the baby in 9. The 3 misses: the baby wasn't detected as a person at all (lying down,
+  held, half hidden in a seat), so the smaller person was the parent. 38 clips have only one
+  person tracked; the scripts now give those no baby (322 repetitions with the baby's face, not
+  354). Agreement didn't move (AU12 kappa 0.17 on 319): the smile measure, not the choice of
+  person, is what limits it. A lesson for chapter 9.
 
 ### To check before writing it
 
